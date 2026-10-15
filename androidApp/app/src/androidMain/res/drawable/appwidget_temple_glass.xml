@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TempleCountdownWidget's CountdownUnit box: black glass with a light edge, 8 dp corners. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/appwidget_temple_glass" />
+    <stroke android:width="1dp" android:color="@color/appwidget_temple_glass_edge" />
+    <corners android:radius="8dp" />
+</shape>

@@ -1,0 +1,5 @@
+# Shell scripts keep LF on Windows checkouts (core.autocrlf would hand bash and WSL CRLF files).
+*.sh text eol=lf
+gradlew text eol=lf
+# The Windows launcher keeps CRLF everywhere, including the Linux checkouts that package it for the site and releases.
+*.cmd text eol=crlf

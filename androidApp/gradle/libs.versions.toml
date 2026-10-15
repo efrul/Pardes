@@ -1,0 +1,57 @@
+[versions]
+kotlin = "2.4.20"
+agp = "8.12.3"
+sqlDelight = "2.3.2"
+kotlinx-coroutines = "1.10.2"
+kotlinx-serialization = "1.10.0"
+kotlinx-datetime = "0.7.1"
+kermit = "2.1.0"
+jsoup = "1.22.1"
+compose-bom = "2026.03.00"
+activity-compose = "1.13.0"
+lifecycle = "2.10.0"
+core-ktx = "1.17.0"
+paging = "3.3.6"
+zmanim = "2.5.0"
+# Same as desktop 0.6.1 (its zmanim engine); resolves the androidJvm artifact kosherkotlin-android.
+kosherkotlin = "3.0.5"
+hebrew-numerals = "0.2.6"
+# Same versions as the desktop app (zstd-jni is added as its Android AAR in app/build.gradle.kts).
+zstd-jni = "1.5.7-10"
+commons-compress = "1.28.0"
+
+[libraries]
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinx-serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+sqlDelight-driver-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqlDelight" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-foundation = { module = "androidx.compose.foundation:foundation" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material-icons = { module = "androidx.compose.material:material-icons-extended" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-runtime = { module = "androidx.compose.runtime:runtime" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
+paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
+paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }
+zmanim = { module = "com.kosherjava:zmanim", version.ref = "zmanim" }
+kosherkotlin = { module = "io.github.kdroidfilter:kosherkotlin", version.ref = "kosherkotlin" }
+hebrew-numerals = { module = "io.github.kdroidfilter:hebrewnumerals", version.ref = "hebrew-numerals" }
+zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+sqlDelight = { id = "app.cash.sqldelight", version.ref = "sqlDelight" }

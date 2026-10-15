@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- חיפוש בפרדס: one row, its icons and hint as tall as the row allows; its own layout is its preview.
+     minResizeHeight 8 dp: a launcher (Launcher3) rounds up the rows the smallest size needs in every orientation, and
+     a Jelly Star row is about 30 dp high, some 16 sideways: the 40 to 80 dp before asked for two rows or more there,
+     and a single row was refused. Half the shortest row, so that no launcher's grid or rounding asks for two; a widget
+     is never drawn under one row. One row draws one line (appwidget/WidgetRenderers.kt), as tall as the row allows.
+     No polling (updatePeriodMillis 0): appwidget/ZayitWidgets redraws it when what it shows changes. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/appwidget_search_description"
+    android:initialLayout="@layout/appwidget_loading"
+    android:minWidth="220dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="100dp"
+    android:minResizeHeight="8dp"
+    android:previewLayout="@layout/appwidget_search"
+    android:resizeMode="horizontal"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

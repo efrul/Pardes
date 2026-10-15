@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PanelCard's 1.5 dp border, white: tinted with the app's panelBorder. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+    <stroke android:width="1.5dp" android:color="#FFFFFFFF" />
+    <corners android:radius="18dp" />
+</shape>

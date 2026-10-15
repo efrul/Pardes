@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- zayitColors(dark = true), Gold accent: see values/appwidget_colors.xml. -->
+    <color name="appwidget_panel">#2B2D30</color>
+    <color name="appwidget_panel_border">#393B40</color>
+    <color name="appwidget_text">#DFE1E5</color>
+    <color name="appwidget_text_secondary">#9DA0A8</color>
+    <color name="appwidget_accent">#D4A843</color>
+    <color name="appwidget_accent_tint">#4D4634</color>
+</resources>

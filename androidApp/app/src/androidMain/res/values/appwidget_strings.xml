@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launcher widgets (appwidget/): names as desktop's home_widget_name_* (strings.xml), descriptions for the
+         launcher's widget list. -->
+    <string name="appwidget_zmanim_label">זמני היום</string>
+    <string name="appwidget_zmanim_description">זמני היום במקום שלך, והזמן הבא מודגש</string>
+    <string name="appwidget_next_zman_label">הזמן הבא</string>
+    <string name="appwidget_next_zman_description">הזמן הבא ושעתו, עם התאריך העברי</string>
+    <string name="appwidget_luach_label">לוח עברי</string>
+    <string name="appwidget_luach_description">התאריך העברי, החג או ראש החודש, ושבת עם כניסתה ויציאתה</string>
+    <string name="appwidget_limud_label">לימוד יומי</string>
+    <string name="appwidget_limud_description">הדף היומי ושאר הלימודים שנבחרו בדף הבית</string>
+    <string name="appwidget_temple_label">חורבן הבית</string>
+    <string name="appwidget_temple_description">זמן שחלף מאז חורבן בית המקדש השני</string>
+    <string name="appwidget_search_label">חיפוש בפרדס</string>
+    <string name="appwidget_search_description">פותח את דף הבית של פרדס עם שורת החיפוש</string>
+</resources>

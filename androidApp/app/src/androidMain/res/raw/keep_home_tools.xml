@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The limud schedules and their licence notice (BSD-2, hebcal), the Temple animation, and the sky's stars (HYG Database v4.1,
+     CC BY-SA 4.0, as desktop's earthwidget files/stars.csv): read by id, kept by the shrinker. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/limud,@raw/limud_notice,@raw/temple_jerusalem_in_fire,@raw/sky_stars" />

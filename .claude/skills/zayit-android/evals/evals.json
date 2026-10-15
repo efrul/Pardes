@@ -1,0 +1,66 @@
+{
+  "skill_name": "zayit-android",
+  "evals": [
+    {
+      "id": 1,
+      "name": "jelly-star-settings-screenshot",
+      "prompt": "סשן חדש. אני רוצה לראות איך נראה מסך ההגדרות של אפליקציית האנדרואיד על מסך קטן כמו Jelly Star. תצלם ותשלח לי.",
+      "expected_output": "A concrete, ordered plan for a fresh cloud container: SDK check/setup, emulator started in the background and waited on without foreground sleep, release APK build and install, a library put on the device with permissions fixed, Jelly Star size via wm size/density, navigation to settings, screenshot sent to the user, size reset. Reply in Hebrew.",
+      "files": [],
+      "expectations": [
+        "Starts the emulator as a background command and waits for boot by polling/Monitor rather than a long foreground sleep",
+        "Accounts for software emulation without KVM (slow boot, cores/memory flags or prep such as disabling heavy apps)",
+        "Builds the release (R8) APK rather than the debug APK, or explains why release is preferred",
+        "Puts a library (e.g. the dev subset DB) on the device and fixes the pushed file's ownership/permissions so SQLite can open it read-write",
+        "Sets a Jelly Star-like size with adb wm size 480x854 and wm density 320 (about 240dp wide)",
+        "Reaches the settings screen by tapping a labelled element (uiautomator / text) or a deep link, not by guessing coordinates blindly",
+        "Sends the screenshot to the user (SendUserFile) and resets the emulator screen size afterwards",
+        "The reply to the user is in Hebrew"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "classvalue-search-crash",
+      "prompt": "התקנתי את ה-APK על הטלפון (אנדרואיד 13). כשאני מחפש משהו האפליקציה קורסת. ב-logcat: java.lang.NoClassDefFoundError: Failed resolution of: Ljava/lang/ClassValue; at org.apache.lucene.util.AttributeSource. מה הבעיה ואיך מתקנים?",
+      "expected_output": "Diagnosis: java.lang.ClassValue only exists from API 34; Lucene's AttributeSource/AttributeFactory use it; the app must use the patched lucene-core from androidApp/lucene-android, so the unpatched jar is on the classpath or the patch is missing. Fix plan: check dependencies for org.apache.lucene:lucene-core, ensure project(':lucene-android'), run the API-33 TraceReferences gate, rebuild release and verify on an API-33 device. Keeps minSdk 33 and offline Lucene search.",
+      "files": [],
+      "expectations": [
+        "Explains that java.lang.ClassValue is missing on Android 13 (added in API 34)",
+        "Names Lucene's AttributeSource / AttributeFactory use of ClassValue as the trigger (first TokenStream)",
+        "Points to the patched lucene-core in androidApp/lucene-android (CompatClassValue replacement) and checks that the unpatched org.apache.lucene:lucene-core is not on the app classpath (e.g. ./gradlew :app:dependencies)",
+        "Mentions verifying with the TraceReferences / check-api33.sh gate against the API-33 platform jar",
+        "Does not propose raising minSdk to 34+ or replacing the offline Lucene search with a server or different engine as the fix",
+        "Answers in Hebrew"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "fetch-library-make-subset",
+      "prompt": "I'm in a fresh cloud session. Get the real Zayit library (the one desktop downloads) into this container and make a small test DB from it that I can put on the emulator. Disk is limited.",
+      "expected_output": "Checks free disk; downloads the SeforimLibrary release bundle without the GitHub API (blocked by the proxy) using releases/latest/download and the manifest, streamed through zstd and tar with no stored archive (optionally skipping the ~5 GB full-text index); builds the subset with androidApp/tools/make_subset_db.sh; explains pushing it to files/library with permissions fixed; cleans up the full DB if disk is tight.",
+      "files": [],
+      "expectations": [
+        "Checks free disk space (df) before downloading and states the space the library needs (roughly 8 GB for seforim.db, more with the full-text index)",
+        "Does not rely on api.github.com (refused by the session proxy for unattached repos); uses github.com/.../releases/latest/download/ URLs or the bundle manifest",
+        "Streams the multi-part .tar.zst (concatenated parts) through zstd -d and tar without storing the whole archive, or uses an equivalent streaming approach",
+        "Offers to skip the ~5 GB seforim.db.lucene full-text index when disk is tight",
+        "Builds the small DB with androidApp/tools/make_subset_db.sh",
+        "Describes putting the subset on the emulator under the app's files/library folder and fixing ownership/permissions (chmod 666 or chown + restorecon)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "about-welcome-parity-keeps-attribution",
+      "prompt": "תעשה שמסך האודות ומסך הפתיחה של האנדרואיד יהיו בדיוק כמו במחשב.",
+      "expected_output": "Aligns layout and styling with desktop but keeps the authorship texts: the welcome step, the settings header, About and terms say the app, Pardes, is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it. Does not restore desktop's 'נוצר על ידי אליהו גמבש' or 'שנבנה באהבה על ידי אברך ומפתח חרדי'. Keeps the copyright, AGPL and §7b notices. Names no porter and links this repository only as Pardes's AGPL source. Tells the user in Hebrew why these texts differ from desktop.",
+      "files": [],
+      "expectations": [
+        "Keeps the wording that the app is Pardes, based on Zayit by Elie (Elyahou) Gambache, who did not make it, is not responsible for it and gives it no support, and never calls it Zayit",
+        "Does not copy desktop's 'נוצר על ידי אליהו גמבש' or 'שנבנה באהבה על ידי אברך ומפתח חרדי' as describing the Android app",
+        "Keeps the original copyright line, the AGPL-3.0 notice and the line 'Powered by the technologies that drive Zayit — https://zayitapp.com/'",
+        "Does not name the porter, and links this repository only as Pardes's AGPL source (קוד המקור של פרדס)",
+        "Tells the user, in Hebrew, that the authorship texts differ from desktop on purpose"
+      ]
+    }
+  ]
+}

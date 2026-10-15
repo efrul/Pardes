@@ -1,0 +1,11 @@
+[
+ {"file": "shots/home.png", "name": "01-home", "title": "הספרייה התורנית בטלפון", "subtitle": "זמני היום, הלוח והחיפוש בדף הבית, כמו בזית למחשב", "device": "phone", "theme": "light"},
+ {"file": "shots/search.png", "name": "02-search", "title": "חיפוש מלא בכל הספרים", "subtitle": "בלי אינטרנט, מקובץ לפי ספר ומסונן לפי קטגוריה", "device": "phone", "theme": "light"},
+ {"file": "shots/reader.png", "name": "03-reader", "title": "קריאה נוחה", "subtitle": "ניקוד וטעמים, מפרשים, תרגומים וקישורים", "device": "phone", "theme": "light"},
+ {"file": "shots/reader-dark.png", "name": "04-dark", "title": "גם במצב כהה", "subtitle": "ערכות נושא וצבעים כמו בזית למחשב", "device": "phone", "theme": "dark"},
+ {"file": "shots/molad.png", "name": "05-tools", "title": "כלים ללימוד ולזמנים", "subtitle": "מולד וקידוש לבנה, לוח עברי, מילון ועוד", "device": "phone", "theme": "light"},
+ {"file": "shots/year-cycle.png", "name": "06-year-cycle", "title": "מעגל השנה", "subtitle": "החגים והמועדים סביב השמש", "device": "phone", "theme": "dark"},
+ {"file": "shots/js-reader.png", "name": "07-small-screen", "title": "מותאם גם למסך קטן", "subtitle": "נבדק על Jelly Star", "device": "small", "theme": "light"},
+ {"file": "shots/launcher-widgets.png", "name": "08-widgets", "title": "ווידג'טים למסך הבית", "subtitle": "לימוד יומי, הזמן הבא והתאריך במבט אחד", "device": "small", "theme": "dark"},
+ {"file": "shots/tablet-search.png", "name": "09-tablet", "title": "בטאבלט: הכל לצד הכל", "subtitle": "תוצאות, קריאה ופרטי הספר באותו מסך", "device": "tablet", "theme": "light"}
+]

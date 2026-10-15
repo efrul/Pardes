@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Pardes icon: gold letters on olive green -->
+    <color name="pardes_olive_light">#3E4D24</color>
+    <color name="pardes_olive_dark">#1C2410</color>
+    <color name="pardes_gold_light">#F6DC8C</color>
+    <color name="pardes_gold_dark">#B8862A</color>
+    <color name="window_background">#F2F3F5</color>
+</resources>

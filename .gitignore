@@ -15,4 +15,6 @@ Pods/
 *.jks
 *.gpg
 *yarn.lock
-.claude/
+.claude/*
+# Project skills are shared with every Claude Code session on this repo.
+!.claude/skills/
