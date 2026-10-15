@@ -12,14 +12,41 @@ device: phone (1080x1920 portrait), small (Jelly Star, same canvas, smaller devi
 footer: optional; a small extra line under DEFAULT_FOOTER (what the app is), which is always drawn.
 The overview repeats DEFAULT_FOOTER in large type.
 Writes <name>.png per shot plus overview.png (all shots side by side, scaled down).
-Needs Pillow with raqm (python3 -c "from PIL import features; print(features.check('raqm'))")
-so the Hebrew lays out right to left. The font is desktop's Open Sans from this repository.
+Hebrew lays out right to left with Pillow's raqm (python3 -c "from PIL import features; print(features.check('raqm'))");
+without it (Pillow's Windows wheels), python-bidi puts each line in visual order instead. The font is desktop's Open Sans
+from this repository.
 """
 import json
 import os
 import sys
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, features
+
+if not features.check("raqm"):
+    # No raqm: a font call asked for direction="rtl" gets the text in visual order (python-bidi) and no direction,
+    # which basic layout cannot take
+    try:
+        from bidi import get_display
+    except ImportError:
+        from bidi.algorithm import get_display
+
+    def _basic_layout(method):
+        def call(self, text, *args, **kwargs):
+            args = list(args)
+            direction = kwargs.pop("direction", None)
+            if direction is None and len(args) >= 2 and args[1] in ("rtl", "ltr", "ttb"):
+                direction = args[1]
+                args[1:4] = [None] * len(args[1:4])
+            kwargs.pop("features", None)
+            kwargs.pop("language", None)
+            if direction == "rtl" and isinstance(text, str):
+                text = get_display(text, base_dir="R")
+            return method(self, text, *args, **kwargs)
+
+        return call
+
+    for _name in ("getlength", "getbbox", "getmask2"):
+        setattr(ImageFont.FreeTypeFont, _name, _basic_layout(getattr(ImageFont.FreeTypeFont, _name)))
 
 # Desktop's own Open Sans: one variable font with Hebrew, Latin punctuation and digits
 # (Noto Sans Hebrew has no comma or digits, which come out as boxes).
