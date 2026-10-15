@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A launcher widget's outline (the Home's WidgetShape, 18 dp): the root clips to it, so the launcher keeps its corners. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/appwidget_panel" />
+    <corners android:radius="18dp" />
+</shape>

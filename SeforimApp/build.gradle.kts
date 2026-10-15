@@ -197,7 +197,7 @@ kotlin {
 //    compileSdk = 35
 //
 //    defaultConfig {
-//        applicationId = "io.github.kdroidfilter.seforimapp.androidApp"
+//        applicationId = "io.github.efrul.zayit"
 //        minSdk = 21
 //        targetSdk = 35
 //        versionCode = 1

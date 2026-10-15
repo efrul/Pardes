@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Trust the certificates the user installed as well as the system ones, for every host. Israeli content filters
+  (NetFree, Rimon, Etrog...) inspect HTTPS with a root certificate their users install; apps targeting API 24+ ignore
+  user certificates by default, so the library download and the release lookup would fail behind them. Desktop does
+  the same by trusting the OS certificate store (network/TrustedRootsSSL.kt). Clear-text traffic stays off.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

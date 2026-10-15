@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher widget "לימוד יומי" (appwidget/WidgetRenderers.kt, LimudPanel): the title and the Hebrew date, then the
+     limudim in one column or two (aw_col_a is the right one); the rows are added at run time. On one short launcher row
+     the title (aw_header) is hidden and the limudim go alone. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/appwidget_shape"
+    android:clipToOutline="true"
+    android:layoutDirection="rtl">
+
+    <ImageView
+        android:id="@+id/aw_fill"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/appwidget_fill"
+        android:tint="@color/appwidget_panel" />
+
+    <ImageView
+        android:id="@+id/aw_border"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/appwidget_border"
+        android:tint="@color/appwidget_panel_border" />
+
+    <LinearLayout
+        android:id="@+id/aw_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:id="@+id/aw_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="22dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/aw_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="לימוד יומי"
+                android:textAlignment="viewStart"
+                android:textColor="@color/appwidget_text"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/aw_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:paddingEnd="4dp"
+                android:textColor="@color/appwidget_text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/aw_columns"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="2dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/aw_col_a"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical" />
+
+            <FrameLayout
+                android:id="@+id/aw_col_gap"
+                android:layout_width="12dp"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/aw_col_b"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

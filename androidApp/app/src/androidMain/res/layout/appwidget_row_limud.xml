@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A limud of the "לימוד יומי" launcher widget (LimudRow): its kind as a tag, the day's reading, and towards the end of
+     the line the chevron of the ones that open in the library. A row too short for the tag (aw_kicker_box) leaves it
+     out. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/aw_row"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp">
+
+    <FrameLayout
+        android:id="@+id/aw_kicker_box"
+        android:layout_width="54dp"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/aw_kicker_bg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/appwidget_tag"
+            android:tint="@color/appwidget_accent_tint" />
+
+        <TextView
+            android:id="@+id/aw_kicker"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:textColor="@color/appwidget_accent"
+            android:textSize="11sp" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/aw_value"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:textAlignment="viewStart"
+        android:textColor="@color/appwidget_text"
+        android:textSize="13sp" />
+
+    <ImageView
+        android:id="@+id/aw_chevron"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="4dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/appwidget_chevron"
+        android:tint="@color/appwidget_text_secondary"
+        android:visibility="gone" />
+</LinearLayout>

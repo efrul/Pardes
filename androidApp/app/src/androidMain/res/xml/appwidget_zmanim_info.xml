@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- זמני היום: 2x2, down to the Jelly Star's two narrow cells; a row too short for the title shows the next zman
+     alone.
+     minResizeHeight 8 dp: a launcher (Launcher3) rounds up the rows the smallest size needs in every orientation, and
+     a Jelly Star row is about 30 dp high, some 16 sideways: the 40 to 80 dp before asked for two rows or more there,
+     and a single row was refused. Half the shortest row, so that no launcher's grid or rounding asks for two; a widget
+     is never drawn under one row. One row draws one line (appwidget/WidgetRenderers.kt), as tall as the row allows.
+     No polling (updatePeriodMillis 0): appwidget/ZayitWidgets redraws it when what it shows changes. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/appwidget_zmanim_description"
+    android:initialLayout="@layout/appwidget_loading"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="100dp"
+    android:minResizeHeight="8dp"
+    android:previewLayout="@layout/appwidget_zmanim_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

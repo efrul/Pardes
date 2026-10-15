@@ -58,7 +58,6 @@ import seforimapp.seforimapp.generated.resources.NachlieliCLM_Bold
 import seforimapp.seforimapp.generated.resources.NachlieliCLM_BoldOblique
 import seforimapp.seforimapp.generated.resources.NachlieliCLM_Light
 import seforimapp.seforimapp.generated.resources.NachlieliCLM_LightOblique
-import seforimapp.seforimapp.generated.resources.RashiAmiti
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.ShofarDemi_Bold
 import seforimapp.seforimapp.generated.resources.ShofarDemi_BoldOblique
@@ -106,7 +105,6 @@ import seforimapp.seforimapp.generated.resources.font_miriam_mono_clm
 import seforimapp.seforimapp.generated.resources.font_nachlieli_clm
 import seforimapp.seforimapp.generated.resources.font_noto_rashi_hebrew
 import seforimapp.seforimapp.generated.resources.font_noto_serif_hebrew
-import seforimapp.seforimapp.generated.resources.font_rashi_amiti
 import seforimapp.seforimapp.generated.resources.font_shofar
 import seforimapp.seforimapp.generated.resources.font_simple_clm
 import seforimapp.seforimapp.generated.resources.font_stam_ashkenaz_clm
@@ -144,7 +142,6 @@ object FontCatalog {
             FontOption(code = "bonanovasc", label = Res.string.font_bona_nova_sc),
             FontOption(code = "keteraramtsova", label = Res.string.font_keter_aram_tsova),
             FontOption(code = "keteryg", label = Res.string.font_keter_yg),
-            FontOption(code = "rashiamiti", label = Res.string.font_rashi_amiti),
             FontOption(code = "shofar", label = Res.string.font_shofar),
             FontOption(code = "taameyashkenaz", label = Res.string.font_taamey_ashkenaz),
             FontOption(code = "taameydavidclm", label = Res.string.font_taamey_david_clm),
@@ -216,10 +213,6 @@ object FontCatalog {
                     Font(resource = Res.font.KeterYG_MediumOblique, weight = FontWeight.Medium, style = FontStyle.Italic),
                     Font(resource = Res.font.KeterYG_Bold, weight = FontWeight.Bold),
                     Font(resource = Res.font.KeterYG_BoldOblique, weight = FontWeight.Bold, style = FontStyle.Italic),
-                )
-            "rashiamiti" ->
-                FontFamily(
-                    Font(resource = Res.font.RashiAmiti, weight = FontWeight.Normal),
                 )
             "shofar" ->
                 FontFamily(

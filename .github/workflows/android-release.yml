@@ -1,0 +1,171 @@
+name: Android release
+
+# Builds Pardes, the Android app based on Zayit (androidApp/), and publishes the APK as a GitHub release marked Latest,
+# so it shows in the repository's sidebar (a pre-release never does), with the build's complete source beside it.
+# Tag android-<versionName>-<run number> (e.g. android-0.2.0-7), APK pardes-<tag>.apk. Run numbers only grow, so tags
+# sort by version and then by build; a re-run of a run that already released gets -r<attempt> instead of colliding.
+# The desktop workflows inherited from Zayit (deploy.yaml, pages.yaml, update-download-count.yaml) were removed: they
+# would publish Zayit-branded installers or Zayit's own site from this repository.
+# The APK is signed with Pardes's own key, kept only in the repository's secrets (PARDES_KEYSTORE_BASE64,
+# PARDES_KEYSTORE_PASSWORD, PARDES_KEY_ALIAS, PARDES_KEY_PASSWORD), never with the debug key in the repository, which
+# would let anyone sign an "update". No release without it: the APK's certificate must be RELEASE_CERT_SHA256.
+
+# Runs only by hand, never on a push: Actions › Android release › Run workflow (on main, the default branch).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+env:
+  # SHA-256 of the release key's certificate, as apksigner prints it (also in the release notes, for checking a download)
+  RELEASE_CERT_SHA256: 293bf2a28ff954ef624cbee0292deb5b0d23819a93d4122a33483e2bc2d52772
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: Build APK and release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      # Android builds only against this submodule, pinned to the SeforimLibrary commit desktop Zayit 0.6.1 was built
+      # with (381fbea). The root SeforimLibrary and SeforimAcronymizer submodules belong to the desktop fork.
+      - name: Check out androidApp/upstream/SeforimLibrary
+        run: git submodule update --init androidApp/upstream/SeforimLibrary
+
+      # JDK 21: lucene-android compiles against lucene-core's Java 21 class files.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-36'
+
+      # basic: the open-source (MIT) cache provider, no extra terms. Not read-only, so a run started from another
+      # branch than the default one still writes the cache.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+          cache-read-only: false
+
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > androidApp/local.properties
+
+      - name: Release key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PARDES_KEYSTORE_BASE64 }}
+        run: |
+          [ -n "$KEYSTORE_BASE64" ] || { echo "The PARDES_KEYSTORE_BASE64 secret is missing: no release with the debug key" >&2; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/pardes-release.jks"
+          echo "PARDES_KEYSTORE=$RUNNER_TEMP/pardes-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        working-directory: androidApp
+        env:
+          PARDES_KEYSTORE_PASSWORD: ${{ secrets.PARDES_KEYSTORE_PASSWORD }}
+          PARDES_KEY_ALIAS: ${{ secrets.PARDES_KEY_ALIAS }}
+          PARDES_KEY_PASSWORD: ${{ secrets.PARDES_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --console=plain
+
+      # The APK must carry the release key's certificate: a build that fell back to the debug key is never published
+      - name: Check the APK's signature
+        run: |
+          # The build-tools AGP fetched for the build (35.0.0 with AGP 8.12), else installed here
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)"
+          if [ ! -x "$apksigner" ]; then
+            sdkmanager --install "build-tools;35.0.0" > /dev/null
+            apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          fi
+          [ -x "$apksigner" ] || { echo "apksigner not found under $ANDROID_HOME/build-tools" >&2; exit 1; }
+          "$apksigner" verify --print-certs androidApp/app/build/outputs/apk/release/app-release.apk | tee signature.txt
+          grep -qi "certificate SHA-256 digest: $RELEASE_CERT_SHA256$" signature.txt \
+            || { echo "The APK is not signed with the release key ($RELEASE_CERT_SHA256)" >&2; exit 1; }
+          rm -f "$RUNNER_TEMP/pardes-release.jks"
+
+      # Every missing reference would be a NoClassDefFoundError/NoSuchMethodError on Android 13: no release unless 0.
+      - name: Check lucene-android against API 33
+        run: |
+          androidApp/lucene-android/check-api33.sh androidApp/lucene-android/build/libs/lucene-android-*-android.jar \
+            | tee check-api33.txt
+          grep -q ': 0 missing references on API 33$' check-api33.txt
+          { echo '### lucene-android API 33 gate'; echo '```'; cat check-api33.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Name the release
+        id: name
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' androidApp/app/build.gradle.kts)"
+          [ -n "$version" ] || { echo "versionName not found in androidApp/app/build.gradle.kts" >&2; exit 1; }
+          tag="android-$version-$GITHUB_RUN_NUMBER"
+          if gh release view "$tag" > /dev/null 2>&1; then tag="$tag-r$GITHUB_RUN_ATTEMPT"; fi
+          apk="pardes-$tag.apk"
+          cp androidApp/app/build/outputs/apk/release/app-release.apk "$apk"
+          # AGPL §6: the APK's Corresponding Source. GitHub's own "Source code" archives leave out submodules, and the
+          # build compiles androidApp/upstream/SeforimLibrary, so this archive adds it at its path.
+          src="pardes-$tag-source.tar.gz"
+          git archive --prefix="pardes-$tag/" -o source.tar HEAD
+          git -C androidApp/upstream/SeforimLibrary archive --prefix="pardes-$tag/androidApp/upstream/SeforimLibrary/" \
+            -o "$GITHUB_WORKSPACE/submodule.tar" HEAD
+          tar --concatenate -f source.tar submodule.tar
+          gzip -n -9 -c source.tar > "$src"
+          (cd androidApp/tools && zip -q -X "$GITHUB_WORKSPACE/push-desktop-library-windows.zip" push-desktop-library.cmd push-desktop-library.ps1)
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "apk=$apk"
+            echo "src=$src"
+            echo "sha256=$(sha256sum "$apk" | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.name.outputs.version }}
+          TAG: ${{ steps.name.outputs.tag }}
+          APK: ${{ steps.name.outputs.apk }}
+          SRC: ${{ steps.name.outputs.src }}
+          SHA256: ${{ steps.name.outputs.sha256 }}
+        run: |
+          cat > notes.md <<EOF
+          פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.1 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
+
+          ### התקנה
+          - דרוש Android 13 ומעלה.
+          - מורידים את \`$APK\` מהקבצים שלמטה, פותחים אותו בטלפון ומאשרים התקנה מהמקור שממנו נפתח.
+          - ה-APK חתום במפתח החתימה של פרדס, וכל גרסה מותקנת מעל הקודמת. טביעת האצבע (SHA-256) של התעודה: \`$RELEASE_CERT_SHA256\`.
+
+          ### הספרייה
+          - בהפעלה הראשונה האפליקציה מורידה את ספריית הספרים שזית למחשב משתמש בה (כ-5.5 GB, ונדרשים כ-14.1 GB פנויים).
+          - מחשב שזית למחשב מותקן בו יכול להעביר את הספרייה שלו לטלפון דרך adb, בלי הורדה ובלי root. ב-Windows מחלצים את \`push-desktop-library-windows.zip\` לתיקייה (לחיצה ימנית › חלץ הכול) ולוחצים פעמיים על \`push-desktop-library.cmd\` שבה; ב-Linux/macOS מריצים \`bash push-desktop-library.sh\`. שניהם מצורפים כאן ונמצאים גם ב-\`androidApp/tools\` שבקוד המקור. דרוש adb (Android SDK Platform-Tools של Google).
+
+          ---
+          Copyright (C) 2025 Elie Gambache. GNU AGPL v3 with an additional attribution term (§7b), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
+          Powered by the technologies that drive Zayit — https://zayitapp.com/
+
+          נבנה מ-commit \`$GITHUB_SHA\`. SHA-256 של ה-APK: \`$SHA256\`
+          EOF
+          gh release create "$TAG" "$APK" "$SRC" \
+            push-desktop-library-windows.zip androidApp/tools/push-desktop-library.sh \
+            --target "$GITHUB_SHA" \
+            --title "פרדס $VERSION (בנייה $GITHUB_RUN_NUMBER) – מבוסס על זית" \
+            --notes-file notes.md \
+            --latest
+          echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG): \`$APK\`" >> "$GITHUB_STEP_SUMMARY"

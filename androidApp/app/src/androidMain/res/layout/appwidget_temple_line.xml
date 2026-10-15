@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher widget "חורבן הבית" one launcher row high (appwidget/WidgetRenderers.kt templeLine): TempleCountdownWidget's
+     still picture behind one line, the title's dot and the years since; its size and wording are set at run time. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/appwidget_temple_shape"
+    android:clipToOutline="true"
+    android:layoutDirection="rtl">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:src="@drawable/temple_small" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/appwidget_temple_scrim" />
+
+    <ImageView
+        android:id="@+id/aw_border"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/appwidget_border"
+        android:tint="@color/appwidget_panel_border" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <ImageView
+            android:id="@+id/aw_temple_dot"
+            android:layout_width="9dp"
+            android:layout_height="9dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/appwidget_temple_dot" />
+
+        <!-- A light shadow: a thin slice of the picture can be bright behind the line -->
+        <TextView
+            android:id="@+id/aw_line_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:shadowColor="@color/appwidget_temple_scrim_bottom"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            android:textColor="@color/appwidget_temple_title"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,455 @@
+// Android variant of the SeforimLibrary 0.6.1 file search/src/jvmMain/.../MagicDictionaryIndex.kt (submodule
+// upstream/SeforimLibrary at 381fbea), which app/build.gradle.kts excludes: the desktop file reads lexical.db through
+// JDBC (sqlite-jdbc), which Android does not have, so this one reads it with the platform SQLite, read-only. Public
+// API, lookup SQL, caches, prefetch and the expansion shape are the desktop ones.
+package io.github.kdroidfilter.seforimlibrary.search
+
+import android.database.sqlite.SQLiteDatabase
+import co.touchlab.kermit.Logger
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.LinkedBlockingDeque
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Streaming dictionary index backed by SQLite (tables: surface, variant, base).
+ * Previously we loaded the entire dictionary into memory; now we stream lookups
+ * on-demand with a small LRU cache while preserving the exact expansion shape
+ * used by the search ranking logic.
+ */
+class MagicDictionaryIndex private constructor(
+    private val norm: (String) -> String,
+    private val dbFile: Path
+) {
+    /**
+     * The forms a token expands to. [surface] holds every form (inflections, then the dictionary's variants, then
+     * the base) as the ranking uses them; [inflections] only the base's inflected forms and the base itself: the
+     * variants also hold loose associations (יום for הוא), so they don't count as the same word.
+     */
+    data class Expansion(
+        val surface: List<String>,
+        val variants: List<String>,
+        val base: List<String>,
+        val inflections: List<String> = emptyList()
+    )
+
+    // Android: desktop keeps a JDBC connection per thread. A read-only SQLiteDatabase outside WAL mode has a single
+    // connection, which would queue the parallel lookups, so a few handles are opened on demand and lent per lookup.
+    private val handles = LinkedBlockingDeque<SQLiteDatabase>()
+    private val openedHandles = AtomicInteger()
+
+    @Volatile
+    private var closed = false
+
+    // Dictionaries since v0.4.2 list the extra lemmas of ambiguous surfaces (פנינו: פנה and פנים)
+    private val lookupSql: String by lazy {
+        withDb { db -> if (db.hasTable(EXTRA_BASE_TABLE)) LOOKUP_WITH_EXTRA_BASES_SQL else LOOKUP_SQL }
+    }
+    private val lookupParamCount: Int by lazy { lookupSql.count { it == '?' } }
+
+    private fun <T> withDb(block: (SQLiteDatabase) -> T): T {
+        val db = borrow()
+        try {
+            return block(db)
+        } finally {
+            handles.offerFirst(db)
+            // Closed meanwhile: the handle goes too
+            if (closed) closeHandles()
+        }
+    }
+
+    /**
+     * Android: closes the lexical.db handles, with the engine (desktop leaves its per-thread JDBC connections open).
+     * A lookup still running closes its handle when it ends; one started later opens and closes its own.
+     */
+    fun close() {
+        closed = true
+        closeHandles()
+    }
+
+    private fun closeHandles() {
+        while (true) {
+            val db = handles.pollFirst() ?: return
+            runCatching { db.close() }
+            openedHandles.decrementAndGet()
+        }
+    }
+
+    private fun borrow(): SQLiteDatabase {
+        while (true) {
+            handles.pollFirst()?.let { return it }
+            if (openedHandles.getAndUpdate { if (it < MAX_HANDLES) it + 1 else it } < MAX_HANDLES) {
+                // A failed open (file replaced or deleted under a running search) gives its slot back, else the
+                // lookups would wait forever for handles that never come
+                return try {
+                    openReadOnly(dbFile)
+                } catch (t: Throwable) {
+                    openedHandles.decrementAndGet()
+                    throw t
+                }
+            }
+            // Re-check now and then: a slot freed by a failed open returns no handle to wait for
+            handles.pollFirst(HANDLE_WAIT_MS, TimeUnit.MILLISECONDS)?.let { return it }
+        }
+    }
+
+    /**
+     * Cache expansions per normalized token to avoid repeated DB hits. Lookups in progress are cached too, so
+     * concurrent searches (facets and results start together) share them.
+     */
+    private val tokenCache = object : LinkedHashMap<String, CompletableFuture<List<Expansion>>>(TOKEN_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CompletableFuture<List<Expansion>>>?): Boolean =
+            size > TOKEN_CACHE_SIZE
+    }
+
+    /**
+     * Cache fully-normalized expansions per base id so repeated hits to the same base
+     * avoid re-normalizing rows.
+     */
+    private val baseCache = object : LinkedHashMap<Long, Expansion>(BASE_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Expansion>?): Boolean =
+            size > BASE_CACHE_SIZE
+    }
+
+    /** Starts looking up [tokens] in parallel, so the following [expansionFor] calls find them ready. */
+    fun prefetch(tokens: Collection<String>) {
+        tokens.forEach { lookup(it, async = true) }
+    }
+
+    fun expansionsFor(tokens: List<String>): List<Expansion> =
+        tokens.flatMap { expansionsForToken(it) }.distinct()
+
+    fun expansionFor(token: String): Expansion? {
+        val expansions = expansionsForToken(token)
+        if (expansions.isEmpty()) return null
+
+        val normalized = norm(token)
+        // Strategy: prefer the expansion whose base matches the token
+        val matchingBase = expansions.firstOrNull { exp ->
+            exp.base.any { it == normalized }
+        }
+        if (matchingBase != null) return matchingBase
+
+        // Then the entries the token truly is a form of: one reached only through a dictionary variant (loose
+        // associations: לעולם to יום) isn't the token's paradigm, however large
+        val ownEntries = expansions.filter { exp -> exp.inflections.any { it == normalized } }
+
+        // The largest of them (more terms = more complete paradigm)
+        return ownEntries.ifEmpty { expansions }.maxByOrNull { it.surface.size }
+    }
+
+    private fun expansionsForToken(token: String): List<Expansion> = lookup(token, async = false).join()
+
+    private fun lookup(token: String, async: Boolean): CompletableFuture<List<Expansion>> {
+        val normalized = norm(token)
+        if (normalized.isEmpty()) return CompletableFuture.completedFuture(emptyList())
+        val future = CompletableFuture<List<Expansion>>()
+        synchronized(tokenCache) {
+            tokenCache[normalized]?.let { return it }
+            tokenCache[normalized] = future
+        }
+        val fetch = Runnable {
+            // fetchExpansions logs and skips its failures: an empty result is cached like any other
+            future.complete(runCatching { fetchForToken(token, normalized) }.getOrDefault(emptyList()))
+        }
+        if (async) lookupExecutor.execute(fetch) else fetch.run()
+        return future
+    }
+
+    private fun fetchForToken(token: String, normalized: String): List<Expansion> {
+        // Try raw, normalized, and final-form variants to match DB values.
+        val candidates = buildLookupCandidates(token, normalized)
+        val mergedByBase = LinkedHashMap<Long, Expansion>()
+
+        for (candidate in candidates) {
+            val fetched = fetchExpansions(candidate, normalized)
+            for ((baseId, exp) in fetched) {
+                val existing = mergedByBase[baseId]
+                if (existing == null) {
+                    mergedByBase[baseId] = exp
+                } else {
+                    val surfaces = (existing.surface + exp.surface).distinct()
+                    val variants = (existing.variants + exp.variants).distinct()
+                    val base = (existing.base + exp.base).distinct()
+                    val inflections = (existing.inflections + exp.inflections).distinct()
+                    mergedByBase[baseId] = Expansion(surfaces, variants, base, inflections)
+                }
+            }
+        }
+        return mergedByBase.values.toList()
+    }
+
+    /**
+     * Fetch expansions for a token. Returns a list of (baseId, Expansion) pairs so callers can merge by base id.
+     */
+    private fun fetchExpansions(rawToken: String, normalizedToken: String): List<Pair<Long, Expansion>> {
+        val expansions = mutableListOf<Pair<Long, Expansion>>()
+
+        runCatching {
+            val accum = mutableMapOf<Long, BaseBucket>()
+            // Read before borrowing a handle: the first read borrows one itself
+            val sql = lookupSql
+            val args = Array(lookupParamCount) { rawToken }
+            withDb { db ->
+                db.rawQuery(sql, args).use { c ->
+                    val baseIdCol = c.getColumnIndexOrThrow("base_id")
+                    val baseCol = c.getColumnIndexOrThrow("base")
+                    val surfaceCol = c.getColumnIndexOrThrow("surface")
+                    val variantCol = c.getColumnIndexOrThrow("variant")
+                    while (c.moveToNext()) {
+                        val baseId = c.getLong(baseIdCol)
+                        val bucket = accum.getOrPut(baseId) {
+                            BaseBucket(
+                                baseRaw = c.getString(baseCol) ?: "",
+                                surfaces = linkedSetOf(),
+                                variants = linkedSetOf()
+                            )
+                        }
+                        c.getString(surfaceCol)?.let { bucket.surfaces += it }
+                        c.getString(variantCol)?.let { bucket.variants += it }
+                    }
+                }
+            }
+
+            for ((baseId, bucket) in accum) {
+                val cached = synchronized(baseCache) { baseCache[baseId] }
+                if (cached != null) {
+                    expansions += baseId to cached
+                    continue
+                }
+
+                val surfaceN = bucket.surfaces.mapNotNull { v -> norm(v).takeIf { it.isNotEmpty() } }
+                val variantsN = bucket.variants.mapNotNull { v -> norm(v).takeIf { it.isNotEmpty() } }
+                val baseN = norm(bucket.baseRaw).takeIf { it.isNotEmpty() }
+                    ?: surfaceN.firstOrNull()
+                    ?: normalizedToken
+
+                val baseTerms = listOfNotNull(baseN.takeIf { it.isNotEmpty() })
+                val allTerms = (surfaceN + variantsN + baseTerms).distinct()
+                if (allTerms.isEmpty()) continue
+
+                val exp = Expansion(
+                    surface = allTerms,
+                    variants = emptyList(),
+                    base = baseTerms,
+                    inflections = (surfaceN + baseTerms).distinct()
+                )
+
+                synchronized(baseCache) {
+                    baseCache[baseId] = exp
+                }
+                expansions += baseId to exp
+            }
+        }.onFailure {
+            logger.d { "[MagicDictionary] Failed to fetch expansions for '$rawToken' : ${it.message}" }
+        }
+
+        return expansions
+    }
+
+    companion object {
+        private val logger = Logger.withTag("MagicDictionary")
+        private const val TOKEN_CACHE_SIZE = 1024
+
+        // Parallel lookups of a query's words (each thread keeps its own connection)
+        private val lookupExecutor: ExecutorService by lazy {
+            val ids = AtomicInteger()
+            Executors.newFixedThreadPool(minOf(Runtime.getRuntime().availableProcessors(), 4)) { task ->
+                Thread(task, "magic-dictionary-${ids.incrementAndGet()}").apply { isDaemon = true }
+            }
+        }
+        private const val BASE_CACHE_SIZE = 512
+
+        // Android: lexical.db handles per dictionary, as many as lookup threads
+        private val MAX_HANDLES = minOf(Runtime.getRuntime().availableProcessors(), 4)
+        private const val HANDLE_WAIT_MS = 100L
+
+        private fun openReadOnly(file: Path): SQLiteDatabase =
+            SQLiteDatabase.openDatabase(
+                file.toAbsolutePath().toString(),
+                null,
+                SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS,
+            )
+
+        /**
+         * Load from SQLite DB (expected tables: surface(value, base_id), variant(value, surface_id), base(value)).
+         * Uses streaming lookup to avoid holding the entire dictionary in memory.
+         */
+        fun load(norm: (String) -> String, candidate: Path?): MagicDictionaryIndex? {
+            val file = candidate?.takeIf { Files.isRegularFile(it) && hasRequiredTables(it) } ?: run {
+                if (candidate != null) {
+                    logger.d { "[MagicDictionary] Ignoring candidate $candidate because required tables are missing" }
+                }
+                return null
+            }
+            return runCatching {
+                // Validate DB is reachable
+                openReadOnly(file).use { it.rawQuery("SELECT 1", null).use { c -> c.moveToFirst() } }
+                logger.d { "[MagicDictionary] Streaming lexical db from $file (lazy on-demand)" }
+                MagicDictionaryIndex(norm, file)
+            }.onFailure {
+                logger.d { "[MagicDictionary] Failed to load from $file : ${it.message}" }
+            }.getOrNull()
+        }
+
+        /**
+         * Find the first candidate path that exists and contains the required tables.
+         */
+        fun findValidDictionary(candidates: List<Path>): Path? {
+            for (candidate in candidates) {
+                if (!Files.isRegularFile(candidate)) continue
+                if (hasRequiredTables(candidate)) {
+                    logger.d { "[MagicDictionary] Using validated lexical db at $candidate" }
+                    return candidate
+                } else {
+                    logger.d {
+                        "[MagicDictionary] Candidate $candidate is present but missing required tables; skipping"
+                    }
+                }
+            }
+            return null
+        }
+
+        private fun hasRequiredTables(file: Path): Boolean = runCatching {
+            openReadOnly(file).use { db ->
+                val sql = """
+                    SELECT name FROM sqlite_master
+                    WHERE type = 'table' AND name IN ('surface', 'variant', 'base', 'surface_variant')
+                """.trimIndent()
+                db.rawQuery(sql, null).use { c ->
+                    val names = mutableSetOf<String>()
+                    while (c.moveToNext()) names += c.getString(0) ?: ""
+                    names.containsAll(listOf("surface", "variant", "base", "surface_variant"))
+                }
+            }
+        }.getOrElse { false }
+
+        private const val LOOKUP_SQL = """
+            WITH matches AS (
+                SELECT s.base_id AS base_id FROM surface s WHERE s.value = ?
+                UNION
+                SELECT b.id FROM base b WHERE b.value = ?
+                UNION
+                SELECT s.base_id FROM variant v
+                JOIN surface_variant sv ON sv.variant_id = v.id
+                JOIN surface s ON sv.surface_id = s.id
+                WHERE v.value = ?
+            )
+            SELECT b.id as base_id,
+                   b.value as base,
+                   s.value as surface,
+                   v.value as variant
+            FROM base b
+            JOIN matches m ON m.base_id = b.id
+            LEFT JOIN surface s ON s.base_id = b.id
+            LEFT JOIN surface_variant sv ON sv.surface_id = s.id
+            LEFT JOIN variant v ON sv.variant_id = v.id
+        """
+
+        private const val EXTRA_BASE_TABLE = "surface_extra_base"
+
+        /**
+         * [LOOKUP_SQL] plus the extra lemmas of ambiguous surfaces: a token matches every lemma it is a form of, and
+         * such a surface counts among the forms of each. Its variants stay with its primary lemma only, as they hold
+         * associations of that reading.
+         */
+        private const val LOOKUP_WITH_EXTRA_BASES_SQL = """
+            WITH matches AS (
+                SELECT s.base_id AS base_id FROM surface s WHERE s.value = ?
+                UNION
+                SELECT e.base_id FROM surface_extra_base e JOIN surface s ON s.id = e.surface_id WHERE s.value = ?
+                UNION
+                SELECT b.id FROM base b WHERE b.value = ?
+                UNION
+                SELECT s.base_id FROM variant v
+                JOIN surface_variant sv ON sv.variant_id = v.id
+                JOIN surface s ON sv.surface_id = s.id
+                WHERE v.value = ?
+            ),
+            members AS (
+                SELECT s.base_id AS base_id, s.id AS surface_id, 1 AS own
+                FROM surface s WHERE s.base_id IN (SELECT base_id FROM matches)
+                UNION ALL
+                SELECT e.base_id, e.surface_id, 0
+                FROM surface_extra_base e WHERE e.base_id IN (SELECT base_id FROM matches)
+            )
+            SELECT b.id as base_id,
+                   b.value as base,
+                   s.value as surface,
+                   v.value as variant
+            FROM base b
+            JOIN matches m ON m.base_id = b.id
+            LEFT JOIN members mb ON mb.base_id = b.id
+            LEFT JOIN surface s ON s.id = mb.surface_id
+            LEFT JOIN surface_variant sv ON sv.surface_id = s.id AND mb.own = 1
+            LEFT JOIN variant v ON sv.variant_id = v.id
+        """
+
+        private fun SQLiteDatabase.hasTable(name: String): Boolean =
+            rawQuery("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", arrayOf(name)).use { it.moveToFirst() }
+    }
+
+    private data class BaseBucket(
+        val baseRaw: String,
+        val surfaces: MutableSet<String>,
+        val variants: MutableSet<String>
+    )
+
+    private fun buildLookupCandidates(rawToken: String, normalized: String): List<String> {
+        val finalsMap = mapOf(
+            'כ' to 'ך',
+            'מ' to 'ם',
+            'נ' to 'ן',
+            'פ' to 'ף',
+            'צ' to 'ץ'
+        )
+
+        fun applyFinalForm(t: String): String {
+            if (t.isEmpty()) return t
+            val last = t.last()
+            val final = finalsMap[last] ?: last
+            return if (final == last) t else t.dropLast(1) + final
+        }
+
+        return listOf(
+            rawToken,
+            normalized,
+            applyFinalForm(rawToken),
+            applyFinalForm(normalized)
+        ).filter { it.isNotBlank() }.distinct()
+    }
+
+    /**
+     * Load all surface forms whose base lemma directly from the underlying SQLite DB.
+     * This is used for snippet highlighting of Hashem names, independent of token-level expansions.
+     */
+    fun loadHashemSurfaces(): List<String> {
+        val terms = linkedSetOf<String>()
+        runCatching {
+            withDb { db ->
+                val sql = """
+                    SELECT s.value AS surface
+                    FROM surface s
+                    JOIN base b ON s.base_id = b.id
+                    WHERE b.value = 'יהוה'
+                """.trimIndent()
+                db.rawQuery(sql, null).use { c ->
+                    while (c.moveToNext()) {
+                        val v = c.getString(0) ?: continue
+                        val trimmed = v.trim()
+                        if (trimmed.isNotEmpty()) {
+                            terms += trimmed
+                        }
+                    }
+                }
+            }
+        }.onFailure {
+            logger.d { "[MagicDictionary] Failed to load Hashem surfaces: ${it.message}" }
+        }
+        return terms.toList()
+    }
+}

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher widget "חיפוש בפרדס" (appwidget/WidgetRenderers.kt): a search field's look; a tap opens the Home, where
+     the search bar is. Static, so it is its own preview in the launcher's widget list. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/appwidget_shape"
+    android:clipToOutline="true"
+    android:layoutDirection="rtl">
+
+    <ImageView
+        android:id="@+id/aw_fill"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/appwidget_fill"
+        android:tint="@color/appwidget_panel" />
+
+    <ImageView
+        android:id="@+id/aw_border"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/appwidget_border"
+        android:tint="@color/appwidget_panel_border" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="14dp">
+
+        <ImageView
+            android:id="@+id/aw_logo"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:importantForAccessibility="no"
+            android:src="@mipmap/ic_launcher_round" />
+
+        <TextView
+            android:id="@+id/aw_hint"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="חפש בפרדס…"
+            android:textAlignment="viewStart"
+            android:textColor="@color/appwidget_text_secondary"
+            android:textSize="15sp" />
+
+        <ImageView
+            android:id="@+id/aw_search_icon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginStart="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/appwidget_search_icon"
+            android:tint="@color/appwidget_text_secondary" />
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Islands tokens of ui/theme/ZayitTheme.kt (zayitColors, light here, dark in values-night), Gold accent.
+         Only the widget list's previews and a widget's first frame use them: a placed widget is drawn in the app's own
+         theme and accent (appwidget/WidgetData.kt palette). accent_tint is the accent's tint composited on the panel. -->
+    <color name="appwidget_panel">#FFFFFF</color>
+    <color name="appwidget_panel_border">#EBECF0</color>
+    <color name="appwidget_text">#1F1F1F</color>
+    <color name="appwidget_text_secondary">#6C707E</color>
+    <color name="appwidget_accent">#BE9117</color>
+    <color name="appwidget_accent_tint">#F6F0DE</color>
+
+    <!-- TempleCountdownWidget's fixed colours over the picture, the same by day and by night: white at 85, 78 and
+         60 %, the glass's black at 35 % and its edge white at 15 %, the scrim's black at 25 to 45 %. -->
+    <color name="appwidget_temple_title">#D9FFFFFF</color>
+    <color name="appwidget_temple_label">#C7FFFFFF</color>
+    <color name="appwidget_temple_subtitle">#99FFFFFF</color>
+    <color name="appwidget_temple_value">#FFFFFFFF</color>
+    <color name="appwidget_temple_glass">#59000000</color>
+    <color name="appwidget_temple_glass_edge">#26FFFFFF</color>
+    <color name="appwidget_temple_dot_edge">#4DFFFFFF</color>
+    <color name="appwidget_temple_dot_start">#FFFF6B35</color>
+    <color name="appwidget_temple_dot_end">#FFFFAA70</color>
+    <color name="appwidget_temple_scrim_top">#40000000</color>
+    <color name="appwidget_temple_scrim_bottom">#73000000</color>
+    <color name="appwidget_temple_ground">#FF000000</color>
+</resources>
