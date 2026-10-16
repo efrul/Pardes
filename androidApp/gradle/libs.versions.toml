@@ -47,6 +47,10 @@ zmanim = { module = "com.kosherjava:zmanim", version.ref = "zmanim" }
 kosherkotlin = { module = "io.github.kdroidfilter:kosherkotlin", version.ref = "kosherkotlin" }
 hebrew-numerals = { module = "io.github.kdroidfilter:hebrewnumerals", version.ref = "hebrew-numerals" }
 zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
+# A SQLite of its own (3.49) with extension loading: the multiplex VFS for a library split on a FAT32 card.
+requery-sqlite = { module = "com.github.requery:sqlite-android", version = "3.49.0" }
+# Android's SQLite behind SQLDelight's driver (its runtime dependency, at the version it brings), named for LibraryStore.
+androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version = "2.6.2" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 
 [plugins]

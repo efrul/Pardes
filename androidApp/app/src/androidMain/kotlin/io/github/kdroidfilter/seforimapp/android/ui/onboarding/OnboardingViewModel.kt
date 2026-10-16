@@ -9,11 +9,13 @@ import io.github.kdroidfilter.seforimapp.android.data.InstallError
 import io.github.kdroidfilter.seforimapp.android.data.InstallPurpose
 import io.github.kdroidfilter.seforimapp.android.data.InstallState
 import io.github.kdroidfilter.seforimapp.android.data.LibraryInstaller
+import io.github.kdroidfilter.seforimapp.android.data.LibraryLocation
 import io.github.kdroidfilter.seforimapp.android.data.worldPlaces
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,9 +42,24 @@ internal enum class Community(val code: String, val label: String) {
     Sefard("SEFARD", DesktopStrings.onboardingUserCommunitySefard),
 }
 
-internal data class DiskState(val loading: Boolean = true, val totalBytes: Long = 0L, val availableBytes: Long = 0L) {
+/** A place the library can go (the phone or a memory card), with its free space now. Android only. */
+internal data class LocationChoice(val location: LibraryLocation, val space: LibraryInstaller.DiskSpace) {
+    val fits: Boolean get() = space.availableBytes >= LibraryInstaller.REQUIRED_SPACE_BYTES
+
+    val usable: Boolean get() = fits
+}
+
+internal data class DiskState(
+    val loading: Boolean = true,
+    val totalBytes: Long = 0L,
+    val availableBytes: Long = 0L,
+    /** Android: the phone and the memory cards, when there is a card to choose. */
+    val choices: List<LocationChoice> = emptyList(),
+    val selectedKey: String = LibraryLocation.PHONE,
+) {
     val requiredBytes: Long get() = LibraryInstaller.REQUIRED_SPACE_BYTES
-    val enough: Boolean get() = availableBytes >= requiredBytes
+    val selected: LocationChoice? get() = choices.firstOrNull { it.location.key == selectedKey }
+    val enough: Boolean get() = selected?.usable ?: (availableBytes >= requiredBytes)
 }
 
 /** What the install-type and offline steps found on the device. */
@@ -67,6 +84,7 @@ internal data class RegionState(val countryIndex: Int = -1, val cityIndex: Int =
 internal class OnboardingViewModel(app: ZayitApplication) : ViewModel() {
     val installer: LibraryInstaller = LibraryInstaller.get(app)
     private val prefs = app.prefs
+    private val store = app.libraryStore
 
     private val _stack = MutableStateFlow(initialStack(installer.state.value))
     val stack: StateFlow<List<OnboardingStep>> = _stack.asStateFlow()
@@ -104,6 +122,10 @@ internal class OnboardingViewModel(app: ZayitApplication) : ViewModel() {
     init {
         viewModelScope.launch { installer.state.collect { onInstallState(it) } }
         if (!installer.isBusy) refreshDevice()
+        // A memory card put in or taken out while the disk step is open: list the places again.
+        viewModelScope.launch {
+            app.mediaChanges.drop(1).collect { if (step == OnboardingStep.DiskSpace) refreshDisk() }
+        }
     }
 
     fun citiesOf(countryIndex: Int): List<String> {
@@ -173,13 +195,34 @@ internal class OnboardingViewModel(app: ZayitApplication) : ViewModel() {
     fun refreshDisk() {
         viewModelScope.launch {
             _disk.update { it.copy(loading = true) }
-            val space = withContext(Dispatchers.IO) {
+            _disk.value = withContext(Dispatchers.IO) {
                 installer.discardStaleDownload()
-                installer.diskSpace()
+                store.refreshLocations()
+                val choices = store.locations.map { LocationChoice(it, it.space()) }
+                // The chosen place, unless it cannot take the library and another one can (a phone that is full, and a card).
+                val chosen = choices.firstOrNull { it.location.key == store.preferredKey } ?: choices.first()
+                val selected = if (!chosen.usable) choices.firstOrNull { it.usable } ?: chosen else chosen
+                store.setPreferred(selected.location)
+                diskState(choices, selected)
             }
-            _disk.value = DiskState(loading = false, totalBytes = space.totalBytes, availableBytes = space.availableBytes)
         }
     }
+
+    /** The library goes to [key] (the phone, or a memory card's UUID). */
+    fun selectLocation(key: String) {
+        val choices = _disk.value.choices
+        val choice = choices.firstOrNull { it.location.key == key } ?: return
+        store.setPreferred(choice.location)
+        _disk.value = diskState(choices, choice)
+    }
+
+    private fun diskState(choices: List<LocationChoice>, selected: LocationChoice) = DiskState(
+        loading = false,
+        totalBytes = selected.space.totalBytes,
+        availableBytes = selected.space.availableBytes,
+        choices = choices.takeIf { it.size > 1 }.orEmpty(),
+        selectedKey = selected.location.key,
+    )
 
     private fun refreshDevice() {
         viewModelScope.launch {

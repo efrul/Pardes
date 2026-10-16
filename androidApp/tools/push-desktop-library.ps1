@@ -3,11 +3,15 @@ Copies the library of desktop Zayit to Pardes (an Android app based on Zayit) ov
 העתקת הספרייה של זית למחשב אל פרדס בטלפון דרך adb, ללא הורדה של 5.5 ג״ב בטלפון.
 
   Double-click push-desktop-library.cmd next to this file, or:
-  powershell -ExecutionPolicy Bypass -File push-desktop-library.ps1 [-Source DIR] [-Serial SERIAL] [-WithNotes] [-DryRun]
+  powershell -ExecutionPolicy Bypass -File push-desktop-library.ps1 [-Source DIR] [-Serial SERIAL] [-SdCard [-CardUuid UUID]] [-WithNotes] [-DryRun]
 
   -Source DIR      desktop library folder (default: the folder of %SEFORIMAPP_DATABASE_PATH%, else the desktop
                    install, %APPDATA%\io.github.kdroidfilter.seforimapp\databases)
   -Serial SERIAL   device to use when several are connected (see `adb devices`)
+  -SdCard          copy to the memory card instead of the phone's storage (-CardUuid picks one of several cards):
+                   /storage/<UUID>/Android/data/<app>/files/library/. On a FAT32 card seforim.db goes in chunks of
+                   2 GiB less 64 KiB (seforim.db, seforim.db001...), which the app reads as one database. Once the copy
+                   is complete, a library in the phone's storage is removed: the app keeps one library.
   -WithNotes       also copy notes and highlights (settings\user_settings.db); they replace the phone's own
   -DryRun          print the adb commands instead of running them
 
@@ -16,12 +20,18 @@ release_info.txt (~12.2 GB) into /sdcard/Android/data/<app>/files/library/. Need
 installed, and Zayit closed on the computer. No root. Without root, `adb push` cannot write into another app's folder
 (its fchown fails there), and adb on Windows reads its standard input as text, so a stream through `adb shell -T`
 stops at the first 0x1A byte. So each file is pushed to /data/local/tmp/zayit-push and copied into place by the
-phone's shell, one file at a time: the phone needs room for the library plus its largest file (8 GB). An item is
+phone's shell, one file at a time, a file over 2 GiB in pieces of that size (written one by one in this computer's
+TEMP folder): the phone needs room for the library plus 2 GiB (with -SdCard: the card for the library, the phone
+for 2 GiB). An item is
 written as .zayit-incoming-<name> and renamed when complete (the app deletes <name>.part when it opens). The files belong to adb's `shell` user, so they are made writable
 for the app (SQLite opens the database read-write). Folders the app made itself (its own download) cannot be emptied
 by adb: they are renamed .zayit-old-* and the app deletes them when it next starts. Linux/macOS: push-desktop-library.sh.
 #>
-param([string]$Source = '', [string]$Serial = '', [switch]$WithNotes, [switch]$DryRun, [switch]$Help)
+param(
+    [string]$Source = '', [string]$Serial = '', [switch]$SdCard, [string]$CardUuid = '', [switch]$WithNotes, [switch]$DryRun, [switch]$Help,
+    # For tests: chunks on any card, and their size (a multiple of 64 KiB; the app reads any such size).
+    [switch]$Split, [long]$ChunkBytes = 2147418112
+)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 if ($Help) { foreach ($h in (Get-Content -LiteralPath $PSCommandPath -Encoding UTF8 | Select-Object -Skip 1)) { if ($h -eq '#>') { break }; $h }; exit 0 }
@@ -43,7 +53,8 @@ function Die($he, $en) {
     if ($script:Staging) { try { $null = & $Adb (Full @('shell', "rm -rf $Stage")) } catch { } }
     exit 1
 }
-if ($args.Count) { Die "אפשרות לא מוכרת: $args (האפשרויות: -Source, -Serial, -WithNotes, -DryRun)" "unknown option(s) $args; the options are -Source, -Serial, -WithNotes, -DryRun, -Help" }
+if ($args.Count) { Die "אפשרות לא מוכרת: $args (האפשרויות: -Source, -Serial, -SdCard, -CardUuid, -WithNotes, -DryRun)" "unknown option(s) $args; the options are -Source, -Serial, -SdCard, -CardUuid, -WithNotes, -DryRun, -Help" }
+if ($ChunkBytes -le 0 -or $ChunkBytes % 65536) { Die 'גודל החלק חייב להיות כפולה של 65536' '-ChunkBytes must be a multiple of 65536' }
 function SizeOf($p) {
     $item = Get-Item -LiteralPath $p
     if (-not $item.PSIsContainer) { return [long]$item.Length }
@@ -75,8 +86,8 @@ foreach ($d in 'seforim.db.lucene', 'seforim.db.lookup.lucene') {
 if ($WithNotes -and -not (Test-Path -LiteralPath $NotesDb)) { Die "לא נמצא קובץ ההערות $NotesDb" "no notes database at $NotesDb" }
 $Present = @($Items | Where-Object { Test-Path -LiteralPath (Join-Path $Source $_) })
 $TotalKb = [long](($Present | ForEach-Object { SizeOf (Join-Path $Source $_) } | Measure-Object -Sum).Sum / 1024)
-# Each file passes through the staging folder on the phone, so the largest one needs room twice.
-$LargestKb = [long](($Present | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $Source $_) -Recurse -File -Force } | Measure-Object Length -Maximum).Maximum / 1024)
+# Each file passes through the staging folder on the phone, a large one in pieces: the largest piece needs room twice.
+$LargestKb = [long]([Math]::Min(($Present | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $Source $_) -Recurse -File -Force } | Measure-Object Length -Maximum).Maximum, $ChunkBytes) / 1024)
 Say "מקור: $Source ($([long]($TotalKb / 1024)) מ״ב)" "source: $Source ($([long]($TotalKb / 1024)) MB): $Present"
 
 # --- adb and the device
@@ -99,6 +110,7 @@ if (-not $Adb) {
 }
 function Full([string[]]$a) { if ($Serial) { @('-s', $Serial) + $a } else { $a } }
 # Run: changes the device (printed with -DryRun). Ask: reads from it ($fake is the -DryRun answer).
+# A remote command holds no double quotes: Windows PowerShell 5.1 passes them to adb.exe unescaped, which drops them.
 function Run([string[]]$a) {
     $f = Full $a
     if ($DryRun) { Write-Host "    `$ adb $f"; return $true }
@@ -121,6 +133,27 @@ if (-not $Serial) {
 Say "מכשיר: $Serial" "device: $Serial"
 if ((Ask "package:/data/app/$Pkg/base.apk" @('shell', 'pm', 'path', $Pkg)) -notmatch '^package:') { Die 'פרדס אינו מותקן במכשיר' "Pardes ($Pkg) is not installed on the device" }
 
+# --- the memory card (-SdCard): its app folder, and its filesystem (FAT32 takes no file of 4 GB)
+$PhoneFiles = $Files
+$PhoneLib = $Lib
+$Fs = ''
+if ($SdCard -or $CardUuid) {
+    $vols = @((Ask 'public:179,1 mounted 1234-ABCD' @('shell', 'sm', 'list-volumes', 'public')) -split "`n" |
+        ForEach-Object { $f = $_.Trim() -split '\s+'; if ($f.Count -ge 3 -and $f[1] -eq 'mounted' -and $f[2] -ne 'null') { $f[2] } })
+    if (-not $CardUuid) {
+        if ($vols.Count -eq 0) { Die 'לא נמצא כרטיס זיכרון מחובר' 'no memory card is mounted' }
+        if ($vols.Count -gt 1) { Die "יש כמה כרטיסים, בחרו אחד עם -CardUuid: $vols" "several cards, pick one with -CardUuid: $vols" }
+        $CardUuid = $vols[0]
+    }
+    if ($vols -notcontains $CardUuid) { Die "הכרטיס $CardUuid אינו מחובר" "card $CardUuid is not mounted" }
+    $Files = "/storage/$CardUuid/Android/data/$Pkg/files"
+    $Lib = "$Files/library"
+    $Fs = (Ask 'vfat' @('shell', "awk -v m=/mnt/media_rw/$CardUuid '`$2 == m { print `$3 }' /proc/mounts")).Trim()
+    Say "כרטיס זיכרון: $CardUuid ($Fs)" "memory card: $CardUuid ($Fs)"
+}
+$SplitDb = ($SdCard -or $CardUuid) -and ($Split -or ($Fs -eq 'vfat' -and (Get-Item -LiteralPath $Db).Length -gt 4294967295))
+if ($SplitDb) { Say 'הכרטיס מפורמט ב-FAT32: seforim.db יועתק בחלקים' 'FAT32 card: seforim.db is copied in chunks (seforim.db, seforim.db001...)' }
+
 # --- the app's folder exists only once it has run
 $probe = @('shell', "[ -d $Files ] && echo yes")
 if ((Ask 'yes' $probe) -ne 'yes') {
@@ -138,11 +171,20 @@ if (-not (Run @('shell', "mkdir -p $Lib; chmod 777 $Lib 2>/dev/null; rm -f $Lib/
 $null = Run @('shell', "rm -rf $Stage")
 $df = Ask "Filesystem 1K-blocks Used Available Use% Mounted on`n/dev/fuse 0 0 52428800 0% /storage/emulated" @('shell', 'df', '-k', $Files)
 $AvailKb = [long](((($df -split "`n")[1]).Trim() -split '\s+')[3])
-$du = Ask '0' @('shell', "cd $Lib && du -sk $Items $($Items | ForEach-Object { "$Incoming$_" }) 2>/dev/null; true")
+$du = Ask '0' @('shell', "cd $Lib && du -sk $Items $($Items | ForEach-Object { "$Incoming$_" }) seforim.db[0-9][0-9][0-9] $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true")
 $OldKb = [long](($du -split "`n" | Where-Object { $_ -match '^\d+' } | ForEach-Object { [long](($_ -split '\s+')[0]) } | Measure-Object -Sum).Sum)
-$NeedKb = $TotalKb + $LargestKb + 512 * 1024
+$OnCard = $SdCard -or $CardUuid
+$NeedKb = $TotalKb + 512 * 1024
+# The stage is on the phone's /data, which /sdcard shares; a card does not.
+if (-not $OnCard) { $NeedKb += $LargestKb }
 Say "פנוי במכשיר: $([long](($AvailKb + $OldKb) / 1024)) מ״ב, נדרש: $([long]($NeedKb / 1024)) מ״ב" "free on device: $([long](($AvailKb + $OldKb) / 1024)) MB (incl. the old library), needed: $([long]($NeedKb / 1024)) MB"
 if ($AvailKb + $OldKb -lt $NeedKb) { Die 'אין מספיק מקום פנוי במכשיר' 'not enough free space on the device' }
+if ($OnCard) {
+    $sdf = Ask "Filesystem 1K-blocks Used Available Use% Mounted on`n/dev/block/dm-0 0 0 52428800 0% /data" @('shell', 'df', '-k', '/data/local/tmp')
+    $StageAvailKb = [long](((($sdf -split "`n")[1]).Trim() -split '\s+')[3])
+    $StageNeedKb = $LargestKb + 64 * 1024
+    if ($StageAvailKb -lt $StageNeedKb) { Die "אין מספיק מקום פנוי בזיכרון הטלפון להעברה: נדרשים $([long]($StageNeedKb / 1024)) מ״ב" "not enough free space in the phone's internal storage for the transfer stage (/data/local/tmp): $([long]($StageNeedKb / 1024)) MB needed" }
+}
 
 # Removes an item from the library, or renames it .zayit-old-* when adb cannot empty it (a folder the app made), for
 # the app to delete when it next starts.
@@ -157,12 +199,51 @@ function RemoteBytes([string]$path, [long]$fake) {
     return [long]("$out".Trim())
 }
 
+# Writes $length bytes of $src from $offset to $dst (adb push takes whole files).
+function WritePiece([string]$src, [long]$offset, [long]$length, [string]$dst) {
+    $in = [IO.File]::OpenRead($src)
+    $out = [IO.File]::Create($dst)
+    try {
+        $null = $in.Seek($offset, [IO.SeekOrigin]::Begin)
+        $buf = New-Object byte[] (4MB)
+        $left = $length
+        while ($left -gt 0) {
+            $n = $in.Read($buf, 0, [int][Math]::Min([long]$buf.Length, $left))
+            if ($n -le 0) { break }
+            $out.Write($buf, 0, $n)
+            $left -= $n
+        }
+    } finally { $in.Dispose(); $out.Dispose() }
+}
+
+# Sends a file larger than $ChunkBytes in pieces of that size, each through this computer's TEMP folder and the
+# phone's stage: appended into one file, or (a database for a FAT32 card) each piece a chunk of its own, $remote
+# then $remote + 001, 002...
+function SendPieces([string]$local, [string]$remote, [bool]$chunks) {
+    $size = (Get-Item -LiteralPath $local -Force).Length
+    $n = [long][Math]::Ceiling($size / $ChunkBytes)
+    $piece = Join-Path ([IO.Path]::GetTempPath()) 'pardes-push-piece.bin'
+    try {
+        for ($k = 0; $k -lt $n; $k++) {
+            Write-Host "    piece $($k + 1) of $n"
+            $target = if ($chunks -and $k -gt 0) { $remote + ('{0:D3}' -f $k) } else { $remote }
+            $op = if ($chunks -or $k -eq 0) { '>' } else { '>>' }
+            if ($DryRun) { Write-Host "    (bytes $($k * $ChunkBytes)..: $piece -> $target)" } else {
+                WritePiece $local ($k * $ChunkBytes) ([Math]::Min($ChunkBytes, $size - $k * $ChunkBytes)) $piece
+            }
+            if (-not (SendFile $piece $target $op)) { return $false }
+        }
+    } finally { if (Test-Path -LiteralPath $piece) { Remove-Item -LiteralPath $piece -Force } }
+    return $true
+}
+
 # Sends one file to the phone. adb on Windows reads its standard input as text, so a stream through `adb shell -T`
 # (or exec-in) ends at the first 0x1A byte; adb push reads the file itself. It cannot write into the app's folder, so
 # the file lands in $Stage and the phone's shell copies it into place (separate mounts: a move would copy too).
-function SendFile([string]$local, [string]$remote) {
+function SendFile([string]$local, [string]$remote, [string]$op = '>') {
     $tmp = "$Stage/file"
-    $big = (Get-Item -LiteralPath $local -Force).Length -ge 64MB
+    # A piece that -DryRun did not write counts as large.
+    $big = if (Test-Path -LiteralPath $local) { (Get-Item -LiteralPath $local -Force).Length -ge 64MB } else { $true }
     # Large files show adb's own progress line; small ones (the index files) stay quiet.
     $argv = Full $(if ($big) { @('push', $local, $tmp) } else { @('push', '-q', $local, $tmp) })
     if ($DryRun) { Write-Host "    `$ adb $argv" } else {
@@ -176,7 +257,7 @@ function SendFile([string]$local, [string]$remote) {
         if ($p.ExitCode -ne 0) { return $false }
     }
     if ($big) { Write-Host '    placing it in the app''s folder' }
-    return Run @('shell', "cat $tmp > '$remote' && rm -f $tmp")
+    return Run @('shell', "cat $tmp $op '$remote' && rm -f $tmp")
 }
 
 # --- copy. The old database goes first, with anything the source lacks, so an interrupted copy or a partial
@@ -186,7 +267,9 @@ $null = Run @('shell', "rm -rf $Stage; mkdir -p $Stage")
 $Staging = $true
 try {
     # With the old database goes any unfinished delta of it (its marker and work folder): never resumed on the new one
-    foreach ($i in @('seforim.db', 'seforim.db-wal', 'seforim.db-shm', 'seforim.db-journal', 'release_info.txt', 'seforim.db.applying', 'seforim.db.applying.tmp', 'delta-cache') + @($Items | Where-Object { $Present -notcontains $_ })) { ClearItem $i }
+    foreach ($i in @('seforim.db', 'seforim.db-wal', 'seforim.db-shm', 'seforim.db-journal', 'release_info.txt', 'local_update_version.txt', 'seforim.db.applying', 'seforim.db.applying.tmp', 'delta-cache') + @($Items | Where-Object { $Present -notcontains $_ })) { ClearItem $i }
+    # A split database's chunks (seforim.db001...), whatever their number
+    $null = Run @('shell', "cd $Lib && rm -f seforim.db[0-9][0-9][0-9] $($Incoming)seforim.db[0-9][0-9][0-9]")
     foreach ($i in $Present) {
         Say "מעתיק $i" "copying $i"
         ClearItem $i; ClearItem "$i$Part"; ClearItem "$Incoming$i"  # the old copy goes first, so its space is free for the new one
@@ -200,15 +283,38 @@ try {
                 $rel = $f.FullName.Substring($root.Length + 1).Replace('\', '/')
                 if (-not (SendFile $f.FullName "$Lib/$Incoming$i/$rel")) { Die "ההעתקה של $i/$rel נכשלה" "copying $i/$rel failed" }
             }
+        } elseif ($i -eq 'seforim.db' -and $SplitDb) {
+            if (-not (SendPieces $local "$Lib/$Incoming$i" $true)) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
+            $sizes = Ask "$want" @('shell', "cd $Lib && stat -c %s $Incoming$i $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null | awk '{ s += `$1 } END { print s + 0 }'")
+            $got = [long]("$sizes".Trim())
+            if ($got -ne $want) { Die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again" }
+            # The overflow chunks first, the first chunk (seforim.db) last: the app sees a library only once it is all there.
+            $fix = "cd $Lib && for c in $($Incoming)seforim.db[0-9][0-9][0-9]; do [ -e `$c ] && mv `$c `${c#$Incoming}; done; mv $Incoming$i $i"
+            if (-not (Run @('shell', $fix))) { Die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder" }
+            continue
+        } elseif ((Get-Item -LiteralPath $local -Force).Length -gt $ChunkBytes) {
+            if (-not (SendPieces $local "$Lib/$Incoming$i" $false)) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
         } elseif (-not (SendFile $local "$Lib/$Incoming$i")) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
         if ((RemoteBytes "$Lib/$Incoming$i" $want) -ne $want) { Die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again" }
-        # Files 666 / folders 777: the app is not their owner but must read, write (SQLite WAL) and later delete them.
-        $fix = "cd $Lib && mv $Incoming$i $i && find $i -type d -exec chmod 777 {} + && find $i -type f -exec chmod 666 {} +"
+        # Files 666 / folders 777: the app is not their owner but must read, write (SQLite WAL) and later delete them. On
+        # a card the filesystem has no such permissions, and the app owns its folder there.
+        $fix = if ($SdCard -or $CardUuid) { "cd $Lib && mv $Incoming$i $i" } else { "cd $Lib && mv $Incoming$i $i && find $i -type d -exec chmod 777 {} + && find $i -type f -exec chmod 666 {} +" }
         if (-not (Run @('shell', $fix))) { Die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder" }
+    }
+    if ($SdCard -or $CardUuid) {
+        # One library: the app would keep using the one it chose before, in the phone's storage.
+        if ((Ask '' @('shell', "[ -f $PhoneLib/seforim.db ] && echo yes")) -eq 'yes') {
+            Say 'מסיר את הספרייה שבזיכרון הטלפון: פרדס ישתמש בזו שבכרטיס' "removing the library in the phone's storage: Pardes uses the card's"
+            $names = "seforim.db seforim.db-wal seforim.db-shm seforim.db-journal $Items local_update_version.txt seforim.db.applying delta-cache"
+            $null = Run @('shell', "cd $PhoneLib && rm -rf $names seforim.db[0-9][0-9][0-9] 2>/dev/null; for i in $names; do [ ! -e `$i ] || mv `$i .zayit-old-`$i-$Stamp; done; true")
+        }
+    } elseif (Ask '' @('shell', "ls /storage/*/Android/data/$Pkg/files/library/seforim.db 2>/dev/null | grep -v emulated; true")) {
+        Say 'שימו לב: גם בכרטיס הזיכרון יש ספרייה. אם פרדס ממשיך להשתמש בה, עברו לספרייה שבטלפון בהגדרות › ניהול נתונים › מיקום הספרייה' 'note: the memory card has a library too; if Pardes keeps using it, switch in Settings › ניהול נתונים › מיקום הספרייה'
     }
     if ($WithNotes) {
         Say 'מעתיק הערות והדגשות (יחליפו את אלה שבטלפון)' "copying notes and highlights (they replace the phone's)"
-        $import = "$Files/import"
+        # The app imports them from the phone's storage only, also when its library is on the card.
+        $import = "$PhoneFiles/import"
         $null = Run @('shell', "mkdir -p $import; chmod 777 $import 2>/dev/null; rm -f $import/user_settings.db*")
         if (-not (SendFile $NotesDb "$import/user_settings.db$Part")) { Die 'ההעתקה של ההערות נכשלה' 'copying the notes failed' }
         if (-not (Run @('shell', "cd $import && mv user_settings.db$Part user_settings.db && chmod 666 user_settings.db"))) { Die 'לא ניתן להעביר את ההערות לתיקיית היישום' "could not move the notes into the app's folder" }

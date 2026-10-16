@@ -43,7 +43,7 @@ The user can pick other accents (Blue, Teal, Green, Gold), as in the desktop set
 
 ## 3. Screens
 
-1. **Onboarding (first run):** welcome → licence (checkbox, "המשך") → disk space → install type (online / offline) → download → extract → personal details → region → done ("פתח את היישום").
+1. **Onboarding (first run):** welcome → licence (checkbox, "המשך") → disk space → install type (online / offline) → download → extract → personal details → region → done ("פתח את היישום"). Android only: with a memory card in the device, the disk step lists the phone and the card (radio rows with their free space) and the pie follows the one chosen.
    - Full-screen steps with the same titles, illustrations and gold buttons. A thin progress bar runs at the top.
    - The download runs as a foreground job so it survives backgrounding.
    - The offline route imports a database that is already on the device (`<external files>/seforim.db`, or picked through the system file picker).
@@ -60,7 +60,7 @@ The user can pick other accents (Blue, Teal, Green, Gold), as in the desktop set
 6. **Search:** the desktop results screen: query field with the telescope chip (base books only, or every book), "נמצאו N תוצאות" with a progress line and cancel, results as "book > section", a snippet with the hits in bold accent and the full path, loaded 25 at a time while scrolling. The category/book tree with counts and checkboxes is a bottom sheet on phones ("סינון" chip, checked filters as removable chips) and a side panel from 1200dp; on tablets a tap shows the result in the preview pane.
    - Phone: list, then tap opens the reader at that line.
    - Tablet: list on the right, preview on the left, like desktop.
-7. **Settings:** a list of pages, the same as desktop (כללי, תצוגה, פרופיל, גופנים, ניהול נתונים, אודות, תנאים) with the same controls, plus one Android-only page at the end, רישיונות: Pardes's licence and every bundled library, icon set, font and data file with its licence texts, which open full-screen and offline. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept.
+7. **Settings:** a list of pages, the same as desktop (כללי, תצוגה, פרופיל, גופנים, ניהול נתונים, אודות, תנאים) with the same controls, plus Android-only parts: in ניהול נתונים, "מיקום הספרייה" (phone or memory card, moving between them) and "עדכון מקבצים" / "עדכון מתיקייה" beside the incremental update; and one page at the end, רישיונות: Pardes's licence and every bundled library, icon set, font and data file with its licence texts, which open full-screen and offline. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept.
 8. **Tools menu:** the same items as desktop (סידור חכם, לוח עברי, מילון, לימוד יומי, מולד וקידוש לבנה, שנים מקרא ואחד תרגום, תפילת היום, ממיר מידות, מעגל השנה, זמני היום). On phone they are full-screen pages; on tablet, dialogs.
 
 ## 4. Data

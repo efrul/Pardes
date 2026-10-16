@@ -38,6 +38,11 @@
             android:name=".data.LibraryInstallService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <!-- Moving the library between the phone and a memory card (LibraryMover). -->
+        <service
+            android:name=".data.LibraryMoveService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <!-- Incremental library updates (DbDeltaUpdateService): download, apply, re-index in the foreground. -->
         <service
             android:name=".delta.LibraryDeltaService"

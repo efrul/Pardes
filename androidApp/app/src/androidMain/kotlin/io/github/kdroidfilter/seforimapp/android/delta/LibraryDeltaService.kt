@@ -37,7 +37,10 @@ class LibraryDeltaService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val service = DbDeltaUpdateService.get(application as ZayitApplication)
         if (intent?.action == ACTION_CANCEL) {
+            // The latest start, which stop() must name for the service to stop.
+            lastStartId = startId
             service.cancel()
+            if (observer == null) stopSelf(startId) // a stale tap, with nothing running
             return START_NOT_STICKY
         }
         lastStartId = startId

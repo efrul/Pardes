@@ -28,6 +28,10 @@ dependencyResolutionManagement {
         }
         maven("https://maven-central.storage-download.googleapis.com/maven2/")
         mavenCentral()
+        // requery sqlite-android (a bundled SQLite, for a library split on a FAT32 card) is published on JitPack only.
+        maven("https://jitpack.io") {
+            content { includeGroup("com.github.requery") }
+        }
     }
 }
 

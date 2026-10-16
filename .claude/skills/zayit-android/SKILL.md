@@ -102,9 +102,12 @@ MainActivity is `singleTask`, so a deep link sent to a running app arrives throu
 
 ## Library on the device
 
-The app reads the desktop library format: `seforim.db`, plus the Lucene index folders, `lexical.db` and `catalog.pb` next to it. LibraryStore picks whichever of these folders already holds `seforim.db`:
+The app reads the desktop library format: `seforim.db`, plus the Lucene index folders, `lexical.db` and `catalog.pb` next to it. LibraryStore picks whichever of these folders already holds `seforim.db`, the chosen location (prefs file `library_location`) first:
 - `<external files>/library/`, which is `/sdcard/Android/data/io.github.efrul.pardes/files/library/`
+- on a memory card, `/storage/<UUID>/Android/data/io.github.efrul.pardes/files/library/` (`LibraryLocation`)
 - `<internal files>/library/`
+
+On a FAT32 card the database is split in SQLite multiplex chunks (`seforim.db`, `seforim.db001`…, `SplitDatabase.kt`), read through requery's SQLite with `libpardes_multiplex.so`. To test cards on the emulator, give it a virtual SD card as root: `truncate -s 1536M /data/misc/vold/virtual_disk; sm set-virtual-disk true`, then `sm partition <disk id from sm list-disks> public` (vfat), `sm unmount`/`sm mount <volume id>` to take it out and put it back, `sm set-virtual-disk false` to remove it. Without the truncate the disk is 512 MB.
 
 Pick one of three routes:
 

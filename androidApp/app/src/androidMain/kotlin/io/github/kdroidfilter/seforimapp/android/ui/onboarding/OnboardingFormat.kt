@@ -77,4 +77,14 @@ internal object AndroidStrings {
     const val meteredWarning = "שימו לב: המכשיר מחובר כעת לרשת סלולרית או מוגבלת. ההורדה (%1\$s) עלולה לצרוך חבילת גלישה."
     const val reconnecting = "החיבור נקטע. מנסה להתחבר מחדש…"
     const val backgroundHint = "ניתן לצאת מהיישום: ההורדה תמשיך ברקע."
+
+    // Where the library is kept: the phone or a memory card (LibraryLocation).
+    const val fileTooLarge =
+        "כרטיס הזיכרון מפורמט ב-FAT32, שאינו מקבל קבצים של 4GB ומעלה, ומסד הנתונים גדול מכך. " +
+            "אפשר לפרמט את הכרטיס ל-exFAT במחשב, או לשמור את הספרייה בזיכרון הטלפון."
+    const val locationTitle = "היכן לשמור את הספרייה?"
+    const val locationSpace = "%1\$s פנויים מתוך %2\$s"
+    const val locationFat = "FAT32: מסד הנתונים יישמר בו בכמה קבצים, ועדכון מצטבר לא יהיה זמין (רק עדכון מלא)"
+    const val locationNotEnough = "אין די מקום"
+    const val cardHint = "אפשר גם לשמור את הספרייה בכרטיס זיכרון: הכניסו כרטיס SD למכשיר."
 }

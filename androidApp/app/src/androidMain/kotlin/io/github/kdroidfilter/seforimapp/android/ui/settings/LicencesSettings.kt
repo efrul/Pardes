@@ -96,6 +96,12 @@ private val libraryCredits = listOf(
         listOf(bundled("BSD 2-Clause (zstd-jni)", "zstd-jni-LICENSE.txt"), bundled("BSD (Zstandard)", "Zstandard-LICENSE.txt")),
     ),
     Credit("jsoup", "Copyright (c) 2009-2025 Jonathan Hedley", listOf(bundled("MIT (jsoup)", "jsoup-LICENSE.txt"))),
+    Credit(
+        "requery sqlite-android, SQLite",
+        "Copyright (C) 2017-2025 requery.io; The Android Open Source Project. SQLite and its multiplex VFS: public domain",
+        listOf(Docs.apache),
+        "מנוע SQLite נוסף, לספרייה שנשמרת בחלקים בכרטיס זיכרון FAT32 (עם רכיב ה-multiplex של SQLite).",
+    ),
     Credit("KosherJava Zmanim", "Copyright © Eliyahu Hershfeld", listOf(Docs.lgpl)),
     Credit("KosherKotlin", "kdroidFilter, Sternbach-Software, after KosherJava by Eliyahu Hershfeld", listOf(Docs.lgpl)),
     Credit("HebrewNumerals", "kdroidFilter", listOf(Docs.apache)),

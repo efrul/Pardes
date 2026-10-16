@@ -98,6 +98,8 @@ internal fun DataSettings(wide: Boolean) {
     SettingsColumn(wide) {
         // Desktop 0.6.1 DbDeltaUpdateSection (incremental library updates).
         DbDeltaUpdateSection()
+        // Android: the phone or a memory card.
+        LibraryLocationSection()
         SettingsCard {
             ActionRow("ייצוא הנתונים שלי", "שמירת גיבוי של ההערות, ההדגשות וההגדרות.") {
                 OutlineButton(
@@ -192,12 +194,11 @@ private suspend fun resetApp(context: Context, app: ZayitApplication) = withCont
     runCatching { app.history.clearHistory() }
     runCatching { app.libraryStore.close() }
     app.libraryStore.candidateDirs.forEach { runCatching { it.deleteRecursively() } }
-    listOfNotNull(
-        context.getExternalFilesDir(null),
+    (context.getExternalFilesDirs(null).filterNotNull() + listOfNotNull(
         context.getDatabasePath(UserDataBackup.USER_DB).parentFile,
         context.filesDir,
         context.cacheDir,
-    ).forEach { dir -> dir.listFiles()?.forEach { runCatching { it.deleteRecursively() } } }
+    )).forEach { dir -> dir.listFiles()?.forEach { runCatching { it.deleteRecursively() } } }
     app.prefs.resetAll()
     File(context.dataDir, "shared_prefs").listFiles()?.forEach { file ->
         runCatching { context.deleteSharedPreferences(file.name.removeSuffix(".xml")) }
