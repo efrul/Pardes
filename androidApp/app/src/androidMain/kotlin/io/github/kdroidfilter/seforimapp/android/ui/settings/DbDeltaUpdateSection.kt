@@ -1,5 +1,12 @@
 package io.github.kdroidfilter.seforimapp.android.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -10,8 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -21,7 +31,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.DatabaseVersion
+import io.github.kdroidfilter.seforimapp.android.data.InstallPurpose
 import io.github.kdroidfilter.seforimapp.android.data.LibraryInstaller
+import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.android.delta.DbDeltaUpdateEvents
 import io.github.kdroidfilter.seforimapp.android.delta.DbDeltaUpdateService
 import io.github.kdroidfilter.seforimapp.android.delta.DbDeltaUpdateState
@@ -32,10 +44,14 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.AndroidStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.releaseReadGrants
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.rememberWithNotificationPermission
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.takeReadGrants
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Desktop 0.6.1 `features/settings/dbupdate/DbDeltaUpdateSection.kt` in Settings › ניהול נתונים: the status text
@@ -58,6 +74,80 @@ internal fun DbDeltaUpdateSection() {
     val version by produceState<String?>(null, state.lastAppliedCount) {
         value = withContext(Dispatchers.IO) { DatabaseVersion.current(app.libraryStore).orEmpty() }
     }
+    // Android: the version an update from files reached (release_info.txt keeps its date then).
+    val localVersion by produceState<Int?>(null, state.lastAppliedCount) {
+        value = withContext(Dispatchers.IO) { runCatching { service.localUpdateVersion() }.getOrNull() }
+    }
+    val scope = rememberCoroutineScope()
+    // Why a picked folder was not used (nothing to update from, or a library unpacked as on a computer), or null.
+    var folderError by remember { mutableStateOf<String?>(null) }
+    // Android: an update from files picked on the device. A delta's patch and manifest go to the service here; the
+    // parts of a full release (or a seforim.db) to the installer, in the database update flow over the app.
+    fun updateFrom(files: List<Pair<Uri, String>>) {
+        val delta = files.filter { LibraryInstaller.isDeltaFileName(it.second) }
+        // A patch without its manifest goes here too, to be told so: as an install it would read as a .zst database.
+        if (delta.isNotEmpty()) {
+            // The other picked files are not read: their grants go back now (a picked folder's stays for the patches).
+            (files - delta.toSet()).forEach { runCatching { context.contentResolver.releasePersistableUriPermission(it.first, Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
+            service.applyFromFiles(delta.map { it.first })
+        } else {
+            val installer = LibraryInstaller.get(app)
+            installer.purpose = InstallPurpose.Update
+            installer.reset()
+            installer.importUris(files.map { it.first })
+            app.manualLibraryUpdate.value = true
+        }
+    }
+    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        // The services read the files in the background, possibly after the activity is gone.
+        context.takeReadGrants(uris)
+        scope.launch { updateFrom(withContext(Dispatchers.IO) { uris.map { it to displayName(context, it) } }) }
+    }
+    // A whole folder (the parts of a release are many files): its update files are taken, the rest ignored.
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree == null) return@rememberLauncherForActivityResult
+        // The folder's grant covers the files in it.
+        context.takeReadGrants(listOf(tree))
+        scope.launch {
+            val entries = withContext(Dispatchers.IO) { folderEntries(context, tree) }
+            val files = entries.filter { !it.isDirectory && (LibraryInstaller.isDeltaFileName(it.name) || LibraryInstaller.isInstallFileName(it.name)) }
+            val names = entries.map { it.name }.toSet()
+            // A library unpacked as on a computer (the database beside its indexes, dictionary or catalog): the install
+            // would take the database alone and drop the rest, so the folder is refused (the copy script moves it all).
+            val unpackedLibrary = files.none { LibraryInstaller.isDeltaFileName(it.name) } &&
+                LibraryStore.DB_NAME in names && UNPACKED_LIBRARY_ITEMS.any { it in names }
+            val error = when {
+                files.isEmpty() -> DeltaStrings.folderEmpty
+                unpackedLibrary -> DeltaStrings.folderIsLibrary
+                else -> null
+            }
+            folderError = error
+            if (error != null) context.releaseReadGrants(listOf(tree)) else updateFrom(files.map { it.uri to it.name })
+        }
+    }
+    val pick = rememberWithNotificationPermission {
+        // An earlier folder's refusal does not concern these files (it would show again under their result).
+        folderError = null
+        pickFiles.launch(arrayOf("*/*"))
+    }
+    // Bundle files already in the app's own folders (copied there from a computer, onto the card in a card reader,
+    // say): Android's file picker does not show Android/data.
+    val localBundle by produceState(emptyList<File>(), busy) {
+        value = withContext(Dispatchers.IO) { runCatching { LibraryInstaller.get(app).findLocalBundle() }.getOrDefault(emptyList()) }
+    }
+    val useLocal = rememberWithNotificationPermission {
+        folderError = null
+        val installer = LibraryInstaller.get(app)
+        installer.purpose = InstallPurpose.Update
+        installer.reset()
+        installer.importFiles(localBundle)
+        app.manualLibraryUpdate.value = true
+    }
+    val pickDir = rememberWithNotificationPermission {
+        folderError = null
+        pickFolder.launch(null)
+    }
     val metered by produceState(false, state.offer) {
         value = state.offer != null && withContext(Dispatchers.IO) { LibraryInstaller.get(app).isMeteredNetwork() }
     }
@@ -67,7 +157,8 @@ internal fun DbDeltaUpdateSection() {
     SettingsCard(title = DeltaStrings.title) {
         version?.let { v ->
             Text(
-                DesktopStrings.dbUpdateCurrentVersion.format(v.takeIf { it.isNotEmpty() }?.let(DatabaseVersion::formatForDisplay) ?: DesktopStrings.dbUpdateVersionUnknown),
+                DesktopStrings.dbUpdateCurrentVersion.format(v.takeIf { it.isNotEmpty() }?.let(DatabaseVersion::formatForDisplay) ?: DesktopStrings.dbUpdateVersionUnknown) +
+                    localVersion?.let { " · " + DeltaStrings.localVersion.format(it) }.orEmpty(),
                 fontSize = 13.sp,
                 color = c.textSecondary,
             )
@@ -109,7 +200,13 @@ internal fun DbDeltaUpdateSection() {
                 OutlineButton(DeltaStrings.cancel, { service.onEvent(DbDeltaUpdateEvents.CancelClicked) })
             }
             if (hasMessage && !busy && offer == null) OutlineButton(DeltaStrings.dismiss, { service.onEvent(DbDeltaUpdateEvents.ClearMessage) })
+            if (!busy) OutlineButton(DeltaStrings.fromFiles, pick)
+            if (!busy) OutlineButton(DeltaStrings.fromFolder, pickDir)
+            if (!busy && localBundle.isNotEmpty()) OutlineButton(AndroidStrings.useLocalBundle, useLocal)
         }
+        if (!busy && localBundle.isNotEmpty()) Text(AndroidStrings.localBundleFound, fontSize = 13.sp, color = c.textSecondary)
+        folderError?.takeIf { !busy }?.let { ErrorBanner(it) }
+        if (!busy) Text(DeltaStrings.fromFilesHint, fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
     }
 }
 
@@ -133,3 +230,30 @@ private fun TrackSectionVisibility(service: DbDeltaUpdateService) {
         }
     }
 }
+
+/** A picked document's file name (what the release page called it), or its URI's last segment. Blocking. */
+private fun displayName(context: Context, uri: Uri): String =
+    runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+    }.getOrNull() ?: uri.lastPathSegment.orEmpty().substringAfterLast('/')
+
+/** What an unpacked library holds beside seforim.db (an install from a folder would take the database alone). */
+private val UNPACKED_LIBRARY_ITEMS = setOf(LibraryStore.TEXT_INDEX_NAME, LibraryStore.LOOKUP_INDEX_NAME, LibraryStore.LEXICAL_NAME, LibraryStore.CATALOG_NAME)
+
+/** Something directly in a picked folder: a file, or a folder ([isDirectory]). */
+private class FolderEntry(val uri: Uri, val name: String, val isDirectory: Boolean)
+
+/** What is directly in a picked folder (a document tree), files and folders, with their names. Blocking. */
+private fun folderEntries(context: Context, tree: Uri): List<FolderEntry> = runCatching {
+    val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+    val columns = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE)
+    context.contentResolver.query(children, columns, null, null, null)?.use { c ->
+        buildList {
+            while (c.moveToNext()) {
+                val id = c.getString(0) ?: continue
+                val name = c.getString(1) ?: continue
+                add(FolderEntry(DocumentsContract.buildDocumentUriUsingTree(tree, id), name, c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR))
+            }
+        }
+    }.orEmpty()
+}.getOrDefault(emptyList())

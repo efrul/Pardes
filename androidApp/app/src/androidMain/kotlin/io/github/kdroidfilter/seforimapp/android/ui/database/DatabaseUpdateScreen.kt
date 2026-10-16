@@ -72,6 +72,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytesPerSec
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatEta
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.rememberWithNotificationPermission
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.takeReadGrants
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.icons.CheckCircle
 import io.github.kdroidfilter.seforimapp.icons.Deployed_code_update
@@ -91,6 +92,12 @@ enum class DatabaseUpdateReason {
 
     /** The library is there but SQLite cannot open it (Android only: e.g. files pushed by adb that the app may not read). */
     Broken,
+
+    /**
+     * Android: asked for in Settings (an update from files, with no network, or a download), with a library that
+     * works. The flow starts at the options, and leaving it returns to the app.
+     */
+    Manual,
 }
 
 /**
@@ -135,7 +142,7 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
     val install by installer.state.collectAsState()
     val deltaService = remember(app) { DbDeltaUpdateService.get(app) }
     val delta by deltaService.state.collectAsState()
-    var stackNames by rememberSaveable { mutableStateOf(initialStack(installer, deltaService).joinToString(",") { it.name }) }
+    var stackNames by rememberSaveable { mutableStateOf(initialStack(installer, deltaService, reason).joinToString(",") { it.name }) }
     val stack = stackNames.split(',').map { UpdateStep.valueOf(it) }
     val step = stack.last()
     fun setStack(steps: List<UpdateStep>) {
@@ -146,7 +153,11 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
     }
     fun replace(next: UpdateStep) = setStack(stack.dropLast(1) + next)
     fun back() {
-        if (stack.size <= 1) return
+        if (stack.size <= 1) {
+            // From Settings the title bar's back arrow leaves the flow, as Back does.
+            if (reason == DatabaseUpdateReason.Manual) onExit()
+            return
+        }
         // Leaving a failed or finished install: forget it, so the next attempt starts clean.
         if (step == UpdateStep.Online || step == UpdateStep.Offline || step == UpdateStep.Completion) installer.reset()
         setStack(stack.dropLast(1))
@@ -159,7 +170,7 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
         if (step != UpdateStep.Online && step != UpdateStep.Offline) return@LaunchedEffect
         when {
             current is InstallState.Done -> replace(UpdateStep.Completion)
-            // A release or file too old for this app (refused before anything was deleted): the completion check says so.
+            // A release or file too old for this app (refused before anything was deleted): the completion step says so.
             current is InstallState.Failed && current.error == InstallError.Incompatible -> replace(UpdateStep.Completion)
             // Cancelled from the notification, or the screen restored after the process was killed: back to the options.
             current is InstallState.Idle && step == UpdateStep.Online -> setStack(stack.dropLast(1))
@@ -175,8 +186,9 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
     val installing = (busy && (step == UpdateStep.Online || step == UpdateStep.Offline)) || (delta.phase != null && step == UpdateStep.Delta)
     BackHandler(enabled = installing) { context.findActivity()?.moveTaskToBack(true) }
     BackHandler(enabled = !installing && stack.size > 1) {
-        // A finished update opens the app, as its only button does.
-        if (step == UpdateStep.Completion && (installer.state.value is InstallState.Done || deltaService.state.value.lastAppliedCount != null)) {
+        // A finished update opens the app, as its only button does; refused files go back, whatever delta ran before.
+        val refused = installer.state.value is InstallState.Failed
+        if (step == UpdateStep.Completion && (installer.state.value is InstallState.Done || (!refused && deltaService.state.value.lastAppliedCount != null))) {
             installer.reset()
             onDone()
         } else {
@@ -199,6 +211,8 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
     val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
             pickedFiles = uris.size
+            // The install service reads the parts one by one, possibly after the activity is gone.
+            context.takeReadGrants(uris)
             installer.purpose = InstallPurpose.Update
             installer.reset()
             installer.importUris(uris)
@@ -222,7 +236,7 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
     InstallerWindow(
         title = DesktopStrings.dbUpdateTitleBar,
         icon = Deployed_code_update,
-        canGoBack = stack.size > 1 && !installing,
+        canGoBack = (stack.size > 1 || reason == DatabaseUpdateReason.Manual) && !installing,
         onBack = ::back,
         progress = progress,
     ) {
@@ -231,7 +245,7 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
                 UpdateStep.VersionCheck -> VersionCheckStep(reason, onContinue = { go(UpdateStep.Options) }, onRetryOpen = onDone)
                 UpdateStep.Options -> OptionsStep(
                     installer,
-                    deltaService.takeIf { reason == DatabaseUpdateReason.Outdated },
+                    deltaService.takeIf { reason == DatabaseUpdateReason.Outdated || reason == DatabaseUpdateReason.Manual },
                     onOffline = {
                         installer.reset()
                         go(UpdateStep.Offline)
@@ -273,6 +287,8 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
                 }
                 UpdateStep.Completion -> CompletionStep(
                     installer,
+                    // Reached through Failed(Incompatible) too: the files were refused, whatever library is installed.
+                    refused = install is InstallState.Failed,
                     onOpenApp = {
                         installer.reset()
                         onDone()
@@ -289,13 +305,15 @@ fun DatabaseUpdateScreen(reason: DatabaseUpdateReason, onDone: () -> Unit, onExi
 }
 
 /** Where to reopen when the screen comes back while an update install is running, or has ended. */
-private fun initialStack(installer: LibraryInstaller, delta: DbDeltaUpdateService): List<UpdateStep> {
-    val base = listOf(UpdateStep.VersionCheck, UpdateStep.Options)
+private fun initialStack(installer: LibraryInstaller, delta: DbDeltaUpdateService, reason: DatabaseUpdateReason): List<UpdateStep> {
+    // From Settings there is no version problem to show: the options come first.
+    val first = if (reason == DatabaseUpdateReason.Manual) listOf(UpdateStep.Options) else listOf(UpdateStep.VersionCheck)
+    val base = if (reason == DatabaseUpdateReason.Manual) first else first + UpdateStep.Options
     if (delta.isBusy && delta.state.value.phase != DbDeltaUpdateState.Phase.CheckingForUpdates) return base + UpdateStep.Delta
     // What the onboarding's install left behind is not this flow's.
-    if (installer.purpose != InstallPurpose.Update) return listOf(UpdateStep.VersionCheck)
+    if (installer.purpose != InstallPurpose.Update) return first
     return when (val state = installer.state.value) {
-        InstallState.Idle -> listOf(UpdateStep.VersionCheck)
+        InstallState.Idle -> first
         is InstallState.Preparing -> base + if (state.online) UpdateStep.Online else UpdateStep.Offline
         is InstallState.Downloading -> base + UpdateStep.Online
         is InstallState.Extracting -> base + if (state.online) UpdateStep.Online else UpdateStep.Offline
@@ -518,6 +536,7 @@ private fun InstallFailure(state: InstallState.Failed, title: String, onBack: ()
     when (state.error) {
         InstallError.InsufficientSpace -> BodyText(DesktopStrings.dbInstallInsufficientSpace, Modifier.fillMaxWidth(0.9f).padding(top = 24.dp))
         InstallError.IncompleteBundle -> BodyText(DesktopStrings.dbInstallIncompleteBundle, Modifier.fillMaxWidth(0.9f).padding(top = 24.dp))
+        InstallError.FileTooLarge -> BodyText(AndroidStrings.fileTooLarge, Modifier.fillMaxWidth(0.9f).padding(top = 24.dp))
         else -> {
             BodyText(title, Modifier.padding(top = 24.dp), fontSize = 17)
             BodyText(state.detail?.takeIf { it.isNotBlank() } ?: DesktopStrings.dbUpdateDownloadErrorUnknown, Modifier.fillMaxWidth(0.9f))
@@ -529,12 +548,20 @@ private fun InstallFailure(state: InstallState.Failed, title: String, onBack: ()
     }
 }
 
-/** Desktop CompletionScreen: checks the library again, then success ("פתח את היישום") or "הגרסה אינה תואמת" ("נסו שוב"). */
+/**
+ * Desktop CompletionScreen: checks the library again, then success ("פתח את היישום") or "הגרסה אינה תואמת" ("נסו שוב").
+ * [refused]: the install refused its files (Failed, Incompatible), so the library still there (from Settings, the working
+ * one) says nothing about this update: the version error is shown without a check.
+ */
 @Composable
-private fun CompletionStep(installer: LibraryInstaller, onOpenApp: () -> Unit, onTryAgain: () -> Unit) {
+private fun CompletionStep(installer: LibraryInstaller, refused: Boolean, onOpenApp: () -> Unit, onTryAgain: () -> Unit) {
     val c = Zayit.colors
-    val compatible by produceState<Boolean?>(null) {
-        value = withContext(Dispatchers.IO) { runCatching { installer.checkInstalledLibrary() == null }.getOrDefault(false) }
+    val compatible by produceState<Boolean?>(null, refused) {
+        value = if (refused) {
+            false
+        } else {
+            withContext(Dispatchers.IO) { runCatching { installer.checkInstalledLibrary() == null }.getOrDefault(false) }
+        }
     }
     when (compatible) {
         true -> StepScaffold(title = DesktopStrings.dbUpdateCompletionTitle, bottomAction = { AccentButton(DesktopStrings.onboardingOpenApp, onOpenApp) }) {

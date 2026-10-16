@@ -49,6 +49,7 @@ internal fun installErrorMessage(failed: InstallState.Failed): String = when (fa
     InstallError.InsufficientSpace -> DesktopStrings.dbInstallInsufficientSpace
     InstallError.IncompleteBundle -> DesktopStrings.dbInstallIncompleteBundle
     InstallError.Incompatible -> DesktopStrings.onboardingVersionErrorMessage
+    InstallError.FileTooLarge -> AndroidStrings.fileTooLarge
     InstallError.Generic -> failed.detail?.takeIf { it.isNotBlank() }?.let { DesktopStrings.onboardingErrorWithDetail.format(it) }
         ?: DesktopStrings.onboardingErrorOccurred
 }
@@ -95,7 +96,7 @@ internal fun LicenceStep(accepted: Boolean, onAcceptedChange: (Boolean) -> Unit,
 }
 
 @Composable
-internal fun DiskSpaceStep(state: DiskState, onRecheck: () -> Unit, onNext: () -> Unit) {
+internal fun DiskSpaceStep(state: DiskState, onRecheck: () -> Unit, onNext: () -> Unit, onSelectLocation: (String) -> Unit) {
     StepScaffold(
         title = DesktopStrings.onboardingDiskTitle,
         bottomAction = { AccentButton(DesktopStrings.nextButton, onNext, enabled = state.enough && !state.loading) },
@@ -113,6 +114,8 @@ internal fun DiskSpaceStep(state: DiskState, onRecheck: () -> Unit, onNext: () -
                     PieSlice(freeAfter.toFloat(), PieColors.freeAfter, DesktopStrings.diskPieFreeAfterWithValue.format(formatBytes(freeAfter))),
                 ),
             )
+            // Android: with a memory card in the device, the library can go there instead of the phone.
+            if (state.choices.isNotEmpty()) LocationPicker(state.choices, state.selectedKey, onSelectLocation)
             if (state.enough) {
                 InfoBanner(DesktopStrings.onboardingDiskSuccessContinue, Modifier.widthIn(max = 520.dp), success = true)
             } else {
@@ -123,6 +126,7 @@ internal fun DiskSpaceStep(state: DiskState, onRecheck: () -> Unit, onNext: () -
                     actionLabel = DesktopStrings.recheckButton,
                     onAction = onRecheck,
                 )
+                if (state.choices.isEmpty()) InfoBanner(AndroidStrings.cardHint, Modifier.widthIn(max = 520.dp))
             }
             InfoBanner(
                 AndroidStrings.diskStreamingNote.format(

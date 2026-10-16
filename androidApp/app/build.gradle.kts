@@ -97,6 +97,10 @@ kotlin {
                 implementation(libs.commons.compress)
                 // Search: lucene-core 10.5.2 (the version that writes the desktop indexes), patched for API 33.
                 implementation(project(":lucene-android"))
+                // A library split in chunks on a FAT32 memory card (data/SplitDatabase.kt): a SQLite that can load the
+                // multiplex VFS (src/androidMain/cpp), which Android's own SQLite cannot.
+                implementation(libs.requery.sqlite)
+                implementation(libs.androidx.sqlite.framework)
             }
         }
     }
@@ -114,6 +118,15 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.2.0"
+    }
+
+    // libpardes_multiplex.so: SQLite's multiplex VFS as an extension of requery's SQLite (data/SplitDatabase.kt).
+    ndkVersion = "27.3.13750724"
+    externalNativeBuild {
+        cmake {
+            path = file("src/androidMain/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")

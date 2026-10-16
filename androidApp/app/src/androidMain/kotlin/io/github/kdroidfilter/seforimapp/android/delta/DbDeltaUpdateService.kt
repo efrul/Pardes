@@ -1,22 +1,31 @@
 package io.github.kdroidfilter.seforimapp.android.delta
 
+import android.net.Uri
 import android.os.PowerManager
+import android.provider.OpenableColumns
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.DatabaseVersion
 import io.github.kdroidfilter.seforimapp.android.data.HttpStatusException
 import io.github.kdroidfilter.seforimapp.android.data.InstallToken
 import io.github.kdroidfilter.seforimapp.android.data.LibraryInstaller
+import io.github.kdroidfilter.seforimapp.android.data.LibraryMover
+import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.android.data.ResumingHttpInputStream
+import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.AndroidStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.releaseReadGrants
+import io.github.kdroidfilter.seforimlibrary.common.patch.LogicalContentHasher
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaApplierClient
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaDownloader
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaEntry
+import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaManifest
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaUpdaterClient
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.FullBundleEntry
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.NotEnoughSpaceException
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.ReleaseMeta
+import io.github.kdroidfilter.seforimlibrary.deltaupdater.UpdateOrchestrator
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.UpdatePath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +46,7 @@ import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -115,6 +125,28 @@ internal object DeltaStrings {
     const val catalog = "מעדכן את הקטלוג…"
     const val noSpace = "אין מספיק שטח פנוי להחלת העדכון: נדרשים %1\$s, פנויים %2\$s. פנו מקום ונסו שוב."
     const val backgroundHint = "ניתן לצאת מהיישום: העדכון ימשיך ברקע."
+
+    // Android: an update from files brought to the device (no network).
+    const val fromFiles = "עדכון מקבצים"
+    const val fromFilesHint =
+        "ללא אינטרנט: הורידו במחשב מעמוד ההפצה של SeforimLibrary את שני קובצי העדכון מהגרסה המותקנת, " +
+            "patch-v…‎.db.zst ו-patch-v…‎.db.zst.manifest.json, העבירו אותם למכשיר ובחרו את שניהם, או את התיקייה שבה הם נמצאים. " +
+            "כך אפשר גם לעדכן מכל קובצי ‎.part של המאגר המלא."
+    const val splitUnsupported =
+        "הספרייה שמורה בחלקים בכרטיס זיכרון FAT32, ועדכון מצטבר עדיין אינו זמין עבורה. " +
+            "אפשר לעדכן אותה בעדכון מלא (הורדה, או קובצי ‎.part של המאגר המלא), או לפרמט את הכרטיס ל-exFAT ולהעביר אליו את הספרייה מחדש."
+    const val fromFolder = "עדכון מתיקייה"
+    const val folderEmpty = "בתיקייה שנבחרה אין קובצי עדכון או קובצי מאגר."
+    const val folderIsLibrary =
+        "בתיקייה שנבחרה יש ספרייה שלמה שאינה ארוזה (seforim.db לצד אינדקסי החיפוש, lexical.db או catalog.pb), " +
+            "ועדכון מתיקייה היה לוקח ממנה רק את מסד הנתונים, בלי החיפוש והקטלוג. כדי להעביר ספרייה כזו מהמחשב הריצו את " +
+            "סקריפט ההעתקה (push-desktop-library), או עדכנו מקובצי ‎.part של המאגר המלא."
+    const val readingFiles = "בודק את הקבצים שנבחרו…"
+    const val copying = "מעתיק את העדכון…"
+    const val noManifest = "לא נבחר קובץ ‎.manifest.json של עדכון מצטבר."
+    const val missingPatch = "חסר הקובץ %1\$s, שהעדכון צריך. בחרו אותו יחד עם קובץ ה-manifest."
+    const val badChain = "קובצי העדכון שנבחרו אינם מתחברים לשרשרת אחת."
+    const val localVersion = "עודכן מקבצים לגרסה %1\$d"
 }
 
 /**
@@ -168,7 +200,11 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
         }
     }
 
-    private class Plan(val chain: List<DeltaEntry>, val releaseTag: String?, val bytes: Long, val resume: Boolean)
+    /**
+     * [local]: the delta came on files picked on the device (Android only): their content URIs by file name. The
+     * manifests are read from them, the patches copied from them instead of downloaded.
+     */
+    private class Plan(val chain: List<DeltaEntry>, val releaseTag: String?, val bytes: Long, val resume: Boolean, val local: Map<String, Uri>? = null)
 
     private sealed interface Found {
         data object UpToDate : Found
@@ -180,7 +216,8 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
 
     /** Desktop's "Check for updates", stopping at the offer: on a phone the size is shown before anything is downloaded. */
     fun check() {
-        if (isBusy || installer.isBusy) return
+        if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy) return
+        if (refuseSplit()) return
         val current = InstallToken().also { token = it }
         _state.value = DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.CheckingForUpdates, message = DeltaStrings.checking)
         job = scope.launch {
@@ -196,6 +233,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     /** For the database update flow: the delta from the installed version, or null (no network, none published). */
     suspend fun findOffer(): DbDeltaUpdateState.Offer? = withContext(Dispatchers.IO) {
         if (isBusy) return@withContext _state.value.offer
+        if (SplitDatabase.isSplit(store.databaseFile)) return@withContext null
         val found = runCatching { findPlan(InstallToken()) }.getOrNull()
         (found as? Found.Ready)?.let { stateOf(it).offer }
     }
@@ -217,11 +255,117 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     /** Downloads and applies the chain the check found (desktop's applyChain step of checkAndApply). */
     fun apply() {
         val p = plan ?: return check()
-        if (isBusy || installer.isBusy) return
+        if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy) return
+        if (refuseSplit()) return
         val current = InstallToken().also { token = it }
         _state.value = DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.Downloading, message = DeltaStrings.preparing, cancellable = true)
         LibraryDeltaService.start(app)
         job = scope.launch { run(p, current) }
+    }
+
+    /**
+     * Android only: applies a delta brought on files (picked with the system picker): one or more
+     * `patch-v<from>-v<to>.db.zst.manifest.json` with their `patch-…db.zst`. The steps are chained by content hash from
+     * the installed database's (each manifest's from-hash is the previous one's to-hash, [localPlan]), and the same
+     * checks as a download guard them: each patch's size and sha256, then the database's content hash before and after.
+     * A release tag is not in these files, so release_info.txt keeps its timestamp and the version reached is recorded
+     * beside it ([LOCAL_VERSION_FILE]). The persistable read grants the picker's caller took on [uris] are given back
+     * when the run ends, unless a cancel keeps the run for "המשך".
+     */
+    fun applyFromFiles(uris: List<Uri>) {
+        if (uris.isEmpty() || isBusy || installer.isBusy || LibraryMover.get(app).isBusy || refuseSplit()) {
+            app.releaseReadGrants(uris) // not run: nothing will read them
+            return
+        }
+        val current = InstallToken().also { token = it }
+        _state.value = DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.CheckingForUpdates, message = DeltaStrings.readingFiles)
+        job = scope.launch {
+            val p = runCatching { localPlan(uris, current) }.getOrElse { e ->
+                app.releaseReadGrants(uris)
+                publish(current, if (current.cancelled.get()) DbDeltaUpdateState() else DbDeltaUpdateState(errorMessage = DeltaStrings.failed.format(e.message ?: e.javaClass.simpleName)))
+                return@launch
+            }
+            if (p == null) {
+                app.releaseReadGrants(uris)
+                plan = null
+                publish(current, DbDeltaUpdateState(message = DeltaStrings.upToDate, upToDate = true))
+                return@launch
+            }
+            plan = p
+            publish(current, DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.Downloading, message = DeltaStrings.copying, cancellable = true))
+            LibraryDeltaService.start(app)
+            run(p, current)
+        }
+    }
+
+    /**
+     * The chain of the picked deltas, or null when the database is already where the newest of them leads. One manifest
+     * is the chain (its from-hash is checked when it applies). From several (a folder that keeps the patches applied
+     * before, two patches of one release's fan) the chain starts at the installed database, by its content hash
+     * computed once (minutes on 8 GB: shown, and cancellable), and each step is the one that starts where the last
+     * ends, the furthest first (the fan's direct patch over its halves); manifests off that path are left out.
+     */
+    private fun localPlan(uris: List<Uri>, current: InstallToken): Plan? {
+        val resolver = app.contentResolver
+        val byName = uris.associateBy { uri ->
+            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+                ?: uri.lastPathSegment.orEmpty().substringAfterLast('/')
+        }
+        val manifests = byName.filterKeys { it.startsWith("patch-") && it.endsWith(MANIFEST_SUFFIX) }.map { (_, uri) ->
+            uri to UpdateOrchestrator.DEFAULT_JSON.decodeFromString(DeltaManifest.serializer(), readText(uri))
+        }
+        if (manifests.isEmpty()) throw IOException(DeltaStrings.noManifest)
+        val chain = mutableListOf<Pair<Uri, DeltaManifest>>()
+        if (manifests.size == 1) {
+            chain += manifests.single()
+        } else {
+            var at = installedContentHash(current)
+            if (at == manifests.maxBy { it.second.toVersion }.second.toContentHash) return null
+            while (true) {
+                val next = manifests.filter { it !in chain && it.second.fromContentHash == at }.maxByOrNull { it.second.toVersion } ?: break
+                chain += next
+                at = next.second.toContentHash
+            }
+            if (chain.isEmpty()) throw IOException(DeltaStrings.badChain)
+        }
+        val entries = chain.map { (uri, manifest) ->
+            manifest.patchFiles.forEach { if (it.file !in byName) throw IOException(DeltaStrings.missingPatch.format(it.file)) }
+            DeltaEntry(manifest.fromVersion, manifest.toVersion, uri.toString(), manifest.patchFiles.sumOf { it.size })
+        }
+        return Plan(entries, releaseTag = null, bytes = entries.sumOf { it.totalSize }, resume = false, local = byName)
+    }
+
+    private fun readText(uri: Uri): String = app.contentResolver.openInputStream(uri)?.use { input ->
+        val bytes = input.readNBytes(MAX_MANIFEST_BYTES + 1)
+        if (bytes.size > MAX_MANIFEST_BYTES) throw IOException("Not a manifest: $uri")
+        String(bytes, Charsets.UTF_8)
+    } ?: throw IOException("Cannot read $uri")
+
+    /**
+     * The installed database's logical content hash, as [DeltaApplierClient] computes it before applying, with its
+     * progress in the state. Minutes on a phone: the foreground service keeps the process meanwhile, and a cancel stops it.
+     */
+    private fun installedContentHash(current: InstallToken): String {
+        publish(current, DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.Applying, message = DeltaStrings.verifying, progress = 0f, cancellable = true))
+        LibraryDeltaService.start(app)
+        return openLibraryDatabase(store.databaseFile).use { db ->
+            LogicalContentHasher(
+                progress = { done, total ->
+                    if (due(done == total)) update(current) { it.copy(progress = (done.toDouble() / total).toFloat().coerceIn(0f, 1f)) }
+                },
+                checkCancelled = current::check,
+            ).compute(db)
+        }
+    }
+
+    /**
+     * A database split in chunks on a FAT32 card (SplitDatabase) takes no incremental update yet: the delta code opens the
+     * database with Android's SQLite, which cannot read the chunks. Says so, and true.
+     */
+    private fun refuseSplit(): Boolean {
+        if (!SplitDatabase.isSplit(store.databaseFile)) return false
+        _state.value = DbDeltaUpdateState(errorMessage = DeltaStrings.splitUnsupported)
+        return true
     }
 
     /** Stops a check, or a run before its SQLite COMMIT (the transaction rolls back; downloads stay for a resume). */
@@ -237,7 +381,8 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
      * finished in the background (desktop rolls back with its backup at boot; there is no backup here).
      */
     fun resumeIfPending() {
-        if (isBusy || installer.isBusy || !store.databaseFile.isFile) return
+        if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy || !store.databaseFile.isFile) return
+        if (SplitDatabase.isSplit(store.databaseFile)) return
         val pending = DeltaApplierClient().pending(store.databaseFile.toPath()) ?: return
         if (pending.stage != DeltaApplierClient.Stage.Index || pending.manifestUrl == null) return
         plan = Plan(listOf(DeltaEntry(pending.fromVersion, pending.toVersion, pending.manifestUrl, 0L)), pending.releaseTag, 0L, resume = true)
@@ -257,18 +402,29 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     private fun run(p: Plan, current: InstallToken) {
         val wakeLock = acquireWakeLock()
         try {
-            client(current).applyChain(
+            client(current, p.local).applyChain(
                 p.chain,
-                progress = { _, _, status -> onStatus(current, status) },
+                progress = { _, _, status -> onStatus(current, status, local = p.local != null) },
                 releaseTagFor = { entry -> p.releaseTag?.takeIf { tagNumber(it) == entry.toVersion } },
-                onDeltaApplied = { entry -> p.releaseTag?.takeIf { tagNumber(it) == entry.toVersion }?.let(::writeReleaseInfo) },
+                onDeltaApplied = { entry ->
+                    val tag = p.releaseTag?.takeIf { tagNumber(it) == entry.toVersion }
+                    // A delta from files resumed after a restart has no local map: its manifest URL still says so.
+                    if (tag != null) {
+                        writeReleaseInfo(tag)
+                    } else if (p.local != null || entry.manifestUrl.startsWith(CONTENT_SCHEME)) {
+                        writeLocalVersion(entry.toVersion)
+                    }
+                },
             )
             closeSearch()
             plan = null
+            releaseGrants(p)
             val n = p.chain.size
             publish(current, DbDeltaUpdateState(message = if (n == 1) DeltaStrings.appliedOne else DeltaStrings.appliedMany.format(n), lastAppliedCount = n))
         } catch (e: Throwable) {
             closeSearch()
+            // A cancel keeps the plan, and the files it reads, for "המשך".
+            if (!current.cancelled.get()) releaseGrants(p)
             publish(
                 current,
                 when {
@@ -284,11 +440,16 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     }
 
     /** Desktop DbDeltaUpdateViewModel's mapping of the orchestrator's statuses to phases, with the Hebrew messages. */
-    private fun onStatus(current: InstallToken, status: String) {
+    private fun onStatus(current: InstallToken, status: String, local: Boolean = false) {
         update(current) { s ->
             when {
-                status == "downloading manifest" -> s.copy(phase = DbDeltaUpdateState.Phase.Downloading, message = DeltaStrings.preparing, progress = null, detail = null)
-                "download" in status -> s.copy(phase = DbDeltaUpdateState.Phase.Downloading, message = DeltaStrings.downloading)
+                status == "downloading manifest" -> s.copy(
+                    phase = DbDeltaUpdateState.Phase.Downloading,
+                    message = if (local) DeltaStrings.copying else DeltaStrings.preparing,
+                    progress = null,
+                    detail = null,
+                )
+                "download" in status -> s.copy(phase = DbDeltaUpdateState.Phase.Downloading, message = if (local) DeltaStrings.copying else DeltaStrings.downloading)
                 status.startsWith("decompressing") -> s.copy(message = DeltaStrings.extracting, progress = 0f, detail = null)
                 "sqlite" in status -> s.copy(phase = DbDeltaUpdateState.Phase.Applying, message = DeltaStrings.verifying, progress = 0f, detail = null)
                 "lucene" in status -> s.copy(phase = DbDeltaUpdateState.Phase.UpdatingIndex, message = DeltaStrings.indexing, progress = null, detail = null, cancellable = false)
@@ -304,6 +465,12 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
         runCatching { runBlocking { app.search.close() } }
     }
 
+    /** Gives back the read grants of the picked files a run read: its patches and manifests (a resumed run's manifest). */
+    private fun releaseGrants(p: Plan) {
+        val uris = p.local?.values.orEmpty() + p.chain.map { it.manifestUrl }.filter { it.startsWith(CONTENT_SCHEME) }.map(Uri::parse)
+        if (uris.isNotEmpty()) app.releaseReadGrants(uris)
+    }
+
     private var lastEmitNs = 0L
 
     /** At most ~4 updates a second from the byte and row counters. */
@@ -314,7 +481,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
         return true
     }
 
-    private fun client(current: InstallToken): DeltaUpdaterClient {
+    private fun client(current: InstallToken, local: Map<String, Uri>? = null): DeltaUpdaterClient {
         val db = store.databaseFile
         var indexed = 0
         return DeltaUpdaterClient(
@@ -329,9 +496,14 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
             localVersionProvider = { localVersion(current, null) },
             downloader = DeltaDownloader(
                 openStream = { url, size, startAt ->
-                    ResumingHttpInputStream(url, size, current, installer::networkAvailable, startAt) { lost ->
-                        update(current) { it.copy(detail = if (lost) AndroidStrings.reconnecting else it.detail) }
-                    }.also { activeStream = it }
+                    if (url.startsWith(CONTENT_SCHEME)) {
+                        // A patch picked on the device: copied into the delta cache like a download, checked the same way.
+                        (app.contentResolver.openInputStream(Uri.parse(url)) ?: throw IOException("Cannot read $url")).apply { skipFully(startAt) }
+                    } else {
+                        ResumingHttpInputStream(url, size, current, installer::networkAvailable, startAt) { lost ->
+                            update(current) { it.copy(detail = if (lost) AndroidStrings.reconnecting else it.detail) }
+                        }.also { activeStream = it }
+                    }
                 },
                 onProgress = { done, total ->
                     if (due(done == total)) {
@@ -345,8 +517,9 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
                 },
                 checkCancelled = current::check,
             ),
-            httpGet = { url -> installer.httpGetText(url, LibraryInstaller.ACCEPT_ANY, current) },
+            httpGet = { url -> if (url.startsWith(CONTENT_SCHEME)) readText(Uri.parse(url)) else installer.httpGetText(url, LibraryInstaller.ACCEPT_ANY, current) },
             isNotFound = { it is HttpStatusException && it.code == 404 },
+            urlForPatchFile = { entry, file -> local?.get(file)?.toString() ?: (entry.manifestUrl.substringBeforeLast('/') + "/" + file) },
             hashProgress = { done, total, after ->
                 if (due(done == total)) {
                     val fraction = (done.toDouble() / total).toFloat().coerceIn(0f, 1f)
@@ -424,6 +597,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
      */
     private fun localVersion(current: InstallToken, latestTag: String?): Int {
         val stamp = DatabaseVersion.current(store)
+        localUpdateVersion(stamp)?.let { return it }
         if (stamp != null) {
             latestTag?.takeIf { LibraryInstaller.versionFromTag(it) == stamp }?.let(::tagNumber)?.let { return it }
             runCatching { releaseTags(current) }.getOrNull()
@@ -445,9 +619,32 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
         return listOfNotNull(root["latest"]?.jsonObject?.tag()) + root["releases"]?.jsonArray.orEmpty().mapNotNull { (it as? JsonObject)?.tag() }
     }
 
+    /**
+     * The version a delta from files reached (Android only), while release_info.txt still holds the [stamp] it had
+     * then: a later download or install writes a new stamp, and the record no longer counts.
+     */
+    private fun localUpdateVersion(stamp: String?): Int? = runCatching {
+        val lines = File(store.libraryDir, LOCAL_VERSION_FILE).readLines()
+        lines[0].trim().toInt().takeIf { lines.getOrNull(1)?.trim().orEmpty() == stamp.orEmpty() }
+    }.getOrNull()
+
+    /** The version a delta from files reached, for the settings to show beside release_info.txt's date, or null. Blocking. */
+    fun localUpdateVersion(): Int? = localUpdateVersion(DatabaseVersion.current(store))
+
+    private fun writeLocalVersion(version: Int) {
+        val target = File(store.libraryDir, LOCAL_VERSION_FILE)
+        val tmp = File(target.path + ".tmp")
+        FileOutputStream(tmp).use { out ->
+            out.write("$version\n${DatabaseVersion.current(store).orEmpty()}\n".toByteArray())
+            out.fd.sync()
+        }
+        Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+    }
+
     /** release_info.txt = the release's timestamp, written aside and renamed (the startup check reads it). */
     private fun writeReleaseInfo(tag: String) {
         val stamp = LibraryInstaller.versionFromTag(tag) ?: return
+        File(store.libraryDir, LOCAL_VERSION_FILE).delete()
         val target = store.releaseInfoFile
         val tmp = File(target.path + ".tmp")
         FileOutputStream(tmp).use { out ->
@@ -474,6 +671,12 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
         const val WORK_DIR = "delta-cache"
 
         private const val BUNDLE_NAME = "seforim_bundle.tar.zst"
+        private const val MANIFEST_SUFFIX = ".manifest.json"
+        private const val CONTENT_SCHEME = "content:"
+        private const val MAX_MANIFEST_BYTES = 4 shl 20
+
+        /** Beside release_info.txt: the version a delta from files reached, and the release_info.txt stamp it applies to. */
+        const val LOCAL_VERSION_FILE = LibraryStore.LOCAL_VERSION_NAME
         private const val WAKE_LOCK_TIMEOUT_MS = 3L * 60 * 60 * 1000
         private val TAG = Regex("""^v(\d+)-\d{14}$""")
 
@@ -488,5 +691,20 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
 
         fun get(app: ZayitApplication): DbDeltaUpdateService =
             instance ?: synchronized(this) { instance ?: DbDeltaUpdateService(app).also { instance = it } }
+    }
+}
+
+/** InputStream.skipNBytes is API 34: skips [n] bytes or fails (a resumed copy of a picked patch). */
+private fun InputStream.skipFully(n: Long) {
+    var left = n
+    while (left > 0) {
+        val skipped = skip(left)
+        if (skipped > 0) {
+            left -= skipped
+        } else if (read() >= 0) {
+            left--
+        } else {
+            throw IOException("Unexpected end of file")
+        }
     }
 }

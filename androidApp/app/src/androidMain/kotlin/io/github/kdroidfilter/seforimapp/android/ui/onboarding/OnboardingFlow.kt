@@ -4,7 +4,10 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -87,7 +90,11 @@ fun OnboardingFlow(onFinished: () -> Unit) {
 
     TrackInstallerVisibility(vm.installer)
     val startOnline = rememberWithNotificationPermission(vm::startOnline)
-    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.importUris(uris) }
+    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        // The install service reads the parts one by one, possibly after the activity is gone.
+        context.takeReadGrants(uris)
+        vm.importUris(uris)
+    }
 
     val progress = when (step) {
         OnboardingStep.Download -> {
@@ -117,7 +124,7 @@ fun OnboardingFlow(onFinished: () -> Unit) {
                 }
                 OnboardingStep.DiskSpace -> {
                     val disk by vm.disk.collectAsState()
-                    DiskSpaceStep(disk, onRecheck = vm::refreshDisk, onNext = { vm.go(OnboardingStep.InstallType) })
+                    DiskSpaceStep(disk, onRecheck = vm::refreshDisk, onNext = { vm.go(OnboardingStep.InstallType) }, onSelectLocation = vm::selectLocation)
                 }
                 OnboardingStep.InstallType -> {
                     val device by vm.device.collectAsState()
@@ -289,4 +296,25 @@ internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+/**
+ * Keeps read access to documents picked with the system picker (or to a picked folder's tree) once the activity that
+ * picked them is gone: the install and update services read them later in the background, and the picker's own
+ * grant ends with the activity (a swipe from Recents). The run that reads them gives them back ([releaseReadGrants]).
+ */
+internal fun Context.takeReadGrants(uris: Collection<Uri>) {
+    uris.forEach { runCatching { contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
+}
+
+/** Gives back what [takeReadGrants] took: each document's grant and, for a document of a picked folder, the folder's. */
+internal fun Context.releaseReadGrants(uris: Collection<Uri>) {
+    val grants = uris.flatMapTo(LinkedHashSet<Uri>()) { uri ->
+        val authority = uri.authority
+        val tree = runCatching {
+            if (authority != null && DocumentsContract.isTreeUri(uri)) DocumentsContract.buildTreeDocumentUri(authority, DocumentsContract.getTreeDocumentId(uri)) else null
+        }.getOrNull()
+        listOfNotNull(uri, tree)
+    }
+    grants.forEach { runCatching { contentResolver.releasePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
 }

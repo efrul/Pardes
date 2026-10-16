@@ -70,6 +70,7 @@ The port was started in a Linux cloud container, and it also builds and runs on 
 - **Memory.** On a PC with 8 GB of RAM the R8 step alone can take half an hour, and the emulator does not fit next to a running build. Stop the Gradle daemons (`./gradlew --stop`) before starting the emulator.
 - **Emulator.** With Hyper-V/WHPX the API 33 x86_64 image is hardware-accelerated, so the cloud container's software-emulation waits do not apply.
 - **Desktop reference.** The installed desktop app keeps its library in `%APPDATA%\io.github.kdroidfilter.seforimapp\databases`. That folder is the default source of `tools/push-desktop-library.ps1`.
+- **Native code.** `app/src/androidMain/cpp` builds `libpardes_multiplex.so` (SQLite's `test_multiplex.c` as a loadable extension, with the 3.49.1 headers) with CMake 3.22.1 and NDK 27.3.13750724. Gradle installs a missing NDK when the SDK licences are accepted. The extension calls only the routines of the SQLite that loads it: requery `sqlite-android` 3.49.0, published on JitPack only (`settings.gradle.kts` restricts that repository to `com.github.requery`).
 - **Transfer script.** adb.exe reads its standard input as text, so a stream through `adb shell -T` stops at the first 0x1A byte. `tools/push-desktop-library.ps1` therefore pushes each file to `/data/local/tmp` and copies it into place on the phone, where the `.sh` streams it. Test changes to the `.ps1` on Windows, not with pwsh on Linux. Windows 11's "Run with PowerShell" runs `powershell -file` under the user's execution policy, so it refuses a downloaded `.ps1` ("is not digitally signed" under RemoteSigned, nothing at all under the default Restricted); `tools/push-desktop-library.cmd` runs it with `-ExecutionPolicy Bypass` and pauses at the end, and is what users double-click.
 
 ## Signing
@@ -82,11 +83,13 @@ Debug and release builds are both signed with `androidApp/debug.keystore` (the u
 - **Compose redraw instead of the desktop UI:** desktop uses Jewel and desktop-only window APIs. The Android UI copies its look (Islands colours, fonts, gold accent) and adapts the layout to touch and small screens.
 - **minSdk 33:** the user's target device runs Android 13. Everything that needs newer Java APIs is patched or avoided rather than raising minSdk.
 - **Lucene on the phone:** the same index and engine as desktop means the same results, no on-device indexing and no server. Lucene 10.x needs JDK APIs that Android 13 lacks, so `lucene-android/` patches lucene-core and a TraceReferences check against the API-33 platform guards it.
+- **Library on a memory card** (since 2026-10-16): in the app's own folder on the card, not a folder the user picks, so no storage permission (all-files access) is needed. A FAT32 card gets the database in multiplex chunks rather than a refusal, because Android formats cards of 32 GB and less as FAT32. Only a split database uses the bundled SQLite: every other library keeps Android's, so nothing changes for it.
 - **R8 release builds,** even for testing: the debug APK is many times larger and slow on a software emulator.
 - **Own name, icon and applicationId:** Pardes (פרדס), an icon of its own (the word in gold on olive green) and `io.github.efrul.pardes` since 2026-10-15, at the request of Zayit's author (before it, "זית לאנדרואיד" as `io.github.efrul.zayit`, and earlier test builds in the original author's namespace). The code's namespace and package names stay `io.github.kdroidfilter…`, as in desktop. Test builds from before the change (never distributed) are a different app to Android, with their own library.
 
 ## Known gaps / ideas
 
+- Incremental updates on a library split for a FAT32 card: the delta code opens the database with Android's SQLite. Porting it to the bundled SQLite (requery's API mirrors Android's) would lift that.
 - Year cycle tool: 2D rendering only.
 - Dictionary tool: headword match only.
 - Release signing: the APK is signed with the project's debug key (see "Signing") until a real key exists.

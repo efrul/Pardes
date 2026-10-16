@@ -1,14 +1,15 @@
 package io.github.kdroidfilter.seforimapp.android.data
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.PowerManager
 import android.os.StatFs
+import android.system.Os
 import android.provider.OpenableColumns
 import com.github.luben.zstd.ZstdInputStream
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.releaseReadGrants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -32,6 +34,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.security.MessageDigest
@@ -39,7 +42,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.exp
 
 /** Why an installation stopped; each value maps to the desktop message the onboarding shows. */
-enum class InstallError { Generic, InsufficientSpace, IncompleteBundle, Incompatible }
+enum class InstallError {
+    Generic,
+    InsufficientSpace,
+    IncompleteBundle,
+    Incompatible,
+
+    /** Android: the memory card's filesystem (FAT32) cannot hold a file that big ([LibraryLocation.maxFileBytes]). */
+    FileTooLarge,
+}
 
 /** Progress of the library installation, observed by the onboarding and by [LibraryInstallService]. */
 sealed interface InstallState {
@@ -182,10 +193,10 @@ class LibraryInstaller private constructor(private val context: Context) {
         if (!isBusy) _state.value = InstallState.Idle
     }
 
-    fun diskSpace(): DiskSpace = runCatching {
-        val stat = StatFs(store.libraryDir.path)
-        DiskSpace(totalBytes = stat.totalBytes, availableBytes = stat.availableBytes)
-    }.getOrDefault(DiskSpace(0L, 0L))
+    /** Free space where the next install writes ([LibraryStore.targetLocation]: the phone, or the chosen memory card). */
+    fun diskSpace(): DiskSpace = targetDir?.let { dir ->
+        runCatching { StatFs(dir.path).let { DiskSpace(totalBytes = it.totalBytes, availableBytes = it.availableBytes) } }.getOrNull()
+    } ?: store.targetLocation().space()
 
     fun isMeteredNetwork(): Boolean =
         runCatching { context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered == true }.getOrDefault(false)
@@ -202,18 +213,32 @@ class LibraryInstaller private constructor(private val context: Context) {
         return checkDatabase(store.databaseFile, DatabaseVersion.current(store))
     }
 
-    /** Drops what a killed install or transfer left half written, so the disk step counts that space as free. */
+    /**
+     * Drops what a killed install, move or transfer left half written, so the disk step counts that space as free and
+     * no hidden copy keeps gigabytes. Only staged (`.part`) names go, never a library's own; nothing while an install or
+     * a move runs.
+     */
     fun discardStaleDownload() {
-        if (isBusy) return
-        libraryDirs().forEach { dir -> LibraryStore.LIBRARY_ITEMS.forEach { File(dir, it + LibraryStore.PARTIAL_SUFFIX).deleteRecursively() } }
+        if (isBusy || LibraryMover.get(context).isBusy) return
+        val stagedDb = LibraryStore.DB_NAME + LibraryStore.PARTIAL_SUFFIX
+        libraryDirs().forEach { dir ->
+            LibraryStore.LIBRARY_ITEMS.forEach { File(dir, it + LibraryStore.PARTIAL_SUFFIX).deleteRecursively() }
+            // The mover's staged write-ahead log, the staged database's side files and its overflow chunks (a FAT32 card).
+            File(dir, LibraryStore.DB_NAME + "-wal" + LibraryStore.PARTIAL_SUFFIX).delete()
+            DB_SIDECARS.forEach { File(dir, stagedDb + it).delete() }
+            SplitDatabase.deleteOverflow(dir, stagedDb)
+        }
     }
 
-    /** Both places LibraryStore may keep the library in. */
+    /** Every place LibraryStore may keep the library in (the phone and the memory cards). */
     private fun libraryDirs(): List<File> = (store.candidateDirs + store.libraryDir).distinct()
 
-    /** Bundle files (parts, manifest or a single .tar.zst) copied into the app's own folders by adb or a file manager. */
+    /**
+     * Bundle files (parts, manifest or a single .tar.zst) copied into the app's own folders by adb or a file manager,
+     * on the phone or on a memory card (`Android/data/<app>/files/`, which a computer can write to straight).
+     */
     fun findLocalBundle(): List<File> {
-        val dirs = listOfNotNull(context.getExternalFilesDir(null), store.libraryDir, context.filesDir).distinct()
+        val dirs = (store.locations.map { it.dir.parentFile } + store.libraryDir + context.filesDir).filterNotNull().distinct()
         return dirs.flatMap { dir ->
             dir.listFiles().orEmpty().filter { file ->
                 file.isFile && (BundleNames.partNumber(file.name) != null || BundleNames.isManifest(file.name) || file.name.endsWith(".tar.zst", ignoreCase = true))
@@ -230,7 +255,7 @@ class LibraryInstaller private constructor(private val context: Context) {
     }
 
     private fun begin(request: Request) {
-        if (isBusy) return
+        if (isBusy || LibraryMover.get(context).isBusy) return
         lastRequest = request
         val previous = job
         val current = InstallToken()
@@ -250,6 +275,7 @@ class LibraryInstaller private constructor(private val context: Context) {
     }
 
     private fun execute(request: Request, current: InstallToken) {
+        targetDir = null
         val wakeLock = acquireWakeLock()
         try {
             when (request) {
@@ -257,6 +283,9 @@ class LibraryInstaller private constructor(private val context: Context) {
                 is Request.Uris -> importOffline(request.uris.map(::pickedFromUri), current)
                 is Request.Files -> importOffline(request.files.map(::pickedFromFile), current)
             }
+            // The read grants kept on the picked files, so that the run could outlive the screen, are not needed any
+            // more. A failed run keeps them for its retry.
+            if (request is Request.Uris) context.releaseReadGrants(request.uris)
             publish(current, InstallState.Done)
         } catch (e: Throwable) {
             runCatching { discardStaged() }
@@ -458,12 +487,17 @@ class LibraryInstaller private constructor(private val context: Context) {
 
     private fun extractBundle(parts: List<BundlePartSource>, current: InstallToken, cleanup: List<File>, pickedVersion: String? = null) {
         val total = parts.sumOf { it.size.coerceAtLeast(0L) }
-        prepareTarget(if (total > 0) estimateLibraryBytes(total) else ESTIMATED_LIBRARY_BYTES)
         val meter = TransferSpeedMeter()
         publish(current, InstallState.Extracting(0f, online = false))
+        // Prepared on the first item written: a bundle that starts with release_info.txt (packed on a computer by a
+        // tool, not desktop's order) is refused for an old release before anything is deleted.
         val version = ConcatenatedBundleParts(parts, current) { read ->
             if (total > 0 && meter.due()) publish(current, InstallState.Extracting((read.toDouble() / total).toFloat().coerceIn(0f, 1f), online = false))
-        }.use { input -> unpackBundle(input, current) }
+        }.use { input ->
+            // The bundle's own library_size.txt, when it comes first, rather than an estimate from the compression of
+            // the official releases (a bundle compressed less, or a smaller library, would need far more than it takes).
+            unpackBundle(input, current) { declared -> prepareTarget(declared ?: if (total > 0) estimateLibraryBytes(total) else ESTIMATED_LIBRARY_BYTES) }
+        }
         publish(current, InstallState.Extracting(1f, online = false))
         finishInstall(current, version ?: pickedVersion, cleanup)
     }
@@ -478,7 +512,7 @@ class LibraryInstaller private constructor(private val context: Context) {
             if (file.size > 0 && meter.due()) publish(current, InstallState.Extracting((read.toDouble() / file.size).toFloat().coerceIn(0f, 1f), online = false))
         }.use { input ->
             ZstdInputStream(BufferedInputStream(input, BUFFER_SIZE)).use { zstd ->
-                writeFile(zstd, -1L, tempDbFile, current) {}
+                writeFile(zstd, -1L, tempDbFile, current, chunked = splitDatabase) {}
             }
         }
         finishInstall(current, version = version, cleanup = cleanup)
@@ -495,7 +529,7 @@ class LibraryInstaller private constructor(private val context: Context) {
         val meter = TransferSpeedMeter()
         publish(current, InstallState.Extracting(0f, online = false))
         file.open().use { input ->
-            writeFile(input, file.size, tempDbFile, current) { written ->
+            writeFile(input, file.size, tempDbFile, current, chunked = splitDatabase) { written ->
                 if (file.size > 0 && meter.due()) publish(current, InstallState.Extracting((written.toDouble() / file.size).toFloat().coerceIn(0f, 1f), online = false))
             }
         }
@@ -515,34 +549,82 @@ class LibraryInstaller private constructor(private val context: Context) {
 
     private fun discardStaged() {
         LibraryStore.LIBRARY_ITEMS.forEach { name -> staged(name).deleteRecursively() }
+        tempDbFile.parentFile?.let { SplitDatabase.deleteOverflow(it, tempDbFile.name) }
         DB_SIDECARS.forEach { File(tempDbFile.path + it).delete() }
     }
 
-    /** Removes the previous library and checks the free space, like desktop's DatabasePreparationUseCase. */
+    /**
+     * Makes room for the new library and checks the free space, like desktop's DatabasePreparationUseCase, which deletes
+     * the previous library first. Android keeps it when the new one fits beside it: the new library is written under
+     * `.part` names and replaces the old one only once it has been read to the end and checked, so a damaged part or a
+     * release too old for the app fails with the working library still in place (an update from files, say).
+     */
     private fun prepareTarget(neededBytes: Long) {
+        targetDir = null
+        store.refreshLocations()
+        // Every handle on the library goes before anything is measured or deleted: search keeps seforim.db (its acronym
+        // cache) and the Lucene indexes open, and a deleted file that is still open keeps its space.
+        runCatching { runBlocking { (context as? ZayitApplication)?.search?.close() } }
         store.close()
-        // LibraryStore may hold the library in external or internal app storage: clear both, with what an interrupted run left.
-        val names = LibraryStore.LIBRARY_ITEMS.flatMap { listOf(it, it + LibraryStore.PARTIAL_SUFFIX) } +
-            DB_SIDECARS.flatMap { listOf(LibraryStore.DB_NAME + it, LibraryStore.DB_NAME + LibraryStore.PARTIAL_SUFFIX + it) } +
-            DELTA_ITEMS
-        for (dir in libraryDirs()) {
+        val location = store.targetLocation()
+        // A FAT32 card takes no file of 4 GB: the database goes there in chunks (SplitDatabase).
+        splitDatabase = location.isFat
+        val target = location.dir.apply { mkdirs() }
+        // LibraryStore may hold the library on the phone (external or internal app storage) or on a memory card: clear
+        // them all of what an interrupted run left, and of the library itself unless there is room to keep it.
+        val partial = LibraryStore.LIBRARY_ITEMS.map { it + LibraryStore.PARTIAL_SUFFIX } +
+            DB_SIDECARS.map { LibraryStore.DB_NAME + LibraryStore.PARTIAL_SUFFIX + it }
+        deleteInLibraryDirs(partial)
+        // Only a library on the same volume frees room for the new one: one elsewhere (the phone, when the card is the
+        // target) stays until the new one is installed (finishInstall), and is kept if this run fails. It is deleted only
+        // when that makes the room: with too little space either way, nothing is deleted and the run stops here.
+        val needed = neededBytes + SPACE_HEADROOM_BYTES
+        val free = runCatching { StatFs(target.path).availableBytes }.getOrDefault(0L)
+        if (free < needed) {
+            val sameVolume = libraryDirs().filter { sameVolume(it, target) }
+            if (free + sameVolume.sumOf(LibraryStore::libraryBytes) < needed) throw InstallException(InstallError.InsufficientSpace)
+            deleteInLibraryDirs(LIBRARY_NAMES, sameVolume)
+        }
+        targetDir = target
+        if (diskSpace().availableBytes < needed) throw InstallException(InstallError.InsufficientSpace)
+    }
+
+    /** Both folders are on one filesystem (the phone's internal and external app folders are; a card is not). */
+    private fun sameVolume(a: File, b: File): Boolean = runCatching { Os.stat(a.path).st_dev == Os.stat(b.path).st_dev }.getOrDefault(false)
+
+    private fun deleteInLibraryDirs(names: List<String>, dirs: List<File> = libraryDirs()) {
+        for (dir in dirs) {
+            // A split database's overflow chunks go with it (and with its staged copy).
+            names.filter { it == LibraryStore.DB_NAME || it == LibraryStore.DB_NAME + LibraryStore.PARTIAL_SUFFIX }.forEach { SplitDatabase.deleteOverflow(dir, it) }
             for (name in names) {
                 val file = File(dir, name)
                 if (file.exists() && !file.deleteRecursively()) throw InstallException(InstallError.Generic, "Cannot delete ${file.name}")
             }
         }
-        targetDir = store.libraryDir
-        if (diskSpace().availableBytes < neededBytes + SPACE_HEADROOM_BYTES) throw InstallException(InstallError.InsufficientSpace)
     }
+
+    /** The run writes the database in chunks (a FAT32 card). */
+    @Volatile
+    private var splitDatabase = false
 
     /**
      * Reads the tar.zst bundle to its end, writing the library items under their staged names ([staged]).
      * Desktop's tar holds `seforim.db.lookup.lucene/…`, `seforim.db.lucene/…`, `seforim.db`, `lexical.db`,
      * `catalog.pb` and `release_info.txt`, in that order. Returns the release_info.txt version when there is one.
+     * [prepare], when given, runs before the first item is written; a release_info.txt read before then that is too old
+     * for the app stops the install with nothing deleted, and a library_size.txt read before then gives [prepare] the
+     * library's real size (bundles packed on a computer by a tool; desktop's order has neither first).
      */
-    private fun unpackBundle(compressed: InputStream, current: InstallToken): String? {
+    private fun unpackBundle(compressed: InputStream, current: InstallToken, prepare: ((declaredBytes: Long?) -> Unit)? = null): String? {
         var version: String? = null
         var foundDb = false
+        var prepared = prepare == null
+        var declaredBytes: Long? = null
+        fun ensurePrepared() {
+            if (prepared) return
+            prepared = true
+            prepare?.invoke(declaredBytes)
+        }
         val buffer = ByteArray(BUFFER_SIZE)
         val buffered = BufferedInputStream(compressed, BUFFER_SIZE)
         val zstd = ZstdInputStream(buffered)
@@ -554,14 +636,24 @@ class LibraryInstaller private constructor(private val context: Context) {
                 val name = entry.name.removePrefix("./").trimEnd('/')
                 val top = name.substringBefore('/')
                 val inside = name.substringAfter('/', missingDelimiterValue = "")
+                if (entry.isFile && name == RELEASE_INFO) {
+                    version = String(tar.readBytes(), Charsets.UTF_8).trim()
+                    if (!prepared && !DatabaseVersion.isCompatible(version)) throw InstallException(InstallError.Incompatible)
+                    continue
+                }
+                if (entry.isFile && name == LIBRARY_SIZE) {
+                    val text = String(tar.readBytes(), Charsets.UTF_8)
+                    if (!prepared) declaredBytes = librarySize(text)
+                    continue
+                }
+                if (top in INDEX_DIRS || (entry.isFile && (name == LibraryStore.DB_NAME || name in BUNDLE_FILES))) ensurePrepared()
                 when {
                     entry.isFile && name == LibraryStore.DB_NAME -> {
                         // Exact size from the tar header: refuse before writing gigabytes that cannot fit.
                         if (diskSpace().availableBytes < entry.size + LATE_SPACE_MARGIN_BYTES) throw InstallException(InstallError.InsufficientSpace)
-                        writeFile(tar, entry.size, tempDbFile, current) {}
+                        writeFile(tar, entry.size, tempDbFile, current, chunked = splitDatabase) {}
                         foundDb = true
                     }
-                    entry.isFile && name == RELEASE_INFO -> version = String(tar.readBytes(), Charsets.UTF_8).trim()
                     entry.isFile && name in BUNDLE_FILES -> writeFile(tar, entry.size, staged(name), current) {}
                     top in INDEX_DIRS && entry.isDirectory -> indexPath(top, inside)?.mkdirs()
                     top in INDEX_DIRS && entry.isFile && inside.isNotEmpty() -> {
@@ -593,9 +685,11 @@ class LibraryInstaller private constructor(private val context: Context) {
         return segments.fold(staged(index)) { dir, segment -> File(dir, segment) }
     }
 
-    private fun writeFile(input: InputStream, size: Long, target: File, current: InstallToken, onWritten: (Long) -> Unit) {
+    /** [chunked]: the database on a FAT32 card, written as SQLite multiplex chunks ([SplitDatabase]). */
+    private fun writeFile(input: InputStream, size: Long, target: File, current: InstallToken, chunked: Boolean = false, onWritten: (Long) -> Unit) {
         val buffer = ByteArray(BUFFER_SIZE)
-        FileOutputStream(target).use { out ->
+        val stream: OutputStream = if (chunked) ChunkedOutputStream(target) else FileOutputStream(target)
+        stream.use { out ->
             var written = 0L
             while (true) {
                 current.check()
@@ -607,7 +701,8 @@ class LibraryInstaller private constructor(private val context: Context) {
             }
             if (size >= 0 && written != size) throw InstallException(InstallError.IncompleteBundle, "${target.name}: $written of $size bytes")
             out.flush()
-            out.fd.sync()
+            // ChunkedOutputStream syncs each chunk as it closes it.
+            (out as? FileOutputStream)?.fd?.sync()
         }
     }
 
@@ -623,13 +718,40 @@ class LibraryInstaller private constructor(private val context: Context) {
         current.check()
         val dir = tempDbFile.parentFile ?: store.libraryDir
         if (version != null) staged(RELEASE_INFO).writeText(version)
-        // LIBRARY_ITEMS ends with the database: the library only counts as installed once everything else is in place.
+        // A previous library kept until now (prepareTarget) stops counting as installed before any of its items is
+        // replaced: its database goes first, chunks and all. An interruption from here on leaves no library (a reinstall),
+        // never the old database with the new indexes and version, nor its first chunk read with the new overflow chunks
+        // through the multiplex VFS. The new database has been checked above.
+        val oldDb = File(dir, LibraryStore.DB_NAME)
+        if (oldDb.exists() && !oldDb.delete()) throw IOException("Cannot delete ${oldDb.name}")
+        SplitDatabase.deleteOverflow(dir, LibraryStore.DB_NAME)
+        // What else belonged to it: its write-ahead log must never meet the new database, nor its delta work or the
+        // version a delta from files had reached.
+        deleteInLibraryDirs(DB_SIDECARS.map { LibraryStore.DB_NAME + it } + DELTA_ITEMS + LibraryStore.LOCAL_VERSION_NAME, listOf(dir))
+        // LIBRARY_ITEMS ends with the database: the library only counts as installed once everything else is in place. A
+        // file is renamed over the old one (atomic); a folder (an index) replaces the old folder.
         for (name in LibraryStore.LIBRARY_ITEMS) {
             val source = staged(name)
-            if (!source.exists()) continue
             val target = File(dir, name)
-            target.deleteRecursively()
+            if (!source.exists()) {
+                // Not in the new library (a bare seforim.db brings no index or catalog): the old one's would not match it.
+                target.deleteRecursively()
+                continue
+            }
+            // A split database's overflow chunks take their names just before its first chunk does.
+            if (name == LibraryStore.DB_NAME) SplitDatabase.renameOverflow(source, target)
+            if (target.isDirectory) target.deleteRecursively()
             if (!source.renameTo(target)) throw IOException("Cannot move ${source.name} to ${target.name}")
+        }
+        // The place the library is in now is the chosen one: an install made while the chosen card was out is not hidden
+        // by that card's older library once it is back.
+        runCatching { store.locations.firstOrNull { it.dir == dir }?.let(store::setPreferred) }
+        // A previous library in another place is not the library any more. One on a memory card this run did not write to
+        // is left alone: the card screen's "install on the phone" promises to keep it, whether the card is back or not.
+        runCatching {
+            val chosen = store.preferredKey
+            val otherCards = store.locations.filter { it.removable && it.key != chosen }.map { it.dir }
+            deleteInLibraryDirs(LIBRARY_NAMES, libraryDirs().filter { it != dir && it !in otherCards })
         }
         // Bundle files that sat in the app's own folders are not needed any more (desktop deletes its parts too).
         cleanup.forEach { runCatching { it.delete() } }
@@ -640,23 +762,31 @@ class LibraryInstaller private constructor(private val context: Context) {
         if (!DatabaseVersion.isCompatible(version)) return InstallError.Incompatible
         val hasTables = runCatching {
             openForCheck(db).use { sql ->
-                sql.rawQuery(REQUIRED_TABLES_QUERY, null).use { cursor -> cursor.moveToFirst() && cursor.getInt(0) == REQUIRED_TABLE_COUNT }
+                sql.rawQuery(REQUIRED_TABLES_QUERY).use { cursor -> cursor.moveToFirst() && cursor.getInt(0) == REQUIRED_TABLE_COUNT }
             }
         }.getOrDefault(false)
         return if (hasTables) null else InstallError.Incompatible
     }
 
-    private fun openForCheck(db: File): SQLiteDatabase = try {
-        SQLiteDatabase.openDatabase(db.path, null, SQLiteDatabase.OPEN_READONLY)
+    /** Android's SQLite, or the bundled one for a database in chunks ([SplitDatabase.openReader]). */
+    private fun openForCheck(db: File): SplitDatabase.LibraryReader = try {
+        SplitDatabase.openReader(db)
     } catch (e: Exception) {
         // A WAL-mode database needs its -shm file, which a read-only connection cannot create.
-        SQLiteDatabase.openDatabase(db.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.NO_LOCALIZED_COLLATORS)
+        SplitDatabase.openReader(db, writable = true)
     }
 
     private fun failureOf(e: Throwable, online: Boolean): InstallState.Failed = when {
         e is InstallException -> InstallState.Failed(e.error, e.detail, online)
         isDiskFull(e) -> InstallState.Failed(InstallError.InsufficientSpace, null, online)
+        isFileTooLarge(e) -> InstallState.Failed(InstallError.FileTooLarge, null, online)
         else -> InstallState.Failed(InstallError.Generic, e.message ?: e.toString(), online)
+    }
+
+    /** EFBIG: a FAT32 card refused to grow a file past 4 GB. */
+    private fun isFileTooLarge(e: Throwable): Boolean {
+        val message = e.message.orEmpty()
+        return message.contains("EFBIG") || message.contains("File too large", ignoreCase = true)
     }
 
     private fun isDiskFull(e: Throwable): Boolean {
@@ -788,12 +918,27 @@ class LibraryInstaller private constructor(private val context: Context) {
 
         private const val LATE_SPACE_MARGIN_BYTES = 268_435_456L
         private const val RELEASE_INFO = LibraryStore.RELEASE_INFO_NAME
+
+        /** Optional, right after release_info.txt in a bundle packed by a tool: the library's size ([librarySize]). */
+        private const val LIBRARY_SIZE = "library_size.txt"
         private val INDEX_DIRS = setOf(LibraryStore.TEXT_INDEX_NAME, LibraryStore.LOOKUP_INDEX_NAME)
         private val BUNDLE_FILES = setOf(LibraryStore.LEXICAL_NAME, LibraryStore.CATALOG_NAME)
         private val DB_SIDECARS = listOf("-wal", "-shm", "-journal")
 
         /** The delta updater's work folder and its unfinished-delta marker (desktop DatabaseCleanupUseCase: delta-cache). */
         private val DELTA_ITEMS = listOf("delta-cache", LibraryStore.DB_NAME + ".applying")
+
+        /** Everything a library consists of in its folder: its items, the database's side files and the delta work. */
+        private val LIBRARY_NAMES = LibraryStore.LIBRARY_ITEMS + DB_SIDECARS.map { LibraryStore.DB_NAME + it } + DELTA_ITEMS
+
+        /** A file an offline install takes: bundle parts, their manifest, a .tar.zst, a (.zst) database, release_info.txt. */
+        fun isInstallFileName(name: String): Boolean =
+            BundleNames.partNumber(name) != null || BundleNames.isManifest(name) || name.endsWith(".zst", ignoreCase = true) ||
+                name == LibraryStore.DB_NAME || name == LibraryStore.RELEASE_INFO_NAME
+
+        /** A file of an incremental update: `patch-v<from>-v<to>.db.zst` or its `.manifest.json`. */
+        fun isDeltaFileName(name: String): Boolean =
+            name.startsWith("patch-") && (name.endsWith(".db.zst") || name.endsWith(".db.zst.manifest.json"))
         private const val LATEST_RELEASE_API = "https://api.github.com/repos/kdroidFilter/SeforimLibrary/releases/latest"
         internal const val RELEASE_MANIFEST_URL = "https://raw.githubusercontent.com/kdroidFilter/SeforimLibrary/master/release-manifest.json"
         private const val LATEST_RELEASE_PAGE = "https://github.com/kdroidFilter/SeforimLibrary/releases/latest"
@@ -812,6 +957,14 @@ class LibraryInstaller private constructor(private val context: Context) {
         /** Compressed bundle size → expected unpacked library size, scaled from the release measured above. */
         fun estimateLibraryBytes(bundleBytes: Long): Long =
             maxOf(ESTIMATED_LIBRARY_BYTES, (bundleBytes.toDouble() * ESTIMATED_LIBRARY_BYTES / ESTIMATED_BUNDLE_BYTES).toLong())
+
+        /**
+         * A bundle's library_size.txt: `key=value` lines, `library=<bytes>` the whole library unpacked (and
+         * `seforim.db=<bytes>`, read by nothing yet). null when it has no sensible `library` line.
+         */
+        internal fun librarySize(text: String): Long? =
+            text.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("library=") }
+                ?.substringAfter('=')?.trim()?.toLongOrNull()?.takeIf { it > 0 }
 
         /** "v3-20261012193827" → "20261012193827" (the release_info.txt format). */
         internal fun versionFromTag(tag: String): String? =
@@ -1090,7 +1243,7 @@ private class ConcatenatedBundleParts(
 }
 
 /** Download speed as a ~3 s exponential moving average (desktop DownloadUseCase), and a ~4 Hz UI throttle. */
-private class TransferSpeedMeter {
+internal class TransferSpeedMeter {
     private var lastBytes = 0L
     private var lastNs = System.nanoTime()
     private var ema = 0.0

@@ -5,6 +5,7 @@ import android.system.Os
 import android.system.OsConstants
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import io.github.kdroidfilter.seforimapp.android.delta.WIDE_WINDOW_BYTES
 import io.github.kdroidfilter.seforimlibrary.core.models.CatalogBook
@@ -19,26 +20,87 @@ import java.io.File
  *
  * The library is the desktop databases folder, same names: seforim.db, the Lucene indexes seforim.db.lucene/
  * (full text) and seforim.db.lookup.lucene/ (books and TOC), lexical.db (magic dictionary), catalog.pb and
- * release_info.txt. It lives in app-specific storage: `<external files>/library/` when external storage is
- * available (so a large download does not count against internal storage), otherwise `<files>/library/`.
- * `tools/push-desktop-library.sh` copies a desktop install straight into the external folder.
+ * release_info.txt. It lives in app-specific storage, in one of the [locations]: on the phone, `<external files>/library/`
+ * when external storage is available (so a large download does not count against internal storage), otherwise
+ * `<files>/library/`; or on a memory card, the app's folder there (`/storage/<card>/Android/data/<app>/files/library/`).
+ * `tools/push-desktop-library.sh` copies a desktop install straight into either.
+ *
+ * The chosen location is remembered (a separate preferences file, not part of a backup), so that a library on a card that
+ * has been taken out is reported as such ([missingCard]) instead of looking like no library at all.
  */
 class LibraryStore(private val context: Context) {
-    private val externalDir: File? get() = context.getExternalFilesDir(null)?.let { File(it, "library") }
-    private val internalDir: File get() = File(context.filesDir, "library")
+    private val internalDir: File get() = File(context.filesDir, LibraryLocation.LIBRARY_FOLDER)
+    private val prefs = context.getSharedPreferences(LOCATION_PREFS, Context.MODE_PRIVATE)
 
     @Volatile
     private var openedToAdb = false
 
-    /** Where the library is, or will be installed. An existing install wins, so a late-mounted or missing external volume never hides it. */
+    @Volatile
+    private var cachedLocations: List<LibraryLocation>? = null
+
+    /** The phone, then every memory card mounted now. Read once; [refreshLocations] reads them again (a card in or out). */
+    val locations: List<LibraryLocation>
+        get() = cachedLocations ?: LibraryLocation.read(context, internalDir).also { cachedLocations = it }
+
+    fun refreshLocations() {
+        cachedLocations = null
+    }
+
+    /** The location chosen for the library (by the user, or where it was found): [LibraryLocation.PHONE] or a card's UUID. */
+    val preferredKey: String get() = prefs.getString(KEY_LOCATION, null) ?: LibraryLocation.PHONE
+
+    /** Chooses where a new library goes: the next install (or a move) writes there. */
+    fun setPreferred(location: LibraryLocation) {
+        if (location.key == preferredKey && (!location.removable || prefs.getString(KEY_CARD_LABEL, null) == location.label)) return
+        prefs.edit().putString(KEY_LOCATION, location.key).putString(KEY_CARD_LABEL, location.label.takeIf { location.removable }).commit()
+    }
+
+    /** Where the library is now (it has seforim.db), or null. The internal folder of older builds counts as the phone. */
+    fun currentLocation(): LibraryLocation? {
+        val dir = libraryDir
+        if (!hasDatabase(dir)) return null
+        return locations.firstOrNull { it.dir == dir } ?: locations.first().copy(dir = dir)
+    }
+
+    /**
+     * Records where the library is (called at startup): a library found elsewhere than chosen, copied onto a card from
+     * a computer say, becomes the chosen location, so that its card is asked for once it is taken out. A chosen card
+     * that is only out now keeps the choice over a library left on the phone: that one is used this time ([resolveDir]),
+     * not chosen. A library on another card (one that replaced the chosen card) is still chosen.
+     */
+    fun rememberCurrentLocation() {
+        val current = currentLocation() ?: return
+        val key = preferredKey
+        if (key != LibraryLocation.PHONE && !current.removable && locations.none { it.key == key }) return
+        setPreferred(current)
+    }
+
+    /** The location a new install writes to: the chosen one when it is mounted, else the phone. */
+    fun targetLocation(): LibraryLocation = locations.firstOrNull { it.key == preferredKey } ?: locations.first()
+
+    /**
+     * The card the library was kept on, when that card is not in the device now and no library is found anywhere else:
+     * its name, for the screen that asks for it back. null otherwise.
+     */
+    fun missingCard(): String? {
+        val key = preferredKey
+        if (key == LibraryLocation.PHONE) return null
+        refreshLocations()
+        if (locations.any { it.key == key }) return null
+        if (candidateDirs.any(::hasDatabase)) return null
+        return prefs.getString(KEY_CARD_LABEL, null) ?: LibraryLocation.CARD_LABEL
+    }
+
+    /** Where the library is, or will be installed. An existing install wins, so a late-mounted or missing volume never hides it. */
     val libraryDir: File
-        get() = (listOfNotNull(externalDir, internalDir).firstOrNull { File(it, DB_NAME).isFile } ?: externalDir ?: internalDir).apply {
+        get() = resolveDir().apply {
             mkdirs()
             // tools/push-desktop-library.sh writes here as adb's `shell` user, which is in the ext_data_rw group. A folder
             // made in the external files dir inherits that group (setgid), and so does everything the app later creates
             // in it (its own download, delta-cache), so the script can replace all of it. Only a folder without that is
             // opened to everyone: chmod drops the setgid bit, and the app cannot set it again for a group it is not in.
-            if (!openedToAdb && this == externalDir) {
+            // On a card the filesystem decides permissions, so nothing is changed there.
+            if (!openedToAdb && this == locations.first().dir && this != internalDir) {
                 openedToAdb = true
                 runCatching {
                     val mode = Os.stat(path).st_mode
@@ -48,8 +110,21 @@ class LibraryStore(private val context: Context) {
             }
         }
 
-    /** Both places the library may be in (an install clears both). */
-    val candidateDirs: List<File> get() = listOfNotNull(externalDir, internalDir)
+    /**
+     * The chosen location first, then the others, then the internal folder of builds that had no external storage: the
+     * first that holds a database is the library; with none, the location a new install writes to.
+     */
+    private fun resolveDir(): File {
+        val all = locations
+        val preferred = all.firstOrNull { it.key == preferredKey }
+        val ordered = listOfNotNull(preferred) + all.filter { it !== preferred }
+        ordered.firstOrNull { hasDatabase(it.dir) }?.let { return it.dir }
+        if (internalDir !in ordered.map { it.dir } && hasDatabase(internalDir)) return internalDir
+        return (preferred ?: all.first()).dir
+    }
+
+    /** Every place the library may be in (an install clears them all). */
+    val candidateDirs: List<File> get() = (locations.map { it.dir } + internalDir).distinct()
 
     val databaseFile: File get() = File(libraryDir, DB_NAME)
 
@@ -70,10 +145,7 @@ class LibraryStore(private val context: Context) {
     fun hasSearchIndex(): Boolean = isLuceneIndex(luceneDir) && isLuceneIndex(lookupDir)
 
     /** Bytes taken by the library's own files (database and indexes). */
-    fun installedBytes(): Long = LIBRARY_ITEMS.sumOf { name ->
-        val f = File(libraryDir, name)
-        if (f.isDirectory) f.walkTopDown().filter { it.isFile }.sumOf { it.length() } else f.length()
-    }
+    fun installedBytes(): Long = libraryBytes(libraryDir)
 
     /**
      * Removes what earlier libraries left in the library folder: the full-text index that builds from before the Lucene
@@ -111,15 +183,28 @@ class LibraryStore(private val context: Context) {
     @Volatile
     private var driver: SqlDriver? = null
 
+    /** How many times [close] closed an open repository in this process: whoever holds one can tell it was closed since. */
+    @Volatile
+    var closeCount = 0
+        private set
+
+    /** The database this process opened the library from ([repository]), or null; [close] leaves it. */
+    @Volatile
+    var openedFrom: File? = null
+        private set
+
     fun repository(): SeforimRepository {
         repository?.let { return it }
         synchronized(this) {
             repository?.let { return it }
+            val split = SplitDatabase.isSplit(databaseFile)
             val driver = PragmaSafeDriver(
                 AndroidSqliteDriver(
                     schema = SeforimDb.Schema,
                     context = context,
                     name = databaseFile.absolutePath,
+                    // A database in chunks (a FAT32 card) is read through the multiplex VFS of the app's own SQLite.
+                    factory = if (split) SplitDatabase.openHelperFactory() else FrameworkSQLiteOpenHelperFactory(),
                     // A row wider than Android's 2 MB cursor window closed the app (SQLiteBlobTooBigException): a
                     // book's notes reach 4.25 MB (מיקרופדיה תלמודית opened the encyclopedias with 2.9 MB). Desktop
                     // reads through JDBC, which has no such window.
@@ -127,6 +212,7 @@ class LibraryStore(private val context: Context) {
                 ),
             )
             this.driver = driver
+            openedFrom = databaseFile
             return SeforimRepository(databaseFile.absolutePath, driver).also { repository = it }
         }
     }
@@ -156,6 +242,7 @@ class LibraryStore(private val context: Context) {
     /** Closes the open library so its file can be replaced (reinstall); the next [repository] call reopens it. */
     fun close() {
         synchronized(this) {
+            if (repository != null) closeCount++
             runCatching { repository?.close() }
             repository = null
             driver = null
@@ -172,6 +259,9 @@ class LibraryStore(private val context: Context) {
         const val CATALOG_NAME = "catalog.pb"
         const val RELEASE_INFO_NAME = "release_info.txt"
 
+        /** Android: the version a delta applied from files reached (DbDeltaUpdateService), beside release_info.txt. */
+        const val LOCAL_VERSION_NAME = "local_update_version.txt"
+
         /** Name, and prefix of the side files, of the SQLite FTS index that earlier builds created on the device. */
         private const val OBSOLETE_FTS_INDEX = "search_index.db"
 
@@ -182,8 +272,24 @@ class LibraryStore(private val context: Context) {
         const val PARTIAL_SUFFIX = ".part"
 
         /** What a library consists of, in the order an install moves it into place: the database last, so it only counts as installed when complete. */
-        val LIBRARY_ITEMS = listOf(LOOKUP_INDEX_NAME, TEXT_INDEX_NAME, LEXICAL_NAME, CATALOG_NAME, RELEASE_INFO_NAME, DB_NAME)
+        val LIBRARY_ITEMS = listOf(LOOKUP_INDEX_NAME, TEXT_INDEX_NAME, LEXICAL_NAME, CATALOG_NAME, RELEASE_INFO_NAME, LOCAL_VERSION_NAME, DB_NAME)
 
         fun isLuceneIndex(dir: File): Boolean = dir.list()?.any { it.startsWith("segments_") } == true
+
+        /** Bytes of the library in [dir]: its items, with the overflow chunks of a split database (SplitDatabase). */
+        fun libraryBytes(dir: File): Long = LIBRARY_ITEMS.sumOf { name ->
+            val f = File(dir, name)
+            if (f.isDirectory) f.walkTopDown().filter { it.isFile }.sumOf { it.length() } else f.length()
+        } + SplitDatabase.overflowChunks(File(dir, DB_NAME)).sumOf { it.length() }
+
+        /** [dir] holds a library database (complete: an install or a move only gives it its name once done). */
+        fun hasDatabase(dir: File): Boolean = File(dir, DB_NAME).isFile
+
+        /** Where the library is kept (not the user's preferences: a backup does not carry it). */
+        private const val LOCATION_PREFS = "library_location"
+        private const val KEY_LOCATION = "location"
+
+        /** The card's name when the library is on a card, for the screen that asks for it back. */
+        private const val KEY_CARD_LABEL = "card_label"
     }
 }

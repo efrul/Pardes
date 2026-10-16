@@ -34,6 +34,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
 import io.github.kdroidfilter.seforimapp.android.ui.database.DatabaseUpdateReason
 import io.github.kdroidfilter.seforimapp.android.ui.database.DatabaseUpdateScreen
+import io.github.kdroidfilter.seforimapp.android.ui.database.LibraryCardMissingScreen
 import io.github.kdroidfilter.seforimapp.android.ui.database.databaseUpdateReason
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.OnboardingFlow
 import io.github.kdroidfilter.seforimapp.android.ui.shell.DismissKeyboardOnRequest
@@ -46,6 +47,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.shellKeyboardShortcuts
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Put on an intent once its link or widget tap was opened. */
@@ -60,6 +62,12 @@ private sealed interface Startup {
     data class Ready(val session: SavedSession?) : Startup
 
     data class Update(val reason: DatabaseUpdateReason) : Startup
+
+    /**
+     * Android: the library is on a memory card that is not in the device ([label] is the card's name). [mediaSeen]: the
+     * card events counted (ZayitApplication.mediaChanges) before the volumes were read; a later one checks again.
+     */
+    data class CardMissing(val label: String, val mediaSeen: Int) : Startup
 }
 
 /**
@@ -82,6 +90,16 @@ class MainActivity : ComponentActivity() {
     private var outsideRequests by mutableIntStateOf(0)
     private val shortcuts = KeyShortcuts()
     private val appVm: AppViewModel by viewModels()
+
+    /**
+     * LibraryStore.closeCount when the startup check last opened the library for the tabs: their ViewModels keep that
+     * repository, so a close since then (an install's prepareTarget) leaves them a closed one.
+     */
+    @Volatile
+    private var closeCountAtReady = -1
+
+    /** The app is starting afresh: Settings' update flow stays on screen until it has. */
+    private var restarting = false
 
     private fun entryOf(intent: Intent): ShellEntry? = when (intent.action) {
         LauncherShortcuts.ACTION_NEW_TAB -> ShellEntry.NewTab
@@ -169,7 +187,29 @@ class MainActivity : ComponentActivity() {
                 value = null
                 val restore = !appVm.sessionApplied && app.prefs.persistSession.value
                 value = withContext(Dispatchers.IO) { checkStartup(app, restore) }
+                // The card and update flows own the screen now and return to the app when done: Settings' request is
+                // not reopened after them.
+                if (value !is Startup.Ready) app.manualLibraryUpdate.value = false
                 (value as? Startup.Ready)?.let { appVm.restoreFromDisk(it.session) }
+            }
+            val manualUpdate by app.manualLibraryUpdate.collectAsState()
+            if (manualUpdate && startup is Startup.Ready) {
+                // Android: Settings' update from files (or download). A new library starts the app afresh; leaving the
+                // flow checks the library again (an install that failed may have removed it) and returns to the tabs,
+                // or, when the install closed the library under them (prepareTarget), starts the app afresh too.
+                DatabaseUpdateScreen(
+                    DatabaseUpdateReason.Manual,
+                    onDone = { app.restart() },
+                    onExit = {
+                        if (app.libraryStore.closeCount != closeCountAtReady) {
+                            restartSavingSession(app)
+                        } else {
+                            app.manualLibraryUpdate.value = false
+                            attempt++
+                        }
+                    },
+                )
+                return
             }
             when (val s = startup) {
                 null -> LoadingBox(Modifier.fillMaxSize().background(Zayit.colors.ground))
@@ -188,6 +228,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 is Startup.Update -> DatabaseUpdateScreen(s.reason, onDone = { attempt++ }, onExit = { finish() })
+                is Startup.CardMissing -> LibraryCardMissingScreen(
+                    s.label,
+                    s.mediaSeen,
+                    onRetry = { attempt++ },
+                    onUsePhone = {
+                        app.libraryStore.setPreferred(app.libraryStore.locations.first())
+                        attempt++
+                    },
+                    onExit = { finish() },
+                )
             }
         }
     }
@@ -199,17 +249,45 @@ class MainActivity : ComponentActivity() {
     private suspend fun checkStartup(app: ZayitApplication, restoreSession: Boolean): Startup {
         runCatching { app.userData }
         runCatching { app.libraryStore.deleteObsoleteFiles() }
+        // What a killed install or move left under `.part` names (gigabytes the space checks would count as taken).
+        runCatching { LibraryInstaller.get(app).discardStaleDownload() }
+        // Counted before the volumes are read: a card put in from here on makes the card screen check again.
+        val mediaSeen = app.mediaChanges.value
+        // Android: a library kept on a memory card that is not in the device is asked for, not reinstalled.
+        app.libraryStore.missingCard()?.let { return Startup.CardMissing(it, mediaSeen) }
+        runCatching { app.libraryStore.rememberCurrentLocation() }
         // Desktop computeStartupState: no library → Missing, release_info.txt missing or too old → Outdated; then the
         // installer's check (as before) for a database without its tables, and opening it.
         val reason = runCatching { databaseUpdateReason(app) }.getOrDefault(DatabaseUpdateReason.Broken)
             ?: DatabaseUpdateReason.Broken.takeIf { runCatching { LibraryInstaller.get(app).checkInstalledLibrary() != null }.getOrDefault(true) }
         if (reason != null) return Startup.Update(reason)
+        // Read before the repository is opened, so that no close after it goes unnoticed ([closeCountAtReady]).
+        val closeCount = app.libraryStore.closeCount
         val repository = runCatching { app.libraryStore.repository() }.getOrElse { return Startup.Update(DatabaseUpdateReason.Broken) }
         val session = if (restoreSession) SessionStore.load(app)?.let { runCatching { SessionStore.enrichTitles(it, repository) }.getOrDefault(it) } else null
         // Desktop main.kt's DbDeltaRecoveryBootstrap spot: a delta whose database part committed before the app stopped
         // gets its search index and catalog finished in the background (nothing to roll back on Android).
         runCatching { DbDeltaUpdateService.get(app).resumeIfPending() }
+        closeCountAtReady = closeCount
         return Startup.Ready(session)
+    }
+
+    /**
+     * Starts the app afresh (ZayitApplication.restart) after the library was closed under the tabs, the session saved
+     * first. AppViewModel.saveNow writes it on another thread, which the restart's exit would not wait for.
+     */
+    private fun restartSavingSession(app: ZayitApplication) {
+        if (restarting) return
+        restarting = true
+        val session = if (appVm.sessionApplied && app.prefs.persistSession.value) {
+            runCatching { SessionStore.encode(appVm.buildSession()) }.getOrNull()
+        } else {
+            null
+        }
+        app.appScope.launch(Dispatchers.IO) {
+            session?.let { SessionStore.write(app, it) }
+            app.restart()
+        }
     }
 
     override fun onStop() {

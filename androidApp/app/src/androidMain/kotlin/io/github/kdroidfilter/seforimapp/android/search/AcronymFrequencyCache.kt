@@ -1,10 +1,11 @@
 // Android variant of the Zayit 0.6.1 file SeforimApp/src/jvmMain/.../framework/search/AcronymFrequencyCache.kt (tag
 // v0.6.1): the desktop file reads seforim.db through JDBC (sqlite-jdbc, absent on Android) at the path its
-// DatabasePathProvider gives. Same queries and API; it reads the installed library with the platform SQLite, read-only.
+// DatabasePathProvider gives. Same queries and API; it reads the installed library with the platform SQLite, read-only
+// (or, for a database split on a FAT32 card, with the app's own SQLite: SplitDatabase).
 package io.github.kdroidfilter.seforimapp.framework.search
 
-import android.database.sqlite.SQLiteDatabase
 import co.touchlab.kermit.Logger
+import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -13,9 +14,9 @@ import java.util.concurrent.ConcurrentHashMap
  * Provides fast lookup of how many books use each acronym.
  */
 class AcronymFrequencyCache(private val databaseFile: File) {
-    private val db: SQLiteDatabase by lazy {
+    private val db: SplitDatabase.LibraryReader by lazy {
         logger.i { "Loading acronym data from seforim.db: $databaseFile" }
-        SQLiteDatabase.openDatabase(databaseFile.path, null, SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS)
+        SplitDatabase.openReader(databaseFile)
     }
 
     // Concurrent maps: suggestions for successive keystrokes may still be running on several threads.
@@ -58,7 +59,6 @@ class AcronymFrequencyCache(private val databaseFile: File) {
         runCatching {
             db.rawQuery(
                 "SELECT term, COUNT(DISTINCT bookId) AS frequency FROM book_acronym GROUP BY term ORDER BY frequency DESC LIMIT 100",
-                null,
             ).use { c -> while (c.moveToNext()) c.getString(0)?.let { frequencyCache[it] = c.getInt(1) } }
         }.onFailure { logger.w(it) { "Could not pre-load acronyms" } }
         logger.i { "Pre-loaded ${frequencyCache.size} acronyms into cache from seforim.db" }

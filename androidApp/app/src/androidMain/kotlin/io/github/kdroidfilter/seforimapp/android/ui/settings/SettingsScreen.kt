@@ -70,7 +70,7 @@ enum class SettingsPage(val title: String, val summary: String, val icon: ImageV
     Profile("פרופיל", "שם, עדה ואזור", BootstrapPersonLines),
     Fonts("גופנים", "גופני הספר, המפרשים, התרגומים והמקורות", RadixFontRoman),
     // Its first card is the database updates, the only update check on Android
-    Data("ניהול נתונים", "עדכוני מסד הנתונים, גיבוי, שחזור ואיפוס", FileArrowDown),
+    Data("ניהול נתונים", "עדכוני מסד הנתונים, מיקום הספרייה, גיבוי ואיפוס", FileArrowDown),
     About("אודות", "על פרדס ותודות", TablerInfoSquare),
     Terms("תנאים", "מקורות, זכויות ורישיון", TablerLicense),
     // Android only (desktop has no such page): the full licence texts the APK must carry
