@@ -51,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -92,6 +93,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -111,6 +114,7 @@ import io.github.kdroidfilter.seforimapp.android.search.searchKey
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.components.Island
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
+import io.github.kdroidfilter.seforimapp.android.ui.components.pinchTextZoom
 import io.github.kdroidfilter.seforimapp.android.ui.reader.PaneHeader
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderPrefs
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderRailButton
@@ -261,6 +265,25 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
         scope.launch {
             val title = vm.bookOf(bookId)?.title.orEmpty()
             appVm.openInNewTab(Destination.Book(bookId, lineId, title), title)
+        }
+    }
+
+    // Citation links (seforim://line/<id>) in the passage preview open their line in a new tab, as in the reader
+    // (desktop rememberRefLinkUriHandler, window-wide); any other link goes to the system
+    val platformUri = LocalUriHandler.current
+    val refUriHandler = remember(platformUri, repo) {
+        object : UriHandler {
+            override fun openUri(uri: String) {
+                val lineId = uri.takeIf { it.startsWith("seforim://line/") }?.removePrefix("seforim://line/")?.toLongOrNull()
+                if (lineId == null) {
+                    runCatching { platformUri.openUri(uri) }
+                    return
+                }
+                scope.launch {
+                    val line = runCatching { repo.getLine(lineId) }.getOrNull() ?: return@launch
+                    openBookAt(line.bookId, line.id)
+                }
+            }
         }
     }
 
@@ -554,14 +577,17 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
                         LoadingBox(Modifier.weight(1f).fillMaxWidth().card())
                     }
                     preview?.let { shown ->
-                        PassagePreviewPane(
-                            preview = shown,
-                            pieces = breadcrumbs[shown.hit.lineId],
-                            textSize = textSize,
-                            onOpen = { openResult(shown.hit) },
-                            onOpenLine = { lineId -> openBookAt(shown.hit.bookId, lineId) },
-                            modifier = Modifier.weight(1f),
-                        )
+                        CompositionLocalProvider(LocalUriHandler provides refUriHandler) {
+                            PassagePreviewPane(
+                                preview = shown,
+                                pieces = breadcrumbs[shown.hit.lineId],
+                                textSize = textSize,
+                                onOpen = { openResult(shown.hit) },
+                                onOpenLine = { lineId -> openBookAt(shown.hit.bookId, lineId) },
+                                // Two fingers on the passage zoom the text, as in the books (desktop 0.6.5 e3051846)
+                                modifier = Modifier.weight(1f).pinchTextZoom { factor -> app.prefs.setTextSize(textSize * factor) },
+                            )
+                        }
                     }
                 }
             }
@@ -647,7 +673,9 @@ private fun StatusRow(state: SearchUiState, oneBook: Boolean, wide: Boolean, com
     val loaded = maxOf(state.progressCurrent, state.results.size)
     val total = maxOf(loaded.toLong(), state.progressTotal ?: loaded.toLong())
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        val scopeName = if (oneBook) state.scopeBook?.title ?: state.results.firstOrNull()?.bookTitle else null
+        // In one book, or in an author's books, where it searched: no base/all books choice there. Desktop 0.6.5 still
+        // offers it in an author's books, which are all searched whatever is chosen
+        val scopeName = if (oneBook) state.scopeBook?.title ?: state.results.firstOrNull()?.bookTitle else state.scopeAuthorName?.let { "ספרי $it" }
         if (state.isLoading) {
             SearchStatusLine(scopeName, total, true, state.globalExtended, state.baseBooksHadNoResults, wide, compact, vm::setGlobalExtended, Modifier.padding(end = 12.dp))
             // Only during the search itself, not while a page loads (that has its own spinner at the list's end)

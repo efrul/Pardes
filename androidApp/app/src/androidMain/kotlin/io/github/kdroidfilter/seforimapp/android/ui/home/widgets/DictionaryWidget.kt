@@ -386,7 +386,7 @@ private fun EntryPage(
         }
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             lines.forEach { line ->
-                Text(buildAnnotatedFromHtml(line.content, baseTextSize = 14f, boldColor = c.accent), fontSize = 14.sp, color = c.text, lineHeight = 22.sp)
+                Text(buildAnnotatedFromHtml(line.content, baseTextSize = 14f, boldColor = c.accent, linkColor = c.accent), fontSize = 14.sp, color = c.text, lineHeight = 22.sp)
             }
         }
         io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton("פתיחה ב${entry.dictionary.label}", onOpenBook, Modifier.align(Alignment.End))

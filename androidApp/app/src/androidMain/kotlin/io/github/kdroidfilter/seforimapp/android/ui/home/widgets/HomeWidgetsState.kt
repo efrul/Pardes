@@ -154,8 +154,8 @@ class HomeWidgetsState internal constructor(
     /** Opens a page of the app (History, Favorites) in a tab. */
     var openPage: (Destination) -> Unit = {}
 
-    /** Runs a search again in a new tab (a history entry). */
-    var openSearch: (String) -> Unit = {}
+    /** Runs a search again in a new tab (a history entry), where it ran: its book, TOC entry or author, base or all books. */
+    var openSearch: (Destination.Search) -> Unit = {}
 
     /** Opens a tool's page (the tefila's "פתח סידור"). */
     var openTool: (ToolKind) -> Unit = {}
@@ -301,7 +301,7 @@ fun rememberHomeWidgetsState(
             appVm.openInNewTab(Destination.Book(book.id, lineId, book.title, endLineId = endLineId, shnayimMikra = sm), book.title)
         }
         state.openPage = { destination -> appVm.showPage(destination) }
-        state.openSearch = { query -> appVm.openInNewTab(Destination.Search(query), query) }
+        state.openSearch = { search -> appVm.openInNewTab(search, search.query) }
         state.openTool = { tool ->
             // The tool shows what the widget showed: the same place, day and moment
             toolsStateOf(app).showSameAs(state)
@@ -345,8 +345,8 @@ fun rememberToolsState(): HomeWidgetsState {
             appVm.showPage(destination)
             repeat(appVm.state.value.overlays.size) { appVm.pop() }
         }
-        state.openSearch = { query ->
-            appVm.openInNewTab(Destination.Search(query), query)
+        state.openSearch = { search ->
+            appVm.openInNewTab(search, search.query)
             repeat(appVm.state.value.overlays.size) { appVm.pop() }
         }
         state.openTool = { tool -> appVm.push(Overlay.Tool(tool)) }

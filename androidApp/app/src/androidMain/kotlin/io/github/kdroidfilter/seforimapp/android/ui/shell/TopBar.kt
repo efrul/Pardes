@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -341,8 +342,14 @@ private fun TabStrip(state: AppUiState, appVm: AppViewModel, modifier: Modifier)
     }
 }
 
+// The pin marking a pinned tab of the strip, beside its icon or acronym (desktop 0.6.5 TabsView PinMarkSize/Gap).
+private val PinMarkSize = 12.dp
+private val PinMarkGap = 4.dp
+private val PinMarkWidth = PinMarkSize + PinMarkGap
+
 /**
- * One tab of the strip. A pinned tab is compact (desktop: 40dp with its icon, or its acronym up to 80dp) and has no ×.
+ * One tab of the strip. A pinned tab is compact (desktop: 40dp with its icon, or its acronym up to 80dp) and has no ×;
+ * a pin marks it, beside its icon or acronym (desktop 0.6.5 1d50541d: 12dp, 4dp apart, the tab that much wider).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -354,7 +361,7 @@ private fun TabChip(tab: Tab, selected: Boolean, onClick: () -> Unit, onClose: (
     Box {
         Row(
             Modifier
-                .then(if (tab.pinned) Modifier.widthIn(min = 40.dp, max = 96.dp) else Modifier.widthIn(min = 96.dp, max = 220.dp))
+                .then(if (tab.pinned) Modifier.widthIn(min = 40.dp + PinMarkWidth, max = 96.dp + PinMarkWidth) else Modifier.widthIn(min = 96.dp, max = 220.dp))
                 .height(36.dp)
                 .clip(shape)
                 .background(if (selected) c.accentTint else Color.Transparent)
@@ -363,8 +370,9 @@ private fun TabChip(tab: Tab, selected: Boolean, onClick: () -> Unit, onClose: (
                 .semantics { contentDescription = label }
                 .padding(start = 10.dp, end = if (tab.pinned) 10.dp else 2.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(if (tab.pinned) PinMarkGap else 6.dp, Alignment.CenterHorizontally),
         ) {
+            if (tab.pinned) Icon(Icons.Outlined.PushPin, "לשונית מוצמדת", tint = c.textSecondary, modifier = Modifier.size(PinMarkSize))
             if (!tab.pinned || tab.shortTitle.isBlank()) Icon(tabIcon(tab), null, tint = c.text, modifier = Modifier.size(16.dp))
             if (tab.pinned) {
                 if (tab.shortTitle.isNotBlank()) Text(tab.shortTitle, fontSize = 14.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)

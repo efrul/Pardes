@@ -35,7 +35,8 @@ enum class VisitKind { BOOK, SEARCH }
  * `visitedAt`/`visitCount`. Reads are on-demand SQL queries; [revision] bumps on every write so UI can re-run its
  * current query.
  *
- * Verbatim port of desktop 0.6.1 `core/history/HistoryStore.kt`.
+ * Verbatim port of desktop 0.6.1 `core/history/HistoryStore.kt`, with the 0.6.5 author scope (1723de06: the author's
+ * id is in the key only).
  */
 class HistoryStore(database: UserSettingsDb) {
     private val queries = database.visitHistoryQueries
@@ -139,8 +140,9 @@ class HistoryStore(database: UserSettingsDb) {
         searchScope = when {
             searchTocId != null && searchBookId != null -> SearchScope.Toc(bookId = searchBookId, tocId = searchTocId)
             searchBookId != null -> SearchScope.Book(searchBookId)
-            // A search once scoped to a category (searchCategoryId) runs everywhere now
-            else -> SearchScope.Global
+            // No column for an author: their id is in the key only. A search once scoped to a
+            // category (searchCategoryId) runs everywhere now
+            else -> authorIdInKey(key)?.let(SearchScope::Author) ?: SearchScope.Global
         },
         searchGlobalExtended = searchExtended,
     )
@@ -150,12 +152,22 @@ class HistoryStore(database: UserSettingsDb) {
             SearchScope.Global, is SearchScope.Category -> "g"
             is SearchScope.Book -> "b${scope.bookId}"
             is SearchScope.Toc -> "t${scope.tocId}"
+            is SearchScope.Author -> "$AUTHOR_KEY${scope.authorId}"
         } + if (globalExtended) "x" else ""
         return "search:$scopeKey:$query"
     }
 
+    // `search:a150:…` (or `a150x`) → 150
+    private fun authorIdInKey(key: String): Long? =
+        key
+            .removePrefix("$KIND_SEARCH:$AUTHOR_KEY")
+            .takeIf { it != key }
+            ?.takeWhile(Char::isDigit)
+            ?.toLongOrNull()
+
     private companion object {
         const val KIND_BOOK = "book"
         const val KIND_SEARCH = "search"
+        const val AUTHOR_KEY = "a"
     }
 }

@@ -15,6 +15,7 @@ import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.SavedSession
 import io.github.kdroidfilter.seforimapp.android.data.SearchScope
 import io.github.kdroidfilter.seforimapp.android.data.SessionStore
+import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -803,12 +804,14 @@ class AppViewModel(application: Application, private val handle: SavedStateHandl
         }
     }
 
-    /** The name of the TOC entry or book a search is scoped to, shown in its history entry (desktop scopeLabel). */
+    /** The name of the TOC entry, book or author a search is scoped to, shown in its history entry (desktop scopeLabel). */
     private suspend fun searchScopeLabel(scope: SearchScope): String? = runCatching {
         val repo = app.libraryStore.repository()
         when (scope) {
             SearchScope.Global, is SearchScope.Category -> null
             is SearchScope.Book -> repo.getBookCore(scope.bookId)?.title
+            // An author's books (desktop 0.6.5 1723de06)
+            is SearchScope.Author -> repo.getAuthorDetails(scope.authorId)?.name?.let(AuthorNames::display)
             is SearchScope.Toc -> listOfNotNull(repo.getBookCore(scope.bookId)?.title, repo.getTocEntry(scope.tocId)?.text).joinToString(", ").ifBlank { null }
         }
     }.getOrNull()

@@ -574,7 +574,8 @@ private fun SiddurText(
             else ->
                 LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp)) {
                     itemsIndexed(visible, key = { _, item -> item.first.id }) { _, (line, applies) ->
-                        val text = remember(line.content, textSize) { buildAnnotatedFromHtml(line.content, textSize) }
+                        // Citation links in the accent, as in the books (0.6.5 f443277d colors links)
+                        val text = remember(line.content, textSize, c.accent) { buildAnnotatedFromHtml(line.content, textSize, linkColor = c.accent) }
                         Text(
                             text,
                             color = c.text,

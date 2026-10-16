@@ -10,9 +10,13 @@ A gap list from comparing the real 0.6.1 sources (upstream `kdroidFilter/Zayit` 
   - the full template siddur: a private package.
 - **Different on purpose: authorship.** Desktop's welcome ("שנבנה באהבה על ידי אברך ומפתח חרדי"), settings header ("נוצר על ידי אליהו גמבש"), About and terms describe desktop Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept. Not a gap.
 
-## Later desktop releases (0.6.2 to 0.6.4)
+## Later desktop releases (0.6.2 to 0.6.5)
 
-The base stays desktop 0.6.1 (SeforimLibrary submodule pinned at `381fbea`). From `git diff v0.6.1 v0.6.4` upstream, only these four 0.6.2 fixes were ported, because the bugs they fix exist here too:
+The base stays desktop 0.6.1 (SeforimLibrary submodule pinned at `381fbea`). 0.6.5 left SeforimLibrary and the library format as 0.6.4 had them (`2265fcb`, no new minimum library version).
+
+### 0.6.2 to 0.6.4
+
+From `git diff v0.6.1 v0.6.4` upstream, only these four 0.6.2 fixes were ported, because the bugs they fix exist here too:
 
 | Upstream commit | Fix | Android files |
 |---|---|---|
@@ -29,6 +33,37 @@ Each of these files says in its header that it is the 0.6.1 port plus the named 
 Kept as desktop has it: typing an author's acronym with its gershayim (`ש"ך`) does not suggest that author (הרב שבתי בן מאיר הכהן). The lookup query drops the quote while the index keeps it (`ש"ך`); desktop 0.6.1 misses him the same way. An Android-only reading that finds him was tried and left out, to keep search the same as desktop.
 
 The Android-only subtitle of תפילת היום in the tools list (`ui/tools/ToolsScreen.kt`) follows the same rule through the shared `tefilaDayAt` helper, so it turns at צאת הכוכבים together with the page it opens.
+
+### 0.6.5
+
+From `git diff v0.6.4 v0.6.5` upstream, these were ported on 2026-10-16, because the features they change exist here too:
+
+| Upstream commit | Change | Android files |
+|---|---|---|
+| `1723de06`, `9e3d19a8` | A picked author (desktop Tab, here the row's "חיפוש בתוך") is a search scope: the row "חיפוש בספרי X: …" searches the text in all their books, base books or not, with one action (no base/all choice; Ctrl+Enter is Enter). The scope stays through the category tabs and "more from this book" and when they are left. A restored tab gets it back, and its bar searches there before the author's chip has loaded. The history keeps it (the author's id in the key, `search:a<id>:…`, titled "query — author"). The bar lists the same books the search runs in (`getAuthorDetails`). | `data/SearchScope.kt` (`Author`), `data/HistoryStore.kt`, `ui/AppState.kt` (history title), `ui/search/SearchBarViewModel.kt`, `ui/search/UnifiedSearchBar.kt`, `ui/search/SearchViewModel.kt`, `ui/search/SearchScreen.kt` (status line) |
+| `f443277d`, `5e016dfa` | Citation links in the accent color, without an underline: it crossed the nikud below the letters. Desktop underlines a link under the pointer only; a finger has no hover. | `htmlparser/.../HtmlCompose.kt` (vendored) |
+| `46a1ecb8` | Links and footnote markers in the search's passage preview in the accent color, not the parser's blue | `ui/search/PassagePreview.kt` |
+| `e3051846` | Two fingers on the passage preview zoom the text, as in the books (one helper for both) | `ui/components/PinchZoom.kt`, `ui/search/SearchScreen.kt`, `ui/reader/BookTextView.kt` |
+| `1d50541d` (its pin mark) | A pinned tab of the tablet strip shows a pin beside its icon or acronym, 16 dp wider (the phone's tab list had one already) | `ui/shell/TopBar.kt` |
+
+The ported code names its 0.6.5 commit in the file's header or beside the change. Different from desktop 0.6.5 on purpose:
+- In an author's books the status line says "כ־N תוצאות בספרי X", without the base/all link, as for one book. Desktop still offers "בספרי יסוד · חיפוש בכל הספרים" there, though an author's books are all searched whichever is chosen.
+- Once an author is picked, their books are filtered only by what is typed after the pick. Desktop 0.6.5 filters them by the text that named the author (its field is emptied without telling the view model), so few or none of their books are listed.
+
+Found by a review of the port against the 0.6.5 code (2026-10-16), and fixed with it:
+- A suggestion lookup still running when an author is picked no longer lists its rows (a place, other authors) under the author's chip, where Enter would have opened them. Desktop 0.6.5 has the same race; here a restored author tab made it show (`SearchBarViewModel.observeQueries`).
+- The Home's history widget runs a search again where it ran (its book, TOC entry or author, base or all books), as the history page and desktop's widget do; it searched everywhere (`ui/home/widgets/LibraryWidgets.kt`, `HomeWidgetsState.kt`).
+- Pinch zoom acts only while two fingers are down, as desktop's TextZoom: a one-finger drag at an angle could be taken from the scrolling, which stopped the preview (and the reader) for that drag (`ui/components/PinchZoom.kt`).
+- Citation links in the passage preview open their line in a new tab, as in the reader; desktop's link handler is window-wide (`ui/search/SearchScreen.kt`).
+- Links in the siddur, Shnayim Mikra and the dictionary widget take the accent, as in the books, not the parser's blue, which was hard to read in dark mode (`ui/tools/SiddurTool.kt`, `ShnayimMikraTool.kt`, `ui/home/widgets/DictionaryWidget.kt`).
+
+Not ported from 0.6.5:
+- the rest of `1d50541d`, and `a991be12`, `a009b0d4`, `6ba92fb7`, `ce6e2b0c` (pinned tabs moved to the strip's start, sliding there): pinned tabs here already come first, at the right of the RTL strip;
+- `ec91acdc` (an "עוד N" menu for the tabs that no longer fit): the tablet strip scrolls, and the phone lists its tabs;
+- `90217b2b`, `17080195`, `8c96d1f4`, `b563e911` (verse quote links in the Talmud): a private package, like the siddur. Once the database carries these links, they show here as citation links;
+- `f96e98f3` (shortcuts with nothing focused), the Nucleus bump `df4b7d12`, CI and docs: desktop only.
+
+To watch: `cc3c6712` fixes text selection in a tab shown again under Compose 1.12 (an unplaced selectable Text never subscribes to its SelectionContainer again), with a patch to Compose's bytecode. This app is on Compose foundation 1.10.5 (BOM 2026.03.00), and `TabHost` unplaces hidden tabs the same way: when the BOM moves to Compose 1.12, check text selection after switching tabs.
 
 Fixes land in waves:
 1. 0.6.1 engine, zmanim, places and network trust.
