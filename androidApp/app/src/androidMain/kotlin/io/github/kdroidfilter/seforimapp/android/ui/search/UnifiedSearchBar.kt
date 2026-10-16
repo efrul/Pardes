@@ -160,6 +160,7 @@ import kotlin.math.roundToInt
 // Desktop 0.6.1 strings (composeResources/values/strings.xml).
 private const val SEARCH_TEXT_ROW = "חיפוש במאגר: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_BOOK = "חיפוש בתוך %2\$s: %1\$s"
+private const val SEARCH_TEXT_ROW_IN_AUTHOR = "חיפוש בספרי %2\$s: %1\$s"
 private const val SEARCH_IN_BOOK_PLACEHOLDER = "מה לחפש בספר זה? פרק, סימן או כל מילה"
 private const val ROW_ACTION_OPEN = "פתיחה"
 private const val ROW_ACTION_SEARCH_INSIDE = "חיפוש בתוך"
@@ -272,11 +273,13 @@ private fun catBookRows(
  * The one smart search bar (references, books, authors, texts) with its suggestions: the home page's, reused by the
  * search results page. Port of desktop 0.6.1 HomeView.kt UnifiedSearchBar + SearchBar (+ SuggestionsPanel,
  * TocSuggestionsPanel, SuggestionRow, RowActionChip, SelectedBookChip) and texteffects/TypewriterPlaceholder.kt,
- * with the 0.6.2 fix 51463d23 in [catBookRows] (a title being typed opens the book before the text search).
+ * with the 0.6.2 fix 51463d23 in [catBookRows] (a title being typed opens the book before the text search) and the
+ * 0.6.5 commits 1723de06 and 9e3d19a8 (once an author is picked, the text row searches all their books: one action,
+ * no base books to choose, Ctrl+Enter as Enter).
  *
  * Touch adaptation: a tap on a row is desktop's click (Enter); IME "Search" is Enter (it runs the highlighted row,
- * the first one by default); the text row always shows its "בספרי יסוד" / "בכל הספרים" buttons and every book and
- * author row its "חיפוש בתוך" (desktop Tab), the highlighted row all of its actions; key hints show only with a
+ * the first one by default); the text row always shows its "בספרי יסוד" / "בכל הספרים" buttons ("חיפוש" alone in an
+ * author's books) and every book and author row its "חיפוש בתוך" (desktop Tab), the highlighted row all of its actions; key hints show only with a
  * hardware keyboard, where Up/Down/Tab/Ctrl+Enter/Esc/Backspace work as on desktop. The list is a popup under the
  * field (above it when the keyboard leaves no room), as tall as the space left: up to 320 dp on a phone, desktop's
  * 220 dp from [wide]. On a short phone with the soft keyboard up (the Jelly Star) the field and the list take the whole
@@ -382,7 +385,10 @@ fun UnifiedSearchBar(
     val configuration = LocalConfiguration.current
     val hardKeyboard = configuration.keyboard == Configuration.KEYBOARD_QWERTY && configuration.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
 
-    val textSearchEnabled = ui.selectedScopeToc == null && ui.selectedScopeAuthor == null
+    // A picked TOC entry fills the field with its path: nothing to search then
+    val textSearchEnabled = ui.selectedScopeToc == null
+    // Once an author is picked, the text is searched in all their books
+    val textSearchInAuthor = ui.selectedScopeAuthor?.name?.let(AuthorNames::display)
     val query = field.text.trim()
     val hasUserText = field.text.isNotBlank()
     val queryLength = field.text.length
@@ -728,7 +734,8 @@ fun UnifiedSearchBar(
                                         // Enter acts on release, as desktop; its press must not reach the field's IME action
                                         enter && ev.type == KeyEventType.KeyDown -> true
                                         enter && ev.isCtrlPressed && ev.type == KeyEventType.KeyUp -> {
-                                            if (textSearchEnabled) handleTextSearch(extended = true)
+                                            // An author's books are all searched already: Ctrl+Enter is Enter there
+                                            if (textSearchEnabled) handleTextSearch(extended = textSearchInAuthor == null)
                                             true
                                         }
                                         enter && ev.type == KeyEventType.KeyUp -> {
@@ -853,18 +860,31 @@ fun UnifiedSearchBar(
                         )
                         CatBookRow.TextSearch -> {
                             val q = field.text.trim()
-                            val base = RowAction("↵", ROW_ACTION_SEARCH_BASE) { runCatBookRow(row, true) }
-                            val all = RowAction("Ctrl+↵", ROW_ACTION_SEARCH_ALL) { handleTextSearch(extended = true) }
+                            // An author's books are all searched: no base books to choose
+                            val actions = if (textSearchInAuthor != null) {
+                                listOf(RowAction("↵", ROW_ACTION_SEARCH) { runCatBookRow(row, true) })
+                            } else {
+                                listOf(
+                                    RowAction("↵", ROW_ACTION_SEARCH_BASE) { runCatBookRow(row, true) },
+                                    RowAction("Ctrl+↵", ROW_ACTION_SEARCH_ALL) { handleTextSearch(extended = true) },
+                                )
+                            }
                             SuggestionRow(
-                                parts = listOf(SEARCH_TEXT_ROW.replace("%1\$s", q)),
+                                parts = listOf(
+                                    if (textSearchInAuthor != null) {
+                                        SEARCH_TEXT_ROW_IN_AUTHOR.replace("%2\$s", textSearchInAuthor).replace("%1\$s", q)
+                                    } else {
+                                        SEARCH_TEXT_ROW.replace("%1\$s", q)
+                                    },
+                                ),
                                 kind = SuggestionKind.TEXT_SEARCH,
                                 emphasis = q,
                                 highlighted = focused,
                                 wide = wide,
                                 keys = hardKeyboard,
-                                actions = listOf(base, all),
-                                alwaysShown = listOf(base, all),
-                                onClick = base.onClick,
+                                actions = actions,
+                                alwaysShown = actions,
+                                onClick = actions.first().onClick,
                                 narrow = narrowList,
                                 dense = dense,
                             )

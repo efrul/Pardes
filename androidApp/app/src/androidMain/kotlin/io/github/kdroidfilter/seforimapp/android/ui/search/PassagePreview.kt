@@ -42,7 +42,8 @@ private const val FOUND_LINE_MARGIN = 40
  * The selected result in its book, to read without opening it: its place as a title, then the found line marked by a
  * bar, between the lines around it, faded; in the books' font and size, over the whole width as the book's text; the
  * search's words highlighted. A tap on the found line opens the result (as the list), on another line the book there.
- * Port of desktop 0.6.1 SearchResultScreen.kt PassagePreview (two-pane layout only).
+ * Port of desktop 0.6.1 SearchResultScreen.kt PassagePreview (two-pane layout only), with the 0.6.5 fixes 46a1ecb8 (links
+ * in the accent) and e3051846 (pinch zoom, given by the caller's modifier).
  */
 @Composable
 internal fun PassagePreviewPane(
@@ -79,7 +80,9 @@ internal fun PassagePreviewPane(
             preview.lines.forEach { previewLine ->
                 val line = previewLine.line
                 val found = line.id == hit.lineId
-                val annotated = remember(line.id, textSize) { buildAnnotatedFromHtml(line.content, textSize) }
+                // Links and footnote markers in the books' color (the accent), not the parser's default blue (desktop
+                // 0.6.5 46a1ecb8)
+                val annotated = remember(line.id, textSize, accent) { buildAnnotatedFromHtml(line.content, textSize, footnoteMarkerColor = accent) }
                 val text = remember(annotated, previewLine.ranges, highlight) { annotated.withBackground(previewLine.ranges, highlight) }
                 Row(
                     Modifier

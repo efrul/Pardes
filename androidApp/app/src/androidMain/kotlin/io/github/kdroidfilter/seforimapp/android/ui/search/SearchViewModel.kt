@@ -13,6 +13,7 @@ import io.github.kdroidfilter.seforimapp.android.search.SearchEntityFinder
 import io.github.kdroidfilter.seforimapp.android.search.SearchService
 import io.github.kdroidfilter.seforimapp.android.search.countFacets
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
+import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
@@ -56,6 +57,9 @@ import kotlinx.coroutines.withContext
 private const val PAGE_SIZE = 25
 private const val DEFAULT_NEAR = 5
 
+/** No book has it: a filter on it finds nothing (desktop NO_BOOK_ID). */
+private const val NO_BOOK_ID = -1L
+
 /** Pages a restored search tab loads at most to come back to its place in the list. */
 private const val MAX_RESTORE_PAGES = 12
 
@@ -92,6 +96,8 @@ data class SearchUiState(
     /** The book (or the book of the TOC entry) the search was scoped to. */
     val scopeBook: Book? = null,
     val scopeTocId: Long? = null,
+    /** The author whose books the search was scoped to, as their name shows (AuthorNames.display). */
+    val scopeAuthorName: String? = null,
     val hasMore: Boolean = false,
     val isLoadingMore: Boolean = false,
     val progressCurrent: Int = 0,
@@ -136,7 +142,8 @@ data class PassagePreview(val hit: SearchResult, val lines: List<PreviewLine>)
 /**
  * Port of desktop 0.6.1 features/search/SearchResultViewModel.kt on the same Lucene engine:
  * - a search runs its first page and the facets together; nothing in the base books widens it to all of them, and
- *   says so; a book or TOC scope (the bar's) is searched whole;
+ *   says so; a book or TOC scope (the bar's) is searched whole, and so are an author's books (0.6.5 1723de06 and
+ *   9e3d19a8: kept through the category tabs and "more from this book", and when they are left);
  * - pages of 25 loaded on demand;
  * - the category tabs ([showOnlyCategory]) re-query Lucene on a category, keeping the base-books choice;
  * - "more from this book" ([showMoreFromBook]) narrows to one book, searched whole, keeping the full results to come
@@ -187,6 +194,27 @@ class SearchViewModel(
     private val booksUnderCategory = HashMap<Long, Set<Long>>()
     private val tocIndexes = HashMap<Long, TocLineIndex>()
     private val bookDetailsLoader = BookDetailsLoader(repo)
+
+    /** The name of an author and the ids of their books (the bar lists the same, SearchBarViewModel.showAuthorBooks). */
+    private class AuthorScope(val id: Long, val name: String, val bookIds: List<Long>)
+
+    // The author last searched in, loaded once for the status line and their books (desktop authorScope)
+    private var authorScopeCache: AuthorScope? = null
+
+    private suspend fun authorScope(authorId: Long): AuthorScope? =
+        authorScopeCache?.takeIf { it.id == authorId }
+            ?: readOrNull { repo.getAuthorDetails(authorId) }
+                ?.let { author -> AuthorScope(author.id, AuthorNames.display(author.name), author.books.map { it.id }) }
+                ?.also { authorScopeCache = it }
+
+    /**
+     * The books searched when [scope] is an author's, null for any other scope. An author without books searches none:
+     * a book id no book has (an empty filter would search everywhere). Desktop authorBookIds.
+     */
+    private suspend fun authorBookIds(scope: SearchScope = searchScope): List<Long>? {
+        val authorId = (scope as? SearchScope.Author)?.authorId ?: return null
+        return authorScope(authorId)?.bookIds.orEmpty().ifEmpty { listOf(NO_BOOK_ID) }
+    }
 
     init {
         viewModelScope.launch {
@@ -328,8 +356,8 @@ class SearchViewModel(
     }
 
     /**
-     * A search from the bar: [scope] is the bar's (its picked book or TOC entry, else everywhere) and replaces this
-     * tab's, with its filters; [widen] (the bar's "בכל הספרים" / Ctrl+Enter) searches all books, Enter keeps the choice.
+     * A search from the bar: [scope] is the bar's (its picked book, TOC entry or author, else everywhere) and replaces
+     * this tab's, with its filters; [widen] (the bar's "בכל הספרים" / Ctrl+Enter) searches all books, Enter keeps the choice.
      */
     fun searchFromBar(query: String, scope: SearchScope, widen: Boolean) {
         dropBeforeBook()
@@ -374,11 +402,15 @@ class SearchViewModel(
                 }?.takeIf { it > 0 }
                 val fetchTocId = (scope as? SearchScope.Toc)?.tocId?.takeIf { it > 0 }
                 val scopeBook = fetchBookId?.let { book(it) }
+                val authorBooks = authorBookIds(scope)
+                val scopeAuthorName = (scope as? SearchScope.Author)?.let { authorScope(it.authorId)?.name }
                 tocCountsAcc.clear()
-                _state.update { it.copy(scopeBook = scopeBook, scopeTocId = fetchTocId, tocTree = null, tocCounts = emptyMap(), selectedTocIds = emptySet()) }
-                // A book or a TOC entry the user chose is searched whole, base book or not
-                var baseOnly = !_state.value.globalExtended && fetchTocId == null && fetchBookId == null
-                val facetsBookIds = fetchBookId?.let { listOf(it) }
+                _state.update {
+                    it.copy(scopeBook = scopeBook, scopeTocId = fetchTocId, scopeAuthorName = scopeAuthorName, tocTree = null, tocCounts = emptyMap(), selectedTocIds = emptySet())
+                }
+                // A book, a TOC entry or an author the user chose is searched whole, base books or not
+                var baseOnly = !_state.value.globalExtended && fetchTocId == null && fetchBookId == null && authorBooks == null
+                val facetsBookIds = fetchBookId?.let { listOf(it) } ?: authorBooks
                 val lineIds = if (fetchTocId != null && fetchBookId != null) lineIdsUnderToc(fetchTocId, fetchBookId) else null
                 val pageBookIds = facetsBookIds?.takeIf { lineIds == null }
 
@@ -524,7 +556,8 @@ class SearchViewModel(
         val s = _state.value
         if (s.selectedCategoryIds.isNotEmpty() || s.bookFilterIds.isNotEmpty() || s.selectedTocIds.isNotEmpty()) return
         _state.update { it.copy(scopeBook = null, scopeTocId = null, tocTree = null) }
-        searchScope = SearchScope.Global
+        // Back to all the results: an author's books stay the searched ones
+        searchScope = searchScope as? SearchScope.Author ?: SearchScope.Global
     }
 
     /** The scoped search's TOC pane: an entry (and its sub-entries) checked or not, searched whole (desktop setTocChecked). */
@@ -574,8 +607,18 @@ class SearchViewModel(
                 } else {
                     for (catId in s.selectedCategoryIds) bookIds += booksUnder(catId)
                 }
+                // In an author's books only: theirs among the category tab's, all theirs without one
+                val authorBooks = authorBookIds()
+                if (authorBooks != null && s.bookFilterIds.isEmpty()) {
+                    if (s.selectedCategoryIds.isEmpty()) {
+                        bookIds += authorBooks
+                    } else {
+                        bookIds.retainAll(authorBooks.toSet())
+                        if (bookIds.isEmpty()) bookIds += NO_BOOK_ID
+                    }
+                }
                 val baseOnly = !s.globalExtended
-                val onlyBooks = s.bookFilterIds.isNotEmpty() || s.selectedCategoryIds.isEmpty()
+                val onlyBooks = s.bookFilterIds.isNotEmpty() || s.selectedCategoryIds.isEmpty() || authorBooks != null
                 val tocLineIds = HashSet<Long>()
                 for (tocId in s.selectedTocIds) {
                     val bookId = s.scopeBook?.id ?: repo.getTocEntry(tocId)?.bookId ?: continue

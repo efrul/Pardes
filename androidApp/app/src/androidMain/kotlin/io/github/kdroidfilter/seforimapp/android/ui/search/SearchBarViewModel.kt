@@ -60,7 +60,7 @@ data class SearchBarUiState(
     val jumpSuggestions: List<ResolvedReference> = emptyList(),
     /** Authors the typed text may name, listed before the books. */
     val authorSuggestions: List<AuthorHit> = emptyList(),
-    /** The author picked: the books listed are then theirs. */
+    /** The author picked: the books listed are then theirs, and the text is searched in all of them. */
     val selectedScopeAuthor: AuthorHit? = null,
     val tocSuggestionsVisible: Boolean = false,
     val isTocLoading: Boolean = false,
@@ -75,7 +75,9 @@ data class SearchBarUiState(
  * The smart search bar's state: books, authors and references suggested as the user types, the picked book's TOC,
  * and where a text search runs. Port of desktop 0.6.1 features/search/SearchHomeViewModel.kt (one per Home tab and
  * one per results tab, as desktop TabsContent's "search-bar" ViewModel), with the 0.6.2 fix 90552dbc (author
- * suggestions kept only when typed word by word); the navigation it emits there is done by the caller here with what
+ * suggestions kept only when typed word by word) and the 0.6.5 commits 1723de06 and 9e3d19a8 (a picked author is a
+ * search scope: the text is searched in all their books; a restored tab searches there before the chip has loaded);
+ * the navigation it emits there is done by the caller here with what
  * [resolvePickedReference] / [deepLinkTarget] return. Without the lookup index (or when Lucene cannot open it) books
  * are suggested from the database titles and acronyms, and no author is.
  */
@@ -99,6 +101,9 @@ class SearchBarViewModel(
 
     // The books of the picked author, filtered by what is typed next
     private var authorBooks: List<BookSuggestionDto> = emptyList()
+
+    // The author a restored results tab searched in, while their name loads for the chip
+    private var restoringAuthorId: Long? = null
 
     private val referenceQuery = MutableStateFlow("")
     private val tocQuery = MutableStateFlow("")
@@ -192,6 +197,9 @@ class SearchBarViewModel(
                                 Suggestions(booksDeferred.await(), jumpsDeferred.await(), authorsDeferred.await())
                             }
                         }
+                        // An author picked while the lookup ran (a restored author tab, or "חיפוש בתוך"): their books are
+                        // listed now, not what the text named before
+                        if (_uiState.value.selectedScopeAuthor != null) return@collectLatest
                         _uiState.value = _uiState.value.copy(
                             isReferenceLoading = false,
                             bookSuggestions = result.books,
@@ -271,31 +279,48 @@ class SearchBarViewModel(
         }
     }
 
-    /** Lists the books of [author], to pick one of them next. */
+    /** Searches in the books of [author], listed to pick one of them instead. */
     fun onPickAuthor(author: AuthorHit) {
+        // The bar empties its field without a query change: the text that named the author is no filter on their
+        // books, only what is typed next is (desktop 0.6.5 filters them by it, leaving few or none listed)
+        val named = referenceQuery.value
+        showAuthor(author, showSuggestions = true)
+        viewModelScope.launch {
+            val books = withContext(Dispatchers.IO) { catching { repository.getAuthorDetails(author.id)?.books }.orEmpty() }
+            showAuthorBooks(author.id, books, typed = referenceQuery.value.takeIf { it != named }.orEmpty())
+        }
+    }
+
+    private fun showAuthor(
+        author: AuthorHit,
+        // False to only show the author picked (a restored results tab), their books staying closed
+        showSuggestions: Boolean,
+    ) {
+        restoringAuthorId = null
         _uiState.value = _uiState.value.copy(
             selectedScopeAuthor = author,
+            selectedScopeBook = null,
+            selectedScopeToc = null,
             authorSuggestions = emptyList(),
             jumpSuggestions = emptyList(),
             bookSuggestions = emptyList(),
-            isReferenceLoading = true,
-            suggestionsVisible = true,
+            isReferenceLoading = showSuggestions,
+            suggestionsVisible = showSuggestions,
         )
-        viewModelScope.launch {
-            authorBooks = withContext(Dispatchers.IO) {
-                catching { repository.searchBooksByAuthor(author.name) }.orEmpty()
-                    // The query matches the name anywhere: keep this author's books only
-                    .filter { book -> book.authors.any { it.id == author.id } }
-                    .sortedWith(compareByDescending<Book> { it.isBaseBook }.thenBy { it.order })
-                    .map { book -> BookSuggestionDto(book, buildCategoryPathTitlesCached(book.categoryId) + book.title) }
-            }
-            if (_uiState.value.selectedScopeAuthor?.id == author.id) {
-                _uiState.value = _uiState.value.copy(bookSuggestions = authorBooks, isReferenceLoading = false)
-            }
+    }
+
+    // The same books as a search scoped to the author runs in (SearchViewModel.authorBookIds), filtered by [typed]
+    private suspend fun showAuthorBooks(authorId: Long, books: List<Book>, typed: String = referenceQuery.value) {
+        authorBooks = books
+            .sortedWith(compareByDescending<Book> { it.isBaseBook }.thenBy { it.order })
+            .map { book -> BookSuggestionDto(book, buildCategoryPathTitlesCached(book.categoryId) + book.title) }
+        if (_uiState.value.selectedScopeAuthor?.id == authorId) {
+            _uiState.value = _uiState.value.copy(bookSuggestions = authorBooks.filter { it.titleContains(typed.trim()) }, isReferenceLoading = false)
         }
     }
 
     fun onClearAuthor() {
+        restoringAuthorId = null
         authorBooks = emptyList()
         _uiState.value = _uiState.value.copy(selectedScopeAuthor = null, bookSuggestions = emptyList(), suggestionsVisible = false)
     }
@@ -305,6 +330,7 @@ class SearchBarViewModel(
         // False to only show the book picked (a results tab's scope), its TOC staying closed
         showSuggestions: Boolean = true,
     ) {
+        restoringAuthorId = null
         authorBooks = emptyList()
         _uiState.value = _uiState.value.copy(
             selectedScopeAuthor = null,
@@ -379,12 +405,16 @@ class SearchBarViewModel(
 
     /**
      * Puts the bar where [scope] searched, as a results tab opens, so that what it shows is where it searches: a book
-     * (a TOC entry's whole book), shown as its chip.
+     * (a TOC entry's whole book) or an author, shown as its chip.
      */
     fun showScope(scope: SearchScope) {
         val bookId = when (scope) {
             is SearchScope.Book -> scope.bookId
             is SearchScope.Toc -> scope.bookId
+            is SearchScope.Author -> {
+                showAuthorScope(scope.authorId)
+                return
+            }
             else -> return
         }
         viewModelScope.launch {
@@ -392,7 +422,22 @@ class SearchBarViewModel(
         }
     }
 
-    /** Where the bar searches: its picked TOC entry or book, else everywhere. */
+    private fun showAuthorScope(authorId: Long) {
+        if (_uiState.value.selectedScopeAuthor?.id == authorId) return
+        // The bar searches in their books at once, before their name is loaded for the chip
+        restoringAuthorId = authorId
+        viewModelScope.launch {
+            val author = catching { repository.getAuthorDetails(authorId) }
+            // Another scope picked meanwhile
+            if (restoringAuthorId != authorId) return@launch
+            restoringAuthorId = null
+            if (author == null) return@launch
+            showAuthor(AuthorHit(author.id, author.name, author.books.size), showSuggestions = false)
+            showAuthorBooks(author.id, author.books)
+        }
+    }
+
+    /** Where the bar searches: its picked TOC entry, book or author, else everywhere. */
     fun barScope(): SearchScope {
         val selected = _uiState.value
         val toc = selected.selectedScopeToc
@@ -401,7 +446,8 @@ class SearchBarViewModel(
             toc != null && !toc.isAltTocEntry() -> SearchScope.Toc(bookId = toc.bookId, tocId = toc.id)
             toc != null -> SearchScope.Book(toc.bookId)
             selected.selectedScopeBook != null -> SearchScope.Book(selected.selectedScopeBook.id)
-            else -> SearchScope.Global
+            selected.selectedScopeAuthor != null -> SearchScope.Author(selected.selectedScopeAuthor.id)
+            else -> restoringAuthorId?.let(SearchScope::Author) ?: SearchScope.Global
         }
     }
 
@@ -432,6 +478,7 @@ class SearchBarViewModel(
 
     /** The bar as a new one starts: nothing typed, no book, author or chapter picked, nothing suggested. */
     fun reset() {
+        restoringAuthorId = null
         authorBooks = emptyList()
         referenceQuery.value = ""
         tocQuery.value = ""

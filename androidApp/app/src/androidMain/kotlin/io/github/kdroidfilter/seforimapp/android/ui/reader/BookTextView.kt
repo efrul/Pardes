@@ -1,7 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.ui.reader
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,16 +18,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -37,6 +33,7 @@ import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.UserHighlight
 import io.github.kdroidfilter.seforimapp.android.data.UserNote
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
+import io.github.kdroidfilter.seforimapp.android.ui.components.pinchTextZoom
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -213,8 +210,6 @@ fun BookText(
     val findQuery = if (smart) "" else state.find.activeQuery
     val current = state.find.current
     val markEnd = if (state.shnayimMikra) "סוף הקריאה" else "סוף הלימוד"
-    var pinch by remember { mutableFloatStateOf(1f) }
-    val zoom by rememberUpdatedState(onZoom)
 
     Box(modifier) {
         SelectableArea(selection, Modifier.fillMaxSize()) {
@@ -223,17 +218,7 @@ fun BookText(
                 modifier = Modifier.fillMaxSize().onGloballyPositioned {
                     locator.list = it
                     noteLocator.list = it
-                }.pointerInput(Unit) {
-                    detectTransformGestures(panZoomLock = true) { _, _, z, _ ->
-                        if (z != 1f) {
-                            pinch *= z
-                            if (pinch > 1.12f || pinch < 0.89f) {
-                                zoom(pinch)
-                                pinch = 1f
-                            }
-                        }
-                    }
-                },
+                }.pinchTextZoom(onZoom),
                 // The find bar floats over the top of the text: while it is open the text can scroll clear of it, the
                 // book's first lines included, and a line put at the top lands just below it
                 contentPadding = PaddingValues(start = 8.dp, end = 22.dp, top = if (state.find.open) FindBarRoom else TextTopPadding, bottom = 56.dp),

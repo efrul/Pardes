@@ -242,8 +242,12 @@ private fun VerseBlock(
     textSize: Float,
 ) {
     val c = Zayit.colors
-    val hebrew = remember(v.hebrew, textSize) { buildAnnotatedFromHtml(v.hebrew, textSize) }
-    val targum = remember(v.targum, textSize) { v.targum?.let { buildAnnotatedFromHtml(HebrewTextUtils.removeTeamim(it), textSize * 0.92f) } }
+    // Citation links in the accent, as in the books (0.6.5 f443277d colors links)
+    val accent = c.accent
+    val hebrew = remember(v.hebrew, textSize, accent) { buildAnnotatedFromHtml(v.hebrew, textSize, linkColor = accent) }
+    val targum = remember(v.targum, textSize, accent) {
+        v.targum?.let { buildAnnotatedFromHtml(HebrewTextUtils.removeTeamim(it), textSize * 0.92f, linkColor = accent) }
+    }
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Text(hebrew, color = c.text, fontFamily = ZayitFonts.book, fontSize = textSize.sp, lineHeight = (textSize * 1.7f).sp)
         Spacer(Modifier.height(4.dp))

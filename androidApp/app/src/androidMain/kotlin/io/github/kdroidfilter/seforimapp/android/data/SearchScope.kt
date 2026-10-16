@@ -3,10 +3,10 @@ package io.github.kdroidfilter.seforimapp.android.data
 import kotlinx.serialization.Serializable
 
 /**
- * Where a search runs: the whole library, or one book or TOC entry.
+ * Where a search runs: the whole library, one author's books, or one book or TOC entry.
  *
- * Mirrors desktop 0.6.1 `navigation/src/commonMain/kotlin/io/github/kdroidfilter/seforim/tabs/SearchScope.kt`
- * (the navigation module is not compiled into the Android app).
+ * Mirrors desktop 0.6.1 `navigation/src/commonMain/kotlin/io/github/kdroidfilter/seforim/tabs/SearchScope.kt`, with
+ * [Author] from 0.6.5 1723de06 (the navigation module is not compiled into the Android app).
  */
 @Serializable
 sealed interface SearchScope {
@@ -22,4 +22,8 @@ sealed interface SearchScope {
 
     @Serializable
     data class Toc(val bookId: Long, val tocId: Long) : SearchScope
+
+    /** All the books of one author, base books or not. */
+    @Serializable
+    data class Author(val authorId: Long) : SearchScope
 }

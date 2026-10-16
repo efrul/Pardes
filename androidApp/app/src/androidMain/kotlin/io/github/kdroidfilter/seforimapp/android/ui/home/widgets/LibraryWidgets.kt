@@ -49,6 +49,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.notes.NotesPage
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalAppViewModel
+import io.github.kdroidfilter.seforimapp.android.ui.shell.destination
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import kotlinx.coroutines.Dispatchers
@@ -94,7 +95,7 @@ internal object HistoryWidget : HomeWidget {
                     icon = if (entry.kind == VisitKind.SEARCH) Icons.Outlined.Search else Icons.AutoMirrored.Outlined.MenuBook,
                     onClick = {
                         when {
-                            entry.kind == VisitKind.SEARCH -> entry.searchQuery?.let(state.openSearch)
+                            entry.kind == VisitKind.SEARCH -> (entry.destination() as? Destination.Search)?.let(state.openSearch)
                             entry.bookId != null -> open(entry.bookId, entry.lineId)
                         }
                     },
