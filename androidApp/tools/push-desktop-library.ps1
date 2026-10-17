@@ -11,7 +11,8 @@ Copies the library of desktop Zayit to Pardes (an Android app based on Zayit) ov
   -SdCard          copy to the memory card instead of the phone's storage (-CardUuid picks one of several cards):
                    /storage/<UUID>/Android/data/<app>/files/library/. On a FAT32 card seforim.db goes in chunks of
                    2 GiB less 64 KiB (seforim.db, seforim.db001...), which the app reads as one database. Once the copy
-                   is complete, a library in the phone's storage is removed: the app keeps one library.
+                   is complete, a library in the phone's storage is removed: the app keeps one library. Needs
+                   Pardes 0.3.0 or later (versionCode 2), the first that opens a library on the card.
   -WithNotes       also copy notes and highlights (settings\user_settings.db); they replace the phone's own
   -DryRun          print the adb commands instead of running them
 
@@ -138,6 +139,10 @@ $PhoneFiles = $Files
 $PhoneLib = $Lib
 $Fs = ''
 if ($SdCard -or $CardUuid) {
+    # An older Pardes finds no library on the card, and the phone's copy is removed at the end.
+    $vc = 0
+    if ((Ask '    versionCode=2 minSdk=33 targetSdk=36' @('shell', 'dumpsys', 'package', $Pkg)) -match 'versionCode=(\d+)') { $vc = [int]$Matches[1] }
+    if ($vc -lt 2) { Die 'כדי להעתיק לכרטיס הזיכרון צריך פרדס 0.3.0 ומעלה. עדכנו את פרדס בטלפון ונסו שוב.' "copying to the memory card needs Pardes 0.3.0 or later (versionCode 2, installed $vc): update the app first" }
     $vols = @((Ask 'public:179,1 mounted 1234-ABCD' @('shell', 'sm', 'list-volumes', 'public')) -split "`n" |
         ForEach-Object { $f = $_.Trim() -split '\s+'; if ($f.Count -ge 3 -and $f[1] -eq 'mounted' -and $f[2] -ne 'null') { $f[2] } })
     if (-not $CardUuid) {

@@ -1,8 +1,10 @@
 # The download site of Pardes, the Android app based on Zayit (androidApp/site), on GitHub Pages, with the desktop-to-phone
 # transfer scripts next to it (and push-desktop-library-windows.zip, the .ps1 with its .cmd launcher) so the page can
-# offer them as downloads. The APK itself comes from the releases that
-# android-release.yml publishes: the deploy writes the newest one to latest.json, and runs again after every successful
-# release, so the page needs no GitHub API call of its own (60 per hour per IP, often shared behind filtering proxies).
+# offer them as downloads, and androidApp/CHANGELOG.md as changelog.md for its changelog. The APK, the version and the
+# download count come from the releases that android-release.yml publishes. The page asks the GitHub API for them on
+# every visit, so the count is current; releases.json, written here at every deploy (and the deploy runs again after
+# every successful release), is what it shows when that call fails: 60 calls per hour per IP, often shared behind
+# filtering proxies, and some filters block api.github.com.
 name: Android site
 
 on:
@@ -13,6 +15,7 @@ on:
       - 'androidApp/tools/push-desktop-library.ps1'
       - 'androidApp/tools/push-desktop-library.sh'
       - 'androidApp/tools/push-desktop-library.cmd'
+      - 'androidApp/CHANGELOG.md'
       - '.github/workflows/android-site.yml'
   workflow_run:
     workflows: [Android release]
@@ -43,20 +46,25 @@ jobs:
           mkdir -p _site/tools
           cp -r androidApp/site/. _site/
           cp androidApp/tools/push-desktop-library.ps1 androidApp/tools/push-desktop-library.sh _site/tools/
+          cp androidApp/CHANGELOG.md _site/changelog.md
           # Windows: the .ps1 with its double-click launcher, in one download.
           (cd androidApp/tools && zip -q -X "$GITHUB_WORKSPACE/_site/tools/push-desktop-library-windows.zip" push-desktop-library.cmd push-desktop-library.ps1)
           touch _site/.nojekyll
 
-      - name: Newest release for the page (latest.json)
+      # Every release with a Pardes APK, newest first as the API lists them, in the API's own shape (only the APK assets
+      # kept), so the page reads it as it reads the API.
+      - name: Releases for the page (releases.json)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api "repos/${{ github.repository }}/releases?per_page=30" --jq '
-            [.[] | select(.draft | not) | select(any(.assets[]; .name | (startswith("pardes-") and endswith(".apk"))))][0] // empty
-            | {name, tag_name, prerelease, published_at, html_url,
-               asset: ([.assets[] | select(.name | (startswith("pardes-") and endswith(".apk")))][0] | {name, size, browser_download_url, digest})}
-          ' > _site/latest.json
-          cat _site/latest.json
+          gh api --paginate "repos/${{ github.repository }}/releases?per_page=100" | jq -s '
+            def apk: .name | (startswith("pardes-") and endswith(".apk"));
+            { generated_at: (now | todate),
+              releases: [ add[] | select(.draft | not) | select(any(.assets[]; apk))
+                | {name, tag_name, prerelease, published_at, html_url,
+                   assets: [.assets[] | select(apk) | {name, size, browser_download_url, digest, download_count}]} ] }
+          ' > _site/releases.json
+          jq -c '{generated_at, releases: (.releases | length), downloads: ([.releases[].assets[].download_count] | add)}' _site/releases.json
 
       - uses: actions/configure-pages@v5
 
