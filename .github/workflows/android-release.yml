@@ -9,6 +9,9 @@ name: Android release
 # The APK is signed with Pardes's own key, kept only in the repository's secrets (PARDES_KEYSTORE_BASE64,
 # PARDES_KEYSTORE_PASSWORD, PARDES_KEY_ALIAS, PARDES_KEY_PASSWORD), never with the debug key in the repository, which
 # would let anyone sign an "update". No release without it: the APK's certificate must be RELEASE_CERT_SHA256.
+# Installed Pardes (0.3.0 and later) updates itself from these releases (androidApp/.../update/AppReleases.kt): it reads
+# the tag, the APK's name and its sha256 digest, installs only an APK with the installed app's certificate, and offers a
+# release only when its versionName is higher than the installed one. Keep the names, and raise versionName every time.
 
 # Runs only by hand, never on a push: Actions › Android release › Run workflow (on main, the default branch).
 on:
@@ -57,6 +60,24 @@ jobs:
           grep -q '[^[:space:]]' "$RUNNER_TEMP/whatsnew.md" \
             || { echo "androidApp/CHANGELOG.md has no section \"## $version\": write what is new in it first" >&2; exit 1; }
           cat "$RUNNER_TEMP/whatsnew.md"
+
+      # Installed apps offer a release as an update only for a higher versionName: say so (without stopping) when this
+      # one is not higher than the newest published.
+      - name: Newer than the published version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' androidApp/app/build.gradle.kts)"
+          if ! [[ "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::warning::versionName $version is not digits and dots: installed apps will not see this release"
+          fi
+          latest="$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName -q '.[].tagName' \
+            | sed -n 's/^android-\([0-9][0-9.]*\)-[0-9].*$/\1/p' | sort -V | tail -1 || true)"
+          highest="$(printf '%s\n%s\n' "$latest" "$version" | sort -V | tail -1)"
+          if [ -n "$latest" ] && { [ "$latest" = "$version" ] || [ "$highest" != "$version" ]; }; then
+            echo "::warning::versionName $version is not higher than the published $latest: installed apps will not offer this release as an update"
+          fi
 
       # JDK 21: lucene-android compiles against lucene-core's Java 21 class files.
       - name: Set up JDK 21
@@ -171,6 +192,7 @@ jobs:
           - דרוש Android 13 ומעלה.
           - מורידים את \`$APK\` מהקבצים שלמטה, פותחים אותו בטלפון ומאשרים התקנה מהמקור שממנו נפתח.
           - ה-APK חתום במפתח החתימה של פרדס, וכל גרסה מותקנת מעל הקודמת. טביעת האצבע (SHA-256) של התעודה: \`$RELEASE_CERT_SHA256\`.
+          - מגרסה 0.3.0 פרדס מתעדכן מתוכו: בהפעלה הראשונה אחרי שיוצאת גרסה חדשה הוא מודיע עליה (בסרגל העליון ובהגדרות › כללי), ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת; הספרייה וההגדרות נשמרות.
 
           ### הספרייה
           - בהפעלה הראשונה האפליקציה מורידה את ספריית הספרים שזית למחשב משתמש בה (כ-5.5 GB, ונדרשים כ-14.1 GB פנויים).

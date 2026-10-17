@@ -210,7 +210,7 @@ Fixes land in waves:
 - [x] **M** Tablet reader panes have fixed sizes (no draggable dividers, no per-tab split); home book tree cannot be hidden
 - [x] **L** Book tree lists subcategories before a category's own books (desktop: books first)
 - [ ] **L** Virtual desktops ('מרחבים') and 'open in new window' are missing
-- [ ] **L** No app-update check (desktop: title-bar badge, settings banner, dialog)
+- [x] **L** No app-update check (desktop: title-bar badge, settings banner, dialog) (`update/`, Settings › כללי: a check at start, the badge in the title bar (a tablet button; the phone's overflow dot and first item), the dialog with what is new, the banner; the APK is checked (sha256, package, version, signing certificate) and installed by Android's PackageInstaller. Different on purpose: no silent install on close; a setting turns the check at start off; development builds do not update)
 - [x] **L** No launcher shortcuts (Android equivalent of desktop's jump list / dock menu)
 
 ## Integration review (wave 4)

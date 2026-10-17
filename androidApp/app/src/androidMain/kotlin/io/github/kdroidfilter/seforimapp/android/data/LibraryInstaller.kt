@@ -10,6 +10,7 @@ import android.provider.OpenableColumns
 import com.github.luben.zstd.ZstdInputStream
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.releaseReadGrants
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -255,7 +256,8 @@ class LibraryInstaller private constructor(private val context: Context) {
     }
 
     private fun begin(request: Request) {
-        if (isBusy || LibraryMover.get(context).isBusy) return
+        // An app update being installed ends the process: no install starts under it
+        if (isBusy || LibraryMover.get(context).isBusy || AppUpdater.get(context).isInstalling) return
         lastRequest = request
         val previous = job
         val current = InstallToken()

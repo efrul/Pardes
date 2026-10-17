@@ -77,8 +77,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
+import io.github.kdroidfilter.seforimapp.android.data.SessionStore
 import io.github.kdroidfilter.seforimapp.android.data.VisitKind
 import io.github.kdroidfilter.seforimapp.android.ui.AppUiState
 import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
@@ -96,15 +99,21 @@ import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderScreen
 import io.github.kdroidfilter.seforimapp.android.ui.reader.drawerWidthFor
 import io.github.kdroidfilter.seforimapp.android.ui.author.AuthorScreen
 import io.github.kdroidfilter.seforimapp.android.ui.search.SearchScreen
+import io.github.kdroidfilter.seforimapp.android.ui.settings.AppUpdateDialog
 import io.github.kdroidfilter.seforimapp.android.ui.settings.SettingsScreen
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ThemeMode
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.tools.ToolScreen
 import io.github.kdroidfilter.seforimapp.android.ui.tools.ToolsScreen
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdateStrings
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -189,6 +198,37 @@ fun ZayitApp(
     // The library is open by now: move the history and favorites the app kept before it used desktop's tables.
     LaunchedEffect(Unit) { app.history.start() }
 
+    // Desktop main.kt's appUpdateService.checkOnStartup, after the session is restored: a newer Pardes is found quietly,
+    // said once in a snackbar, and kept in the title bar's badge; the version this updater just installed says so once.
+    val updater = remember(app) { AppUpdater.get(app) }
+    // Only whether a version is known: the shell is not recomposed at each tick of a download
+    val updateBadge by remember(updater) { updater.state.map { it.showBadge }.distinctUntilChanged() }.collectAsState(updater.state.value.showBadge)
+    val updateDialog by updater.dialogVisible.collectAsState()
+    val announcement by updater.announcement.collectAsState()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(announcement) {
+        val version = announcement ?: return@LaunchedEffect
+        // Said where it is seen: not while the app is in the background
+        lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
+        val shownAt = System.currentTimeMillis()
+        val result = snackbar.showSnackbar(AppUpdateStrings.found.format(version), actionLabel = AppUpdateStrings.details, duration = SnackbarDuration.Long)
+        // Said once it was used or stayed its time; one pushed away at once (a closed tab's bar) comes again next start
+        if (result == SnackbarResult.ActionPerformed || System.currentTimeMillis() - shownAt >= ANNOUNCEMENT_SEEN_MS) updater.markAnnounced(version)
+        if (result == SnackbarResult.ActionPerformed) updater.openDialog()
+    }
+    LaunchedEffect(updater) {
+        val updated = withContext(Dispatchers.IO) { runCatching { updater.onShellStart() }.getOrNull() }
+        if (updated != null) scope.launch { snackbar.showSnackbar(AppUpdateStrings.updatedTo.format(updated), duration = SnackbarDuration.Long) }
+        updater.checkOnStartup()
+    }
+    // An update that needs no confirmation ends the process with no onStop: the tabs are written before it.
+    DisposableEffect(updater, appVm) {
+        updater.sessionText = {
+            if (appVm.sessionApplied && app.prefs.persistSession.value) runCatching { SessionStore.encode(appVm.buildSession()) }.getOrNull() else null
+        }
+        onDispose { updater.sessionText = null }
+    }
+
     // Launcher shortcuts follow the books read last (desktop jump list / dock menu).
     LaunchedEffect(Unit) {
         app.userData.history.revision.debounce(3_000).collect {
@@ -253,7 +293,7 @@ fun ZayitApp(
         if (openerOpen) appVm.closeTabBack(state.selectedIndex) else appVm.goHome()
     }
 
-    val actions = remember(appVm, themeMode) {
+    val actions = remember(appVm, themeMode, updateBadge) {
         TopBarActions(
             onHome = appVm::goHome,
             onFind = { appVm.requestFind() },
@@ -264,6 +304,7 @@ fun ZayitApp(
             onHistory = { tabSearchVisible = true },
             onFavorites = { favoritesVisible = true },
             onSwipeTab = appVm::selectRelative,
+            onAppUpdate = if (updateBadge) updater::openDialog else null,
             onCycleTheme = {
                 // Desktop cycle: Light → Dark → System → Light.
                 app.prefs.setThemeMode(
@@ -343,6 +384,7 @@ fun ZayitApp(
             if (!wide && favoritesVisible) {
                 ShellSheet(onDismiss = { favoritesVisible = false }) { FavoritesMenuContent(appVm, tablet = false, onDismiss = { favoritesVisible = false }) }
             }
+            if (updateDialog) AppUpdateDialog()
 
             SnackbarHost(
                 snackbar,
@@ -351,6 +393,9 @@ fun ZayitApp(
         }
     }
 }
+
+/** How long the "new version" bar must stay up to count as seen (SnackbarDuration.Long is 10 s). */
+private const val ANNOUNCEMENT_SEEN_MS = 8_000L
 
 /** One tab's screen. */
 @Composable

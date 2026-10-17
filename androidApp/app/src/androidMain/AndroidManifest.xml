@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Updating the app from within it (update/AppUpdater): the downloaded APK goes to Android's PackageInstaller. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Lets Android replace Pardes by its own update without asking each time (a normal permission, granted at install). -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <application
         android:name=".ZayitApplication"
@@ -48,6 +52,23 @@
             android:name=".delta.LibraryDeltaService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- The app's own update (update/AppUpdater): the APK's download, PackageInstaller's answer, and the new version
+             saying it was installed. -->
+        <service
+            android:name=".update.AppUpdateService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <receiver
+            android:name=".update.AppUpdateInstallReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".update.AppUpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Launcher widgets (appwidget/): what the Home's widgets show, as RemoteViews. Not exported: the system's
              widget broadcasts reach them all the same. -->

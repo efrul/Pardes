@@ -5,6 +5,7 @@ import android.os.PowerManager
 import android.util.Log
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.delta.DbDeltaUpdateService
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -90,6 +91,7 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
     fun blockedReason(): String? = when {
         LibraryInstaller.get(app).isBusy -> MoveStrings.blockedInstall
         DbDeltaUpdateService.get(app).isBusy -> MoveStrings.blockedUpdate
+        AppUpdater.get(app).isInstalling -> MoveStrings.blockedAppUpdate
         File(store.libraryDir, LibraryStore.DB_NAME + APPLYING_SUFFIX).exists() -> MoveStrings.blockedUpdate
         else -> null
     }
@@ -351,6 +353,7 @@ internal object PageCache {
 internal object MoveStrings {
     const val blockedInstall = "התקנת הספרייה פועלת כעת. אפשר להעביר את הספרייה כשתסתיים."
     const val blockedUpdate = "עדכון הספרייה פועל כעת או לא הושלם. אפשר להעביר את הספרייה אחרי שיסתיים."
+    const val blockedAppUpdate = "עדכון של פרדס מותקן כעת, ובסופו פרדס ייסגר. אפשר להעביר את הספרייה אחרי שייפתח מחדש."
     const val nothingToMove = "לא נמצאה ספרייה להעברה."
     const val notEnoughSpace = "אין די מקום פנוי ביעד."
     const val fileTooLarge = "כרטיס הזיכרון מפורמט ב-FAT32, שאינו מקבל קבצים של 4GB ומעלה, וקובץ בספרייה גדול מכך. אפשר לפרמט את הכרטיס ל-exFAT במחשב."

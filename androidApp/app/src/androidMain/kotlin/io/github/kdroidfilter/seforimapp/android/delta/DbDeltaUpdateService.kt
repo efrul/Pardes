@@ -16,6 +16,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.AndroidStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.releaseReadGrants
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 import io.github.kdroidfilter.seforimlibrary.common.patch.LogicalContentHasher
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaApplierClient
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaDownloader
@@ -216,7 +217,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
 
     /** Desktop's "Check for updates", stopping at the offer: on a phone the size is shown before anything is downloaded. */
     fun check() {
-        if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy) return
+        if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy || AppUpdater.get(app).isInstalling) return
         if (refuseSplit()) return
         val current = InstallToken().also { token = it }
         _state.value = DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.CheckingForUpdates, message = DeltaStrings.checking)
@@ -255,7 +256,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     /** Downloads and applies the chain the check found (desktop's applyChain step of checkAndApply). */
     fun apply() {
         val p = plan ?: return check()
-        if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy) return
+        if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy || AppUpdater.get(app).isInstalling) return
         if (refuseSplit()) return
         val current = InstallToken().also { token = it }
         _state.value = DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.Downloading, message = DeltaStrings.preparing, cancellable = true)
@@ -273,7 +274,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
      * when the run ends, unless a cancel keeps the run for "המשך".
      */
     fun applyFromFiles(uris: List<Uri>) {
-        if (uris.isEmpty() || isBusy || installer.isBusy || LibraryMover.get(app).isBusy || refuseSplit()) {
+        if (uris.isEmpty() || isBusy || installer.isBusy || LibraryMover.get(app).isBusy || AppUpdater.get(app).isInstalling || refuseSplit()) {
             app.releaseReadGrants(uris) // not run: nothing will read them
             return
         }
