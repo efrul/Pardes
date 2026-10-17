@@ -11,7 +11,8 @@
 #   --sdcard       copy to the memory card instead of the phone's storage (the card's UUID when there are several):
 #                  /storage/<UUID>/Android/data/<app>/files/library/. On a FAT32 card seforim.db goes in chunks of
 #                  2 GiB less 64 KiB (seforim.db, seforim.db001…), which the app reads as one database. Once the copy is
-#                  complete, a library in the phone's storage is removed: the app keeps one library.
+#                  complete, a library in the phone's storage is removed: the app keeps one library. Needs Pardes
+#                  0.3.0 or later (versionCode 2), the first that opens a library on the card.
 #   --with-notes   also copy notes and highlights (settings/user_settings.db); they replace the phone's own
 #   --dry-run      print the adb commands instead of running them
 #
@@ -106,6 +107,10 @@ PM=$(ask "package:/data/app/$PKG/base.apk" shell pm path $PKG || true)
 # --- the memory card (--sdcard): its app folder, and its filesystem (FAT32 takes no file of 4 GB)
 PHONE_FILES=$FILES; PHONE_LIB=$LIB; FS=""
 if [ -n "$CARD" ]; then
+  # An older Pardes finds no library on the card, and the phone's copy is removed at the end.
+  DUMP=$(ask "    versionCode=2 minSdk=33 targetSdk=36" shell dumpsys package $PKG || true)
+  VC=0; [[ "$DUMP" =~ versionCode=([0-9]+) ]] && VC=${BASH_REMATCH[1]}
+  [ "$VC" -ge 2 ] || die "כדי להעתיק לכרטיס הזיכרון צריך פרדס 0.3.0 ומעלה. עדכנו את פרדס בטלפון ונסו שוב." "copying to the memory card needs Pardes 0.3.0 or later (versionCode 2, installed $VC): update the app first"
   VOLS=$(ask "public:179,1 mounted 1234-ABCD" shell sm list-volumes public | awk '$2 == "mounted" && $3 != "null" { print $3 }')
   if [ "$CARD" = auto ]; then
     set -- $VOLS

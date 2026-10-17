@@ -43,6 +43,21 @@ jobs:
       - name: Check out androidApp/upstream/SeforimLibrary
         run: git submodule update --init androidApp/upstream/SeforimLibrary
 
+      # The release notes say what is new from this version's section of androidApp/CHANGELOG.md ("## <versionName> ·
+      # <date>", which the site shows too), its "###" headings one level down. No release of a version the changelog
+      # does not describe; checked before the half-hour build.
+      - name: What's new in this version
+        run: |
+          version="$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' androidApp/app/build.gradle.kts)"
+          [ -n "$version" ] || { echo "versionName not found in androidApp/app/build.gradle.kts" >&2; exit 1; }
+          awk -v v="$version" '
+            /^## / { if (found) exit; if ($2 == v "") { found = 1; next } }
+            found && !/^<\/?div/ { print }
+          ' androidApp/CHANGELOG.md | sed 's/^### /#### /' > "$RUNNER_TEMP/whatsnew.md"
+          grep -q '[^[:space:]]' "$RUNNER_TEMP/whatsnew.md" \
+            || { echo "androidApp/CHANGELOG.md has no section \"## $version\": write what is new in it first" >&2; exit 1; }
+          cat "$RUNNER_TEMP/whatsnew.md"
+
       # JDK 21: lucene-android compiles against lucene-core's Java 21 class files.
       - name: Set up JDK 21
         uses: actions/setup-java@v6
@@ -147,6 +162,11 @@ jobs:
           cat > notes.md <<EOF
           פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.1 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
 
+          ### מה חדש בגרסה $VERSION
+          $(cat "$RUNNER_TEMP/whatsnew.md")
+
+          כל הגרסאות ב[יומן השינויים]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/androidApp/CHANGELOG.md) ובאתר ההורדה, https://efrul.github.io/Pardes/#changelog
+
           ### התקנה
           - דרוש Android 13 ומעלה.
           - מורידים את \`$APK\` מהקבצים שלמטה, פותחים אותו בטלפון ומאשרים התקנה מהמקור שממנו נפתח.
@@ -154,7 +174,9 @@ jobs:
 
           ### הספרייה
           - בהפעלה הראשונה האפליקציה מורידה את ספריית הספרים שזית למחשב משתמש בה (כ-5.5 GB, ונדרשים כ-14.1 GB פנויים).
-          - מחשב שזית למחשב מותקן בו יכול להעביר את הספרייה שלו לטלפון דרך adb, בלי הורדה ובלי root. ב-Windows מחלצים את \`push-desktop-library-windows.zip\` לתיקייה (לחיצה ימנית › חלץ הכול) ולוחצים פעמיים על \`push-desktop-library.cmd\` שבה; ב-Linux/macOS מריצים \`bash push-desktop-library.sh\`. שניהם מצורפים כאן ונמצאים גם ב-\`androidApp/tools\` שבקוד המקור. דרוש adb (Android SDK Platform-Tools של Google).
+          - אפשר לשמור את הספרייה בכרטיס זיכרון: במדריך ההגדרה, כשיש כרטיס במכשיר, או אחר כך בהגדרות › ניהול נתונים › מיקום הספרייה.
+          - מחשב שזית למחשב מותקן בו יכול להעביר את הספרייה שלו לטלפון דרך adb, בלי הורדה ובלי root. ב-Windows מחלצים את \`push-desktop-library-windows.zip\` לתיקייה (לחיצה ימנית › חלץ הכול) ולוחצים פעמיים על \`push-desktop-library.cmd\` שבה; ב-Linux/macOS מריצים \`bash push-desktop-library.sh\`. שניהם מצורפים כאן ונמצאים גם ב-\`androidApp/tools\` שבקוד המקור. דרוש adb (Android SDK Platform-Tools של Google). להעתקה ישר לכרטיס הזיכרון: \`-SdCard\` ב-Windows (\`push-desktop-library.cmd -SdCard\` משורת הפקודה), \`--sdcard\` ב-Linux/macOS.
+          - בלי אינטרנט אפשר לעדכן את הספרייה מקבצים שהועברו למכשיר: הגדרות › ניהול נתונים › עדכון מקבצים.
 
           ---
           Copyright (C) 2025 Elie Gambache. GNU AGPL v3 with an additional attribution term (§7b), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
