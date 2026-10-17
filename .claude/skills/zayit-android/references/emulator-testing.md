@@ -8,6 +8,7 @@
 - Navigation map (labels for emu-tap.py)
 - Sizes: phone, Jelly Star, tablet
 - A full "screenshot everything" pass
+- Testing the app update
 - Debugging crashes and slowness
 
 ## What to expect
@@ -153,6 +154,29 @@ This is the order that worked, with the screens the user expects to see. Pair ea
 9. Repeat the key screens at Jelly Star and tablet size.
 
 Send the user contact sheets in batches as you go, not 40 separate files at the end.
+
+## Testing the app update
+
+The updater (`update/AppUpdater`) looks for no update in a development build. Give it a test feed instead (the full recipe is in `androidApp/docs/DEVELOPMENT.md` › Testing the app update):
+
+```bash
+export MSYS_NO_PATHCONV=1          # Git Bash on Windows: keep /data/... paths as they are
+P=io.github.efrul.pardes; T=pardes-android-0.3.1-99.apk
+adb root && adb wait-for-device    # emulator; run-as cannot write there (the release build type is not debuggable)
+adb shell am force-stop $P
+adb push pardes-0.3.1.apk /data/local/tmp/$T
+adb push feed.json /data/local/tmp/app-update-test-feed.json
+adb shell "U=\$(stat -c %u /data/data/$P); D=/data/data/$P/files; mkdir -p \$D/app-update-test && mv /data/local/tmp/$T \$D/app-update-test/ && mv /data/local/tmp/app-update-test-feed.json \$D/ && chown -R \$U:\$U \$D && restorecon -R \$D"
+# On a rooted phone (adbd not root): the same last command inside adb shell 'su -c "..."', and no adb root
+```
+
+`feed.json`, with the APK's exact size and sha256:
+
+```json
+{"releases":[{"tag_name":"android-0.3.1-99","prerelease":false,"assets":[{"name":"pardes-android-0.3.1-99.apk","size":25426050,"digest":"sha256:<hex>","browser_download_url":"file:///data/user/0/io.github.efrul.pardes/files/app-update-test/pardes-android-0.3.1-99.apk"}]}]}
+```
+
+The APK to update to needs a higher `versionName` and a `versionCode` not lower than the installed one. Expect: the snackbar "גרסה 0.3.1 של פרדס זמינה" (once per version: remove `announced_version` from `shared_prefs/app_update.xml` to see it again) and the badge at start; "הורד והתקן" in the dialog; the first time, the permission banner, whose "פתח הגדרות" opens the "install unknown apps" page (the install goes on after Back); then Android replaces the app with no question (`UPDATE_PACKAGES_WITHOUT_USER_ACTION`) and the app closes; on the next start "פרדס עודכן לגרסה 0.3.1". `adb shell dumpsys package io.github.efrul.pardes | grep -E "versionName|installerPackageName"` then shows the new version and Pardes as its installer. Remove the test files afterwards (`files/app-update-test*`); the build drops what it downloaded at its next start. Tested this way on the Jelly Star (Android 13), 2026-10-18: a refusal of a release-key APK, the permission page, cancel and approve in Android's confirmation, a silent update, and a downloaded APK offered again after the process was stopped.
 
 ## Debugging crashes and slowness
 

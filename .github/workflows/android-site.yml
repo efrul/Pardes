@@ -5,6 +5,8 @@
 # every visit, so the count is current; releases.json, written here at every deploy (and the deploy runs again after
 # every successful release), is what it shows when that call fails: 60 calls per hour per IP, often shared behind
 # filtering proxies, and some filters block api.github.com.
+# The app reads releases.json and changelog.md too, the same way, to update itself (androidApp/.../update/AppReleases.kt):
+# keep their shapes.
 name: Android site
 
 on:

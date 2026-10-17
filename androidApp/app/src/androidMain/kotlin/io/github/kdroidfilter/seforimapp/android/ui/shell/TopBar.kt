@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,6 +99,8 @@ data class TopBarActions(
     val onFavorites: () -> Unit,
     /** Phone title bar swipe: the next (+1) or previous (-1) tab. */
     val onSwipeTab: (Int) -> Unit,
+    /** Desktop's update badge (update/AppUpdater): set while a newer Pardes is known, opens the update dialog. */
+    val onAppUpdate: (() -> Unit)? = null,
 )
 
 /**
@@ -151,10 +154,13 @@ fun PhoneTopBar(
             extra?.invoke()
             TabCounter(tabCount, actions.onTabs)
             Box {
-                ZIconButton(Icons.Outlined.MoreVert, "אפשרויות נוספות", { menu = true })
-                // Desktop's title bar order: "+" at the end of the tabs, then home, find, favorites, history, tools,
-                // theme and settings
+                ZIconButton(Icons.Outlined.MoreVert, if (actions.onAppUpdate != null) "אפשרויות נוספות (עדכון זמין)" else "אפשרויות נוספות", { menu = true })
+                // Desktop's update badge, folded into the overflow: a dot on its button, and its first item
+                if (actions.onAppUpdate != null) Box(Modifier.align(Alignment.TopEnd).padding(top = 9.dp, end = 9.dp).size(8.dp).clip(CircleShape).background(c.accent))
+                // Desktop's title bar order: the update badge, "+" at the end of the tabs, then home, find, favorites,
+                // history, tools, theme and settings
                 ShellMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    actions.onAppUpdate?.let { open -> MenuItem("עדכון זמין", Icons.Outlined.SystemUpdate) { menu = false; open() } }
                     MenuItem("לשונית חדשה", Icons.Outlined.Add) { menu = false; actions.onNewTab() }
                     MenuItem("דף הבית", Icons.Outlined.Home) { menu = false; actions.onHome() }
                     if (findInMenu) MenuItem("חפש בתוך העמוד", Icons.Outlined.FindInPage) { menu = false; actions.onFind() }
@@ -249,6 +255,8 @@ fun TabletTitleBar(
     ) {
         TabStrip(state, appVm, Modifier.weight(1f).fillMaxHeight())
         WorkspaceSwitcher(state, appVm)
+        // Desktop's update badge (TitleBarActionsButtonsView): the first button while a newer version is known
+        actions.onAppUpdate?.let { TitleBarButton(Icons.Outlined.SystemUpdate, "עדכון זמין", "עדכון זמין", it, tint = c.accent) }
         TitleBarButton(Icons.Outlined.Home, "דף הבית", "עבור לדף הבית  (Alt+Home)", actions.onHome)
         TitleBarButton(
             Icons.Outlined.Search,
@@ -278,13 +286,13 @@ fun TabletTitleBar(
 /** A title-bar button with desktop's tooltip (shown on a long press, or on hover with a mouse). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TitleBarButton(icon: ImageVector, description: String, tooltip: String, onClick: () -> Unit, enabled: Boolean = true) {
+private fun TitleBarButton(icon: ImageVector, description: String, tooltip: String, onClick: () -> Unit, enabled: Boolean = true, tint: Color = Zayit.colors.text) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
         tooltip = { PlainTooltip { Text(tooltip) } },
         state = rememberTooltipState(),
     ) {
-        ZIconButton(icon, description, { if (enabled) onClick() }, modifier = Modifier.alpha(if (enabled) 1f else 0.38f))
+        ZIconButton(icon, description, { if (enabled) onClick() }, modifier = Modifier.alpha(if (enabled) 1f else 0.38f), tint = tint)
     }
 }
 

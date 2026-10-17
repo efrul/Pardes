@@ -53,6 +53,8 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton
 import io.github.kdroidfilter.seforimapp.android.ui.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFont
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdateStrings
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 
 /*
  * The pages of desktop 0.6.1's settings window (features/settings/ui): GeneralSettingsScreen, DisplaySettingsScreen,
@@ -71,13 +73,19 @@ internal fun appVersion(context: Context): String = runCatching {
 
 // ---------------------------------------------------------------- כללי
 
-/** Desktop GeneralSettingsScreen: the app header, then the three checkbox cards. */
+/**
+ * Desktop GeneralSettingsScreen: the app header (with the update banner), then the three checkbox cards; and, Android
+ * only, whether to look for a newer Pardes at every start (desktop always does).
+ */
 @Composable
 internal fun GeneralSettings(wide: Boolean) {
     val prefs = appPrefs()
     val closeTree by prefs.closeTreeOnOpen.collectAsState()
     val persist by prefs.persistSession.collectAsState()
     val keepOn by prefs.keepScreenOn.collectAsState()
+    val updateCheck by prefs.appUpdateCheck.collectAsState()
+    val context = LocalContext.current
+    val canUpdate = remember(context) { AppUpdater.get(context).canUpdate }
     SettingsColumn(wide) {
         AppHeaderCard()
         SettingCheckCard(
@@ -98,13 +106,14 @@ internal fun GeneralSettings(wide: Boolean) {
             keepOn,
             prefs::setKeepScreenOn,
         )
+        if (canUpdate) SettingCheckCard(AppUpdateStrings.autoCheckTitle, AppUpdateStrings.autoCheckDescription, updateCheck, prefs::setAppUpdateCheck)
     }
 }
 
 /**
- * Desktop AppHeader for Pardes: icon, name and version, a credit link to Zayit instead of desktop's "נוצר על ידי", the
- * disclaimer, the licence lines with a link to this app's own source (AGPL §6) and the AGPL §7(b) attribution. Its update
- * banner is left out: desktop's Nucleus updater has no Android counterpart (there is no Android release channel to check).
+ * Desktop AppHeader for Pardes: the update banner (desktop UpdateStatusBanner: [AppUpdateBanner], from Pardes' own
+ * releases), icon, name and version, a credit link to Zayit instead of desktop's "נוצר על ידי", the disclaimer, the
+ * licence lines with a link to this app's own source (AGPL §6) and the AGPL §7(b) attribution.
  */
 @Composable
 private fun AppHeaderCard() {
@@ -113,6 +122,7 @@ private fun AppHeaderCard() {
     val uri = LocalUriHandler.current
     val version = remember { appVersion(context) }
     SettingsCard {
+        AppUpdateBanner()
         Row(verticalAlignment = Alignment.CenterVertically) {
             AppIcon()
             HSpacer(16.dp)

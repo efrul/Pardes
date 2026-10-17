@@ -46,6 +46,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.ZayitApp
 import io.github.kdroidfilter.seforimapp.android.ui.shell.shellKeyboardShortcuts
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitTheme
+import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -74,7 +75,8 @@ private sealed interface Startup {
  * Desktop 0.6.1 main.kt: onboarding on first run; once it is done, the library check (DatabaseVersionManager) that
  * sends a missing, outdated or unreadable library to the database update flow; then the saved session and the tabs.
  * Also the Android entry points: zayit:// links and launcher shortcuts (singleTask, so a running app gets them in
- * [onNewIntent]), hardware-keyboard shortcuts, and saving the session when the app leaves the screen.
+ * [onNewIntent]), the app update's notification, hardware-keyboard shortcuts, and saving the session when the app
+ * leaves the screen.
  */
 class MainActivity : ComponentActivity() {
     /** A link or launcher shortcut waiting to be opened by the shell. */
@@ -114,6 +116,12 @@ class MainActivity : ComponentActivity() {
         if (intent == null || intent.getBooleanExtra(EXTRA_HANDLED, false)) return
         // Reopened from Recents after the process died: the intent that first launched the app is not a new request
         if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
+        // The app update's notification ("ready to install"): the update dialog, over whatever the shell shows
+        if (intent.action == AppUpdater.ACTION_SHOW) {
+            intent.putExtra(EXTRA_HANDLED, true)
+            AppUpdater.get(this).openDialog()
+            return
+        }
         val entry = entryOf(intent)
         val widget = widgetLaunchOf(intent)
         if (entry == null && widget == null) return

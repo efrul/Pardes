@@ -65,11 +65,11 @@ import io.github.kdroidfilter.seforimapp.icons.TablerLicense
  * is the phone page list's second line (Android only).
  */
 enum class SettingsPage(val title: String, val summary: String, val icon: ImageVector) {
-    General("כללי", "גרסה, עץ הספרים, שמירת מצב ומסך", LucideInspectionPanel),
+    General("כללי", "גרסה ועדכונים, עץ הספרים, שמירת מצב ומסך", LucideInspectionPanel),
     Display("תצוגה", "צבע מבטא, תמונת רקע ומפרשים בעמוד", MaterialIconsDisplay_settings),
     Profile("פרופיל", "שם, עדה ואזור", BootstrapPersonLines),
     Fonts("גופנים", "גופני הספר, המפרשים, התרגומים והמקורות", RadixFontRoman),
-    // Its first card is the database updates, the only update check on Android
+    // Its first card is the database updates (the app's own updates are in General, as on desktop)
     Data("ניהול נתונים", "עדכוני מסד הנתונים, מיקום הספרייה, גיבוי ואיפוס", FileArrowDown),
     About("אודות", "על פרדס ותודות", TablerInfoSquare),
     Terms("תנאים", "מקורות, זכויות ורישיון", TablerLicense),

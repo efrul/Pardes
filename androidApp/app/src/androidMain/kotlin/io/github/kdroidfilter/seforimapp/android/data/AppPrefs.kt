@@ -81,6 +81,10 @@ class AppPrefs(context: Context) {
     private val _compactRails = MutableStateFlow(sp.getBoolean(KEY_COMPACT_RAILS, false))
     val compactRails: StateFlow<Boolean> = _compactRails.asStateFlow()
 
+    /** Android only: look for a newer Pardes at every start (update/AppUpdater). Desktop always checks. */
+    private val _appUpdateCheck = MutableStateFlow(sp.getBoolean(KEY_APP_UPDATE_CHECK, true))
+    val appUpdateCheck: StateFlow<Boolean> = _appUpdateCheck.asStateFlow()
+
     /** "מספר מרבי של מפרשים בעמוד": 0 = automatic, otherwise 1..[MAX_COMMENTATORS_PER_PAGE]. */
     private val _maxCommentatorsPerPage = MutableStateFlow(sp.getInt(KEY_MAX_COMMENTATORS, 0).coerceIn(0, MAX_COMMENTATORS_PER_PAGE))
     val maxCommentatorsPerPage: StateFlow<Int> = _maxCommentatorsPerPage.asStateFlow()
@@ -231,6 +235,11 @@ class AppPrefs(context: Context) {
         sp.edit().putBoolean(KEY_COMPACT_RAILS, compact).apply()
     }
 
+    fun setAppUpdateCheck(on: Boolean) {
+        _appUpdateCheck.value = on
+        sp.edit().putBoolean(KEY_APP_UPDATE_CHECK, on).apply()
+    }
+
     fun setMaxCommentatorsPerPage(max: Int) {
         val v = max.coerceIn(0, MAX_COMMENTATORS_PER_PAGE)
         _maxCommentatorsPerPage.value = v
@@ -297,6 +306,7 @@ class AppPrefs(context: Context) {
         _keepScreenOn.value = true
         _persistSession.value = true
         _compactRails.value = false
+        _appUpdateCheck.value = true
         _maxCommentatorsPerPage.value = 0
         _bookFont.value = ZayitFont.DefaultBook
         _commentaryFont.value = ZayitFont.DefaultCommentary
@@ -376,6 +386,7 @@ class AppPrefs(context: Context) {
         private const val KEY_SCHEMA = "android_prefs_schema"
         private const val KEY_CATALOG_ROW_WIDTH = "home_catalog_row_width"
         private const val KEY_CATALOG_ROW_HEIGHT = "home_catalog_row_height"
+        private const val KEY_APP_UPDATE_CHECK = "app_update_check_on_start"
         private const val SCHEMA = 1
 
         /** Desktop AppSettings.PORTABLE_KEYS: what a backup carries to another machine. */
