@@ -154,12 +154,14 @@ header.grove { padding-top: env(safe-area-inset-top, 0px); }
 .grove .topnav a { color: var(--on-grove-muted); text-decoration: none; }
 .grove .topnav a:hover { color: var(--gold-hi); }
 
-.hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; padding-block: 1.2rem 3rem; }
-.pitch { display: grid; gap: 1.1rem; align-content: start; min-width: 0; }
+/* The hero by areas: one under the other on a phone. On a computer the download stands beside the name, so its
+   button is in the first screen even when the screen is low; the phone comes in only where there is height for it. */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "pitch" "get" "credit"; gap: 1.4rem; padding-block: 1.2rem 3rem; }
+.pitch { grid-area: pitch; display: grid; gap: 1.1rem; align-content: start; min-width: 0; }
 .eyebrow { font-size: 0.95rem; font-weight: 500; color: var(--on-grove-muted); }
 .pitch h1 { display: grid; gap: 0.35rem; }
 .mark {
-  display: block; font-weight: 900; font-size: clamp(5.4rem, 25vw, 10rem); line-height: 0.95; letter-spacing: -0.01em;
+  display: block; font-weight: 900; font-size: clamp(4.5rem, min(25vw, 19vh), 10rem); line-height: 0.95; letter-spacing: -0.01em;
   color: var(--gold-hi);
   background-image:
     linear-gradient(104deg, transparent 42%, rgba(255, 249, 226, 0.85) 50%, transparent 58%),
@@ -175,7 +177,7 @@ header.grove { padding-top: env(safe-area-inset-top, 0px); }
 .tag { display: block; font-weight: 700; font-size: clamp(1.5rem, 5.6vw, 2.3rem); color: var(--on-grove); }
 .lead { font-size: 1.14rem; max-width: 36rem; color: var(--on-grove); }
 
-.get { display: grid; gap: 0.9rem; max-width: 36rem; padding: 1.1rem; border-radius: 16px; background: var(--grove-well); border: 1px solid var(--grove-line); min-width: 0; }
+.get { grid-area: get; display: grid; gap: 0.9rem; max-width: 36rem; padding: 1.1rem; border-radius: 16px; background: var(--grove-well); border: 1px solid var(--grove-line); min-width: 0; }
 .btn-big { min-height: 3.7rem; font-size: 1.15rem; justify-content: flex-start; padding-inline: 1.2rem; text-align: start; line-height: 1.3; }
 .btn-big svg { width: 1.6rem; height: 1.6rem; }
 .btn-big small { display: block; font-size: 0.8rem; font-weight: 500; opacity: 0.8; }
@@ -191,9 +193,9 @@ header.grove { padding-top: env(safe-area-inset-top, 0px); }
 .sha code { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--grove-deep); color: var(--on-grove); }
 .get .copy { background: transparent; color: var(--on-grove); border-color: var(--grove-line); }
 .get .links { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; font-size: 0.95rem; }
-.credit { max-width: 36rem; font-size: 0.93rem; color: var(--on-grove-muted); }
+.credit { grid-area: credit; max-width: 36rem; font-size: 0.93rem; color: var(--on-grove-muted); }
 .credit strong { color: var(--on-grove); font-weight: 600; }
-.hero-phone { display: none; }
+.hero-phone { grid-area: phone; display: none; }
 
 /* A phone or a tablet around a screenshot. */
 .device {
@@ -225,9 +227,10 @@ section { min-width: 0; scroll-margin-top: 1rem; }
 .panel .text { display: grid; gap: 0.7rem; max-width: 30rem; min-width: 0; }
 .panel h3 { font-size: clamp(1.45rem, 4vw, 1.95rem); }
 .devices { display: flex; justify-content: center; align-items: flex-start; gap: 1rem; }
-.devices .device { width: min(14rem, 62vw); }
-.devices.pair .device { width: min(11.5rem, 42vw); }
-.devices .device.short { width: min(13rem, 60vw); }
+/* Phones no taller than the screen: a 540×1200 shot is 0.45 as wide as it is tall, a 480×854 one 0.56. */
+.devices .device { width: min(14rem, 62vw, (100vh - 7rem) * 0.45); }
+.devices.pair .device { width: min(11.5rem, 42vw, (100vh - 7rem) * 0.45); }
+.devices .device.short { width: min(13rem, 60vw, (100vh - 7rem) * 0.56); }
 .devices .device.wide { width: min(44rem, 100%); }
 
 /* Install: a real sequence, counted in Hebrew letters as a sefer counts. */
@@ -400,22 +403,34 @@ footer p { max-width: 52rem; }
   .extras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 56rem) {
-  .hero { grid-template-columns: minmax(0, 1fr) 17rem; gap: 4rem; padding-block: 1.6rem 0; }
-  .pitch { padding-bottom: 3.5rem; }
-  .hero-phone { display: block; margin: 0 0 -5rem; align-self: end; position: relative; z-index: 2; }
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 24rem); grid-template-areas: "pitch get" "credit get"; column-gap: 3.5rem; row-gap: 1.2rem; align-items: center; padding-block: 1.4rem 3rem; }
+  .credit { align-self: start; }
   .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5rem; }
   .steps li { grid-template-columns: minmax(0, 1fr); gap: 0.6rem; border-top: 2px solid var(--rule); padding-top: 1rem; }
   .steps li::before { text-align: start; }
   .panel { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; }
   .panel.wide { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr); }
-  .devices .device { width: 16.5rem; }
-  .devices.pair .device { width: 14rem; }
-  .devices .device.short { width: 15rem; }
+  .devices .device { width: min(16.5rem, (100vh - 7rem) * 0.45); }
+  .devices.pair .device { width: min(14rem, (100vh - 7rem) * 0.45); }
+  .devices .device.short { width: min(15rem, (100vh - 7rem) * 0.56); }
   main { gap: 6rem; padding-block: 5rem 6rem; }
 }
 @media (min-width: 64rem) {
   .choose { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .choose li:last-child { grid-column: auto; }
+}
+/* A low computer screen (a laptop at 125% or 150%): the hero tightens so the download stays in view. */
+@media (min-width: 56rem) and (max-height: 42rem) {
+  .top { padding-block: 0.6rem; }
+  .hero { padding-block: 0.4rem 2rem; row-gap: 0.8rem; }
+  .pitch { gap: 0.7rem; }
+  .lead { font-size: 1.02rem; }
+}
+/* A wide, tall screen has room for a phone beside the download, half on the page below. */
+@media (min-width: 76rem) and (min-height: 50rem) {
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 23rem) 14rem; grid-template-areas: "pitch get phone" "credit get phone"; padding-bottom: 0; }
+  .credit { padding-bottom: 3rem; }
+  .hero-phone { display: block; margin: 0 0 -4rem; align-self: end; position: relative; z-index: 2; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .gallery { scroll-behavior: smooth; }
@@ -444,6 +459,7 @@ footer p { max-width: 52rem; }
       <p class="eyebrow">לאנדרואיד 13 ומעלה</p>
       <h1 id="title"><span class="mark">פרדס</span><span class="tag">ארון ספרים תורני בטלפון ובטאבלט</span></h1>
       <p class="lead">אלפי ספרים, מהתנ״ך והתלמוד ועד ההלכה, החסידות והשו״ת, עם המפרשים, התרגומים והקישורים שביניהם. החיפוש עובר על כל הספרייה בתוך הטלפון, גם בלי חיבור לרשת. יש בו גם זמני היום, לוח עברי, מעגל השנה ווידג'טים למסך הבית.</p>
+    </div>
 
       <div class="get" role="region" aria-label="הורדת פרדס">
         <a class="btn btn-big" id="dl-btn" href="https://github.com/efrul/Pardes/releases">
@@ -467,7 +483,6 @@ footer p { max-width: 52rem; }
       </div>
 
       <p class="credit">פרדס מבוסס על <strong>זית מאת אליהו גמבש</strong> ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. שאלות ותקלות בפרדס אין להפנות אליו או לפרויקט זית.</p>
-    </div>
 
     <figure class="hero-phone">
       <div class="device"><img src="img/app/home.webp" width="540" height="1200" alt="דף הבית של פרדס: החיפוש, קטלוג הספרים וזמני היום"></div>
