@@ -14,8 +14,9 @@ import java.io.InputStream
 
 /**
  * Android 12+ may hold a foreground service's notification back for up to 10 s: this one shows at once, as every one
- * does on Android 11. Notification.Builder.setForegroundServiceBehavior is API 31; called there it would make
- * startForeground fail, and Android 11 ends the app when a service started for the foreground stops without it.
+ * does on Android 11. Notification.Builder.setForegroundServiceBehavior is API 31: on Android 11 it would throw while
+ * the notification is built, before startForeground, and Android 11 ends the app when a service started for the
+ * foreground stops without it.
  */
 internal fun Notification.Builder.showForegroundImmediately(): Notification.Builder = apply {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
@@ -39,8 +40,9 @@ internal fun PackageManager.packageArchiveInfoCompat(path: String, flags: Long):
         getPackageArchiveInfo(path, flags.toInt())
     }
 
-/** InputStream.readNBytes(int) is API 33: up to [limit] bytes, fewer only at the end of the stream. */
+/** InputStream.readNBytes(int), API 33: up to [limit] bytes, fewer only at the end of the stream. Below, the same loop. */
 internal fun InputStream.readAtMost(limit: Int): ByteArray {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return readNBytes(limit)
     val out = ByteArrayOutputStream(minOf(limit, READ_CHUNK))
     val chunk = ByteArray(minOf(limit, READ_CHUNK))
     var left = limit

@@ -95,7 +95,7 @@ kotlin {
                 // the default jar of zstd-jni only has desktop natives.
                 implementation("com.github.luben:zstd-jni:${libs.versions.zstd.jni.get()}@aar")
                 implementation(libs.commons.compress)
-                // Search: lucene-core 10.5.2 (the version that writes the desktop indexes), patched for API 33.
+                // Search: lucene-core 10.5.2 (the version that writes the desktop indexes), patched for API 30.
                 implementation(project(":lucene-android"))
                 // A library split in chunks on a FAT32 memory card (data/SplitDatabase.kt): a SQLite that can load the
                 // multiplex VFS (src/androidMain/cpp), which Android's own SQLite cannot.
@@ -230,7 +230,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 }
 
-// Stock lucene-core does not link on API 33: if a library ever brings it transitively, use the patched one.
+// Stock lucene-core does not link on Android: if a library ever brings it transitively, use the patched one.
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         substitute(module("org.apache.lucene:lucene-core")).using(project(":lucene-android"))

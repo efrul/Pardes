@@ -5,6 +5,7 @@ import java.io.PrintStream;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.lang.invoke.WrongMethodTypeException;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -50,7 +51,7 @@ import org.apache.lucene.util.CompatVarHandle;
 /**
  * JVM test of the Android 11/12 (API 30-32) code of the :lucene-android jar against the JDK methods
  * it stands in for (single-file program, no build needed):
- * java -Dlucene.android.forceFallbacks=true -cp build/libs/lucene-android-10.5.2-android.jar smoke/CompatFallbacks.java [rounds] [seed]
+ * java -XX:-OmitStackTraceInFastThrow -Dlucene.android.forceFallbacks=true -cp build/libs/lucene-android-10.5.2-android.jar smoke/CompatFallbacks.java [rounds] [seed]
  *
  * <p>Calls every API 33 stand-in of AndroidCompat and CompatVarHandle with random and edge-case
  * inputs and compares each outcome with the JDK method's: the result (for set, the bytes written),
@@ -66,6 +67,12 @@ public class CompatFallbacks {
 
   public static void main(String[] args) throws Exception {
     System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, "UTF-8"));
+    // Once an implicit exception (ArrayStoreException from toArray, ...) is frequent, HotSpot's compiled code throws a
+    // preallocated one without a message, so the JDK call and its stand-in could differ by when C2 got to them.
+    if (!ManagementFactory.getRuntimeMXBean().getInputArguments().contains("-XX:-OmitStackTraceInFastThrow")) {
+      System.err.println("Run with -XX:-OmitStackTraceInFastThrow: exception messages are compared.");
+      System.exit(2);
+    }
     final int rounds = args.length > 0 ? Integer.parseInt(args[0]) : 100_000;
     final long seed = args.length > 1 ? Long.parseLong(args[1]) : new Random().nextLong();
     random = new Random(seed);

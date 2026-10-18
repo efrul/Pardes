@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time tuning after the emulator has booted. Makes a software-emulated Android 13 usable for UI tests:
+# One-time tuning after the emulator has booted. Makes a software-emulated Android usable for UI tests:
 # root shell, screen always on, no animations, no ANR/crash dialogs covering the app, and the heavy Google
 # apps disabled (GMS, launcher, assistant... starve the CPU under TCG and caused system_server crashes and
 # ANR loops). Disabling packages persists across reboots; the rest is re-applied each run.

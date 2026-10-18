@@ -36,5 +36,5 @@ dependencyResolutionManagement {
 }
 
 include(":app")
-// lucene-core patched to link on Android 13 (API 33); see lucene-android/build.gradle.kts.
+// lucene-core patched to link on Android 11 (API 30); see lucene-android/build.gradle.kts.
 include(":lucene-android")

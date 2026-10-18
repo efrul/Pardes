@@ -142,6 +142,7 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val startupChecked = AtomicBoolean(false)
+    private val shellStarted = AtomicBoolean(false)
 
     @Volatile
     private var token: InstallToken? = null
@@ -221,6 +222,7 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
      * to by this updater, once, or null.
      */
     fun onShellStart(): String? {
+        val firstInProcess = shellStarted.compareAndSet(false, true)
         // The shell comes back after the library update flow too: not while this process downloads or installs
         if (!isBusy) {
             runCatching {
@@ -232,8 +234,9 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
             }
             if (sessionId == -1) abandonSessions(committedToo = false)
             restoreReady()
-            // Android 11 restarted the app for the permission the install asked for (awaitPermissionAcrossRestart)
-            if (prefs.getBoolean(KEY_AWAITING_PERMISSION, false)) {
+            // Android 11 restarted the app for the permission the install asked for (awaitPermissionAcrossRestart). Only a
+            // new process takes it up: the shell coming back in this one (a recreated activity) leaves the wait as it is
+            if (firstInProcess && prefs.getBoolean(KEY_AWAITING_PERMISSION, false)) {
                 prefs.edit().remove(KEY_AWAITING_PERMISSION).apply()
                 if (_state.value.ready && app.packageManager.canRequestPackageInstalls()) {
                     _dialogVisible.value = true
@@ -454,6 +457,8 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
             _state.value = s.copy(needsPermission = true, errorMessage = null, message = null)
             return
         }
+        // Allowed without a restart (on already, or Android did not end the app): no install waits for the next process
+        awaitPermissionAcrossRestart(false)
         val session = runCatching { sessionText?.invoke() }.getOrNull()
         val current = InstallToken().also { token = it }
         _state.value = s.copy(phase = AppUpdateState.Phase.Installing, needsPermission = false, confirming = false, errorMessage = null, message = null)
@@ -512,7 +517,7 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
      * on in the next process instead, with the APK checked before and the dialog open ([onShellStart]).
      */
     private fun awaitPermissionAcrossRestart(waiting: Boolean) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || !waiting && !prefs.contains(KEY_AWAITING_PERMISSION)) return
         prefs.edit().apply { if (waiting) putBoolean(KEY_AWAITING_PERMISSION, true) else remove(KEY_AWAITING_PERMISSION) }.apply()
     }
 

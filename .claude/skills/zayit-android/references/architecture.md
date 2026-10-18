@@ -21,7 +21,7 @@
     - `SeforimDb` from `upstream/SeforimLibrary/dao/src/commonMain/sqldelight` (the library).
     - `UserSettingsDb` from `SeforimApp/src/commonMain/sqldelight` (notes and highlights, the same schema as desktop).
   - The release build type uses R8 (`isMinifyEnabled`, `isShrinkResources`) with `proguard-rules.pro`, signed with the debug key.
-- `lucene-android/` holds lucene-core 10.5.2 patched for API 33 (see lucene-android.md).
+- `lucene-android/` holds lucene-core 10.5.2 patched for API 30 (see lucene-android.md).
 - `tools/` has developer and user scripts: `make_subset_db.sh` and `push-desktop-library.sh`/`.ps1`.
 
 Identifiers:
