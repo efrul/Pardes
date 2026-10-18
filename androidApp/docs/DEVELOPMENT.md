@@ -5,7 +5,7 @@ This file records where the Android port stands and how it is worked on. It is f
 ## Goal and constraints
 
 - **Target:** Android 13 (minSdk 33), phones down to the 3" Unihertz Jelly Star, and tablets.
-- **Parity with desktop Zayit 0.6.1:** the same screens, wording (except the authorship texts, see below), behaviour and data. Desktop is the reference whenever something is unclear. Four fixes from desktop 0.6.2 are ported on top of that base (see [PARITY.md](PARITY.md) › Later desktop releases); the rest of 0.6.2–0.6.4 is not.
+- **Parity with desktop Zayit 0.6.1:** the same screens, wording (except the authorship texts, see below), behaviour and data. Desktop is the reference whenever something is unclear. Four fixes from desktop 0.6.2 and the 0.6.5 changes that apply here are ported on top of that base; the rest of 0.6.2–0.6.4 is not, and 0.6.6 had nothing for this app (see [PARITY.md](PARITY.md) › Later desktop releases).
 - **Own app, based on Zayit:** Pardes is not an app by Zayit's author. User-facing text says Pardes is based on Zayit by Elie (Elyahou) Gambache (AGPL-3.0), who did not make it, is not responsible for it and does not support it. His copyright, licence and §7b attribution notices are kept; the porter is not named, and this repository is linked only as Pardes's AGPL source (the כללי header, אודות, תנאים). Where desktop's wording says who made the app (the welcome step, the settings header, About, the terms), Android's differs on purpose.
 - **Offline, including search:** the app uses the desktop library and the desktop Lucene index. There is no server.
 - **Shared code:** desktop code is reused unchanged where it compiles, and desktop sources are never edited for Android.
