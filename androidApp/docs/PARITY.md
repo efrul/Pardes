@@ -10,9 +10,9 @@ A gap list from comparing the real 0.6.1 sources (upstream `kdroidFilter/Zayit` 
   - the full template siddur: a private package.
 - **Different on purpose: authorship.** Desktop's welcome ("שנבנה באהבה על ידי אברך ומפתח חרדי"), settings header ("נוצר על ידי אליהו גמבש"), About and terms describe desktop Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept. Not a gap.
 
-## Later desktop releases (0.6.2 to 0.6.5)
+## Later desktop releases (0.6.2 to 0.6.6)
 
-The base stays desktop 0.6.1 (SeforimLibrary submodule pinned at `381fbea`). 0.6.5 left SeforimLibrary and the library format as 0.6.4 had them (`2265fcb`, no new minimum library version).
+The base stays desktop 0.6.1 (SeforimLibrary submodule pinned at `381fbea`). 0.6.5 left SeforimLibrary and the library format as 0.6.4 had them (`2265fcb`, no new minimum library version). 0.6.6 moved it to `7ddf045`, which changes only the desktop's `zayit cli`.
 
 ### 0.6.2 to 0.6.4
 
@@ -64,6 +64,19 @@ Not ported from 0.6.5:
 - `f96e98f3` (shortcuts with nothing focused), the Nucleus bump `df4b7d12`, CI and docs: desktop only.
 
 To watch: `cc3c6712` fixes text selection in a tab shown again under Compose 1.12 (an unplaced selectable Text never subscribes to its SelectionContainer again), with a patch to Compose's bytecode. This app is on Compose foundation 1.10.5 (BOM 2026.03.00), and `TabHost` unplaces hidden tabs the same way: when the BOM moves to Compose 1.12, check text selection after switching tabs.
+
+### 0.6.6
+
+`git diff v0.6.5 v0.6.6` upstream (2026-10-18) holds two fixes, both for desktop only. Nothing was ported, because Pardes already behaves as 0.6.6 does:
+
+| Upstream commit | Change | Here |
+|---|---|---|
+| `7380286b` | Alt+Home goes to the Home page. Desktop listened for `Key.SystemHome`, Android's Home button, which no desktop keyboard sends, instead of the keyboard's Home key (`Key.MoveHome`) | Already right: `ui/shell/KeyShortcuts.kt` maps Alt+`KEYCODE_MOVE_HOME` to `goHome()` and lists it under that key in the system's shortcuts helper (Meta+/). `KEYCODE_HOME` belongs to the system and never reaches the app. |
+| `0380bb5a` | Filament KMP 0.7.10 on Windows (ANGLE): the 3D Home widgets no longer show a stale or garbled frame, and a new tab no longer compiles their shaders again (about 250 ms of UI thread per view); an e2e scenario for it | No Filament here: the Earth, Sky and solar-system widgets are drawn on a Canvas, off the main thread (`rememberOffMain`). The Earth's map is decoded once per process (`EarthWidget.kt`, `earthTexture`), and each widget's last result is kept across Home tabs (`OffMainValues`), so a new tab shows what was already computed. |
+
+Also in the diff, and not for this app:
+- `58e8beb5` and the SeforimLibrary bump `2265fcb` → `7ddf045` ("internal tooling improvements"): desktop's search engine setup is shared with `zayit cli`, whose commands now use the app's own search and lookup. Only SeforimLibrary's CLI module changed; the schema, the library format and the minimum library version are as in 0.6.4.
+- `37748ba7`: a redirect page on Zayit's site (`open.html`) that forwards `…/open#book/<id>/line/<id>` to `zayit://book/<id>/line/<id>`. On a phone with Pardes the page's link opens the passage in Pardes, whose `zayit` intent filter is BROWSABLE (and so does the automatic redirect, where the browser allows it without a tap). Desktop 0.6.6 does not share such links yet; Pardes shares `zayit://` links, as desktop does.
 
 Fixes land in waves:
 1. 0.6.1 engine, zmanim, places and network trust.
