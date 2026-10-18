@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.IBinder
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
+import io.github.kdroidfilter.seforimapp.android.showForegroundImmediately
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +96,7 @@ class LibraryDeltaService : Service() {
             .setSmallIcon(if (state.phase == DbDeltaUpdateState.Phase.Downloading) android.R.drawable.stat_sys_download else android.R.drawable.stat_notify_sync)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+            .showForegroundImmediately()
             .setContentTitle(state.message.ifEmpty { DeltaStrings.title })
             .setContentText(state.detail ?: DeltaStrings.title)
         val progress = state.progress

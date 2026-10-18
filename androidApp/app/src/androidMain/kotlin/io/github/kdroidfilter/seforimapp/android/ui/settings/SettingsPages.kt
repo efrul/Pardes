@@ -1,7 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.ui.settings
 
 import android.content.Context
-import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +47,7 @@ import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.AppPrefs
 import io.github.kdroidfilter.seforimapp.android.data.Community
 import io.github.kdroidfilter.seforimapp.android.data.worldPlaces
+import io.github.kdroidfilter.seforimapp.android.packageInfoCompat
 import io.github.kdroidfilter.seforimapp.android.ui.components.HSpacer
 import io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton
 import io.github.kdroidfilter.seforimapp.android.ui.theme.AccentColor
@@ -68,7 +68,7 @@ internal const val PREVIEW_TEXT = "הֲבֵ֤ל הֲבָלִים֙ אָמַ֣ר 
 internal fun appPrefs(): AppPrefs = (LocalContext.current.applicationContext as ZayitApplication).prefs
 
 internal fun appVersion(context: Context): String = runCatching {
-    context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0)).versionName ?: "?"
+    context.packageManager.packageInfoCompat(context.packageName, 0).versionName ?: "?"
 }.getOrDefault("?")
 
 // ---------------------------------------------------------------- כללי

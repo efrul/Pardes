@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.android.ui.shell
 
 import android.app.Activity
 import android.app.ActivityManager
+import android.os.Build
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -248,7 +249,15 @@ fun ZayitApp(
         append(if (tab.destination is Destination.Search) "תוצאות חיפוש : ${tab.title}" else tab.title.ifBlank { AppUiState.HOME_TITLE })
     }
     LaunchedEffect(windowTitle) {
-        activity?.setTaskDescription(ActivityManager.TaskDescription.Builder().setLabel(windowTitle).build())
+        activity?.setTaskDescription(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ActivityManager.TaskDescription.Builder().setLabel(windowTitle).build()
+            } else {
+                // TaskDescription.Builder is API 33: before it, the label-only constructor (deprecated since)
+                @Suppress("DEPRECATION")
+                ActivityManager.TaskDescription(windowTitle)
+            },
+        )
     }
 
     // Desktop: "keep the screen on while a book is open".

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launcher widgets' receivers (AndroidManifest.xml): off below Android 12, whose RemoteViews calls they are
+         drawn with (setColorInt, setViewLayout*, a RemoteViews for each size); values-v31 turns them on. -->
+    <bool name="appwidget_enabled">false</bool>
+</resources>

@@ -1,7 +1,9 @@
-// Vendored from Zayit 0.6.1: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/reference/RepositoryReferenceSource.kt
-// (tag v0.6.1), with the 0.6.2 fix 2126c238 applied as is. Keep it identical; Android changes belong in a variant file.
+// Android variant of the Zayit 0.6.1 file SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/reference/RepositoryReferenceSource.kt
+// (tag v0.6.1), with the 0.6.2 fix 2126c238 applied as is. One difference: linesOf reads a TOC entry's lines in lists
+// Android 11's SQLite can bind (999 parameters; a section reaches 9,400 lines), through SqlVariableLimit.
 package io.github.kdroidfilter.seforimapp.features.search.domain.reference
 
+import io.github.kdroidfilter.seforimapp.android.data.SqlVariableLimit
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
@@ -39,7 +41,9 @@ class RepositoryReferenceSource(
         }
 
     override suspend fun linesOf(tocEntryId: Long): List<Line> =
-        repository.getLinesByIds(repository.getLineIdsForTocEntry(tocEntryId)).sortedBy { it.lineIndex }
+        SqlVariableLimit
+            .readInChunks(repository.getLineIdsForTocEntry(tocEntryId)) { repository.getLinesByIds(it) }
+            .sortedBy { it.lineIndex }
 
     // Thread-safe LRU; a value is loaded outside the lock, at worst twice by concurrent lookups
     private class LruCache<K, V>(

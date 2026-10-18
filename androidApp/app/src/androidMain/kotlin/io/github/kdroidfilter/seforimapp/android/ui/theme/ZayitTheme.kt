@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -440,7 +441,12 @@ fun ZayitTheme(
     val context = LocalContext.current
     val systemAccent = if (accent == AccentColor.System) {
         remember(context, dark) {
-            runCatching { (if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)).primary }.getOrNull()
+            // Material You is Android 12's (API 31): before it, the accent's own colours
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                runCatching { (if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)).primary }.getOrNull()
+            } else {
+                null
+            }
         }
     } else {
         null

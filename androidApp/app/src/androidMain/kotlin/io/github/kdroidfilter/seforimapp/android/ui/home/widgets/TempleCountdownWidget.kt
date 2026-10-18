@@ -8,8 +8,10 @@ import android.content.IntentFilter
 import android.graphics.ImageDecoder
 import android.graphics.drawable.AnimatedImageDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.PowerManager
 import android.widget.ImageView
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,7 +55,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import io.github.kdroidfilter.seforimapp.android.R
@@ -168,19 +172,32 @@ private fun rememberMotionAllowed(): Boolean {
                     powerSave = power?.isPowerSaveMode == true
                 }
             }
-        context.registerReceiver(receiver, IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED), Context.RECEIVER_NOT_EXPORTED)
-        // Held weakly by ValueAnimator: this effect keeps it alive
-        val scaleListener = ValueAnimator.DurationScaleChangeListener { scale -> animatorsOn = scale != 0f }
-        ValueAnimator.registerDurationScaleChangeListener(scaleListener)
+        // ContextCompat: RECEIVER_NOT_EXPORTED is API 33, and only the compat call keeps it unexported before it
+        ContextCompat.registerReceiver(context, receiver, IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
+        val stopFollowingScale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) followAnimatorScale { animatorsOn = it } else null
         // A change made while the app was away
         animatorsOn = ValueAnimator.areAnimatorsEnabled()
         powerSave = power?.isPowerSaveMode == true
         onDispose {
             runCatching { context.unregisterReceiver(receiver) }
-            ValueAnimator.unregisterDurationScaleChangeListener(scaleListener)
+            stopFollowingScale?.invoke()
         }
     }
+    // Below Android 13 nothing says when the scale changes: it is read again as the activity resumes (it is changed in
+    // Settings, away from the app)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { animatorsOn = ValueAnimator.areAnimatorsEnabled() }
+    }
     return animatorsOn && !powerSave
+}
+
+/** Follows the animator duration scale ([onChange]: animators on) until the function returned is called. */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun followAnimatorScale(onChange: (Boolean) -> Unit): () -> Unit {
+    // Held weakly by ValueAnimator: the function returned keeps it alive
+    val listener = ValueAnimator.DurationScaleChangeListener { scale -> onChange(scale != 0f) }
+    ValueAnimator.registerDurationScaleChangeListener(listener)
+    return { ValueAnimator.unregisterDurationScaleChangeListener(listener) }
 }
 
 @Composable

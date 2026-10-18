@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -191,13 +192,17 @@ internal object ZayitWidgets {
 
     /** How long a broadcast received at [received] (uptime) may be held open; 0 when not at all. */
     private fun broadcastBudget(received: Long): Long {
-        val start = Process.getStartRequestedUptimeMillis()
+        // API 33. Android 12 has only the moment the process was bound (Process.getStartUptimeMillis), later than the
+        // ask by the time the start took, which comes off the 2 s left before the system's 10 s
+        val start = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Process.getStartRequestedUptimeMillis() else Process.getStartUptimeMillis()
         if (start <= 0L || received - start >= COLD_START_MS) return WARM_BUDGET_MS
         return (start + COLD_START_BUDGET_MS - received).coerceIn(0L, COLD_START_BUDGET_MS)
     }
 
     /** Adds [request] to the next redraw, starting one unless one is under way; null outside the app. */
     private fun enqueue(context: Context, request: WidgetRequest): Job? {
+        // None can be placed on Android 11: the widgets' receivers are off below API 31 (AndroidManifest.xml)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
         val app = context.applicationContext as? ZayitApplication ?: return null
         synchronized(lock) {
             val batch = next ?: Batch().also { next = it }

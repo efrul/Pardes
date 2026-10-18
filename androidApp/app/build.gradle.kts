@@ -114,7 +114,9 @@ android {
         // Pardes, not Zayit: renamed at the request of Zayit's author, who asked forks not to use his app's name or icon.
         // A new id, so it installs beside the earlier io.github.efrul.zayit builds instead of over them.
         applicationId = "io.github.efrul.pardes"
-        minSdk = 33
+        // Android 11 (33 until 0.3.0). Newer platform calls sit behind SDK_INT checks with a fallback, so Android 12 and
+        // later behave as before; the launcher widgets need 12 (docs/DEVELOPMENT.md › Android 11).
+        minSdk = 30
         targetSdk = 36
         versionCode = 2
         versionName = "0.3.0"

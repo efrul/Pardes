@@ -4,24 +4,55 @@
  */
 package org.apache.lucene.util;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
+import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.Checksum;
 
 /**
- * Android: static stand-ins for JDK methods that lucene-core 10.4 calls but Android 13 (API 33)
- * does not have. The :lucene-android rewriter redirects each call site to the method of the same
- * name here (the receiver becomes the first parameter); behavior matches the JDK methods.
+ * Android: static stand-ins for JDK methods that lucene-core 10.5 calls but Android does not have.
+ * The :lucene-android rewriter redirects each call site to the method of the same name here (the
+ * receiver becomes the first parameter); behavior matches the JDK methods.
+ *
+ * <p>The first group is missing even on Android 13 (API 34/35 methods) and always runs here. The
+ * second group exists from API 33: there each method hands over to the JDK method through {@link
+ * AndroidCompatApi33}, so Android 13+ runs what it ran before; Android 11 and 12 (API 30-32) run
+ * the equivalent code here.
  */
 public final class AndroidCompat {
   private AndroidCompat() {}
+
+  /**
+   * System property that makes {@link #API_33} false on any VM, so the API 30-32 code below can be
+   * tested on a JVM: {@code -Dlucene.android.forceFallbacks=true}.
+   */
+  public static final String FORCE_FALLBACKS = "lucene.android.forceFallbacks";
+
+  /**
+   * True on Android 13 (API 33) and later, and on a JVM (there is no android.os.Build): the JDK
+   * methods of {@link AndroidCompatApi33} exist. android.os.Build is read reflectively, once,
+   * because this jar is built without android.jar.
+   */
+  static final boolean API_33 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 33;
+
+  private static int sdkInt() {
+    try {
+      return Class.forName("android.os.Build$VERSION").getField("SDK_INT").getInt(null);
+    } catch (ReflectiveOperationException | LinkageError e) {
+      return Integer.MAX_VALUE; // not Android
+    }
+  }
 
   /** {@code HashMap.newHashMap(int)}: Java 19, API 35. */
   public static <K, V> HashMap<K, V> newHashMap(int numMappings) {
@@ -89,5 +120,256 @@ public final class AndroidCompat {
       throw new NoSuchElementException();
     }
     return list.get(0);
+  }
+
+  // ---- API 33: the JDK method on Android 13+, the code below on Android 11 and 12 ----
+
+  /** {@code Arrays.mismatch(byte[], int, int, byte[], int, int)}: Java 9, API 33. */
+  public static int mismatch(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.mismatch(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    final int aLength = aTo - aFrom;
+    final int bLength = bTo - bFrom;
+    final int length = Math.min(aLength, bLength);
+    final int i = firstDifference(a, aFrom, b, bFrom, length);
+    return i < 0 && aLength != bLength ? length : i;
+  }
+
+  /** {@code Arrays.mismatch(char[], int, int, char[], int, int)}: Java 9, API 33. */
+  public static int mismatch(char[] a, int aFrom, int aTo, char[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.mismatch(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    final int aLength = aTo - aFrom;
+    final int bLength = bTo - bFrom;
+    final int length = Math.min(aLength, bLength);
+    final int i = firstDifference(a, aFrom, b, bFrom, length);
+    return i < 0 && aLength != bLength ? length : i;
+  }
+
+  /** {@code Arrays.mismatch(int[], int, int, int[], int, int)}: Java 9, API 33. */
+  public static int mismatch(int[] a, int aFrom, int aTo, int[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.mismatch(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    final int aLength = aTo - aFrom;
+    final int bLength = bTo - bFrom;
+    final int length = Math.min(aLength, bLength);
+    final int i = firstDifference(a, aFrom, b, bFrom, length);
+    return i < 0 && aLength != bLength ? length : i;
+  }
+
+  /** {@code Arrays.compareUnsigned(byte[], int, int, byte[], int, int)}: Java 9, API 33. */
+  public static int compareUnsigned(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.compareUnsigned(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    final int aLength = aTo - aFrom;
+    final int bLength = bTo - bFrom;
+    final int i = firstDifference(a, aFrom, b, bFrom, Math.min(aLength, bLength));
+    if (i >= 0) {
+      return Byte.toUnsignedInt(a[aFrom + i]) - Byte.toUnsignedInt(b[bFrom + i]);
+    }
+    return aLength - bLength;
+  }
+
+  /** {@code Arrays.compare(char[], int, int, char[], int, int)}: Java 9, API 33. */
+  public static int compare(char[] a, int aFrom, int aTo, char[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.compare(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    final int aLength = aTo - aFrom;
+    final int bLength = bTo - bFrom;
+    final int i = firstDifference(a, aFrom, b, bFrom, Math.min(aLength, bLength));
+    if (i >= 0) {
+      return Character.compare(a[aFrom + i], b[bFrom + i]);
+    }
+    return aLength - bLength;
+  }
+
+  /** {@code Arrays.compare(int[], int, int, int[], int, int)}: Java 9, API 33. */
+  public static int compare(int[] a, int aFrom, int aTo, int[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.compare(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    final int aLength = aTo - aFrom;
+    final int bLength = bTo - bFrom;
+    final int i = firstDifference(a, aFrom, b, bFrom, Math.min(aLength, bLength));
+    if (i >= 0) {
+      return Integer.compare(a[aFrom + i], b[bFrom + i]);
+    }
+    return aLength - bLength;
+  }
+
+  /** {@code Arrays.compare(long[], int, int, long[], int, int)}: Java 9, API 33. */
+  public static int compare(long[] a, int aFrom, int aTo, long[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.compare(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    final int aLength = aTo - aFrom;
+    final int bLength = bTo - bFrom;
+    final int i = firstDifference(a, aFrom, b, bFrom, Math.min(aLength, bLength));
+    if (i >= 0) {
+      return Long.compare(a[aFrom + i], b[bFrom + i]);
+    }
+    return aLength - bLength;
+  }
+
+  /** {@code Arrays.equals(byte[], int, int, byte[], int, int)}: Java 9, API 33. */
+  public static boolean equals(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.equals(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    return aTo - aFrom == bTo - bFrom && firstDifference(a, aFrom, b, bFrom, aTo - aFrom) < 0;
+  }
+
+  /** {@code Arrays.equals(char[], int, int, char[], int, int)}: Java 9, API 33. */
+  public static boolean equals(char[] a, int aFrom, int aTo, char[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.equals(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    return aTo - aFrom == bTo - bFrom && firstDifference(a, aFrom, b, bFrom, aTo - aFrom) < 0;
+  }
+
+  /** {@code Arrays.equals(int[], int, int, int[], int, int)}: Java 9, API 33. */
+  public static boolean equals(int[] a, int aFrom, int aTo, int[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.equals(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    return aTo - aFrom == bTo - bFrom && firstDifference(a, aFrom, b, bFrom, aTo - aFrom) < 0;
+  }
+
+  /** {@code Arrays.equals(long[], int, int, long[], int, int)}: Java 9, API 33. */
+  public static boolean equals(long[] a, int aFrom, int aTo, long[] b, int bFrom, int bTo) {
+    if (API_33) {
+      return AndroidCompatApi33.equals(a, aFrom, aTo, b, bFrom, bTo);
+    }
+    rangeCheck(a.length, aFrom, aTo);
+    rangeCheck(b.length, bFrom, bTo);
+    return aTo - aFrom == bTo - bFrom && firstDifference(a, aFrom, b, bFrom, aTo - aFrom) < 0;
+  }
+
+  /** Arrays.rangeCheck: the exceptions of the Arrays range methods, in the JDK's order. */
+  private static void rangeCheck(int arrayLength, int fromIndex, int toIndex) {
+    if (fromIndex > toIndex) {
+      throw new IllegalArgumentException("fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
+    }
+    if (fromIndex < 0) {
+      throw new ArrayIndexOutOfBoundsException(fromIndex);
+    }
+    if (toIndex > arrayLength) {
+      throw new ArrayIndexOutOfBoundsException(toIndex);
+    }
+  }
+
+  /** Index of the first difference of a[aFrom..] and b[bFrom..] within length, else -1. */
+  private static int firstDifference(byte[] a, int aFrom, byte[] b, int bFrom, int length) {
+    for (int i = 0; i < length; i++) {
+      if (a[aFrom + i] != b[bFrom + i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private static int firstDifference(char[] a, int aFrom, char[] b, int bFrom, int length) {
+    for (int i = 0; i < length; i++) {
+      if (a[aFrom + i] != b[bFrom + i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private static int firstDifference(int[] a, int aFrom, int[] b, int bFrom, int length) {
+    for (int i = 0; i < length; i++) {
+      if (a[aFrom + i] != b[bFrom + i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private static int firstDifference(long[] a, int aFrom, long[] b, int bFrom, int length) {
+    for (int i = 0; i < length; i++) {
+      if (a[aFrom + i] != b[bFrom + i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * {@code Math.fma(float, float, float)}: Java 9, API 33. Below API 33 Lucene never calls it: the
+   * only caller (DefaultVectorUtilSupport, float vectors) first checks
+   * Constants.HAS_FAST_SCALAR_FMA, which needs Hotspot's UseFMA flag. It is exact anyway, a * b + c
+   * rounded once to float like the JDK method: the product of two floats fits a double exactly, the
+   * sum is rounded to a double "to odd" (the exact error of the double sum, from TwoSum, sets the
+   * last bit), and rounding that to float is then correct, a double having more than float's 24 +
+   * 2 bits (Boldo and Melquiond, "Emulation of FMA and correctly rounded sums: proved algorithms
+   * using rounding to odd", 2008). Plain (float) (a * b + c) in double can round twice the wrong
+   * way.
+   */
+  public static float fma(float a, float b, float c) {
+    if (API_33) {
+      return AndroidCompatApi33.fma(a, b, c);
+    }
+    final double product = (double) a * (double) b;
+    final double sum = product + c;
+    if (Double.isNaN(sum) || Double.isInfinite(sum)) {
+      return (float) sum;
+    }
+    final double cPart = sum - product;
+    final double error = (product - (sum - cPart)) + (c - cPart);
+    if (error != 0 && (Double.doubleToRawLongBits(sum) & 1) == 0) {
+      return (float) (error > 0 ? Math.nextUp(sum) : Math.nextDown(sum));
+    }
+    return (float) sum;
+  }
+
+  /** {@code AtomicInteger.getOpaque()}: Java 9, API 33. A volatile read is at least as strong. */
+  public static int getOpaque(AtomicInteger value) {
+    if (API_33) {
+      return AndroidCompatApi33.getOpaque(value);
+    }
+    return value.get();
+  }
+
+  /** {@code Collection.toArray(IntFunction)}: Java 11, API 33. Below, its JDK default method. */
+  public static <T> T[] toArray(Collection<?> collection, IntFunction<T[]> generator) {
+    if (API_33) {
+      return AndroidCompatApi33.toArray(collection, generator);
+    }
+    return collection.toArray(generator.apply(0));
+  }
+
+  /** {@code ByteArrayOutputStream.toString(Charset)}: Java 10, API 33. */
+  public static String toString(ByteArrayOutputStream out, Charset charset) {
+    if (API_33) {
+      return AndroidCompatApi33.toString(out, charset);
+    }
+    // As the JDK method: the bytes so far, malformed input replaced.
+    return new String(out.toByteArray(), charset);
   }
 }

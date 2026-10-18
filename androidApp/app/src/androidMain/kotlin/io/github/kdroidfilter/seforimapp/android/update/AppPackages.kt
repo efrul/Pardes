@@ -5,6 +5,8 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.os.Build
+import io.github.kdroidfilter.seforimapp.android.packageArchiveInfoCompat
+import io.github.kdroidfilter.seforimapp.android.packageInfoCompat
 import java.io.File
 import java.security.MessageDigest
 
@@ -36,7 +38,7 @@ internal object AppPackages {
 
     /** The installed app. */
     fun installed(context: Context): Identity? = runCatching {
-        identityOf(context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong())))
+        identityOf(context.packageManager.packageInfoCompat(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
     }.getOrNull()
 
     /**
@@ -47,7 +49,7 @@ internal object AppPackages {
     @Suppress("DEPRECATION")
     fun archive(context: Context, apk: File): Identity? = runCatching {
         val flags = PackageManager.GET_SIGNING_CERTIFICATES.toLong() or PackageManager.GET_SIGNATURES.toLong()
-        context.packageManager.getPackageArchiveInfo(apk.path, PackageManager.PackageInfoFlags.of(flags))?.let(::identityOf)
+        context.packageManager.packageArchiveInfoCompat(apk.path, flags)?.let(::identityOf)
     }.getOrNull()
 
     /** This build is one of Pardes' published releases (not a development build, signed with the public debug key). */
@@ -73,7 +75,8 @@ internal object AppPackages {
             versionCode = info.longVersionCode,
             signers = signers,
             lineage = lineage,
-            minSdk = info.applicationInfo?.minSdkVersion ?: Build.VERSION_CODES.TIRAMISU,
+            // Not known: left to PackageInstaller, which refuses an APK this Android cannot run (STATUS_FAILURE_INCOMPATIBLE)
+            minSdk = info.applicationInfo?.minSdkVersion ?: Build.VERSION.SDK_INT,
         )
     }
 

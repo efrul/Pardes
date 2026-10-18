@@ -71,9 +71,12 @@
         </receiver>
 
         <!-- Launcher widgets (appwidget/): what the Home's widgets show, as RemoteViews. Not exported: the system's
-             widget broadcasts reach them all the same. -->
+             widget broadcasts reach them all the same. Off below Android 12 (@bool/appwidget_enabled, with their
+             WidgetRefreshReceiver): they are drawn with RemoteViews calls of API 31, so Android 11 does not offer them
+             (they would stay on "טוען…"), and ZayitWidgets draws nothing there. -->
         <receiver
             android:name=".appwidget.ZmanimWidgetProvider"
+            android:enabled="@bool/appwidget_enabled"
             android:exported="false"
             android:label="@string/appwidget_zmanim_label">
             <intent-filter>
@@ -85,6 +88,7 @@
         </receiver>
         <receiver
             android:name=".appwidget.NextZmanWidgetProvider"
+            android:enabled="@bool/appwidget_enabled"
             android:exported="false"
             android:label="@string/appwidget_next_zman_label">
             <intent-filter>
@@ -96,6 +100,7 @@
         </receiver>
         <receiver
             android:name=".appwidget.LuachWidgetProvider"
+            android:enabled="@bool/appwidget_enabled"
             android:exported="false"
             android:label="@string/appwidget_luach_label">
             <intent-filter>
@@ -107,6 +112,7 @@
         </receiver>
         <receiver
             android:name=".appwidget.LimudWidgetProvider"
+            android:enabled="@bool/appwidget_enabled"
             android:exported="false"
             android:label="@string/appwidget_limud_label">
             <intent-filter>
@@ -118,6 +124,7 @@
         </receiver>
         <receiver
             android:name=".appwidget.TempleWidgetProvider"
+            android:enabled="@bool/appwidget_enabled"
             android:exported="false"
             android:label="@string/appwidget_temple_label">
             <intent-filter>
@@ -129,6 +136,7 @@
         </receiver>
         <receiver
             android:name=".appwidget.SearchWidgetProvider"
+            android:enabled="@bool/appwidget_enabled"
             android:exported="false"
             android:label="@string/appwidget_search_label">
             <intent-filter>
@@ -143,6 +151,7 @@
              sets the alarm again. -->
         <receiver
             android:name=".appwidget.WidgetRefreshReceiver"
+            android:enabled="@bool/appwidget_enabled"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.TIME_SET" />

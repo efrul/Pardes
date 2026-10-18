@@ -39,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.lucene.util.AndroidCompat;
 import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.IOUtils;
 
@@ -179,7 +180,8 @@ public abstract class FSDirectory extends BaseDirectory {
       }
     }
 
-    String[] array = entries.toArray(String[]::new);
+    // Android: List.toArray(IntFunction) is API 33, and the rewriter does not touch this file.
+    String[] array = AndroidCompat.toArray(entries, String[]::new);
     // Directory.listAll javadocs state that we sort the results here, so we don't let filesystem
     // specifics leak out of this abstraction:
     Arrays.sort(array);

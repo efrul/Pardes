@@ -7,6 +7,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.DocumentsContract
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -250,13 +251,18 @@ internal fun TrackInstallerVisibility(installer: LibraryInstaller) {
     }
 }
 
-/** The foreground service shows the download progress, so notifications are asked for before [start] runs. */
+/**
+ * The foreground service shows the download progress, so notifications are asked for before [start] runs. Android 13's
+ * permission: before it, notifications need no asking.
+ */
 @Composable
 internal fun rememberWithNotificationPermission(start: () -> Unit): () -> Unit {
     val context = LocalContext.current
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { start() }
     return {
-        if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        ) {
             start()
         } else {
             permission.launch(Manifest.permission.POST_NOTIFICATIONS)

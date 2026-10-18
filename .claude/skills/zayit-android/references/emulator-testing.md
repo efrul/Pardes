@@ -178,6 +178,8 @@ adb shell "U=\$(stat -c %u /data/data/$P); D=/data/data/$P/files; mkdir -p \$D/a
 
 The APK to update to needs a higher `versionName` and a `versionCode` not lower than the installed one. Expect: the snackbar "גרסה 0.3.1 של פרדס זמינה" (once per version: remove `announced_version` from `shared_prefs/app_update.xml` to see it again) and the badge at start; "הורד והתקן" in the dialog; the first time, the permission banner, whose "פתח הגדרות" opens the "install unknown apps" page (the install goes on after Back); then Android replaces the app with no question (`UPDATE_PACKAGES_WITHOUT_USER_ACTION`) and the app closes; on the next start "פרדס עודכן לגרסה 0.3.1". `adb shell dumpsys package io.github.efrul.pardes | grep -E "versionName|installerPackageName"` then shows the new version and Pardes as its installer. Remove the test files afterwards (`files/app-update-test*`); the build drops what it downloaded at its next start. Tested this way on the Jelly Star (Android 13), 2026-10-18: a refusal of a release-key APK, the permission page, cancel and approve in Android's confirmation, a silent update, and a downloaded APK offered again after the process was stopped.
 
+On Android 11 (API 30) two steps differ: turning the permission on ends the app, so Back lands in a new process that offers the checked APK as ready (tap install again), and Android's confirmation opens for every update, since `UPDATE_PACKAGES_WITHOUT_USER_ACTION` exists only from Android 12 (`androidApp/docs/DEVELOPMENT.md` › Android 11).
+
 ## Debugging crashes and slowness
 
 - **Crash:** `$ADB logcat -d -b crash | tail -50`. For a broader view, `$ADB logcat -d | grep -E "AndroidRuntime|FATAL|zayit|seforim" | tail -80`. Clear with `logcat -c` before reproducing.

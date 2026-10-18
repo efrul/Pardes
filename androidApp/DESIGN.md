@@ -1,6 +1,6 @@
 # Pardes (an Android app based on Zayit): design spec
 
-Goal: the Android app should feel like Zayit 0.6.1 on desktop, adapted to touch. It targets **minSdk 33** (Android 13). Screen sizes run from the Unihertz Jelly Star (≈240×427dp) through ordinary phones (≈360–412dp wide) to tablets (≥840dp wide). All reference screenshots were taken from the real desktop build 0.6.1.
+Goal: the Android app should feel like Zayit 0.6.1 on desktop, adapted to touch. It targets **minSdk 30** (Android 11). Screen sizes run from the Unihertz Jelly Star (≈240×427dp) through ordinary phones (≈360–412dp wide) to tablets (≥840dp wide). All reference screenshots were taken from the real desktop build 0.6.1.
 
 ## 1. Visual language (copied from desktop "Islands" style)
 
