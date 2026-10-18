@@ -2,7 +2,9 @@ package io.github.kdroidfilter.seforimapp.android.appwidget
 
 import android.content.Context
 import android.graphics.Paint
+import android.os.Build
 import android.widget.RemoteViews
+import androidx.annotation.RequiresApi
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.Color
@@ -191,17 +193,19 @@ internal class WidgetData(val app: ZayitApplication, nowMillis: Long, private va
         }
     }
 
-    // ZayitTheme's "מערכת" accent: Material You's primary
+    // ZayitTheme's "מערכת" accent: Material You's primary (Android 12+, as the widgets themselves)
     private fun systemAccent(dark: Boolean): Color? =
-        runCatching { (if (dark) dynamicDarkColorScheme(app) else dynamicLightColorScheme(app)).primary }.getOrNull()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) null else runCatching { (if (dark) dynamicDarkColorScheme(app) else dynamicLightColorScheme(app)).primary }.getOrNull()
 }
 
 /** The widget's colours by day and by night. */
 internal class WidgetPalette(val light: ZayitColors, val dark: ZayitColors)
 
+@RequiresApi(Build.VERSION_CODES.S)
 internal fun RemoteViews.textColor(id: Int, p: WidgetPalette, pick: (ZayitColors) -> Color) =
     setColorInt(id, "setTextColor", pick(p.light).toArgb(), pick(p.dark).toArgb())
 
 /** Colours a white shape (the panel, its border, a pill): ImageView.setColorFilter keeps the shape's rounded outline. */
+@RequiresApi(Build.VERSION_CODES.S)
 internal fun RemoteViews.tint(id: Int, p: WidgetPalette, pick: (ZayitColors) -> Color) =
     setColorInt(id, "setColorFilter", pick(p.light).toArgb(), pick(p.dark).toArgb())

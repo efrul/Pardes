@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Desktop's LuceneSearchEngine.kt is in the upstream search srcDir but excluded from the build (build.gradle.kts;
+         its Android variant is search/LuceneSearchEngine.kt): lint reads it all the same. -->
+    <issue id="NewApi">
+        <ignore regexp=".*upstream/SeforimLibrary/search/src/jvmMain/.*/LuceneSearchEngine\.kt" />
+    </issue>
+</lint>
