@@ -95,11 +95,18 @@ internal fun LicenceStep(accepted: Boolean, onAcceptedChange: (Boolean) -> Unit,
     }
 }
 
+/**
+ * Desktop's disk check for the full library (the pie, enough or not). Android: short of that room, it still leads on, to
+ * an install from files only: a small library (ספרייה מוקטנת, packed by a tool) takes far less, and the install from
+ * files measures what the picked bundle needs (its library_size.txt) before it writes anything.
+ */
 @Composable
 internal fun DiskSpaceStep(state: DiskState, onRecheck: () -> Unit, onNext: () -> Unit, onSelectLocation: (String) -> Unit) {
     StepScaffold(
         title = DesktopStrings.onboardingDiskTitle,
-        bottomAction = { AccentButton(DesktopStrings.nextButton, onNext, enabled = state.enough && !state.loading) },
+        bottomAction = {
+            AccentButton(if (state.enough) DesktopStrings.nextButton else AndroidStrings.continueWithFiles, onNext, enabled = !state.loading)
+        },
     ) {
         if (state.loading) {
             CircularProgressIndicator(color = Zayit.colors.accent, strokeWidth = 3.dp, modifier = Modifier.padding(top = 48.dp).size(36.dp))
@@ -127,6 +134,7 @@ internal fun DiskSpaceStep(state: DiskState, onRecheck: () -> Unit, onNext: () -
                     onAction = onRecheck,
                 )
                 if (state.choices.isEmpty()) InfoBanner(AndroidStrings.cardHint, Modifier.widthIn(max = 520.dp))
+                InfoBanner(AndroidStrings.smallLibraryHint, Modifier.widthIn(max = 520.dp))
             }
             InfoBanner(
                 AndroidStrings.diskStreamingNote.format(
@@ -142,8 +150,9 @@ internal fun DiskSpaceStep(state: DiskState, onRecheck: () -> Unit, onNext: () -
     }
 }
 
+/** Desktop's two install types. Android: [onlineAllowed] false when the disk step found too little room for the download. */
 @Composable
-internal fun InstallTypeStep(device: DeviceState, onOffline: () -> Unit, onOnline: () -> Unit, onUseExisting: () -> Unit) {
+internal fun InstallTypeStep(device: DeviceState, onlineAllowed: Boolean, onOffline: () -> Unit, onOnline: () -> Unit, onUseExisting: () -> Unit) {
     val c = Zayit.colors
     val wide = LocalOnboardingWide.current
     StepScaffold(title = DesktopStrings.installationTitle) {
@@ -153,8 +162,12 @@ internal fun InstallTypeStep(device: DeviceState, onOffline: () -> Unit, onOnlin
             device.existingLibraryError?.let { ErrorBanner(installErrorMessage(InstallState.Failed(it, null, online = false))) }
             AccentButton(AndroidStrings.useExistingLibrary, onUseExisting, enabled = !device.checkingExisting)
         }
-        if (device.metered) InfoBanner(AndroidStrings.meteredWarning.format(formatBytes(LibraryInstaller.ESTIMATED_BUNDLE_BYTES)))
-        val onlineDesc = AndroidStrings.installationOnlineDesc.format(formatBytes(LibraryInstaller.ESTIMATED_BUNDLE_BYTES))
+        if (device.metered && onlineAllowed) InfoBanner(AndroidStrings.meteredWarning.format(formatBytes(LibraryInstaller.ESTIMATED_BUNDLE_BYTES)))
+        val onlineDesc = if (onlineAllowed) {
+            AndroidStrings.installationOnlineDesc.format(formatBytes(LibraryInstaller.ESTIMATED_BUNDLE_BYTES))
+        } else {
+            AndroidStrings.installationOnlineNoSpace
+        }
         if (wide) {
             // Desktop: two columns split by a vertical rule, offline on the right (first in RTL).
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
@@ -174,6 +187,7 @@ internal fun InstallTypeStep(device: DeviceState, onOffline: () -> Unit, onOnlin
                     onOnline,
                     Modifier.weight(1f).fillMaxHeight(),
                     OnboardingIcons.DownloadForOffline,
+                    enabled = onlineAllowed,
                 )
             }
         } else {
@@ -195,6 +209,7 @@ internal fun InstallTypeStep(device: DeviceState, onOffline: () -> Unit, onOnlin
                     onOnline,
                     Modifier.fillMaxWidth(),
                     OnboardingIcons.DownloadForOffline,
+                    enabled = onlineAllowed,
                 )
             }
         }
@@ -210,6 +225,7 @@ internal fun InstallOption(
     onClick: () -> Unit,
     modifier: Modifier,
     icon: ImageVector,
+    enabled: Boolean = true,
 ) {
     val c = Zayit.colors
     Column(
@@ -220,7 +236,7 @@ internal fun InstallOption(
         Text(title, color = c.text, fontSize = 22.sp, textAlign = TextAlign.Center)
         Icon(icon, contentDescription = title, tint = c.text, modifier = Modifier.size(72.dp))
         BodyText(description, fontSize = 14)
-        AccentButton(buttonText, onClick)
+        AccentButton(buttonText, onClick, enabled = enabled)
     }
 }
 

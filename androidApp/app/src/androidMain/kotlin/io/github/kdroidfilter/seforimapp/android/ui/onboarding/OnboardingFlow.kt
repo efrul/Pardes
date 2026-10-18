@@ -128,8 +128,10 @@ fun OnboardingFlow(onFinished: () -> Unit) {
                 }
                 OnboardingStep.InstallType -> {
                     val device by vm.device.collectAsState()
+                    val disk by vm.disk.collectAsState()
                     InstallTypeStep(
                         device,
+                        onlineAllowed = disk.enough,
                         onOffline = { vm.go(OnboardingStep.OfflineFiles) },
                         onOnline = startOnline,
                         onUseExisting = vm::useExistingLibrary,
