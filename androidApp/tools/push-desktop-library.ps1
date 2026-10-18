@@ -137,6 +137,11 @@ if (-not $Serial) {
 }
 Say "מכשיר: $Serial" "device: $Serial"
 if ((Ask "package:/data/app/$Pkg/base.apk" @('shell', 'pm', 'path', $Pkg)) -notmatch '^package:') { Die 'פרדס אינו מותקן במכשיר' "Pardes ($Pkg) is not installed on the device" }
+# Android 11's adb shell is not in the ext_data_rw group (Android 12 added it): Android/data/<app>/ is out of its reach
+$sdk = 0; [void][int]::TryParse(((Ask '33' @('shell', 'getprop', 'ro.build.version.sdk')) -replace '\D', ''), [ref]$sdk)
+if ($sdk -gt 0 -and $sdk -lt 31 -and (Ask 'yes' @('shell', 'ls /sdcard/Android/data >/dev/null 2>&1 && echo yes')) -ne 'yes') {
+    Die 'באנדרואיד 11 כלי ההעברה (adb) אינו יכול לגשת לתיקייה של פרדס בטלפון; זה אפשרי מאנדרואיד 12. במקום זאת הורידו מעמוד ההפצה של הספרייה את הקבצים ‎.part ואת ‎.manifest.json, העתיקו אותם לתיקיית Download בטלפון ובחרו אותם בפרדס: מדריך ההגדרה ← התקנה לא-מקוונת' "Android 11: adb cannot reach Pardes's folder on the phone (it can from Android 12). Instead, download the library's .part and .manifest.json files from its release page, copy them to the phone's Download folder and pick them in Pardes: setup guide, offline install"
+}
 
 # --- the memory card (-SdCard): its app folder, and its filesystem (FAT32 takes no file of 4 GB)
 $PhoneFiles = $Files
