@@ -145,6 +145,13 @@ jobs:
           grep -q 'run on API 33+ only): 0 references above API 33, 0 missing on API 33$' check-min-api.txt
           { echo '### lucene-android API 30 gate'; echo '```'; cat check-min-api.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
+      # R8 must leave lucene-android's API 33 calls in AndroidCompatApi33: moved into a class every search loads, they
+      # made Android 11's verifier reject it (no search there)
+      - name: Check the release dex for lucene-android's API 33 class
+        run: |
+          androidApp/lucene-android/check-release-dex.sh androidApp/app/build/outputs/apk/release/app-release.apk \
+            androidApp/app/build/outputs/mapping/release/mapping.txt
+
       - name: Name the release
         id: name
         env:
