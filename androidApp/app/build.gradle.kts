@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.sqlDelight)
+    id("pardes.compose-vector-moves")
 }
 
 // SeforimLibrary as desktop Zayit 0.6.1 builds it: the Android-only submodule upstream/SeforimLibrary, pinned to

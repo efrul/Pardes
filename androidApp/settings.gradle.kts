@@ -1,6 +1,8 @@
 rootProject.name = "ZayitAndroid"
 
 pluginManagement {
+    // pardes.compose-vector-moves (app/build.gradle.kts): icons on Android 11, see VectorPathCompat
+    includeBuild("build-logic")
     repositories {
         google {
             content {
