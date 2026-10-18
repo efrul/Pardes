@@ -1,6 +1,10 @@
+// The launcher widgets exist from Android 12 (ZayitWidgets.enqueue, @bool/appwidget_enabled): their drawing uses API 31
+@file:RequiresApi(Build.VERSION_CODES.S)
+
 package io.github.kdroidfilter.seforimapp.android.appwidget
 
 import android.graphics.Typeface
+import android.os.Build
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.StyleSpan
@@ -8,6 +12,7 @@ import android.util.SizeF
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.compositeOver
 import io.github.kdroidfilter.seforimapp.android.R
 import io.github.kdroidfilter.seforimapp.android.data.JewishDay

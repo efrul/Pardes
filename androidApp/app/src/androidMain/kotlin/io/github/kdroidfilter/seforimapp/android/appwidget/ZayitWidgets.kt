@@ -18,6 +18,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.util.SizeF
 import android.widget.RemoteViews
+import androidx.annotation.RequiresApi
 import androidx.core.os.BundleCompat
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import kotlinx.coroutines.CompletableJob
@@ -218,6 +219,7 @@ internal object ZayitWidgets {
     }
 
     /** The widgets' thread: redraws until nothing more is asked. */
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun drain(app: ZayitApplication) {
         while (true) {
             val batch =
@@ -238,6 +240,7 @@ internal object ZayitWidgets {
     }
 
     @SuppressLint("ApplySharedPref") // commit() on purpose, see below
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun update(app: ZayitApplication, batch: Batch) {
         val started = SystemClock.uptimeMillis()
         if (batch.clockChanged) WidgetCache.clear()
@@ -296,6 +299,7 @@ internal object ZayitWidgets {
      * it picks the one that fits as the widget is resized, without waiting for the app. A size that fails is left out;
      * with none, the widget keeps what it shows (its last drawing, or the initial "טוען…"). Returns the layouts built.
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun draw(manager: AppWidgetManager, kind: WidgetKind, id: Int, data: WidgetData): Int {
         val options = runCatching { manager.getAppWidgetOptions(id) }.getOrNull() ?: Bundle.EMPTY
         val views =
@@ -325,6 +329,7 @@ internal object ZayitWidgets {
         )
 
     /** The sizes the launcher gave for the widget, at most [MAX_SIZES]; its bounds when it gave none. */
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun sizesOf(options: Bundle, fallback: SizeF): List<SizeF> {
         val given = BundleCompat.getParcelableArrayList<SizeF>(options, AppWidgetManager.OPTION_APPWIDGET_SIZES, SizeF::class.java)
             ?.filter { it.width > 0f && it.height > 0f }
