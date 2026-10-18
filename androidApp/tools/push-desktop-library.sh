@@ -257,6 +257,6 @@ if [ -n "$(ask "" shell "ls -a $LIB | grep '^\.zayit-old-'; true")" ]; then
   say "עותקים ישנים שהיישום יצר בעצמו ימחקו כשיפתח" "old copies the app made itself were renamed .zayit-old-*; it deletes them when it next opens"
 fi
 
-say "הושלם. פתחו את פרדס בטלפון; אם יופיע מסך ההתקנה, בחרו \"שימוש בספרייה הקיימת\"" \
-  "done. Open Pardes on the phone; if the setup screens appear, choose \"use existing library\""
+say "הושלם. פתחו את פרדס בטלפון; אם יופיע מדריך ההגדרה, הוא ימצא את הספרייה אחרי אישור הרישיון" \
+  "done. Open Pardes on the phone; if its setup guide appears, it finds the library after the licence step"
 run shell ls -l $LIB
