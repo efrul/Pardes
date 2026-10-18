@@ -78,7 +78,11 @@ $Source = (Get-Item -LiteralPath $Source -Force).FullName
 $Db = Join-Path $Source 'seforim.db'
 $NotesDb = Join-Path $Source 'settings\user_settings.db'
 if (-not (Test-Path -LiteralPath $NotesDb)) { $NotesDb = Join-Path $Default 'settings\user_settings.db' }
-foreach ($wal in "$Db-wal", "$NotesDb-wal") {
+# The notes only matter with -WithNotes: a desktop Zayit left open keeps their WAL, which must not stop a library copy
+# (a small library built from chosen books, say, is a folder of its own).
+$Wals = @("$Db-wal")
+if ($WithNotes) { $Wals += "$NotesDb-wal" }
+foreach ($wal in $Wals) {
     if ((Test-Path -LiteralPath $wal) -and (Get-Item -LiteralPath $wal).Length -gt 0) { Die "סגרו את זית במחשב ונסו שוב ($wal אינו ריק)" "close Zayit on the computer first ($wal is not empty)" }
 }
 foreach ($d in 'seforim.db.lucene', 'seforim.db.lookup.lucene') {
