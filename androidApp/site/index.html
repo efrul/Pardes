@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>פרדס: ספרייה תורנית לאנדרואיד</title>
-<meta name="description" content="הורדת פרדס לאנדרואיד 13 ומעלה: הספרייה התורנית בטלפון ובטאבלט, עם חיפוש מלא בלי אינטרנט. מבוסס על זית מאת אליהו גמבש ואינו מטעמו.">
-<meta name="theme-color" content="#f3e9c9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1b1810" media="(prefers-color-scheme: dark)">
+<title>פרדס: ארון הספרים התורני בטלפון</title>
+<meta name="description" content="פרדס לאנדרואיד 13 ומעלה: אלפי ספרים עם מפרשים ותרגומים, וחיפוש בכל הספרייה בלי אינטרנט. הורדה, התקנה, והכלים להעברת הספרייה מהמחשב. מבוסס על זית מאת אליהו גמבש ואינו מטעמו.">
+<meta name="theme-color" content="#243018" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b2411" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="he_IL">
-<meta property="og:title" content="פרדס: ספרייה תורנית לאנדרואיד">
-<meta property="og:description" content="הספרייה התורנית בטלפון ובטאבלט, עם חיפוש מלא בלי אינטרנט. מבוסס על זית מאת אליהו גמבש ואינו מטעמו.">
+<meta property="og:title" content="פרדס: ארון הספרים התורני בטלפון">
+<meta property="og:description" content="אלפי ספרים עם מפרשים ותרגומים, וחיפוש בכל הספרייה בלי אינטרנט, לאנדרואיד 13 ומעלה. מבוסס על זית מאת אליהו גמבש ואינו מטעמו.">
 <meta property="og:image" content="https://efrul.github.io/Pardes/img/social.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="img/icon-64.png">
@@ -18,388 +18,900 @@
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Noto+Rashi+Hebrew:wght@500;600&family=IBM+Plex+Mono&display=swap">
 <style>
-/* Layout: one column for the phone that downloads the APK; from 56rem the hero splits into the pitch and the
-   download card, and the screenshots run as a strip under it. Palette and type follow the app: parchment top bar,
-   gold accent, olive from the icon, a Hebrew book face for headings. */
+/* Layout: a title page that opens onto a manual. The grove (the icon's olive, with the name in the icon's gold and its
+   face, Frank Ruhl Libre Black) holds the download; then a tour of the app in tabs, three install steps, a chooser of
+   the five ways to bring in the library with each way's steps and its tool (screenshots and a direct download), one
+   list of every download, the changelog, and the grove again for who made what. One column on the phone that
+   downloads the APK; from 56rem the hero splits and a phone stands in it, half on the page below. Short labels are
+   set in Rashi script, as a sefer sets its commentary. */
 :root {
-  --bg: #faf6ec;
-  --surface: #fffdf7;
-  --ink: #221e14;
-  --muted: #675e4b;
-  --line: #e6dcc2;
-  --gold: #8a6608;
-  --gold-ink: #fffaf0;
-  --gold-soft: #f3e6bd;
-  --olive: #56622a;
-  --band-a: #f6efd9;
-  --band-b: #ecdcae;
-  --code-bg: #f1ead6;
+  --paper: #f2f3ea;
+  --sheet: #fbfbf5;
+  --ink: #1c2113;
+  --muted: #596048;
+  --rule: #d7dbc6;
+  --tint: #e6e9d6;
+  --code: #e7eadb;
+  --gold: #835e0c;
+  --olive: #4b5a26;
+  --grove: #243018;
+  --grove-lit: #3e4d24;
+  --grove-deep: #141b0b;
+  --grove-well: rgba(8, 12, 4, 0.3);
+  --grove-line: rgba(246, 220, 140, 0.3);
+  --on-grove: #f1ecd8;
+  --on-grove-muted: #c5c7a8;
+  --gold-hi: #f6dc8c;
+  --gold-lo: #b8862a;
+  --btn-ink: #1c2410;
+  --frame: #12160c;
+  --shadow: rgba(10, 16, 4, 0.45);
+  --scrim: rgba(6, 9, 3, 0.86);
   --display: "Frank Ruhl Libre", "David", "Times New Roman", serif;
-  --body: "Assistant", "Segoe UI", "Arial Hebrew", Arial, sans-serif;
-  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --radius: 14px;
+  --body: "IBM Plex Sans Hebrew", "Segoe UI", "Arial Hebrew", Arial, sans-serif;
+  --rashi: "Noto Rashi Hebrew", "Frank Ruhl Libre", "David", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15130d;
-    --surface: #1e1b13;
-    --ink: #f2ecdc;
-    --muted: #b1a68b;
-    --line: #353020;
-    --gold: #dcb54c;
-    --gold-ink: #1b1608;
-    --gold-soft: #3a3016;
-    --olive: #a9b872;
-    --band-a: #221e13;
-    --band-b: #2d2715;
-    --code-bg: #26221a;
+  :root:not([data-theme="light"]) {
+    --paper: #0f1309;
+    --sheet: #171c10;
+    --ink: #e9e8d8;
+    --muted: #a4a890;
+    --rule: #2a3120;
+    --tint: #1d2315;
+    --code: #222a19;
+    --gold: #e0bd62;
+    --olive: #aebc78;
+    --grove: #1b2411;
+    --grove-lit: #2d3a1a;
+    --grove-deep: #0a0e05;
+    --frame: #050703;
+    --shadow: rgba(0, 0, 0, 0.6);
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --paper: #0f1309;
+  --sheet: #171c10;
+  --ink: #e9e8d8;
+  --muted: #a4a890;
+  --rule: #2a3120;
+  --tint: #1d2315;
+  --code: #222a19;
+  --gold: #e0bd62;
+  --olive: #aebc78;
+  --grove: #1b2411;
+  --grove-lit: #2d3a1a;
+  --grove-deep: #0a0e05;
+  --frame: #050703;
+  --shadow: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+:root { --disk: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 13h16l-2.5-7.5A2 2 0 0 0 15.6 4H8.4a2 2 0 0 0-1.9 1.5Z'/%3E%3Crect x='4' y='13' width='16' height='7' rx='2'/%3E%3Cpath d='M8 16.5h.01M12 16.5h4'/%3E%3C/svg%3E"); }
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--body);
-  font-size: 1.0625rem;
-  line-height: 1.65;
-}
+/* The grove under the page too, so a pull past either end shows the band that is there. */
+html { -webkit-text-size-adjust: 100%; background: var(--grove); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 1.0625rem; line-height: 1.7; }
 img { max-width: 100%; height: auto; display: block; }
-a { color: var(--gold); text-underline-offset: 0.18em; }
-a:focus-visible, button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
-h1, h2, h3 { font-family: var(--display); line-height: 1.2; text-wrap: balance; margin: 0; }
+a { color: var(--gold); text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
+h1, h2, h3, h4, h5 { font-family: var(--display); line-height: 1.2; text-wrap: balance; margin: 0; }
 p { margin: 0; }
-code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 5px; direction: ltr; unicode-bidi: isolate; overflow-wrap: anywhere; }
+b { font-weight: 600; }
+code { font-family: var(--mono); font-size: 0.84em; background: var(--code); padding: 0.1em 0.38em; border-radius: 5px; direction: ltr; unicode-bidi: isolate; overflow-wrap: anywhere; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .ltr { direction: ltr; unicode-bidi: isolate; }
-
-.wrap { max-width: 66rem; margin-inline: auto; padding-inline: max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
-
-/* The app's top bar: a parchment-to-gold band with the icon and the name. */
-.band {
-  background: linear-gradient(180deg, var(--band-a), var(--band-b));
-  border-bottom: 1px solid var(--line);
-  padding-top: env(safe-area-inset-top, 0px);
+.wrap {
+  max-width: 70rem; margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.band .wrap { display: flex; align-items: center; gap: 0.75rem; padding-block: 0.7rem; }
-.band img { width: 40px; height: 40px; border-radius: 50%; }
-.band .name { font-family: var(--display); font-weight: 700; font-size: 1.35rem; }
 .chip {
-  display: inline-block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em;
-  color: var(--olive); border: 1.5px solid currentColor; border-radius: 999px; padding: 0.05rem 0.6rem; white-space: nowrap;
+  display: inline-block; font-family: var(--body); font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  letter-spacing: 0.02em; color: var(--olive); border: 1.5px solid currentColor; border-radius: 999px;
+  padding: 0 0.6rem; white-space: nowrap; vertical-align: middle;
 }
-.band .chip { margin-inline-start: auto; }
-
-/* minmax(0, 1fr): the screenshot strip scrolls inside itself instead of widening the page. */
-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3.25rem; padding-block: 2rem 3rem; }
-
-.hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.75rem; align-items: start; }
-.hero h1 { font-weight: 900; font-size: clamp(2.1rem, 6.4vw, 3.4rem); letter-spacing: -0.01em; }
-.hero h1 .sub { display: block; font-weight: 500; font-size: 0.5em; color: var(--muted); margin-top: 0.35rem; }
-.lead { font-size: 1.2rem; max-width: 34rem; margin-top: 1rem; }
-.disclaimer {
-  margin-top: 1.1rem; max-width: 34rem; padding: 0.8rem 1rem; border-radius: 10px;
-  background: var(--gold-soft); color: var(--ink); font-size: 0.98rem;
-}
-
-.dl { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.35rem; display: grid; gap: 0.9rem; box-shadow: 0 10px 30px -18px rgba(60, 45, 10, 0.35); }
-.dl .label { font-size: 0.85rem; font-weight: 700; color: var(--muted); letter-spacing: 0.03em; }
-.dl .ver { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-family: var(--display); font-size: 1.45rem; font-weight: 700; min-width: 0; }
-.dl .ver span { overflow-wrap: anywhere; }
-.meta { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.9rem; margin: 0; font-size: 0.95rem; }
-.meta dt { color: var(--muted); }
-.meta dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
-.meta .asof { color: var(--muted); font-size: 0.88em; }
 .btn {
-  display: flex; align-items: center; justify-content: center; gap: 0.6rem; min-height: 3.4rem; padding: 0.7rem 1.2rem;
-  background: var(--gold); color: var(--gold-ink); border-radius: 12px; text-decoration: none;
-  font-weight: 700; font-size: 1.15rem; border: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; min-height: 2.9rem;
+  padding: 0.55rem 1.15rem; border: 0; border-radius: 12px; font: inherit; font-weight: 700; text-decoration: none;
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: var(--btn-ink); cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 16px -10px var(--shadow);
 }
-.btn:hover { filter: brightness(1.06); }
-.btn svg { width: 1.4rem; height: 1.4rem; flex: none; }
-.dl .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem 1rem; font-size: 0.95rem; }
-.status { font-size: 0.92rem; color: var(--muted); min-height: 1.4em; }
-.sha { display: flex; gap: 0.5rem; align-items: center; min-width: 0; }
-.sha code { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.copy { font: inherit; font-size: 0.85rem; padding: 0.15rem 0.6rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
-
-section > h2 { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; margin-bottom: 1rem; }
-.intro { max-width: 40rem; margin-bottom: 1.25rem; color: var(--muted); }
-
-/* Screenshots: a strip that scrolls inside itself; the release images already carry their captions. */
-.strip { display: flex; gap: 0.9rem; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 0.6rem; overscroll-behavior-x: contain; }
-.strip figure { margin: 0; flex: 0 0 auto; width: min(62vw, 15rem); scroll-snap-align: start; }
-.strip figure.wide { width: min(86vw, 30rem); }
-.strip img { width: 100%; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
-
-.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 1rem; max-width: 44rem; }
-.steps li { counter-increment: step; display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.9rem; align-items: start; }
-.steps li::before {
-  content: counter(step); display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%;
-  font-family: var(--display); font-weight: 700; font-size: 1.2rem; color: var(--gold); border: 2px solid var(--gold);
+a.btn { color: var(--btn-ink); }
+.btn:hover { filter: brightness(1.05); }
+.btn svg { width: 1.25rem; height: 1.25rem; flex: none; }
+.btn-line { background: transparent; border: 1.5px solid var(--gold); box-shadow: none; color: var(--gold); }
+a.btn-line { color: var(--gold); }
+.copy {
+  font: inherit; font-size: 0.85rem; padding: 0.15rem 0.7rem; border-radius: 8px; border: 1px solid var(--rule);
+  background: var(--sheet); color: var(--ink); cursor: pointer; flex: none;
 }
-.steps h3 { font-size: 1.2rem; margin-bottom: 0.15rem; }
-.steps div { min-width: 0; }
+.copy:hover { border-color: var(--olive); }
 
-/* minmax(0, 1fr): a long command scrolls inside its box instead of widening the route and the page. */
-.routes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; max-width: 48rem; }
-.route { border-top: 3px solid var(--olive); background: var(--surface); border-radius: 0 0 var(--radius) var(--radius); padding: 1.1rem 1.25rem 1.3rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; min-width: 0; }
-.route h3 { font-size: 1.3rem; }
-.route h3 .chip { vertical-align: middle; font-family: var(--body); margin-inline-start: 0.35rem; }
-.route .when { color: var(--olive); font-weight: 600; }
-.route ol { margin: 0; padding-inline-start: 1.4rem; display: grid; gap: 0.55rem; }
-.route li { min-width: 0; }
-.route li::marker { color: var(--gold); font-weight: 700; }
-.route .need { font-size: 0.92rem; color: var(--muted); }
-.route a, .route code { unicode-bidi: isolate; }
-.route code { white-space: nowrap; }
-.cmd { display: flex; gap: 0.5rem; align-items: center; margin: 0.4rem 0; }
-.cmd pre { flex: 1; min-width: 0; margin: 0; }
-.getfile { display: block; margin-top: 0.3rem; }
-pre { margin: 0.4rem 0; font-family: var(--mono); font-size: 0.82rem; background: var(--code-bg); padding: 0.55rem 0.7rem; border-radius: 8px; overflow-x: auto; text-align: left; white-space: pre; }
+/* ── The grove: the top bar, the name and the download ── */
+.grove {
+  background:
+    radial-gradient(110% 80% at 50% 0%, var(--grove-lit), transparent 70%),
+    linear-gradient(180deg, var(--grove), var(--grove-deep));
+  color: var(--on-grove);
+}
+.grove a { color: var(--gold-hi); }
+.grove a.btn { color: var(--btn-ink); }
+.grove :focus-visible { outline-color: var(--gold-hi); }
+header.grove { padding-top: env(safe-area-inset-top, 0px); }
+.top { display: flex; align-items: center; gap: 0.7rem; padding-block: 0.9rem; }
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+.grove .brand { color: var(--on-grove); }
+.brand img { width: 34px; height: 34px; }
+.brand span { font-family: var(--display); font-weight: 700; font-size: 1.3rem; }
+.top .chip { color: var(--gold-hi); border-color: var(--grove-line); }
+.topnav { display: none; margin-inline-start: auto; gap: 1.4rem; font-size: 0.95rem; }
+.grove .topnav a { color: var(--on-grove-muted); text-decoration: none; }
+.grove .topnav a:hover { color: var(--gold-hi); }
 
-/* Changelog: androidApp/CHANGELOG.md (deployed as changelog.md), one fold per version, the newest open. */
-.log { display: grid; gap: 0.9rem; max-width: 48rem; }
-.version { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding-inline: 1.25rem; min-width: 0; }
-.version summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.75rem; padding-block: 0.95rem; cursor: pointer; list-style: none; }
-.version summary::-webkit-details-marker { display: none; }
-.version summary::before {
-  content: ""; flex: none; width: 0.55rem; height: 0.55rem; margin-inline: 0.15rem 0.2rem;
+.hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; padding-block: 1.2rem 3rem; }
+.pitch { display: grid; gap: 1.1rem; align-content: start; min-width: 0; }
+.eyebrow { font-size: 0.95rem; font-weight: 500; color: var(--on-grove-muted); }
+.pitch h1 { display: grid; gap: 0.35rem; }
+.mark {
+  display: block; font-weight: 900; font-size: clamp(5.4rem, 25vw, 10rem); line-height: 0.95; letter-spacing: -0.01em;
+  color: var(--gold-hi);
+  background-image:
+    linear-gradient(104deg, transparent 42%, rgba(255, 249, 226, 0.85) 50%, transparent 58%),
+    linear-gradient(180deg, var(--gold-hi) 8%, var(--gold-lo) 92%);
+  background-size: 250% 100%, 100% 100%;
+  background-position: 0% 0, 0 0;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 var(--grove-deep));
+  padding-block: 0.06em;
+}
+.tag { display: block; font-weight: 700; font-size: clamp(1.5rem, 5.6vw, 2.3rem); color: var(--on-grove); }
+.lead { font-size: 1.14rem; max-width: 36rem; color: var(--on-grove); }
+
+.get { display: grid; gap: 0.9rem; max-width: 36rem; padding: 1.1rem; border-radius: 16px; background: var(--grove-well); border: 1px solid var(--grove-line); min-width: 0; }
+.btn-big { min-height: 3.7rem; font-size: 1.15rem; justify-content: flex-start; padding-inline: 1.2rem; text-align: start; line-height: 1.3; }
+.btn-big svg { width: 1.6rem; height: 1.6rem; }
+.btn-big small { display: block; font-size: 0.8rem; font-weight: 500; opacity: 0.8; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem 1rem; margin: 0; }
+.facts div { min-width: 0; }
+.facts .span { grid-column: 1 / -1; }
+.facts dt { font-size: 0.8rem; color: var(--on-grove-muted); }
+.facts dd { margin: 0; color: var(--on-grove); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.get .chip { color: var(--gold-hi); border-color: var(--grove-line); margin-inline-start: 0.3rem; }
+.asof { color: var(--on-grove-muted); font-size: 0.85em; }
+.get .status { font-size: 0.9rem; color: var(--on-grove-muted); min-height: 1.4em; }
+.sha { display: flex; gap: 0.5rem; align-items: center; min-width: 0; font-size: 0.85rem; color: var(--on-grove-muted); }
+.sha code { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--grove-deep); color: var(--on-grove); }
+.get .copy { background: transparent; color: var(--on-grove); border-color: var(--grove-line); }
+.get .links { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; font-size: 0.95rem; }
+.credit { max-width: 36rem; font-size: 0.93rem; color: var(--on-grove-muted); }
+.credit strong { color: var(--on-grove); font-weight: 600; }
+.hero-phone { display: none; }
+
+/* A phone or a tablet around a screenshot. */
+.device {
+  border-radius: 2.1rem; padding: 0.5rem; background: var(--frame);
+  box-shadow: 0 0 0 1px var(--rule), 0 28px 56px -28px var(--shadow);
+}
+.device img { width: 100%; border-radius: 1.65rem; }
+.device.wide { border-radius: 1.4rem; padding: 0.6rem; }
+.device.wide img { border-radius: 0.9rem; }
+
+/* ── The page ── */
+main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5rem; padding-block: 3.5rem 5rem; }
+section { min-width: 0; scroll-margin-top: 1rem; }
+.head { display: grid; gap: 0.25rem; margin-bottom: 1.6rem; }
+.kicker { font-family: var(--rashi); font-weight: 600; font-size: 1.05rem; color: var(--gold); }
+.head h2 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 700; }
+.intro { max-width: 44rem; color: var(--muted); margin-top: 0.5rem; }
+
+/* The tour: tabs once the script runs, one panel under the other without it. */
+.tablist { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.4rem; margin-bottom: 1.8rem; scrollbar-width: none; }
+.tablist button {
+  flex: none; font: inherit; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 1rem; border-radius: 999px;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); cursor: pointer;
+}
+.tablist button:hover { border-color: var(--olive); }
+.tablist button[aria-selected="true"] { background: var(--grove); border-color: var(--grove); color: var(--gold-hi); }
+.panels { display: grid; gap: 3.5rem; }
+.panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.6rem; align-items: center; }
+.panel .text { display: grid; gap: 0.7rem; max-width: 30rem; min-width: 0; }
+.panel h3 { font-size: clamp(1.45rem, 4vw, 1.95rem); }
+.devices { display: flex; justify-content: center; align-items: flex-start; gap: 1rem; }
+.devices .device { width: min(14rem, 62vw); }
+.devices.pair .device { width: min(11.5rem, 42vw); }
+.devices .device.short { width: min(13rem, 60vw); }
+.devices .device.wide { width: min(44rem, 100%); }
+
+/* Install: a real sequence, counted in Hebrew letters as a sefer counts. */
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 1.6rem; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0.9rem; align-content: start; }
+.steps li::before { content: counter(step, hebrew); font-family: var(--display); font-weight: 900; font-size: 2.5rem; line-height: 1; color: var(--gold); text-align: center; }
+.steps div { min-width: 0; display: grid; gap: 0.3rem; }
+.steps h3 { font-size: 1.25rem; }
+.note { margin-top: 2.2rem; display: grid; gap: 0.4rem; padding: 1.1rem 1.25rem; border-radius: 14px; background: var(--sheet); border: 1px solid var(--rule); max-width: 52rem; }
+.note h3 { font-size: 1.2rem; }
+
+/* The library: a chooser of the ways, then each way. */
+.choose { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+.choose a {
+  position: relative; display: grid; gap: 0.25rem; align-content: start; height: 100%;
+  padding: 1rem 1.1rem; padding-inline-end: 2.6rem; border-radius: 14px; background: var(--sheet);
+  border: 1px solid var(--rule); color: var(--ink); text-decoration: none;
+}
+.choose a::after {
+  content: ""; position: absolute; inset-inline-end: 1.1rem; top: 1.45rem; width: 0.55rem; height: 0.55rem;
   border-left: 2px solid var(--gold); border-bottom: 2px solid var(--gold); transform: rotate(45deg);
 }
-.version[open] summary::before { transform: rotate(-45deg); }
-.version summary h3 { font-size: 1.35rem; }
-.version .when { color: var(--muted); font-size: 0.92rem; }
-.version .chip.soon { color: var(--gold); }
-.version .body { display: grid; gap: 0.55rem; padding-bottom: 1.25rem; min-width: 0; }
-.version h4 { font-family: var(--display); font-size: 1.12rem; color: var(--olive); margin: 0.55rem 0 0; }
-.version ul { margin: 0; padding-inline-start: 1.3rem; display: grid; gap: 0.4rem; }
+.choose a:hover { border-color: var(--gold); }
+.choose strong { font-family: var(--display); font-size: 1.25rem; font-weight: 700; line-height: 1.3; }
+.choose span { color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+.choose em { font-style: normal; font-size: 0.82rem; font-weight: 600; color: var(--olive); }
+
+.routes { display: grid; margin-top: 2.5rem; }
+.route { display: grid; gap: 1.1rem; padding-block: 2.6rem; border-top: 1px solid var(--rule); min-width: 0; scroll-margin-top: 1rem; }
+.route > * { max-width: 48rem; }
+.route > .tool, .route > .ways { max-width: none; }
+.route-head { display: grid; gap: 0.35rem; }
+.route-head h3 { font-size: clamp(1.55rem, 4.2vw, 2.05rem); }
+.when { color: var(--olive); font-weight: 600; }
+.sub { font-size: 1.25rem; margin-top: 0.5rem; }
+.do { margin: 0; padding-inline-start: 1.5rem; display: grid; gap: 0.6rem; }
+.do li { min-width: 0; padding-inline-start: 0.2rem; }
+.do li::marker { color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.route a, .route code { unicode-bidi: isolate; }
+.need {
+  position: relative; font-size: 0.93rem; color: var(--muted); background: var(--tint); border-radius: 10px;
+  padding-block: 0.75rem; padding-inline: 2.7rem 0.9rem;
+}
+.need::before {
+  content: ""; position: absolute; inset-inline-start: 0.9rem; top: 0.95rem; width: 1.25rem; height: 1.25rem; background: var(--olive);
+  -webkit-mask: var(--disk) center / contain no-repeat; mask: var(--disk) center / contain no-repeat;
+}
+.ways { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+.way { display: grid; gap: 0.6rem; align-content: start; padding: 1.1rem 1.2rem; border-radius: 14px; border: 1px solid var(--rule); background: var(--sheet); min-width: 0; }
+.way h5 { font-size: 1.15rem; }
+.cmd { display: flex; gap: 0.5rem; align-items: center; min-width: 0; }
+.cmd pre { flex: 1; min-width: 0; margin: 0; }
+pre {
+  font-family: var(--mono); font-size: 0.85rem; background: var(--code); color: var(--ink);
+  padding: 0.6rem 0.8rem; border-radius: 8px; overflow-x: auto; text-align: left; white-space: pre; margin: 0;
+}
+.opts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.2rem 1.2rem; margin: 0; }
+.opts dt { margin-top: 0.5rem; }
+.opts dd { margin: 0; color: var(--muted); }
+
+/* A tool: what it is, the direct download, and its screens. */
+.tool { display: grid; gap: 1.1rem; padding: 1.15rem; border-radius: 18px; background: var(--sheet); border: 1px solid var(--rule); min-width: 0; }
+.tool-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.9rem 1.5rem; }
+.tool-id { display: grid; gap: 0.15rem; min-width: 0; }
+.tool-kind { font-family: var(--rashi); font-weight: 600; color: var(--gold); font-size: 0.98rem; }
+.tool h4 { font-size: 1.4rem; }
+.tool-meta { font-size: 0.9rem; color: var(--muted); overflow-wrap: anywhere; }
+.tool-note { font-size: 0.88rem; color: var(--muted); }
+.gallery {
+  --h: 12rem; display: flex; gap: 0.9rem; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 0.5rem;
+  overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--rule) transparent;
+}
+.gallery figure { margin: 0; flex: none; width: calc(var(--h) * var(--r)); max-width: 100%; display: grid; gap: 0.45rem; align-content: start; scroll-snap-align: start; }
+.shot { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); background: var(--paper); cursor: zoom-in; }
+.gallery img { width: 100%; height: var(--h); object-fit: cover; }
+.gallery figcaption { font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+.files { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; }
+.file {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.8rem; align-items: center;
+  padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); text-decoration: none;
+}
+.route a.file { color: var(--ink); }
+.file svg { grid-row: 1 / span 3; width: 1.5rem; height: 1.5rem; color: var(--gold); }
+.file strong { font-weight: 600; }
+.file span { font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
+.file .ltr { justify-self: start; font-family: var(--mono); color: var(--ink); }
+.file:hover { border-color: var(--gold); }
+.pt { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; align-items: baseline; font-size: 0.93rem; color: var(--muted); }
+.bundle { display: grid; gap: 0.6rem; }
+.bundle ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.3rem; font-size: 0.92rem; }
+.bundle li { display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; }
+.bundle .size { color: var(--muted); font-variant-numeric: tabular-nums; }
+.bundle .status { font-size: 0.92rem; color: var(--muted); }
+.bundle .btn { justify-self: start; min-height: 2.5rem; font-size: 0.95rem; }
+
+.extras { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: 1rem; }
+.extra { display: grid; gap: 0.75rem; align-content: start; padding: 1.3rem 1.3rem 1.4rem; border-radius: 16px; background: var(--sheet); border: 1px solid var(--rule); min-width: 0; scroll-margin-top: 1rem; }
+.extra h3 { font-size: 1.4rem; }
+.extra h3 .chip { margin-inline-start: 0.4rem; }
+
+/* Every download, one per row. */
+.dls { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.dl-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; padding-block: 1.15rem; border-bottom: 1px solid var(--rule); }
+.dl-what { display: grid; gap: 0.1rem; min-width: 0; }
+.dl-what strong { font-family: var(--display); font-size: 1.22rem; font-weight: 700; }
+.dl-what span { color: var(--muted); font-size: 0.95rem; }
+.dl-file { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; font-size: 0.88rem; color: var(--muted); min-width: 0; }
+.dl-file .ltr { font-family: var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+.dl-go { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dl-go .btn { min-height: 2.5rem; padding: 0.35rem 0.95rem; font-size: 0.95rem; }
+.fine { margin-top: 1.1rem; font-size: 0.88rem; color: var(--muted); max-width: 52rem; }
+
+/* Changelog: androidApp/CHANGELOG.md (deployed as changelog.md), one fold per version on a timeline, the newest open. */
+.log { display: grid; max-width: 48rem; }
+.version { position: relative; padding-inline-start: 1.6rem; border-inline-start: 2px solid var(--rule); padding-bottom: 0.4rem; min-width: 0; }
+.version:last-child { border-inline-start-color: transparent; }
+.version::before {
+  content: ""; position: absolute; inset-inline-start: -8px; top: 1.15rem; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--paper); border: 2px solid var(--gold);
+}
+.version[open]::before { background: var(--gold); }
+.version summary { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; padding-block: 0.75rem; padding-inline-end: 1.8rem; cursor: pointer; list-style: none; }
+.version summary::-webkit-details-marker { display: none; }
+.version summary::after {
+  content: ""; position: absolute; inset-inline-end: 0.4rem; top: 1.45rem; width: 0.5rem; height: 0.5rem;
+  border-left: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg) translateY(-2px);
+}
+.version[open] summary::after { transform: rotate(135deg) translateY(-2px); }
+.version summary h3 { font-size: 1.45rem; }
+.version .when { color: var(--muted); font-size: 0.92rem; font-weight: 400; }
+.version .chip { background: var(--gold); border-color: var(--gold); color: var(--sheet); }
+.version .chip.soon { background: transparent; border-color: currentColor; color: var(--olive); }
+.version .body { display: grid; gap: 0.6rem; padding-bottom: 1.6rem; min-width: 0; }
+.version h4 { font-size: 1.15rem; color: var(--olive); margin: 0.6rem 0 0; }
+.version ul { margin: 0; padding-inline-start: 1.3rem; display: grid; gap: 0.45rem; }
 .version li { min-width: 0; overflow-wrap: anywhere; }
 .version li::marker { color: var(--gold); }
+.log > .status { color: var(--muted); }
 
-footer { border-top: 1px solid var(--line); background: var(--band-a); padding-bottom: env(safe-area-inset-bottom, 0px); }
-footer .wrap { padding-block: 1.75rem 2.25rem; display: grid; gap: 0.65rem; font-size: 0.93rem; color: var(--muted); max-width: 66rem; }
-footer strong { color: var(--ink); }
+/* ── The grove again: who made what ── */
+footer.grove { padding-bottom: env(safe-area-inset-bottom, 0px); background: linear-gradient(180deg, var(--grove-deep), var(--grove)); }
+footer .wrap { padding-block: 2.6rem 2.8rem; display: grid; gap: 0.8rem; font-size: 0.94rem; color: var(--on-grove-muted); }
+footer .brand { margin-bottom: 0.4rem; color: var(--gold-hi); }
+footer strong { color: var(--on-grove); font-weight: 600; }
+footer p { max-width: 52rem; }
 
+/* A screenshot at full size. */
+.viewer { border: 0; padding: 0; background: transparent; color: var(--on-grove); max-width: min(96vw, 72rem); max-height: 94vh; overflow: visible; }
+.viewer::backdrop { background: var(--scrim); }
+.viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; }
+.viewer-bar p { font-size: 0.95rem; }
+.viewer .copy { background: transparent; color: var(--on-grove); border-color: var(--grove-line); }
+.viewer img { max-height: calc(94vh - 3.5rem); width: auto; max-width: 100%; margin-inline: auto; border-radius: 10px; }
+
+@media (min-width: 40rem) {
+  .choose { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .choose li:last-child { grid-column: 1 / -1; }
+  .files { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .opts { grid-template-columns: max-content minmax(0, 1fr); }
+  .opts dt { margin-top: 0; }
+}
+@media (min-width: 48rem) {
+  .topnav { display: flex; }
+  .gallery { --h: 15rem; }
+  .dl-row { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; align-items: center; gap: 1.5rem; }
+  .dl-go { justify-content: flex-end; }
+  /* The long way (copying by hand) beside the two short ones, so no card stretches over empty space. */
+  .ways { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+  .ways .way:first-child { grid-row: span 2; }
+  .extras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (min-width: 56rem) {
-  .hero { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 3rem; }
-  main { padding-block: 3rem 4rem; }
+  .hero { grid-template-columns: minmax(0, 1fr) 17rem; gap: 4rem; padding-block: 1.6rem 0; }
+  .pitch { padding-bottom: 3.5rem; }
+  .hero-phone { display: block; margin: 0 0 -5rem; align-self: end; position: relative; z-index: 2; }
+  .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5rem; }
+  .steps li { grid-template-columns: minmax(0, 1fr); gap: 0.6rem; border-top: 2px solid var(--rule); padding-top: 1rem; }
+  .steps li::before { text-align: start; }
+  .panel { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; }
+  .panel.wide { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr); }
+  .devices .device { width: 16.5rem; }
+  .devices.pair .device { width: 14rem; }
+  .devices .device.short { width: 15rem; }
+  main { gap: 6rem; padding-block: 5rem 6rem; }
+}
+@media (min-width: 64rem) {
+  .choose { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .choose li:last-child { grid-column: auto; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .strip { scroll-behavior: smooth; }
-  .btn { transition: filter 0.15s ease; }
+  .gallery { scroll-behavior: smooth; }
+  .btn, .copy, .choose a, .file, .tablist button { transition: filter 0.15s ease, border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease; }
+  /* One sheen crosses the name, right to left, as it is read; it rests off the letters before and after. */
+  .mark { animation: sheen 2.6s cubic-bezier(0.45, 0, 0.25, 1) 0.4s 1 both; }
+  @keyframes sheen { from { background-position: 0% 0, 0 0; } to { background-position: 100% 0, 0 0; } }
 }
 </style>
 </head>
 <body>
-<header class="band">
-  <div class="wrap">
-    <img src="img/icon-96.png" alt="" width="40" height="40">
-    <span class="name">פרדס</span>
+<header class="grove">
+  <div class="wrap top">
+    <a class="brand" href="#title"><img src="img/icon-96.png" alt="" width="34" height="34"><span>פרדס</span></a>
     <span class="chip">מבוסס על זית</span>
+    <nav class="topnav" aria-label="בעמוד הזה">
+      <a href="#install">התקנה</a>
+      <a href="#library">הספרייה</a>
+      <a href="#downloads">הורדות</a>
+      <a href="#changelog">מה חדש</a>
+    </nav>
   </div>
+
+  <section class="wrap hero" aria-labelledby="title">
+    <div class="pitch">
+      <p class="eyebrow">לאנדרואיד 13 ומעלה</p>
+      <h1 id="title"><span class="mark">פרדס</span><span class="tag">ארון ספרים תורני בטלפון ובטאבלט</span></h1>
+      <p class="lead">אלפי ספרים, מהתנ״ך והתלמוד ועד ההלכה, החסידות והשו״ת, עם המפרשים, התרגומים והקישורים שביניהם. החיפוש עובר על כל הספרייה בתוך הטלפון, גם בלי חיבור לרשת. יש בו גם זמני היום, לוח עברי, מעגל השנה ווידג'טים למסך הבית.</p>
+
+      <div class="get" role="region" aria-label="הורדת פרדס">
+        <a class="btn btn-big" id="dl-btn" href="https://github.com/efrul/Pardes/releases">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+          <span><span id="dl-text">הורדת פרדס</span><small>קובץ ההתקנה (APK), ישר מ־GitHub</small></span>
+        </a>
+        <dl class="facts">
+          <div><dt>גרסה</dt><dd><span id="rel-name">…</span><span class="chip" id="rel-pre" hidden>גרסת ניסיון</span></dd></div>
+          <div><dt>גודל</dt><dd id="rel-size">…</dd></div>
+          <div class="span"><dt>יצאה</dt><dd id="rel-date">…</dd></div>
+          <div><dt>הורדות, בכל הגרסאות</dt><dd><span id="rel-downloads">…</span> <span class="asof" id="rel-asof" hidden></span></dd></div>
+          <div><dt>דרושה</dt><dd>Android 13 ומעלה</dd></div>
+        </dl>
+        <p class="status" id="status" role="status">בודק מה הגרסה האחרונה…</p>
+        <div class="sha" id="sha-row" hidden>
+          <span class="ltr">SHA-256</span>
+          <code id="sha" title=""></code>
+          <button class="copy" type="button" data-copy="sha">העתקה</button>
+        </div>
+        <p class="links"><a href="#changelog">מה חדש בגרסה</a><a href="https://github.com/efrul/Pardes/releases">כל הגרסאות</a><a href="#install">איך מתקינים</a></p>
+      </div>
+
+      <p class="credit">פרדס מבוסס על <strong>זית מאת אליהו גמבש</strong> ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. שאלות ותקלות בפרדס אין להפנות אליו או לפרויקט זית.</p>
+    </div>
+
+    <figure class="hero-phone">
+      <div class="device"><img src="img/app/home.webp" width="540" height="1200" alt="דף הבית של פרדס: החיפוש, קטלוג הספרים וזמני היום"></div>
+    </figure>
+  </section>
 </header>
 
 <main class="wrap">
-  <section class="hero" aria-labelledby="title">
-    <div>
-      <h1 id="title">פרדס: הספרייה התורנית בטלפון<span class="sub">לאנדרואיד 13 ומעלה, מבוסס על זית</span></h1>
-      <p class="lead">אלפי ספרים וחיפוש מלא בכולם בלי אינטרנט, באותו מנוע ואותו אינדקס של זית למחשב. מפרשים, תרגומים וקישורים, זמני היום ולוח עברי, מטלפון קטן ועד טאבלט.</p>
-      <p class="disclaimer">פרדס מבוסס על <strong>זית מאת אליהו גמבש</strong> ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. בשאלות עליו אין לפנות אליו או לפרויקט זית.</p>
+  <section id="shots" aria-labelledby="shots-title">
+    <div class="head">
+      <span class="kicker">צילומי מסך מהטלפון ומהטאבלט</span>
+      <h2 id="shots-title">מה יש בפרדס</h2>
     </div>
 
-    <div class="dl" role="region" aria-labelledby="dl-label">
-      <span class="label" id="dl-label">הגרסה האחרונה</span>
-      <div class="ver"><span id="rel-name">פרדס</span><span class="chip" id="rel-pre" hidden>גרסת ניסיון</span></div>
-      <dl class="meta">
-        <dt>תאריך</dt><dd id="rel-date">…</dd>
-        <dt>קובץ</dt><dd><span class="ltr" id="rel-file">…</span></dd>
-        <dt>גודל</dt><dd id="rel-size">…</dd>
-        <dt>הורדות</dt><dd><span id="rel-downloads">…</span> <span class="asof" id="rel-asof" hidden></span></dd>
-        <dt>דרושה</dt><dd>Android 13 ומעלה</dd>
-      </dl>
-      <a class="btn" id="dl-btn" href="https://github.com/efrul/Pardes/releases">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
-        <span id="dl-text">להורדת קובץ ההתקנה</span>
-      </a>
-      <p class="status" id="status" role="status">טוען את פרטי הגרסה האחרונה…</p>
-      <div class="sha" id="sha-row" hidden>
-        <span class="ltr">SHA-256</span>
-        <code id="sha" title=""></code>
-        <button class="copy" id="sha-copy" type="button">העתקה</button>
-      </div>
-      <div class="row">
-        <a href="#changelog">מה חדש</a>
-        <a href="https://github.com/efrul/Pardes/releases">כל הגרסאות</a>
-        <a href="#install">איך מתקינים</a>
-      </div>
+    <div class="tablist" role="tablist" aria-label="מסכים" hidden>
+      <button type="button" role="tab" id="t-search" aria-controls="p-search">חיפוש</button>
+      <button type="button" role="tab" id="t-read" aria-controls="p-read">קריאה</button>
+      <button type="button" role="tab" id="t-times" aria-controls="p-times">זמנים</button>
+      <button type="button" role="tab" id="t-year" aria-controls="p-year">מעגל השנה</button>
+      <button type="button" role="tab" id="t-widgets" aria-controls="p-widgets">ווידג'טים</button>
+      <button type="button" role="tab" id="t-small" aria-controls="p-small">מסך קטן</button>
+      <button type="button" role="tab" id="t-tablet" aria-controls="p-tablet">טאבלט</button>
     </div>
-  </section>
 
-  <section aria-labelledby="shots-title">
-    <h2 id="shots-title">איך זה נראה</h2>
-    <div class="strip" role="region" tabindex="0" aria-label="צילומי מסך, אפשר לגלול לצדדים">
-      <figure><img src="img/01-home.webp" width="480" height="853" loading="lazy" alt="דף הבית: זמני היום, הלוח והחיפוש, כמו בזית למחשב"></figure>
-      <figure><img src="img/02-search.webp" width="480" height="853" loading="lazy" alt="חיפוש מלא בכל הספרים, בלי אינטרנט, מקובץ לפי ספר"></figure>
-      <figure><img src="img/03-reader.webp" width="480" height="853" loading="lazy" alt="קריאה עם ניקוד וטעמים, מפרשים, תרגומים וקישורים"></figure>
-      <figure><img src="img/04-dark.webp" width="480" height="853" loading="lazy" alt="הקורא במצב כהה"></figure>
-      <figure><img src="img/05-tools.webp" width="480" height="853" loading="lazy" alt="כלים: מולד וקידוש לבנה, לוח עברי, מילון ועוד"></figure>
-      <figure><img src="img/06-year-cycle.webp" width="480" height="853" loading="lazy" alt="מעגל השנה: החגים והמועדים סביב השמש"></figure>
-      <figure><img src="img/07-small-screen.webp" width="480" height="853" loading="lazy" alt="מותאם למסך קטן, נבדק על Jelly Star"></figure>
-      <figure><img src="img/08-widgets.webp" width="480" height="853" loading="lazy" alt="ווידג'טים למסך הבית: לימוד יומי, הזמן הבא והתאריך"></figure>
-      <figure class="wide"><img src="img/09-tablet.webp" width="960" height="600" loading="lazy" alt="בטאבלט: תוצאות, קריאה ופרטי הספר באותו מסך"></figure>
+    <div class="panels">
+      <div class="panel" id="p-search" role="tabpanel" aria-labelledby="t-search" tabindex="0">
+        <div class="text">
+          <h3>חיפוש בכל הספרייה, בלי רשת</h3>
+          <p>מקלידים מילה או צירוף, ופרדס מחפש בכל הספרים שבטלפון. התוצאות מקובצות לפי ספר, ואפשר לצמצם אותן לקטגוריה, לספר אחד או לספרי היסוד. אפשר גם להקליד שם של ספר או של מחבר ולקפוץ אליו, או לחפש רק בספריו של מחבר אחד.</p>
+          <p>זה מנוע החיפוש של זית למחשב, על אותו אינדקס, ולכן גם התוצאות אותן תוצאות.</p>
+        </div>
+        <div class="devices"><div class="device"><img src="img/app/search.webp" width="540" height="1200" loading="lazy" alt="תוצאות חיפוש של ׳תהו ובהו׳, מקובצות לפי ספר"></div></div>
+      </div>
+
+      <div class="panel" id="p-read" role="tabpanel" aria-labelledby="t-read" tabindex="0">
+        <div class="text">
+          <h3>קריאה, עם כל מה שסביב הטקסט</h3>
+          <p>ניקוד וטעמים, ולצד הפסוק המפרשים, התרגומים והמקורות המקושרים אליו. אפשר לסמן, להדגיש ולכתוב הערות, ולהגדיל ולהקטין את הטקסט בשתי אצבעות.</p>
+          <p>לשעות הלילה יש ערכת נושא כהה.</p>
+        </div>
+        <div class="devices pair">
+          <div class="device"><img src="img/app/reader.webp" width="540" height="1200" loading="lazy" alt="פרק בבראשית עם ניקוד וטעמים"></div>
+          <div class="device"><img src="img/app/reader-dark.webp" width="540" height="1200" loading="lazy" alt="אותו פרק בערכת נושא כהה"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="p-times" role="tabpanel" aria-labelledby="t-times" tabindex="0">
+        <div class="text">
+          <h3>זמני היום, לוח ומולד</h3>
+          <p>זמני היום לפי המקום שבוחרים, לוח עברי, מולד וקידוש לבנה, מולדות השנה ומילון. החישובים הם אותם חישובים של זית למחשב.</p>
+        </div>
+        <div class="devices"><div class="device"><img src="img/app/molad.webp" width="540" height="1200" loading="lazy" alt="מולד וקידוש לבנה, והמולדות של השנה"></div></div>
+      </div>
+
+      <div class="panel" id="p-year" role="tabpanel" aria-labelledby="t-year" tabindex="0">
+        <div class="text">
+          <h3>מעגל השנה</h3>
+          <p>החגים והמועדים של השנה, מסודרים במעגל סביב השמש.</p>
+        </div>
+        <div class="devices"><div class="device"><img src="img/app/year-cycle.webp" width="540" height="1200" loading="lazy" alt="מעגל השנה: החגים והמועדים סביב השמש"></div></div>
+      </div>
+
+      <div class="panel" id="p-widgets" role="tabpanel" aria-labelledby="t-widgets" tabindex="0">
+        <div class="text">
+          <h3>ווידג'טים למסך הבית</h3>
+          <p>הלימוד היומי, הזמן הבא והתאריך העברי, בלי לפתוח את היישום.</p>
+        </div>
+        <div class="devices"><div class="device short"><img src="img/app/widgets.webp" width="480" height="854" loading="lazy" alt="ווידג'טים על מסך הבית: לימוד יומי, מנחה קטנה והתאריך"></div></div>
+      </div>
+
+      <div class="panel" id="p-small" role="tabpanel" aria-labelledby="t-small" tabindex="0">
+        <div class="text">
+          <h3>גם לטלפון קטן</h3>
+          <p>המסכים מתאימים את עצמם גם לטלפון של 3 אינץ'. הממשק נבדק על Unihertz Jelly Star.</p>
+        </div>
+        <div class="devices"><div class="device short"><img src="img/app/small-screen.webp" width="480" height="854" loading="lazy" alt="הקורא בטלפון עם מסך של 3 אינץ'"></div></div>
+      </div>
+
+      <div class="panel wide" id="p-tablet" role="tabpanel" aria-labelledby="t-tablet" tabindex="0">
+        <div class="text">
+          <h3>בטאבלט, הכול לצד הכול</h3>
+          <p>במסך רחב יש לשוניות כמו במחשב, ותוצאות החיפוש, הספר ופרטי הספר מוצגים זה לצד זה.</p>
+        </div>
+        <div class="devices"><div class="device wide"><img src="img/app/tablet.webp" width="1280" height="736" loading="lazy" alt="בטאבלט: תוצאות החיפוש, בראשית ופרטי הספר זה לצד זה"></div></div>
+      </div>
     </div>
   </section>
 
   <section id="install" aria-labelledby="install-title">
-    <h2 id="install-title">התקנה</h2>
+    <div class="head">
+      <span class="kicker">שלושה צעדים</span>
+      <h2 id="install-title">התקנה</h2>
+    </div>
     <ol class="steps">
-      <li><div><h3>מורידים את קובץ ה־APK</h3><p>בטלפון עצמו, בכפתור שלמעלה. הגודל המדויק מופיע ליד הכפתור.</p></div></li>
-      <li><div><h3>מאשרים התקנה ממקור לא מוכר</h3><p>כשפותחים את הקובץ, אנדרואיד מבקש לאשר התקנה מהדפדפן או ממנהל הקבצים. אפשר גם בהגדרות › אפליקציות › גישה מיוחדת › התקנת אפליקציות לא מוכרות.</p></div></li>
-      <li><div><h3>מכניסים את הספרייה</h3><p>בפתיחה הראשונה מדריך ההגדרה מציע להוריד את הספרייה או להתקין אותה מקבצים, ומוצא לבד ספרייה שכבר הועתקה לטלפון. כשיש במכשיר כרטיס זיכרון (מגרסה 0.3.0), אפשר גם לבחור אם לשמור אותה בטלפון או בכרטיס. כל הדרכים מפורטות למטה.</p></div></li>
-      <li><div><h3>מתעדכנים מתוך היישום</h3><p>מגרסה 0.3.0 פרדס מודיע כשיוצאת גרסה חדשה (בסרגל העליון ובהגדרות › כללי), ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. הספרייה וההגדרות נשמרות. בפעם הראשונה צריך לאשר לפרדס להתקין אפליקציות.</p></div></li>
+      <li><div><h3>מורידים את קובץ ההתקנה</h3><p>בטלפון עצמו, בכפתור ההורדה שלמעלה. הקובץ קטן: הספרים מגיעים בנפרד, בצעד השלישי.</p></div></li>
+      <li><div><h3>מאשרים התקנה מהדפדפן</h3><p>כשפותחים את הקובץ, אנדרואיד שואל אם לאפשר התקנת אפליקציות מהדפדפן או ממנהל הקבצים. מאשרים וחוזרים להתקנה. אם השאלה לא מופיעה, ההגדרה נמצאת בדרך כלל ב<b>הגדרות › אפליקציות › גישה מיוחדת › התקנת אפליקציות לא מוכרות</b>.</p></div></li>
+      <li><div><h3>מכניסים את הספרייה</h3><p>בפתיחה הראשונה מדריך ההגדרה מציע להוריד את הספרים או להתקין אותם מקבצים, ומזהה לבד ספרייה שכבר הועתקה לטלפון. <a href="#library">איזו דרך מתאימה לכם</a></p></div></li>
     </ol>
+    <aside class="note" aria-labelledby="updates-title">
+      <h3 id="updates-title">עדכונים</h3>
+      <p>מגרסה 0.3.0 פרדס מתעדכן מתוכו. כשיוצאת גרסה חדשה הוא מודיע עליה, בסרגל העליון וב<b>הגדרות › כללי</b>, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. הספרייה וההגדרות נשמרות. בפעם הראשונה אנדרואיד מבקש לאשר לפרדס להתקין אפליקציות. כל הגרסאות חתומות באותו מפתח, ולכן גם קובץ שמורידים מכאן מותקן מעל הגרסה הקודמת.</p>
+    </aside>
   </section>
 
-  <section aria-labelledby="lib-title">
-    <h2 id="lib-title">הספרייה</h2>
-    <p class="intro">היישום עובד עם מאגר הספרים של זית למחשב (SeforimLibrary) ועם אינדקס החיפוש שלו, כ־13 ג״ב בטלפון או בכרטיס זיכרון. מכניסים אותם פעם אחת, באחת מהדרכים שלמטה. <a href="#lib-subset">ספרייה מוקטנת</a>, עם ספרים נבחרים בלבד, תופסת הרבה פחות.</p>
+  <section id="library" aria-labelledby="lib-title">
+    <div class="head">
+      <span class="kicker">ספרים, מפרשים ואינדקס החיפוש</span>
+      <h2 id="lib-title">הספרייה</h2>
+      <p class="intro">היישום עצמו קטן. הספרים ואינדקס החיפוש שלהם הם הספרייה של זית למחשב (SeforimLibrary), כ־13 ג״ב, ומכניסים אותה לטלפון פעם אחת. הדרך תלויה במה שיש לכם:</p>
+    </div>
+
+    <nav aria-label="הדרכים להכנסת הספרייה">
+      <ul class="choose">
+        <li><a href="#lib-download"><strong>הורדה בטלפון</strong><span>יש בטלפון חיבור לאינטרנט ומקום</span><em>כ־5.5 ג״ב להורדה</em></a></li>
+        <li><a href="#lib-export"><strong>קובץ מהמחשב</strong><span>זית למחשב מותקן במחשב Windows</span><em>בלי adb</em></a></li>
+        <li><a href="#lib-subset"><strong>ספרייה מוקטנת</strong><span>אין מקום לכל הספרייה, או שמספיקים כמה ספרים</span><em>בגודל שבוחרים</em></a></li>
+        <li><a href="#lib-computer"><strong>העברה בכבל</strong><span>זית למחשב ב־Windows, בלינוקס או במק</span><em>עם adb</em></a></li>
+        <li><a href="#lib-files"><strong>מקבצים שהורדו</strong><span>מורידים את הספרייה במחשב או בדפדפן, ומעבירים</span><em>כ־5.5 ג״ב של קבצים</em></a></li>
+      </ul>
+    </nav>
+
     <div class="routes">
       <article class="route" id="lib-download">
-        <h3>1. הורדה בטלפון</h3>
-        <p class="when">הכי פשוט, כשיש בטלפון אינטרנט.</p>
-        <ol>
+        <header class="route-head">
+          <h3>הורדה בטלפון</h3>
+          <p class="when">הדרך הפשוטה, כשיש בטלפון חיבור לאינטרנט.</p>
+        </header>
+        <ol class="do">
           <li>במדריך ההגדרה, בכרטיס <b>התקנה מקוונת</b>, לוחצים <b>התחלת התקנה מקוונת</b>.</li>
-          <li>מחכים לסיום. מורידים כ־5.5 ג״ב, והקבצים נפתחים תוך כדי ההורדה. אם החיבור נקטע, ההורדה ממשיכה מאותה נקודה.</li>
+          <li>ממתינים עד הסוף. מורידים כ־5.5 ג״ב, והקבצים נפתחים תוך כדי ההורדה, כך שלא נשאר בטלפון עותק דחוס. אם החיבור נקטע, ההורדה ממשיכה מהנקודה שבה עצרה.</li>
         </ol>
-        <p class="need">צריך כ־14.1 ג״ב פנויים בטלפון, או בכרטיס הזיכרון כשהספרייה נשמרת בו.</p>
+        <p class="need">צריך כ־14.1 ג״ב פנויים בטלפון, או בכרטיס הזיכרון אם בוחרים לשמור בו את הספרייה.</p>
       </article>
 
       <article class="route" id="lib-export">
-        <h3>2. מהמחשב, בכלי "הספרייה של זית לטלפון"</h3>
-        <p class="when">בלי הורדה ובלי ניפוי באגים, כשזית למחשב מותקן במחשב Windows עם ספרייה עדכנית.</p>
-        <ol>
-          <li>סוגרים את זית במחשב.</li>
-          <li>מורידים את <a href="https://github.com/efrul/zayit-export/releases/latest">ZayitExport.exe</a>, כלי קטן שלא צריך התקנה, ופותחים אותו. בחלון <b>Windows הגן על המחשב שלך</b> לוחצים <b>מידע נוסף › הפעל בכל זאת</b>.</li>
-          <li>מחברים את הטלפון בכבל USB, ובהתראה של ה־USB בטלפון בוחרים <b>העברת קבצים</b>.</li>
-          <li>בכלי לוחצים <b>בחירת מקום…</b> ובוחרים תיקייה בטלפון, למשל <b>מחשב זה › (שם הטלפון) › אחסון פנימי משותף › Download</b>, ואז <b>יצירה ושליחה לטלפון</b>. הספרייה נארזת לקובץ שמגיע לטלפון בחלקים, בתיקייה משלו כמו <code>zayit-library-2026-10-11</code>.</li>
-          <li>במדריך ההגדרה של פרדס, בכרטיס <b>התקנה לא-מקוונת</b>, לוחצים <b>התחלת התקנה לא-מקוונת</b> ואז <b>בחירת קבצים</b>, ומסמנים את כל הקבצים שבתיקייה הזו: לחיצה ארוכה על הראשון, ואחר כך נגיעה בכל השאר.</li>
-          <li>אחרי שההתקנה מסתיימת אפשר למחוק את התיקייה.</li>
-        </ol>
-        <p>הכלי שומר את הקובץ גם בכרטיס זיכרון, בדיסק־און־קי או בתיקייה במחשב. פרדס שכבר יש בו ספרייה מתעדכן מאותו קובץ ב<b>הגדרות › ניהול נתונים › עדכון מתיקייה</b>. <a href="https://github.com/efrul/zayit-export">עוד על הכלי</a>.</p>
-        <p class="need">הקובץ שוקל כ־6.3 ג״ב ב־Windows 11 עדכני. ב־Windows 10 ובגרסאות ישנות של Windows 11 הוא לא נדחס, ושוקל כמו הספרייה, כ־13 ג״ב. צריך בטלפון מקום לקובץ ועוד כ־14.1 ג״ב להתקנה, ובמחשב כ־4.6 ג״ב פנויים בזמן השליחה. הכלי מראה את המספרים מראש. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך.</p>
-      </article>
+        <header class="route-head">
+          <h3>קובץ מהמחשב, בכלי "הספרייה של זית לטלפון"</h3>
+          <p class="when">כשזית למחשב מותקן במחשב Windows עם ספרייה עדכנית. בלי הורדה ובלי ניפוי באגים.</p>
+        </header>
+        <p>הכלי אורז את הספרייה שכבר יש במחשב לקובץ אחד, ושומר אותו ישר בטלפון שמחובר בכבל, בכרטיס זיכרון או בכל תיקייה. בטלפון בוחרים את הקובץ מתוך פרדס, והספרייה מותקנת בלי רשת.</p>
 
-      <article class="route" id="lib-files">
-        <h3>3. התקנה מקבצים שהורדו</h3>
-        <p class="when">כשמורידים את הספרייה במחשב, או בדפדפן, ומעבירים אותה לטלפון.</p>
-        <ol>
-          <li>נכנסים ל<a href="https://github.com/kdroidFilter/SeforimLibrary/releases/latest">ההפצה האחרונה של SeforimLibrary</a> ומורידים את <b>כל</b> הקבצים ששמם מתחיל ב־<code>seforim_bundle.tar.zst</code>: החלקים <code>.part01</code>, <code>.part02</code> וכן הלאה, וקובץ ה־<code>.manifest.json</code>. את שאר הקבצים בעמוד לא צריך.</li>
-          <li>שמים את כולם בטלפון באותה תיקייה, למשל Download. מהמחשב אפשר להעתיק אותם לתיקייה Download בסייר הקבצים, בכבל USB.</li>
-          <li>במדריך ההגדרה, בכרטיס <b>התקנה לא-מקוונת</b>, לוחצים <b>התחלת התקנה לא-מקוונת</b> ואז <b>בחירת קבצים</b>, ומסמנים את כל הקבצים יחד: לחיצה ארוכה על הראשון, ואחר כך נגיעה בכל השאר.</li>
-          <li>אחרי שההתקנה מסתיימת אפשר למחוק את הקבצים שהורדו.</li>
+        <div class="tool">
+          <div class="tool-bar">
+            <div class="tool-id">
+              <span class="tool-kind">כלי למחשב</span>
+              <h4>הספרייה של זית לטלפון</h4>
+              <p class="tool-meta"><span class="ltr">ZayitExport.exe</span> · 0.7 מ״ב · Windows 10 או 11 · בלי התקנה</p>
+            </div>
+            <a class="btn" href="https://github.com/efrul/zayit-export/releases/latest/download/ZayitExport.exe">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+              הורדת הכלי
+            </a>
+          </div>
+          <div class="gallery" role="list" aria-label="צילומי מסך של הספרייה של זית לטלפון">
+            <figure role="listitem" style="--r: 0.981"><a class="shot" href="img/tools/export-choose.webp"><img src="img/tools/export-choose.webp" width="930" height="948" loading="lazy" alt="הספרייה שבמחשב, המקום שנבחר לקובץ והגודל המשוער"></a><figcaption>בוחרים לאן לשמור, ורואים מראש כמה מקום צריך</figcaption></figure>
+            <figure role="listitem" style="--r: 1.332"><a class="shot" href="img/tools/export-progress.webp"><img src="img/tools/export-progress.webp" width="930" height="698" loading="lazy" alt="אריזת הספרייה בעיצומה, עם כפתור עצירה"></a><figcaption>האריזה. אפשר לעצור בכל רגע, והספרייה במחשב לא משתנה</figcaption></figure>
+            <figure role="listitem" style="--r: 0.852"><a class="shot" href="img/tools/export-done.webp"><img src="img/tools/export-done.webp" width="930" height="1092" loading="lazy" alt="הקובץ מוכן: רשימת החלקים, וההוראות להתקנה בטלפון"></a><figcaption>הקובץ מוכן, עם ההוראות לטלפון</figcaption></figure>
+          </div>
+          <p class="tool-note">כלי לא רשמי, שאינו קשור למפתח של זית. <a href="https://github.com/efrul/zayit-export">קוד המקור והסבר מלא</a></p>
+        </div>
+
+        <ol class="do">
+          <li>סוגרים את זית במחשב ומפעילים את <code>ZayitExport.exe</code>. אין צורך להתקין אותו. אם מופיע החלון <b>Windows הגן על המחשב שלך</b>, לוחצים <b>מידע נוסף</b> ואז <b>הפעל בכל זאת</b>.</li>
+          <li>מחברים את הטלפון בכבל USB, ובהתראת ה־USB בטלפון בוחרים <b>העברת קבצים</b>.</li>
+          <li>בכלי לוחצים <b>בחירת מקום…</b> ובוחרים תיקייה בטלפון, למשל <b>מחשב זה › (שם הטלפון) › אחסון פנימי משותף › Download</b>, ואז <b>יצירה ושליחה לטלפון</b>. הקובץ נשלח בחלקים, לתיקייה משלו בשם כמו <code>zayit-library-2026-10-11</code>.</li>
+          <li>בפרדס, במדריך ההגדרה: בכרטיס <b>התקנה לא-מקוונת</b> לוחצים <b>התחלת התקנה לא-מקוונת</b> ואז <b>בחירת קבצים</b>, ומסמנים את כל הקבצים שבתיקייה: לחיצה ארוכה על הראשון, ונגיעה בכל השאר.</li>
+          <li>כשההתקנה מסתיימת, אפשר למחוק את התיקייה.</li>
         </ol>
-        <p class="need">צריך מקום לקבצים שהורדו (כ־5.5 ג״ב) ועוד כ־14.1 ג״ב פנויים.</p>
+        <p>הכלי שומר את הקובץ גם בכרטיס זיכרון, בדיסק־און־קי או בתיקייה במחשב, ומשם מעבירים אותו לטלפון בכל דרך. פרדס שכבר יש בו ספרייה מתעדכן מקובץ כזה ב<b>הגדרות › ניהול נתונים</b>: <b>עדכון מקבצים</b> לקובץ אחד, או <b>עדכון מתיקייה</b> לקובץ בחלקים.</p>
+        <p class="need">ב־Windows 11 עדכני הקובץ דחוס, כ־6.3 ג״ב. ב־Windows 10 ובגרסאות ישנות של Windows 11 הוא נשמר בלי דחיסה, בגודל הספרייה, כ־13 ג״ב, ופרדס מתקין גם אותו. בטלפון צריך מקום לקובץ ועוד כ־14.1 ג״ב להתקנה, ובמחשב כ־4.6 ג״ב פנויים בזמן השליחה. הכלי מציג את המספרים לפני שמתחילים. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך.</p>
       </article>
 
       <article class="route" id="lib-subset">
-        <h3>4. ספרייה מוקטנת, עם ספרים נבחרים</h3>
-        <p class="when">כשאין בטלפון מקום לכל הספרייה, או כשמספיקים כמה ספרים.</p>
-        <p>הכלי <a href="https://github.com/efrul/zayit-subset/releases/latest">ספרייה מוקטנת לזית</a> (ל־Windows) בונה מהספרייה של זית למחשב ספרייה קטנה עם הספרים שבוחרים ועם הפירושים והתרגומים המקושרים אליהם. פירוש גדול נכנס כברירת מחדל רק בקטעים המקושרים, ופירוש גדול מאוד לא נכנס. את זה משנים בכלי. החיפוש מוצא בספרים האלה בדיוק מה שהוא מוצא בהם בספרייה המלאה, והכלי מראה מראש בערך כמה הספרייה תשקול. פרדס פותח אותה כמו שהיא, והדרך הפשוטה להעביר אותה היא העתקה בסייר הקבצים:</p>
-        <ol>
-          <li>מורידים את <a href="https://github.com/efrul/zayit-subset/releases/latest">ZayitSubset-windows-x64.zip</a>, פותחים אותו לתיקייה (לחיצה ימנית › <b>חלץ הכול</b>) ומפעילים את <code>ZayitSubset.exe</code>. בחלון <b>Windows הגן על המחשב שלך</b> לוחצים <b>מידע נוסף › הפעל בכל זאת</b>.</li>
-          <li>בוחרים ספרים ולוחצים <b>יצירת הספרייה</b>. כדי שיהיה בפרדס חיפוש בתוך הספרים וחיפוש ספר לפי שמו, משאירים מסומנים את <b>חיפוש בטקסט</b> ואת <b>הצעות ספרים ומחברים</b>. את <b>גם לפי משמעות</b> אפשר להשאיר כבוי, כי פרדס לא משתמש בו. הספרייה נשמרת בתיקייה חדשה בשם כמו <code>Zayit subset 2026-10-18 21-30</code>, כברירת מחדל בתוך <b>Zayit Subset</b> שבתיקיית ההורדות. הקישור <b>פתיחת התיקייה</b> שבכלי פותח אותה.</li>
-          <li>פותחים את פרדס בטלפון פעם אחת (מסך הפתיחה מספיק), כדי שתיווצר התיקייה שלו, וסוגרים אותו לגמרי: מחליקים אותו מרשימת האפליקציות האחרונות.</li>
-          <li>מחברים את הטלפון בכבל USB, ובהתראה של ה־USB בטלפון בוחרים <b>העברת קבצים</b>.</li>
-          <li>בסייר הקבצים נכנסים לאחסון הפנימי של הטלפון, לא לכרטיס הזיכרון: <b>מחשב זה › (שם הטלפון) › אחסון פנימי משותף › Android › data › io.github.efrul.pardes › files › library</b>. אם יש שם קבצים, מוחקים את כולם.</li>
-          <li>מעתיקים לשם את <b>התוכן</b> של התיקייה <code>Zayit subset …</code> שנבנתה, בלי התיקייה עצמה: הקבצים ושתי התיקיות <code>seforim.db.lucene</code> ו־<code>seforim.db.lookup.lucene</code>. את התיקייה <code>.zayit-profile</code>, שנוצרת כשפותחים את הספרייה בזית למחשב, לא צריך להעתיק.</li>
-          <li>פותחים את פרדס. מדריך ההגדרה מוצא את הספרייה אחרי אישור הרישיון, ופרדס שכבר הוגדר נפתח בה. רק פרדס שהספרייה שלו נשמרה בכרטיס זיכרון ממשיך להשתמש בזו שבכרטיס.</li>
+        <header class="route-head">
+          <h3>ספרייה מוקטנת, בכלי "ספרייה מוקטנת לזית"</h3>
+          <p class="when">כשאין בטלפון מקום לכל הספרייה, או כשמספיקים כמה ספרים.</p>
+        </header>
+        <p>הכלי בונה מהספרייה של זית למחשב ספרייה קטנה, עם הספרים שבוחרים ועם הפירושים והתרגומים המקושרים אליהם, ומראה מראש כמה היא תשקול. החיפוש בספרים האלה מוצא בדיוק מה שהיה מוצא בהם בספרייה המלאה. פירוש גדול נכנס כברירת מחדל רק בקטעים המקושרים, ופירוש גדול מאוד לא נכנס; את הגבולות משנים בהגדרות הכלי. פרדס פותח את הספרייה כמו שהיא.</p>
+
+        <div class="tool">
+          <div class="tool-bar">
+            <div class="tool-id">
+              <span class="tool-kind">כלי למחשב</span>
+              <h4>ספרייה מוקטנת לזית</h4>
+              <p class="tool-meta"><span class="ltr">ZayitSubset-windows-x64.zip</span> · כ־204 מ״ב · Windows 10 או 11, ‏64 סיביות · Java כלולה בקובץ</p>
+            </div>
+            <a class="btn" href="https://github.com/efrul/zayit-subset/releases/latest/download/ZayitSubset-windows-x64.zip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+              הורדת הכלי
+            </a>
+          </div>
+          <div class="gallery" role="list" aria-label="צילומי מסך של ספרייה מוקטנת לזית">
+            <figure role="listitem" style="--r: 1.726"><a class="shot" href="img/tools/subset-main.webp"><img src="img/tools/subset-main.webp" width="1108" height="642" loading="lazy" alt="עץ הספרים של זית עם תיבות סימון, מה לכלול, והגודל המשוער של הספרייה"></a><figcaption>בוחרים ספרים, ורואים ליד כל קטגוריה כמה היא מוסיפה ומה הגודל הכולל</figcaption></figure>
+            <figure role="listitem" style="--r: 1.726"><a class="shot" href="img/tools/subset-settings.webp"><img src="img/tools/subset-settings.webp" width="1108" height="642" loading="lazy" alt="ההגדרות: ספריית המקור, מקום השמירה והגבולות לפירושים גדולים"></a><figcaption>ההגדרות: מאיזו ספרייה בונים, איפה שומרים, וגבולות לפירושים גדולים</figcaption></figure>
+          </div>
+          <p class="tool-note">כלי לא רשמי, שאינו קשור למפתח של זית. <a href="https://github.com/efrul/zayit-subset">קוד המקור והסבר מלא</a></p>
+        </div>
+
+        <h4 class="sub">בונים את הספרייה</h4>
+        <ol class="do">
+          <li>פורסים את הקובץ שהורד לתיקייה (לחיצה ימנית › <b>חלץ הכול</b>) ומפעילים את <code>ZayitSubset.exe</code>. בחלון <b>Windows הגן על המחשב שלך</b> לוחצים <b>מידע נוסף</b> ואז <b>הפעל בכל זאת</b>.</li>
+          <li>בוחרים ספרים. כדי שבפרדס יהיו חיפוש בתוך הספרים וחיפוש ספר לפי שמו, משאירים מסומנים את <b>חיפוש בטקסט</b> ואת <b>הצעות ספרים ומחברים</b>. את <b>גם לפי משמעות</b> אפשר להשאיר כבוי: פרדס לא משתמש בו.</li>
+          <li>לוחצים <b>יצירת הספרייה</b>. היא נשמרת בתיקייה חדשה בשם כמו <code>Zayit subset 2026-10-18 21-30</code>, כברירת מחדל בתוך <b>Zayit Subset</b> שבתיקיית ההורדות. הקישור <b>פתיחת התיקייה</b> בכלי פותח אותה.</li>
         </ol>
-        <p>אפשר גם בכפתור <b>העברה לטלפון…</b> שבכלי, מגרסה 1.0.1 שלו. הוא מעתיק כמו <a href="#lib-computer">דרך 5</a>, וצריך בשבילו ניפוי באגים ב־USB ו־adb מותקן במחשב: ב־PATH, או הקבצים של Platform-Tools ישירות בתיקייה <code>C:\adb</code>.</p>
-        <p>ואפשר לבחור בכלי, לפני הבנייה, תחת <b>לאן</b>, באפשרות <b>זית תעבור אליה</b>. אז זית במחשב עובד עם הספרייה המוקטנת עד שמחזירים אותו לספרייה המלאה (<b>חזרה לספרייה של זית</b> בהגדרות של הכלי), והכלי של <a href="#lib-export">דרך 2</a> אורז אותה לקובץ. מגרסה 0.3.1 של פרדס קובץ כזה מותקן גם בטלפון שאין בו מקום לספרייה המלאה: בשלב <b>בדיקת שטח פנוי בדיסק</b> במדריך ההגדרה לוחצים <b>המשך להתקנה מקבצים</b>.</p>
-        <p class="need">צריך בטלפון מקום לספרייה המוקטנת, בגודל שהכלי מראה. הספרייה של זית במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך.</p>
+
+        <h4 class="sub">מעבירים לטלפון, באחת משלוש דרכים</h4>
+        <div class="ways">
+          <section class="way" aria-labelledby="way-copy">
+            <h5 id="way-copy">בהעתקה בסייר הקבצים</h5>
+            <p class="when">בלי adb.</p>
+            <ol class="do">
+              <li>פותחים את פרדס בטלפון פעם אחת (מסך הפתיחה מספיק), כדי שתיווצר התיקייה שלו, וסוגרים אותו לגמרי: מחליקים אותו מרשימת האפליקציות האחרונות.</li>
+              <li>מחברים את הטלפון בכבל USB, ובהתראה בוחרים <b>העברת קבצים</b>.</li>
+              <li>בסייר הקבצים נכנסים לאחסון הפנימי של הטלפון, לא לכרטיס הזיכרון: <b>מחשב זה › (שם הטלפון) › אחסון פנימי משותף › Android › data › io.github.efrul.pardes › files › library</b>. קבצים שכבר נמצאים שם מוחקים.</li>
+              <li>מעתיקים לשם את <b>התוכן</b> של התיקייה שנבנתה, בלי התיקייה עצמה: הקבצים ושתי התיקיות <code>seforim.db.lucene</code> ו־<code>seforim.db.lookup.lucene</code>. התיקייה <code>.zayit-profile</code>, שנוצרת כשפותחים את הספרייה בזית למחשב, לא נחוצה.</li>
+              <li>פותחים את פרדס. מדריך ההגדרה מוצא את הספרייה אחרי אישור הרישיון, ופרדס שכבר הוגדר נפתח בה. רק פרדס שהספרייה שלו נשמרה בכרטיס זיכרון ממשיך להשתמש בזו שבכרטיס.</li>
+            </ol>
+          </section>
+          <section class="way" aria-labelledby="way-button">
+            <h5 id="way-button">בכפתור "העברה לטלפון…" שבכלי</h5>
+            <p class="when">מגרסה 1.0.1 של הכלי, עם adb.</p>
+            <p>הכפתור מעתיק את הספרייה כמו <a href="#lib-computer">ההעברה בכבל</a>, ומחליף בה את הספרייה של פרדס בטלפון. צריך ניפוי באגים ב־USB, ו־adb במחשב: ב־PATH, או הקבצים של Platform-Tools ישירות בתיקייה <code>C:\adb</code>.</p>
+          </section>
+          <section class="way" aria-labelledby="way-file">
+            <h5 id="way-file">כקובץ, בכלי "הספרייה של זית לטלפון"</h5>
+            <p class="when">גם לטלפון שאין בו מקום לספרייה המלאה, מפרדס 0.3.1.</p>
+            <p>לפני הבנייה בוחרים תחת <b>לאן</b> את <b>זית תעבור אליה</b>. זית במחשב עובד אז עם הספרייה המוקטנת, עד שמחזירים אותו בהגדרות הכלי (<b>חזרה לספרייה של זית</b>), ו<a href="#lib-export">הספרייה של זית לטלפון</a> אורז אותה לקובץ. בטלפון בלי מקום לספרייה המלאה, בשלב <b>בדיקת שטח פנוי בדיסק</b> של מדריך ההגדרה לוחצים <b>המשך להתקנה מקבצים</b>.</p>
+          </section>
+        </div>
+        <p class="need">בטלפון צריך מקום לספרייה המוקטנת, בגודל שהכלי מראה. הספרייה של זית במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך.</p>
       </article>
 
       <article class="route" id="lib-computer">
-        <h3>5. העברה מהמחשב בסקריפט, בכבל USB</h3>
-        <p class="when">בלי הורדה, כשזית למחשב מותקן במחשב עם ספרייה עדכנית, גם בלינוקס ובמק. צריך ניפוי באגים ב־USB ו־adb.</p>
-        <ol>
+        <header class="route-head">
+          <h3>העברה בכבל, בסקריפט ו־adb</h3>
+          <p class="when">כשזית למחשב מותקן במחשב, גם בלינוקס ובמק. בלי הורדה, עם ניפוי באגים ב־USB.</p>
+        </header>
+        <p>הסקריפט מעתיק את הספרייה שמותקנת במחשב ישר לתיקייה של פרדס בטלפון ומכין אותה לפתיחה, בלי root.</p>
+
+        <div class="tool">
+          <div class="tool-bar">
+            <div class="tool-id">
+              <span class="tool-kind">סקריפטים למחשב</span>
+              <h4>העברת הספרייה בכבל</h4>
+              <p class="tool-meta">צריכים adb, שמגיע עם Android Platform-Tools של Google</p>
+            </div>
+          </div>
+          <div class="files">
+            <a class="file" href="tools/push-desktop-library-windows.zip" download>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+              <strong>ל־Windows</strong>
+              <span class="ltr">push-desktop-library-windows.zip</span>
+              <span>10 ק״ב</span>
+            </a>
+            <a class="file" href="tools/push-desktop-library.sh" download>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+              <strong>ללינוקס ולמק</strong>
+              <span class="ltr">push-desktop-library.sh</span>
+              <span>19 ק״ב</span>
+            </a>
+          </div>
+          <p class="pt">Platform-Tools, אם אין במחשב adb:
+            <a href="https://dl.google.com/android/repository/platform-tools-latest-windows.zip">ל־Windows</a>
+            <a href="https://dl.google.com/android/repository/platform-tools-latest-linux.zip">ללינוקס</a>
+            <a href="https://dl.google.com/android/repository/platform-tools-latest-darwin.zip">למק</a>
+          </p>
+        </div>
+
+        <h4 class="sub">ב־Windows</h4>
+        <ol class="do">
           <li>סוגרים את זית במחשב.</li>
-          <li>בטלפון מפעילים ניפוי באגים ב־USB: <b>הגדרות › אודות הטלפון</b>, נוגעים 7 פעמים ב<b>מספר Build</b>, ואז <b>הגדרות › מערכת › אפשרויות למפתחים › ניפוי באגים ב־USB</b>.</li>
-          <li>מורידים את <a href="tools/push-desktop-library-windows.zip" download>push-desktop-library-windows.zip</a> ופותחים אותו לתיקייה: לחיצה ימנית › <b>חלץ הכול</b>.</li>
-          <li>אם אין במחשב adb, מורידים את <a href="https://developer.android.com/tools/releases/platform-tools">Android SDK Platform-Tools</a> של Google ופותחים גם אותו בתוך אותה תיקייה. מי שכבר יש לו adb מדלג על השלב הזה.</li>
-          <li>מחברים את הטלפון בכבל USB, ובטלפון מאשרים את ניפוי הבאגים למחשב הזה.</li>
-          <li>לוחצים פעמיים על <code>push-desktop-library.cmd</code>. אם Windows שואל אם להפעיל קובץ שהורד מהאינטרנט, מאשרים. בחלון <b>Windows הגן על המחשב שלך</b> לוחצים <b>מידע נוסף › הפעל בכל זאת</b>. החלון נשאר פתוח עד שלוחצים על מקש.</li>
-          <li>כשמופיע <b>הושלם</b>, פותחים את פרדס בטלפון (הסקריפט סוגר אותו כשהוא מתחיל). מדריך ההגדרה מוצא את הספרייה אחרי אישור הרישיון.</li>
+          <li>מפעילים בטלפון ניפוי באגים ב־USB: <b>הגדרות › אודות הטלפון</b>, שבע נגיעות ב<b>מספר Build</b>, ואז <b>הגדרות › מערכת › אפשרויות למפתחים › ניפוי באגים ב־USB</b>.</li>
+          <li>פורסים את <code>push-desktop-library-windows.zip</code> לתיקייה (לחיצה ימנית › <b>חלץ הכול</b>). אם אין במחשב adb, פורסים לתוך אותה תיקייה גם את Platform-Tools ל־Windows.</li>
+          <li>מחברים את הטלפון בכבל, ובטלפון מאשרים ניפוי באגים מהמחשב הזה.</li>
+          <li>לוחצים פעמיים על <code>push-desktop-library.cmd</code>. אם Windows שואל אם להפעיל קובץ שהורד מהאינטרנט, מאשרים, ובחלון <b>Windows הגן על המחשב שלך</b> לוחצים <b>מידע נוסף</b> ואז <b>הפעל בכל זאת</b>. החלון נשאר פתוח עד שלוחצים על מקש.</li>
+          <li>כשמופיעה ההודעה <b>הושלם</b>, פותחים את פרדס בטלפון (הסקריפט סוגר אותו בתחילת ההעברה). מדריך ההגדרה מוצא את הספרייה אחרי אישור הרישיון.</li>
         </ol>
-        <p>בלינוקס ובמק, במקום שלבים 3, 4 ו־6: מורידים את <a href="tools/push-desktop-library.sh" download>push-desktop-library.sh</a>, מתקינים adb (Platform-Tools), ומריצים בטרמינל מתוך התיקייה שאליה הורד הקובץ:</p>
-        <span class="cmd"><pre dir="ltr">bash push-desktop-library.sh</pre><button class="copy" type="button">העתקה</button></span>
-        <p class="need">צריך כ־15.7 ג״ב פנויים בטלפון ב־Windows, או כ־13.6 ג״ב בלינוקס ובמק. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך (התאריך בקובץ <code>release_info.txt</code> שליד <code>seforim.db</code>); ספרייה ישנה יותר היישום יבקש לעדכן. להעתקה ישר לכרטיס זיכרון, ראו <a href="#lib-card">בכרטיס זיכרון</a>.</p>
+        <h4 class="sub">בלינוקס ובמק</h4>
+        <p>מורידים את <code>push-desktop-library.sh</code>, ואת Platform-Tools פורסים לצדו (לתיקייה <code>platform-tools</code>) או מתקינים adb בדרך אחרת. אחרי שלבים 1, 2 ו־4 שלמעלה מריצים בטרמינל, מהתיקייה של הקובץ:</p>
+        <div class="cmd"><pre dir="ltr">bash push-desktop-library.sh</pre><button class="copy" type="button">העתקה</button></div>
+        <h4 class="sub">אפשרויות</h4>
+        <dl class="opts">
+          <dt><code>--sdcard</code> · <code>-SdCard</code></dt><dd>מעתיק לכרטיס הזיכרון במקום לזיכרון הטלפון (<a href="#lib-card">בכרטיס זיכרון</a>).</dd>
+          <dt><code>--with-notes</code> · <code>-WithNotes</code></dt><dd>מעביר גם את ההערות וההדגשות מזית למחשב. הן מחליפות את אלה שבטלפון.</dd>
+          <dt><code>--dry-run</code> · <code>-DryRun</code></dt><dd>מציג את פקודות ה־adb בלי להריץ אותן.</dd>
+        </dl>
+        <p>ב־Windows מוסיפים אפשרות כך: בתיקייה שחולצה כותבים <code>cmd</code> בשורת הכתובת של סייר הקבצים ומקישים Enter, ובחלון שנפתח מריצים, למשל:</p>
+        <div class="cmd"><pre dir="ltr">push-desktop-library.cmd -SdCard</pre><button class="copy" type="button">העתקה</button></div>
+        <p class="need">בטלפון צריך כ־15.7 ג״ב פנויים בהעברה מ־Windows, או כ־13.6 ג״ב מלינוקס ומק. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך (התאריך בקובץ <code>release_info.txt</code> שליד <code>seforim.db</code>); ספרייה ישנה יותר פרדס יבקש לעדכן.</p>
       </article>
 
-      <article class="route" id="lib-card">
-        <h3>בכרטיס זיכרון <span class="chip">מגרסה 0.3.0</span></h3>
-        <p class="when">כשאין בטלפון מקום לספרייה, או כשרוצים אותה בכרטיס.</p>
-        <p>כשיש במכשיר כרטיס SD, מדריך ההגדרה מציע לשמור את הספרייה בטלפון או בכרטיס, ומראה כמה מקום פנוי בכל אחד. ספרייה מותקנת עוברת בין הטלפון לכרטיס ב<b>הגדרות › ניהול נתונים › מיקום הספרייה</b>. כשמוציאים את הכרטיס, היישום מבקש להחזיר אותו ונפתח מעצמו כשהוא חוזר.</p>
-        <p>בסקריפט של <a href="#lib-computer">דרך 5</a> אפשר להעתיק ישר לכרטיס. ב־Windows, בתיקייה שחולצה, כותבים <code>cmd</code> בשורת הכתובת של סייר הקבצים ומקישים Enter, ובחלון שנפתח מריצים:</p>
-        <span class="cmd"><pre dir="ltr">push-desktop-library.cmd -SdCard</pre><button class="copy" type="button">העתקה</button></span>
-        <p>בלינוקס ובמק:</p>
-        <span class="cmd"><pre dir="ltr">bash push-desktop-library.sh --sdcard</pre><button class="copy" type="button">העתקה</button></span>
-        <p>גם הכלי של <a href="#lib-export">דרך 2</a> שומר ישר בכרטיס, כשהכרטיס בקורא כרטיסים במחשב. בכרטיס שכבר היה בטלפון הכלי מציע את התיקייה של פרדס, וכשהכרטיס חוזר לטלפון פרדס מוצא שם את הקבצים לבד. במדריך ההגדרה, אחרי <b>התחלת התקנה לא-מקוונת</b>, לוחצים <b>שימוש בקבצים שנמצאו</b>. פרדס שכבר יש בו ספרייה מציע את אותו כפתור ב<b>הגדרות › ניהול נתונים</b>.</p>
-        <p class="need">בכרטיס צריך כ־14.1 ג״ב פנויים להורדה, כ־13.6 ג״ב להעברה בסקריפט, או מקום לקובץ של דרך 2 ועוד כ־14.1 ג״ב (הקובץ נמחק בסוף ההתקנה). ב־Windows הסקריפט צריך גם כ־2.2 ג״ב פנויים בטלפון, לתיקיית ביניים. כרטיס בפורמט FAT32 (כך אנדרואיד מפרמט כרטיסים של 32 ג״ב ומטה) מקבל את מסד הנתונים בכמה חלקים, ובינתיים מתעדכן רק בעדכון מלא. כרטיס שפורמט ל־exFAT במחשב מקבל גם עדכון מצטבר.</p>
+      <article class="route" id="lib-files">
+        <header class="route-head">
+          <h3>מקבצים שהורדו</h3>
+          <p class="when">כשמורידים את קבצי הספרייה במחשב או בדפדפן, ומעבירים אותם לטלפון.</p>
+        </header>
+        <ol class="do">
+          <li>מורידים מ<a href="https://github.com/kdroidFilter/SeforimLibrary/releases/latest">ההפצה האחרונה של SeforimLibrary</a> את <b>כל</b> הקבצים ששמם מתחיל ב־<code>seforim_bundle.tar.zst</code>: החלקים <code>.part01</code>, <code>.part02</code> והלאה, וקובץ ה־<code>.manifest.json</code>. שאר הקבצים בעמוד לא נחוצים.</li>
+          <li>שמים את כולם באותה תיקייה בטלפון, למשל Download. מהמחשב מעתיקים אותם בכבל USB, בסייר הקבצים.</li>
+          <li>במדריך ההגדרה, בכרטיס <b>התקנה לא-מקוונת</b>, לוחצים <b>התחלת התקנה לא-מקוונת</b> ואז <b>בחירת קבצים</b>, ומסמנים את כל הקבצים יחד.</li>
+          <li>כשההתקנה מסתיימת, אפשר למחוק את הקבצים שהורדו.</li>
+        </ol>
+        <div class="bundle">
+          <button class="btn btn-line" type="button" id="bundle-btn">קישורים ישירים לקבצים</button>
+          <p class="status" id="bundle-status" role="status"></p>
+          <ul id="bundle-list" hidden></ul>
+        </div>
+        <p class="need">צריך מקום לקבצים, כ־5.5 ג״ב, ועוד כ־14.1 ג״ב פנויים.</p>
       </article>
+    </div>
 
-      <article class="route" id="lib-update">
-        <h3>עדכון בלי אינטרנט <span class="chip">מגרסה 0.3.0</span></h3>
-        <p class="when">כשיש לספרייה עדכון, והטלפון לא מחובר לאינטרנט.</p>
-        <p>ב<b>הגדרות › ניהול נתונים</b> בוחרים <b>עדכון מקבצים</b> או <b>עדכון מתיקייה</b>. מתאימים שני הקבצים של עדכון מצטבר מ<a href="https://github.com/kdroidFilter/SeforimLibrary/releases">עמוד ההפצה של SeforimLibrary</a>, <code>patch-v….db.zst</code> וקובץ ה־<code>.manifest.json</code> שלו, או כל קובצי ה־<code>.part</code> של המאגר המלא. בעדכון מלא הספרייה הקיימת לא נמחקת עד שהחדשה נבדקה, כשיש מקום לשתיהן.</p>
-      </article>
+    <div class="extras">
+      <section class="extra" id="lib-card" aria-labelledby="card-title">
+        <h3 id="card-title">בכרטיס זיכרון <span class="chip">מגרסה 0.3.0</span></h3>
+        <p>כשיש בטלפון כרטיס SD, מדריך ההגדרה מראה כמה מקום פנוי בטלפון ובכרטיס ומציע לשמור את הספרייה באחד מהם. ספרייה מותקנת עוברת ביניהם ב<b>הגדרות › ניהול נתונים › מיקום הספרייה</b>. כשמוציאים את הכרטיס, פרדס מבקש להחזיר אותו, ונפתח מעצמו כשהוא חוזר.</p>
+        <p>אפשר גם להעתיק ישר לכרטיס מהמחשב: בסקריפט, עם <code>--sdcard</code> או <code>-SdCard</code>, או בכלי <a href="#lib-export">הספרייה של זית לטלפון</a> כשהכרטיס בקורא כרטיסים במחשב. בכרטיס שכבר היה בטלפון הכלי מציע את התיקייה של פרדס, וכשהכרטיס חוזר לטלפון פרדס מוצא שם את הקבצים: במדריך ההגדרה, אחרי <b>התחלת התקנה לא-מקוונת</b>, לוחצים <b>שימוש בקבצים שנמצאו</b>. בפרדס שכבר יש בו ספרייה, אותו כפתור נמצא ב<b>הגדרות › ניהול נתונים</b>.</p>
+        <p class="need">בכרטיס צריך כ־14.1 ג״ב להורדה, כ־13.6 ג״ב להעברה בסקריפט, או מקום לקובץ ועוד כ־14.1 ג״ב (הקובץ נמחק בסוף ההתקנה). ב־Windows הסקריפט צריך גם כ־2.2 ג״ב פנויים בטלפון. כרטיס FAT32 (כך אנדרואיד מפרמט כרטיסים של 32 ג״ב ומטה) מקבל את מסד הנתונים בחלקים, ובינתיים מתעדכן רק בעדכון מלא. כרטיס שפורמט ל־exFAT במחשב מקבל גם עדכון מצטבר.</p>
+      </section>
+      <section class="extra" id="lib-update" aria-labelledby="update-title">
+        <h3 id="update-title">עדכון הספרייה בלי אינטרנט <span class="chip">מגרסה 0.3.0</span></h3>
+        <p>ב<b>הגדרות › ניהול נתונים</b> בוחרים <b>עדכון מקבצים</b> או <b>עדכון מתיקייה</b>, ובוחרים את שני הקבצים של עדכון מצטבר מ<a href="https://github.com/kdroidFilter/SeforimLibrary/releases">עמוד ההפצות של SeforimLibrary</a> (<code>patch-v….db.zst</code> וקובץ ה־<code>.manifest.json</code> שלו), או את כל קובצי ה־<code>.part</code> של מאגר מלא.</p>
+        <p>בעדכון מלא הספרייה הקיימת נשארת עד שהחדשה נבדקה, כשיש מקום לשתיהן.</p>
+      </section>
     </div>
   </section>
 
+  <section id="downloads" aria-labelledby="downloads-title">
+    <div class="head">
+      <span class="kicker">קישורים ישירים</span>
+      <h2 id="downloads-title">כל ההורדות</h2>
+      <p class="intro">כל קישור כאן מוריד את הקובץ עצמו, בגרסה האחרונה שלו.</p>
+    </div>
+    <ul class="dls">
+      <li class="dl-row">
+        <div class="dl-what"><strong>פרדס לאנדרואיד</strong><span>קובץ ההתקנה, לאנדרואיד 13 ומעלה</span></div>
+        <div class="dl-file"><span class="ltr" id="row-apk-file">pardes-android-….apk</span><span id="row-apk-size">…</span></div>
+        <div class="dl-go"><a class="btn" id="row-apk" href="https://github.com/efrul/Pardes/releases">הורדה</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>הספרייה של זית לטלפון</strong><span>אורז את הספרייה של זית למחשב לקובץ לטלפון</span></div>
+        <div class="dl-file"><span class="ltr">ZayitExport.exe</span><span>0.7 מ״ב · Windows 10 או 11</span></div>
+        <div class="dl-go"><a class="btn" href="https://github.com/efrul/zayit-export/releases/latest/download/ZayitExport.exe">הורדה</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>ספרייה מוקטנת לזית</strong><span>בונה ספרייה קטנה עם הספרים שבוחרים</span></div>
+        <div class="dl-file"><span class="ltr">ZayitSubset-windows-x64.zip</span><span>כ־204 מ״ב · Windows 10 או 11, ‏64 סיביות</span></div>
+        <div class="dl-go"><a class="btn" href="https://github.com/efrul/zayit-subset/releases/latest/download/ZayitSubset-windows-x64.zip">הורדה</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>סקריפט העברה ל־Windows</strong><span>מעתיק את הספרייה של זית למחשב לטלפון בכבל, עם adb</span></div>
+        <div class="dl-file"><span class="ltr">push-desktop-library-windows.zip</span><span>10 ק״ב</span></div>
+        <div class="dl-go"><a class="btn" href="tools/push-desktop-library-windows.zip" download>הורדה</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>סקריפט העברה ללינוקס ולמק</strong><span>אותה העברה, בטרמינל</span></div>
+        <div class="dl-file"><span class="ltr">push-desktop-library.sh</span><span>19 ק״ב</span></div>
+        <div class="dl-go"><a class="btn" href="tools/push-desktop-library.sh" download>הורדה</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>Android Platform-Tools</strong><span>adb של Google, לסקריפטים ולכפתור ההעברה בספרייה המוקטנת</span></div>
+        <div class="dl-file"><span class="ltr">platform-tools-latest-….zip</span><span>כ־8 מ״ב, ובמק כ־15</span></div>
+        <div class="dl-go">
+          <a class="btn btn-line" href="https://dl.google.com/android/repository/platform-tools-latest-windows.zip">Windows</a>
+          <a class="btn btn-line" href="https://dl.google.com/android/repository/platform-tools-latest-linux.zip">לינוקס</a>
+          <a class="btn btn-line" href="https://dl.google.com/android/repository/platform-tools-latest-darwin.zip">מק</a>
+        </div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>קוד המקור של פרדס</strong><span>ברישיון AGPL-3.0. לכל גרסה מצורף גם קוד המקור המלא שלה</span></div>
+        <div class="dl-file"><span>GitHub</span></div>
+        <div class="dl-go"><a class="btn btn-line" href="https://github.com/efrul/Pardes/releases">עמוד הגרסאות</a><a class="btn btn-line" href="https://github.com/efrul/Pardes">המאגר</a></div>
+      </li>
+    </ul>
+    <p class="fine">הכלים ל־Windows אינם חתומים דיגיטלית, ולכן Windows עלול להזהיר בפעם הראשונה: <b>מידע נוסף</b> ואז <b>הפעל בכל זאת</b>. Platform-Tools הם קבצים של Google, וההורדה שלהם כפופה ל<a href="https://developer.android.com/tools/releases/platform-tools">תנאים שבעמוד שלה</a>.</p>
+  </section>
+
   <section id="changelog" aria-labelledby="changelog-title">
-    <h2 id="changelog-title">יומן שינויים</h2>
-    <p class="intro">מה השתנה בכל גרסה. היומן נמצא גם ב־<a href="https://github.com/efrul/Pardes/blob/main/androidApp/CHANGELOG.md">GitHub</a>, וכל הגרסאות, עם קוד המקור המלא של כל אחת, ב<a href="https://github.com/efrul/Pardes/releases">עמוד הגרסאות</a>.</p>
-    <div class="log" id="log"><p class="status" id="log-status">טוען את יומן השינויים…</p></div>
+    <div class="head">
+      <span class="kicker">יומן השינויים</span>
+      <h2 id="changelog-title">מה חדש</h2>
+      <p class="intro">מה השתנה בכל גרסה של פרדס. קבצי ההתקנה של כל הגרסאות, עם קוד המקור המלא של כל אחת, נמצאים ב<a href="https://github.com/efrul/Pardes/releases">עמוד הגרסאות</a>, והיומן עצמו גם ב־<a href="https://github.com/efrul/Pardes/blob/main/androidApp/CHANGELOG.md">GitHub</a>.</p>
+    </div>
+    <div class="log" id="log"><p class="status">טוען את יומן השינויים…</p></div>
   </section>
 </main>
 
-<footer>
+<footer class="grove">
   <div class="wrap">
-    <p><strong>פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו.</strong> הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.</p>
+    <span class="brand"><img src="img/icon-96.png" alt="" width="34" height="34"><span>פרדס</span></span>
+    <p><strong>פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו:</strong> הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.</p>
     <p>זית ו־SeforimLibrary: <span class="ltr">Copyright (C) 2025 Elie Gambache</span>. הליבה של זית היא קוד פתוח, המופץ תחת <a href="https://github.com/kdroidFilter/Zayit/blob/master/LICENSE">רישיון AGPL v3</a> עם תנאי ייחוס נוסף: <span class="ltr">Powered by the technologies that drive Zayit — <a href="https://zayitapp.com/">https://zayitapp.com/</a></span></p>
     <p>פרדס נבנה מהקוד הפתוח של זית 0.6.1 ושונה ב־2026 כדי לפעול באנדרואיד. גם הוא מופץ תחת רישיון AGPL-3.0, ו<a href="https://github.com/efrul/Pardes">קוד המקור שלו</a> זמין תחת אותו רישיון; לכל גרסה מצורף גם קוד המקור המלא שלה. הוא מסופק כמות שהוא, ללא כל אחריות.</p>
-    <p>הקובץ חתום במפתח החתימה של פרדס, וכל גרסה מותקנת מעל הקודמת. כדאי להוריד אותו רק מהעמוד הזה או מ<a href="https://github.com/efrul/Pardes/releases">עמוד הגרסאות</a>, ולהשוות את ה־SHA-256 שלו. הספרים מגיעים מ־Sefaria ומאוצריא דרך SeforimLibrary. את זית, היישום המקורי של אליהו גמבש, אפשר למצוא ב־<a href="https://zayitapp.com/">zayitapp.com</a>.</p>
+    <p>כל גרסה של פרדס נחתמת באותו מפתח, ולכן מותקנת מעל הקודמת. כדאי להוריד אותו רק מכאן או מ<a href="https://github.com/efrul/Pardes/releases">עמוד הגרסאות</a>, ולהשוות את טביעת ה־SHA-256 שליד כפתור ההורדה. הספרים מגיעים מ־Sefaria ומאוצריא, דרך SeforimLibrary. את זית, היישום המקורי של אליהו גמבש, אפשר למצוא ב־<a href="https://zayitapp.com/">zayitapp.com</a>.</p>
   </div>
 </footer>
 
+<dialog class="viewer" id="viewer" aria-labelledby="viewer-cap">
+  <div class="viewer-bar"><p id="viewer-cap"></p><button class="copy" type="button" id="viewer-close">סגירה</button></div>
+  <img id="viewer-img" alt="">
+</dialog>
+
 <script>
 (function () {
+  'use strict';
   var REPO = 'efrul/Pardes';
   var API = 'https://api.github.com/repos/' + REPO + '/releases?per_page=100';
+  var LIBRARY_API = 'https://api.github.com/repos/kdroidFilter/SeforimLibrary/releases/latest';
   var $ = function (id) { return document.getElementById(id); };
-  var status = $('status');
-  var shown = null; // what the download card shows: {latest: version, released: {version: first published_at}}
-  var logReady = false;
+  var each = function (selector, fn) { Array.prototype.forEach.call(document.querySelectorAll(selector), fn); };
 
   function esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function fmt(d, greg) {
-    var g = d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
-    if (greg) return g;
-    var heb = '';
-    try { heb = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).format(d); } catch (e) {}
-    return heb ? heb + ' · ' + g : g;
+  // Dates: the Hebrew date in letters, as a sefer prints it (ז׳ בחשוון תשפ״ז), then the civil date.
+  var ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+  var TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+  var HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת'];
+  function letters(n) {
+    var s = '';
+    while (n >= 400) { s += 'ת'; n -= 400; }
+    if (n >= 100) { s += HUNDREDS[Math.floor(n / 100)]; n %= 100; }
+    if (n === 15) s += 'טו';
+    else if (n === 16) s += 'טז';
+    else s += TENS[Math.floor(n / 10)] + ONES[n % 10];
+    return s.length > 1 ? s.slice(0, -1) + '״' + s.slice(-1) : s + '׳';
   }
-  function fmtDate(iso) { return fmt(new Date(iso)); }
+  function hebrew(d) {
+    try {
+      var day = 0, month = '', year = 0;
+      new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(d)
+        .forEach(function (p) {
+          if (p.type === 'day') day = +p.value;
+          else if (p.type === 'month') month = p.value;
+          else if (p.type === 'year') year = +p.value;
+        });
+      return day && month && year ? letters(day) + ' ב' + month + ' ' + letters(year % 1000) : '';
+    } catch (e) { return ''; }
+  }
+  function civil(d) { return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  function both(d) { var h = hebrew(d); return h ? h + ' · ' + civil(d) : civil(d); }
   // A changelog date (YYYY-MM-DD) is a day, not an instant: noon local time, so no time zone moves it.
-  function fmtDay(ymd) { var p = ymd.split('-'); return fmt(new Date(+p[0], p[1] - 1, +p[2], 12)); }
+  function day(ymd) { var p = ymd.split('-'); return new Date(+p[0], p[1] - 1, +p[2], 12); }
+  function mb(bytes) { return (bytes / 1048576).toLocaleString('he-IL', { maximumFractionDigits: 1 }) + ' מ״ב'; }
 
   // android-<versionName>-<run number>[-r<attempt>], as android-release.yml tags a release
   function versionOf(tag) { var m = /^android-(\d+(?:\.\d+)*)-(\d+)/.exec(tag || ''); return m ? m[1] : null; }
@@ -413,53 +925,53 @@ footer strong { color: var(--ink); }
   }
   function isApk(asset) { return /^pardes-.*\.apk$/i.test(asset.name); }
 
+  var shown = null; // what the download shows: {latest: version, released: {version: first published_at}}
+  var logReady = false;
+
   // The releases as the GitHub API lists them, newest first (releases.json keeps that shape): the newest with an APK
   // is offered, and every APK's downloads are counted.
   function show(list, asOf) {
     var latest = null, total = 0, released = {};
     for (var i = 0; i < list.length; i++) {
-      var rel = list[i];
-      if (rel.draft) continue;
-      var apks = (rel.assets || []).filter(isApk);
+      var r = list[i];
+      if (r.draft) continue;
+      var apks = (r.assets || []).filter(isApk);
       if (!apks.length) continue;
       for (var j = 0; j < apks.length; j++) total += apks[j].download_count || 0;
-      var v = versionOf(rel.tag_name);
-      if (v) released[v] = rel.published_at || rel.created_at; // newest first: the last one seen is the first build
-      if (!latest) latest = { rel: rel, apk: apks[0], version: v };
+      var v = versionOf(r.tag_name);
+      if (v) released[v] = r.published_at || r.created_at; // newest first: the last one seen is the first build
+      if (!latest) latest = { rel: r, apk: apks[0], version: v };
     }
-    if (!latest) {
-      fallback('עדיין אין גרסה להורדה. הכפתור מוביל לעמוד הגרסאות.');
-      return;
-    }
-    var rel = latest.rel, apk = latest.apk;
-    $('rel-name').textContent = latest.version ? 'פרדס ' + latest.version : (rel.name || rel.tag_name);
-    $('rel-pre').hidden = !rel.prerelease;
-    $('rel-date').textContent = fmtDate(rel.published_at || rel.created_at);
-    $('rel-size').textContent = (apk.size / 1048576).toLocaleString('he-IL', { maximumFractionDigits: 1 }) + ' מ״ב';
-    $('rel-downloads').textContent = total.toLocaleString('he-IL') + ' בכל הגרסאות';
-    $('rel-asof').textContent = asOf ? '(נכון ל־' + fmt(new Date(asOf), true) + ')' : '';
-    $('rel-asof').hidden = !asOf;
+    if (!latest) { fallback('עדיין לא יצאה גרסה להורדה. הכפתור מוביל לעמוד הגרסאות.'); return; }
+    var rel = latest.rel, apk = latest.apk, ver = latest.version;
     $('dl-btn').href = apk.browser_download_url;
-    $('rel-file').textContent = apk.name;
-    status.textContent = 'הקובץ יורד ישירות מ־GitHub.';
+    $('dl-text').textContent = ver ? 'הורדת פרדס ' + ver : 'הורדת פרדס';
+    $('rel-name').textContent = ver || rel.name || rel.tag_name;
+    $('rel-pre').hidden = !rel.prerelease;
+    $('rel-date').textContent = both(new Date(rel.published_at || rel.created_at));
+    $('rel-size').textContent = mb(apk.size);
+    $('rel-downloads').textContent = total.toLocaleString('he-IL');
+    $('rel-asof').textContent = asOf ? '(נכון ל־' + civil(new Date(asOf)) + ')' : '';
+    $('rel-asof').hidden = !asOf;
+    $('status').textContent = 'הקובץ יורד ישירות מ־GitHub.';
     var sha = (apk.digest || '').replace(/^sha256:/, '');
     $('sha').textContent = sha;
     $('sha').title = sha;
     $('sha-row').hidden = !sha;
-    $('sha-copy').textContent = 'העתקה';
-    shown = { latest: latest.version, released: released };
+    $('row-apk').href = apk.browser_download_url;
+    $('row-apk-file').textContent = apk.name;
+    $('row-apk-size').textContent = mb(apk.size) + ' · גרסה ' + (ver || rel.tag_name);
+    shown = { latest: ver, released: released };
     markVersions();
   }
 
   function fallback(text) {
-    $('rel-file').textContent = '—';
-    $('rel-date').textContent = '—';
-    $('rel-size').textContent = '—';
-    $('rel-downloads').textContent = '—';
+    ['rel-name', 'rel-date', 'rel-size', 'rel-downloads', 'row-apk-size'].forEach(function (id) { $(id).textContent = '—'; });
     $('rel-asof').hidden = true;
-    status.textContent = text;
+    $('status').textContent = text;
   }
 
+  // Copy buttons: data-copy names the element to copy; a command's button copies the command beside it.
   function selectText(el) {
     var r = document.createRange();
     r.selectNodeContents(el);
@@ -468,15 +980,15 @@ footer strong { color: var(--ink); }
     s.addRange(r);
   }
   function copyFrom(button, el) {
-    var done = function () { button.textContent = 'הועתק'; };
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(el.textContent).then(done, function () { selectText(el); });
-    } else { selectText(el); }
+    var done = function () {
+      button.textContent = 'הועתק';
+      setTimeout(function () { button.textContent = 'העתקה'; }, 2500);
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(el.textContent).then(done, function () { selectText(el); });
+    else selectText(el);
   }
-  $('sha-copy').addEventListener('click', function () { copyFrom($('sha-copy'), $('sha')); });
-  Array.prototype.forEach.call(document.querySelectorAll('.cmd .copy'), function (b) {
-    b.addEventListener('click', function () { copyFrom(b, b.parentNode.querySelector('pre')); });
-  });
+  each('[data-copy]', function (b) { b.addEventListener('click', function () { copyFrom(b, $(b.getAttribute('data-copy'))); }); });
+  each('.cmd .copy', function (b) { b.addEventListener('click', function () { copyFrom(b, b.parentNode.querySelector('pre')); }); });
 
   // A filtering proxy may hold a request to api.github.com open instead of refusing it: give up after a while.
   function get(url, ms, asText) {
@@ -519,7 +1031,7 @@ footer strong { color: var(--ink); }
     .then(function (list) { live = true; show(list, null); })
     .catch(function () {
       snapshot.then(function (ok) {
-        if (!ok) fallback('לא הצלחתי לקרוא את פרטי הגרסה. הכפתור מוביל לעמוד הגרסאות ב־GitHub.');
+        if (!ok) fallback('פרטי הגרסה לא נטענו. הכפתור מוביל לעמוד הגרסאות ב־GitHub, ושם הקובץ האחרון.');
       });
     });
 
@@ -534,7 +1046,6 @@ footer strong { color: var(--ink); }
         .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
     }).join('');
   }
-
   function renderLog(md) {
     var out = [], open = false, inList = false, first = true;
     function endList() { if (inList) { out.push('</ul>'); inList = false; } }
@@ -545,7 +1056,7 @@ footer strong { color: var(--ink); }
         endVersion();
         out.push('<details class="version" data-version="' + esc(m[1]) + '"' + (first ? ' open' : '') + '><summary>' +
           '<h3>גרסה <span class="ltr">' + esc(m[1]) + '</span></h3><span class="chip" hidden></span>' +
-          '<span class="when">' + (m[2] ? esc(fmtDay(m[2])) : '') + '</span></summary><div class="body">');
+          '<span class="when">' + (m[2] ? esc(both(day(m[2]))) : '') + '</span></summary><div class="body">');
         open = true;
         first = false;
         return;
@@ -571,16 +1082,16 @@ footer strong { color: var(--ink); }
   // Once both the changelog and the releases are in: the newest release's version is marked, and a version the
   // changelog already describes but no release has yet (the site deploys on a push, the release comes after) says so,
   // with the newest released version opened beside it. A released version is dated by its first release, in the
-  // visitor's time zone as the download card dates it; the changelog's own date stays for one not released yet.
+  // visitor's time zone as the download is dated; the changelog's own date stays for one not released yet.
   function markVersions() {
     if (!logReady || !shown || !shown.latest) return;
-    Array.prototype.forEach.call(document.querySelectorAll('#log .version'), function (d) {
+    each('#log .version', function (d) {
       var v = d.getAttribute('data-version'), chip = d.querySelector('.chip');
       var soon = !shown.released[v] && newer(v, shown.latest);
       chip.textContent = v === shown.latest ? 'האחרונה' : soon ? 'בקרוב' : '';
       chip.className = soon ? 'chip soon' : 'chip';
       chip.hidden = !chip.textContent;
-      if (shown.released[v]) d.querySelector('.when').textContent = fmtDate(shown.released[v]);
+      if (shown.released[v]) d.querySelector('.when').textContent = both(new Date(shown.released[v]));
       if (v === shown.latest && !d.open && d.previousElementSibling && !shown.released[d.previousElementSibling.getAttribute('data-version')]) d.open = true;
     });
   }
@@ -588,8 +1099,86 @@ footer strong { color: var(--ink); }
   get('changelog.md', 10000, true)
     .then(renderLog)
     .catch(function () {
-      $('log').innerHTML = '<p class="status">לא הצלחתי לטעון את יומן השינויים. הוא נמצא גם ב־<a href="https://github.com/efrul/Pardes/blob/main/androidApp/CHANGELOG.md">GitHub</a>.</p>';
+      $('log').innerHTML = '<p class="status">יומן השינויים לא נטען. הוא נמצא גם ב־<a href="https://github.com/efrul/Pardes/blob/main/androidApp/CHANGELOG.md">GitHub</a>.</p>';
     });
+
+  // The tour: the panels stand one under the other until the script turns them into tabs. In RTL the next tab is
+  // to the left.
+  (function () {
+    var list = document.querySelector('.tablist');
+    if (!list) return;
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+    function select(tab, focus) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        $(t.getAttribute('aria-controls')).hidden = !on;
+      });
+      if (focus) {
+        tab.focus();
+        if (tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { select(t, false); });
+      t.addEventListener('keydown', function (e) {
+        var n = tabs.length, j = null;
+        if (e.key === 'ArrowLeft') j = (i + 1) % n;
+        else if (e.key === 'ArrowRight') j = (i - 1 + n) % n;
+        else if (e.key === 'Home') j = 0;
+        else if (e.key === 'End') j = n - 1;
+        if (j === null) return;
+        e.preventDefault();
+        select(tabs[j], true);
+      });
+    });
+    list.hidden = false;
+    select(tabs[0], false);
+  })();
+
+  // A tool's screenshot opens at full size; without <dialog> the link opens the picture itself.
+  (function () {
+    var viewer = $('viewer');
+    if (!viewer || typeof viewer.showModal !== 'function') return;
+    var img = $('viewer-img'), cap = $('viewer-cap');
+    each('a.shot', function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var fig = a.parentNode, small = a.querySelector('img');
+        img.src = a.getAttribute('href');
+        img.alt = small.alt;
+        cap.textContent = fig.querySelector('figcaption').textContent;
+        viewer.showModal();
+      });
+    });
+    $('viewer-close').addEventListener('click', function () { viewer.close(); });
+    viewer.addEventListener('click', function (e) { if (e.target === viewer) viewer.close(); });
+  })();
+
+  // Direct links to the library's files, asked of the GitHub API only when wanted (it allows 60 calls an hour).
+  (function () {
+    var btn = $('bundle-btn'), status = $('bundle-status'), list = $('bundle-list');
+    var page = '<a href="https://github.com/kdroidFilter/SeforimLibrary/releases/latest">עמוד ההפצה</a>';
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      status.textContent = 'טוען את רשימת הקבצים מ־GitHub…';
+      get(LIBRARY_API, 10000).then(function (rel) {
+        var files = (rel.assets || []).filter(function (a) { return a.name.indexOf('seforim_bundle.tar.zst') === 0; });
+        if (!files.length) throw new Error('none');
+        files.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+        list.innerHTML = files.map(function (a) {
+          return '<li><a href="' + esc(a.browser_download_url) + '"><span class="ltr">' + esc(a.name) + '</span></a><span class="size">' + mb(a.size) + '</span></li>';
+        }).join('');
+        list.hidden = false;
+        btn.hidden = true;
+        status.innerHTML = files.length + ' קבצים, מההפצה <span class="ltr">' + esc(rel.tag_name) + '</span> שב' + page + '. מורידים את כולם.';
+      }).catch(function () {
+        btn.disabled = false;
+        status.innerHTML = 'הרשימה לא נטענה מ־GitHub. הקבצים נמצאים גם ב' + page + '.';
+      });
+    });
+  })();
 })();
 </script>
 </body>
