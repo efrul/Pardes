@@ -133,13 +133,17 @@ jobs:
             || { echo "The APK is not signed with the release key ($RELEASE_CERT_SHA256)" >&2; exit 1; }
           rm -f "$RUNNER_TEMP/pardes-release.jks"
 
-      # Every missing reference would be a NoClassDefFoundError/NoSuchMethodError on Android 13: no release unless 0.
-      - name: Check lucene-android against API 33
+      # Every reference above API 30 would be a NoClassDefFoundError/NoSuchMethodError on Android 11: no release unless 0.
+      # The gate dexes with AGP's own D8 (in the Gradle cache after the build) and traces against the API 30 platform.
+      - name: Check lucene-android against API 30
         run: |
-          androidApp/lucene-android/check-api33.sh androidApp/lucene-android/build/libs/lucene-android-*-android.jar \
-            | tee check-api33.txt
-          grep -q ': 0 missing references on API 33$' check-api33.txt
-          { echo '### lucene-android API 33 gate'; echo '```'; cat check-api33.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          set -o pipefail
+          sdkmanager --install "platforms;android-30" > /dev/null
+          androidApp/lucene-android/check-min-api.sh androidApp/lucene-android/build/libs/lucene-android-*-android.jar \
+            | tee check-min-api.txt
+          grep -q ': 0 references above API 30, 0 missing on API 33, 0 missing on API 30$' check-min-api.txt
+          grep -q 'run on API 33+ only): 0 references above API 33, 0 missing on API 33$' check-min-api.txt
+          { echo '### lucene-android API 30 gate'; echo '```'; cat check-min-api.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Name the release
         id: name

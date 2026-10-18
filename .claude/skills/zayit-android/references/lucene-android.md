@@ -1,9 +1,9 @@
-# Offline search on Android: desktop Lucene on API 33
+# Offline search on Android: desktop Lucene on API 30+
 
 ## Contents
 - Decision (don't reopen it)
 - Index files
-- Why stock Lucene fails on Android 13
+- Why stock Lucene fails on Android
 - The patched jar: `androidApp/lucene-android`
 - App wiring
 - R8
@@ -16,7 +16,8 @@ These points are settled; don't re-research them:
 - **Offline only.** The user requires search to work fully offline; server-side search was rejected.
 - **Same engine as desktop.** Android runs the desktop engine (`SeforimLibrary/search`, Apache Lucene) on the **same prebuilt index** desktop downloads. The version must match the index writer: release `20261012193827` was written by **Lucene 10.5.2** (its `Lucene90DocValuesFormat` version 2 makes 10.4.0 throw `IndexFormatTooNewException`), while this fork's SeforimLibrary still declares 10.4.0. Use the version upstream desktop ships; a newer 10.x reads older 10.x indexes, never the other way round. Indexing on the phone is ruled out: it would take hours, and results would differ from desktop.
 - **The FTS4 index is gone.** An earlier on-device SQLite FTS4 index (`data/SearchIndex.kt`) was a stopgap, and the Lucene port replaced it.
-- **Patching works.** The research was done in session 1 with TraceReferences against the real API-33 platform jar: patching lucene-core is enough, and analysis-common is not needed at runtime. Build on that result.
+- **Patching works.** The research was done in session 1 with TraceReferences against the real API-33 platform jar: patching lucene-core is enough, and analysis-common is not needed at runtime. Build on that result. The same approach took it down to API 30 (Android 11) on 2026-10-18.
+- **Not NJA, for now.** The Zayit author's embedded JVM (NucleusFramework/NucleusJvmAccess, 2026-10-17) was weighed on 2026-10-18 and set aside: experimental (0.4.0, plugin unpublished, no real-device runs), 64-bit only while Pardes ships 32-bit ABIs, about +40-80 MB of APK and ~50 MB extracted, a read-only façade (the delta updater writes the index), Java 25 artifacts, and HotSpot (GPLv2 without the Classpath Exception) linked into the app. Look again when upstream merges SeforimLibrary PR #134 and Pardes moves its pin past it, or when the desktop index is written by Lucene 11.
 
 ## Index files
 
@@ -31,9 +32,9 @@ These sit next to `seforim.db` in the library folder, in the same layout desktop
 
 Open the indexes with **`NIOFSDirectory`**. `FSDirectory.open` picks MMapDirectory on 64-bit, and Lucene 10's MMapDirectory needs `java.lang.foreign`, which Android doesn't have.
 
-## Why stock Lucene fails on Android 13
+## Why stock Lucene fails on Android
 
-These gaps were found with R8 TraceReferences against the API-33 `android.jar`.
+These gaps were found with R8 TraceReferences against the API-33 `android.jar` (stock 10.5.2: 217 missing on API 33, 240 on API 30).
 
 **Broken at every API level:**
 - `HotspotVMOptions.<clinit>` calls `Class.getModule` outside its try. The failure cascades through `Constants` and `RamUsageEstimator`.
@@ -51,6 +52,12 @@ These gaps were found with R8 TraceReferences against the API-33 `android.jar`.
 - `LongBuffer.put(int,long[],int,int)` in BufferedChecksum, reached when `.liv` deletion files exist.
 - `ByteBuffer.get(int,byte[],int,int)`.
 
+**Missing until API 33 (Android 11 and 12), what Android 13 brought of Java 9-11:**
+- the `Arrays` range overloads (`mismatch`, `compare`, `compareUnsigned`, `equals` on byte/char/int/long ranges): BytesRef, StringHelper, the blocktree term seek (SegmentTermsEnum), FST outputs, LZ4, BKD;
+- `VarHandle` and `MethodHandles.byteArrayViewVarHandle`: BitUtil's `VH_*` byte views, behind every little-endian read and write (96 call sites);
+- `Collection.toArray(IntFunction)` (75 sites), `AtomicInteger.getOpaque` (BaseCompositeReader), `Math.fma`, `ByteArrayOutputStream.toString(Charset)` and `new PrintStream(OutputStream, boolean, Charset)` (CheckIndex, blocktree Stats).
+- Java 9-11 methods that AGP's D8 backports at minSdk 30 (`List/Set/Map.copyOf`, `String.isBlank`, `Math.multiplyExact(long,int)`, `Predicate.not`) need nothing; the gate proves it with that D8.
+
 ## The patched jar: `androidApp/lucene-android`
 
 This is a Gradle `java-library` subproject of the Android build (JDK 21+ to build: it compiles against lucene-core's Java 21 class files). `rewriteLucene` (ASM, `rewriter/LuceneAndroidRewriter.java`) copies the original `lucene-core-10.5.2.jar` (`luceneVersion` in its `build.gradle.kts`) into `build/libs/lucene-android-10.5.2-android.jar` with three kinds of change:
@@ -61,15 +68,20 @@ This is a Gradle `java-library` subproject of the Android build (JDK 21+ to buil
    - `TestSecrets`: setters (run from IndexWriter/SegmentReader static init, also on the read path) keep only the set-once check; getters always refuse.
    - `AnalysisSPILoader`: reads `META-INF/services` itself (`ServiceLoader.stream()` is API 35+).
    - `FSDirectory`: `open()` always returns `NIOFSDirectory`.
-   - New helpers: `AndroidCompat` (static stand-ins), `CompatClassValue` (ConcurrentHashMap), `CompatHexFormat`, `CompatRuntimeVersion`.
+   - New helpers: `AndroidCompat` (static stand-ins), `CompatClassValue` (ConcurrentHashMap), `CompatHexFormat`, `CompatRuntimeVersion`, `CompatVarHandle` (byte-array views), `AndroidCompatApi33` (the API 33 JDK calls, one per method).
 2. **ASM rewrites** of the copied classes:
    - type swaps: `ClassValue` -> `CompatClassValue` (AttributeSource, AttributeFactory, VirtualMethod), `HexFormat` -> `CompatHexFormat` (StringHelper), `Runtime.Version`/`Runtime.version()` -> `CompatRuntimeVersion` (IndexWriter diagnostics);
-   - calls redirected to `AndroidCompat`: `HashMap.newHashMap`, `LongBuffer.put(int,long[],int,int)`, `ByteBuffer.get(int,byte[],int,int)`, `Stream.toList`, `Checksum.update(ByteBuffer)`, `StringBuilder.isEmpty`, `List.addFirst`, `List.getFirst`.
+   - calls redirected to `AndroidCompat`: `HashMap.newHashMap`, `LongBuffer.put(int,long[],int,int)`, `ByteBuffer.get(int,byte[],int,int)`, `Stream.toList`, `Checksum.update(ByteBuffer)`, `StringBuilder.isEmpty`, `List.addFirst`, `List.getFirst` (always the compat code);
+   - the API 33 calls above, redirected to `AndroidCompat` / `CompatVarHandle` (the `VarHandle` type is remapped to it), which dispatch on `AndroidCompat.API_33` (`Build.VERSION.SDK_INT >= 33`, read reflectively once): Android 13+ calls the JDK method through `AndroidCompatApi33`, as before; Android 11 and 12 run equivalent Java code. The `PrintStream` constructor becomes its `String` charset-name twin on every level.
 3. **Stripped** (69 classes): Panama/MemorySegment/NativeAccess/RefCountedSharedArena, `MMapDirectory`, `ModuleResourceLoader`. Code that names `MMapDirectory` no longer compiles.
 
-Gate the jar with `androidApp/lucene-android/check-api33.sh [--baseline] [jar]`. It dexes the jar like AGP for minSdk 33, runs R8 `TraceReferences --check` with the API-33 platform jar as `--lib`, and must report **0 missing** (stock 10.5.2: 217). Run it after any Lucene version bump or patch change. Upgrading: copy the six edited files again from the new sources jar, re-apply the `// Android:` edits, rebuild, gate, smoke test.
+Gate the jar with `androidApp/lucene-android/check-min-api.sh [--baseline] [jar]` (CI runs it before every release). It dexes the jar with **AGP's own D8** (the builder jar of the AGP in `gradle/libs.versions.toml`, from the Gradle cache: a newer build-tools D8 backports more, e.g. the `Arrays.equals` ranges, and would pass call sites the APK still has) for minSdk 30, then requires: 0 references above API 30 by the compile SDK's `api-versions.xml` (`gate/DexApiLevels.java`), 0 missing in `TraceReferences --check` against the API 33 and API 30 `android.jar` (install `platforms;android-30`; the API 33 jar is downloaded once when not installed), and the same for `AndroidCompatApi33` against API 33 alone. Expected: `lucene-android-10.5.2-android: 0 references above API 30, 0 missing on API 33, 0 missing on API 30` (stock: 47, 217 and 240). Run it after any Lucene version bump, patch change or AGP upgrade. After an AGP upgrade also check that `AndroidCompatApi33` still calls the platform methods and not D8 backports: `dexdump -d build/check-min-api/*/dex-api33/classes.dex | grep 'Ljava/util/Arrays;'`. Upgrading Lucene: copy the edited files again from the new sources jar, re-apply the `// Android:` edits, rebuild, gate, then the JVM tests.
 
-JVM smoke test (read path with Term/Phrase/Prefix queries and an index sort, plus a small write/delete/merge): `java -cp build/libs/lucene-android-10.5.2-android.jar smoke/LuceneSmoke.java <copy of seforim.db.lookup.lucene>`. It proves the patches did not break Lucene, not that ART runs it.
+JVM tests (single-file programs, run from `lucene-android/`), each once as is and once with `-Dlucene.android.forceFallbacks=true`, which runs the Android 11/12 code on the JVM:
+- `java -XX:-OmitStackTraceInFastThrow [-Dlucene.android.forceFallbacks=true] -cp build/libs/lucene-android-10.5.2-android.jar smoke/CompatFallbacks.java [rounds] [seed]` compares every API 33 stand-in with the JDK method on random and edge-case input, results and exceptions, then runs CheckIndex. The flag is required: without it HotSpot's compiled code throws message-less implicit exceptions and the comparison fails spuriously.
+- `java [-Dlucene.android.forceFallbacks=true] -cp build/libs/lucene-android-10.5.2-android.jar smoke/LuceneSmoke.java <copy of seforim.db.lookup.lucene>`: the read path with Term/Phrase/Prefix queries and an index sort, plus a small write/delete/merge. Both runs must print the same apart from the `jar:` line (on a full-text index the queries match too; its last step, the sort, is written for the lookup index's doc values and stops there in both runs).
+
+They prove the patches did not break Lucene and that the fallbacks equal the JDK, not that ART runs them: the gate and the emulators (API 30 and 33) do that.
 
 ## App wiring
 
@@ -86,7 +98,7 @@ JVM smoke test (read path with Term/Phrase/Prefix queries and an index sort, plu
 
 ## Delta updates
 
-The incremental updater (`delta/`) writes new lines into the full-text index exactly as the generator does. That needs three classes from Lucene's analysis-common module, which the lucene-android jar now also contains. `check-api33.sh` still reports 0 missing. Segments over 512 MB are never rewritten on the phone.
+The incremental updater (`delta/`) writes new lines into the full-text index exactly as the generator does. That needs three classes from Lucene's analysis-common module, which the lucene-android jar now also contains, under the same rewrites and gate. Segments over 512 MB are never rewritten on the phone.
 
 ## R8
 
@@ -124,7 +136,7 @@ When search works in debug but not in release, suspect these rules first; an SPI
 | Symptom | Cause |
 |---|---|
 | `NoClassDefFoundError: java.lang.ClassValue` | the unpatched lucene-core got onto the classpath (check `./gradlew :app:dependencies`) |
-| `NoSuchMethodError: HashMap.newHashMap` / `Stream.toList` | a call site the rewriter missed: rerun `check-api33.sh` |
+| `NoSuchMethodError: HashMap.newHashMap` / `Stream.toList`, or `Arrays.mismatch` / `VarHandle` on Android 11-12 only | a call site the rewriter missed: rerun `check-min-api.sh` |
 | `UnsupportedOperationException` / `java.lang.foreign` | something used `FSDirectory.open` or `MMapDirectory`: use `NIOFSDirectory` |
 | SPI "does not exist" only in release | R8 stripped a codec: keep rules |
 | No results but no crash | index folder not found next to the DB (check `LibraryStore` paths, permissions after `adb push`: directories need `chmod 777`/files `666` when pushed as shell) |

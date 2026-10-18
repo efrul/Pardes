@@ -47,10 +47,16 @@ public final class AndroidCompat {
   static final boolean API_33 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 33;
 
   private static int sdkInt() {
+    final Class<?> version;
     try {
-      return Class.forName("android.os.Build$VERSION").getField("SDK_INT").getInt(null);
-    } catch (ReflectiveOperationException | LinkageError e) {
+      version = Class.forName("android.os.Build$VERSION");
+    } catch (ClassNotFoundException e) {
       return Integer.MAX_VALUE; // not Android
+    }
+    try {
+      return version.getField("SDK_INT").getInt(null);
+    } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+      return 0; // Android, level unknown: the fallbacks, which run on every level
     }
   }
 
