@@ -193,10 +193,12 @@ internal object ZayitWidgets {
     /** How long a broadcast received at [received] (uptime) may be held open; 0 when not at all. */
     private fun broadcastBudget(received: Long): Long {
         // API 33. Android 12 has only the moment the process was bound (Process.getStartUptimeMillis), later than the
-        // ask by the time the start took, which comes off the 2 s left before the system's 10 s
-        val start = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Process.getStartRequestedUptimeMillis() else Process.getStartUptimeMillis()
+        // ask by the time the start took, seconds on a slow phone: there the budget is halved, which leaves 6 s for it
+        val requested = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        val start = if (requested) Process.getStartRequestedUptimeMillis() else Process.getStartUptimeMillis()
         if (start <= 0L || received - start >= COLD_START_MS) return WARM_BUDGET_MS
-        return (start + COLD_START_BUDGET_MS - received).coerceIn(0L, COLD_START_BUDGET_MS)
+        val coldBudget = if (requested) COLD_START_BUDGET_MS else COLD_START_BUDGET_MS / 2
+        return (start + coldBudget - received).coerceIn(0L, coldBudget)
     }
 
     /** Adds [request] to the next redraw, starting one unless one is under way; null outside the app. */
