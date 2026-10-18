@@ -55,3 +55,7 @@
 -keepnames class org.apache.lucene.codecs.perfield.PerFieldPostingsFormat
 -keepnames class org.apache.lucene.codecs.perfield.PerFieldDocValuesFormat
 -keepnames class org.apache.lucene.codecs.perfield.PerFieldKnnVectorsFormat
+# AndroidCompatApi33 holds lucene-android's API 33 calls (VarHandle's signature-polymorphic get/set, the Arrays ranges...),
+# reached only on Android 13+. R8 moved its VarHandle methods into GroupVIntUtil, which every search loads: Android 11's
+# verifier rejected the whole class (VerifyError) and search failed. Kept, its methods stay in a class only 13+ loads.
+-keep,allowobfuscation class org.apache.lucene.util.AndroidCompatApi33 { *; }

@@ -83,6 +83,8 @@ JVM tests (single-file programs, run from `lucene-android/`), each once as is an
 
 They prove the patches did not break Lucene and that the fallbacks equal the JDK, not that ART runs them: the gate and the emulators (API 30 and 33) do that.
 
+**R8 and the API 33 class.** The release build is R8-optimized, which the jar gate does not see. R8 once moved AndroidCompatApi33's VarHandle methods (signature-polymorphic `invoke-polymorphic` calls) into GroupVIntUtil, which every search loads; Android 11's verifier rejected that whole class (`VerifyError ... register v1 has type Precise Reference`, then `NoClassDefFoundError`), and the search screen showed "החיפוש נכשל" with an obfuscated class name. `app/proguard-rules.pro` keeps AndroidCompatApi33 (`-keep,allowobfuscation ... { *; }`), and `lucene-android/check-release-dex.sh <apk> <mapping.txt>` (CI runs it after the build) fails unless every VarHandle call of the APK is in that class. Run it after any R8 rule or AGP change.
+
 ## App wiring
 
 - **Dependency.** `app/build.gradle.kts` declares `implementation(project(":lucene-android"))`. There must be no transitive original `lucene-core`.
