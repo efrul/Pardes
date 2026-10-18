@@ -87,4 +87,11 @@ internal object AndroidStrings {
     const val locationFat = "FAT32: מסד הנתונים יישמר בו בכמה קבצים, ועדכון מצטבר לא יהיה זמין (רק עדכון מלא)"
     const val locationNotEnough = "אין די מקום"
     const val cardHint = "אפשר גם לשמור את הספרייה בכרטיס זיכרון: הכניסו כרטיס SD למכשיר."
+
+    // Short of room for the full library: a small one from files still fits (DiskSpaceStep, InstallTypeStep).
+    const val smallLibraryHint =
+        "אפשר להמשיך ולהתקין מקבצים ספרייה קטנה יותר, למשל ספרייה מוקטנת שנבנתה במחשב עם ספרים נבחרים: " +
+            "המקום שהיא צריכה ייבדק לפי הקבצים שתבחרו."
+    const val continueWithFiles = "המשך להתקנה מקבצים"
+    const val installationOnlineNoSpace = "אין במכשיר מספיק מקום להורדת הספרייה המלאה. אפשר להתקין מקבצים ספרייה קטנה יותר."
 }
