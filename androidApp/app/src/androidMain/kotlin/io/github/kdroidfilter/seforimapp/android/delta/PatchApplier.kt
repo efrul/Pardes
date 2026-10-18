@@ -17,7 +17,7 @@ import java.nio.file.Path
  *
  * android.database instead of JDBC: the transaction is [SQLiteDatabase.beginTransactionNonExclusive], which pins one
  * connection, and ATTACH goes through a compiled statement inside it (SQLiteDatabase.execSQL would try to switch the
- * journal mode for an ATTACH, which fails inside a transaction). SQLite ≥ 3.21 (Android 13 has 3.32) allows ATTACH in a
+ * journal mode for an ATTACH, which fails inside a transaction). SQLite ≥ 3.21 (Android 11 has 3.28) allows ATTACH in a
  * transaction. [checkCancelled] is called between statements and may throw: the transaction is then rolled back.
  */
 class PatchApplier(

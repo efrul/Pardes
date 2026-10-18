@@ -13,6 +13,7 @@ import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.IBinder
 import androidx.core.content.IntentCompat
+import io.github.kdroidfilter.seforimapp.android.showForegroundImmediately
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -99,7 +100,7 @@ class AppUpdateService : Service() {
             .setSmallIcon(if (downloading) android.R.drawable.stat_sys_download else android.R.drawable.stat_notify_sync)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+            .showForegroundImmediately()
             .setContentTitle(AppUpdateStrings.downloadingTitle)
             .setContentText(if (downloading) state.detail ?: AppUpdateStrings.downloading else AppUpdateStrings.verifying)
         val progress = state.progress

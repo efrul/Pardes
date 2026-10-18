@@ -4,7 +4,7 @@ This file records where the Android port stands and how it is worked on. It is f
 
 ## Goal and constraints
 
-- **Target:** Android 13 (minSdk 33), phones down to the 3" Unihertz Jelly Star, and tablets.
+- **Target:** Android 11 and later (minSdk 30; 33 up to 0.3.0), phones down to the 3" Unihertz Jelly Star, and tablets. Most testing is on Android 13 (the API 33 emulator and the Jelly Star); what differs on 11 is in [Android 11](#android-11).
 - **Parity with desktop Zayit 0.6.1:** the same screens, wording (except the authorship texts, see below), behaviour and data. Desktop is the reference whenever something is unclear. Four fixes from desktop 0.6.2 are ported on top of that base (see [PARITY.md](PARITY.md) › Later desktop releases); the rest of 0.6.2–0.6.4 is not.
 - **Own app, based on Zayit:** Pardes is not an app by Zayit's author. User-facing text says Pardes is based on Zayit by Elie (Elyahou) Gambache (AGPL-3.0), who did not make it, is not responsible for it and does not support it. His copyright, licence and §7b attribution notices are kept; the porter is not named, and this repository is linked only as Pardes's AGPL source (the כללי header, אודות, תנאים). Where desktop's wording says who made the app (the welcome step, the settings header, About, the terms), Android's differs on purpose.
 - **Offline, including search:** the app uses the desktop library and the desktop Lucene index. There is no server.
@@ -50,7 +50,7 @@ Dark theme.
    - Strings: `SeforimApp/src/commonMain/composeResources/values/strings.xml`.
    - Desktop features newer than this fork's sources (the tools menu) exist only in the 0.6.1 binary. Run it headless and screenshot it.
 2. **Port it** under `app/src/androidMain/kotlin/.../android/`, and say in a KDoc which desktop class each file mirrors.
-3. **Build** `./gradlew :app:assembleRelease` and install it on the API-33 emulator.
+3. **Build** `./gradlew :app:assembleRelease` and install it on the API-33 emulator, and on the Android 11 one when the change touches a platform API ([Android 11](#android-11)).
 4. **Screenshot** at phone, Jelly Star (`wm size 480x854`, density 320) and tablet (`wm size 1920x1200`, density 240: 1280dp) sizes. Compare side by side with desktop and fix the differences.
 5. **Commit** as `androidApp: <change>`.
 
@@ -90,20 +90,30 @@ A development build can run the whole update on a device or an emulator from a t
 
 The feed is read only by a build that is not signed with the release key, and its `file:` URLs only inside the app's files.
 
+## Android 11
+
+minSdk is 30, and Android 12 and later must behave exactly as with minSdk 33: every platform call newer than API 30 sits behind a `Build.VERSION.SDK_INT` check with a fallback for 30. Lint's NewApi check is not enough on its own. It missed `InputStream.readNBytes(int)` (API 33) and `RemoteViews(Map)` (API 31), probably because its Kotlin frontend cannot read Kotlin 2.4 metadata, so look a new call up in the SDK's `platforms/android-36/data/api-versions.xml` (its `since`).
+
+- **Emulator.** `system-images;android-30;google_apis;x86_64` (google_apis like the API 33 image, so `adb root` works), in the PC's SDK (`C:\AndroidSDK`) as AVD `Android11_Emulator`, beside `Android13_Emulator`. The API 33 emulator and the Jelly Star stay the main test devices; run Android 11 for changes to platform calls, the updater, the widgets or SQL that binds a list.
+- **Launcher widgets** are off below Android 12: they are drawn with RemoteViews API from 12 (`setColorInt`, `setViewLayout*`, a RemoteViews per size), so on 11 the launcher lists none of Pardes's widgets. The widgets of the app's own Home screen are not affected.
+- **SQLite 3.28.** Android 11 ships SQLite 3.28; 12 and 13 ship 3.32. Below 3.32 one statement takes at most 999 bound parameters, so a list of ids bound with `IN ?` goes in chunks (`LineConnections` binds 400 per query): a longer list fails with "too many SQL variables" on 11 only. A library split on a FAT32 card is read through requery's SQLite 3.49, which has no such limit. Nothing else is missing: the SQLDelight dialect is 3.24, and `VACUUM INTO` (3.27) works. A patch migration written with 3.29–3.32 syntax would fail on 11 only.
+- **App update.** Android 11 ends an app whose "install unknown apps" permission is turned on, so after "פתח הגדרות" the update goes on in a new process: Pardes offers the checked APK again as ready and the user taps install once more. Android also asks to confirm every update, since `UPDATE_PACKAGES_WITHOUT_USER_ACTION` exists only from Android 12.
+
 ## Decisions and why
 
 - **Separate Gradle build** (`androidApp/`): the desktop build stays untouched and builds without the Android SDK.
 - **Compose redraw instead of the desktop UI:** desktop uses Jewel and desktop-only window APIs. The Android UI copies its look (Islands colours, fonts, gold accent) and adapts the layout to touch and small screens.
-- **minSdk 33:** the user's target device runs Android 13. Everything that needs newer Java APIs is patched or avoided rather than raising minSdk.
+- **minSdk 30** (Android 11, since 2026-10-18): at first 33, for the user's own Android 13 phone; lowered so that Android 11 and 12 phones can run the app too. Platform calls newer than 30 are guarded with a fallback rather than dropped, so Android 12 and later lose nothing, and everything that needs newer Java APIs is patched or avoided rather than raising minSdk (see [Android 11](#android-11)).
 - **Lucene on the phone:** the same index and engine as desktop means the same results, no on-device indexing and no server. Lucene 10.x needs JDK APIs that Android 13 lacks, so `lucene-android/` patches lucene-core and a TraceReferences check against the API-33 platform guards it.
 - **Library on a memory card** (since 2026-10-16): in the app's own folder on the card, not a folder the user picks, so no storage permission (all-files access) is needed. A FAT32 card gets the database in multiplex chunks rather than a refusal, because Android formats cards of 32 GB and less as FAT32. Only a split database uses the bundled SQLite: every other library keeps Android's, so nothing changes for it.
-- **Updating the app from GitHub releases** (since 2026-10-17): the releases are read as the download site reads them (the GitHub API's list, else the site's `releases.json`), with no server of our own, and compared by `versionName` (the tag carries it, not `versionCode`). The APK is trusted for its signing certificate, not for where it came from: the app trusts user CAs (for filtering proxies), so whoever holds one could change the list and the file alike; the sha256 only proves the download is whole. PackageInstaller sessions rather than an `ACTION_VIEW` of the file: no FileProvider, and with `UPDATE_PACKAGES_WITHOUT_USER_ACTION` the app replaces itself without a question once the user has let it install apps.
+- **Updating the app from GitHub releases** (since 2026-10-17): the releases are read as the download site reads them (the GitHub API's list, else the site's `releases.json`), with no server of our own, and compared by `versionName` (the tag carries it, not `versionCode`). The APK is trusted for its signing certificate, not for where it came from: the app trusts user CAs (for filtering proxies), so whoever holds one could change the list and the file alike; the sha256 only proves the download is whole. PackageInstaller sessions rather than an `ACTION_VIEW` of the file: no FileProvider, and with `UPDATE_PACKAGES_WITHOUT_USER_ACTION` the app replaces itself without a question once the user has let it install apps (from Android 12; Android 11 asks every time).
 - **R8 release builds,** even for testing: the debug APK is many times larger and slow on a software emulator.
 - **Own name, icon and applicationId:** Pardes (פרדס), an icon of its own (the word in gold on olive green) and `io.github.efrul.pardes` since 2026-10-15, at the request of Zayit's author (before it, "זית לאנדרואיד" as `io.github.efrul.zayit`, and earlier test builds in the original author's namespace). The code's namespace and package names stay `io.github.kdroidfilter…`, as in desktop. Test builds from before the change (never distributed) are a different app to Android, with their own library.
 
 ## Known gaps / ideas
 
 - Incremental updates on a library split for a FAT32 card: the delta code opens the database with Android's SQLite. Porting it to the bundled SQLite (requery's API mirrors Android's) would lift that.
+- Launcher widgets need Android 12, so they are off on 11. A drawing path for 11 (colours set with `setInt` by day or night, fixed layouts, one RemoteViews for every size) would bring them back.
 - Year cycle tool: 2D rendering only.
 - Dictionary tool: headword match only.
 - App updates are found only while the app runs (at start, or in Settings): there is no background check (WorkManager) or notification for a new version.

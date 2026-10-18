@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.IBinder
+import io.github.kdroidfilter.seforimapp.android.showForegroundImmediately
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytesPerSec
@@ -93,7 +94,7 @@ class LibraryMoveService : Service() {
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+            .showForegroundImmediately()
         when (state) {
             is MoveState.Copying -> {
                 builder.setContentTitle(MoveUiStrings.movingTo.format(state.target))

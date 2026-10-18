@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
+import io.github.kdroidfilter.seforimapp.android.data.SqlVariableLimit
 import io.github.kdroidfilter.seforimapp.android.search.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
@@ -575,15 +576,19 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
             is LinkSelection.Single -> sectionOrLine(selection.lineId, windowed = type == ConnectionType.COMMENTARY)
             is LinkSelection.Multi -> selection.lineIds
         }
+        val distinct = type != ConnectionType.COMMENTARY && ids.size > 1
         return runCatching {
-            repository.getCommentariesForLineRange(
-                lineIds = ids,
-                activeCommentatorIds = setOf(targetBookId),
-                connectionTypes = setOf(type),
-                offset = offset,
-                limit = limit,
-                distinctByTargetLine = type != ConnectionType.COMMENTARY && ids.size > 1,
-            )
+            // A whole section (a heading's targum and sources) can pass the 999 bound parameters of Android 11's SQLite
+            SqlVariableLimit.linksPage(ids, type, distinct, offset, limit) { lineIds, o, l ->
+                repository.getCommentariesForLineRange(
+                    lineIds = lineIds,
+                    activeCommentatorIds = setOf(targetBookId),
+                    connectionTypes = setOf(type),
+                    offset = o,
+                    limit = l,
+                    distinctByTargetLine = distinct,
+                )
+            }
         }.getOrElse { e ->
             if (e is CancellationException) throw e
             emptyList()
@@ -970,7 +975,8 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
     }
 
     /** Lines read from the DB, for selections spanning lines the list did not compose (copy with source, report). */
-    suspend fun linesByIds(ids: Collection<Long>): List<Line> = runCatching { repository.getLinesByIds(ids) }.getOrElse { emptyList() }
+    suspend fun linesByIds(ids: Collection<Long>): List<Line> =
+        runCatching { SqlVariableLimit.readInChunks(ids) { repository.getLinesByIds(it) } }.getOrElse { emptyList() }
 
     companion object {
         const val CHUNK = 60

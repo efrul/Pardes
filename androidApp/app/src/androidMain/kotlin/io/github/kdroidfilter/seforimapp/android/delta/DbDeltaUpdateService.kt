@@ -12,6 +12,7 @@ import io.github.kdroidfilter.seforimapp.android.data.LibraryMover
 import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.android.data.ResumingHttpInputStream
 import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase
+import io.github.kdroidfilter.seforimapp.android.readAtMost
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.AndroidStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
@@ -337,7 +338,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     }
 
     private fun readText(uri: Uri): String = app.contentResolver.openInputStream(uri)?.use { input ->
-        val bytes = input.readNBytes(MAX_MANIFEST_BYTES + 1)
+        val bytes = input.readAtMost(MAX_MANIFEST_BYTES + 1)
         if (bytes.size > MAX_MANIFEST_BYTES) throw IOException("Not a manifest: $uri")
         String(bytes, Charsets.UTF_8)
     } ?: throw IOException("Cannot read $uri")

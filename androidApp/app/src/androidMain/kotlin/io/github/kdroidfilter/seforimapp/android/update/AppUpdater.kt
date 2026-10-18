@@ -19,6 +19,7 @@ import io.github.kdroidfilter.seforimapp.android.data.ResumingHttpInputStream
 import io.github.kdroidfilter.seforimapp.android.data.SessionStore
 import io.github.kdroidfilter.seforimapp.android.data.USER_AGENT
 import io.github.kdroidfilter.seforimapp.android.delta.DbDeltaUpdateService
+import io.github.kdroidfilter.seforimapp.android.readAtMost
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.AndroidStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
@@ -231,6 +232,14 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
             }
             if (sessionId == -1) abandonSessions(committedToo = false)
             restoreReady()
+            // Android 11 restarted the app for the permission the install asked for (awaitPermissionAcrossRestart)
+            if (prefs.getBoolean(KEY_AWAITING_PERMISSION, false)) {
+                prefs.edit().remove(KEY_AWAITING_PERMISSION).apply()
+                if (_state.value.ready && app.packageManager.canRequestPackageInstalls()) {
+                    _dialogVisible.value = true
+                    scope.launch(Dispatchers.Main) { install() }
+                }
+            }
         }
         val installing = prefs.getString(KEY_INSTALLING, null)
         val updated = (prefs.getString(KEY_UPDATED, null) ?: installing)?.takeIf { AppReleases.compareVersions(it, installedVersion) == 0 }
@@ -319,7 +328,7 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
                 connection.setRequestProperty("User-Agent", USER_AGENT)
                 val code = connection.responseCode
                 if (code !in 200..299) throw HttpStatusException(code)
-                val bytes = connection.inputStream.use { it.readNBytes(maxBytes + 1) }
+                val bytes = connection.inputStream.use { it.readAtMost(maxBytes + 1) }
                 if (bytes.size > maxBytes) throw IOException("Too large: $url")
                 return String(bytes, Charsets.UTF_8)
             } catch (e: HttpStatusException) {
@@ -441,6 +450,7 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
             return
         }
         if (!app.packageManager.canRequestPackageInstalls()) {
+            awaitPermissionAcrossRestart(true)
             _state.value = s.copy(needsPermission = true, errorMessage = null, message = null)
             return
         }
@@ -490,7 +500,20 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
     /** "ביטול" beside "פתח הגדרות": the checked APK waits again. */
     fun clearPermission() {
         val s = _state.value
-        if (s.needsPermission) _state.value = s.copy(needsPermission = false)
+        if (s.needsPermission) {
+            awaitPermissionAcrossRestart(false)
+            _state.value = s.copy(needsPermission = false)
+        }
+    }
+
+    /**
+     * Android 11 ends the app as "install unknown apps" is switched on for it (it remounts the app's storage; Android
+     * 12 and later keep it running), so the install that asked for it cannot go on in [onResume]: remembered, it goes
+     * on in the next process instead, with the APK checked before and the dialog open ([onShellStart]).
+     */
+    private fun awaitPermissionAcrossRestart(waiting: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
+        prefs.edit().apply { if (waiting) putBoolean(KEY_AWAITING_PERMISSION, true) else remove(KEY_AWAITING_PERMISSION) }.apply()
     }
 
     /** "פתח הגדרות": Android's "install unknown apps" page for Pardes. */
@@ -525,7 +548,8 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
             setInstallReason(PackageManager.INSTALL_REASON_USER)
             // Honoured as Pardes updates itself and holds UPDATE_PACKAGES_WITHOUT_USER_ACTION, once it may install apps.
             // Android still asks at times (another installer owns updates, a silent update in the last 30 s, a policy).
-            setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            // API 31: Android 11 always asks.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         }
         val id = installer.createSession(params)
         try {
@@ -798,6 +822,7 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
         private const val KEY_ANNOUNCED = "announced_version"
         private const val KEY_READY = "ready_release"
         private const val KEY_REJECTED = "rejected_tag"
+        private const val KEY_AWAITING_PERMISSION = "awaiting_install_permission"
         private const val DIR_NAME = "app-update"
         private const val PART_SUFFIX = ".part"
         private const val SESSION_APK_NAME = "base.apk"

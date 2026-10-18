@@ -72,7 +72,7 @@ The whole app runs with `LayoutDirection.Rtl`.
 
 ## Data and SQLite
 
-- **SQLite 3.32 on API 33.** There is no FTS5 and some newer syntax is missing. Desktop schema features must work on 3.32; the SQLDelight dialect is `sqlite-3-24`.
+- **SQLite 3.28 on API 30** (3.32 on API 31–33). There is no FTS5 and some newer syntax is missing. Desktop schema features must work on 3.28; the SQLDelight dialect is `sqlite-3-24`. Below 3.32 one statement takes at most 999 bound parameters, so an `IN ?` list of ids fails with "too many SQL variables" on Android 11 only: bind it in chunks (`LineConnections` uses 400). A library split on a FAT32 card goes through requery's 3.49 and hides this, so test it on a single-file library.
 - **PRAGMA in `execute()` throws on Android.** `data/PragmaSafeDriver.kt` routes row-returning PRAGMAs through `executeQuery`. Wrap any new driver with it.
 - **A row wider than the cursor window.**
   - Symptom: opening a category in the book list closed the app with `SQLiteBlobTooBigException: Row too big to fit into CursorWindow requiredPos=3, totalRows=4` (encyclopedias › שם הגדולים).

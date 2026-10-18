@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import io.github.kdroidfilter.seforimapp.android.data.AppPrefs
 import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.android.data.ReadingHistory
@@ -105,8 +106,9 @@ class ZayitApplication : Application() {
                 }
             }
         }
-        // System broadcasts reach a receiver that is not exported.
-        registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        // System broadcasts reach a receiver that is not exported. ContextCompat: RECEIVER_NOT_EXPORTED is API 33, and
+        // only the compat call keeps it unexported before it.
+        ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     private inner class ForegroundTracker : ActivityLifecycleCallbacks {

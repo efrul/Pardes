@@ -1,11 +1,11 @@
 ---
 name: zayit-android
-description: Working on Pardes (פרדס), the Android app based on Zayit, formerly the unofficial Android port "זית לאנדרואיד" (the `androidApp/` folder of this repo, Android 13+ / minSdk 33), which mirrors the desktop app's screens and reuses SeforimLibrary. Covers building the APK, setting up the SDK and a headless emulator in a cloud container, installing and screenshotting the app, getting a library onto a device, desktop/Android comparisons, offline Lucene search on Android, the desktop→phone transfer script, Jelly Star and tablet layouts, and RTL/Compose pitfalls already solved once. Use it for any task touching androidApp, an APK, adb, an emulator, an Android screenshot, a phone or tablet layout, "make it look like desktop", or Android search, even when the request doesn't say "Android" outright (e.g. "תצלם את המסך", "תתקין על האמולטור", "למה החיפוש לא עובד בטלפון", "Jelly Star").
+description: Working on Pardes (פרדס), the Android app based on Zayit, formerly the unofficial Android port "זית לאנדרואיד" (the `androidApp/` folder of this repo, Android 11+ / minSdk 30), which mirrors the desktop app's screens and reuses SeforimLibrary. Covers building the APK, setting up the SDK and a headless emulator in a cloud container, installing and screenshotting the app, getting a library onto a device, desktop/Android comparisons, offline Lucene search on Android, the desktop→phone transfer script, Jelly Star and tablet layouts, and RTL/Compose pitfalls already solved once. Use it for any task touching androidApp, an APK, adb, an emulator, an Android screenshot, a phone or tablet layout, "make it look like desktop", or Android search, even when the request doesn't say "Android" outright (e.g. "תצלם את המסך", "תתקין על האמולטור", "למה החיפוש לא עובד בטלפון", "Jelly Star").
 ---
 
 # Pardes, the Android app based on Zayit
 
-`androidApp/` is a standalone Gradle build that ports desktop Zayit to Android 13+ as Pardes, an app of its own based on Zayit (minSdk 33 is the user's target; don't raise it).
+`androidApp/` is a standalone Gradle build that ports desktop Zayit to Android 11+ as Pardes, an app of its own based on Zayit (minSdk 30, lowered from 33 after 0.3.0; don't raise it). Android 12 and later must behave as they did with minSdk 33: calls newer than API 30 are guarded (Things that will bite you › API levels).
 - **Shared code:** SeforimLibrary `core` and `dao` (plus `htmlparser` and the desktop `.sq` files) are compiled in unchanged through `kotlin.srcDir`.
 - **UI:** a Jetpack Compose redraw of the desktop "Islands" layout, for phones from the 3" Unihertz Jelly Star up to tablets.
 - **Language:** the UI is Hebrew and RTL, with strings copied from desktop, except the name and the authorship texts (see Authorship and name).
@@ -181,7 +181,8 @@ The full list with fixes is in [references/pitfalls.md](references/pitfalls.md);
   - Status and navigation bar icon colours must follow the app theme (`WindowCompat.getInsetsController`).
   - Tablets with a taskbar need `windowInsetsPadding(navigationBars)`.
 - **Hebrew calendar:** use `JewishCalendar().apply { setGregorianDate(y, m0, d) }`. `JewishCalendar(Date)` uses the default timezone and shifted Shabbat/parasha.
-- **SQLite:** Android 13 ships SQLite 3.32: no FTS5, and row-returning PRAGMAs throw in `execute()`. That is why `PragmaSafeDriver` exists.
+- **API levels:** minSdk is 30, so a platform call newer than API 30 needs a `Build.VERSION.SDK_INT` check and a fallback that leaves 12+ as it was. Lint's NewApi misses some (it missed `InputStream.readNBytes(int)` and `RemoteViews(Map)`, probably because it cannot read Kotlin 2.4 metadata): look new calls up in `api-versions.xml`. Launcher widgets are off below Android 12. Emulator and differences: `androidApp/docs/DEVELOPMENT.md` › Android 11.
+- **SQLite:** Android 11 ships SQLite 3.28 (12 and 13: 3.32): no FTS5, at most 999 bound parameters per statement (bind id lists in chunks, as `LineConnections` does), and row-returning PRAGMAs throw in `execute()`. That is why `PragmaSafeDriver` exists.
 - **Release builds:** they are R8-minified. A missing keep rule shows up only in release, typically kotlinx-serialization `$$serializer`, ServiceLoader/SPI, or reflection. Check `proguard-rules.pro` when something works in debug but not in release.
 
 ## Delegating to agents
@@ -190,4 +191,4 @@ When fanning work out (Workflow or Agent tool), state these limits in each promp
 - **One emulator.** Only the orchestrator runs adb. Agents that need the device return instructions instead.
 - **One Gradle build of `:app` at a time.** Parallel builds in `androidApp/` corrupt each other's outputs. Agents type-check by building only their own subproject, or the orchestrator builds after integrating.
 - **Desktop code stays untouched.** All Android changes live under `androidApp/` (and this skill).
-- **Give agents the decisions already made** (Lucene approach, minSdk 33, desktop parity, and the name and authorship rule: the app is Pardes (פרדס), never Zayit/זית, based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; never desktop's "created by" texts, no porter name, and this repository linked only as Pardes's AGPL source) so they don't re-research them. The user notices and objects to repeated research.
+- **Give agents the decisions already made** (Lucene approach, minSdk 30 with guarded fallbacks that keep 12+ unchanged, desktop parity, and the name and authorship rule: the app is Pardes (פרדס), never Zayit/זית, based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; never desktop's "created by" texts, no porter name, and this repository linked only as Pardes's AGPL source) so they don't re-research them. The user notices and objects to repeated research.

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+: the launcher widgets are offered (values/appwidget_bools.xml). -->
+    <bool name="appwidget_enabled">true</bool>
+</resources>

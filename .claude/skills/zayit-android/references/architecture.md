@@ -90,7 +90,7 @@ Shared sources compiled through `srcDir` (not copied): `upstream/SeforimLibrary`
 - **Library.** `seforim.db` is ~8 GB on a full install. Index files sit next to it: `seforim.db.lucene/`, `seforim.db.lookup.lucene/`, `lexical.db`, `catalog.pb`, plus `release_info.txt` (the version check).
 - **Where it lives.** `LibraryStore.libraryDir` is `<external files>/library` or `<internal files>/library`, whichever already holds the DB. New installs go to external storage when it is mounted.
 - **Repository.** `SeforimRepository` from the desktop dao, on an Android SQLDelight driver wrapped by `PragmaSafeDriver`. Open it off the main thread.
-- **SQLite constraints.** SQLite 3.32 (API 33): no FTS5, no `RETURNING`, no newer JSON functions.
+- **SQLite constraints.** SQLite 3.28 on API 30 (3.32 on API 31–33): no FTS5, no `RETURNING`, no newer JSON functions, and at most 999 bound parameters per statement below 3.32.
 
 ## Conventions
 

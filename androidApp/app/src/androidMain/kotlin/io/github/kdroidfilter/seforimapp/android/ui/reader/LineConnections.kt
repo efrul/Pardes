@@ -153,7 +153,7 @@ class LineConnections(private val repository: SeforimRepository, private val cur
         const val MAX_CACHED = 512
         const val MAX_BASE_LINES = 128
 
-        // Bound parameters per query (SQLite on Android 13)
+        // Bound parameters per query: SQLite below 3.32 (Android 11 has 3.28) takes at most 999
         const val MAX_IDS_PER_QUERY = 400
     }
 }
