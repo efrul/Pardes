@@ -14,8 +14,20 @@ name: Android release
 # release only when its versionName is higher than the installed one. Keep the names, and raise versionName every time.
 
 # Runs only by hand, never on a push: Actions › Android release › Run workflow (on main, the default branch).
+# "prerelease" publishes a build for testers instead: a GitHub pre-release, not Latest, which installed apps never offer
+# as an update (AppReleases.kt skips pre-releases). The download site still offers the newest release, pre-releases
+# included, with a "גרסת ניסיון" chip.
 on:
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Pre-release for testers (installed apps do not offer it, not marked Latest)'
+        type: boolean
+        default: false
+      note:
+        description: 'Optional paragraph at the top of the release notes (e.g. what was tested)'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -191,8 +203,23 @@ jobs:
           APK: ${{ steps.name.outputs.apk }}
           SRC: ${{ steps.name.outputs.src }}
           SHA256: ${{ steps.name.outputs.sha256 }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          NOTE: ${{ inputs.note }}
         run: |
+          if [ "$PRERELEASE" = true ]; then
+            kind=--prerelease
+            title_suffix=", גרסת ניסיון"
+            pre="**גרסת ניסיון לבודקים.** פרדס המותקן לא מציע אותה כעדכון, והיא לא מסומנת כגרסה האחרונה. מתקינים אותה ידנית מהקבצים שלמטה."
+          else
+            kind=--latest
+            title_suffix=""
+            pre=""
+          fi
           cat > notes.md <<EOF
+          $pre
+
+          $NOTE
+
           פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.1 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
 
           ### מה חדש בגרסה $VERSION
@@ -201,7 +228,7 @@ jobs:
           כל הגרסאות ב[יומן השינויים]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/androidApp/CHANGELOG.md) ובאתר ההורדה, https://efrul.github.io/Pardes/#changelog
 
           ### התקנה
-          - דרוש Android 13 ומעלה.
+          - דרוש Android 8.0 ומעלה. עדכון מצטבר של הספרייה דורש Android 11 ומעלה, והווידג'טים למסך הבית של הטלפון Android 12 ומעלה.
           - מורידים את \`$APK\` מהקבצים שלמטה, פותחים אותו בטלפון ומאשרים התקנה מהמקור שממנו נפתח.
           - ה-APK חתום במפתח החתימה של פרדס, וכל גרסה מותקנת מעל הקודמת. טביעת האצבע (SHA-256) של התעודה: \`$RELEASE_CERT_SHA256\`.
           - מגרסה 0.3.0 פרדס מתעדכן מתוכו: בהפעלה הראשונה אחרי שיוצאת גרסה חדשה הוא מודיע עליה (בסרגל העליון ובהגדרות › כללי), ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת; הספרייה וההגדרות נשמרות.
@@ -209,7 +236,7 @@ jobs:
           ### הספרייה
           - בהפעלה הראשונה האפליקציה מורידה את ספריית הספרים שזית למחשב משתמש בה (כ-5.5 GB, ונדרשים כ-14.1 GB פנויים).
           - אפשר לשמור את הספרייה בכרטיס זיכרון: במדריך ההגדרה, כשיש כרטיס במכשיר, או אחר כך בהגדרות › ניהול נתונים › מיקום הספרייה.
-          - מחשב שזית למחשב מותקן בו יכול להעביר את הספרייה שלו לטלפון דרך adb, בלי הורדה ובלי root. ב-Windows מחלצים את \`push-desktop-library-windows.zip\` לתיקייה (לחיצה ימנית › חלץ הכול) ולוחצים פעמיים על \`push-desktop-library.cmd\` שבה; ב-Linux/macOS מריצים \`bash push-desktop-library.sh\`. שניהם מצורפים כאן ונמצאים גם ב-\`androidApp/tools\` שבקוד המקור. דרוש adb (Android SDK Platform-Tools של Google). להעתקה ישר לכרטיס הזיכרון: \`-SdCard\` ב-Windows (\`push-desktop-library.cmd -SdCard\` משורת הפקודה), \`--sdcard\` ב-Linux/macOS.
+          - מחשב שזית למחשב מותקן בו יכול להעביר את הספרייה שלו לטלפון דרך adb, בלי הורדה ובלי root (לא באנדרואיד 11, שם מתקינים מקובצי המאגר במכשיר). ב-Windows מחלצים את \`push-desktop-library-windows.zip\` לתיקייה (לחיצה ימנית › חלץ הכול) ולוחצים פעמיים על \`push-desktop-library.cmd\` שבה; ב-Linux/macOS מריצים \`bash push-desktop-library.sh\`. שניהם מצורפים כאן ונמצאים גם ב-\`androidApp/tools\` שבקוד המקור. דרוש adb (Android SDK Platform-Tools של Google). להעתקה ישר לכרטיס הזיכרון: \`-SdCard\` ב-Windows (\`push-desktop-library.cmd -SdCard\` משורת הפקודה), \`--sdcard\` ב-Linux/macOS.
           - בלי אינטרנט אפשר לעדכן את הספרייה מקבצים שהועברו למכשיר: הגדרות › ניהול נתונים › עדכון מקבצים.
 
           ---
@@ -221,7 +248,7 @@ jobs:
           gh release create "$TAG" "$APK" "$SRC" \
             push-desktop-library-windows.zip androidApp/tools/push-desktop-library.sh \
             --target "$GITHUB_SHA" \
-            --title "פרדס $VERSION (בנייה $GITHUB_RUN_NUMBER) – מבוסס על זית" \
+            --title "פרדס $VERSION (בנייה $GITHUB_RUN_NUMBER$title_suffix) – מבוסס על זית" \
             --notes-file notes.md \
-            --latest
+            "$kind"
           echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG): \`$APK\`" >> "$GITHUB_STEP_SUMMARY"
