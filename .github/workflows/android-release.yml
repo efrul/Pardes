@@ -15,7 +15,7 @@ name: Android release
 
 # Runs only by hand, never on a push: Actions › Android release › Run workflow (on main, the default branch).
 # "prerelease" publishes a build for testers instead: a GitHub pre-release, not Latest, which installed apps never offer
-# as an update (AppReleases.kt skips pre-releases), and the download site does not offer while a stable release exists
+# as an update (AppReleases.kt skips pre-releases), and the download site does not offer it while a stable release exists
 # (androidApp/site/index.html); testers take it from the releases page.
 on:
   workflow_dispatch:
