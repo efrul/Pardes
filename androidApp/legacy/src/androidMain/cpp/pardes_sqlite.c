@@ -209,7 +209,7 @@ static size_t normalize(const unsigned char *in, size_t n, unsigned char *out, i
   return o;
 }
 
-/* A normalized query, split into its words. */
+/* A normalized query: its words, or the whole of it as one (a phrase). */
 typedef struct {
   int count;
   char **words;
@@ -224,7 +224,7 @@ static void freeNeedle(void *p) {
   sqlite3_free(needle);
 }
 
-static Needle *makeNeedle(const unsigned char *query, int n) {
+static Needle *makeNeedle(const unsigned char *query, int n, int phrase) {
   Needle *needle = (Needle *) sqlite3_malloc(sizeof(Needle));
   char *s;
   int words = 0;
@@ -237,6 +237,11 @@ static Needle *makeNeedle(const unsigned char *query, int n) {
     return NULL;
   }
   normalize(query, (size_t) n, (unsigned char *) needle->text, 0);
+  if (phrase) {
+    needle->count = needle->text[0] ? 1 : 0;
+    needle->words[0] = needle->text;
+    return needle;
+  }
   for (s = needle->text; *s;) {
     char *space = strchr(s, ' ');
     needle->words[words++] = s;
@@ -249,8 +254,10 @@ static Needle *makeNeedle(const unsigned char *query, int n) {
 }
 
 /*
-** pardes_match(text, query): 1 when every word of query is found in text (a line's HTML), both in their search form;
-** a word may be part of a longer one (השמים is found for שמים). 0 otherwise.
+** pardes_match(text, query): 1 when query is found in text (a line's HTML), both in their search form: the words in
+** that order, whatever points, cantillation, punctuation or maqaf stand between or on them (קורין את שמע finds
+** "וְקוֹרִין אֶת שְׁמַע"). pardes_match_all(text, query): 1 when every word of query is in text, anywhere. Either way a
+** word may be part of a longer one (השמים is found for שמים). 0 otherwise.
 */
 static void matchFunc(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
   const unsigned char *text = sqlite3_value_text(argv[0]);
@@ -265,7 +272,7 @@ static void matchFunc(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
       sqlite3_result_int(ctx, 0);
       return;
     }
-    needle = makeNeedle(query, sqlite3_value_bytes(argv[1]));
+    needle = makeNeedle(query, sqlite3_value_bytes(argv[1]), sqlite3_user_data(ctx) != NULL);
     if (!needle) {
       sqlite3_result_error_nomem(ctx);
       return;
@@ -310,8 +317,11 @@ static jlong nOpen(JNIEnv *env, jclass cls, jstring path, jint flags) {
   }
   sqlite3_extended_result_codes(db, 1);
   sqlite3_busy_timeout(db, 5000);
-  sqlite3_create_function_v2(db, "pardes_match", 2, SQLITE_UTF8 | SQLITE_DETERMINISTIC, NULL, matchFunc, NULL, NULL,
-                             NULL);
+  /* The user data tells the two apart: a phrase, or all the words. */
+  sqlite3_create_function_v2(db, "pardes_match", 2, SQLITE_UTF8 | SQLITE_DETERMINISTIC, (void *) 1, matchFunc, NULL,
+                             NULL, NULL);
+  sqlite3_create_function_v2(db, "pardes_match_all", 2, SQLITE_UTF8 | SQLITE_DETERMINISTIC, NULL, matchFunc, NULL,
+                             NULL, NULL);
   return (jlong) (intptr_t) db;
 }
 
