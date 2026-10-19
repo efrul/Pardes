@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pardes for Android 4.4 to 7.1: the main app's id and library folder, its own screens (README.md). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:installLocation="auto">
+
+    <!-- Kermit 2.1 declares API 23 for its Android logger, which only calls android.util.Log (checked: the release
+         dex has no reference above API 19 outside guarded code, README.md). -->
+    <uses-sdk tools:overrideLibrary="co.touchlab.kermit,co.touchlab.kermit.core" />
+
+    <application
+        android:name=".PardesApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Pardes">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- The desktop's passage links (copy link), as the main app opens them. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="zayit" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ui.BookActivity" />
+        <activity android:name=".ui.TocActivity" />
+        <activity
+            android:name=".ui.SearchActivity"
+            android:windowSoftInputMode="stateVisible|adjustResize" />
+        <activity android:name=".ui.SettingsActivity" />
+        <activity android:name=".ui.TextActivity" />
+    </application>
+</manifest>

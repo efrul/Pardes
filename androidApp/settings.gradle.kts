@@ -41,3 +41,5 @@ dependencyResolutionManagement {
 include(":app")
 // lucene-core patched to link on Android 8.0 (API 26); see lucene-android/build.gradle.kts.
 include(":lucene-android")
+// Pardes for Android 4.4 to 7.1 (minSdk 19): its own Views UI and SQLite, over the same SeforimLibrary; see legacy/README.md.
+include(":legacy")

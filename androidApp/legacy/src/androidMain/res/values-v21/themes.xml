@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 5.0 to 7.1: Material, with the title bar's olive under the status bar. -->
+<resources>
+    <style name="Theme.Pardes" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ground_light</item>
+        <item name="android:colorBackground">@color/ground_light</item>
+        <item name="android:colorPrimary">@color/pardes_olive_dark</item>
+        <item name="android:colorPrimaryDark">@color/pardes_olive_dark</item>
+        <item name="android:colorAccent">@color/pardes_gold</item>
+        <item name="android:statusBarColor">@color/pardes_olive_dark</item>
+    </style>
+
+    <style name="Theme.Pardes.Dark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ground_dark</item>
+        <item name="android:colorBackground">@color/ground_dark</item>
+        <item name="android:colorPrimary">@color/pardes_olive_dark</item>
+        <item name="android:colorPrimaryDark">@color/pardes_olive_dark</item>
+        <item name="android:colorAccent">@color/pardes_gold</item>
+        <item name="android:statusBarColor">@color/pardes_olive_dark</item>
+    </style>
+</resources>

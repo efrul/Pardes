@@ -1,0 +1,267 @@
+import java.net.URI
+import java.security.MessageDigest
+import java.util.zip.ZipInputStream
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+plugins {
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.sqlDelight)
+}
+
+// Pardes for Android 4.4 to 7.1 (README.md here). The main app (:app) needs Android 8.0: Jetpack Compose needs 6.0,
+// Lucene 8.0. This edition draws its screens with Android's own views and reads the same library through the same
+// desktop dao (SeforimLibrary core and dao, compiled in unchanged as :app does), on a SQLite of its own
+// (src/main/cpp): Android 4.4's SQLite 3.7.11 cannot read the library's schema.
+val seforimLibrary = rootDir.resolve("upstream/SeforimLibrary")
+val mainApp = rootDir.resolve("app/src/androidMain")
+
+// ------------------------------------------------------------------ SQLite (libpardes_sqlite.so)
+
+// The amalgamation of the SQLite release that requery 3.49 (the main app's bundled SQLite) is built from, its last
+// patch release. Downloaded from sqlite.org once and checked against this digest.
+val sqliteRelease = "3490200"
+val sqliteYear = "2025"
+val sqliteSha256 = "921fc725517a694df7df38a2a3dfede6684024b5788d9de464187c612afb5918"
+val sqliteDir = layout.buildDirectory.dir("sqlite/sqlite-amalgamation-$sqliteRelease")
+
+abstract class SqliteAmalgamation : DefaultTask() {
+    @get:Input abstract val url: Property<String>
+
+    @get:Input abstract val sha256: Property<String>
+
+    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun fetch() {
+        val bytes = URI(url.get()).toURL().openStream().use { it.readBytes() }
+        val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+        check(digest == sha256.get()) { "${url.get()}: sha256 $digest, expected ${sha256.get()}" }
+        val dir = outputDir.get().asFile
+        dir.deleteRecursively()
+        dir.mkdirs()
+        ZipInputStream(bytes.inputStream()).use { zip ->
+            generateSequence { zip.nextEntry }.filter { !it.isDirectory }.forEach { entry ->
+                val name = entry.name.substringAfterLast('/')
+                if (name == "sqlite3.c" || name == "sqlite3.h" || name == "sqlite3ext.h") dir.resolve(name).writeBytes(zip.readBytes())
+            }
+        }
+        check(dir.resolve("sqlite3.c").isFile) { "sqlite3.c is not in ${url.get()}" }
+    }
+}
+
+val sqliteAmalgamation by tasks.registering(SqliteAmalgamation::class) {
+    url.set("https://www.sqlite.org/$sqliteYear/sqlite-amalgamation-$sqliteRelease.zip")
+    sha256.set(sqliteSha256)
+    outputDir.set(sqliteDir)
+}
+
+// ------------------------------------------------------------------ what this edition shares with the main app
+
+// Desktop's commentator grouping and line connections as the main app ported them, and its terms text (pure Kotlin, no
+// Compose), copied in at build time rather than kept twice.
+val sharedAppSources by tasks.registering(Sync::class) {
+    from(mainApp.resolve("kotlin")) {
+        include("io/github/kdroidfilter/seforimapp/android/data/CommentatorGrouping.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/reader/LineConnections.kt")
+        // CONDITIONS_MARKDOWN (desktop's CONDITIONS.md under Pardes's name), shown by Settings › תנאים.
+        include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/LicenceText.kt")
+    }
+    into(layout.buildDirectory.dir("generated/sharedAppSources"))
+}
+
+/**
+ * The fonts and licence texts this edition takes from the main app (assets/fonts, assets/licenses), and the repository
+ * LICENSE (AGPL-3.0 with Zayit's §7b terms), word for word, as the main app copies it.
+ */
+abstract class LegacyAssets : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val fontDir: DirectoryProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val licenceDir: DirectoryProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val appLicence: RegularFileProperty
+
+    @get:Input abstract val fonts: ListProperty<String>
+
+    @get:Input abstract val licences: ListProperty<String>
+
+    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val out = outputDir.get().asFile
+        out.deleteRecursively()
+        val fontsOut = out.resolve("fonts").apply { mkdirs() }
+        fonts.get().forEach { fontDir.get().asFile.resolve(it).copyTo(fontsOut.resolve(it)) }
+        val licencesOut = out.resolve("licenses").apply { mkdirs() }
+        licences.get().forEach { licenceDir.get().asFile.resolve(it).copyTo(licencesOut.resolve(it)) }
+        appLicence.get().asFile.copyTo(licencesOut.resolve("Pardes-LICENSE.txt"))
+    }
+}
+
+// ------------------------------------------------------------------ the app
+
+android {
+    namespace = "io.github.kdroidfilter.seforimapp.legacy"
+    compileSdk = 36
+
+    defaultConfig {
+        // The main app's id: the same library folder (Android/data/io.github.efrul.pardes/files/library), so the
+        // transfer scripts, Zayit Subset and a library copied by hand reach this edition too. The main app needs
+        // Android 8.0, so a phone has one or the other.
+        applicationId = "io.github.efrul.pardes"
+        minSdk = 19
+        targetSdk = 36
+        // Below the main app's (4 at 0.4.0): where both could install (Android 8.0 and later), the main app installs
+        // over this edition and never the other way round.
+        versionCode = 1
+        versionName = "0.1.0"
+        multiDexEnabled = true
+
+        externalNativeBuild {
+            cmake {
+                arguments += listOf(
+                    "-DSQLITE_DIR=${sqliteDir.get().asFile.absolutePath}",
+                    "-DMULTIPLEX_DIR=${mainApp.resolve("cpp").absolutePath}",
+                )
+            }
+        }
+        ndk {
+            // The ABIs of phones with Android 4.4 to 7.1; the 64-bit ones start at Android 5.0.
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+    }
+
+    // NDK r25 is the last that builds for API 19 (r26 starts at 21). The main app's own NDK is newer (27).
+    ndkVersion = "25.2.9519653"
+    externalNativeBuild {
+        cmake {
+            path = file("src/androidMain/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        // java.util's Java 8 methods that the shared Kotlin code calls (Map.forEach, getOrDefault, removeIf...) are
+        // only in Android 7.0's library: below it they come from the desugared library.
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    signingConfigs {
+        // The project's debug key (androidApp/debug.keystore), as :app: a build from any machine installs over another.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+        val releaseStore = System.getenv("PARDES_KEYSTORE")?.let { file(it) }?.takeIf { it.isFile }
+        if (releaseStore != null) {
+            create("release") {
+                storeFile = releaseStore
+                storePassword = System.getenv("PARDES_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("PARDES_KEY_ALIAS")
+                keyPassword = System.getenv("PARDES_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+        }
+    }
+
+    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
+    sourceSets["main"].res.srcDirs("src/androidMain/res")
+
+    lint {
+        // lint.xml: NewApi is not checked in the shared desktop sources, which hold code this edition never calls
+        // (catalog.pb read through java.nio.file); the release dex is checked for calls above API 19 instead (README.md).
+        lintConfig = file("lint.xml")
+    }
+}
+
+
+kotlin {
+    androidTarget {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+
+    sourceSets {
+        commonMain {
+            kotlin.srcDir(seforimLibrary.resolve("core/src/commonMain/kotlin"))
+            kotlin.srcDir(seforimLibrary.resolve("dao/src/commonMain/kotlin"))
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.serialization.protobuf)
+                implementation(libs.kermit)
+                implementation(libs.sqlDelight.runtime)
+            }
+        }
+        androidMain {
+            kotlin.srcDir(seforimLibrary.resolve("dao/src/androidMain/kotlin"))
+            kotlin.srcDir(sharedAppSources)
+            dependencies {
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.androidx.multidex)
+            }
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith("configureCMake") || it.name.startsWith("buildCMake") }.configureEach {
+    dependsOn(sqliteAmalgamation)
+}
+
+androidComponents {
+    onVariants { variant ->
+        val assets = tasks.register<LegacyAssets>("${variant.name}LegacyAssets") {
+            fontDir.set(mainApp.resolve("res/font"))
+            licenceDir.set(mainApp.resolve("assets/licenses"))
+            appLicence.set(rootDir.resolve("../LICENSE"))
+            // The main app's default book and commentary fonts, and a cantillation font for the targum.
+            fonts.set(listOf("notoserifhebrew.ttf", "frankruhllibre.ttf", "taameyfrankclm_medium.ttf"))
+            licences.set(
+                listOf(
+                    "Apache-2.0.txt",
+                    "OFL-Noto-Hebrew.txt",
+                    "OFL-Frank-Ruhl-Libre.txt",
+                    "GPL-2.0.txt",
+                    "Culmus-LICENSE.txt",
+                    "Fonts-NOTICE.txt",
+                ),
+            )
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(assets, LegacyAssets::outputDir)
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+}
+
+sqldelight {
+    databases {
+        create("SeforimDb") {
+            packageName.set("io.github.kdroidfilter.seforimlibrary.db")
+            dialect("app.cash.sqldelight:sqlite-3-24-dialect:${libs.versions.sqlDelight.get()}")
+            srcDirs.setFrom(seforimLibrary.resolve("dao/src/commonMain/sqldelight"))
+        }
+    }
+}
