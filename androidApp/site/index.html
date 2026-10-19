@@ -944,9 +944,10 @@ footer p { max-width: 52rem; }
   var logReady = false;
 
   // The releases as the GitHub API lists them, newest first (releases.json keeps that shape): the newest with an APK
-  // is offered, and every APK's downloads are counted.
+  // is offered, and every APK's downloads are counted. A pre-release is a build for testers, on the releases page: it
+  // is offered only when there is no other release, and does not mark its version released.
   function show(list, asOf) {
-    var latest = null, total = 0, released = {};
+    var latest = null, newestPre = null, total = 0, released = {};
     for (var i = 0; i < list.length; i++) {
       var r = list[i];
       if (r.draft) continue;
@@ -954,9 +955,14 @@ footer p { max-width: 52rem; }
       if (!apks.length) continue;
       for (var j = 0; j < apks.length; j++) total += apks[j].download_count || 0;
       var v = versionOf(r.tag_name);
+      if (r.prerelease) {
+        if (!newestPre) newestPre = { rel: r, apk: apks[0], version: v };
+        continue;
+      }
       if (v) released[v] = r.published_at || r.created_at; // newest first: the last one seen is the first build
       if (!latest) latest = { rel: r, apk: apks[0], version: v };
     }
+    latest = latest || newestPre;
     if (!latest) { fallback('עדיין לא יצאה גרסה להורדה. הכפתור מוביל לעמוד הגרסאות.'); return; }
     var rel = latest.rel, apk = latest.apk, ver = latest.version;
     $('dl-btn').href = apk.browser_download_url;
