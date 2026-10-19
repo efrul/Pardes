@@ -51,6 +51,11 @@ zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
 requery-sqlite = { module = "com.github.requery:sqlite-android", version = "3.49.0" }
 # Android's SQLite behind SQLDelight's driver (its runtime dependency, at the version it brings), named for LibraryStore.
 androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version = "2.6.2" }
+# The Android 4.4 edition (legacy/): SQLDelight's runtime alone (its own driver over its own SQLite), legacy multidex,
+# and the desugared Java 8+ library for what the shared Kotlin code calls from java.util on API 19.
+sqlDelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqlDelight" }
+androidx-multidex = { module = "androidx.multidex:multidex", version = "2.0.1" }
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version = "2.1.5" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 
 [plugins]

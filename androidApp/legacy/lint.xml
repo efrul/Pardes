@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- SeforimLibrary core and dao (upstream/) are compiled in unchanged and hold calls this edition never makes
+         (CatalogLoader reads catalog.pb through java.nio.file, API 26). The release dex is checked for references
+         above API 19 instead (README.md). -->
+    <issue id="NewApi">
+        <ignore path="**/upstream/SeforimLibrary/**" />
+    </issue>
+</lint>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 4.4: Holo, without its action bar (the screens draw their own olive title bar, ui/Ui.kt). -->
+<resources>
+    <style name="Theme.Pardes" parent="android:Theme.Holo.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ground_light</item>
+        <item name="android:colorBackground">@color/ground_light</item>
+    </style>
+
+    <style name="Theme.Pardes.Dark" parent="android:Theme.Holo.NoActionBar">
+        <item name="android:windowBackground">@color/ground_dark</item>
+        <item name="android:colorBackground">@color/ground_dark</item>
+    </style>
+
+    <color name="ground_light">#F2F3F5</color>
+    <color name="ground_dark">#1E1F22</color>
+    <color name="pardes_olive_dark">#1C2410</color>
+    <color name="pardes_gold">#BE9117</color>
+</resources>
