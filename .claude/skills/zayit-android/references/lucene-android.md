@@ -56,7 +56,7 @@ These gaps were found with R8 TraceReferences against the API-33 `android.jar` (
 - the `Arrays` range overloads (`mismatch`, `compare`, `compareUnsigned`, `equals` on byte/char/int/long ranges): BytesRef, StringHelper, the blocktree term seek (SegmentTermsEnum), FST outputs, LZ4, BKD;
 - `VarHandle` and `MethodHandles.byteArrayViewVarHandle`: BitUtil's `VH_*` byte views, behind every little-endian read and write (96 call sites);
 - `Collection.toArray(IntFunction)` (75 sites), `AtomicInteger.getOpaque` (BaseCompositeReader), `Math.fma`, `ByteArrayOutputStream.toString(Charset)` and `new PrintStream(OutputStream, boolean, Charset)` (CheckIndex, blocktree Stats).
-- Java 9-11 methods that AGP's D8 backports at minSdk 30 (`List/Set/Map.copyOf`, `String.isBlank`, `Math.multiplyExact(long,int)`, `Predicate.not`) need nothing; the gate proves it with that D8.
+- Java 9-11 methods that AGP's D8 backports at minSdk 30 (`List/Set/Map.copyOf`, `String.isBlank`, `Math.multiplyExact(long,int)`, `Predicate.not`) need nothing; the gate proves it with that D8. The backport has no SDK_INT check: D8 rewrites those call sites for every level, so Android 12 and 13 run D8's code too (for `copyOf`, an unmodifiable copy, not the platform's immutable collection). The results are the same for what Lucene passes. Only reflection could reach the platform method on 31+, on hot paths (every `IOContext`), so this one deviation from "13+ as before" is accepted.
 
 ## The patched jar: `androidApp/lucene-android`
 
