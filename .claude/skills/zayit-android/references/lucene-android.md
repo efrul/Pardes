@@ -68,6 +68,7 @@ This is a Gradle `java-library` subproject of the Android build (JDK 21+ to buil
    - `TestSecrets`: setters (run from IndexWriter/SegmentReader static init, also on the read path) keep only the set-once check; getters always refuse.
    - `AnalysisSPILoader`: reads `META-INF/services` itself (`ServiceLoader.stream()` is API 35+).
    - `FSDirectory`: `open()` always returns `NIOFSDirectory`.
+   - `AttributeFactory`: below API 30 (`AndroidCompat.API_30`) the attributes come from the reflected no-arg constructor. The ART of Android 8 and 9 builds a constructor MethodHandle's instance from the type `asType` gave it, so `findConstructor(...).asType(AttributeImpl)` tried the abstract `AttributeImpl` and every search failed (`UndeclaredThrowableException` / `InstantiationException: Can't instantiate abstract class`, on the API 26 and 28 emulators; 10 not checked, so it takes the same path). No gate sees it: only a search on the device. It also uses `CompatClassValue` itself (the rewriter does not touch replaced classes).
    - New helpers: `AndroidCompat` (static stand-ins), `CompatClassValue` (ConcurrentHashMap), `CompatHexFormat`, `CompatRuntimeVersion`, `CompatVarHandle` (byte-array views), `AndroidCompatApi33` (the API 33 JDK calls, one per method).
 2. **ASM rewrites** of the copied classes:
    - type swaps: `ClassValue` -> `CompatClassValue` (AttributeSource, AttributeFactory, VirtualMethod), `HexFormat` -> `CompatHexFormat` (StringHelper), `Runtime.Version`/`Runtime.version()` -> `CompatRuntimeVersion` (IndexWriter diagnostics);
@@ -139,6 +140,7 @@ When search works in debug but not in release, suspect these rules first; an SPI
 |---|---|
 | `NoClassDefFoundError: java.lang.ClassValue` | the unpatched lucene-core got onto the classpath (check `./gradlew :app:dependencies`) |
 | `NoSuchMethodError: HashMap.newHashMap` / `Stream.toList`, or `Arrays.mismatch` / `VarHandle` on Android 8-12 only | a call site the rewriter missed: rerun `check-min-api.sh` |
+| "החיפוש נכשל" with `UndeclaredThrowableException` / `InstantiationException: Can't instantiate abstract class` on Android 8-10 | `AttributeFactory`'s constructor handles: the replaced class must be in the jar (`unzip -l` it) and `AndroidCompat.API_30` false there |
 | `UnsupportedOperationException` / `java.lang.foreign` | something used `FSDirectory.open` or `MMapDirectory`: use `NIOFSDirectory` |
 | SPI "does not exist" only in release | R8 stripped a codec: keep rules |
 | No results but no crash | index folder not found next to the DB (check `LibraryStore` paths, permissions after `adb push`: directories need `chmod 777`/files `666` when pushed as shell) |
