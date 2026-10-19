@@ -5,7 +5,7 @@ description: Working on Pardes (פרדס), the Android app based on Zayit, forme
 
 # Pardes, the Android app based on Zayit
 
-`androidApp/` is a standalone Gradle build that ports desktop Zayit to Android 8.0+ as Pardes, an app of its own based on Zayit (minSdk 26, lowered from 33 after 0.3.0, to 30 and then 26 on 2026-10-18; don't raise it). Android 11 and later must behave as they did with minSdk 30, and Android 12 and later as with minSdk 33: calls newer than API 26 are guarded (Things that will bite you › API levels).
+`androidApp/` is a standalone Gradle build that ports desktop Zayit to Android 8.0+ as Pardes, an app of its own based on Zayit (minSdk 26, 33 up to 0.3.1, lowered to 30 and then 26 on 2026-10-18; don't raise it). Android 11 and later must behave as they did with minSdk 30, and Android 12 and later as with minSdk 33: calls newer than API 26 are guarded (Things that will bite you › API levels).
 - **Shared code:** SeforimLibrary `core` and `dao` (plus `htmlparser` and the desktop `.sq` files) are compiled in unchanged through `kotlin.srcDir`.
 - **UI:** a Jetpack Compose redraw of the desktop "Islands" layout, for phones from the 3" Unihertz Jelly Star up to tablets.
 - **Language:** the UI is Hebrew and RTL, with strings copied from desktop, except the name and the authorship texts (see Authorship and name).
