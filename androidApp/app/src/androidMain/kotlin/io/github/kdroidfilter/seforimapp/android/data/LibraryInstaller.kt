@@ -770,7 +770,7 @@ class LibraryInstaller private constructor(private val context: Context) {
         return if (hasTables) null else InstallError.Incompatible
     }
 
-    /** Android's SQLite, or the bundled one for a database in chunks ([SplitDatabase.openReader]). */
+    /** Android's SQLite, or the bundled one for a database in chunks and below Android 9 ([SplitDatabase.openReader]). */
     private fun openForCheck(db: File): SplitDatabase.LibraryReader = try {
         SplitDatabase.openReader(db)
     } catch (e: Exception) {

@@ -12,6 +12,7 @@ import android.content.pm.PackageInstaller
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.IBinder
+import androidx.core.app.ServiceCompat
 import androidx.core.content.IntentCompat
 import io.github.kdroidfilter.seforimapp.android.showForegroundImmediately
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +47,7 @@ class AppUpdateService : Service() {
         }
         AppUpdateNotifications.ensureChannel(this)
         val started = runCatching {
-            startForeground(AppUpdateNotifications.PROGRESS_ID, progressNotification(updater.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            ServiceCompat.startForeground(this, AppUpdateNotifications.PROGRESS_ID, progressNotification(updater.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         }.isSuccess
         if (!started) {
             stopSelf()

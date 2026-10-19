@@ -4,6 +4,7 @@ import android.database.AbstractWindowedCursor
 import android.database.Cursor
 import android.database.CursorWindow
 import android.database.sqlite.SQLiteDatabase
+import android.os.Build
 import java.io.File
 
 /**
@@ -17,9 +18,14 @@ import java.io.File
  */
 internal const val WIDE_WINDOW_BYTES = 16L * 1024 * 1024
 
-/** [SQLiteDatabase.rawQuery] with a [WIDE_WINDOW_BYTES] window. */
+/**
+ * [SQLiteDatabase.rawQuery] with a [WIDE_WINDOW_BYTES] window. CursorWindow(String, long) is API 28; the delta code runs
+ * from Android 11 only (DbDeltaUpdateService.deltaRefusal), so below 28 the cursor keeps its window and nothing else.
+ */
 internal fun SQLiteDatabase.queryWide(sql: String, args: Array<String>? = null): Cursor =
-    rawQuery(sql, args).also { cursor -> (cursor as? AbstractWindowedCursor)?.window = CursorWindow("zayit-delta", WIDE_WINDOW_BYTES) }
+    rawQuery(sql, args).also { cursor ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) (cursor as? AbstractWindowedCursor)?.window = CursorWindow("zayit-delta", WIDE_WINDOW_BYTES)
+    }
 
 /**
  * The library database, opened on its own connection (the app's repository keeps its own). Read-write even to read:

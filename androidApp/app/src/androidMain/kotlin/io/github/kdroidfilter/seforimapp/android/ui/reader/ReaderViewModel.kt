@@ -578,7 +578,7 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         }
         val distinct = type != ConnectionType.COMMENTARY && ids.size > 1
         return runCatching {
-            // A whole section (a heading's targum and sources) can pass the 999 bound parameters of Android 11's SQLite
+            // A whole section (a heading's targum and sources) can pass the 999 bound parameters of SQLite below 3.32
             SqlVariableLimit.linksPage(ids, type, distinct, offset, limit) { lineIds, o, l ->
                 repository.getCommentariesForLineRange(
                     lineIds = lineIds,

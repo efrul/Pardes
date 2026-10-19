@@ -10,13 +10,13 @@ import kotlin.math.min
  * Id lists bound into one `IN ?` kept within the bound-parameter limit of the SQLite that runs the statement.
  *
  * SQLite before 3.32 binds at most 999 parameters per statement (SQLITE_MAX_VARIABLE_NUMBER), 3.32 and later 32766, and
- * Android keeps that default: Android 11's own SQLite is 3.28, Android 12 and later have 3.32 or newer. A longer list
+ * Android keeps that default: Android 8.0 to 11 have 3.18 to 3.28, Android 12 and later 3.32 or newer. A longer list
  * fails with "too many SQL variables", which the readers' runCatching turned into an empty pane or an empty passage.
  * Every parameter of the statement counts, not only the list: the other IN lists, LIMIT and OFFSET.
  *
  * On Android 12 and later nothing here splits a list: each caller runs its query once, as before. A library split on a
- * FAT32 card is read by requery's SQLite 3.49 on any version; on Android 11 its lists are split too, which costs a few
- * statements more and gives the same rows.
+ * FAT32 card, and every library below Android 9, is read by requery's SQLite 3.49; below Android 12 its lists are split
+ * too, which costs a few statements more and gives the same rows.
  */
 object SqlVariableLimit {
     /** SQLITE_MAX_VARIABLE_NUMBER before SQLite 3.32. */
@@ -40,8 +40,9 @@ object SqlVariableLimit {
 
     /**
      * One page of SeforimRepository.getCommentariesForLineRange for one target book and one connection type (the
-     * reader's panes), [read] running it on part of [lineIds] from its first row: on Android 11 a section of a thousand
-     * lines and more, which the Targum and Sources panes take whole for a heading, needs more than one statement.
+     * reader's panes), [read] running it on part of [lineIds] from its first row: below Android 12 a section of a
+     * thousand lines and more, which the Targum and Sources panes take whole for a heading, needs more than one
+     * statement.
      *
      * The page is the one a single statement gives. Every query takes one book and the lines of one book, so its ORDER
      * BY comes down to the line index of the line shown ([CommentaryWithText.link]'s targetLineIndex):

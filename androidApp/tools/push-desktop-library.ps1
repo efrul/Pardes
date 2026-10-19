@@ -137,6 +137,15 @@ if (-not $Serial) {
 }
 Say "מכשיר: $Serial" "device: $Serial"
 if ((Ask "package:/data/app/$Pkg/base.apk" @('shell', 'pm', 'path', $Pkg)) -notmatch '^package:') { Die 'פרדס אינו מותקן במכשיר' "Pardes ($Pkg) is not installed on the device" }
+# The phone's Android version: below 11 its shared storage takes no chmod (see the copy below).
+$Sdk = 30
+if ((Ask '30' @('shell', 'getprop', 'ro.build.version.sdk')).Trim() -match '^\d+$') { $Sdk = [int]$Matches[0] }
+# Adds up the numbers an Ask returned (the phone's file sizes): stock Android 8.x has no awk to do it there.
+function SumOf([string]$out) {
+    [long]$sum = 0
+    foreach ($n in ("$out" -split '\s+')) { if ($n -match '^\d+$') { $sum += [long]$n } }
+    return $sum
+}
 
 # --- the memory card (-SdCard): its app folder, and its filesystem (FAT32 takes no file of 4 GB)
 $PhoneFiles = $Files
@@ -157,7 +166,11 @@ if ($SdCard -or $CardUuid) {
     if ($vols -notcontains $CardUuid) { Die "הכרטיס $CardUuid אינו מחובר" "card $CardUuid is not mounted" }
     $Files = "/storage/$CardUuid/Android/data/$Pkg/files"
     $Lib = "$Files/library"
-    $Fs = (Ask 'vfat' @('shell', "awk -v m=/mnt/media_rw/$CardUuid '`$2 == m { print `$3 }' /proc/mounts")).Trim()
+    # Read here, not on the phone: stock Android 8.x has no awk.
+    foreach ($m in ((Ask "/dev/block/vold/public:179,1 /mnt/media_rw/$CardUuid vfat rw 0 0" @('shell', 'cat', '/proc/mounts')) -split "`n")) {
+        $f = $m.Trim() -split '\s+'
+        if ($f.Count -ge 3 -and $f[1] -eq "/mnt/media_rw/$CardUuid") { $Fs = $f[2]; break }
+    }
     Say "כרטיס זיכרון: $CardUuid ($Fs)" "memory card: $CardUuid ($Fs)"
 }
 $SplitDb = ($SdCard -or $CardUuid) -and ($Split -or ($Fs -eq 'vfat' -and (Get-Item -LiteralPath $Db).Length -gt 4294967295))
@@ -204,8 +217,7 @@ function ClearItem($i) {
 
 # Bytes in a file or folder on the phone.
 function RemoteBytes([string]$path, [long]$fake) {
-    $out = Ask "$fake" @('shell', "find '$path' -type f -exec stat -c %s {} + 2>/dev/null | awk '{ s += `$1 } END { print s + 0 }'")
-    return [long]("$out".Trim())
+    return SumOf (Ask "$fake" @('shell', "find '$path' -type f -exec stat -c %s {} + 2>/dev/null; true"))
 }
 
 # Writes $length bytes of $src from $offset to $dst (adb push takes whole files).
@@ -294,8 +306,7 @@ try {
             }
         } elseif ($i -eq 'seforim.db' -and $SplitDb) {
             if (-not (SendPieces $local "$Lib/$Incoming$i" $true)) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
-            $sizes = Ask "$want" @('shell', "cd $Lib && stat -c %s $Incoming$i $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null | awk '{ s += `$1 } END { print s + 0 }'")
-            $got = [long]("$sizes".Trim())
+            $got = SumOf (Ask "$want" @('shell', "cd $Lib && stat -c %s $Incoming$i $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true"))
             if ($got -ne $want) { Die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again" }
             # The overflow chunks first, the first chunk (seforim.db) last: the app sees a library only once it is all there.
             $fix = "cd $Lib && for c in $($Incoming)seforim.db[0-9][0-9][0-9]; do [ -e `$c ] && mv `$c `${c#$Incoming}; done; mv $Incoming$i $i"
@@ -306,9 +317,12 @@ try {
         } elseif (-not (SendFile $local "$Lib/$Incoming$i")) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
         if ((RemoteBytes "$Lib/$Incoming$i" $want) -ne $want) { Die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again" }
         # Files 666 / folders 777: the app is not their owner but must read, write (SQLite WAL) and later delete them. On
-        # a card the filesystem has no such permissions, and the app owns its folder there.
-        $fix = if ($SdCard -or $CardUuid) { "cd $Lib && mv $Incoming$i $i" } else { "cd $Lib && mv $Incoming$i $i && find $i -type d -exec chmod 777 {} + && find $i -type f -exec chmod 666 {} +" }
+        # a card the filesystem has no such permissions, and the app owns its folder there. Below Android 11 the phone's
+        # shared storage (sdcardfs) refuses chmod and needs none, giving the app its folder's files whoever wrote them:
+        # tried only.
+        $fix = if ($SdCard -or $CardUuid -or $Sdk -lt 30) { "cd $Lib && mv $Incoming$i $i" } else { "cd $Lib && mv $Incoming$i $i && find $i -type d -exec chmod 777 {} + && find $i -type f -exec chmod 666 {} +" }
         if (-not (Run @('shell', $fix))) { Die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder" }
+        if (-not ($SdCard -or $CardUuid) -and $Sdk -lt 30) { $null = Run @('shell', "cd $Lib && { find $i -type d -exec chmod 777 {} +; find $i -type f -exec chmod 666 {} +; } 2>/dev/null; true") }
     }
     if ($SdCard -or $CardUuid) {
         # One library: the app would keep using the one it chose before, in the phone's storage.
@@ -326,7 +340,9 @@ try {
         $import = "$PhoneFiles/import"
         $null = Run @('shell', "mkdir -p $import; chmod 777 $import 2>/dev/null; rm -f $import/user_settings.db*")
         if (-not (SendFile $NotesDb "$import/user_settings.db$Part")) { Die 'ההעתקה של ההערות נכשלה' 'copying the notes failed' }
-        if (-not (Run @('shell', "cd $import && mv user_settings.db$Part user_settings.db && chmod 666 user_settings.db"))) { Die 'לא ניתן להעביר את ההערות לתיקיית היישום' "could not move the notes into the app's folder" }
+        $move = if ($Sdk -lt 30) { "cd $import && mv user_settings.db$Part user_settings.db" } else { "cd $import && mv user_settings.db$Part user_settings.db && chmod 666 user_settings.db" }
+        if (-not (Run @('shell', $move))) { Die 'לא ניתן להעביר את ההערות לתיקיית היישום' "could not move the notes into the app's folder" }
+        if ($Sdk -lt 30) { $null = Run @('shell', "chmod 666 $import/user_settings.db 2>/dev/null; true") }
     }
 } finally {
     # Also on Ctrl+C, which skips Die: adbd stops the phone's shell with the adb client, before its own `rm -f`.

@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.data
 
+import android.os.Build
 import androidx.compose.runtime.Stable
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.db.Visit_history
@@ -40,6 +41,7 @@ enum class VisitKind { BOOK, SEARCH }
  */
 class HistoryStore(database: UserSettingsDb) {
     private val queries = database.visitHistoryQueries
+    private val legacyQueries = database.upsertLegacyQueries
 
     private val _revision = MutableStateFlow(0L)
     val revision: StateFlow<Long> = _revision.asStateFlow()
@@ -56,7 +58,7 @@ class HistoryStore(database: UserSettingsDb) {
         lineId: Long? = null,
     ): Unit = withContext(Dispatchers.IO) {
         if (title.isBlank()) return@withContext
-        queries.upsertVisit(
+        upsertVisit(
             key = if (tocEntryId != null) "book:$bookId:$tocEntryId" else "book:$bookId",
             kind = KIND_BOOK,
             bookId = bookId,
@@ -86,7 +88,7 @@ class HistoryStore(database: UserSettingsDb) {
     ): Unit = withContext(Dispatchers.IO) {
         val q = query.trim()
         if (q.isBlank()) return@withContext
-        queries.upsertVisit(
+        upsertVisit(
             key = searchKey(q, scope, globalExtended),
             kind = KIND_SEARCH,
             bookId = null,
@@ -105,6 +107,57 @@ class HistoryStore(database: UserSettingsDb) {
             searchExtended = globalExtended,
         )
         _revision.update { it + 1 }
+    }
+
+    /**
+     * Desktop's upsertVisit. UPSERT needs SQLite 3.24: Android 8-10 (3.18 to 3.22) make the same write in two statements
+     * (UpsertLegacy.sq).
+     */
+    private fun upsertVisit(
+        key: String,
+        kind: String,
+        bookId: Long?,
+        searchQuery: String?,
+        title: String,
+        visitedAt: Long,
+        tocEntryId: Long?,
+        lineId: Long?,
+        searchCategoryId: Long?,
+        searchBookId: Long?,
+        searchTocId: Long?,
+        searchExtended: Boolean,
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            queries.upsertVisit(
+                key = key,
+                kind = kind,
+                bookId = bookId,
+                searchQuery = searchQuery,
+                title = title,
+                visitedAt = visitedAt,
+                tocEntryId = tocEntryId,
+                lineId = lineId,
+                searchCategoryId = searchCategoryId,
+                searchBookId = searchBookId,
+                searchTocId = searchTocId,
+                searchExtended = searchExtended,
+            )
+        } else {
+            legacyQueries.upsertVisitLegacy(
+                key = key,
+                kind = kind,
+                bookId = bookId,
+                searchQuery = searchQuery,
+                title = title,
+                visitedAt = visitedAt,
+                tocEntryId = tocEntryId,
+                lineId = lineId,
+                searchCategoryId = searchCategoryId,
+                searchBookId = searchBookId,
+                searchTocId = searchTocId,
+                searchExtended = searchExtended,
+            )
+        }
     }
 
     /** Most recent entries, or entries whose title matches [query] when non-blank. */

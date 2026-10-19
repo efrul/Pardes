@@ -27,14 +27,14 @@ import java.util.zip.Checksum;
  *
  * <p>The first group is missing even on Android 13 (API 34/35 methods) and always runs here. The
  * second group exists from API 33: there each method hands over to the JDK method through {@link
- * AndroidCompatApi33}, so Android 13+ runs what it ran before; Android 11 and 12 (API 30-32) run
+ * AndroidCompatApi33}, so Android 13+ runs what it ran before; Android 8.0 to 12 (API 26-32) run
  * the equivalent code here.
  */
 public final class AndroidCompat {
   private AndroidCompat() {}
 
   /**
-   * System property that makes {@link #API_33} false on any VM, so the API 30-32 code below can be
+   * System property that makes {@link #API_33} false on any VM, so the API 26-32 code below can be
    * tested on a JVM: {@code -Dlucene.android.forceFallbacks=true}.
    */
   public static final String FORCE_FALLBACKS = "lucene.android.forceFallbacks";
@@ -45,6 +45,14 @@ public final class AndroidCompat {
    * because this jar is built without android.jar.
    */
   static final boolean API_33 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 33;
+
+  /**
+   * True on Android 9 (API 28) and later, and on a JVM: a constructor's MethodHandle may be given
+   * another return type with asType. Android 8's ART creates the instance from the handle's type, so
+   * below 28 AttributeFactory uses the reflected constructor instead. {@link #FORCE_FALLBACKS}
+   * makes it false too.
+   */
+  static final boolean API_28 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 28;
 
   private static int sdkInt() {
     final Class<?> version;
@@ -128,7 +136,7 @@ public final class AndroidCompat {
     return list.get(0);
   }
 
-  // ---- API 33: the JDK method on Android 13+, the code below on Android 11 and 12 ----
+  // ---- API 33: the JDK method on Android 13+, the code below on Android 8.0 to 12 ----
 
   /** {@code Arrays.mismatch(byte[], int, int, byte[], int, int)}: Java 9, API 33. */
   public static int mismatch(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo) {

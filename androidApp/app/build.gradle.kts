@@ -96,10 +96,11 @@ kotlin {
                 // the default jar of zstd-jni only has desktop natives.
                 implementation("com.github.luben:zstd-jni:${libs.versions.zstd.jni.get()}@aar")
                 implementation(libs.commons.compress)
-                // Search: lucene-core 10.5.2 (the version that writes the desktop indexes), patched for API 30.
+                // Search: lucene-core 10.5.2 (the version that writes the desktop indexes), patched for API 26.
                 implementation(project(":lucene-android"))
                 // A library split in chunks on a FAT32 memory card (data/SplitDatabase.kt): a SQLite that can load the
-                // multiplex VFS (src/androidMain/cpp), which Android's own SQLite cannot.
+                // multiplex VFS (src/androidMain/cpp), which Android's own SQLite cannot. Below Android 9 it reads every
+                // library, with the wide cursor windows Android's SQLite cannot have there.
                 implementation(libs.requery.sqlite)
                 implementation(libs.androidx.sqlite.framework)
             }
@@ -115,9 +116,11 @@ android {
         // Pardes, not Zayit: renamed at the request of Zayit's author, who asked forks not to use his app's name or icon.
         // A new id, so it installs beside the earlier io.github.efrul.zayit builds instead of over them.
         applicationId = "io.github.efrul.pardes"
-        // Android 11 (33 until 0.3.0). Newer platform calls sit behind SDK_INT checks with a fallback, so Android 12 and
-        // later behave as before; the launcher widgets need 12 (docs/DEVELOPMENT.md › Android 11).
-        minSdk = 30
+        // Android 8.0 (33 until 0.3.0, then 30). Newer platform calls sit behind SDK_INT checks with a fallback, so
+        // Android 11 and later behave as with 30 and Android 12 and later as with 33; the launcher widgets need 12,
+        // incremental library updates 11 (docs/DEVELOPMENT.md › Android 8 to 12). API 26 is the floor: Lucene needs
+        // java.nio.file, java.time and MethodHandle.invoke.
+        minSdk = 26
         targetSdk = 36
         versionCode = 2
         versionName = "0.3.0"
@@ -182,6 +185,10 @@ android {
     // are in assets/licenses instead, shown by Settings › רישיונות.
     packaging {
         resources.excludes += setOf("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+        // Below minSdk 28 AGP compresses classes.dex by default: stored as it was with minSdk 28 and later, so the APK
+        // each installed app downloads as its update does not change for that, and Android 9 and later keep reading
+        // the dex in place from it.
+        dex.useLegacyPackaging = false
     }
 }
 
@@ -250,7 +257,8 @@ sqldelight {
             dialect("app.cash.sqldelight:sqlite-3-24-dialect:${libs.versions.sqlDelight.get()}")
             // Desktop 0.6.1's user_settings.db schema (SeforimApp/src/commonMain/sqldelight at v0.6.1), vendored: notes,
             // highlights, visit history, favorites and shnayim mikra, so a desktop file imported with --with-notes is read as is.
-            srcDirs.setFrom(file("src/androidMain/sqldelight-user"))
+            // sqldelight-user-legacy: the two UPSERTs as Android 8-10's SQLite can run them (no schema of its own).
+            srcDirs.setFrom(file("src/androidMain/sqldelight-user"), file("src/androidMain/sqldelight-user-legacy"))
         }
     }
 }

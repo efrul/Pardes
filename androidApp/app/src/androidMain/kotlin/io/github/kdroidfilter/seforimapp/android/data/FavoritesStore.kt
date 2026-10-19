@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.data
 
+import android.os.Build
 import androidx.compose.runtime.Stable
 import io.github.kdroidfilter.seforimapp.db.Favorite
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
@@ -36,6 +37,7 @@ data class FavoriteFolder(val id: Long, val name: String)
  */
 class FavoritesStore(database: UserSettingsDb) {
     private val queries = database.favoritesQueries
+    private val legacyQueries = database.upsertLegacyQueries
 
     private val _revision = MutableStateFlow(0L)
     val revision: StateFlow<Long> = _revision.asStateFlow()
@@ -52,15 +54,29 @@ class FavoritesStore(database: UserSettingsDb) {
         folderId: Long? = null,
     ): Unit = withContext(Dispatchers.IO) {
         if (title.isBlank()) return@withContext
-        queries.upsertFavorite(
-            key = keyFor(bookId, tocEntryId),
-            bookId = bookId,
-            title = title,
-            folderId = folderId,
-            createdAt = timestamp,
-            tocEntryId = tocEntryId,
-            lineId = lineId,
-        )
+        val key = keyFor(bookId, tocEntryId)
+        // UPSERT needs SQLite 3.24: Android 8-10 (3.18 to 3.22) make the same write in two statements (UpsertLegacy.sq)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            queries.upsertFavorite(
+                key = key,
+                bookId = bookId,
+                title = title,
+                folderId = folderId,
+                createdAt = timestamp,
+                tocEntryId = tocEntryId,
+                lineId = lineId,
+            )
+        } else {
+            legacyQueries.upsertFavoriteLegacy(
+                key = key,
+                bookId = bookId,
+                title = title,
+                folderId = folderId,
+                createdAt = timestamp,
+                tocEntryId = tocEntryId,
+                lineId = lineId,
+            )
+        }
         _revision.update { it + 1 }
     }
 

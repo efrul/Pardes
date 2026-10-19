@@ -49,8 +49,8 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CompatVarHandle;
 
 /**
- * JVM test of the Android 11/12 (API 30-32) code of the :lucene-android jar against the JDK methods
- * it stands in for (single-file program, no build needed):
+ * JVM test of the Android 8.0-12 (API 26-32) code of the :lucene-android jar against the JDK
+ * methods it stands in for (single-file program, no build needed):
  * java -XX:-OmitStackTraceInFastThrow -Dlucene.android.forceFallbacks=true -cp build/libs/lucene-android-10.5.2-android.jar smoke/CompatFallbacks.java [rounds] [seed]
  *
  * <p>Calls every API 33 stand-in of AndroidCompat and CompatVarHandle with random and edge-case
@@ -79,7 +79,7 @@ public class CompatFallbacks {
     final Field api33 = AndroidCompat.class.getDeclaredField("API_33");
     api33.setAccessible(true);
     System.out.println(
-        (api33.getBoolean(null) ? "API 33+ path (JDK methods)" : "API 30-32 fallbacks")
+        (api33.getBoolean(null) ? "API 33+ path (JDK methods)" : "API 26-32 fallbacks")
             + ", " + rounds + " rounds, seed " + seed);
     arrays(rounds);
     fma(rounds);

@@ -1,0 +1,30 @@
+-- Android 8-10 only (FavoritesStore, HistoryStore): their SQLite (3.18 to 3.22) predates UPSERT (3.24), so desktop's
+-- upsertFavorite (Favorites.sq) and upsertVisit (VisitHistory.sq), kept as desktop has them, fail there. The same write
+-- in two statements, run in one transaction: the update of an existing row (the columns desktop's DO UPDATE sets), then
+-- the insert of a row the key does not have yet.
+
+upsertFavoriteLegacy {
+    UPDATE favorite SET
+        title = :title,
+        lineId = :lineId
+    WHERE key = :key;
+
+    INSERT INTO favorite(key, bookId, title, folderId, createdAt, tocEntryId, lineId)
+    SELECT :key, :bookId, :title, :folderId, :createdAt, :tocEntryId, :lineId
+    WHERE NOT EXISTS (SELECT 1 FROM favorite WHERE key = :key);
+}
+
+upsertVisitLegacy {
+    UPDATE visit_history SET
+        visitedAt = :visitedAt,
+        title = :title,
+        lineId = :lineId,
+        visitCount = visitCount + 1
+    WHERE key = :key;
+
+    INSERT INTO visit_history(key, kind, bookId, searchQuery, title, visitedAt, visitCount, tocEntryId, lineId,
+        searchCategoryId, searchBookId, searchTocId, searchExtended)
+    SELECT :key, :kind, :bookId, :searchQuery, :title, :visitedAt, 1, :tocEntryId, :lineId,
+        :searchCategoryId, :searchBookId, :searchTocId, :searchExtended
+    WHERE NOT EXISTS (SELECT 1 FROM visit_history WHERE key = :key);
+}

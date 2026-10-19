@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Gate for the Android build of lucene-core: dexes the jar the way AGP does for the app's minSdk 30 and
-# fails on any reference to the platform that Android 11 (API 30) lacks, each of which would be a
+# Gate for the Android build of lucene-core: dexes the jar the way AGP does for the app's minSdk 26 and
+# fails on any reference to the platform that Android 8.0 (API 26) lacks, each of which would be a
 # NoClassDefFoundError/NoSuchMethodError there:
 #  - the dexer is AGP's own D8 (com.android.tools.build:builder-<agp>.jar in the Gradle cache, agp from
 #    ../gradle/libs.versions.toml). The D8 of a newer build-tools backports more JDK methods (the
 #    Arrays.equals ranges, for one), so it would pass call sites the APK still has;
 #  - levels (gate/DexApiLevels.java): every class, field and method the dex takes from the platform must
-#    have an API level of at most 30 in data/api-versions.xml of the compile SDK platform. What that file
-#    does not list (covariant-return overloads such as ByteBuffer.flip()ByteBuffer, which ART has from
-#    API 29; members of hidden superclasses such as StringBuilder.getChars) is info, left to:
-#  - TraceReferences --check against the API 33 android.jar, and against the API 30 android.jar when one
-#    is installed (CI installs platforms;android-30): nothing missing.
+#    have an API level of at most the min API in data/api-versions.xml of the compile SDK platform. What
+#    that file does not list (covariant-return overloads such as ByteBuffer.flip()ByteBuffer, which ART
+#    has from API 29; members of hidden superclasses such as StringBuilder.getChars) is info, left to:
+#  - TraceReferences --check against the API 33 android.jar, and against the min API's android.jar when
+#    one is installed (CI installs platforms;android-26): nothing missing.
 # AndroidCompatApi33 is the one class meant to call API 33 methods (it only runs on API 33+): it is dexed
 # and checked on its own, against API 33.
 #
 # Usage: ./check-min-api.sh [--baseline] [--min-api N] [jar...]
 #   Without jars it builds :lucene-android:jar and checks that. --baseline also reports (without
 #   failing) the unpatched org.apache.lucene:lucene-core jar of the same version from the Gradle cache.
-#   --min-api (default 30) is for experiments; the app's minSdk is 30.
+#   --min-api N dexes and checks for API N (default: minSdk of ../app/build.gradle.kts, else 26).
 # Env: ANDROID_HOME (default: sdk.dir of ../local.properties) for platforms/;
 #      COMPILE_SDK_PLATFORM: the platform dir whose android.jar D8 gets as --lib and whose api-versions.xml
 #        gives the levels (default: platforms/android-<compileSdk of ../app/build.gradle.kts>);
@@ -35,7 +35,9 @@ levels_tool="$here/gate/DexApiLevels.java"
 api33_classes="org/apache/lucene/util/AndroidCompatApi33"
 
 baseline=false
-min_api=30
+# The app's minSdk, read as compileSdk is below
+min_api="$(sed -n 's/^ *minSdk = \([0-9][0-9]*\).*/\1/p' "$here/../app/build.gradle.kts" 2>/dev/null | head -1 || true)"
+min_api="${min_api:-26}"
 jars=()
 while [ $# -gt 0 ]; do
   case "$1" in

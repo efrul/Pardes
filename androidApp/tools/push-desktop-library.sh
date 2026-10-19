@@ -103,6 +103,7 @@ fi
 say "מכשיר: $SERIAL" "device: $SERIAL"
 PM=$(ask "package:/data/app/$PKG/base.apk" shell pm path $PKG || true)
 [[ "$PM" == package:* ]] || die "פרדס אינו מותקן במכשיר" "Pardes ($PKG) is not installed on the device"
+SDK=$(ask 30 shell getprop ro.build.version.sdk); [[ "$SDK" =~ ^[0-9]+$ ]] || SDK=30
 
 # --- the memory card (--sdcard): its app folder, and its filesystem (FAT32 takes no file of 4 GB)
 PHONE_FILES=$FILES; PHONE_LIB=$LIB; FS=""
@@ -121,7 +122,8 @@ if [ -n "$CARD" ]; then
   echo "$VOLS" | grep -qx "$CARD" || die "הכרטיס $CARD אינו מחובר" "card $CARD is not mounted"
   FILES=/storage/$CARD/Android/data/$PKG/files
   LIB=$FILES/library
-  FS=$(ask vfat shell "awk '\$2 == \"/mnt/media_rw/$CARD\" { print \$3 }' /proc/mounts")
+  # Read here, not on the phone: stock Android 8.x has no awk.
+  FS=$(ask "/dev/block/vold/public:179,1 /mnt/media_rw/$CARD vfat rw 0 0" shell cat /proc/mounts | awk -v m="/mnt/media_rw/$CARD" '$2 == m { print $3 }')
   say "כרטיס זיכרון: $CARD ($FS)" "memory card: $CARD ($FS)"
 fi
 SPLIT=0
@@ -160,9 +162,9 @@ clear_item() {
     || die "לא ניתן להסיר את $1 הישן מתיקיית היישום" "could not remove the old $1 from the app's folder"
 }
 
-# Bytes in a file or folder, here and on the phone.
+# Bytes in a file or folder, here and on the phone. The phone's sizes are added up here: stock Android 8.x has no awk.
 local_bytes() { find "$1" -type f -exec ls -ln {} + | awk '{ s += $5 } END { print s + 0 }'; }
-remote_bytes() { ask "$2" shell "find '$1' -type f -exec stat -c %s {} + 2>/dev/null | awk '{ s += \$1 } END { print s + 0 }'" || echo 0; }
+remote_bytes() { { ask "$2" shell "find '$1' -type f -exec stat -c %s {} + 2>/dev/null; true" || echo 0; } | awk '{ s += $1 } END { print s + 0 }'; }
 
 # Streams one file to the phone. `shell -T` (no terminal) passes the bytes untouched, waits until the phone has written
 # them and returns its exit code; `exec-in` can drop the end of the stream.
@@ -212,7 +214,7 @@ for i in "${PRESENT[@]}"; do
           || die "ההעתקה של $c נכשלה" "copying $c failed"
       fi
     done
-    GOT=$(ask "$WANT" shell "cd $LIB && stat -c %s $INCOMING$i $INCOMING""seforim.db[0-9][0-9][0-9] 2>/dev/null | awk '{ s += \$1 } END { print s + 0 }'")
+    GOT=$(ask "$WANT" shell "cd $LIB && stat -c %s $INCOMING$i $INCOMING""seforim.db[0-9][0-9][0-9] 2>/dev/null; true" | awk '{ s += $1 } END { print s + 0 }')
     [ "$GOT" = "$WANT" ] || die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again"
     # The overflow chunks first, the first chunk (seforim.db) last: the app sees a library only once it is all there.
     run shell "cd $LIB && for c in $INCOMING""seforim.db[0-9][0-9][0-9]; do [ -e \"\$c\" ] && mv \"\$c\" \"\${c#$INCOMING}\"; done; mv $INCOMING$i $i" \
@@ -226,9 +228,13 @@ for i in "${PRESENT[@]}"; do
   fi
   [ "$(remote_bytes "$LIB/$INCOMING$i" "$WANT")" = "$WANT" ] || die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again"
   # Files 666 / folders 777: the app is not their owner but must read, write (SQLite WAL) and later delete them. On a
-  # card the filesystem has no such permissions, and the app owns its folder there.
+  # card the filesystem has no such permissions, and the app owns its folder there. Below Android 11 the phone's shared
+  # storage (sdcardfs) refuses chmod and needs none, giving the app its folder's files whoever wrote them: tried only.
   if [ -n "$CARD" ]; then
     run shell "cd $LIB && mv $INCOMING$i $i" || die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder"
+  elif [ "$SDK" -lt 30 ]; then
+    run shell "cd $LIB && mv $INCOMING$i $i" || die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder"
+    run shell "cd $LIB && { find $i -type d -exec chmod 777 {} +; find $i -type f -exec chmod 666 {} +; } 2>/dev/null; true"
   else
     run shell "cd $LIB && mv $INCOMING$i $i && find $i -type d -exec chmod 777 {} + && find $i -type f -exec chmod 666 {} +" \
       || die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder"
@@ -250,8 +256,14 @@ if [ $NOTES = 1 ]; then
   IMPORT=$PHONE_FILES/import
   run shell "mkdir -p $IMPORT; chmod 777 $IMPORT 2>/dev/null; rm -f $IMPORT/user_settings.db*"
   send_file "$NOTES_DB" "$IMPORT/user_settings.db$PART" || die "ההעתקה של ההערות נכשלה" "copying the notes failed"
-  run shell "cd $IMPORT && mv user_settings.db$PART user_settings.db && chmod 666 user_settings.db" \
-    || die "לא ניתן להעביר את ההערות לתיקיית היישום" "could not move the notes into the app's folder"
+  if [ "$SDK" -lt 30 ]; then
+    run shell "cd $IMPORT && mv user_settings.db$PART user_settings.db" \
+      || die "לא ניתן להעביר את ההערות לתיקיית היישום" "could not move the notes into the app's folder"
+    run shell "chmod 666 $IMPORT/user_settings.db 2>/dev/null; true"
+  else
+    run shell "cd $IMPORT && mv user_settings.db$PART user_settings.db && chmod 666 user_settings.db" \
+      || die "לא ניתן להעביר את ההערות לתיקיית היישום" "could not move the notes into the app's folder"
+  fi
 fi
 if [ -n "$(ask "" shell "ls -a $LIB | grep '^\.zayit-old-'; true")" ]; then
   say "עותקים ישנים שהיישום יצר בעצמו ימחקו כשיפתח" "old copies the app made itself were renamed .zayit-old-*; it deletes them when it next opens"

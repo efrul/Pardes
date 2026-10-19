@@ -83,7 +83,7 @@ private val libraryCredits = listOf(
         "Apache Lucene 10.5.2",
         "Copyright 2001-2025 The Apache Software Foundation",
         listOf(bundled("Apache License 2.0 (Lucene)", "Lucene-LICENSE.txt"), bundled("NOTICE (Lucene)", "Lucene-NOTICE.txt")),
-        "מנוע החיפוש: lucene-core ושלוש מחלקות של lucene-analysis-common, ששונו כדי לפעול מאנדרואיד 11.",
+        "מנוע החיפוש: lucene-core ושלוש מחלקות של lucene-analysis-common, ששונו כדי לפעול מאנדרואיד 8.",
     ),
     Credit(
         "Apache Commons Compress, IO, Lang, Codec",

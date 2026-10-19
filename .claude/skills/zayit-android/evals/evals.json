@@ -22,7 +22,7 @@
       "id": 2,
       "name": "classvalue-search-crash",
       "prompt": "התקנתי את ה-APK על הטלפון (אנדרואיד 13). כשאני מחפש משהו האפליקציה קורסת. ב-logcat: java.lang.NoClassDefFoundError: Failed resolution of: Ljava/lang/ClassValue; at org.apache.lucene.util.AttributeSource. מה הבעיה ואיך מתקנים?",
-      "expected_output": "Diagnosis: java.lang.ClassValue only exists from API 34; Lucene's AttributeSource/AttributeFactory use it; the app must use the patched lucene-core from androidApp/lucene-android, so the unpatched jar is on the classpath or the patch is missing. Fix plan: check dependencies for org.apache.lucene:lucene-core, ensure project(':lucene-android'), run the lucene-android gate (check-min-api.sh, TraceReferences against the API 30 and 33 platforms), rebuild release and verify on the device. Keeps minSdk 30 and offline Lucene search.",
+      "expected_output": "Diagnosis: java.lang.ClassValue only exists from API 34; Lucene's AttributeSource/AttributeFactory use it; the app must use the patched lucene-core from androidApp/lucene-android, so the unpatched jar is on the classpath or the patch is missing. Fix plan: check dependencies for org.apache.lucene:lucene-core, ensure project(':lucene-android'), run the lucene-android gate (check-min-api.sh, TraceReferences against the API 26 and 33 platforms), rebuild release and verify on the device. Keeps minSdk 26 and offline Lucene search.",
       "files": [],
       "expectations": [
         "Explains that java.lang.ClassValue is missing on Android 13 (added in API 34)",

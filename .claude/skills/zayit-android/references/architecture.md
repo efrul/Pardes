@@ -19,9 +19,9 @@
   - `androidMain` adds the dao `androidMain` sources and `../htmlparser/src/commonMain/kotlin`.
   - SQLDelight generates two databases:
     - `SeforimDb` from `upstream/SeforimLibrary/dao/src/commonMain/sqldelight` (the library).
-    - `UserSettingsDb` from `SeforimApp/src/commonMain/sqldelight` (notes and highlights, the same schema as desktop).
+    - `UserSettingsDb` from `SeforimApp/src/commonMain/sqldelight` (notes and highlights, the same schema as desktop), plus `app/src/androidMain/sqldelight-user-legacy` (desktop's two UPSERTs as Android 8-10's SQLite can run them).
   - The release build type uses R8 (`isMinifyEnabled`, `isShrinkResources`) with `proguard-rules.pro`, signed with the debug key.
-- `lucene-android/` holds lucene-core 10.5.2 patched for API 30 (see lucene-android.md).
+- `lucene-android/` holds lucene-core 10.5.2 patched for API 26 (see lucene-android.md).
 - `tools/` has developer and user scripts: `make_subset_db.sh` and `push-desktop-library.sh`/`.ps1`.
 
 Identifiers:
@@ -90,7 +90,7 @@ Shared sources compiled through `srcDir` (not copied): `upstream/SeforimLibrary`
 - **Library.** `seforim.db` is ~8 GB on a full install. Index files sit next to it: `seforim.db.lucene/`, `seforim.db.lookup.lucene/`, `lexical.db`, `catalog.pb`, plus `release_info.txt` (the version check).
 - **Where it lives.** `LibraryStore.libraryDir` is `<external files>/library` or `<internal files>/library`, whichever already holds the DB. New installs go to external storage when it is mounted.
 - **Repository.** `SeforimRepository` from the desktop dao, on an Android SQLDelight driver wrapped by `PragmaSafeDriver`. Open it off the main thread.
-- **SQLite constraints.** SQLite 3.28 on API 30 (3.32 on API 31–33): no FTS5, no `RETURNING`, no newer JSON functions, and at most 999 bound parameters per statement below 3.32.
+- **SQLite constraints.** SQLite 3.18 on API 26 (3.19 on 27, 3.22 on 28–29, 3.28 on 30, 3.32 on 31–33): no FTS5, no `RETURNING`, no newer JSON functions, no UPSERT below 3.24, no `VACUUM INTO` below 3.27, and at most 999 bound parameters per statement below 3.32. Below Android 9 the library goes through the bundled requery SQLite 3.49 (`SplitDatabase.usesBundledSqlite`).
 
 ## Conventions
 

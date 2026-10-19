@@ -513,8 +513,9 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
 
     /**
      * Android 11 ends the app as "install unknown apps" is switched on for it (it remounts the app's storage; Android
-     * 12 and later keep it running), so the install that asked for it cannot go on in [onResume]: remembered, it goes
-     * on in the next process instead, with the APK checked before and the dialog open ([onShellStart]).
+     * 8 to 10, and 12 and later, keep it running), so the install that asked for it cannot go on in [onResume]:
+     * remembered, it goes on in the next process instead, with the APK checked before and the dialog open
+     * ([onShellStart]).
      */
     private fun awaitPermissionAcrossRestart(waiting: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || !waiting && !prefs.contains(KEY_AWAITING_PERMISSION)) return
@@ -553,7 +554,7 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
             setInstallReason(PackageManager.INSTALL_REASON_USER)
             // Honoured as Pardes updates itself and holds UPDATE_PACKAGES_WITHOUT_USER_ACTION, once it may install apps.
             // Android still asks at times (another installer owns updates, a silent update in the last 30 s, a policy).
-            // API 31: Android 11 always asks.
+            // API 31: below 12 Android always asks.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         }
         val id = installer.createSession(params)
@@ -772,17 +773,29 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
     private fun libraryBusy(): String? =
         AppUpdateStrings.libraryBusy.takeIf { LibraryInstaller.get(app).isBusy || LibraryMover.get(app).isBusy || DbDeltaUpdateService.get(app).isBusy }
 
-    /** This app's install sessions: those never committed (a process that ended while writing one), or all of them. */
+    /**
+     * This app's install sessions: those never committed (a process that ended while writing one), or all of them.
+     * SessionInfo.isStaged and isCommitted are API 29. Below, no session is staged (staged installs came with Android
+     * 10), and a session is sealed exactly when it is committed (SessionInfo.isSealed, API 26).
+     */
     private fun abandonSessions(committedToo: Boolean) {
         val installer = app.packageManager.packageInstaller
         runCatching {
-            installer.mySessions.filter { !it.isStaged && (committedToo || !it.isCommitted) }.forEach { runCatching { installer.abandonSession(it.sessionId) } }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                installer.mySessions.filter { !it.isStaged && (committedToo || !it.isCommitted) }.forEach { runCatching { installer.abandonSession(it.sessionId) } }
+            } else {
+                installer.mySessions.filter { committedToo || !it.isSealed }.forEach { runCatching { installer.abandonSession(it.sessionId) } }
+            }
         }
     }
 
     private fun hasSession(id: Int): Boolean = runCatching { app.packageManager.packageInstaller.getSessionInfo(id) != null }.getOrDefault(false)
 
-    private fun hasCommittedSession(): Boolean = runCatching { app.packageManager.packageInstaller.mySessions.any { it.isCommitted } }.getOrDefault(false)
+    /** A committed session of this app's is there. SessionInfo.isCommitted is API 29: below, a sealed one (abandonSessions). */
+    private fun hasCommittedSession(): Boolean = runCatching {
+        val sessions = app.packageManager.packageInstaller.mySessions
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) sessions.any { it.isCommitted } else sessions.any { it.isSealed }
+    }.getOrDefault(false)
 
     private fun offered(release: AppRelease) = AppUpdateState(release = release, changes = _state.value.changes)
 

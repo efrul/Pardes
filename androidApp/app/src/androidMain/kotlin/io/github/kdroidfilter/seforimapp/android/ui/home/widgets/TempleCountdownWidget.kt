@@ -111,6 +111,11 @@ internal object TempleCountdownWidget : HomeWidget {
  */
 @Composable
 private fun AnimatedTempleBackground(modifier: Modifier = Modifier) {
+    // ImageDecoder and AnimatedImageDrawable are API 28: Android 8 shows the still picture, as a low-RAM device does
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+        StillTemple(modifier)
+        return
+    }
     if (!rememberMotionAllowed()) {
         StillTemple(modifier)
         return

@@ -17,10 +17,10 @@ import java.util.function.IntFunction;
 /**
  * Android: the JDK methods lucene-core calls that ART only has from API 33 (Android 13), one static
  * method each. {@link AndroidCompat} and {@link CompatVarHandle} call them only when {@link
- * AndroidCompat#API_33}, so on Android 11 and 12 this class is never loaded. Its references, which
+ * AndroidCompat#API_33}, so on Android 8.0 to 12 this class is never loaded. Its references, which
  * do not resolve there, are kept out of the classes that do run: an unresolved method makes ART's
  * verifier fail the whole class softly, which then runs with extra checks. check-min-api.sh checks
- * this class against API 33 and everything else against API 30.
+ * this class against API 33 and everything else against API 26.
  */
 final class AndroidCompatApi33 {
   private AndroidCompatApi33() {}

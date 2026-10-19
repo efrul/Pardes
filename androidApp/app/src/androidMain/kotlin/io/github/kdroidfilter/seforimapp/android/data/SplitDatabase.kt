@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.android.data
 
 import android.database.Cursor
 import android.database.CursorWrapper
+import android.os.Build
 import android.os.CancellationSignal
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
@@ -30,6 +31,10 @@ import io.requery.android.database.sqlite.SQLiteDatabase as BundledDatabase
  * Android's SQLite cannot take another VFS. A database in one file never goes through it.
  *
  * Incremental updates do not run on a split database yet: their code opens the database with Android's SQLite.
+ *
+ * Below Android 9 every library is read through the bundled SQLite, split or not ([usesBundledSqlite]): there Android's
+ * cursor window cannot be widened (CursorWindow(String, long) is API 28, and SQLDelight applies windowSizeBytes only from
+ * API 28), so a row over its 2 MB (a book's notes reach 4.25 MB) could not be read.
  */
 object SplitDatabase {
     /** SQLITE_MULTIPLEX_CHUNK_SIZE: 2 GiB less 64 KiB. The multiplex VFS also finds it from the first chunk's size. */
@@ -52,6 +57,15 @@ object SplitDatabase {
     fun files(db: File): List<File> = listOf(db) + overflowChunks(db)
 
     fun isSplit(db: File): Boolean = File(db.path + "001").isFile
+
+    /**
+     * Whether the library database [db] is opened with the bundled SQLite rather than Android's: in chunks, or below
+     * Android 9 (see the class comment). Every opener of the library asks this (the repository in LibraryStore and
+     * [openReader]): two SQLite builds in one process must not open the same file, as each keeps its own POSIX locks and
+     * one closing the file drops the other's. The delta code, which opens it with Android's SQLite, does not run where
+     * this is true (DbDeltaUpdateService.deltaRefusal).
+     */
+    fun usesBundledSqlite(db: File): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || isSplit(db)
 
     /** The database's size: all its chunks. */
     fun size(db: File): Long = files(db).sumOf { it.length() }
@@ -96,18 +110,18 @@ object SplitDatabase {
         registered = true
     }
 
-    /** For SQLDelight's AndroidSqliteDriver on a split database: the bundled SQLite, with wide cursor windows. */
+    /** For SQLDelight's AndroidSqliteDriver where [usesBundledSqlite]: the bundled SQLite, with wide cursor windows. */
     fun openHelperFactory(): SupportSQLiteOpenHelper.Factory {
         register()
         return WideWindowFactory(RequerySQLiteOpenHelperFactory())
     }
 
     /**
-     * Read-only queries on the library database [db], in one file (Android's SQLite) or split (the bundled one). For the
-     * few readers outside the repository: the installer's check and the acronym cache.
+     * Read-only queries on the library database [db], with Android's SQLite or, where [usesBundledSqlite], the bundled
+     * one. For the few readers outside the repository: the installer's check and the acronym cache.
      */
     fun openReader(db: File, writable: Boolean = false): LibraryReader =
-        if (isSplit(db)) {
+        if (usesBundledSqlite(db)) {
             register()
             val flags = if (writable) BundledDatabase.OPEN_READWRITE else BundledDatabase.OPEN_READONLY
             val sql = BundledDatabase.openDatabase(db.path, null, flags)

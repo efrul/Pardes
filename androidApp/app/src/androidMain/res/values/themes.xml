@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- System bar icons for the light window background: dark ones. The splash (starting) window and the moments
-         before Compose sets them (SystemBarsHost) take them from here; values-night has the light ones. -->
+         before Compose sets them (SystemBarsHost) take them from here; values-night has the light ones. This file is
+         Android 8.0's: values-v27 has the same with dark navigation bar icons (android:windowLightNavigationBar is API
+         27). Here the navigation bar keeps its white icons, on androidx.activity's dark scrim rather than the light
+         window background, until enableEdgeToEdge and SystemBarsHost set the bar. -->
     <style name="Theme.Zayit" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">#801B1B1B</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

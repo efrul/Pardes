@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.android.ui.search
 
 import android.animation.ValueAnimator
 import android.content.res.Configuration
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -128,6 +129,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
@@ -135,6 +138,7 @@ import io.github.kdroidfilter.seforimapp.android.R
 import io.github.kdroidfilter.seforimapp.android.data.SearchScope
 import io.github.kdroidfilter.seforimapp.android.search.searchKey
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.findActivity
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalAppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalTabSession
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
@@ -446,7 +450,12 @@ fun UnifiedSearchBar(
     // Compose's controller hides the keyboard through the field's input session, the window's whatever holds it
     fun hideKeyboard() {
         keyboard?.hide()
-        hostView.windowInsetsController?.hide(android.view.WindowInsets.Type.ime())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            hostView.windowInsetsController?.hide(android.view.WindowInsets.Type.ime())
+        } else {
+            // View.getWindowInsetsController is API 30: below, the compat controller (it hides by the view's window token)
+            hostView.context.findActivity()?.window?.let { WindowCompat.getInsetsController(it, hostView).hide(WindowInsetsCompat.Type.ime()) }
+        }
     }
     LaunchedEffect(
         ui.suggestionsVisible, ui.tocSuggestionsVisible, ui.bookSuggestions, ui.jumpSuggestions, ui.authorSuggestions, textRow,
