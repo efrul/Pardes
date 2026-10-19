@@ -223,6 +223,11 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
      */
     fun onShellStart(): String? {
         val firstInProcess = shellStarted.compareAndSet(false, true)
+        // Android 11 restarted the app for the permission the install asked for (awaitPermissionAcrossRestart). Only a
+        // new process takes it up, and at once: the shell coming back in this one (a recreated activity) leaves the wait
+        // as it is, and a later process must not find it
+        val awaited = firstInProcess && prefs.getBoolean(KEY_AWAITING_PERMISSION, false)
+        if (awaited) prefs.edit().remove(KEY_AWAITING_PERMISSION).apply()
         // The shell comes back after the library update flow too: not while this process downloads or installs
         if (!isBusy) {
             runCatching {
@@ -234,14 +239,12 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
             }
             if (sessionId == -1) abandonSessions(committedToo = false)
             restoreReady()
-            // Android 11 restarted the app for the permission the install asked for (awaitPermissionAcrossRestart). Only a
-            // new process takes it up: the shell coming back in this one (a recreated activity) leaves the wait as it is
-            if (firstInProcess && prefs.getBoolean(KEY_AWAITING_PERMISSION, false)) {
-                prefs.edit().remove(KEY_AWAITING_PERMISSION).apply()
-                if (_state.value.ready && app.packageManager.canRequestPackageInstalls()) {
-                    _dialogVisible.value = true
-                    scope.launch(Dispatchers.Main) { install() }
-                }
+            if (awaited) resumeInstall()
+        } else if (awaited) {
+            // A check runs (the "ready" notification's tap opened the dialog first): the install goes on once it has
+            // found the APK again, unless the dialog was closed meanwhile
+            scope.launch {
+                if (_state.first { it.phase == null }.ready && _dialogVisible.value) resumeInstall()
             }
         }
         val installing = prefs.getString(KEY_INSTALLING, null)
@@ -520,6 +523,14 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
     private fun awaitPermissionAcrossRestart(waiting: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || !waiting && !prefs.contains(KEY_AWAITING_PERMISSION)) return
         prefs.edit().apply { if (waiting) putBoolean(KEY_AWAITING_PERMISSION, true) else remove(KEY_AWAITING_PERMISSION) }.apply()
+    }
+
+    /** The install that waited across Android 11's restart goes on, with the dialog open, once allowed. */
+    private fun resumeInstall() {
+        if (_state.value.ready && app.packageManager.canRequestPackageInstalls()) {
+            _dialogVisible.value = true
+            scope.launch(Dispatchers.Main) { install() }
+        }
     }
 
     /** "פתח הגדרות": Android's "install unknown apps" page for Pardes. */

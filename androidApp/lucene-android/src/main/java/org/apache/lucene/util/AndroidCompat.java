@@ -29,6 +29,13 @@ import java.util.zip.Checksum;
  * second group exists from API 33: there each method hands over to the JDK method through {@link
  * AndroidCompatApi33}, so Android 13+ runs what it ran before; Android 8.0 to 12 (API 26-32) run
  * the equivalent code here.
+ *
+ * <p>Not here: the Java 10-11 methods that AGP's D8 backports at the app's minSdk ({@code
+ * List/Set/Map.copyOf}, {@code String.isBlank}, {@code Predicate.not}, {@code
+ * Math.multiplyExact(long, int)}, and at minSdk 26 also the API 30 {@code List.of} and {@code
+ * Objects.check*}). D8 rewrites those call sites in the APK for every Android version, Android
+ * 13 included, with the same results for what Lucene passes; only reflection could reach the
+ * platform method there, on hot paths (every IOContext).
  */
 public final class AndroidCompat {
   private AndroidCompat() {}
