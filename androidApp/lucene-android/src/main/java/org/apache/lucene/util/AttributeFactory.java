@@ -46,10 +46,11 @@ public abstract class AttributeFactory {
     }
   }
 
-  // Android: below API 28 (AndroidCompat.API_28 false) the attributes come from their reflected
-  // public no-arg constructor instead of findAttributeImplCtor's handle. Android 8's ART creates the
-  // instance of a constructor handle from the handle's type, which asType made AttributeImpl, so
-  // every analyzer failed (InstantiationException: "Can't instantiate abstract class", no search).
+  // Android: below API 30 (AndroidCompat.API_30 false) the attributes come from their reflected
+  // public no-arg constructor instead of findAttributeImplCtor's handle. The ART of Android 8 and 9
+  // creates the instance of a constructor handle from the handle's type, which asType made
+  // AttributeImpl, so every analyzer failed (InstantiationException: "Can't instantiate abstract
+  // class", no search).
   static final Constructor<? extends AttributeImpl> findAttributeImplReflectedCtor(
       Class<? extends AttributeImpl> clazz) {
     try {
@@ -99,7 +100,7 @@ public abstract class AttributeFactory {
           }
         };
 
-    // Android: the reflected constructors, used below API 28 (see findAttributeImplReflectedCtor).
+    // Android: the reflected constructors, used below API 30 (see findAttributeImplReflectedCtor).
     private final CompatClassValue<Constructor<? extends AttributeImpl>> reflectedConstructors =
         new CompatClassValue<Constructor<? extends AttributeImpl>>() {
           @Override
@@ -114,7 +115,7 @@ public abstract class AttributeFactory {
     @Override
     public AttributeImpl createAttributeInstance(Class<? extends Attribute> attClass) {
       // Android: see findAttributeImplReflectedCtor.
-      if (!AndroidCompat.API_28) {
+      if (!AndroidCompat.API_30) {
         return newAttributeImpl(reflectedConstructors.get(attClass));
       }
       try {
@@ -196,7 +197,7 @@ public abstract class AttributeFactory {
   public static <A extends AttributeImpl> AttributeFactory getStaticImplementation(
       AttributeFactory delegate, Class<A> clazz) {
     // Android: see findAttributeImplReflectedCtor.
-    if (!AndroidCompat.API_28) {
+    if (!AndroidCompat.API_30) {
       final Constructor<? extends AttributeImpl> reflected = findAttributeImplReflectedCtor(clazz);
       return new StaticImplementationAttributeFactory<A>(delegate, clazz) {
         @Override

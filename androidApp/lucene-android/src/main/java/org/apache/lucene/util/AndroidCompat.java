@@ -47,12 +47,13 @@ public final class AndroidCompat {
   static final boolean API_33 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 33;
 
   /**
-   * True on Android 9 (API 28) and later, and on a JVM: a constructor's MethodHandle may be given
-   * another return type with asType. Android 8's ART creates the instance from the handle's type, so
-   * below 28 AttributeFactory uses the reflected constructor instead. {@link #FORCE_FALLBACKS}
-   * makes it false too.
+   * True on Android 11 (API 30) and later, and on a JVM: a constructor's MethodHandle may be given
+   * another return type with asType. The ART of Android 8 and 9 creates the instance from the
+   * handle's type (seen on the API 26 and 28 emulators; Android 10 was not checked, so it is treated
+   * the same), so there AttributeFactory uses the reflected constructor instead. {@link
+   * #FORCE_FALLBACKS} makes it false too.
    */
-  static final boolean API_28 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 28;
+  static final boolean API_30 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 30;
 
   private static int sdkInt() {
     final Class<?> version;
