@@ -9,8 +9,8 @@ import io.github.kdroidfilter.seforimapp.legacy.db.NativeSqliteDriver
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import java.io.File
 
-/** A row of the library tree: a category, or a book in one. */
-data class Entry(val id: Long, val title: String, val isBook: Boolean)
+/** A row of the library tree: a category, or a book in one ([base]: one of the desktop's base books, isBaseBook). */
+data class Entry(val id: Long, val title: String, val isBook: Boolean, val base: Boolean = false)
 
 /** What the reader needs of a book, read without its notes (they reach 4 MB). */
 data class BookInfo(
@@ -162,12 +162,12 @@ class Library(private val context: Context) {
             data class Cat(val id: Long, val parentId: Long?)
             val categories = query("SELECT id, parentId FROM category ORDER BY orderIndex, title") { Cat(it.getLong(0)!!, it.getLong(1)) }
             val children = categories.groupBy { it.parentId }
-            val books = query("SELECT id, title, categoryId FROM book ORDER BY orderIndex, title") {
-                Triple(it.getLong(0)!!, it.getString(1)!!, it.getLong(2)!!)
-            }.groupBy { it.third }
+            val books = query("SELECT id, title, categoryId, isBaseBook FROM book ORDER BY orderIndex, title") {
+                Entry(it.getLong(0)!!, it.getString(1)!!, isBook = true, base = it.getLong(3) == 1L) to it.getLong(2)!!
+            }.groupBy({ it.second }, { it.first })
             val out = ArrayList<Entry>()
             fun walk(id: Long) {
-                books[id]?.forEach { out += Entry(it.first, it.second, isBook = true) }
+                books[id]?.let { out += it }
                 children[id]?.forEach { walk(it.id) }
             }
             if (categoryId == null) children[null]?.forEach { walk(it.id) } else walk(categoryId)

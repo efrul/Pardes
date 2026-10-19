@@ -103,6 +103,19 @@ abstract class LegacyAssets : DefaultTask() {
         val licencesOut = out.resolve("licenses").apply { mkdirs() }
         licences.get().forEach { licenceDir.get().asFile.resolve(it).copyTo(licencesOut.resolve(it)) }
         appLicence.get().asFile.copyTo(licencesOut.resolve("Pardes-LICENSE.txt"))
+        // The main app's font notices (copied from the fonts' name tables), for the fonts this edition carries only.
+        val sections = licenceDir.get().asFile.resolve("Fonts-NOTICE.txt").readText().split("\n\n\n")
+        val kept = sections.drop(1).filter { section -> fonts.get().any { section.lineSequence().first().contains(it) } }
+        licencesOut.resolve("Fonts-NOTICE.txt").writeText(
+            (listOf(FONTS_NOTICE_INTRO) + kept).joinToString("\n\n\n"),
+        )
+    }
+
+    private companion object {
+        const val FONTS_NOTICE_INTRO =
+            "The notices below are those embedded in the fonts bundled with Pardes for Android 4.4 (name table: " +
+                "copyright, licence description and licence URL), copied verbatim. See also GPL-2.0.txt, " +
+                "Culmus-LICENSE.txt and the OFL-*.txt files."
     }
 }
 
@@ -186,6 +199,8 @@ android {
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
+    // licenses/desugar_jdk_libs-LICENSE.txt; the rest of assets/ is copied from the main app (LegacyAssets).
+    sourceSets["main"].assets.srcDirs("src/androidMain/assets")
 
     lint {
         // lint.xml: NewApi is not checked in the shared desktop sources, which hold code this edition never calls
@@ -244,7 +259,6 @@ androidComponents {
                     "OFL-Frank-Ruhl-Libre.txt",
                     "GPL-2.0.txt",
                     "Culmus-LICENSE.txt",
-                    "Fonts-NOTICE.txt",
                 ),
             )
         }

@@ -170,7 +170,8 @@ class MainActivity : BaseActivity() {
         text.addView(label("עדיין אין ספרייה במכשיר", 18f, colors.accent, bold = true))
         val steps = buildString {
             append("פרדס קורא את הספרייה של זית למחשב. כדי להעביר אותה:\n\n")
-            append("1. במחשב, מצאו את תיקיית הספרייה של זית: databases (ב־Windows: ‎%APPDATA%\\io.github.kdroidfilter.seforimapp\\databases‎).\n\n")
+            append("1. במחשב, מצאו את תיקיית הספרייה של זית למחשב, databases. ב־Windows היא:\n")
+            append(Bidi.ltr("%APPDATA%\\io.github.kdroidfilter.seforimapp\\databases")).append("\n\n")
             append("2. חברו את הטלפון למחשב בכבל USB, במצב העברת קבצים (MTP).\n\n")
             append("3. העתיקו את הקובץ seforim.db (ואת שאר הקבצים שלצדו) לתיקייה:\n")
             append(folder?.path?.let(::shortPath) ?: "Android/data/io.github.efrul.pardes/files/library")
@@ -358,7 +359,7 @@ class MainActivity : BaseActivity() {
         setOnClickListener { onClick() }
     }
 
-    private fun shortPath(path: String): String = "‎" + path + "‎"
+    private fun shortPath(path: String): String = Bidi.ltr(path)
 
     private companion object {
         const val STATE_PATH = "path"

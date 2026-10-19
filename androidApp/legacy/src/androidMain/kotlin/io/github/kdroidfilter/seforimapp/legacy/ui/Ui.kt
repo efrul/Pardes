@@ -243,7 +243,16 @@ class EntryRow(context: Context, private val colors: Colors) : LinearLayout(cont
         addView(chevron)
     }
 
-    fun bind(text: CharSequence, second: CharSequence? = null, iconRes: Int? = null, iconTint: Int = colors.accent, leads: Boolean = false): EntryRow {
+    fun bind(
+        text: CharSequence,
+        second: CharSequence? = null,
+        iconRes: Int? = null,
+        iconTint: Int = colors.accent,
+        leads: Boolean = false,
+        marked: Boolean = false,
+    ): EntryRow {
+        // A list resets its rows' selected state as it lays them out, so a marked row gets its own background.
+        background = pressable(if (marked) colors.selected else colors.panel, colors.pressed)
         title.text = text
         subtitle.text = second
         subtitle.visibility = if (second.isNullOrEmpty()) GONE else VISIBLE
