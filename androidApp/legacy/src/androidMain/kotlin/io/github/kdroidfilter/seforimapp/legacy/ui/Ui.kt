@@ -190,13 +190,13 @@ fun roundRect(fill: Int, radius: Float, stroke: Int? = null, strokeWidth: Int = 
     }
 
 /**
- * A background by state: pressed (touch), focused or selected (a keypad's highlight; a list marks the row under it
- * selected), else [normal]. There is no ripple before Android 5.0.
+ * A background by state: pressed (touch), focused (a keypad's highlight), else [normal]. There is no ripple before
+ * Android 5.0. A list's row is not focused but selected, and its list draws the highlight (its selector): the row's
+ * own would double it.
  */
 fun states(normal: Drawable, pressed: Drawable, focused: Drawable): StateListDrawable = StateListDrawable().apply {
     addState(intArrayOf(android.R.attr.state_pressed), pressed)
     addState(intArrayOf(android.R.attr.state_focused), focused)
-    addState(intArrayOf(android.R.attr.state_selected), focused)
     addState(intArrayOf(), normal)
 }
 

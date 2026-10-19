@@ -386,8 +386,11 @@ class BookActivity : BaseActivity() {
         finish()
     }
 
-    /** The line the menu's actions are about: the one marked, else the first one shown. */
-    private fun placeLine(): Int = if (selected >= 0) selected else list.firstVisiblePosition
+    /** The line the menu's actions are about: a keypad's place, else the one marked, else the first one shown. */
+    private fun placeLine(): Int = keypadLine().takeIf { it >= 0 } ?: if (selected >= 0) selected else list.firstVisiblePosition
+
+    /** The line a keypad's highlight is on (the text has focus, out of touch mode), else -1. */
+    private fun keypadLine(): Int = if (!list.isInTouchMode && list.hasFocus()) list.selectedItemPosition else -1
 
     private fun toggleFavorite() {
         val info = book ?: return
@@ -632,8 +635,13 @@ class BookActivity : BaseActivity() {
     }
 
     private fun showPane(p: Pane) {
-        // No line marked: the first one shown, so the pane has something to show.
-        if (selected < 0 && p != Pane.Details) mark(list.firstVisiblePosition, follow = false)
+        // A keypad's place is the line it is about; else no line marked: the first one shown.
+        val keypad = keypadLine()
+        if (keypad >= 0 && keypad != selected && p != Pane.Details) {
+            mark(keypad, follow = false)
+        } else if (selected < 0 && p != Pane.Details) {
+            mark(list.firstVisiblePosition, follow = false)
+        }
         pane.show(p)
         updateToolbar()
     }

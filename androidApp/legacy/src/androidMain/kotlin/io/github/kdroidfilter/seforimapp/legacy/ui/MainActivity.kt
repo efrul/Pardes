@@ -393,7 +393,8 @@ class MainActivity : BaseActivity() {
                 val picture = context.assets.open(path).use {
                     BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
                 } ?: return null
-                val out = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
+                // 32 bits a pixel: in 16 the radial wash shows rings (banding), dithered or not.
+                val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(out)
                 canvas.drawColor(colors.panel)
                 val s = maxOf(w.toFloat() / picture.width, h.toFloat() / picture.height)
