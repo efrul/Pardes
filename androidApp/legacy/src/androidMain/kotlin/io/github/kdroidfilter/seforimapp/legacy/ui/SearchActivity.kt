@@ -1,24 +1,33 @@
 package io.github.kdroidfilter.seforimapp.legacy.ui
 
-import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.PorterDuff
+import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.TextWatcher
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.TextView
+import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceResolver
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.Entry
 import io.github.kdroidfilter.seforimapp.legacy.data.Hit
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
+import io.github.kdroidfilter.seforimapp.legacy.data.References
 import io.github.kdroidfilter.seforimapp.legacy.data.TextSearch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,76 +36,240 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Search: book titles (and their acronyms) as one types, or the text of a book, a category or the whole library
- * (TextSearch) on Enter. Opened from a book for its find-in-book, a chosen line goes back to that book.
+ * The search, as the main app's one smart bar and its results page (UnifiedSearchBar, SearchScreen): as one types,
+ * the places it names (ברכות דף ב, בראשית א ג), the books, and "חיפוש במאגר"; Enter takes the first. The text search
+ * reads the base books first, as the main app's does, and all the books when they have nothing or on "חיפוש בכל
+ * הספרים"; its results come grouped by book ("עוד N תוצאות מ…"), with the categories they are in as chips. A book
+ * picked (the reader's find, or "חיפוש בתוך") sits in the field, and the search is in it; a result in the book the
+ * search was opened from goes back to it.
+ *
+ * The main app searches the desktop's Lucene index, which Android 4.4 cannot run: here the books are read one after
+ * the other (TextSearch), so the whole library takes minutes on an old phone, and the base books seconds.
  */
 class SearchActivity : BaseActivity() {
     private lateinit var opened: Library.Opened
+    private lateinit var resolver: ReferenceResolver
     private lateinit var field: EditText
-    private lateinit var modeTitles: TextView
-    private lateinit var modeText: TextView
-    private lateinit var textOptions: LinearLayout
-    private lateinit var matchPhrase: TextView
-    private lateinit var matchAll: TextView
-    private lateinit var scopeLabel: TextView
+    private lateinit var clear: View
+    private lateinit var bookChip: TextView
+    private lateinit var tabs: LinearLayout
+    private lateinit var tabsScroll: View
+    private lateinit var statusRow: View
     private lateinit var status: TextView
+    private lateinit var switchLink: TextView
+    private lateinit var stop: View
     private lateinit var progress: ProgressBar
-    private lateinit var stop: TextView
     private lateinit var list: ListView
 
-    private var textMode = false
-
-    /** The text search's match: the query as a phrase (the default), or its words anywhere in the line. */
-    private var allWords = false
-    private var where: Scope = Scope.Library
-    private var titleJob: Job? = null
+    /** The book the search is in (the reader's find, or "חיפוש בתוך"), null for the library. */
+    private var scopeBook: Entry? = null
+    private var suggestJob: Job? = null
     private var searchJob: Job? = null
     private var search: TextSearch? = null
+    private var showingResults = false
+    private var suggestions: List<Row> = emptyList()
+
+    // The text search: its query, where it looked, its results
     private var lastQuery = ""
-
-    private val titleAdapter = ItemsAdapter<Entry> { entry, reuse, _ ->
-        (reuse as? EntryRow ?: EntryRow(this, colors)).bind(entry.title, iconRes = R.drawable.ic_book, iconTint = colors.secondary)
-    }
-    private val hitAdapter = ItemsAdapter<Hit> { hit, reuse, _ -> hitView(hit, reuse) }
     private var highlight: Regex? = null
+    private var allBooks = false
+    private var allWords = false
+    private var fellBack = false
+    private var stopped = false
+    private val hits = ArrayList<Hit>()
+    private val rootOfBook = HashMap<Long, Long>()
+    private var roots: List<Entry> = emptyList()
+    private var tab: Long? = null
 
-    /** Where the text search looks. */
-    private sealed class Scope(val label: String) {
-        object Library : Scope("כל הספרייה")
+    /** The books whose results are all shown ("עוד N תוצאות מ…" chosen). */
+    private val expanded = HashSet<Long>()
+    private val headings = HashMap<Pair<Long, Int>, String>()
 
-        class Category(val id: Long, title: String) : Scope(title)
+    private sealed interface Row {
+        /** A suggestion: its icon, its text and second line; a tap (OK) runs [open], a long press [more]. */
+        class Suggestion(val icon: Int, val text: CharSequence, val detail: String?, val open: () -> Unit, val more: (() -> Unit)? = null) : Row
 
-        class Book(val id: Long, val title: String) : Scope("הספר $title")
+        class Found(val hit: Hit, val last: Boolean) : Row
+
+        class More(val bookId: Long, val title: String, val count: Int) : Row
+    }
+
+    private val adapter = ItemsAdapter<Row> { row, reuse, _ ->
+        when (row) {
+            is Row.Suggestion -> (reuse as? TreeRow ?: TreeRow(this, colors)).bind(row.text, iconRes = row.icon, secondLine = row.detail)
+            is Row.Found -> hitView(row, reuse as? HitView)
+            is Row.More -> moreView(row, reuse as? MoreView)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val bookScope = intent.getLongExtra(EXTRA_BOOK_SCOPE, 0L)
-        if (bookScope != 0L) {
-            where = Scope.Book(bookScope, intent.getStringExtra(BookActivity.EXTRA_TITLE) ?: "")
-            textMode = true
+        intent.getLongExtra(EXTRA_BOOK_SCOPE, 0L).takeIf { it != 0L }?.let { id ->
+            scopeBook = Entry(id, intent.getStringExtra(BookActivity.EXTRA_TITLE) ?: "", isBook = true)
         }
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val bar = TopBar(this, colors) { finish() }
-        bar.title.text = if (bookScope != 0L) "חיפוש בספר" else "חיפוש"
+        val bar = TopBar(this, colors).apply {
+            leading(R.drawable.ic_back, "חזרה") { finish() }
+            title.text = "חיפוש"
+        }
+        topBar = bar
         root.addView(bar, lp(MATCH, WRAP))
 
+        // One card: the field, the chips and the status over the list, as the main app's results page.
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = island(colors)
+        }
         val top = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(colors.panel)
-            setPadding(dp(12), dp(10), dp(12), dp(6))
+            setPadding(dp(10), dp(10), dp(10), dp(6))
         }
+        val head = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        // The logo beside the field, as Google's, where there is room for it.
+        if (resources.configuration.screenWidthDp >= 360) {
+            head.addView(ImageView(this).apply { setImageResource(R.mipmap.ic_launcher) }, lp(dp(44), dp(44)).apply { marginEnd = dp(10) })
+        }
+        head.addView(searchField(intent.getStringExtra(EXTRA_QUERY) ?: ""), lp(0, WRAP, 1f))
+        top.addView(head, lp(MATCH, WRAP))
+
+        tabs = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        tabsScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            isFillViewport = true
+            addView(tabs)
+            visibility = View.GONE
+        }
+        top.addView(tabsScroll, lp(MATCH, WRAP).apply { topMargin = dp(8) })
+
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+        }
+        statusRow = row
+        val texts = FlowRow(this, dp(6), 0)
+        status = label("", 14f, Palette.withAlpha(colors.text, 0.72f), maxLines = 2).apply { minHeight = dp(36); gravity = Gravity.CENTER_VERTICAL }
+        switchLink = label("", 14f, colors.accent, maxLines = 1).apply {
+            gravity = Gravity.CENTER
+            minHeight = dp(36)
+            setPadding(dp(4), 0, dp(4), 0)
+            background = states(colors, 0, dp(6).toFloat())
+        }
+        texts.addView(status)
+        texts.addView(switchLink)
+        row.addView(texts, lp(0, WRAP, 1f))
+        stop = iconButton(R.drawable.ic_close, colors.secondary, "בטל חיפוש", colors) { stopSearch() }.apply { visibility = View.GONE }
+        row.addView(stop)
+        top.addView(row, lp(MATCH, WRAP).apply { topMargin = dp(4) })
+        progress = progressLine(colors).apply { visibility = View.GONE }
+        top.addView(progress, lp(MATCH, dp(4)).apply { topMargin = dp(2) })
+        card.addView(top, lp(MATCH, WRAP))
+        card.addView(divider(colors))
+
+        list = ListView(this).apply {
+            divider = null
+            selector = states(colors, 0, dp(6).toFloat())
+            cacheColorHint = 0
+            setPadding(dp(6), dp(4), dp(6), dp(6))
+            clipToPadding = false
+            adapter = this@SearchActivity.adapter
+            setOnItemClickListener { _, _, position, _ -> open(position) }
+            setOnItemLongClickListener { _, _, position, _ ->
+                val suggestion = this@SearchActivity.adapter.items.getOrNull(position) as? Row.Suggestion
+                suggestion?.more?.invoke()
+                suggestion?.more != null
+            }
+        }
+        card.addView(list, lp(MATCH, 0, 1f))
+        root.addView(card, lp(MATCH, 0, 1f).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
+        setContentView(root)
+        drawScope()
+
+        val runAtOnce = intent.getBooleanExtra(EXTRA_RUN, false)
+        scope.launch {
+            opened = withContext(Dispatchers.IO) { app.library.open() }
+            resolver = ReferenceResolver(References(opened.repository))
+            search = TextSearch(opened)
+            roots = withContext(Dispatchers.IO) { runCatching { opened.rootEntries() }.getOrDefault(emptyList()) }
+            if (runAtOnce && field.text.isNotBlank()) startTextSearch(field.text.toString().trim()) else suggest()
+        }
+    }
+
+    override fun onDestroy() {
+        search?.cancel()
+        super.onDestroy()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // The suggestions over results already found: back to the results, as the main app's popup closes.
+        if (!showingResults && hits.isNotEmpty()) {
+            field.setText(lastQuery)
+            field.setSelection(lastQuery.length)
+            showResults()
+            return
+        }
+        @Suppress("DEPRECATION")
+        super.onBackPressed()
+    }
+
+    // ------------------------------------------------------------------ the field
+
+    /** The main app's bar: a pill with its border, the search icon, the book picked, the field, and ✕. */
+    private fun searchField(initial: String): View {
+        val pill = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(48)
+            setPaddingRelative(dp(14), 0, dp(4), 0)
+            background = roundRect(colors.panel, dp(24).toFloat(), colors.border, maxOf(1, dp(1)))
+        }
+        pill.addView(ImageView(this).apply {
+            setImageResource(R.drawable.ic_search)
+            setColorFilter(colors.secondary, PorterDuff.Mode.SRC_IN)
+        }, lp(dp(16), dp(16)).apply { marginEnd = dp(8) })
+        // The book picked (SelectedChip): its title and ✕, which takes the search back to the whole library.
+        bookChip = label("", 13f, colors.text, maxLines = 1).apply {
+            maxWidth = (resources.displayMetrics.widthPixels * 0.35f).toInt()
+            setPadding(dp(8), dp(4), dp(6), dp(4))
+            background = states(
+                roundRect(colors.accentTint, dp(12).toFloat()),
+                roundRect(colors.pressed, dp(12).toFloat()),
+                roundRect(colors.focus, dp(12).toFloat(), colors.accent, maxOf(1, dp(1))),
+            )
+            @Suppress("DEPRECATION")
+            val x = resources.getDrawable(R.drawable.ic_close).mutate()
+            x.setColorFilter(colors.secondary, PorterDuff.Mode.SRC_IN)
+            x.setBounds(0, 0, dp(14), dp(14))
+            setCompoundDrawablesRelative(null, null, x, null)
+            compoundDrawablePadding = dp(4)
+            contentDescription = "הסר ספר שנבחר"
+            keyable(this) {
+                scopeBook = null
+                drawScope()
+                suggest()
+            }
+        }
+        pill.addView(bookChip, lp(WRAP, WRAP).apply { marginEnd = dp(8) })
         field = EditText(this).apply {
-            hint = "מה לחפש?"
             setSingleLine()
             imeOptions = EditorInfo.IME_ACTION_SEARCH
-            textSize = 18f
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             setTextColor(colors.text)
-            setHintTextColor(colors.secondary)
-            setText(intent.getStringExtra(EXTRA_QUERY) ?: "")
+            setHintTextColor(PLACEHOLDER_GREY)
+            background = null
+            setPadding(0, dp(8), 0, dp(8))
+            setText(initial)
+            setSelection(initial.length)
             setOnEditorActionListener { _, actionId, event ->
-                if (actionId == EditorInfo.IME_ACTION_SEARCH || event?.keyCode == KeyEvent.KEYCODE_ENTER) {
-                    if (event == null || event.action == KeyEvent.ACTION_DOWN) submit()
+                if (actionId == EditorInfo.IME_ACTION_SEARCH || event?.keyCode == KeyEvent.KEYCODE_ENTER || event?.keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
+                    if (event == null || event.action == KeyEvent.ACTION_DOWN) enter()
                     true
                 } else {
                     false
@@ -108,283 +281,418 @@ class SearchActivity : BaseActivity() {
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
 
                 override fun afterTextChanged(s: Editable?) {
-                    if (!textMode) findTitles()
+                    clear.visibility = if (s.isNullOrEmpty()) View.INVISIBLE else View.VISIBLE
+                    suggest()
                 }
             })
         }
-        top.addView(field, lp(MATCH, WRAP))
-
-        val modes = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        modeTitles = modeChip("שמות ספרים") { setMode(false) }
-        modeText = modeChip("טקסט") { setMode(true) }
-        modes.addView(modeTitles, lp(WRAP, WRAP).apply { marginEnd = dp(6) })
-        modes.addView(modeText, lp(WRAP, WRAP).apply { marginEnd = dp(6) })
-        top.addView(modes, lp(MATCH, WRAP).apply { topMargin = dp(6) })
-
-        textOptions = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-        val match = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        matchPhrase = modeChip("ביטוי מדויק") { setMatch(false) }
-        matchAll = modeChip("כל המילים") { setMatch(true) }
-        match.addView(matchPhrase, lp(WRAP, WRAP).apply { marginEnd = dp(6) })
-        match.addView(matchAll, lp(WRAP, WRAP))
-        textOptions.addView(match, lp(MATCH, WRAP).apply { topMargin = dp(6) })
-        scopeLabel = label("", 14f, colors.accent, maxLines = 1).apply {
-            setPadding(dp(4), dp(8), dp(4), dp(4))
-            background = pressable(0, colors.pressed)
-            setOnClickListener { chooseScope() }
-        }
-        textOptions.addView(scopeLabel, lp(MATCH, WRAP))
-        top.addView(textOptions, lp(MATCH, WRAP))
-
-        val statusRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        status = label("", 13f, colors.secondary, maxLines = 2)
-        statusRow.addView(status, lp(0, WRAP, 1f))
-        stop = label("עצור", 14f, colors.accent, bold = true).apply {
-            setPadding(dp(12), dp(6), dp(12), dp(6))
-            background = pressable(0, colors.pressed)
-            visibility = View.GONE
-            setOnClickListener { stopSearch("החיפוש נעצר") }
-        }
-        statusRow.addView(stop)
-        top.addView(statusRow, lp(MATCH, WRAP).apply { topMargin = dp(4) })
-        progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply { visibility = View.GONE }
-        top.addView(progress, lp(MATCH, WRAP))
-        root.addView(top, lp(MATCH, WRAP))
-        root.addView(divider(colors))
-
-        list = ListView(this).apply {
-            setBackgroundColor(colors.panel)
-            cacheColorHint = colors.panel
-            divider = null
-            setOnItemClickListener { _, _, position, _ -> open(position) }
-        }
-        root.addView(list, lp(MATCH, 0, 1f))
-        setContentView(root)
-
-        setMode(textMode)
-        scope.launch {
-            opened = withContext(Dispatchers.IO) { app.library.open() }
-            search = TextSearch(opened)
-            if (!textMode) findTitles()
-        }
+        pill.addView(field, lp(0, WRAP, 1f))
+        clear = iconButton(R.drawable.ic_close, colors.secondary, "ניקוי", colors) {
+            field.setText("")
+            field.requestFocus()
+        }.apply { visibility = if (initial.isEmpty()) View.INVISIBLE else View.VISIBLE }
+        pill.addView(clear)
+        return pill
     }
 
-    override fun onDestroy() {
-        search?.cancel()
-        super.onDestroy()
+    /** The field's chip and hint for where the search is: a book, or the library. */
+    private fun drawScope() {
+        val book = scopeBook
+        bookChip.text = book?.title ?: ""
+        bookChip.visibility = if (book == null) View.GONE else View.VISIBLE
+        field.hint = if (book == null) nextHint() else "מה לחפש בספר זה? פרק, סימן או כל מילה"
     }
 
-    private fun modeChip(text: String, onClick: () -> Unit): TextView = label(text, 14f, colors.text).apply {
-        setPadding(dp(12), dp(6), dp(12), dp(6))
-        setOnClickListener { onClick() }
-    }
+    // ------------------------------------------------------------------ the suggestions
 
-    private fun paintChips(vararg chips: Pair<TextView, Boolean>) {
-        val radius = dp(16).toFloat()
-        chips.forEach { (chip, on) ->
-            chip.setTextColor(if (on) colors.panel else colors.text)
-            chip.background = if (on) roundRect(colors.accent, radius) else roundRect(colors.panel, radius, colors.border, dp(1))
-        }
-    }
-
-    private fun setMatch(all: Boolean) {
-        allWords = all
-        paintChips(matchPhrase to !all, matchAll to all)
-        stopSearch(null)
-    }
-
-    private fun setMode(text: Boolean) {
-        textMode = text
-        paintChips(modeTitles to !text, modeText to text)
-        paintChips(matchPhrase to !allWords, matchAll to allWords)
-        textOptions.visibility = if (text) View.VISIBLE else View.GONE
-        scopeLabel.text = "בתוך: ${where.label} ▾"
-        stopSearch(null)
-        if (text) {
-            list.adapter = hitAdapter
-            status.text = "הקישו על חיפוש במקלדת כדי לחפש בטקסט"
-        } else {
-            list.adapter = titleAdapter
-            status.text = ""
-            if (::opened.isInitialized) findTitles()
-        }
-    }
-
-    private fun chooseScope() {
-        scope.launch {
-            val fromBook = intent.getLongExtra(EXTRA_BOOK_SCOPE, 0L)
-            val choices = withContext(Dispatchers.IO) {
-                val list = ArrayList<Scope>()
-                if (fromBook != 0L) {
-                    list += Scope.Book(fromBook, intent.getStringExtra(BookActivity.EXTRA_TITLE) ?: "")
-                    runCatching { opened.book(fromBook) }.getOrNull()?.let { info ->
-                        opened.categoryTitle(info.categoryId)?.let { list += Scope.Category(info.categoryId, it) }
-                    }
-                }
-                list += Scope.Library
-                runCatching { opened.rootEntries() }.getOrDefault(emptyList()).forEach { list += Scope.Category(it.id, it.title) }
-                list
-            }
-            AlertDialog.Builder(this@SearchActivity)
-                .setTitle("איפה לחפש")
-                .setItems(choices.map { it.label }.toTypedArray()) { _, which ->
-                    where = choices[which]
-                    scopeLabel.text = "בתוך: ${where.label} ▾"
-                    stopSearch(null)
-                }
-                .show()
-        }
-    }
-
-    private fun submit() {
-        if (textMode) startTextSearch() else findTitles()
-    }
-
-    private fun findTitles() {
+    /**
+     * The rows for what is typed (catBookRows): the places it names, the books named whole, the text search, then the
+     * other books; in a book, its places and the search in it. Shown after a pause in the typing.
+     */
+    private fun suggest() {
         if (!::opened.isInitialized) return
         val q = field.text.toString().trim()
-        titleJob?.cancel()
-        titleJob = scope.launch {
-            delay(200)
-            val found = if (q.isEmpty()) emptyList() else withContext(Dispatchers.IO) { runCatching { opened.findBooks(q) }.getOrDefault(emptyList()) }
-            titleAdapter.items = found
-            status.text = when {
-                q.isEmpty() -> ""
-                found.isEmpty() -> "לא נמצא ספר בשם הזה. לחיפוש בטקסט הספרים בחרו \"טקסט\"."
-                else -> "${found.size} ספרים"
+        suggestJob?.cancel()
+        if (q.isEmpty()) {
+            showSuggestions(emptyList())
+            return
+        }
+        suggestJob = scope.launch {
+            delay(SUGGEST_DELAY_MS)
+            val book = scopeBook
+            val rows = withContext(Dispatchers.IO) {
+                val out = ArrayList<Row>()
+                if (book != null) {
+                    // A place in the book: the reference with the book's title before it.
+                    runCatching { resolver.resolve("${book.title} $q", maxBooks = 1, maxResults = 5) }.getOrDefault(emptyList())
+                        .filter { it.book.id == book.id }
+                        .forEach { ref -> out += Row.Suggestion(R.drawable.ic_find_in_page, ref.label, book.title, { openPlace(ref.book.id, ref.book.title, ref.lineId) }) }
+                    out += Row.Suggestion(R.drawable.ic_search, "חיפוש בתוך ${book.title}: $q", null, { startTextSearch(q) })
+                    return@withContext out
+                }
+                val references = runCatching { resolver.resolve(q) }.getOrDefault(emptyList())
+                val books = runCatching { opened.findBooks(q, MAX_BOOK_SUGGESTIONS) }.getOrDefault(emptyList())
+                val named = runCatching { opened.booksNamed(q) }.getOrDefault(emptySet())
+                val categories = runCatching { opened.categoriesOf(books.map { it.id }) }.getOrDefault(emptyMap())
+                val (exact, others) = books.partition { it.id in named }
+                fun bookRow(entry: Entry) = Row.Suggestion(R.drawable.ic_book, entry.title, categories[entry.id], { openBook(entry) }, { bookActions(entry) })
+                references.forEach { ref ->
+                    out += Row.Suggestion(R.drawable.ic_find_in_page, "${ref.book.title} ${ref.label}", categories[ref.book.id], { openPlace(ref.book.id, ref.book.title, ref.lineId) })
+                }
+                exact.forEach { out += bookRow(it) }
+                out += Row.Suggestion(R.drawable.ic_search, "חיפוש במאגר: $q", null, { startTextSearch(q) })
+                others.forEach { out += bookRow(it) }
+                out
+            }
+            showSuggestions(rows)
+        }
+    }
+
+    private fun showSuggestions(rows: List<Row>) {
+        suggestions = rows
+        showingResults = false
+        tabsScroll.visibility = View.GONE
+        statusRow.visibility = View.GONE
+        progress.visibility = View.GONE
+        adapter.items = rows
+        list.setSelection(0)
+    }
+
+    /** Enter (the keyboard's search, OK in the field): the first row, as the main app's highlighted one. */
+    private fun enter() {
+        val q = field.text.toString().trim()
+        if (q.isEmpty() || !::opened.isInitialized) return
+        val first = suggestions.firstOrNull() as? Row.Suggestion
+        if (first != null && suggestJob?.isActive != true) first.open() else startTextSearch(q)
+    }
+
+    /** A book's long press (the main app's "חיפוש בתוך" beside it): open it, or search in it. */
+    private fun bookActions(entry: Entry) {
+        Dialogs.choices(this, colors, entry.title, listOf(
+            MenuEntry("פתיחה", R.drawable.ic_book) { openBook(entry) },
+            MenuEntry("חיפוש בתוך", R.drawable.ic_search) {
+                scopeBook = entry
+                drawScope()
+                field.setText("")
+                field.requestFocus()
+            },
+        ))
+    }
+
+    private fun openBook(entry: Entry) = BookActivity.start(this, entry.id, prefs.lastLine(entry.id), entry.title)
+
+    private fun openPlace(bookId: Long, title: String, lineId: Long) {
+        scope.launch {
+            val index = withContext(Dispatchers.IO) { runCatching { opened.lineIndex(lineId) }.getOrNull() }
+            if (index != null && fromBook(bookId)) {
+                setResult(RESULT_OK, Intent().putExtra(BookActivity.EXTRA_LINE, index))
+                finish()
+            } else {
+                BookActivity.start(this@SearchActivity, bookId, index, title)
             }
         }
     }
 
-    private fun startTextSearch() {
+    /** Opened by [bookId]'s reader for its find: a place in it goes back there. */
+    private fun fromBook(bookId: Long): Boolean = callingActivity != null && intent.getLongExtra(EXTRA_BOOK_SCOPE, 0L) == bookId
+
+    // ------------------------------------------------------------------ the text search
+
+    /**
+     * Searches [q]: in the book picked, else in the base books (and all the books if they have nothing), or all the
+     * books after "חיפוש בכל הספרים".
+     */
+    private fun startTextSearch(q: String, everywhere: Boolean = false, words: Boolean = false) {
         val engine = search ?: return
-        val q = field.text.toString().trim()
         if (q.isEmpty()) return
-        stopSearch(null)
+        searchJob?.cancel()
+        engine.cancel()
+        suggestJob?.cancel()
         lastQuery = q
-        val all = allWords
-        highlight = LineText.highlighter(q, phrase = !all)
-        hitAdapter.items = emptyList()
-        val hits = ArrayList<Hit>()
+        allBooks = everywhere
+        allWords = words
+        fellBack = false
+        stopped = false
+        tab = null
+        highlight = LineText.highlighter(q, phrase = !words)
+        hits.clear()
+        expanded.clear()
+        showResults()
         progress.visibility = View.VISIBLE
         stop.visibility = View.VISIBLE
-        status.text = "מכין את החיפוש…"
-        val target = where
+        val book = scopeBook
         searchJob = scope.launch {
-            val books = withContext(Dispatchers.IO) {
-                runCatching {
-                    when (target) {
-                        is Scope.Book -> listOf(Entry(target.id, target.title, isBook = true))
-                        is Scope.Category -> opened.booksUnder(target.id)
-                        Scope.Library -> opened.booksUnder(null)
-                    }
-                }.getOrDefault(emptyList())
-                    // The base books first (the Torah, the Mishnah, the Talmud...), as desktop's results open with them.
-                    .sortedByDescending { it.base }
+            val all = withContext(Dispatchers.IO) {
+                runCatching { if (book != null) emptyList() else opened.booksUnder(null) }.getOrDefault(emptyList())
             }
-            progress.max = maxOf(1, books.size)
-            val started = System.currentTimeMillis()
-            val found = withContext(Dispatchers.IO) {
-                runCatching {
-                    engine.run(
-                        q, books, MAX_HITS, all,
-                        onBook = { i, book ->
-                            withContext(Dispatchers.Main) {
-                                progress.progress = i
-                                status.text = "מחפש ב${book.title} (${i + 1} מתוך ${books.size}) · ${hits.size} תוצאות"
-                            }
-                        },
-                        onHits = { found ->
-                            withContext(Dispatchers.Main) {
-                                hits += found
-                                hitAdapter.items = ArrayList(hits)
-                            }
-                        },
-                    )
-                }
+            all.forEach { rootOfBook[it.id] = it.root }
+            val books = when {
+                book != null -> listOf(book)
+                everywhere -> all.filter { it.base } + all.filterNot { it.base }
+                else -> all.filter { it.base }
+            }
+            // Nothing in the base books: all the others (the main app's fallback).
+            if (scan(engine, q, books, words) == 0 && book == null && !everywhere && !stopped) {
+                fellBack = true
+                scan(engine, q, all.filterNot { it.base }, words)
             }
             progress.visibility = View.GONE
             stop.visibility = View.GONE
-            val seconds = (System.currentTimeMillis() - started) / 1000
-            status.text = when {
-                found.isFailure -> "החיפוש נכשל: ${found.exceptionOrNull()?.message}"
-                hits.isEmpty() -> "לא נמצאו תוצאות ב${target.label}"
-                hits.size >= MAX_HITS -> "נמצאו ${hits.size} תוצאות ראשונות (החיפוש נעצר שם). צמצמו את החיפוש לספר או לקטגוריה."
-                else -> "נמצאו ${hits.size} תוצאות ב${target.label}" + if (seconds > 1) " · $seconds שניות" else ""
-            }
+            drawStatus(done = true)
         }
     }
 
-    private fun stopSearch(message: String?) {
-        val job = searchJob ?: return
-        if (job.isActive) {
-            job.cancel()
-            search?.cancel()
-            progress.visibility = View.GONE
-            stop.visibility = View.GONE
-            if (message != null) status.text = "$message · ${hitAdapter.count} תוצאות"
+    private suspend fun scan(engine: TextSearch, q: String, books: List<Entry>, words: Boolean): Int {
+        progress.max = maxOf(1, books.size)
+        progress.progress = 0
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                engine.run(
+                    q, books, MAX_HITS, words,
+                    onBook = { i, book ->
+                        withContext(Dispatchers.Main) {
+                            progress.progress = i
+                            status.text = "מחפש ב${book.title} (${i + 1} מתוך ${books.size}) · ${hits.size} תוצאות"
+                        }
+                    },
+                    onHits = { found ->
+                        withContext(Dispatchers.Main) {
+                            hits += found
+                            if (showingResults) showHits()
+                        }
+                    },
+                )
+            }.getOrDefault(0)
         }
-        searchJob = null
+    }
+
+    private fun stopSearch() {
+        if (searchJob?.isActive != true) return
+        stopped = true
+        searchJob?.cancel()
+        search?.cancel()
+        progress.visibility = View.GONE
+        stop.visibility = View.GONE
+        drawStatus(done = true)
+    }
+
+    private fun showResults() {
+        showingResults = true
+        statusRow.visibility = View.VISIBLE
+        drawStatus(done = searchJob?.isActive != true)
+        showHits()
+    }
+
+    /** SearchStatusLine: how many, where, and the other choice as a link (all the books, or the base books only). */
+    private fun drawStatus(done: Boolean) {
+        val book = scopeBook
+        switchLink.visibility = View.GONE
+        if (!done) {
+            status.text = "מחפש..."
+            return
+        }
+        val n = hits.size
+        val first = if (n >= MAX_HITS) "$n התוצאות הראשונות" else "$n תוצאות"
+        status.text = when {
+            n == 0 -> "לא נמצאו תוצאות"
+            book != null -> "$first ב${book.title}"
+            fellBack -> "לא נמצא בספרי יסוד · מוצגות $first מכל הספרים"
+            allBooks -> "$first בכל הספרים"
+            else -> "$first בספרי יסוד"
+        } + if (stopped) " (החיפוש הופסק)" else ""
+        val link: Pair<String, () -> Unit>? = when {
+            n == 0 && !allWords && lastQuery.trim().contains(' ') -> "חיפוש כל מילה בנפרד" to { startTextSearch(lastQuery, allBooks, words = true) }
+            book != null || fellBack -> null
+            allBooks -> "רק ספרי יסוד" to { startTextSearch(lastQuery, everywhere = false, words = allWords) }
+            else -> "חיפוש בכל הספרים" to { startTextSearch(lastQuery, everywhere = true, words = allWords) }
+        }
+        if (link != null) {
+            switchLink.text = link.first
+            switchLink.visibility = View.VISIBLE
+            keyable(switchLink) { link.second() }
+        }
+        drawTabs()
+    }
+
+    /** CategoryTabs: הכל, then the top categories the results are in, in the library's order. */
+    private fun drawTabs() {
+        tabs.removeAllViews()
+        val present = hits.mapNotNull { rootOfBook[it.bookId] }.toSet()
+        val shown = roots.filter { it.id in present }
+        if (scopeBook != null || shown.size < 2) {
+            tabsScroll.visibility = View.GONE
+            return
+        }
+        tabsScroll.visibility = View.VISIBLE
+        fun add(text: String, id: Long?) {
+            tabs.addView(chip(text, colors, tab == id) {
+                tab = id
+                drawTabs()
+                showHits()
+            }, lp(WRAP, WRAP).apply { marginEnd = dp(6) })
+        }
+        add("הכל", null)
+        shown.forEach { add(it.title, it.id) }
+    }
+
+    /** The results, a book's first one with "עוד N תוצאות מ…" under it, or all of them once that is chosen. */
+    private fun showHits() {
+        val rows = ArrayList<Row>()
+        val filter = tab
+        val shown = if (filter == null) hits else hits.filter { rootOfBook[it.bookId] == filter }
+        for ((bookId, group) in shown.groupBy { it.bookId }) {
+            if (bookId in expanded || group.size == 1) {
+                group.forEachIndexed { i, hit -> rows += Row.Found(hit, last = i == group.size - 1) }
+            } else {
+                rows += Row.Found(group.first(), last = false)
+                rows += Row.More(bookId, group.first().bookTitle, group.size - 1)
+            }
+        }
+        adapter.items = rows
+        if (searchJob?.isActive == true) drawTabs()
     }
 
     private fun open(position: Int) {
-        if (textMode) {
-            val hit = hitAdapter.items.getOrNull(position) ?: return
-            if (callingActivity != null && intent.getLongExtra(EXTRA_BOOK_SCOPE, 0L) == hit.bookId) {
-                setResult(
-                    RESULT_OK,
-                    Intent().putExtra(BookActivity.EXTRA_LINE, hit.lineIndex).putExtra(BookActivity.EXTRA_FIND, lastQuery)
-                        .putExtra(BookActivity.EXTRA_FIND_WORDS, allWords),
-                )
-                finish()
-            } else {
-                BookActivity.start(this, hit.bookId, hit.lineIndex, hit.bookTitle, lastQuery, allWords)
+        when (val row = adapter.items.getOrNull(position) ?: return) {
+            is Row.Suggestion -> row.open()
+            is Row.More -> {
+                expanded += row.bookId
+                showHits()
             }
-        } else {
-            val entry = titleAdapter.items.getOrNull(position) ?: return
-            BookActivity.start(this, entry.id, prefs.lastLine(entry.id), entry.title)
+            is Row.Found -> {
+                val hit = row.hit
+                if (fromBook(hit.bookId)) {
+                    setResult(
+                        RESULT_OK,
+                        Intent().putExtra(BookActivity.EXTRA_LINE, hit.lineIndex).putExtra(BookActivity.EXTRA_FIND, lastQuery)
+                            .putExtra(BookActivity.EXTRA_FIND_WORDS, allWords),
+                    )
+                    finish()
+                } else {
+                    BookActivity.start(this, hit.bookId, hit.lineIndex, hit.bookTitle, lastQuery, allWords)
+                }
+            }
         }
     }
 
-    /** A hit: its book, and the line around the first word found, the words marked. */
-    private fun hitView(hit: Hit, reuse: View?): View {
-        val box = reuse as? LinearLayout ?: LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(8), dp(14), dp(10))
-            background = pressable(colors.panel, colors.pressed)
-            addView(label("", 13f, colors.accent, bold = true, maxLines = 1))
-            addView(label("", 16f, colors.text, maxLines = 4).apply { typeface = Fonts.book(this@SearchActivity) })
+    /** A result (ResultView): its book in bold, "· its place", two lines of the passage with the words found bold. */
+    private inner class HitView : LinearLayout(this@SearchActivity) {
+        val title: TextView
+        val place: TextView
+        val snippet: TextView
+        val line: View
+        var key: Pair<Long, Int>? = null
+
+        init {
+            orientation = VERTICAL
+            val head = LinearLayout(context).apply {
+                orientation = HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            title = label("", 15f, colors.text, bold = true, maxLines = 1)
+            place = label("", 13f, Palette.withAlpha(colors.text, 0.72f), maxLines = 1)
+            head.addView(title, lp(WRAP, WRAP).apply { marginEnd = dp(6) })
+            head.addView(place, lp(WRAP, WRAP))
+            val body = LinearLayout(context).apply {
+                orientation = VERTICAL
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+            }
+            body.addView(head)
+            snippet = label("", 14f, Palette.withAlpha(colors.text, 0.72f), maxLines = 2, typeface = Fonts.book(context)).apply {
+                lineHeightFactor(1.65f)
+                setPadding(0, dp(2), 0, dp(2))
+            }
+            body.addView(snippet, lp(MATCH, WRAP))
+            addView(body, lp(MATCH, WRAP))
+            line = View(context).apply { setBackgroundColor(Palette.withAlpha(colors.border, 0.5f)) }
+            addView(line, lp(MATCH, maxOf(1, dp(1))).apply { marginStart = dp(8) })
         }
-        (box.getChildAt(0) as TextView).text = "${hit.bookTitle} · שורה ${hit.lineIndex + 1}"
-        (box.getChildAt(1) as TextView).text = snippet(hit.content)
-        return box
     }
 
+    private fun hitView(row: Row.Found, reuse: HitView?): View {
+        val view = reuse ?: HitView()
+        val hit = row.hit
+        view.title.text = hit.bookTitle
+        view.snippet.text = snippet(hit.content)
+        view.line.visibility = if (row.last) View.VISIBLE else View.GONE
+        val key = hit.bookId to hit.lineIndex
+        view.key = key
+        val known = headings[key]
+        view.place.text = known?.let { "· $it" } ?: ""
+        if (known == null && ::opened.isInitialized) {
+            scope.launch {
+                val heading = withContext(Dispatchers.IO) { runCatching { opened.heading(hit.bookId, hit.lineIndex) }.getOrNull() }
+                    ?.takeIf { it.isNotBlank() && it != hit.bookTitle } ?: "שורה ${hit.lineIndex + 1}"
+                headings[key] = heading
+                if (view.key == key) view.place.text = "· $heading"
+            }
+        }
+        return view
+    }
+
+    /** "עוד N תוצאות מ…": the book's other results (ResultLink). */
+    private inner class MoreView : LinearLayout(this@SearchActivity) {
+        val text: TextView = label("", 13f, colors.accent, maxLines = 1).apply {
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            minHeight = dp(36)
+            setPadding(dp(8), 0, dp(8), dp(4))
+        }
+
+        init {
+            orientation = VERTICAL
+            addView(text, lp(MATCH, WRAP))
+            addView(View(context).apply { setBackgroundColor(Palette.withAlpha(colors.border, 0.5f)) }, lp(MATCH, maxOf(1, dp(1))).apply { marginStart = dp(8) })
+        }
+    }
+
+    private fun moreView(row: Row.More, reuse: MoreView?): View = (reuse ?: MoreView()).apply {
+        text.text = "עוד ${row.count} תוצאות מ${row.title}"
+    }
+
+    /** The passage around the first word found: a little before it (as the main app's compactSnippet), the words bold. */
     private fun snippet(html: String): CharSequence {
         val text = LineText.render(html, prefs.diacritics)
         val first = highlight?.find(text)
-        val from = first?.let { maxOf(0, it.range.first - SNIPPET_BEFORE) } ?: 0
-        val clipped = if (from > 0) SpannableStringBuilder("…").append(text.subSequence(from, text.length)) else text
-        val out = SpannableStringBuilder(clipped)
-        LineText.highlight(out, highlight, colors.searchHit)
+        var from = first?.let { maxOf(0, it.range.first - SNIPPET_BEFORE) } ?: 0
+        if (from > 0) {
+            val space = text.lastIndexOf(' ', from)
+            if (space in 1 until (first?.range?.first ?: 0)) from = space + 1
+        }
+        val out = if (from > 0) SpannableStringBuilder("...").append(text.subSequence(from, text.length)) else SpannableStringBuilder(text)
+        highlight?.findAll(out)?.forEach { match ->
+            out.setSpan(StyleSpan(Typeface.BOLD), match.range.first, match.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            out.setSpan(ForegroundColorSpan(colors.text), match.range.first, match.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
         return out
     }
 
     companion object {
         const val EXTRA_QUERY = "query"
         const val EXTRA_BOOK_SCOPE = "book_scope"
+
+        /** Search [EXTRA_QUERY]'s text at once (a zayit://search link), rather than suggest. */
+        const val EXTRA_RUN = "run"
         private const val MAX_HITS = 500
-        private const val SNIPPET_BEFORE = 60
+        private const val MAX_BOOK_SUGGESTIONS = 12
+        private const val SUGGEST_DELAY_MS = 250L
+        private const val SNIPPET_BEFORE = 40
+
+        /** Desktop's placeholder grey (HomeView SearchBar, both themes). */
+        const val PLACEHOLDER_GREY = 0xFF9AA0A6.toInt()
+
+        /**
+         * The bar's hints (UnifiedSearchBar HINTS: a reference, then a text, in turn), one a time the bar is shown:
+         * the main app types them out; here a still one, which costs an old phone nothing.
+         */
+        private val HINTS = listOf(
+            "שו\"ע אורח חיים סימן רסח", "הכל בידי שמים חוץ מיראת שמים",
+            "רמב\"ם הלכות שבת פרק כ", "ואהבת לרעך כמוך",
+            "משנה ברורה סימן רלה סעיף קטן ד", "שמע ישראל ה׳ אלקינו ה׳ אחד",
+            "ברכות דף ב עמוד א", "מי שטרח בערב שבת יאכל בשבת",
+            "תהילים פרק כג פסוק ד", "אין עוד מלבדו",
+        )
+        private var hint = 0
+
+        fun nextHint(): String = HINTS[hint++ % HINTS.size]
     }
 }

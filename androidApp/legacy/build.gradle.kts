@@ -67,13 +67,19 @@ val sharedAppSources by tasks.registering(Sync::class) {
         include("io/github/kdroidfilter/seforimapp/android/ui/reader/LineConnections.kt")
         // CONDITIONS_MARKDOWN (desktop's CONDITIONS.md under Pardes's name), shown by Settings › תנאים.
         include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/LicenceText.kt")
+        // How an author's name is shown (פרטי הספר), vendored from desktop.
+        include("io/github/kdroidfilter/seforimapp/android/search/AuthorNames.kt")
+        // The search bar's references (ברכות דף ב, בראשית א ג), vendored from desktop; this edition's source is
+        // data/References.kt (the main app's reads through SqlVariableLimit, which SQLite 3.49 does not need).
+        include("io/github/kdroidfilter/seforimapp/android/search/reference/ReferenceParser.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/reference/ReferenceResolver.kt")
     }
     into(layout.buildDirectory.dir("generated/sharedAppSources"))
 }
 
 /**
- * The fonts and licence texts this edition takes from the main app (assets/fonts, assets/licenses), and the repository
- * LICENSE (AGPL-3.0 with Zayit's §7b terms), word for word, as the main app copies it.
+ * The fonts, licence texts and Home wallpapers this edition takes from the main app (assets/fonts, assets/licenses,
+ * assets/home), and the repository LICENSE (AGPL-3.0 with Zayit's §7b terms), word for word, as the main app copies it.
  */
 abstract class LegacyAssets : DefaultTask() {
     @get:InputDirectory
@@ -87,6 +93,12 @@ abstract class LegacyAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val appLicence: RegularFileProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val wallpaperDir: DirectoryProperty
+
+    @get:Input abstract val wallpapers: ListProperty<String>
 
     @get:Input abstract val fonts: ListProperty<String>
 
@@ -103,6 +115,9 @@ abstract class LegacyAssets : DefaultTask() {
         val licencesOut = out.resolve("licenses").apply { mkdirs() }
         licences.get().forEach { licenceDir.get().asFile.resolve(it).copyTo(licencesOut.resolve(it)) }
         appLicence.get().asFile.copyTo(licencesOut.resolve("Pardes-LICENSE.txt"))
+        // The Home's wallpapers, their 960px copies (assets rather than resources: decoded once, at the view's size).
+        val homeOut = out.resolve("home").apply { mkdirs() }
+        wallpapers.get().forEach { wallpaperDir.get().asFile.resolve(it).copyTo(homeOut.resolve(it)) }
         // The main app's font notices (copied from the fonts' name tables), for the fonts this edition carries only.
         val sections = licenceDir.get().asFile.resolve("Fonts-NOTICE.txt").readText().split("\n\n\n")
         val kept = sections.drop(1).filter { section -> fonts.get().any { section.lineSequence().first().contains(it) } }
@@ -235,6 +250,8 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.androidx.multidex)
+                // Hebrew numerals for the references (ReferenceParser), as the main app.
+                implementation(libs.hebrew.numerals)
             }
         }
     }
@@ -250,6 +267,8 @@ androidComponents {
             fontDir.set(mainApp.resolve("res/font"))
             licenceDir.set(mainApp.resolve("assets/licenses"))
             appLicence.set(rootDir.resolve("../LICENSE"))
+            wallpaperDir.set(mainApp.resolve("res/drawable-nodpi"))
+            wallpapers.set(listOf("homepage_wallpaper_small.jpg", "homepage_wallpaper_dark_small.jpg"))
             // The main app's default book and commentary fonts, and a cantillation font for the targum.
             fonts.set(listOf("notoserifhebrew.ttf", "frankruhllibre.ttf", "taameyfrankclm_medium.ttf"))
             licences.set(

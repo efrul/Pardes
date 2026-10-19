@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Icons by Google (Apache License 2.0), white: the screens tint it (ui/Ui.kt). -->
+<!-- Material Icons Outlined "arrow_forward" by Google (Apache License 2.0), as the main app draws it; white, the
+     screens tint it (ui/Ui.kt). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +8,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,4l-1.41,1.41L16.17,11H4v2h12.17l-5.58,5.59L12,20l8,-8z" />
+        android:pathData="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" />
 </vector>
