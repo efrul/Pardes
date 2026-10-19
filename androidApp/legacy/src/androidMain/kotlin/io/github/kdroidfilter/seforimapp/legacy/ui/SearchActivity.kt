@@ -190,6 +190,8 @@ class SearchActivity : BaseActivity() {
         root.addView(card, lp(MATCH, 0, 1f).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
         setContentView(root)
         drawScope()
+        // A keypad starts in the field (else Android gives the title bar's back button the first focus).
+        field.requestFocus()
 
         val runAtOnce = intent.getBooleanExtra(EXTRA_RUN, false)
         scope.launch {
@@ -333,7 +335,7 @@ class SearchActivity : BaseActivity() {
                 val references = runCatching { resolver.resolve(q) }.getOrDefault(emptyList())
                 val books = runCatching { opened.findBooks(q, MAX_BOOK_SUGGESTIONS) }.getOrDefault(emptyList())
                 val named = runCatching { opened.booksNamed(q) }.getOrDefault(emptySet())
-                val categories = runCatching { opened.categoriesOf(books.map { it.id }) }.getOrDefault(emptyMap())
+                val categories = runCatching { opened.categoriesOf((books.map { it.id } + references.map { it.book.id }).toSet()) }.getOrDefault(emptyMap())
                 val (exact, others) = books.partition { it.id in named }
                 fun bookRow(entry: Entry) = Row.Suggestion(R.drawable.ic_book, entry.title, categories[entry.id], { openBook(entry) }, { bookActions(entry) })
                 references.forEach { ref ->
