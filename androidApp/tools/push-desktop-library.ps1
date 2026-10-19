@@ -357,5 +357,5 @@ if (Ask '' @('shell', "ls -a $Lib | grep '^\.zayit-old-'; true")) {
     Say 'עותקים ישנים שהיישום יצר בעצמו ימחקו כשיפתח' 'old copies the app made itself were renamed .zayit-old-*; it deletes them when it next opens'
 }
 
-Say 'הושלם. פתחו את פרדס בטלפון; אם יופיע מסך ההתקנה, בחרו "שימוש בספרייה הקיימת"' 'done. Open Pardes on the phone; if the setup screens appear, choose "use existing library"'
+Say 'הושלם. פתחו את פרדס בטלפון; אם יופיע מדריך ההגדרה, הוא ימצא את הספרייה אחרי אישור הרישיון' 'done. Open Pardes on the phone; if its setup guide appears, it finds the library after the licence step'
 $null = Run @('shell', 'ls', '-l', $Lib)
