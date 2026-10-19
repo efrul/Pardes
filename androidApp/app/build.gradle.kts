@@ -116,7 +116,7 @@ android {
         // Pardes, not Zayit: renamed at the request of Zayit's author, who asked forks not to use his app's name or icon.
         // A new id, so it installs beside the earlier io.github.efrul.zayit builds instead of over them.
         applicationId = "io.github.efrul.pardes"
-        // Android 8.0 (33 until 0.3.0, then 30). Newer platform calls sit behind SDK_INT checks with a fallback, so
+        // Android 8.0 (33 up to 0.3.1, then 30). Newer platform calls sit behind SDK_INT checks with a fallback, so
         // Android 11 and later behave as with 30 and Android 12 and later as with 33; the launcher widgets need 12,
         // incremental library updates 11 (docs/DEVELOPMENT.md › Android 8 to 12). API 26 is the floor: Lucene needs
         // java.nio.file, java.time and MethodHandle.invoke.
