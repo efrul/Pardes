@@ -137,9 +137,13 @@ if (-not $Serial) {
 }
 Say "מכשיר: $Serial" "device: $Serial"
 if ((Ask "package:/data/app/$Pkg/base.apk" @('shell', 'pm', 'path', $Pkg)) -notmatch '^package:') { Die 'פרדס אינו מותקן במכשיר' "Pardes ($Pkg) is not installed on the device" }
-# The phone's Android version: below 11 its shared storage takes no chmod (see the copy below).
-$Sdk = 30
-if ((Ask '30' @('shell', 'getprop', 'ro.build.version.sdk')).Trim() -match '^\d+$') { $Sdk = [int]$Matches[0] }
+# Android 11's adb shell is not in the ext_data_rw group (Android 12 added it): Android/data/<app>/ is out of its reach.
+# Android 8 to 10 reach it (their sdcardfs gives the shell sdcard_rw), and take no chmod there (see the copy below).
+$sdk = 0; [void][int]::TryParse(((Ask '33' @('shell', 'getprop', 'ro.build.version.sdk')) -replace '\D', ''), [ref]$sdk)
+$SdcardFs = $sdk -gt 0 -and $sdk -lt 30
+if ($sdk -eq 30 -and (Ask 'yes' @('shell', 'ls /sdcard/Android/data >/dev/null 2>&1 && echo yes')) -ne 'yes') {
+    Die 'באנדרואיד 11 כלי ההעברה (adb) אינו יכול לגשת לתיקייה של פרדס בטלפון; זה אפשרי מאנדרואיד 12. במקום זאת הורידו מעמוד ההפצה של הספרייה את הקבצים ‎.part ואת ‎.manifest.json, העתיקו אותם לתיקיית Download בטלפון ובחרו אותם בפרדס: מדריך ההגדרה ← התקנה לא-מקוונת' "Android 11: adb cannot reach Pardes's folder on the phone (it can from Android 12). Instead, download the library's .part and .manifest.json files from its release page, copy them to the phone's Download folder and pick them in Pardes: setup guide, offline install"
+}
 # Adds up the numbers an Ask returned (the phone's file sizes): stock Android 8.x has no awk to do it there.
 function SumOf([string]$out) {
     [long]$sum = 0
@@ -320,9 +324,9 @@ try {
         # a card the filesystem has no such permissions, and the app owns its folder there. Below Android 11 the phone's
         # shared storage (sdcardfs) refuses chmod and needs none, giving the app its folder's files whoever wrote them:
         # tried only.
-        $fix = if ($SdCard -or $CardUuid -or $Sdk -lt 30) { "cd $Lib && mv $Incoming$i $i" } else { "cd $Lib && mv $Incoming$i $i && find $i -type d -exec chmod 777 {} + && find $i -type f -exec chmod 666 {} +" }
+        $fix = if ($SdCard -or $CardUuid -or $SdcardFs) { "cd $Lib && mv $Incoming$i $i" } else { "cd $Lib && mv $Incoming$i $i && find $i -type d -exec chmod 777 {} + && find $i -type f -exec chmod 666 {} +" }
         if (-not (Run @('shell', $fix))) { Die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder" }
-        if (-not ($SdCard -or $CardUuid) -and $Sdk -lt 30) { $null = Run @('shell', "cd $Lib && { find $i -type d -exec chmod 777 {} +; find $i -type f -exec chmod 666 {} +; } 2>/dev/null; true") }
+        if (-not ($SdCard -or $CardUuid) -and $SdcardFs) { $null = Run @('shell', "cd $Lib && { find $i -type d -exec chmod 777 {} +; find $i -type f -exec chmod 666 {} +; } 2>/dev/null; true") }
     }
     if ($SdCard -or $CardUuid) {
         # One library: the app would keep using the one it chose before, in the phone's storage.
@@ -340,9 +344,9 @@ try {
         $import = "$PhoneFiles/import"
         $null = Run @('shell', "mkdir -p $import; chmod 777 $import 2>/dev/null; rm -f $import/user_settings.db*")
         if (-not (SendFile $NotesDb "$import/user_settings.db$Part")) { Die 'ההעתקה של ההערות נכשלה' 'copying the notes failed' }
-        $move = if ($Sdk -lt 30) { "cd $import && mv user_settings.db$Part user_settings.db" } else { "cd $import && mv user_settings.db$Part user_settings.db && chmod 666 user_settings.db" }
+        $move = if ($SdcardFs) { "cd $import && mv user_settings.db$Part user_settings.db" } else { "cd $import && mv user_settings.db$Part user_settings.db && chmod 666 user_settings.db" }
         if (-not (Run @('shell', $move))) { Die 'לא ניתן להעביר את ההערות לתיקיית היישום' "could not move the notes into the app's folder" }
-        if ($Sdk -lt 30) { $null = Run @('shell', "chmod 666 $import/user_settings.db 2>/dev/null; true") }
+        if ($SdcardFs) { $null = Run @('shell', "chmod 666 $import/user_settings.db 2>/dev/null; true") }
     }
 } finally {
     # Also on Ctrl+C, which skips Die: adbd stops the phone's shell with the adb client, before its own `rm -f`.

@@ -180,7 +180,19 @@ adb shell "U=\$(stat -c %u /data/data/$P); D=/data/data/$P/files; mkdir -p \$D/a
 
 The APK to update to needs a higher `versionName` and a `versionCode` not lower than the installed one. Expect: the snackbar "גרסה 0.3.1 של פרדס זמינה" (once per version: remove `announced_version` from `shared_prefs/app_update.xml` to see it again) and the badge at start; "הורד והתקן" in the dialog; the first time, the permission banner, whose "פתח הגדרות" opens the "install unknown apps" page (the install goes on after Back); then Android replaces the app with no question (`UPDATE_PACKAGES_WITHOUT_USER_ACTION`) and the app closes; on the next start "פרדס עודכן לגרסה 0.3.1". `adb shell dumpsys package io.github.efrul.pardes | grep -E "versionName|installerPackageName"` then shows the new version and Pardes as its installer. Remove the test files afterwards (`files/app-update-test*`); the build drops what it downloaded at its next start. Tested this way on the Jelly Star (Android 13), 2026-10-18: a refusal of a release-key APK, the permission page, cancel and approve in Android's confirmation, a silent update, and a downloaded APK offered again after the process was stopped.
 
-On Android 11 (API 30) two steps differ: turning the permission on ends the app, so Back lands in a new process that offers the checked APK as ready (tap install again), and Android's confirmation opens for every update, since `UPDATE_PACKAGES_WITHOUT_USER_ACTION` exists only from Android 12 (`androidApp/docs/DEVELOPMENT.md` › Android 8 to 12). On Android 8 to 10 only the second differs: the app keeps running when the permission is turned on.
+On Android 11 (API 30) two steps differ: turning the permission on ends the app, so Back lands in a new process, which reopens the dialog and installs the checked APK by itself; and Android's confirmation ("Install") opens for every update, since `UPDATE_PACKAGES_WITHOUT_USER_ACTION` exists only from Android 12 (`androidApp/docs/DEVELOPMENT.md` › Android 8 to 12). On Android 8 to 10 only the second differs: the app keeps running when the permission is turned on.
+
+## The API 30 emulator (Android 11)
+
+`system-images;android-30;google_apis;x86_64`, AVD `zayit30` (`AVD=zayit30 scripts/emulator-start.sh`). What it took on 2026-10-18 under TCG:
+- **system_server kept dying** with "Lost network stack": a debuggable build crashes on purpose when the network stack process is slow to answer. Run `adb shell device_config put connectivity always_ratelimit_networkstack_crash true` as soon as `service check device_config` answers (it persists).
+- **Disable the Google apps only once the user is RUNNING_UNLOCKED** (`am get-started-user-state 0`): disabling them during boot crashed system_server (NPE in finishDisabledPackageActivities). emulator-prep.sh then works as on API 33.
+- **Keep the data:** the AVD's config.ini had `disk.dataPartition.path=<temp>`; point it at the AVD's `userdata-qemu.img`. The data partition needs as much free disk as its size (`disk.dataPartition.size=6G` here).
+- **Start the emulator with a 2-hour timeout** (Bash `run_in_background` with `timeout: 7200000`); without it the background command is killed at 30 minutes.
+- **Typing:** with LatinIME disabled there is no keyboard; install ADBKeyBoard (above) and use emu-type.sh.
+- **DocumentsUI ignores taps on files and folders** under TCG: move with keyevents (`61` Tab, `20` down, `66` Enter) and pick with Enter.
+- **A subset bundle for "התקנה לא-מקוונת"** needs `library_size.txt` (`library=<bytes>`) as the tar's first entry, or the installer reserves the full library's 13 GB.
+- **adb shell cannot reach `Android/data/<app>`** on 11 (not in `ext_data_rw`): the transfer scripts fail there; use root (`/data/media/0/Android/data/...`) or install from files.
 
 ## Debugging crashes and slowness
 
