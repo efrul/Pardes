@@ -30,7 +30,8 @@ dependencyResolutionManagement {
         }
         maven("https://maven-central.storage-download.googleapis.com/maven2/")
         mavenCentral()
-        // requery sqlite-android (a bundled SQLite, for a library split on a FAT32 card) is published on JitPack only.
+        // requery sqlite-android (a bundled SQLite, for a library split on a FAT32 card and any library below Android 9)
+        // is published on JitPack only.
         maven("https://jitpack.io") {
             content { includeGroup("com.github.requery") }
         }
@@ -38,5 +39,5 @@ dependencyResolutionManagement {
 }
 
 include(":app")
-// lucene-core patched to link on Android 11 (API 30); see lucene-android/build.gradle.kts.
+// lucene-core patched to link on Android 8.0 (API 26); see lucene-android/build.gradle.kts.
 include(":lucene-android")

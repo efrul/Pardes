@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.IBinder
+import androidx.core.app.ServiceCompat
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.showForegroundImmediately
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
@@ -47,7 +48,7 @@ class LibraryDeltaService : Service() {
         lastStartId = startId
         ensureChannel()
         val started = runCatching {
-            startForeground(NOTIFICATION_ID, progressNotification(service.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, progressNotification(service.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         }.isSuccess
         if (!started) {
             stopSelf()

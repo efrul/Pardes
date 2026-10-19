@@ -41,9 +41,16 @@ object UserDataBackup {
         val database = try {
             SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.NO_LOCALIZED_COLLATORS).use { db ->
                 runCatching { db.execSQL("VACUUM INTO '${copy.absolutePath.replace("'", "''")}'") }.onFailure {
-                    // VACUUM INTO needs SQLite 3.27; otherwise fold the log into the file and copy it.
+                    // VACUUM INTO needs SQLite 3.27 (Android 8-10 have 3.18 to 3.22); otherwise fold the log into the
+                    // file and copy it, holding the write lock meanwhile: a commit on UserDataStore's connection (or the
+                    // checkpoint after one) would change the file under the copy.
                     db.rawQuery("PRAGMA wal_checkpoint(FULL)", null).use { cursor -> cursor.moveToFirst() }
-                    dbFile.copyTo(copy, overwrite = true)
+                    db.beginTransactionNonExclusive()
+                    try {
+                        dbFile.copyTo(copy, overwrite = true)
+                    } finally {
+                        db.endTransaction()
+                    }
                 }
             }
             copy.readBytes()

@@ -204,7 +204,7 @@ internal object ZayitWidgets {
 
     /** Adds [request] to the next redraw, starting one unless one is under way; null outside the app. */
     private fun enqueue(context: Context, request: WidgetRequest): Job? {
-        // None can be placed on Android 11: the widgets' receivers are off below API 31 (AndroidManifest.xml)
+        // None can be placed below Android 12: the widgets' receivers are off below API 31 (AndroidManifest.xml)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
         val app = context.applicationContext as? ZayitApplication ?: return null
         synchronized(lock) {

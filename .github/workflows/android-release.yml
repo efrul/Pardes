@@ -133,17 +133,18 @@ jobs:
             || { echo "The APK is not signed with the release key ($RELEASE_CERT_SHA256)" >&2; exit 1; }
           rm -f "$RUNNER_TEMP/pardes-release.jks"
 
-      # Every reference above API 30 would be a NoClassDefFoundError/NoSuchMethodError on Android 11: no release unless 0.
-      # The gate dexes with AGP's own D8 (in the Gradle cache after the build) and traces against the API 30 platform.
-      - name: Check lucene-android against API 30
+      # Every reference above API 26 would be a NoClassDefFoundError/NoSuchMethodError on Android 8.0: no release unless 0.
+      # The gate dexes with AGP's own D8 (in the Gradle cache after the build) for the app's minSdk (26) and traces
+      # against the API 26 platform.
+      - name: Check lucene-android against API 26
         run: |
           set -o pipefail
-          sdkmanager --install "platforms;android-30" > /dev/null
+          sdkmanager --install "platforms;android-26" > /dev/null
           androidApp/lucene-android/check-min-api.sh androidApp/lucene-android/build/libs/lucene-android-*-android.jar \
             | tee check-min-api.txt
-          grep -q ': 0 references above API 30, 0 missing on API 33, 0 missing on API 30$' check-min-api.txt
+          grep -q ': 0 references above API 26, 0 missing on API 33, 0 missing on API 26$' check-min-api.txt
           grep -q 'run on API 33+ only): 0 references above API 33, 0 missing on API 33$' check-min-api.txt
-          { echo '### lucene-android API 30 gate'; echo '```'; cat check-min-api.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### lucene-android API 26 gate'; echo '```'; cat check-min-api.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       # R8 must leave lucene-android's API 33 calls in AndroidCompatApi33: moved into a class every search loads, they
       # made Android 11's verifier reject it (no search there)

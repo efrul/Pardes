@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.android.delta
 
 import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
 import android.provider.OpenableColumns
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
@@ -137,6 +138,9 @@ internal object DeltaStrings {
     const val splitUnsupported =
         "הספרייה שמורה בחלקים בכרטיס זיכרון FAT32, ועדכון מצטבר עדיין אינו זמין עבורה. " +
             "אפשר לעדכן אותה בעדכון מלא (הורדה, או קובצי ‎.part של המאגר המלא), או לפרמט את הכרטיס ל-exFAT ולהעביר אליו את הספרייה מחדש."
+    const val androidTooOld =
+        "עדכון מצטבר דורש אנדרואיד 11 ומעלה: ה-SQLite של גרסת אנדרואיד שבמכשיר ישן מדי בשבילו. " +
+            "אפשר לעדכן את הספרייה בעדכון מלא (הורדה, או קובצי ‎.part של המאגר המלא)."
     const val fromFolder = "עדכון מתיקייה"
     const val folderEmpty = "בתיקייה שנבחרה אין קובצי עדכון או קובצי מאגר."
     const val folderIsLibrary =
@@ -219,7 +223,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     /** Desktop's "Check for updates", stopping at the offer: on a phone the size is shown before anything is downloaded. */
     fun check() {
         if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy || AppUpdater.get(app).isInstalling) return
-        if (refuseSplit()) return
+        if (refuseDelta()) return
         val current = InstallToken().also { token = it }
         _state.value = DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.CheckingForUpdates, message = DeltaStrings.checking)
         job = scope.launch {
@@ -235,7 +239,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     /** For the database update flow: the delta from the installed version, or null (no network, none published). */
     suspend fun findOffer(): DbDeltaUpdateState.Offer? = withContext(Dispatchers.IO) {
         if (isBusy) return@withContext _state.value.offer
-        if (SplitDatabase.isSplit(store.databaseFile)) return@withContext null
+        if (deltaRefusal() != null) return@withContext null
         val found = runCatching { findPlan(InstallToken()) }.getOrNull()
         (found as? Found.Ready)?.let { stateOf(it).offer }
     }
@@ -258,7 +262,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     fun apply() {
         val p = plan ?: return check()
         if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy || AppUpdater.get(app).isInstalling) return
-        if (refuseSplit()) return
+        if (refuseDelta()) return
         val current = InstallToken().also { token = it }
         _state.value = DbDeltaUpdateState(phase = DbDeltaUpdateState.Phase.Downloading, message = DeltaStrings.preparing, cancellable = true)
         LibraryDeltaService.start(app)
@@ -275,7 +279,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
      * when the run ends, unless a cancel keeps the run for "המשך".
      */
     fun applyFromFiles(uris: List<Uri>) {
-        if (uris.isEmpty() || isBusy || installer.isBusy || LibraryMover.get(app).isBusy || AppUpdater.get(app).isInstalling || refuseSplit()) {
+        if (uris.isEmpty() || isBusy || installer.isBusy || LibraryMover.get(app).isBusy || AppUpdater.get(app).isInstalling || refuseDelta()) {
             app.releaseReadGrants(uris) // not run: nothing will read them
             return
         }
@@ -361,12 +365,23 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
     }
 
     /**
-     * A database split in chunks on a FAT32 card (SplitDatabase) takes no incremental update yet: the delta code opens the
-     * database with Android's SQLite, which cannot read the chunks. Says so, and true.
+     * Why this library takes no incremental update, or null when it takes one. Such a library is updated with the full
+     * download instead (the database update flow finds no offer here):
+     * - below Android 11: the patches need SQLite 3.24 and later (UPSERT, `WHERE true` in PatchApplier) and these have
+     *   3.18 to 3.22; Android 8.x also refuses ATTACH inside a transaction, and DeltaSqlite's wide CursorWindow is API 28;
+     * - a database split in chunks on a FAT32 card (SplitDatabase): the delta code opens the database with Android's
+     *   SQLite, which cannot read the chunks.
      */
-    private fun refuseSplit(): Boolean {
-        if (!SplitDatabase.isSplit(store.databaseFile)) return false
-        _state.value = DbDeltaUpdateState(errorMessage = DeltaStrings.splitUnsupported)
+    private fun deltaRefusal(): String? = when {
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.R -> DeltaStrings.androidTooOld
+        SplitDatabase.isSplit(store.databaseFile) -> DeltaStrings.splitUnsupported
+        else -> null
+    }
+
+    /** [deltaRefusal]: says why, and true. */
+    private fun refuseDelta(): Boolean {
+        val refusal = deltaRefusal() ?: return false
+        _state.value = DbDeltaUpdateState(errorMessage = refusal)
         return true
     }
 
@@ -384,7 +399,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
      */
     fun resumeIfPending() {
         if (isBusy || installer.isBusy || LibraryMover.get(app).isBusy || !store.databaseFile.isFile) return
-        if (SplitDatabase.isSplit(store.databaseFile)) return
+        if (deltaRefusal() != null) return
         val pending = DeltaApplierClient().pending(store.databaseFile.toPath()) ?: return
         if (pending.stage != DeltaApplierClient.Stage.Index || pending.manifestUrl == null) return
         plan = Plan(listOf(DeltaEntry(pending.fromVersion, pending.toVersion, pending.manifestUrl, 0L)), pending.releaseTag, 0L, resume = true)

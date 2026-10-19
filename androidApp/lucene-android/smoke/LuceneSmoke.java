@@ -43,7 +43,7 @@ import org.apache.lucene.util.VectorUtil;
  * <p>Reads a copy of a desktop index (default fields: those of seforim.db.lookup.lucene; the stored text is re-analyzed into the query terms) through
  * NIOFSDirectory with Term/Phrase/Prefix queries and a doc-values sort, then writes, deletes and
  * merges a small index to cover the write path. Any failed expectation throws.
- * With -Dlucene.android.forceFallbacks=true the jar runs its Android 11/12 code in place of the
+ * With -Dlucene.android.forceFallbacks=true the jar runs its Android 8.0-12 code in place of the
  * API 33 JDK methods (see AndroidCompat); the output must not change apart from the "jar:" line.
  */
 public class LuceneSmoke {
@@ -56,7 +56,7 @@ public class LuceneSmoke {
 
     final boolean patched = LuceneSmoke.class.getClassLoader()
         .getResource("org/apache/lucene/util/AndroidCompat.class") != null;
-    System.out.println("jar: " + (patched ? "lucene-android" + (api33() ? "" : " (API 30-32 code)") : "original lucene-core")
+    System.out.println("jar: " + (patched ? "lucene-android" + (api33() ? "" : " (API 26-32 code)") : "original lucene-core")
         + ", FSDirectory.open -> " + FSDirectory.open(indexDir).getClass().getSimpleName());
     check(!patched || FSDirectory.open(indexDir) instanceof NIOFSDirectory, "FSDirectory.open is NIOFS");
     System.out.println("tokenizers (SPI): " + TokenizerFactory.availableTokenizers());

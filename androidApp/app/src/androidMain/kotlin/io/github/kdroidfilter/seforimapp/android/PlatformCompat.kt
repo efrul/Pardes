@@ -8,14 +8,14 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 
 /*
- * Platform calls newer than Android 11 (API 30) that several places make. Where Android has them they are made as
+ * Platform calls newer than Android 8.0 (API 26) that several places make. Where Android has them they are made as
  * before; below, the older call that does the same, or none where the older Android already behaves that way.
  */
 
 /**
  * Android 12+ may hold a foreground service's notification back for up to 10 s: this one shows at once, as every one
- * does on Android 11. Notification.Builder.setForegroundServiceBehavior is API 31: on Android 11 it would throw while
- * the notification is built, before startForeground, and Android 11 ends the app when a service started for the
+ * does below Android 12. Notification.Builder.setForegroundServiceBehavior is API 31: below 12 it would throw while
+ * the notification is built, before startForeground, and Android ends the app when a service started for the
  * foreground stops without it.
  */
 internal fun Notification.Builder.showForegroundImmediately(): Notification.Builder = apply {

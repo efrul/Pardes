@@ -5,6 +5,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.os.Build
+import androidx.core.content.pm.PackageInfoCompat
 import io.github.kdroidfilter.seforimapp.android.packageArchiveInfoCompat
 import io.github.kdroidfilter.seforimapp.android.packageInfoCompat
 import java.io.File
@@ -36,19 +37,30 @@ internal object AppPackages {
         val minSdk: Int,
     )
 
-    /** The installed app. */
+    /**
+     * The installed app. GET_SIGNING_CERTIFICATES and PackageInfo.signingInfo are API 28: below, GET_SIGNATURES and
+     * PackageInfo.signatures, the certificates Android verified the APK against when it installed it ([identityOf]).
+     */
+    @Suppress("DEPRECATION")
     fun installed(context: Context): Identity? = runCatching {
-        identityOf(context.packageManager.packageInfoCompat(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        identityOf(context.packageManager.packageInfoCompat(context.packageName, flags.toLong()))
     }.getOrNull()
 
     /**
      * A downloaded APK, or null when Android cannot read it as one (a truncated or foreign file). Android 13's first
      * releases (android-13.0.0_r1 to r13) collected an archive's certificates only for GET_SIGNATURES, leaving
-     * signingInfo null for GET_SIGNING_CERTIFICATES alone: both are asked (no signers = no update).
+     * signingInfo null for GET_SIGNING_CERTIFICATES alone: both are asked (no signers = no update). Below Android 9 only
+     * GET_SIGNATURES exists: getPackageArchiveInfo then verifies the archive's signature (collectCertificates) and gives
+     * its certificates, or none when it does not verify.
      */
     @Suppress("DEPRECATION")
     fun archive(context: Context, apk: File): Identity? = runCatching {
-        val flags = PackageManager.GET_SIGNING_CERTIFICATES.toLong() or PackageManager.GET_SIGNATURES.toLong()
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            PackageManager.GET_SIGNING_CERTIFICATES.toLong() or PackageManager.GET_SIGNATURES.toLong()
+        } else {
+            PackageManager.GET_SIGNATURES.toLong()
+        }
         context.packageManager.packageArchiveInfoCompat(apk.path, flags)?.let(::identityOf)
     }.getOrNull()
 
@@ -66,13 +78,24 @@ internal object AppPackages {
     }
 
     private fun identityOf(info: PackageInfo): Identity {
-        val signing = info.signingInfo
-        val signers = signing?.apkContentsSigners.orEmpty().map(::sha256).toSet()
-        val lineage = if (signing != null && !signing.hasMultipleSigners()) signing.signingCertificateHistory.orEmpty().map(::sha256) else emptyList()
+        val signers: Set<String>
+        val lineage: List<String>
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val signing = info.signingInfo
+            signers = signing?.apkContentsSigners.orEmpty().map(::sha256).toSet()
+            lineage = if (signing != null && !signing.hasMultipleSigners()) signing.signingCertificateHistory.orEmpty().map(::sha256) else emptyList()
+        } else {
+            // Android 8.x: every certificate that signs the APK, and no lineage (key rotation, APK signature scheme v3,
+            // is Android 9's), so sameSigner asks for the same certificates, as Android 8 does to install an update.
+            @Suppress("DEPRECATION")
+            signers = info.signatures.orEmpty().map(::sha256).toSet()
+            lineage = emptyList()
+        }
         return Identity(
             packageName = info.packageName,
             versionName = info.versionName.orEmpty(),
-            versionCode = info.longVersionCode,
+            // PackageInfo.longVersionCode is API 28; below, versionCode (an Int then)
+            versionCode = PackageInfoCompat.getLongVersionCode(info),
             signers = signers,
             lineage = lineage,
             // Not known: left to PackageInstaller, which refuses an APK this Android cannot run (STATUS_FAILURE_INCOMPATIBLE)

@@ -197,17 +197,19 @@ class LibraryStore(private val context: Context) {
         repository?.let { return it }
         synchronized(this) {
             repository?.let { return it }
-            val split = SplitDatabase.isSplit(databaseFile)
+            val bundled = SplitDatabase.usesBundledSqlite(databaseFile)
             val driver = PragmaSafeDriver(
                 AndroidSqliteDriver(
                     schema = SeforimDb.Schema,
                     context = context,
                     name = databaseFile.absolutePath,
-                    // A database in chunks (a FAT32 card) is read through the multiplex VFS of the app's own SQLite.
-                    factory = if (split) SplitDatabase.openHelperFactory() else FrameworkSQLiteOpenHelperFactory(),
+                    // A database in chunks (a FAT32 card) is read through the multiplex VFS of the app's own SQLite,
+                    // and so is every library below Android 9, whose own SQLite keeps a 2 MB window (SplitDatabase).
+                    factory = if (bundled) SplitDatabase.openHelperFactory() else FrameworkSQLiteOpenHelperFactory(),
                     // A row wider than Android's 2 MB cursor window closed the app (SQLiteBlobTooBigException): a
                     // book's notes reach 4.25 MB (מיקרופדיה תלמודית opened the encyclopedias with 2.9 MB). Desktop
-                    // reads through JDBC, which has no such window.
+                    // reads through JDBC, which has no such window. SQLDelight applies it from API 28, to Android's
+                    // cursors; the bundled SQLite's get theirs from openHelperFactory.
                     windowSizeBytes = WIDE_WINDOW_BYTES,
                 ),
             )

@@ -24,7 +24,7 @@ import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 
 /**
- * Turns the lucene-core jar into one that links on Android 11 (API 30), see ../build.gradle.kts.
+ * Turns the lucene-core jar into one that links on Android 8.0 (API 26), see ../build.gradle.kts.
  *
  * <p>Usage: {@code LuceneAndroidRewriter <lucene-core.jar> <patched classes dir> <out dir>
  * <out MANIFEST.MF> [<extra jar> <class,class,...>]...}. Every entry of the original jar is copied to the out dir except: classes
@@ -66,7 +66,7 @@ public final class LuceneAndroidRewriter {
   private static final String COMPAT = "org/apache/lucene/util/AndroidCompat";
 
   /**
-   * JDK methods missing on Android 11 ("owner.name(desc)" as called) and the static method that
+   * JDK methods missing on Android 8.0 ("owner.name(desc)" as called) and the static method that
    * replaces them; instance calls pass the receiver as first argument. The API 33 ones hand over
    * to the JDK method on API 33+ (AndroidCompat, CompatVarHandle).
    */

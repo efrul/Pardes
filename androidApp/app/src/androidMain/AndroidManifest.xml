@@ -72,7 +72,7 @@
 
         <!-- Launcher widgets (appwidget/): what the Home's widgets show, as RemoteViews. Not exported: the system's
              widget broadcasts reach them all the same. Off below Android 12 (@bool/appwidget_enabled, with their
-             WidgetRefreshReceiver): they are drawn with RemoteViews calls of API 31, so Android 11 does not offer them
+             WidgetRefreshReceiver): they are drawn with RemoteViews calls of API 31, so Android 8 to 11 do not offer them
              (they would stay on "טוען…"), and ZayitWidgets draws nothing there. -->
         <receiver
             android:name=".appwidget.ZmanimWidgetProvider"

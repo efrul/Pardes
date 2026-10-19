@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- System bar icons for the light window background: dark ones. The splash (starting) window and the moments
+         before Compose sets them (SystemBarsHost) take them from here; values-night-v27 has the light ones. Android
+         8.1 and later: android:windowLightNavigationBar is API 27 (values/themes.xml, for 8.0, has the rest). -->
+    <style name="Theme.Zayit" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.ui.shell
 
+import android.os.Build
 import android.view.ViewTreeObserver
 import android.view.Window
 import androidx.compose.runtime.Composable
@@ -73,6 +74,7 @@ fun SystemBarsHost(window: Window, content: @Composable () -> Unit) {
             isAppearanceLightStatusBars = lightStatus
             isAppearanceLightNavigationBars = lightNavigation
         }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) window.navigationBarColor = navigationBarScrim(lightNavigation)
     }
     SideEffect { applyBars() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -108,5 +110,16 @@ fun DialogSystemBarsOver(status: Color, navigation: Color) {
             isAppearanceLightStatusBars = lightStatus
             isAppearanceLightNavigationBars = lightNavigation
         }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) window.navigationBarColor = navigationBarScrim(lightNavigation)
     }
 }
+
+/**
+ * The navigation bar's colour below Android 10, where the bar is not transparent: enableEdgeToEdge paints it with the
+ * scrim of the system's night mode, not the app's, so with the app dark on a light system its light icons vanished on
+ * the light scrim. Here the scrim follows the background shown, as the icons do: androidx.activity's own two scrims
+ * (EdgeToEdge.kt DefaultLightScrim and DefaultDarkScrim). From Android 10 on enableEdgeToEdge leaves the bar
+ * transparent, and the system keeps the icons readable.
+ */
+private fun navigationBarScrim(light: Boolean): Int =
+    if (light) android.graphics.Color.argb(0xe6, 0xff, 0xff, 0xff) else android.graphics.Color.argb(0x80, 0x1b, 0x1b, 0x1b)
