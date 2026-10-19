@@ -9,17 +9,31 @@ import io.github.kdroidfilter.seforimapp.legacy.db.NativeSqliteDriver
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import java.io.File
 
-/** A row of the library tree: a category, or a book in one ([base]: one of the desktop's base books, isBaseBook). */
-data class Entry(val id: Long, val title: String, val isBook: Boolean, val base: Boolean = false)
+/**
+ * A row of the library tree: a category, or a book in one ([base]: one of the desktop's base books, isBaseBook;
+ * [root]: its top category, which the search's category chips name).
+ */
+data class Entry(val id: Long, val title: String, val isBook: Boolean, val base: Boolean = false, val root: Long = 0)
 
-/** What the reader needs of a book, read without its notes (they reach 4 MB). */
+/**
+ * What the reader needs of a book, read without its notes (they reach 4 MB): which links it has (the toolbar shows
+ * only those buttons, as the main app) and whether its text has niqqud and cantillation (the ניקוד button).
+ */
 data class BookInfo(
     val id: Long,
     val title: String,
     val categoryId: Long,
     val totalLines: Int,
     val shortDescription: String?,
+    val hasCommentaries: Boolean = false,
+    val hasTargum: Boolean = false,
+    val hasSources: Boolean = false,
+    val hasNekudot: Boolean = false,
+    val hasTeamim: Boolean = false,
 )
+
+/** A category of the library: its parent and its title. */
+data class CategoryRow(val id: Long, val parentId: Long?, val title: String)
 
 class NoLibraryException : Exception("No library")
 
@@ -123,9 +137,41 @@ class Library(private val context: Context) {
         }
 
         fun book(id: Long): BookInfo? =
-            query("SELECT id, title, categoryId, totalLines, heShortDesc FROM book WHERE id = ?", { bindLong(0, id) }) {
-                BookInfo(it.getLong(0)!!, it.getString(1)!!, it.getLong(2)!!, it.getLong(3)!!.toInt(), it.getString(4))
+            query(
+                """
+                SELECT id, title, categoryId, totalLines, heShortDesc,
+                    hasCommentaryConnection, hasTargumConnection, hasSourceConnection, hasNekudot, hasTeamim
+                FROM book WHERE id = ?
+                """.trimIndent(),
+                { bindLong(0, id) },
+            ) {
+                BookInfo(
+                    it.getLong(0)!!, it.getString(1)!!, it.getLong(2)!!, it.getLong(3)!!.toInt(), it.getString(4),
+                    hasCommentaries = it.getLong(5) == 1L, hasTargum = it.getLong(6) == 1L, hasSources = it.getLong(7) == 1L,
+                    hasNekudot = it.getLong(8) == 1L, hasTeamim = it.getLong(9) == 1L,
+                )
             }.firstOrNull()
+
+        fun bookTitle(id: Long): String? = query("SELECT title FROM book WHERE id = ?", { bindLong(0, id) }) { it.getString(0) }.firstOrNull()
+
+        /** Every category (a few hundred rows): the Home's catalog row reads its titles and parents. */
+        fun categories(): List<CategoryRow> = query("SELECT id, parentId, title FROM category") { CategoryRow(it.getLong(0)!!, it.getLong(1), it.getString(2) ?: "") }
+
+        /** A category's own books, in order (not its subcategories'). */
+        fun booksIn(categoryId: Long): List<Entry> =
+            query("SELECT id, title FROM book WHERE categoryId = ? ORDER BY orderIndex, title", { bindLong(0, categoryId) }) {
+                Entry(it.getLong(0)!!, it.getString(1)!!, isBook = true)
+            }
+
+        /** The table of contents' entry of a line ("פרק כו"), the place the title bar and the search's results name. */
+        fun heading(bookId: Long, lineIndex: Int): String? =
+            query(
+                """
+                SELECT tt.text FROM line l JOIN line_toc lt ON lt.lineId = l.id JOIN tocEntry te ON te.id = lt.tocEntryId
+                JOIN tocText tt ON tt.id = te.textId WHERE l.bookId = ? AND l.lineIndex = ?
+                """.trimIndent(),
+                { bindLong(0, bookId); bindLong(1, lineIndex.toLong()) },
+            ) { it.getString(0) }.firstOrNull()
 
         fun lineCount(bookId: Long): Int =
             query("SELECT COUNT(*) FROM line WHERE bookId = ?", { bindLong(0, bookId) }) { it.getLong(0)!!.toInt() }.first()
@@ -154,6 +200,26 @@ class Library(private val context: Context) {
             ) { Entry(it.getLong(0)!!, it.getString(1)!!, isBook = true) }
         }
 
+        /** The category title of each of [bookIds] (a suggestion's second line). */
+        fun categoriesOf(bookIds: Collection<Long>): Map<Long, String> {
+            if (bookIds.isEmpty()) return emptyMap()
+            val marks = bookIds.joinToString(",") { "?" }
+            return query(
+                "SELECT b.id, c.title FROM book b JOIN category c ON c.id = b.categoryId WHERE b.id IN ($marks)",
+                { bookIds.forEachIndexed { i, id -> bindLong(i, id) } },
+            ) { it.getLong(0)!! to (it.getString(1) ?: "") }.toMap()
+        }
+
+        /** The books whose title is [text], or one of whose acronyms is (a book named whole, which Enter opens). */
+        fun booksNamed(text: String): Set<Long> {
+            val q = text.trim()
+            if (q.isEmpty()) return emptySet()
+            return query(
+                "SELECT id FROM book WHERE title = ?1 UNION SELECT bookId FROM book_acronym WHERE term = ?1",
+                { bindString(0, q) },
+            ) { it.getLong(0)!! }.toSet()
+        }
+
         /**
          * Every book under [categoryId] at any depth, or every book of the library for null, in the tree's order (a
          * category's books, then its subcategories, each by its place): the order the search goes through them.
@@ -165,12 +231,18 @@ class Library(private val context: Context) {
             val books = query("SELECT id, title, categoryId, isBaseBook FROM book ORDER BY orderIndex, title") {
                 Entry(it.getLong(0)!!, it.getString(1)!!, isBook = true, base = it.getLong(3) == 1L) to it.getLong(2)!!
             }.groupBy({ it.second }, { it.first })
-            val out = ArrayList<Entry>()
-            fun walk(id: Long) {
-                books[id]?.let { out += it }
-                children[id]?.forEach { walk(it.id) }
+            val parents = categories.associate { it.id to it.parentId }
+            fun rootOf(id: Long): Long {
+                var at = id
+                repeat(64) { at = parents[at] ?: return at }
+                return at
             }
-            if (categoryId == null) children[null]?.forEach { walk(it.id) } else walk(categoryId)
+            val out = ArrayList<Entry>()
+            fun walk(id: Long, root: Long) {
+                books[id]?.let { list -> list.mapTo(out) { it.copy(root = root) } }
+                children[id]?.forEach { walk(it.id, root) }
+            }
+            if (categoryId == null) children[null]?.forEach { walk(it.id, it.id) } else walk(categoryId, rootOf(categoryId))
             return out
         }
     }

@@ -2,8 +2,7 @@ package io.github.kdroidfilter.seforimapp.legacy.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.Gravity
-import android.widget.HorizontalScrollView
+import android.view.KeyEvent
 import android.widget.LinearLayout
 import android.widget.ListView
 import io.github.kdroidfilter.seforimapp.legacy.R
@@ -14,86 +13,136 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * A book's table of contents, one level at a time (a phone's width has no room for desktop's tree): an entry with
- * children opens them, the others take the reader to their line. It opens at the place the reader is at.
+ * A book's table of contents as the main app's TOC pane draws it (TocPane TocTree): entries open in place under their
+ * parent, the reader's place marked and its parents open. An entry with entries under it opens and closes; the others
+ * take the reader to their line, and a long press takes it to an open entry's own line. On a keypad OK does the same,
+ * and ← opens an entry and → closes it, as the tree reads from right to left.
  */
 class TocActivity : BaseActivity() {
     private var bookId = 0L
     private lateinit var opened: Library.Opened
-    private lateinit var crumbs: LinearLayout
     private lateinit var list: ListView
 
-    /** The entries from the root down to the level shown. */
-    private val path = ArrayList<TocEntry>()
+    /** A row of the flattened tree. */
+    private class Node(val entry: TocEntry, val depth: Int, var open: Boolean = false)
 
-    /** The entries from the root to the reader's place, marked in the lists. */
-    private var current: Set<Long> = emptySet()
-    private val adapter = ItemsAdapter<Row> { row, reuse, _ ->
-        val view = reuse as? EntryRow ?: EntryRow(this, colors)
-        when (row) {
-            is Row.Start -> view.bind("לתחילת ${row.entry.text}", iconRes = R.drawable.ic_back, iconTint = colors.accent)
-            is Row.Item -> view.bind(row.entry.text, leads = row.entry.hasChildren, marked = row.entry.id in current)
+    private val nodes = ArrayList<Node>()
+
+    /** The entry of the reader's place. */
+    private var current: Long? = null
+    private val adapter = ItemsAdapter<Node> { node, reuse, _ ->
+        val arrow = when {
+            !node.entry.hasChildren -> null
+            node.open -> R.drawable.ic_arrow_down
+            else -> R.drawable.ic_arrow_left
         }
-        view
-    }
-
-    private sealed interface Row {
-        data class Start(val entry: TocEntry) : Row
-
-        data class Item(val entry: TocEntry) : Row
+        (reuse as? TreeRow ?: TreeRow(this, colors)).bind(node.entry.text, node.depth, arrowRes = arrow, keepArrowSpace = true, marked = node.entry.id == current)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         bookId = intent.getLongExtra(BookActivity.EXTRA_BOOK, 0L)
         val line = intent.getIntExtra(BookActivity.EXTRA_LINE, 0)
+        val title = intent.getStringExtra(BookActivity.EXTRA_TITLE) ?: ""
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val bar = TopBar(this, colors) { finish() }
-        bar.title.text = "תוכן העניינים: " + (intent.getStringExtra(BookActivity.EXTRA_TITLE) ?: "")
-        root.addView(bar, lp(MATCH, WRAP))
-        crumbs = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(6), dp(8), dp(6))
+        val bar = TopBar(this, colors).apply {
+            leading(R.drawable.ic_back, "חזרה") { finish() }
+            this.title.text = "תוכן עניינים"
+            setSubtitle(title)
         }
-        root.addView(HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            setBackgroundColor(colors.ground)
-            addView(crumbs)
-        }, lp(MATCH, WRAP))
+        topBar = bar
+        root.addView(bar, lp(MATCH, WRAP))
         list = ListView(this).apply {
-            adapter = this@TocActivity.adapter
-            setBackgroundColor(colors.panel)
-            cacheColorHint = colors.panel
             divider = null
-            setOnItemClickListener { _, _, position, _ ->
-                when (val row = this@TocActivity.adapter.items[position]) {
-                    is Row.Start -> go(row.entry)
-                    is Row.Item -> if (row.entry.hasChildren) {
-                        path += row.entry
-                        show()
-                    } else {
-                        go(row.entry)
-                    }
-                }
-            }
+            selector = states(colors, 0, dp(6).toFloat())
+            cacheColorHint = 0
+            setPadding(dp(6), dp(4), dp(6), dp(4))
+            adapter = this@TocActivity.adapter
+            setOnItemClickListener { _, _, position, _ -> activate(position) }
             setOnItemLongClickListener { _, _, position, _ ->
-                (this@TocActivity.adapter.items[position] as? Row.Item)?.let { go(it.entry) }
+                nodes.getOrNull(position)?.let { go(it.entry) }
                 true
             }
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+                val node = nodes.getOrNull(selectedItemPosition) ?: return@setOnKeyListener false
+                when {
+                    keyCode == KeyEvent.KEYCODE_DPAD_LEFT && node.entry.hasChildren && !node.open -> {
+                        toggle(selectedItemPosition)
+                        true
+                    }
+                    keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && node.open -> {
+                        toggle(selectedItemPosition)
+                        true
+                    }
+                    else -> false
+                }
+            }
         }
-        root.addView(list, lp(MATCH, 0, 1f))
+        val card = LinearLayout(this).apply { background = island(colors) }
+        card.addView(list, lp(MATCH, MATCH))
+        root.addView(card, lp(MATCH, 0, 1f).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
         setContentView(root)
+
         scope.launch {
             opened = withContext(Dispatchers.IO) { app.library.open() }
-            // Open at the reader's place: its entry's parents become the path.
-            val trail = withContext(Dispatchers.IO) { runCatching { trailTo(line) }.getOrDefault(emptyList()) }
-            current = trail.map { it.id }.toSet()
-            path.addAll(trail.dropLast(1))
-            show()
+            val (roots, trail) = withContext(Dispatchers.IO) {
+                runCatching {
+                    var top = opened.repository.getBookRootToc(bookId)
+                    // A root that only repeats the book's title: its entries are the tree's first level.
+                    val titleRoot = top.firstOrNull()?.takeIf { it.text == title && it.hasChildren }
+                    if (titleRoot != null) top = opened.repository.getTocChildren(titleRoot.id) + top.drop(1)
+                    top to trailTo(line)
+                }.getOrDefault(emptyList<TocEntry>() to emptyList())
+            }
+            roots.forEach { nodes += Node(it, 0) }
+            current = trail.lastOrNull()?.id
+            // The reader's place: its parents open, it in view.
+            var at = -1
+            for (step in trail) {
+                val i = nodes.indexOfFirst { it.entry.id == step.id }
+                if (i < 0) continue
+                at = i
+                if (step.id != current && nodes[i].entry.hasChildren && !nodes[i].open) expand(i)
+            }
+            adapter.items = ArrayList(nodes)
+            if (at >= 0) {
+                list.setSelection(maxOf(0, at - 2))
+                if (!list.isInTouchMode) list.post { list.setSelection(at) }
+            }
         }
     }
 
+    private fun activate(position: Int) {
+        val node = nodes.getOrNull(position) ?: return
+        if (node.entry.hasChildren) toggle(position) else go(node.entry)
+    }
+
+    private fun toggle(position: Int) {
+        val node = nodes.getOrNull(position) ?: return
+        if (node.open) {
+            node.open = false
+            var end = position + 1
+            while (end < nodes.size && nodes[end].depth > node.depth) end++
+            nodes.subList(position + 1, end).clear()
+            adapter.items = ArrayList(nodes)
+        } else {
+            scope.launch {
+                expand(position)
+                adapter.items = ArrayList(nodes)
+            }
+        }
+    }
+
+    /** Opens the entry at [position]: its entries under it. */
+    private suspend fun expand(position: Int) {
+        val node = nodes.getOrNull(position) ?: return
+        val children = withContext(Dispatchers.IO) { runCatching { opened.repository.getTocChildren(node.entry.id) }.getOrDefault(emptyList()) }
+        node.open = true
+        nodes.addAll(position + 1, children.map { Node(it, node.depth + 1) })
+    }
+
+    /** The entries from the root down to the one of the line at [lineIndex]. */
     private fun trailTo(lineIndex: Int): List<TocEntry> {
         val entryId = opened.query(
             "SELECT lt.tocEntryId FROM line l JOIN line_toc lt ON lt.lineId = l.id WHERE l.bookId = ? AND l.lineIndex = ?",
@@ -119,47 +168,6 @@ class TocActivity : BaseActivity() {
             id = entry.parentId
         }
         return trail
-    }
-
-    private fun show() {
-        scope.launch {
-            var entries = withContext(Dispatchers.IO) {
-                runCatching {
-                    path.lastOrNull()?.let { opened.repository.getTocChildren(it.id) } ?: opened.repository.getBookRootToc(bookId)
-                }.getOrDefault(emptyList())
-            }
-            // A lone root (the book's own title heading) opens straight away.
-            if (path.isEmpty() && entries.size == 1 && entries[0].hasChildren) {
-                path += entries[0]
-                entries = withContext(Dispatchers.IO) { runCatching { opened.repository.getTocChildren(entries[0].id) }.getOrDefault(emptyList()) }
-            }
-            val rows = ArrayList<Row>()
-            path.lastOrNull()?.takeIf { it.lineId != null }?.let { rows += Row.Start(it) }
-            entries.forEach { rows += Row.Item(it) }
-            adapter.items = rows
-            drawCrumbs()
-            val at = rows.indexOfFirst { it is Row.Item && it.entry.id in current }
-            list.setSelection(maxOf(0, at - 2))
-        }
-    }
-
-    private fun drawCrumbs() {
-        crumbs.removeAllViews()
-        fun step(text: String, depth: Int, last: Boolean) {
-            crumbs.addView(label(text, 14f, if (last) colors.text else colors.accent, bold = last, maxLines = 1).apply {
-                setPadding(dp(6), dp(4), dp(6), dp(4))
-                if (!last) {
-                    background = pressable(0, colors.pressed)
-                    setOnClickListener {
-                        while (path.size > depth) path.removeAt(path.size - 1)
-                        show()
-                    }
-                }
-            })
-            if (!last) crumbs.addView(label("›", 14f, colors.secondary))
-        }
-        step("ראשי", 0, path.isEmpty())
-        path.forEachIndexed { i, e -> step(e.text, i + 1, i == path.size - 1) }
     }
 
     private fun go(entry: TocEntry) {

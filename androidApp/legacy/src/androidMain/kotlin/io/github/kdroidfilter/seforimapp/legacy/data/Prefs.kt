@@ -47,6 +47,17 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_SCREEN_ON, true)
         set(value) = sp.edit().putBoolean(KEY_SCREEN_ON, value).apply()
 
+    /** The Home's wallpaper (the main app's תמונת רקע); a phone Android counts as low on memory never shows it. */
+    var wallpaper: Boolean
+        get() = sp.getBoolean(KEY_WALLPAPER, true)
+        set(value) = sp.edit().putBoolean(KEY_WALLPAPER, value).apply()
+
+    /** The commentators a book's pane shows (the main app's per-book choice), null until chosen. */
+    fun commentators(bookId: Long): Set<Long>? =
+        sp.getString(KEY_COMMENTATORS + bookId, null)?.split(',')?.mapNotNull { it.toLongOrNull() }?.toSet()
+
+    fun setCommentators(bookId: Long, ids: Set<Long>) = sp.edit().putString(KEY_COMMENTATORS + bookId, ids.joinToString(",")).apply()
+
     /** The folder the library was last opened from. */
     var libraryDir: String?
         get() = sp.getString(KEY_LIBRARY_DIR, null)
@@ -61,6 +72,10 @@ class Prefs(context: Context) {
     }
 
     fun lastLine(bookId: Long): Int? = recents.firstOrNull { it.bookId == bookId }?.lineIndex
+
+    fun forgetRecent(bookId: Long) = writePlaces(KEY_RECENTS, recents.filter { it.bookId != bookId })
+
+    fun isBookmarked(bookId: Long, lineIndex: Int): Boolean = bookmarks.any { it.bookId == bookId && it.lineIndex == lineIndex }
 
     val bookmarks: List<Place> get() = readPlaces(KEY_BOOKMARKS)
 
@@ -91,9 +106,11 @@ class Prefs(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_TEXT_SIZE = 20
+        /** The main app's (desktop AppSettings) default and largest sizes and zoom step; 12 is smaller, for small screens. */
+        const val DEFAULT_TEXT_SIZE = 16
         const val MIN_TEXT_SIZE = 12
-        const val MAX_TEXT_SIZE = 40
+        const val MAX_TEXT_SIZE = 50
+        const val TEXT_SIZE_STEP = 2
         private const val MAX_RECENTS = 30
 
         private const val KEY_DARK = "dark"
@@ -101,6 +118,8 @@ class Prefs(context: Context) {
         private const val KEY_BOOK_FONT = "book_font"
         private const val KEY_DIACRITICS = "diacritics"
         private const val KEY_SCREEN_ON = "keep_screen_on"
+        private const val KEY_WALLPAPER = "wallpaper"
+        private const val KEY_COMMENTATORS = "commentators_"
         private const val KEY_LIBRARY_DIR = "library_dir"
         private const val KEY_RECENTS = "recents"
         private const val KEY_BOOKMARKS = "bookmarks"

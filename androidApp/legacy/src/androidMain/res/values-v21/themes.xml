@@ -1,21 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 5.0 to 7.1: Material, with the title bar's olive under the status bar. -->
+<!-- Android 5.0 to 7.1: Material, with the main app's grounds and the gold accent (the status bar's colour is set by
+     BaseActivity, as the title bar's ground where its icons can be dark). -->
 <resources>
     <style name="Theme.Pardes" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/ground_light</item>
         <item name="android:colorBackground">@color/ground_light</item>
-        <item name="android:colorPrimary">@color/pardes_olive_dark</item>
-        <item name="android:colorPrimaryDark">@color/pardes_olive_dark</item>
+        <item name="android:colorPrimary">@color/bar_light</item>
+        <item name="android:colorPrimaryDark">@color/ground_dark</item>
         <item name="android:colorAccent">@color/pardes_gold</item>
-        <item name="android:statusBarColor">@color/pardes_olive_dark</item>
+        <item name="android:colorControlActivated">@color/pardes_gold</item>
+        <item name="android:textColorHighlight">@color/gold_selection</item>
+        <item name="android:fastScrollThumbDrawable">@drawable/fastscroll_thumb</item>
+        <item name="android:fastScrollTrackDrawable">@android:color/transparent</item>
     </style>
 
     <style name="Theme.Pardes.Dark" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/ground_dark</item>
         <item name="android:colorBackground">@color/ground_dark</item>
-        <item name="android:colorPrimary">@color/pardes_olive_dark</item>
-        <item name="android:colorPrimaryDark">@color/pardes_olive_dark</item>
-        <item name="android:colorAccent">@color/pardes_gold</item>
-        <item name="android:statusBarColor">@color/pardes_olive_dark</item>
+        <item name="android:colorPrimary">@color/ground_dark</item>
+        <item name="android:colorPrimaryDark">@color/ground_dark</item>
+        <item name="android:colorAccent">@color/pardes_gold_dark</item>
+        <item name="android:colorControlActivated">@color/pardes_gold_dark</item>
+        <item name="android:textColorHighlight">@color/gold_selection</item>
+        <item name="android:fastScrollThumbDrawable">@drawable/fastscroll_thumb</item>
+        <item name="android:fastScrollTrackDrawable">@android:color/transparent</item>
     </style>
+
+    <color name="bar_light">#F7F8FA</color>
+    <color name="pardes_gold_dark">#D4A843</color>
 </resources>

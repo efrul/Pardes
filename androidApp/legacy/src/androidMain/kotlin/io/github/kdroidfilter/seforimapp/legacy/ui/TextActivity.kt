@@ -16,6 +16,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.CONDITIONS_MARKDOWN
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.PARDES_LICENSE_URL
+import io.github.kdroidfilter.seforimapp.legacy.R
 
 /**
  * A text to read: the terms (desktop's CONDITIONS.md under Pardes's name, as the main app shows it), the list of
@@ -25,18 +26,24 @@ class TextActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val bar = TopBar(this, colors) { finish() }
-        bar.title.text = intent.getStringExtra(EXTRA_TITLE) ?: ""
+        val bar = TopBar(this, colors).apply {
+            leading(R.drawable.ic_back, "חזרה") { finish() }
+            title.text = intent.getStringExtra(EXTRA_TITLE) ?: ""
+        }
+        topBar = bar
         root.addView(bar, lp(MATCH, WRAP))
+        // An Island on the ground, as the main app's settings pages.
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(colors.panel)
-            setPadding(dp(16), dp(12), dp(16), dp(24))
+            background = island(colors)
+            setPadding(dp(14), dp(10), dp(14), dp(16))
         }
-        root.addView(ScrollView(this).apply {
-            setBackgroundColor(colors.panel)
-            addView(body)
-        }, lp(MATCH, 0, 1f))
+        val page = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(10), dp(10), dp(24))
+            addView(body, lp(MATCH, WRAP))
+        }
+        root.addView(ScrollView(this).apply { addView(page) }, lp(MATCH, 0, 1f))
         setContentView(root)
         when (intent.getStringExtra(EXTRA_KIND)) {
             KIND_TERMS -> body.addView(rich(markdownToHtml(Bidi.compat(CONDITIONS_MARKDOWN))))
@@ -58,15 +65,14 @@ class TextActivity : BaseActivity() {
     private fun licences(body: LinearLayout) {
         body.addView(paragraph(LICENCES_INTRO))
         PARDES_LICENCE.forEach { body.addView(paragraph(Bidi.compat(it))) }
-        body.addView(sectionTitle("הרכיבים שבפרדס לאנדרואיד 4.4", colors).apply { setPadding(0, dp(16), 0, dp(4)) })
-        COMPONENTS.forEach { c ->
-            body.addView(EntryRow(this, colors).bind(c.name, c.licence, leads = true).apply {
-                setPadding(dp(4), dp(6), dp(4), dp(6))
-                setOnClickListener {
+        body.addView(label("הרכיבים שבפרדס לאנדרואיד 4.4", 15f, colors.text, bold = true).apply { setPadding(0, dp(16), 0, dp(4)) })
+        COMPONENTS.forEachIndexed { i, c ->
+            if (i > 0) body.addView(divider(colors))
+            body.addView(TreeRow(this, colors).bind(c.name, secondLine = c.licence).apply {
+                keyable(this) {
                     if (c.asset != null) showAsset(this@TextActivity, c.name, c.asset) else showPlain(this@TextActivity, c.name, c.licence)
                 }
             })
-            body.addView(divider(colors))
         }
         body.addView(paragraph(DATA_NOTE))
     }
@@ -169,6 +175,7 @@ class TextActivity : BaseActivity() {
             Component("Kotlin, kotlinx.coroutines ו־kotlinx.serialization (JetBrains)", APACHE, "licenses/Apache-2.0.txt"),
             Component("SQLDelight (Cash App)", APACHE, "licenses/Apache-2.0.txt"),
             Component("Kermit (Touchlab)", APACHE, "licenses/Apache-2.0.txt"),
+            Component("HebrewNumerals (kdroidFilter)", APACHE, "licenses/Apache-2.0.txt"),
             Component("AndroidX Multidex (Google)", APACHE, "licenses/Apache-2.0.txt"),
             Component("desugar_jdk_libs (Google, מ־OpenJDK)", "GNU GPL v2 עם חריגת Classpath", "licenses/desugar_jdk_libs-LICENSE.txt"),
             Component("Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),

@@ -4,13 +4,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="auto">
 
-    <!-- Kermit 2.1 declares API 23 for its Android logger, which only calls android.util.Log (checked: the release
-         dex has no reference above API 19 outside guarded code, README.md). -->
-    <uses-sdk tools:overrideLibrary="co.touchlab.kermit,co.touchlab.kermit.core" />
+    <!-- Kermit 2.1 declares API 23 for its Android logger, which only calls android.util.Log, and HebrewNumerals
+         (com.kdroid.gematria) API 21 for plain Kotlin that calls no Android API (checked: the release dex has no
+         reference above API 19 outside guarded code, README.md). -->
+    <uses-sdk tools:overrideLibrary="co.touchlab.kermit,co.touchlab.kermit.core,com.kdroid.gematria" />
 
+    <!-- Back is handled in onBackPressed (an open pane, a category level), which Android 4.4 to 7.1 call: predictive
+         back (Android 13 and later) is turned off so that a device that installs this edition anyway keeps calling it. -->
     <application
         android:name=".PardesApp"
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -32,6 +36,13 @@
                 <data android:scheme="zayit" />
             </intent-filter>
         </activity>
+        <!-- The main app's launcher activity name, under which the transfer scripts and the docs' adb commands start
+             Pardes (am start -n io.github.efrul.pardes/io.github.kdroidfilter.seforimapp.android.MainActivity). -->
+        <activity-alias
+            android:name="io.github.kdroidfilter.seforimapp.android.MainActivity"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity" />
+        <activity android:name=".ui.LibraryActivity" />
         <activity android:name=".ui.BookActivity" />
         <activity android:name=".ui.TocActivity" />
         <activity

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Icons by Google (Apache License 2.0), white: the screens tint it (ui/Ui.kt). -->
+<!-- Material Icons Outlined "filter_list" by Google (Apache License 2.0), as the main app draws it; white, the
+     screens tint it (ui/Ui.kt). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +8,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M9,4v3h5v12h3V7h5V4H9zM3,12h3v7h3v-7h3V9H3v3z" />
+        android:pathData="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" />
 </vector>
