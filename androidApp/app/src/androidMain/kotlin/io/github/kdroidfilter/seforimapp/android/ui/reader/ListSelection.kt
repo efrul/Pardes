@@ -65,9 +65,15 @@ class ListSelection {
             return s < e
         }
 
-    /** The units the last [selectedText] read, kept after [clear] for the action the text was read for. */
+    /**
+     * The units of the text an action was given, kept after [clear] for it to find its lines; set by the area just
+     * before the action runs, so a later read cannot change it under an action still to run.
+     */
     var lastUnits: LongRange? = null
-        private set
+        internal set
+
+    /** Counts [reset]s: a read that spans one gives nothing, its offsets indexing texts no longer shown. */
+    private var resets = 0
 
     /** The text of a unit that is not composed (scrolled away), as its Text shows it; null where there is none. */
     internal var textOf: (Long) -> String? = { null }
@@ -91,6 +97,12 @@ class ListSelection {
     internal val handleRects = arrayOfNulls<Rect>(2)
 
     private val texts = HashMap<Long, SelectableText>()
+
+    /** Other texts are shown (diacritics, shnayim mikra, another book): the selection's offsets no longer index them. */
+    internal fun reset() {
+        resets++
+        clear()
+    }
 
     fun clear() {
         start = null
@@ -146,12 +158,18 @@ class ListSelection {
      * [selectedText], once the data of every unit it spans is read ([prepare]): what actions and copies take. The
      * selection as it was when asked: a tap elsewhere while lines load does not change what the action gets.
      */
-    suspend fun read(): String {
-        val s = start ?: return ""
-        val e = end ?: return ""
+    suspend fun read(): Captured? {
+        val s = start ?: return null
+        val e = end ?: return null
+        val epoch = resets
         prepare(s.unit..e.unit)
-        return textBetween(s, e)
+        // The texts were rebuilt while the lines loaded (diacritics toggled): the offsets would cut them elsewhere
+        if (resets != epoch) return null
+        return Captured(textBetween(s, e), s.unit..e.unit)
     }
+
+    /** A selection's text as an action takes it, with the units it spans. */
+    class Captured(val text: String, val units: LongRange)
 
     /** The selected text: the parts of several units joined by line breaks, as Compose's selection copied them. */
     fun selectedText(): String {
@@ -161,7 +179,6 @@ class ListSelection {
     }
 
     private fun textBetween(s: TextPoint, e: TextPoint): String {
-        lastUnits = s.unit..e.unit
         val out = StringBuilder()
         var unit = s.unit
         while (unit <= e.unit) {
@@ -285,7 +302,8 @@ class ListSelection {
 
     /** The handle under [position]: 0 the start's, 1 the end's (the nearer when both are), -1 none. */
     internal fun handleAt(position: Offset): Int {
-        if (!hasSelection) return -1
+        // Handles are shown only for a selection made by touch: a mouse's left the last ones' rects behind
+        if (!hasSelection || !touch) return -1
         var found = -1
         var nearest = Float.MAX_VALUE
         handleRects.forEachIndexed { i, rect ->

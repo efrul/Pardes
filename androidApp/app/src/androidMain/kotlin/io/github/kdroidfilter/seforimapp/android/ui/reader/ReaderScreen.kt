@@ -337,7 +337,7 @@ fun ReaderScreen(
         // Ctrl+C copies the text selected last, in the book or a pane (desktop's SelectionContainer)
         val selected = selectionFocus.selection
         if (e.type == KeyEventType.KeyDown && (e.isCtrlPressed || e.isMetaPressed) && e.key == Key.C && selected != null) {
-            scope.launch { trimSelectionEdges(selected.read()).takeIf { it.isNotBlank() }?.let { copyText(context, it) } }
+            scope.launch { selected.read()?.let { trimSelectionEdges(it.text) }?.takeIf { it.isNotBlank() }?.let { copyText(context, it) } }
             true
         } else readerKey(e, vm, current, listState, wide, onTree = {
             if (wide) vm.toggleTree() else scope.launch { drawerTab = 1; drawerState.open() }
