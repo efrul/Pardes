@@ -242,16 +242,16 @@ private fun totalLabel(
         else -> "$amount פתיחות"
     }
 
-/**
- * Each part's colour, the same three hues in light and dark, stepped for each surface: told apart under protan and
- * deutan vision too (checked as a categorical palette against the panel), and never alone, as every part is named.
- */
-private fun LearningPart.color(dark: Boolean): Color =
-    when (this) {
-        LearningPart.MIKRA -> if (dark) Color(0xFFC98500) else Color(0xFFB07400)
-        LearningPart.MISHNA -> if (dark) Color(0xFF3987E5) else Color(0xFF2A78D6)
-        LearningPart.TALMUD -> if (dark) Color(0xFF199E70) else Color(0xFF1B9E6F)
-    }
+/** Each part's shade of the accent: the full colour, then lighter; every part is also named beside its share. */
+private fun LearningPart.color(accent: Color): Color =
+    accent.copy(
+        alpha =
+            when (this) {
+                LearningPart.MIKRA -> 1f
+                LearningPart.MISHNA -> 0.62f
+                LearningPart.TALMUD -> 0.34f
+            },
+    )
 
 // Narrower, the parts go one under the other (the Jelly Star, a phone's half)
 private val SIDE_BY_SIDE_WIDTH = 300.dp
@@ -341,22 +341,22 @@ private fun SplitBody(
     measure: LearningMeasure,
     open: (SplitBook) -> Unit,
 ) {
-    val dark = Zayit.colors.isDark
+    val accent = Zayit.colors.accent
     val percent = percents(LearningPart.entries.map { split.amounts.getValue(it) }).let { p -> LearningPart.entries.zip(p).toMap() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val sideBySide = maxWidth >= SIDE_BY_SIDE_WIDTH
         Column(Modifier.fillMaxSize()) {
-            SplitBar(split, percent, dark)
+            SplitBar(split, percent, accent)
             Spacer(Modifier.height(14.dp))
             if (sideBySide) {
                 Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LearningPart.entries.forEach { part ->
-                        PartColumn(part, percent.getValue(part), split, measure, dark, open, Modifier.weight(1f).fillMaxHeight())
+                        PartColumn(part, percent.getValue(part), split, measure, accent, open, Modifier.weight(1f).fillMaxHeight())
                     }
                 }
             } else {
                 FitColumn(Modifier.fillMaxWidth().weight(1f), spacing = 6.dp) {
-                    LearningPart.entries.forEach { part -> PartRow(part, percent.getValue(part), split, measure, dark, open) }
+                    LearningPart.entries.forEach { part -> PartRow(part, percent.getValue(part), split, measure, accent, open) }
                 }
             }
         }
@@ -371,7 +371,7 @@ private fun SplitBody(
 private fun SplitBar(
     split: LearningSplit,
     percent: Map<LearningPart, Int>,
-    dark: Boolean,
+    accent: Color,
 ) {
     val tick = Zayit.colors.textSecondary
     val description = LearningPart.entries.joinToString(", ") { "${it.label} ${percent.getValue(it)}%" }
@@ -380,7 +380,7 @@ private fun SplitBar(
             LearningPart.entries.forEach { part ->
                 val amount = split.amounts.getValue(part)
                 // A sliver still shows: never under 2% of the bar
-                if (amount > 0) Box(Modifier.weight(maxOf(amount.toFloat(), split.total * 0.02f)).fillMaxHeight().background(part.color(dark)))
+                if (amount > 0) Box(Modifier.weight(maxOf(amount.toFloat(), split.total * 0.02f)).fillMaxHeight().background(part.color(accent)))
             }
         }
         Canvas(Modifier.fillMaxWidth().height(7.dp)) {
@@ -399,14 +399,14 @@ private fun PartColumn(
     percent: Int,
     split: LearningSplit,
     measure: LearningMeasure,
-    dark: Boolean,
+    accent: Color,
     open: (SplitBook) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Zayit.colors
     val books = split.books[part].orEmpty()
     Column(modifier) {
-        PartName(part, dark)
+        PartName(part, accent)
         Text("$percent%", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.text, maxLines = 1)
         Text(totalLabel(measure, split.amounts.getValue(part)).takeIf { books.isNotEmpty() } ?: "—", fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
         HorizontalDivider(Modifier.padding(vertical = 6.dp), color = c.divider)
@@ -431,7 +431,7 @@ private fun PartRow(
     percent: Int,
     split: LearningSplit,
     measure: LearningMeasure,
-    dark: Boolean,
+    accent: Color,
     open: (SplitBook) -> Unit,
 ) {
     val c = Zayit.colors
@@ -439,7 +439,7 @@ private fun PartRow(
     HoverBox(onClick = top?.let { { open(it) } }, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                PartName(part, dark)
+                PartName(part, accent)
                 Text(top?.title ?: "—", fontSize = 11.sp, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -454,10 +454,10 @@ private fun PartRow(
 @Composable
 private fun PartName(
     part: LearningPart,
-    dark: Boolean,
+    accent: Color,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(part.color(dark)))
+        Box(Modifier.size(8.dp).clip(CircleShape).background(part.color(accent)))
         Spacer(Modifier.width(6.dp))
         Text(part.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Zayit.colors.text, maxLines = 1)
     }
