@@ -46,6 +46,8 @@ object Catalog {
     fun menus(opened: Library.Opened): List<CatalogMenu> {
         cached?.takeIf { it.first === opened }?.let { return it.second }
         val categories = opened.categories().associateBy { it.id }
+        // One pattern per label, compiled once for all its books: a few hundred books, a few labels each.
+        val prefixes = HashMap<String, Regex>()
         fun title(id: Long): String? {
             val row = categories[id] ?: return null
             if (id != BAVLI && id != YERUSHALMI) return row.title
@@ -68,8 +70,9 @@ object Catalog {
                 categoryId == SHULCHAN_ARUCH || parent == SHULCHAN_ARUCH -> SHULCHAN_ARUCH_EXCLUDED_PREFIXES
                 else -> emptyList()
             }
+            val distinct = labels.distinct()
             return opened.booksIn(categoryId).mapNotNull { book ->
-                val shown = labels.distinct().fold(book.title) { t, label -> stripLabelPrefix(label, t) }
+                val shown = distinct.fold(book.title) { t, label -> stripLabelPrefix(label, t, prefixes) }
                 if (excluded.any { shown.trimStart().startsWith(it) }) null else CatalogItem(shown, book.id)
             }
         }
@@ -99,21 +102,17 @@ object Catalog {
         return menus
     }
 
-    /** CatalogAccess.stripLabelPrefix: [title] without [label] and what follows it (a comma, a dash, a plus, spaces). */
-    private fun stripLabelPrefix(label: String, title: String): String {
-        if (label.isBlank()) return title
-        val prefix = Regex.escape(label)
-        val patterns = listOf(
-            Regex("^$prefix\\s*,\\s*"),
-            Regex("^$prefix,\\s*"),
-            Regex("^$prefix\\s*[:–—-]\\s*"),
-            Regex("^$prefix\\s*\\+\\s*"),
-            Regex("^$prefix\\s+"),
-        )
-        for (p in patterns) {
-            val match = p.find(title) ?: continue
-            return title.substring(match.range.last + 1).trimStart()
+    /**
+     * CatalogAccess.stripLabelPrefix: [title] without [label] and what follows it (a comma, a dash, a plus, spaces).
+     * Its five patterns, tried in turn, as one alternation in the same order (the same match), kept in [prefixes];
+     * a title that does not start with the label is left as it is before any pattern runs.
+     */
+    private fun stripLabelPrefix(label: String, title: String, prefixes: MutableMap<String, Regex>): String {
+        if (label.isBlank() || !title.startsWith(label)) return title
+        val pattern = prefixes.getOrPut(label) {
+            Regex("^" + Regex.escape(label) + "(?:\\s*,\\s*|,\\s*|\\s*[:–—-]\\s*|\\s*\\+\\s*|\\s+)")
         }
-        return title
+        val match = pattern.find(title) ?: return title
+        return title.substring(match.range.last + 1).trimStart()
     }
 }

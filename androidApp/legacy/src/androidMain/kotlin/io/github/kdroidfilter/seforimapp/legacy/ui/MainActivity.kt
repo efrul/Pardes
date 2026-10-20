@@ -13,13 +13,14 @@ import android.graphics.RadialGradient
 import android.graphics.Rect
 import android.graphics.Shader
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.legacy.R
@@ -28,6 +29,7 @@ import io.github.kdroidfilter.seforimapp.legacy.data.CatalogMenu
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.NoLibraryException
 import io.github.kdroidfilter.seforimapp.legacy.data.Place
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -44,7 +46,16 @@ class MainActivity : BaseActivity() {
     private lateinit var content: LinearLayout
     private var loadJob: Job? = null
     private var pendingLink: Uri? = null
-    private var shown = false
+
+    /** The library the Home shows; null while it opens, and with no library or one that cannot be read. */
+    private var homeLibrary: Library.Opened? = null
+    private var search: View? = null
+
+    /** Where the Home has the cards of the books opened lately and of the favourites, and what each shows. */
+    private var recentsSlot: LinearLayout? = null
+    private var favoritesSlot: LinearLayout? = null
+    private var shownRecents: List<Place>? = null
+    private var shownFavorites: List<Place>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +69,7 @@ class MainActivity : BaseActivity() {
         root.addView(bar, lp(MATCH, WRAP))
         // The Home is a panel (desktop's home card), the wallpaper over it when shown.
         val frame = FrameLayout(this).apply { setBackgroundColor(colors.panel) }
-        if (wallpaperAllowed()) frame.addView(WallpaperView(this, colors), FrameLayout.LayoutParams(MATCH, MATCH))
+        if (wallpaperAllowed()) frame.addView(WallpaperView(this, colors, scope), FrameLayout.LayoutParams(MATCH, MATCH))
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             val side = dp(if (resources.configuration.screenWidthDp < 360) 10 else 14)
@@ -76,6 +87,8 @@ class MainActivity : BaseActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Settings' "חפש את הספרייה מחדש", whatever the Home shows (no library too).
+        if (intent.getBooleanExtra(EXTRA_RELOAD, false)) load()
         intent.data?.let {
             pendingLink = it
             handleLink()
@@ -84,15 +97,17 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        // The books opened lately and the favourites change while a book is open.
-        if (shown && app.library.current != null) showHome()
+        val home = homeLibrary ?: return
+        // The library was closed behind the Home (Settings searches for it again): open it again, or say it is gone.
+        // Otherwise only the books opened lately and the favourites can have changed (in a book, in Settings).
+        if (app.library.current !== home) load() else refreshPlaces()
     }
 
     private fun menu(): List<MenuEntry> = listOf(
         MenuEntry("חיפוש במאגר", R.drawable.ic_search) { openSearch() },
         MenuEntry("ספרייה", R.drawable.ic_library) { openLibrary(null) },
-        MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(this, colors) },
-        MenuEntry("מועדפים", R.drawable.ic_star_border) { PlacesDialogs.favorites(this, colors) },
+        MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(this, colors) { refreshPlaces() } },
+        MenuEntry("מועדפים", R.drawable.ic_star_border) { PlacesDialogs.favorites(this, colors) { refreshPlaces() } },
         MenuEntry(if (prefs.dark) "ערכת נושא: כהה" else "ערכת נושא: בהירה", if (prefs.dark) R.drawable.ic_dark_mode else R.drawable.ic_light_mode) {
             prefs.dark = !prefs.dark
             recreate()
@@ -107,11 +122,12 @@ class MainActivity : BaseActivity() {
 
     private fun load() {
         loadJob?.cancel()
+        homeLibrary = null
         showProgress()
         loadJob = scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { app.library.open() } }
-            result.onSuccess {
-                showHome()
+            result.onSuccess { opened ->
+                showHome(opened)
                 handleLink()
             }.onFailure { error ->
                 if (error is NoLibraryException) showNoLibrary() else showError(error)
@@ -219,45 +235,89 @@ class MainActivity : BaseActivity() {
         })
     }
 
-    private fun showHome() {
-        val opened = app.library.current ?: return
-        shown = true
-        scope.launch {
-            val (roots, menus) = withContext(Dispatchers.IO) {
-                val roots = runCatching { opened.rootEntries() }.getOrDefault(emptyList())
-                roots to runCatching { Catalog.menus(opened) }.getOrDefault(emptyList())
-            }
-            val first = content.childCount == 0 || content.getChildAt(0) is ProgressBar
-            content.removeAllViews()
-            if (menus.isNotEmpty()) content.addView(catalogRow(menus), lp(MATCH, WRAP).apply { topMargin = dp(4) })
-            content.addView(logo(), lp(MATCH, WRAP))
-            val search = searchField()
-            content.addView(search, lp(MATCH, WRAP).apply { bottomMargin = dp(16) })
-
-            val recents = prefs.recents.take(4)
-            if (recents.isNotEmpty()) {
-                content.addView(card("המשך מהמקום שבו עצרת").apply {
-                    recents.forEach { place -> addView(placeRow(place, R.drawable.ic_history)) }
-                    if (prefs.recents.size > recents.size) addView(textButton("כל ההיסטוריה") { PlacesDialogs.recents(this@MainActivity, colors) })
-                })
-            }
-            val favorites = prefs.bookmarks.take(4)
-            if (favorites.isNotEmpty()) {
-                content.addView(card("מועדפים").apply {
-                    favorites.forEach { place -> addView(placeRow(place, R.drawable.ic_star)) }
-                    if (prefs.bookmarks.size > favorites.size) addView(textButton("כל המועדפים") { PlacesDialogs.favorites(this@MainActivity, colors) })
-                })
-            }
-            content.addView(card("ספרייה").apply {
-                roots.forEach { entry ->
-                    addView(TreeRow(this@MainActivity, colors).bind(entry.title, iconRes = R.drawable.ic_folder, arrowRes = R.drawable.ic_arrow_left).apply {
-                        keyable(this) { openLibrary(entry.id) }
-                    })
-                }
-            })
-            // A keypad starts on the search field, the Home's first stop.
-            if (first && !search.isInTouchMode) search.requestFocus()
+    /**
+     * The Home of [opened], built once: coming back to it redraws only the books opened lately and the favourites
+     * (refreshPlaces), so it keeps its scroll and a keypad its place.
+     */
+    private suspend fun showHome(opened: Library.Opened) {
+        val (roots, menus) = withContext(Dispatchers.IO) {
+            val roots = runCatching { opened.rootEntries() }.getOrDefault(emptyList())
+            roots to runCatching { Catalog.menus(opened) }.getOrDefault(emptyList())
         }
+        content.removeAllViews()
+        if (menus.isNotEmpty()) content.addView(catalogRow(menus), lp(MATCH, WRAP).apply { topMargin = dp(4) })
+        content.addView(logo(), lp(MATCH, WRAP))
+        val search = searchField()
+        this.search = search
+        content.addView(search, lp(MATCH, WRAP).apply { bottomMargin = dp(16) })
+        recentsSlot = placesSlot().also { content.addView(it) }
+        favoritesSlot = placesSlot().also { content.addView(it) }
+        shownRecents = null
+        shownFavorites = null
+        content.addView(card("ספרייה").apply {
+            roots.forEach { entry ->
+                addView(TreeRow(this@MainActivity, colors).bind(entry.title, iconRes = R.drawable.ic_folder, arrowRes = R.drawable.ic_arrow_left).apply {
+                    keyable(this) { openLibrary(entry.id) }
+                })
+            }
+        })
+        homeLibrary = opened
+        refreshPlaces()
+        // A keypad starts on the search field, the Home's first stop.
+        if (!search.isInTouchMode) search.requestFocus()
+    }
+
+    private fun placesSlot(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        layoutParams = lp(MATCH, WRAP)
+    }
+
+    /**
+     * The cards of the books opened lately and of the favourites, each redrawn only when what it shows has changed:
+     * in a book, in Settings, or in the history and favourites dialogs, which leave the Home resumed under them.
+     */
+    private fun refreshPlaces() {
+        if (homeLibrary == null) return
+        // One more than shown: whether there are more, for the button to all of them.
+        val recents = prefs.recents.take(PLACES + 1)
+        if (recents != shownRecents) {
+            shownRecents = recents
+            recentsSlot?.let { slot ->
+                fillPlaces(slot, "המשך מהמקום שבו עצרת", recents, R.drawable.ic_history, "כל ההיסטוריה") {
+                    PlacesDialogs.recents(this, colors) { refreshPlaces() }
+                }
+            }
+        }
+        val favorites = prefs.bookmarks.take(PLACES + 1)
+        if (favorites != shownFavorites) {
+            shownFavorites = favorites
+            favoritesSlot?.let { slot ->
+                fillPlaces(slot, "מועדפים", favorites, R.drawable.ic_star, "כל המועדפים") {
+                    PlacesDialogs.favorites(this, colors) { refreshPlaces() }
+                }
+            }
+        }
+    }
+
+    /** [slot]'s card: [title], the first [PLACES] of [places], and [allLabel] to all of them; no card for none. */
+    private fun fillPlaces(slot: LinearLayout, title: String, places: List<Place>, icon: Int, allLabel: String, showAll: () -> Unit) {
+        // A keypad on the card being redrawn stays at the same row: removing the row it is on would send it to the
+        // title bar.
+        val old = slot.getChildAt(0) as? ViewGroup
+        val at = old?.let { card -> (0 until card.childCount).firstOrNull { card.getChildAt(it).hasFocus() } } ?: -1
+        slot.removeAllViews()
+        val keypad = at >= 0 && !slot.isInTouchMode
+        if (places.isEmpty()) {
+            if (keypad) search?.requestFocus()
+            return
+        }
+        val card = card(title).apply {
+            places.take(PLACES).forEach { place -> addView(placeRow(place, icon)) }
+            if (places.size > PLACES) addView(textButton(allLabel) { showAll() })
+        }
+        slot.addView(card)
+        // Its rows come after its title.
+        if (keypad) card.getChildAt(at.coerceIn(1, card.childCount - 1)).requestFocus()
     }
 
     private fun placeRow(place: Place, icon: Int): View =
@@ -267,7 +327,6 @@ class MainActivity : BaseActivity() {
 
     /** Where to copy a library: the desktop's databases folder, into the app's folder on the phone or a card. */
     private fun showNoLibrary() {
-        shown = false
         content.removeAllViews()
         val folder = app.library.prepareFolder()
         val cards = app.library.locations().drop(1).filter { it.label == Library.CARD_LABEL }
@@ -366,22 +425,38 @@ class MainActivity : BaseActivity() {
     /**
      * The Home's wallpaper with desktop HomeView's two layers over it (a horizontal vignette of the panel's colour,
      * and a radial wash of it centred at 65% of the height), drawn once into one bitmap the size of the view: a
-     * scroll then only draws that bitmap, which an old phone does at no cost.
+     * scroll then only draws that bitmap, which an old phone does at no cost. It is drawn off the main thread, where
+     * it would hold up the launch screen's first layout (a decode, then two gradients over every pixel): the panel's
+     * plain colour shows until it is ready.
      */
-    private class WallpaperView(context: Context, private val colors: Colors) : View(context) {
+    private class WallpaperView(context: Context, private val colors: Colors, private val scope: CoroutineScope) : View(context) {
         private var bitmap: Bitmap? = null
+        private var job: Job? = null
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-            bitmap = if (w > 0 && h > 0) compose(w, h) else null
+            job?.cancel()
+            bitmap = null
+            if (w <= 0 || h <= 0) return
+            val key = "$w x $h ${colors.dark}"
+            cached?.takeIf { it.first == key }?.second?.get()?.let {
+                bitmap = it
+                return
+            }
+            job = scope.launch {
+                val composed = withContext(Dispatchers.Default) { compose(w, h) } ?: return@launch
+                cached = key to WeakReference(composed)
+                bitmap = composed
+                invalidate()
+            }
         }
 
         override fun onDraw(canvas: Canvas) {
             bitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
         }
 
+        // inDither: deprecated (and ignored) from Android 7.0, where the picture is decoded in 32 bits anyway.
+        @Suppress("DEPRECATION")
         private fun compose(w: Int, h: Int): Bitmap? {
-            val key = "$w x $h ${colors.dark}"
-            cached?.takeIf { it.first == key }?.second?.get()?.let { return it }
             val path = if (colors.dark) "home/homepage_wallpaper_dark_small.jpg" else "home/homepage_wallpaper_small.jpg"
             return runCatching {
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -391,7 +466,16 @@ class MainActivity : BaseActivity() {
                 var sample = 1
                 while (cover * sample * 2 <= 1f) sample *= 2
                 val picture = context.assets.open(path).use {
-                    BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+                    BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply {
+                        inSampleSize = sample
+                        // The photograph in 16 bits, dithered, where that halves its memory on an old phone's heap: it
+                        // is drawn into the 32-bit result, so the washes over it do not band. Android 7.0 no longer
+                        // dithers a decode, and keeps 32 bits.
+                        if (Build.VERSION.SDK_INT < 24) {
+                            inPreferredConfig = Bitmap.Config.RGB_565
+                            inDither = true
+                        }
+                    })
                 } ?: return null
                 // 32 bits a pixel: in 16 the radial wash shows rings (banding), dithered or not.
                 val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -420,7 +504,7 @@ class MainActivity : BaseActivity() {
                 )
                 canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), paint)
                 out
-            }.getOrNull()?.also { cached = key to WeakReference(it) }
+            }.getOrNull()
         }
 
         private companion object {
@@ -432,8 +516,14 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private companion object {
+    companion object {
+        /** An intent's extra: open the library again (Settings' "חפש את הספרייה מחדש"). */
+        const val EXTRA_RELOAD = "reload"
+
+        /** The books opened lately, and the favourites, that the Home shows. */
+        private const val PLACES = 4
+
         /** The main app's sentence (AndroidStrings.welcomeSubtitle): who made what. */
-        const val ABOUT_LINE = "פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה."
+        private const val ABOUT_LINE = "פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה."
     }
 }

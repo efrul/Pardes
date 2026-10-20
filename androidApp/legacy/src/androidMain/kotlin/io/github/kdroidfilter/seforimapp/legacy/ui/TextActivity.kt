@@ -10,6 +10,7 @@ import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
 import android.text.style.URLSpan
+import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -56,7 +57,9 @@ class TextActivity : BaseActivity() {
                     textDirection = View.TEXT_DIRECTION_LTR
                     textAlignment = View.TEXT_ALIGNMENT_VIEW_START
                     layoutDirection = View.LAYOUT_DIRECTION_LTR
-                    setTextIsSelectable(true)
+                    // Selectable for a touch only: selectable text takes the keypad's ▲▼ to move a cursor it does not
+                    // draw, a line at a time, where the page should scroll by half a screen.
+                    if (isInTouchMode) setTextIsSelectable(true)
                 })
             }
         }
@@ -68,13 +71,23 @@ class TextActivity : BaseActivity() {
         body.addView(label("הרכיבים שבפרדס לאנדרואיד 4.4", 15f, colors.text, bold = true).apply { setPadding(0, dp(16), 0, dp(4)) })
         COMPONENTS.forEachIndexed { i, c ->
             if (i > 0) body.addView(divider(colors))
-            body.addView(TreeRow(this, colors).bind(c.name, secondLine = c.licence).apply {
-                keyable(this) {
-                    if (c.asset != null) showAsset(this@TextActivity, c.name, c.asset) else showPlain(this@TextActivity, c.name, c.licence)
-                }
-            })
+            body.addView(componentRow(c))
         }
         body.addView(paragraph(DATA_NOTE))
+    }
+
+    /** A component's row as a TreeRow draws one, its licence line in full: a TreeRow cuts its second line to one. */
+    private fun componentRow(c: Component): View = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(44)
+        setPaddingRelative(dp(8), dp(4), dp(10), dp(4))
+        background = states(colors, 0, dp(6).toFloat())
+        addView(label(c.name, 15f, colors.text, maxLines = 2))
+        addView(label(c.licence, 12f, colors.secondary))
+        keyable(this) {
+            if (c.asset != null) showAsset(this@TextActivity, c.name, c.asset) else showPlain(this@TextActivity, c.name, c.licence)
+        }
     }
 
     private fun paragraph(text: CharSequence): TextView = label(text, 14f, colors.text).apply {
@@ -181,7 +194,13 @@ class TextActivity : BaseActivity() {
             Component("Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),
             Component("Noto Serif Hebrew", "SIL Open Font License 1.1", "licenses/OFL-Noto-Hebrew.txt"),
             Component("Frank Ruhl Libre", "SIL Open Font License 1.1", "licenses/OFL-Frank-Ruhl-Libre.txt"),
-            Component("Taamey Frank CLM (פרויקט הקולמוס)", "GNU GPL v2 עם חריגת גופנים", "licenses/Culmus-LICENSE.txt"),
+            // Its own notice (Fonts-NOTICE.txt): the GPL with the font exception, and the MIT text of its layout logic.
+            // Culmus-LICENSE.txt is the notice of the Culmus package's other fonts, and never names it.
+            Component(
+                "Taamey Frank CLM (פרויקט הקולמוס)",
+                "ברישיון GPL v2 עם חריג הגופנים; לוגיקת הפריסה של הטעמים ברישיון MIT (בהודעות הגופנים).",
+                "licenses/Fonts-NOTICE.txt",
+            ),
             Component("GNU GPL v2", "נוסח הרישיון", "licenses/GPL-2.0.txt"),
             Component("הודעות הגופנים", "כפי שהן כתובות בגופנים עצמם", "licenses/Fonts-NOTICE.txt"),
         )
