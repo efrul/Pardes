@@ -66,8 +66,9 @@ class Prefs(context: Context) {
         set(value) = sp.edit().putString(KEY_LIBRARY_DIR, value).apply()
 
     /**
-     * Why the search last fell back from a level (LegacySearch): the library's release, this app's version code, the
-     * level that failed and what Lucene threw, as LegacySearch writes it; null when nothing failed.
+     * Why the search last fell back from a level for good (LegacySearch): the library's release, this build of the app
+     * (version name and install time), the indexes that failed and what was thrown, as LegacySearch writes it; null
+     * when nothing failed.
      */
     var searchFailure: String?
         get() = sp.getString(KEY_SEARCH_FAILURE, null)
