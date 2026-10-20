@@ -176,7 +176,12 @@ android {
             // R8 cuts the dex roughly tenfold (icons-extended is huge)
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Lucene's keep rules are shared with the Android 4.4 edition (lucene-android/proguard-lucene.pro).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+                rootProject.file("lucene-android/proguard-lucene.pro"),
+            )
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
