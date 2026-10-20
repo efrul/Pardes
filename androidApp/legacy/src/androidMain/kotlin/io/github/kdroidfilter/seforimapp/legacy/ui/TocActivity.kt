@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.legacy.ui
 
 import android.content.Intent
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.LinearLayout
@@ -23,8 +24,8 @@ class TocActivity : BaseActivity() {
     private lateinit var opened: Library.Opened
     private lateinit var list: ListView
 
-    /** A row of the flattened tree. */
-    private class Node(val entry: TocEntry, val depth: Int, var open: Boolean = false)
+    /** A row of the flattened tree; [loading] while its entries are being read. */
+    private class Node(val entry: TocEntry, val depth: Int, var open: Boolean = false, var loading: Boolean = false)
 
     private val nodes = ArrayList<Node>()
 
@@ -54,7 +55,10 @@ class TocActivity : BaseActivity() {
         root.addView(bar, lp(MATCH, WRAP))
         list = ListView(this).apply {
             divider = null
-            selector = states(colors, 0, dp(6).toFloat())
+            // The keypad's highlight over the rows, translucent: under them, the reader's place (a row with its own
+            // ground) would hide it, and that is the row a keypad starts on. A touch shows the row's own pressed ground.
+            isDrawSelectorOnTop = true
+            selector = states(ColorDrawable(0), ColorDrawable(0), roundRect(colors.focus, dp(6).toFloat()))
             cacheColorHint = 0
             setPadding(dp(6), dp(4), dp(6), dp(4))
             adapter = this@TocActivity.adapter
@@ -100,16 +104,17 @@ class TocActivity : BaseActivity() {
             // The reader's place: its parents open, it in view.
             var at = -1
             for (step in trail) {
-                val i = nodes.indexOfFirst { it.entry.id == step.id }
-                if (i < 0) continue
-                at = i
-                if (step.id != current && nodes[i].entry.hasChildren && !nodes[i].open) expand(i)
+                val node = nodes.firstOrNull { it.entry.id == step.id } ?: continue
+                if (step.id != current && node.entry.hasChildren) expand(node)
+                at = nodes.indexOf(node)
             }
             adapter.items = ArrayList(nodes)
             if (at >= 0) {
                 list.setSelection(maxOf(0, at - 2))
                 if (!list.isInTouchMode) list.post { list.setSelection(at) }
             }
+            // A keypad starts in the tree: the title bar's Back took the first focus while the list was empty.
+            if (!list.isInTouchMode) list.requestFocus()
         }
     }
 
@@ -127,19 +132,25 @@ class TocActivity : BaseActivity() {
             nodes.subList(position + 1, end).clear()
             adapter.items = ArrayList(nodes)
         } else {
-            scope.launch {
-                expand(position)
-                adapter.items = ArrayList(nodes)
-            }
+            scope.launch { if (expand(node)) adapter.items = ArrayList(nodes) }
         }
     }
 
-    /** Opens the entry at [position]: its entries under it. */
-    private suspend fun expand(position: Int) {
-        val node = nodes.getOrNull(position) ?: return
+    /**
+     * Opens [node]: its entries under it; false when it was open or opening already. Once: a second OK (or a held ←)
+     * while it reads does nothing, and the entries go under the node wherever it is by then.
+     */
+    private suspend fun expand(node: Node): Boolean {
+        if (node.open || node.loading) return false
+        node.loading = true
         val children = withContext(Dispatchers.IO) { runCatching { opened.repository.getTocChildren(node.entry.id) }.getOrDefault(emptyList()) }
+        node.loading = false
+        // Entries above it may have opened or closed meanwhile, or its parent closed over it.
+        val at = nodes.indexOf(node)
+        if (at < 0) return false
         node.open = true
-        nodes.addAll(position + 1, children.map { Node(it, node.depth + 1) })
+        nodes.addAll(at + 1, children.map { Node(it, node.depth + 1) })
+        return true
     }
 
     /** The entries from the root down to the one of the line at [lineIndex]. */

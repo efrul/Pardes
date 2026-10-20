@@ -2,12 +2,16 @@ package io.github.kdroidfilter.seforimapp.legacy.ui
 
 import android.app.Activity
 import android.app.Dialog
+import android.content.Context
+import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.BaseAdapter
 import android.widget.LinearLayout
+import android.widget.ListView
 import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
@@ -88,44 +92,100 @@ object Dialogs {
             setTextIsSelectable(true)
         })
 
-    /** A menu under [anchor]: [entries] as rows in a panel, the first one focused for a keypad. */
+    /**
+     * A menu at [anchor]: [entries] as rows in a panel, under the anchor when they fit there, else on the side with
+     * more room (over the reader's bottom toolbar), scrolling rather than running past the screen's edge; the first row
+     * selected for a keypad. A list builds only the rows in view: a catalog menu of the Home runs to a hundred.
+     */
     fun popup(anchor: View, colors: Colors, entries: List<MenuEntry>) {
         val context = anchor.context
-        val list = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
+        val menu = MenuAdapter(context, colors, entries)
+        val list = ListView(context).apply {
             layoutDirection = View.LAYOUT_DIRECTION_RTL
             background = context.island(colors)
             setPadding(context.dp(4), context.dp(4), context.dp(4), context.dp(4))
+            divider = null
+            selector = states(colors, 0, context.dp(6).toFloat())
+            cacheColorHint = 0
+            adapter = menu
         }
         val width = minOf(context.dp(280), (context.resources.displayMetrics.widthPixels * 0.85f).toInt())
-        val window = PopupWindow(ScrollView(context).apply { addView(list) }, width, ViewGroup.LayoutParams.WRAP_CONTENT, true)
-        var first: View? = null
-        entries.forEachIndexed { i, entry ->
-            if (entry.action == null) {
-                list.addView(header(context, colors, entry.label, first = i == 0), lp(MATCH, WRAP))
-                return@forEachIndexed
-            }
-            val row = TreeRow(context, colors).bind(entry.label, iconRes = entry.icon, iconTint = colors.text).apply {
-                keyable(this) {
-                    window.dismiss()
-                    entry.action.invoke()
-                }
-            }
-            if (first == null) first = row
-            list.addView(row, lp(MATCH, WRAP))
+        // The room under the anchor and over it, in the part of the screen the window shows.
+        val frame = Rect()
+        anchor.getWindowVisibleDisplayFrame(frame)
+        val at = IntArray(2)
+        anchor.getLocationOnScreen(at)
+        val below = frame.bottom - at[1] - anchor.height
+        val above = at[1] - frame.top
+        // The rows' own height, not WRAP_CONTENT: Android 4.4 tests the room under the anchor with that -2, always finds
+        // it enough, and clips a menu under the bottom toolbar to a few pixels. So a menu that does not fit under its
+        // anchor is put over it here (the height is at most the larger room, so it then fits there).
+        val height = menu.height(list, width, maxOf(below, above, context.dp(48)))
+        val over = height > below
+        val window = PopupWindow(list, width, height, true)
+        list.setOnItemClickListener { _, _, position, _ ->
+            val action = entries[position].action ?: return@setOnItemClickListener
+            window.dismiss()
+            action()
         }
         window.setBackgroundDrawable(ColorDrawable(0))
         window.isOutsideTouchable = true
         // RTL: the menu hangs from the anchor's right edge; ⋮ sits at the bar's left, so it opens towards the middle.
-        window.showAsDropDown(anchor, 0, 0)
-        if (!anchor.isInTouchMode) first?.requestFocus()
+        window.showAsDropDown(anchor, 0, if (over) -(anchor.height + height) else 0)
+        // Without touch, setAdapter has selected the first row a keypad stops on, a section's title above it still in
+        // view (setSelection would scroll that title away): the keypad starts there, in the menu's window.
+        if (!anchor.isInTouchMode) list.requestFocus()
+    }
+
+    /** A [popup]'s rows: an entry, or a section's title (not a stop for the keypad), each kind reused as it scrolls. */
+    private class MenuAdapter(private val context: Context, private val colors: Colors, private val entries: List<MenuEntry>) : BaseAdapter() {
+        override fun getCount(): Int = entries.size
+
+        override fun getItem(position: Int): MenuEntry = entries[position]
+
+        override fun getItemId(position: Int): Long = position.toLong()
+
+        override fun getViewTypeCount(): Int = 2
+
+        override fun getItemViewType(position: Int): Int = if (entries[position].action == null) 0 else 1
+
+        override fun areAllItemsEnabled(): Boolean = false
+
+        override fun isEnabled(position: Int): Boolean = entries[position].action != null
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val entry = entries[position]
+            if (entry.action == null) return header(context, colors, entry.label, first = position == 0, reuse = convertView)
+            return (convertView as? TreeRow ?: TreeRow(context, colors)).bind(entry.label, iconRes = entry.icon, iconTint = colors.text)
+        }
+
+        /** The height of the rows in [list] when it is [width] wide, its padding included: measured up to [max], no further. */
+        fun height(list: ListView, width: Int, max: Int): Int {
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(width - list.paddingLeft - list.paddingRight, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            val reuse = arrayOfNulls<View>(viewTypeCount)
+            var total = list.paddingTop + list.paddingBottom
+            for (i in 0 until count) {
+                val type = getItemViewType(i)
+                val row = getView(i, reuse[type], list)
+                reuse[type] = row
+                row.measure(widthSpec, heightSpec)
+                total += row.measuredHeight
+                if (total >= max) return max
+            }
+            return total
+        }
     }
 
     /** A section's title in a menu (the catalog's תורה, נביאים…): grey, with a line above all but the first. */
-    private fun header(context: android.content.Context, colors: Colors, text: String, first: Boolean): View {
-        val box = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        if (!first) box.addView(context.divider(colors).apply { (layoutParams as LinearLayout.LayoutParams).setMargins(0, context.dp(4), 0, context.dp(2)) })
-        box.addView(context.label(text, 14f, colors.disabled, bold = true, maxLines = 1).apply { setPadding(context.dp(12), context.dp(6), context.dp(12), context.dp(6)) })
+    private fun header(context: Context, colors: Colors, text: String, first: Boolean, reuse: View? = null): View {
+        val box = reuse as? LinearLayout ?: LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(context.divider(colors).apply { (layoutParams as LinearLayout.LayoutParams).setMargins(0, context.dp(4), 0, context.dp(2)) })
+            addView(context.label("", 14f, colors.disabled, bold = true, maxLines = 1).apply { setPadding(context.dp(12), context.dp(6), context.dp(12), context.dp(6)) })
+        }
+        box.getChildAt(0).visibility = if (first) View.GONE else View.VISIBLE
+        (box.getChildAt(1) as TextView).text = text
         return box
     }
 

@@ -9,20 +9,27 @@ import io.github.kdroidfilter.seforimapp.legacy.data.Place
 
 /**
  * The books opened lately and the favourites (the main app's היסטוריה and מועדפים pages) as lists to pick from: a row
- * opens its book at its place; a long press (a long OK on a keypad) offers to remove it.
+ * opens its book at its place; a long press (a long OK on a keypad) offers to remove it. [onChanged] runs after a
+ * removal or a clear: the screen under the dialog (the Home's cards) stays resumed and would not see it otherwise.
  */
 object PlacesDialogs {
-    fun recents(activity: Activity, colors: Colors) {
+    fun recents(activity: Activity, colors: Colors, onChanged: () -> Unit = {}) {
         val prefs = PardesApp.of(activity).prefs
-        show(activity, colors, "היסטוריה", prefs.recents, R.drawable.ic_history, "אין עדיין ספרים שנפתחו", clear = "נקה היסטוריה" to { prefs.clearRecents() }) { place ->
+        val clear = "נקה היסטוריה" to {
+            prefs.clearRecents()
+            onChanged()
+        }
+        show(activity, colors, "היסטוריה", prefs.recents, R.drawable.ic_history, "אין עדיין ספרים שנפתחו", clear, reopen = { recents(activity, colors, onChanged) }) { place ->
             prefs.forgetRecent(place.bookId)
+            onChanged()
         }
     }
 
-    fun favorites(activity: Activity, colors: Colors) {
+    fun favorites(activity: Activity, colors: Colors, onChanged: () -> Unit = {}) {
         val prefs = PardesApp.of(activity).prefs
-        show(activity, colors, "מועדפים", prefs.bookmarks, R.drawable.ic_star, "אין עדיין מועדפים. מוסיפים אותם בספר, מתפריט \"עוד\".") { place ->
+        show(activity, colors, "מועדפים", prefs.bookmarks, R.drawable.ic_star, "אין עדיין מועדפים. מוסיפים אותם בספר, מתפריט \"עוד\".", reopen = { favorites(activity, colors, onChanged) }) { place ->
             prefs.removeBookmark(place)
+            onChanged()
         }
     }
 
@@ -34,6 +41,7 @@ object PlacesDialogs {
         icon: Int,
         empty: String,
         clear: Pair<String, () -> Unit>? = null,
+        reopen: () -> Unit,
         remove: (Place) -> Unit,
     ) {
         lateinit var dialog: Dialog
@@ -49,7 +57,7 @@ object PlacesDialogs {
                     Dialogs.show(activity, colors, place.title, Dialogs.text(activity, colors, "להסיר מהרשימה?"), listOf("הסר" to {
                         remove(place)
                         dialog.dismiss()
-                        if (title == "מועדפים") favorites(activity, colors) else recents(activity, colors)
+                        reopen()
                     }, "ביטול" to {}))
                     true
                 }

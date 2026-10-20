@@ -96,6 +96,7 @@ class SettingsActivity : BaseActivity() {
     // ------------------------------------------------------------------ the list
 
     private fun showList() {
+        val from = page
         page = null
         bar.title.text = "הגדרות"
         val body = pageBody()
@@ -106,7 +107,7 @@ class SettingsActivity : BaseActivity() {
         val narrow = resources.configuration.screenWidthDp < 300
         val pad = dp(if (narrow) 10 else 14)
         val tile = dp(if (narrow) 32 else 38)
-        var first: View? = null
+        var focus: View? = null
         Page.entries.forEachIndexed { i, p ->
             if (i > 0) island.addView(View(this).apply { setBackgroundColor(colors.border) }, lp(MATCH, maxOf(1, dp(1))).apply { marginStart = pad * 2 + tile })
             val row = LinearLayout(this).apply {
@@ -131,11 +132,20 @@ class SettingsActivity : BaseActivity() {
                 setImageResource(R.drawable.ic_arrow_left)
                 setColorFilter(colors.secondary, PorterDuff.Mode.SRC_IN)
             }, lp(dp(if (narrow) 18 else 22), dp(if (narrow) 18 else 22)).apply { marginStart = dp(6) })
-            if (first == null) first = row
+            // A keypad comes back to the row of the page it leaves, else starts on the first.
+            if (focus == null || p == from) focus = row
             island.addView(row, lp(MATCH, WRAP))
         }
         body.addView(island, lp(MATCH, WRAP))
-        if (!frame.isInTouchMode) first?.requestFocus()
+        keypadFocus(focus)
+    }
+
+    /**
+     * Puts a keypad on [view], a page's first control: building a page removes the row that had the focus, which would
+     * then go to the title bar's Back, and the next OK leave the page.
+     */
+    private fun keypadFocus(view: View?) {
+        if (!frame.isInTouchMode) view?.requestFocus()
     }
 
     private fun open(p: Page) {
@@ -162,10 +172,11 @@ class SettingsActivity : BaseActivity() {
     private fun display() {
         val body = pageBody()
         val theme = card(body, "ערכת נושא")
-        theme.addView(choiceChips(listOf("בהירה", "כהה"), if (prefs.dark) 1 else 0) { i ->
+        val themes = choiceChips(listOf("בהירה", "כהה"), if (prefs.dark) 1 else 0) { i ->
             prefs.dark = i == 1
             recreate()
-        })
+        }
+        theme.addView(themes)
         val home = card(body)
         home.addView(toggleRow("תמונת רקע", "בדף הבית, מאחורי השם והחיפוש", colors, prefs.wallpaper) { prefs.wallpaper = it })
 
@@ -210,10 +221,12 @@ class SettingsActivity : BaseActivity() {
         val screen = card(body)
         screen.addView(toggleRow("השאר את המסך דולק", "בזמן הקריאה בספר", colors, prefs.keepScreenOn) { prefs.keepScreenOn = it })
         update()
+        // The theme chosen: also where a keypad is after picking one, which recreates the screen.
+        keypadFocus(themes.getChildAt(if (prefs.dark) 1 else 0))
     }
 
     /** The ZChips of one choice among [labels], wrapping; [fontOf] draws each in its font (the book fonts). */
-    private fun choiceChips(labels: List<String>, selected: Int, fontOf: ((Int) -> android.graphics.Typeface)? = null, onPick: (Int) -> Unit): View {
+    private fun choiceChips(labels: List<String>, selected: Int, fontOf: ((Int) -> android.graphics.Typeface)? = null, onPick: (Int) -> Unit): FlowRow {
         val row = FlowRow(this, dp(8), dp(8))
         var current = selected
         fun draw() {
@@ -248,16 +261,18 @@ class SettingsActivity : BaseActivity() {
         val text = label("…", 14f, colors.text).apply { setLineSpacing(0f, 1.2f) }
         info.addView(text)
         val actions = card(body)
-        actions.addView(link("חפש את הספרייה מחדש") {
+        val search = link("חפש את הספרייה מחדש") {
             app.library.close()
-            startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
+            startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra(MainActivity.EXTRA_RELOAD, true))
             finish()
-        })
+        }
+        actions.addView(search)
         actions.addView(link("נקה את רשימת הספרים האחרונים") {
             prefs.clearRecents()
             toast("הרשימה נוקתה")
         })
         scope.launch { text.text = withContext(Dispatchers.IO) { libraryInfo() } }
+        keypadFocus(search)
     }
 
     private fun libraryInfo(): String {
@@ -282,6 +297,11 @@ class SettingsActivity : BaseActivity() {
 
     // ------------------------------------------------------------------ אודות
 
+    /**
+     * The main app's כללי header (AppHeaderCard: icon, name, version, the credit to Zayit), then its About page
+     * (AboutSettings ABOUT_MD: אודות פרדס and תודות) word for word, each link a row a keypad reaches under its
+     * paragraph, then what this edition is.
+     */
     private fun about() {
         val body = pageBody()
         val card = card(body)
@@ -293,13 +313,44 @@ class SettingsActivity : BaseActivity() {
         val titles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         titles.addView(label("פרדס", 24f, colors.logo, typeface = Fonts.logo(this)))
         titles.addView(label("גרסה ${versionName()} לאנדרואיד 4.4 עד 7.1", 13f, colors.secondary))
-        titles.addView(link("מבוסס על זית מאת אליהו גמבש") { openUrl("https://github.com/kdroidFilter/Zayit") })
+        val credit = link("מבוסס על זית מאת אליהו גמבש") { openUrl("https://github.com/kdroidFilter/Zayit") }
+        titles.addView(credit)
         head.addView(titles, lp(0, WRAP, 1f))
         card.addView(head)
-        ABOUT.forEach { card.addView(paragraph(Bidi.compat(it))) }
-        card.addView(link("קוד המקור של פרדס") { openUrl(SOURCE_URL) })
+
+        val about = card(body, "אודות פרדס")
+        about.addView(paragraph(ABOUT_PARDES))
+        about.addView(paragraph(ABOUT_SOURCE))
+        about.addView(link("קוד המקור של פרדס") { openUrl(SOURCE_URL) })
+        about.addView(paragraph(Bidi.compat(POWERED_BY)))
+
+        val thanks = card(body, "תודות")
+        thanks.addView(paragraph(THANKS_ZAYIT))
+        thanks.addView(links("זית" to "https://zayitapp.com/", "SeforimLibrary" to "https://github.com/kdroidFilter/SeforimLibrary"))
+        thanks.addView(paragraph(THANKS_SOURCES))
+        thanks.addView(links("Sefaria" to "https://www.sefaria.org.il/", "אוצריא" to "https://otzaria.org"))
+        thanks.addView(quote(OTZARIA_QUOTE))
+
         val edition = card(body, "הגרסה הזו")
         edition.addView(paragraph(EDITION))
+        keypadFocus(credit)
+    }
+
+    /** A paragraph's links ([label] → address), side by side from its start. */
+    private fun links(vararg targets: Pair<String, String>): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        targets.forEach { (text, url) -> addView(link(text) { openUrl(url) }, lp(WRAP, WRAP).apply { marginEnd = dp(12) }) }
+    }
+
+    /** A Markdown quote: a bar at its start, the text grey. */
+    private fun quote(text: CharSequence): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        setPadding(0, dp(8), 0, 0)
+        addView(View(this@SettingsActivity).apply { setBackgroundColor(colors.border) }, lp(dp(3), MATCH).apply { marginEnd = dp(10) })
+        addView(paragraph(text).apply {
+            setTextColor(colors.secondary)
+            setPadding(0, 0, 0, 0)
+        }, lp(0, WRAP, 1f))
     }
 
     private fun paragraph(text: CharSequence): TextView = label(text, 14f, colors.text).apply {
@@ -333,13 +384,20 @@ class SettingsActivity : BaseActivity() {
         /** Bereshit 1:1 with its niqqud and cantillation, to show the font, the size and the marks chosen. */
         const val SAMPLE = "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃"
 
-        /** The main app's About and כללי header (SettingsPages, AboutSettings), word for word. */
-        val ABOUT = listOf(
-            "פרדס אינו מטעם אליהו גמבש: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.",
-            "הליבה של זית היא קוד פתוח תחת רישיון AGPL-3.0, וגם קוד המקור של פרדס זמין תחת רישיון זה.",
-            "המודולים הקנייניים של הגרסאות הרשמיות של זית (החיפוש הסמנטי והסידור החכם המלא) אינם כלולים בפרדס.",
-            "⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩",
-        )
+        // The main app's About (AboutSettings ABOUT_MD), word for word, its links' texts left in place. Its thanks for
+        // Lucene and Compose and its Emoji One credit are left out: this edition has neither, nor that icon.
+        const val ABOUT_PARDES =
+            "פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו " +
+                "אחראי לו ואינו נותן לו תמיכה. פרדס נבנה מהקוד הפתוח של זית 0.6.1 (רישיון AGPL-3.0), ושונה כדי לפעול באנדרואיד."
+        const val ABOUT_SOURCE =
+            "גם פרדס מופץ תחת רישיון AGPL-3.0, וקוד המקור שלו זמין תחת אותו רישיון. המודולים הקנייניים של הגרסאות " +
+                "הרשמיות של זית (החיפוש הסמנטי והסידור החכם המלא) אינם כלולים בו."
+
+        /** Zayit's AGPL §7(b) attribution, word for word. */
+        const val POWERED_BY = "⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩"
+        const val THANKS_ZAYIT = "לאליהו גמבש, יוצר זית ו־SeforimLibrary, שעל הקוד הפתוח שלהם פרדס בנוי."
+        const val THANKS_SOURCES = "לפרויקטים Sefaria ואוצריא, שמהם מגיעים הספרים."
+        const val OTZARIA_QUOTE = "התכנים שלפניכם נאספו, מוינו, סוננו ונערכו בעמל רב ובמסירות על ידי צוות פרויקט 'אוצריא' (otzaria.org)."
 
         const val EDITION =
             "זוהי הגרסה של פרדס לאנדרואיד 4.4 עד 7.1, שבהם פרדס הרגיל (מאנדרואיד 8.0) אינו פועל. היא קוראת אותה ספרייה, " +
