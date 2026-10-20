@@ -89,15 +89,16 @@ class LegacySearch(context: Context, private val library: Library, private val p
     }.getOrDefault("")
 
     /**
-     * How Lucene runs here, against a 48 MB heap or so, a core or two and a FUSE memory card: one slice, 8 forms of
-     * each word instead of 32, the facets after the first page, a query cache of 2 MB (4 MB from a heap of 96 MB), and
-     * the terms index with the small files in the heap. Measured on the JVM (HeapBench, the dev subset's index): a
-     * three-word search then runs in a 12 MB heap, where the main app's settings need 24 MB with 2 slices, and over all
-     * books makes 12,729 reads instead of 25,177 (none of them in the terms index, 8,342 before).
+     * How Lucene runs here, against a 48 MB heap or so, a core or two and a FUSE memory card: one slice, the facets
+     * after the first page, a query cache of 2 MB (4 MB from a heap of 96 MB), and the terms index with the small files
+     * in the heap. Each word is searched with as many of its forms as in the main app (LuceneTuning's 32), so that a
+     * search finds what it finds there: with 8, תפילין over all the dev subset's books found 1,266 lines of 4,817.
+     * Measured on the JVM (HeapBench, the dev subset's index): a three-word search then runs in a 16 MB heap, where the
+     * main app's settings need 24 MB with 2 slices, and over all books makes 16,834 reads instead of 25,180 with one
+     * slice (none of them in the terms index, 8,342 before).
      */
     val tuning = LuceneTuning(
         slices = 1,
-        maxSynonymTermsPerToken = FORMS_PER_WORD,
         facetsWithFirstPage = false,
         queryCacheBytes = if (heapBytes >= LARGE_HEAP_BYTES) 4L shl 20 else 2L shl 20,
         directory = { path -> AndroidHeapFilesDirectory(NIOFSDirectory(path), HEAP_EXTENSIONS, HEAP_MAX_FILE_BYTES) },
@@ -107,10 +108,10 @@ class LegacySearch(context: Context, private val library: Library, private val p
         // Read by lucene-android when an index opens (Lucene99HnswVectorsFormat): the vectors (semantic search) are
         // never searched here, so they are not opened, and a library may be copied without their files.
         // Its read buffers stay Lucene's 1 KB (lucene.android.niofsBufferSize unset). 8 KB ones cut a three-word search
-        // of the dev subset from 12,729 reads to 3,843 on the JVM, but on Android 4.4 each is a fresh allocation for
-        // each postings and norms reader, and Dalvik met nearly every one with a full collection ("Grow heap (frag
-        // case) ... for 8204-byte allocation", 1,700 of them): the same search took 76 s instead of 46 s on the
-        // emulator.
+        // of the dev subset from 12,729 reads to 3,843 on the JVM (with 8 forms of each word), but on Android 4.4 each
+        // is a fresh allocation for each postings and norms reader, and Dalvik met nearly every one with a full
+        // collection ("Grow heap (frag case) ... for 8204-byte allocation", 1,700 of them): the same search took 76 s
+        // instead of 46 s on the emulator.
         System.setProperty(SKIP_VECTORS_PROPERTY, "true")
     }
 
@@ -378,9 +379,6 @@ class LegacySearch(context: Context, private val library: Library, private val p
         private const val MAX_MESSAGE = 300
         private const val PROBE_QUERY = "בראשית"
         const val PAGE_SIZE = 25
-
-        /** The main app's 32 forms of each word make a three-word search 600 to 1,000 terms. */
-        const val FORMS_PER_WORD = 8
 
         /** Below this heap, even with android:largeHeap, the full-text index stays closed (Level.Lookup). */
         const val SMALL_HEAP_BYTES = 40L shl 20
