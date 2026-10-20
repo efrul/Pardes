@@ -321,8 +321,16 @@ class TopBar(context: Context, private val colors: Colors) : LinearLayout(contex
     }
 }
 
-/** A list adapter over [items], drawing each with [bind] (given the view to reuse, if any). */
-class ItemsAdapter<T>(private val bind: (item: T, reuse: View?, parent: ViewGroup) -> View) : BaseAdapter() {
+/**
+ * A list adapter over [items], drawing each with [bind] (given the view to reuse, if any). Rows of several kinds give
+ * their number ([types]) and each item's ([typeOf], from 0): the list then hands a row only a view of its own kind to
+ * reuse, where with one kind it would hand a wrong one and a new row be built at each step of a scroll.
+ */
+class ItemsAdapter<T>(
+    private val types: Int = 1,
+    private val typeOf: (item: T) -> Int = { 0 },
+    private val bind: (item: T, reuse: View?, parent: ViewGroup) -> View,
+) : BaseAdapter() {
     var items: List<T> = emptyList()
         set(value) {
             field = value
@@ -334,6 +342,10 @@ class ItemsAdapter<T>(private val bind: (item: T, reuse: View?, parent: ViewGrou
     override fun getItem(position: Int): T = items[position]
 
     override fun getItemId(position: Int): Long = position.toLong()
+
+    override fun getViewTypeCount(): Int = types
+
+    override fun getItemViewType(position: Int): Int = typeOf(items[position])
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View = bind(items[position], convertView, parent)
 }
