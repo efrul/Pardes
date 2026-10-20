@@ -20,8 +20,14 @@
 set -euo pipefail
 
 # --legacy: references above the min API that the APK may have, each behind an SDK_INT check in legacy's own
-# sources, which lint's NewApi checks there ("<level> <kind> <owner> <member>" as DexApiLevels prints them).
+# sources or in the main app's files it compiles in (sharedAppSources in ../legacy/build.gradle.kts), which lint's
+# NewApi checks in both ("<level> <kind> <owner> <member>" as DexApiLevels prints them).
 LEGACY_ALLOWED=(
+  # SearchService.libraryKey (shared): a file's inode by Os.stat from API 21, its time and size below
+  "21	field	android/system/StructStat	st_ino:J"
+  "21	method	android/system/Os	stat(Ljava/lang/String;)Landroid/system/StructStat;"
+  "21	type	android/system/Os	"
+  "21	type	android/system/StructStat	"
   "21	method	android/view/Window	setStatusBarColor(I)V"
   "24	method	android/text/Html	fromHtml(Ljava/lang/String;I)Landroid/text/Spanned;"
   "26	method	android/widget/TextView	setJustificationMode(I)V"
