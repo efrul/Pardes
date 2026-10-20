@@ -16,10 +16,12 @@ import io.github.kdroidfilter.seforimlibrary.search.LuceneTuning
 import io.github.kdroidfilter.seforimlibrary.search.SearchSession
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +29,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.apache.lucene.index.IndexFormatTooNewException
+import org.apache.lucene.index.IndexFormatTooOldException
 import org.apache.lucene.store.AndroidHeapFilesDirectory
 import org.apache.lucene.store.NIOFSDirectory
 
@@ -39,10 +43,15 @@ import org.apache.lucene.store.NIOFSDirectory
  *  - [Level.Scan]: neither, as before: the scan, and books found by their titles in the database.
  * The level is what the library folder holds, less what this phone cannot run: a heap under [SMALL_HEAP_BYTES] even
  * with android:largeHeap keeps to the lookup (unless Prefs.searchIndexOnSmallHeap), and an index that failed is left
- * closed. Anything Lucene throws while opening or searching (a VerifyError or other LinkageError, an OutOfMemoryError,
- * an IOException such as a CorruptIndexException or a missing file) closes that index for the session, and is recorded
- * with the library's release and this app's version code (Prefs.searchFailure), so that a failing index is not opened
- * again at every start, until the library or the app changes or [retry] asks again.
+ * closed for as long as its failure says ([verdict]):
+ *  - a read that failed (a memory card removed, a file missing, cut short or corrupt, as while a copy is still
+ *    arriving), a heap that ran out while it opened or in a third search: closed for this session;
+ *  - a class this Android cannot load or verify, an index of a Lucene version this one cannot read, or anything else
+ *    thrown while it opens: closed, and recorded with the library's release and this build of the app
+ *    (Prefs.searchFailure), so that it is not opened again at every start, until the library or the app changes or
+ *    [retry] asks again;
+ *  - anything else a search throws (a query too long for Lucene's clause limit or for the heap, a database read): that
+ *    search failed, and the index stays open.
  *
  * Opening runs on a background thread ([prepare], [service]), never in attachBaseContext: the first open loads about
  * 1,265 Lucene classes. It also runs a small search on each index, so that a class this Android lacks, a missing or
@@ -55,10 +64,29 @@ class LegacySearch(context: Context, private val library: Library, private val p
     /** From the least to the most: compare them. */
     enum class Level { Scan, Lookup, Full }
 
+    /** How long an index that failed stays closed ([verdict]). */
+    internal enum class Verdict {
+        /** Not at all: one search failed, the index stays open. */
+        Search,
+
+        /** For this session, until [retry]. */
+        Session,
+
+        /** Also at the next starts, until the library or the app changes or [retry] (Prefs.searchFailure). */
+        Recorded,
+    }
+
     private val heapBytes = Runtime.getRuntime().maxMemory()
 
-    @Suppress("DEPRECATION")
-    private val versionCode = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionCode }.getOrDefault(0)
+    /**
+     * This build of the app, which a recorded failure names: its version name and when it was installed. Not the
+     * version code, which this edition keeps at 1 in every build (build.gradle.kts), while a new build may well run
+     * what the last one could not (a class its Dalvik rejected).
+     */
+    private val build = runCatching {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        "${info.versionName}@${info.lastUpdateTime}".replace('|', '/')
+    }.getOrDefault("")
 
     /**
      * How Lucene runs here, against a 48 MB heap or so, a core or two and a FUSE memory card: one slice, 8 forms of
@@ -100,8 +128,15 @@ class LegacySearch(context: Context, private val library: Library, private val p
     @Volatile
     private var opened: Opened? = null
 
-    /** The indexes that failed in this session for reasons not their own (a database read), left closed until [retry]. */
+    /** The indexes closed for this session ([Verdict.Session], or a failed open), until [retry]. */
     private val sessionFailures = HashSet<String>()
+
+    /**
+     * The searches the heap ran out in, this session. One is the query's: a passage of 100 words pasted in needs more
+     * than a 64 MB heap (HeapBench on the JVM, with 8 forms of each word as with 32), where three words run in 16 MB. A
+     * third says this heap is too small for the index, which then closes for the session.
+     */
+    private val heapFailures = AtomicInteger()
 
     /** Opens the search in the background, if it is not open yet. */
     fun prepare() {
@@ -112,28 +147,33 @@ class LegacySearch(context: Context, private val library: Library, private val p
      * The main app's SearchService on the open library, opened and tried at the level this phone can run (blocking
      * work on Dispatchers.IO), or null without a library or at [Level.Scan]. The same service for a library folder:
      * after a failure it leaves the failed index closed (its engine() or lookup() returns null).
+     *
+     * The opening runs in this class's scope: a caller that goes away while it waits (a screen closed) only stops
+     * waiting, and the open with its small search still finishes, so that no level stands without having been tried.
      */
-    suspend fun service(): SearchService? = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val dir = runCatching { library.open().file.parentFile }.getOrNull()
-            if (dir == null) {
-                _level.value = Level.Scan
-                return@withLock null
-            }
-            val target = chooseLevel(dir)
-            val current = opened
-            if (current != null && current.dir == dir && target == _level.value) {
-                return@withLock current.service.takeIf { target != Level.Scan }
-            }
-            // A new library folder, or another level (an index copied in or removed, a failure, retry): open again
-            current?.service?.close()
-            val service = current?.service?.takeIf { current.dir == dir }
-                ?: SearchService(LibraryStore(library), tuning, allowed = ::allows, onFailure = ::reportFailure)
-            opened = Opened(dir, service)
-            _level.value = target
-            tryOpen(dir, service)
-            service.takeIf { _level.value != Level.Scan }
+    suspend fun service(): SearchService? = scope.async { openService() }.await()
+
+    private suspend fun openService(): SearchService? = mutex.withLock {
+        val dir = runCatching { library.open().file.parentFile }.getOrNull()
+        if (dir == null) {
+            _level.value = Level.Scan
+            return@withLock null
         }
+        val target = chooseLevel(dir)
+        val current = opened
+        if (current != null && current.dir == dir && target == _level.value) {
+            return@withLock current.service.takeIf { target != Level.Scan }
+        }
+        // A new library folder, or another level (an index copied in or removed, a failure, retry): open again. The
+        // level is set before the open service closes, so that a holder of it reopening it meanwhile (a keystroke's
+        // lookup, waiting for its lock) is allowed only the new level's indexes.
+        val service = current?.service?.takeIf { current.dir == dir }
+            ?: SearchService(LibraryStore(library), tuning, allowed = ::allows, onFailure = ::reportFailure)
+        opened = Opened(dir, service)
+        _level.value = target
+        current?.service?.close()
+        tryOpen(dir, service)
+        service.takeIf { _level.value != Level.Scan }
     }
 
     /** The level the folder's indexes allow on this phone, without loading Lucene. */
@@ -166,50 +206,73 @@ class LegacySearch(context: Context, private val library: Library, private val p
             var part = TEXT
             try {
                 if (level == Level.Full) {
-                    lucene(TEXT, dir) { service.engine()?.searchBooksByTitlePrefix(PROBE_QUERY, 1) }
+                    lucene(TEXT, dir, opening = true) { service.engine()?.searchBooksByTitlePrefix(PROBE_QUERY, 1) }
                 }
                 part = LOOKUP
-                lucene(LOOKUP, dir) { service.lookup()?.suggestBooks(PROBE_QUERY, 1) }
+                lucene(LOOKUP, dir, opening = true) { service.lookup()?.suggestBooks(PROBE_QUERY, 1) }
                 Log.i(TAG, "search: $level, opened in ${SystemClock.elapsedRealtime() - start} ms (heap ${heapBytes shr 20} MB)")
                 return
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                // Recorded already when it came from Lucene; either way that index stays closed now
-                if (!isLuceneFailure(t)) Log.w(TAG, "search: the $part index could not be read", t)
+                // Recorded already when its verdict says so; whatever it was, that index stays closed for the session
                 synchronized(sessionFailures) { sessionFailures += part }
             }
-            service.close()
+            // The level first, then the close (see openService)
             _level.value = chooseLevel(dir)
+            service.close()
         }
         Log.i(TAG, "search: ${Level.Scan} (heap ${heapBytes shr 20} MB)")
     }
 
-    /** Runs a call on one index ([TEXT] or [LOOKUP]); what Lucene throws there is recorded as that index's failure. */
-    private inline fun <T> lucene(index: String, dir: File, block: () -> T): T = try {
+    /**
+     * Runs a call on one index ([TEXT] or [LOOKUP]), while it opens ([opening]) or for a search: what it throws closes
+     * that index as far as its [verdict] says, and is thrown on.
+     */
+    private inline fun <T> lucene(index: String, dir: File, opening: Boolean, block: () -> T): T = try {
         block()
     } catch (e: CancellationException) {
         throw e
     } catch (t: Throwable) {
-        if (isLuceneFailure(t)) recordFailure(dir, index, t)
+        fail(dir, index, t, opening)
         throw t
     }
 
+    /** Closes [index] after [error] for as long as its [verdict] says; true when it is to close now. */
+    private fun fail(dir: File, index: String, error: Throwable, opening: Boolean): Boolean {
+        var verdict = verdict(error, opening)
+        if (verdict == Verdict.Search && ranOutOfHeap(error) && heapFailures.incrementAndGet() >= HEAP_FAILURES) verdict = Verdict.Session
+        return when (verdict) {
+            Verdict.Search -> {
+                Log.i(TAG, "search: failed (${error.javaClass.name}), the $index index stays open")
+                false
+            }
+            Verdict.Session -> {
+                Log.w(TAG, "search: the $index index failed, closed for this session", error)
+                synchronized(sessionFailures) { sessionFailures += index }
+                true
+            }
+            Verdict.Recorded -> {
+                recordFailure(dir, index, error)
+                true
+            }
+        }
+    }
+
     /**
-     * A search failed with [error] (SearchService's onFailure, from the main app's view models): when it came from
-     * Lucene, the full-text index is closed for the session and the failure recorded.
+     * A search failed with [error] (SearchService's onFailure, from the main app's view models): the full-text index
+     * is closed when its [verdict] says so, and the search reopened without it.
      */
     fun reportFailure(error: Throwable) {
         val dir = opened?.dir ?: return
-        if (!isLuceneFailure(error)) return
-        recordFailure(dir, TEXT, error)
-        reopen()
+        if (fail(dir, TEXT, error, opening = false)) reopen()
     }
 
     /** Forgets the recorded failures and opens the search again at the best level (the search screen's "נסה שוב"). */
     fun retry() {
         prefs.searchFailure = null
         synchronized(sessionFailures) { sessionFailures.clear() }
+        heapFailures.set(0)
         reopen()
     }
 
@@ -218,11 +281,13 @@ class LegacySearch(context: Context, private val library: Library, private val p
         scope.launch { runCatching { service() } }
     }
 
-    /** A search on the full-text index: what Lucene throws is recorded, and the search reopened without it. */
+    /** A search on the full-text index: what it throws closes the index as its [verdict] says, and is thrown on. */
     private suspend fun <T> textSearch(dir: File, block: suspend () -> T): T = try {
-        lucene(TEXT, dir) { block() }
+        block()
+    } catch (e: CancellationException) {
+        throw e
     } catch (t: Throwable) {
-        if (t !is CancellationException && isLuceneFailure(t)) reopen()
+        if (fail(dir, TEXT, t, opening = false)) reopen()
         throw t
     }
 
@@ -288,18 +353,18 @@ class LegacySearch(context: Context, private val library: Library, private val p
 
     // ------------------------------------------------------------------ failures
 
-    /** The indexes recorded as failed for this library release and this app's version. */
+    /** The indexes recorded as failed for this library release and this build of the app. */
     private fun recordedFailures(dir: File): Set<String> {
         val parts = prefs.searchFailure?.split('|', limit = 4) ?: return emptySet()
-        if (parts.size < 4 || parts[0] != release(dir) || parts[1] != versionCode.toString()) return emptySet()
+        if (parts.size < 4 || parts[0] != release(dir) || parts[1] != build) return emptySet()
         return parts[2].split(',').toSet()
     }
 
     private fun recordFailure(dir: File, index: String, error: Throwable) {
-        Log.e(TAG, "search: the $index index failed, not opened again for this library", error)
+        Log.e(TAG, "search: the $index index failed, not opened again for this library and this build", error)
         val failed = recordedFailures(dir) + index
         val message = (error.javaClass.name + ": " + error.message).replace('\n', ' ').take(MAX_MESSAGE)
-        prefs.searchFailure = listOf(release(dir), versionCode.toString(), failed.sorted().joinToString(","), message).joinToString("|")
+        prefs.searchFailure = listOf(release(dir), build, failed.sorted().joinToString(","), message).joinToString("|")
     }
 
     /** The library's release (release_info.txt, as desktop writes it), or "" when it has none. */
@@ -331,12 +396,31 @@ class LegacySearch(context: Context, private val library: Library, private val p
 
         private const val SKIP_VECTORS_PROPERTY = "lucene.android.skipVectors"
 
-        /** What Lucene throws when it cannot run or read here, as against a database read or a cancelled search. */
-        fun isLuceneFailure(t: Throwable): Boolean = when {
-            t is CancellationException -> false
-            t is SqliteException -> false
-            t is Error || t is IOException -> true
-            else -> generateSequence(t) { it.cause }.take(8).any { e -> e.stackTrace.any { it.className.startsWith("org.apache.lucene.") } }
+        /** The searches the heap may run out in before the full-text index closes for the session ([heapFailures]). */
+        private const val HEAP_FAILURES = 3
+
+        private fun ranOutOfHeap(t: Throwable) = generateSequence(t) { it.cause }.take(8).any { it is VirtualMachineError }
+
+        /**
+         * What [t], thrown by an index while it opens with its small search ([opening]) or by a search on it, says
+         * about that index (see the class's comment): a class this Android cannot load or verify, or an index of
+         * another Lucene version, at any time, and anything but a read or the heap at the open, where no query of the
+         * user's is involved, say that it cannot work here; a read that failed, a database read or a heap that ran
+         * out at the open (also through a class's initializer), say nothing past this session (a card may be back, a
+         * copy finished); the rest is one search's failure, as Lucene's IndexSearcher.TooManyClauses or a heap that
+         * ran out for a long passage pasted in (counted by [fail]).
+         */
+        internal fun verdict(t: Throwable, opening: Boolean): Verdict {
+            if (t is CancellationException) return Verdict.Search
+            val chain = generateSequence(t) { it.cause }.take(8).toList()
+            return when {
+                chain.any { it is VirtualMachineError } -> if (opening) Verdict.Session else Verdict.Search
+                chain.any { it is LinkageError || it is IndexFormatTooOldException || it is IndexFormatTooNewException } -> Verdict.Recorded
+                chain.any { it is SqliteException } -> if (opening) Verdict.Session else Verdict.Search
+                chain.any { it is IOException } -> Verdict.Session
+                opening -> Verdict.Recorded
+                else -> Verdict.Search
+            }
         }
     }
 }
