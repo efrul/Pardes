@@ -333,10 +333,11 @@ private fun SplitBody(
     val dark = Zayit.colors.isDark
     val percent = percents(LearningPart.entries.map { split.amounts.getValue(it) }).let { p -> LearningPart.entries.zip(p).toMap() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
+        val sideBySide = maxWidth >= SIDE_BY_SIDE_WIDTH
         Column(Modifier.fillMaxSize()) {
             SplitBar(split, percent, dark)
             Spacer(Modifier.height(14.dp))
-            if (maxWidth >= SIDE_BY_SIDE_WIDTH) {
+            if (sideBySide) {
                 Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LearningPart.entries.forEach { part ->
                         PartColumn(part, percent.getValue(part), split, measure, dark, open, Modifier.weight(1f).fillMaxHeight())

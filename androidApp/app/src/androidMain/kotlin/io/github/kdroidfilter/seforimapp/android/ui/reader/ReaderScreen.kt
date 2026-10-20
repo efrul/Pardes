@@ -235,7 +235,7 @@ fun ReaderScreen(
         val readingBookId = state.book?.id
         val reading = readingBookId != null && session.isFront && resumed
         LaunchedEffect(readingBookId, reading) {
-            if (reading && readingBookId != null) app.userData.readingTime.track(readingBookId)
+            if (reading) app.userData.readingTime.track(readingBookId)
         }
     }
 
