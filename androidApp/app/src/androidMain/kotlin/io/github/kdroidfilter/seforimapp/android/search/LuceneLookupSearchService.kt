@@ -1,7 +1,8 @@
 // Android variant of the Zayit 0.6.1 file SeforimApp/src/jvmMain/.../framework/search/LuceneLookupSearchService.kt
 // (tag v0.6.1), with the 0.6.2 fixes 2126c238 and 90552dbc applied as is (book suggestions: title tiers, words typed
-// once each). Differences: the index is always opened with NIOFSDirectory (FSDirectory.open picks MMapDirectory,
-// which needs java.lang.foreign, absent on Android) and the query cache is smaller for a phone heap.
+// once each). Differences: the index is opened with NIOFSDirectory (FSDirectory.open picks MMapDirectory, which needs
+// java.lang.foreign, absent on Android), or the directory the caller opens (LuceneTuning.directory), and the query
+// cache is smaller for a phone heap.
 package io.github.kdroidfilter.seforimapp.framework.search
 
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
@@ -21,6 +22,7 @@ import org.apache.lucene.search.Sort
 import org.apache.lucene.search.SortField
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.UsageTrackingQueryCachingPolicy
+import org.apache.lucene.store.Directory
 import org.apache.lucene.store.NIOFSDirectory
 import java.nio.file.Path
 
@@ -28,10 +30,12 @@ class LuceneLookupSearchService(
     indexDir: Path,
     private val analyzer: Analyzer = StandardAnalyzer(),
     private val acronymCache: AcronymFrequencyCache? = null,
+    // Android: how the folder is opened (LuceneTuning.directory)
+    private val directory: (Path) -> Directory = ::NIOFSDirectory,
 ) {
     // Open Lucene directory lazily to avoid any I/O at app startup.
-    // Android: no MMapDirectory (it needs java.lang.foreign), so always NIOFSDirectory.
-    private val dir by lazy { NIOFSDirectory(indexDir) }
+    // Android: no MMapDirectory (it needs java.lang.foreign), so NIOFSDirectory unless [directory] opens another.
+    private val dir by lazy { directory(indexDir) }
 
     // Cache searchers; refresh explicitly when index changes
     private val searcherManager by lazy {

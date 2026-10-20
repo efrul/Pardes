@@ -8,6 +8,7 @@ import io.github.kdroidfilter.seforimapp.framework.search.AcronymFrequencyCache
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimapp.framework.search.RepositorySnippetSourceProvider
 import io.github.kdroidfilter.seforimlibrary.search.LuceneSearchEngine
+import io.github.kdroidfilter.seforimlibrary.search.LuceneTuning
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import io.github.kdroidfilter.seforimlibrary.search.SearchFacets
 import io.github.kdroidfilter.seforimlibrary.search.SnippetProvider
@@ -23,8 +24,22 @@ import kotlinx.coroutines.withContext
  * keeps next to seforim.db (wired like the 0.6.1 AppCoreBindings provideSearchEngine and
  * provideLuceneLookupSearchService, as the community build: lexical only, no semantic hybrid). Nothing is built on the
  * device; when the files are missing, [engine] and [lookup] return null and the UI explains how to get them.
+ *
+ * The Android 4.4 edition builds it with its own [tuning] and [allowed] (it may search by the lookup index alone, or
+ * by neither), and [onFailure] tells it of each search Lucene failed (it then falls back). This app passes none.
  */
-class SearchService(private val store: LibraryStore) {
+class SearchService(
+    private val store: LibraryStore,
+    /** How Lucene runs on this device; the defaults are this app's. */
+    val tuning: LuceneTuning = LuceneTuning(),
+    /**
+     * Whether an installed index may be opened, [TEXT_INDEX] or [LOOKUP_INDEX], asked again at each (re)open: one it
+     * refuses stays closed and its call returns null, as when it is missing.
+     */
+    private val allowed: (index: String) -> Boolean = { true },
+    /** Told of a search that failed ([reportFailure]), with what Lucene threw. */
+    private val onFailure: (Throwable) -> Unit = {},
+) {
     data class Part(val name: String, val present: Boolean, val bytes: Long)
 
     data class Status(val text: Part, val lookup: Part, val dictionary: Part) {
@@ -51,7 +66,10 @@ class SearchService(private val store: LibraryStore) {
     suspend fun lookup(): LuceneLookupSearchService? = open().lookup
 
     /** Cheap check (no Lucene class is loaded) that the full-text index is installed. */
-    suspend fun isTextSearchAvailable(): Boolean = withContext(Dispatchers.IO) { isIndex(File(store.libraryDir, TEXT_INDEX)) }
+    suspend fun isTextSearchAvailable(): Boolean = withContext(Dispatchers.IO) { allowed(TEXT_INDEX) && isIndex(File(store.libraryDir, TEXT_INDEX)) }
+
+    /** A search failed with [error] (the search screens call it; see [onFailure]). */
+    fun reportFailure(error: Throwable) = onFailure(error)
 
     suspend fun status(): Status = withContext(Dispatchers.IO) {
         val dir = store.libraryDir
@@ -79,21 +97,23 @@ class SearchService(private val store: LibraryStore) {
             opened = null
             val text = File(dir, TEXT_INDEX)
             val lookupDir = File(dir, LOOKUP_INDEX)
-            val engine = if (isIndex(text)) {
+            val useLookup = allowed(LOOKUP_INDEX) && isIndex(lookupDir)
+            val engine = if (allowed(TEXT_INDEX) && isIndex(text)) {
                 // The repository is looked up per page: the installer closes and reopens it when it replaces the library.
                 val snippets = SnippetProvider { lines -> RepositorySnippetSourceProvider(store.repository()).getSnippetSources(lines) }
-                LuceneSearchEngine(text.toPath(), snippets, dictionaryPath = File(dir, DICTIONARY).toPath())
+                LuceneSearchEngine(text.toPath(), snippets, dictionaryPath = File(dir, DICTIONARY).toPath(), tuning = tuning)
             } else {
                 null
             }
-            val acronyms = if (isIndex(lookupDir) && store.databaseFile.isFile) {
+            val acronyms = if (useLookup && store.databaseFile.isFile) {
                 runCatching { AcronymFrequencyCache(store.databaseFile) }.onFailure { Log.w(TAG, "acronym cache", it) }.getOrNull()
             } else {
                 null
             }
-            val lookup = if (isIndex(lookupDir)) {
+            val lookup = if (useLookup) {
                 // When Lucene cannot load here this throws on every call (each keystroke on home): do not leak the cache.
-                runCatching { LuceneLookupSearchService(lookupDir.toPath(), acronymCache = acronyms) }.onFailure { acronyms?.close() }.getOrThrow()
+                runCatching { LuceneLookupSearchService(lookupDir.toPath(), acronymCache = acronyms, directory = tuning.directory) }
+                    .onFailure { acronyms?.close() }.getOrThrow()
             } else {
                 null
             }

@@ -5,6 +5,8 @@
 //  - lexical.db is only looked up next to the index: Path.of is API 34+, and the desktop system property,
 //    environment variable and source-tree fallbacks do not exist on a phone;
 //  - the searcher pool has at most 4 threads (heat and battery on 8-core phones);
+//  - LuceneTuning: the slices, the forms per word, the query cache and the directory can be set (the Android 4.4
+//    edition does); the defaults are desktop's values, but for the 4 threads;
 //  - computeFacetsCancellable: facets stop cooperatively, never by Thread.interrupt (see there);
 //  - close() also closes lexical.db (MagicDictionaryIndex.close);
 //  - Lucene's clause limit is raised to MAX_QUERY_CLAUSES: a pasted verse rewrites past the default 1024 leaf clauses.
@@ -32,6 +34,7 @@ import org.apache.lucene.search.Collector
 import org.apache.lucene.search.CollectorManager
 import org.apache.lucene.search.FuzzyQuery
 import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.LRUQueryCache
 import org.apache.lucene.search.LeafCollector
 import org.apache.lucene.search.PrefixQuery
 import org.apache.lucene.search.PointRangeQuery
@@ -45,7 +48,6 @@ import org.apache.lucene.search.SearcherFactory
 import org.apache.lucene.search.SearcherManager
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.util.QueryBuilder
-import org.apache.lucene.store.NIOFSDirectory
 import org.apache.lucene.document.IntPoint
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -59,8 +61,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * Supports Hebrew text with diacritics handling, dictionary expansion, and fuzzy matching.
  */
 private val logger = Logger.withTag("LuceneSearchEngine")
-// Hard cap on how many synonym/expansion terms we allow per token
-private const val MAX_SYNONYM_TERMS_PER_TOKEN: Int = 32
+// Hard cap on how many synonym/expansion terms we allow per token: LuceneTuning.maxSynonymTermsPerToken (Android)
 // Global cap for boost queries built from dictionary expansions
 private const val MAX_SYNONYM_BOOST_TERMS: Int = 256
 // Constants for snippet source building (must match indexer)
@@ -85,26 +86,33 @@ const val WARMUP_PAGE_SIZE = 25
 // Smallest partition worth a task of its own when a segment is split across cores
 private const val MIN_DOCS_PER_SLICE = 100_000
 
+// Android: queries an explicit query cache (LuceneTuning.queryCacheBytes) holds at most, as LuceneLookupSearchService's
+private const val QUERY_CACHE_MAX_QUERIES = 256
+
+// Android: the searchers' thread pools, one per size, shared by every engine of the process (this app opens one
+// engine again after each library update, always with the same size: one pool, as before)
+private val searchExecutors = ConcurrentHashMap<Int, ExecutorService>()
+
+private fun searchExecutor(threads: Int): ExecutorService = searchExecutors.getOrPut(threads) {
+    val ids = AtomicInteger()
+    Executors.newFixedThreadPool(threads) { task ->
+        Thread(task, "lucene-search-${ids.incrementAndGet()}").apply { isDaemon = true }
+    }
+}
+
 /**
  * Searchers that split the index, even a single segment, into one partition per core and search them concurrently:
  * a merged index is one big segment, which a plain searcher scores on one thread.
  */
-private object PartitionedSearcherFactory : SearcherFactory() {
-    // Android: at most 4 threads, as MagicDictionaryIndex (desktop: one per core)
-    private val cores = minOf(Runtime.getRuntime().availableProcessors(), 4)
-    private val executor: ExecutorService by lazy {
-        val ids = AtomicInteger()
-        Executors.newFixedThreadPool(cores) { task ->
-            Thread(task, "lucene-search-${ids.incrementAndGet()}").apply { isDaemon = true }
-        }
-    }
-
+// Android: [cores] partitions (LuceneTuning.slices: at most 4 threads by default, as MagicDictionaryIndex; desktop:
+// one per core)
+private class PartitionedSearcherFactory(private val cores: Int) : SearcherFactory() {
     override fun newSearcher(reader: IndexReader, previousReader: IndexReader?): IndexSearcher {
-        val searcher = if (cores == 1) {
+        val searcher = if (cores <= 1) {
             IndexSearcher(reader)
         } else {
             val docsPerSlice = maxOf(MIN_DOCS_PER_SLICE, reader.maxDoc() / cores + 1)
-            object : IndexSearcher(reader, executor) {
+            object : IndexSearcher(reader, searchExecutor(cores)) {
                 override fun slices(leaves: List<LeafReaderContext>): Array<LeafSlice> =
                     slices(leaves, docsPerSlice, Int.MAX_VALUE, true)
             }
@@ -184,16 +192,20 @@ class LuceneSearchEngine(
     private val indexDir: Path,
     private val snippetProvider: SnippetProvider? = null,
     private val analyzer: Analyzer = StandardAnalyzer(),
-    private val dictionaryPath: Path? = null
+    private val dictionaryPath: Path? = null,
+    // Android: how Lucene runs on this device (the defaults are this app's)
+    private val tuning: LuceneTuning = LuceneTuning(),
 ) : SearchEngine {
 
     // Open Lucene directory lazily to avoid any I/O at app startup.
-    // Android: no MMapDirectory (it needs java.lang.foreign), so always NIOFSDirectory.
-    private val dir by lazy { NIOFSDirectory(indexDir) }
+    // Android: no MMapDirectory (it needs java.lang.foreign), so NIOFSDirectory unless the tuning opens another.
+    private val dir by lazy { tuning.directory(indexDir) }
 
     init {
         // Static: set before this engine's first search, and it covers the lookup index's searchers too
         IndexSearcher.setMaxClauseCount(maxOf(IndexSearcher.getMaxClauseCount(), MAX_QUERY_CLAUSES))
+        // Android: static too; the lookup index's searchers have a cache of their own
+        tuning.queryCacheBytes?.let { IndexSearcher.setDefaultQueryCache(LRUQueryCache(QUERY_CACHE_MAX_QUERIES, it)) }
     }
 
     private val stdAnalyzer: Analyzer by lazy { analyzer }
@@ -226,7 +238,7 @@ class LuceneSearchEngine(
     // One reader shared by every search: opening one per search re-reads the term index of each segment and maps,
     // then unmaps, all the files. Refreshed when the index changes on disk (delta updates write into it).
     private val searcherManagerLazy = lazy {
-        SearcherManager(dir, PartitionedSearcherFactory).apply {
+        SearcherManager(dir, PartitionedSearcherFactory(tuning.slices)).apply {
             addListener(
                 object : ReferenceManager.RefreshListener {
                     override fun beforeRefresh() = Unit
@@ -1154,7 +1166,7 @@ class LuceneSearchEngine(
         otherTerms.forEach { ordered += it }
 
         val totalSize = ordered.size
-        val limited = ordered.take(MAX_SYNONYM_TERMS_PER_TOKEN)
+        val limited = ordered.take(tuning.maxSynonymTermsPerToken)
         if (totalSize > limited.size) {
             logger.d {
                 "[DEBUG] Capped synonym terms for token '$token' from $totalSize to ${limited.size}"

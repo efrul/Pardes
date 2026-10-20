@@ -415,7 +415,9 @@ class SearchViewModel(
 
                 // The facets run beside the first page (desktop runs both at once); the results show as soon as their
                 // page is there, the tabs and the "more" counts once the facets are counted, which takes longer on a
-                // phone. Cancelling the search cancels them (countFacets stops between slices, never interrupting a read)
+                // phone. Cancelling the search cancels them (countFacets stops between slices, never interrupting a read).
+                // With LuceneTuning.facetsWithFirstPage false (the Android 4.4 edition) they start once the page shows
+                val facetsBeside = service.tuning.facetsWithFirstPage
                 fun facetsAsync(baseOnly: Boolean) = searchJob.async(Dispatchers.IO) {
                     try {
                         engine.countFacets(q, DEFAULT_NEAR, bookIds = facetsBookIds, baseBookOnly = baseOnly)
@@ -423,18 +425,19 @@ class SearchViewModel(
                         throw e
                     } catch (t: Throwable) {
                         Log.w(TAG, "search: facets", t)
+                        service.reportFailure(t)
                         null
                     }
                 }
-                var facets = facetsAsync(baseOnly)
+                var facets = if (facetsBeside) facetsAsync(baseOnly) else null
                 var first = openFirstPage(engine, q, baseOnly, bookIds = pageBookIds, lineIds = lineIds)
                 if (baseOnly && first.session != null && first.page?.hits.isNullOrEmpty()) {
                     // Nothing in the base books: all of them, and the status line says so (desktop fallback)
-                    facets.cancel()
+                    facets?.cancel()
                     withContext(Dispatchers.IO + NonCancellable) { first.session.close() }
                     baseOnly = false
                     _state.update { it.copy(globalExtended = true, baseBooksHadNoResults = true) }
-                    facets = facetsAsync(baseOnly)
+                    facets = if (facetsBeside) facetsAsync(baseOnly) else null
                     first = openFirstPage(engine, q, baseOnly, bookIds = pageBookIds, lineIds = lineIds)
                 }
                 tocAllowedLineIds = lineIds.orEmpty()
@@ -444,7 +447,7 @@ class SearchViewModel(
                 val tree = scopeBook?.let { b -> runCatching { tocIndex(b.id).tree }.onFailure { if (it is CancellationException) throw it }.getOrNull() }
                 if (tree != null) _state.update { it.copy(tocTree = tree) }
                 countTocHits(_state.value.results)
-                applyFacets(facets.await())
+                applyFacets((facets ?: facetsAsync(baseOnly)).await())
             }
         }
     }
@@ -459,7 +462,11 @@ class SearchViewModel(
         _state.update { it.copy(isLoadingMore = true) }
         loadMoreJob = viewModelScope.launch {
             val page = runCatching { sessionMutex.withLock { if (gen == generation) session?.let { withContext(Dispatchers.IO + NonCancellable) { it.nextPage(PAGE_SIZE) } } else null } }
-                .onFailure { if (it is CancellationException) throw it else Log.w(TAG, "search: next page", it) }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    Log.w(TAG, "search: next page", it)
+                    service.reportFailure(it)
+                }
                 .getOrNull()
             if (gen != generation) return@launch
             val hits = page?.hits.orEmpty().let { hits -> if (tocAllowedLineIds.isEmpty()) hits else hits.filter { it.lineId in tocAllowedLineIds } }
@@ -730,6 +737,7 @@ class SearchViewModel(
             throw e
         } catch (t: Throwable) {
             Log.e(TAG, "search failed", t)
+            service.reportFailure(t)
             _state.update { it.copy(isLoading = false, isLoadingMore = false, isFiltering = false, failure = t.message ?: t.javaClass.name) }
         }
     }
