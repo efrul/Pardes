@@ -113,9 +113,14 @@ class ListSelection {
         }
     }
 
-    /** A selection started anew (a long press, a mouse drag, a double or triple click). */
-    internal fun begin(a: TextPoint, b: TextPoint) {
+    /** Made by touch: it has handles. A mouse's has none, as Android shows none outside touch mode. */
+    var touch by mutableStateOf(true)
+        private set
+
+    /** A selection started anew (a long press, a mouse drag, a double or triple click); [touch] when made by touch. */
+    internal fun begin(a: TextPoint, b: TextPoint, touch: Boolean = true) {
         select(a, b)
+        this.touch = touch
         generation++
         onBegin?.invoke()
     }
@@ -128,34 +133,40 @@ class ListSelection {
         if (texts[text.unit] === text) texts.remove(text.unit)
     }
 
-    /** The part of [unit]'s text ([length] long) that is selected; null when none of it is. */
-    internal fun rangeIn(unit: Long, length: Int): IntRange? {
-        val s = start ?: return null
-        val e = end ?: return null
+    /** The part of [unit]'s text ([length] long) that is selected (from [s] to [e]); null when none of it is. */
+    internal fun rangeIn(unit: Long, length: Int, s: TextPoint? = start, e: TextPoint? = end): IntRange? {
+        if (s == null || e == null) return null
         if (unit < s.unit || unit > e.unit) return null
         val from = if (unit == s.unit) s.offset.coerceIn(0, length) else 0
         val to = if (unit == e.unit) e.offset.coerceIn(0, length) else length
         return if (to > from) from until to else null
     }
 
-    /** [selectedText], once the data of every unit it spans is read ([prepare]): what actions and copies take. */
+    /**
+     * [selectedText], once the data of every unit it spans is read ([prepare]): what actions and copies take. The
+     * selection as it was when asked: a tap elsewhere while lines load does not change what the action gets.
+     */
     suspend fun read(): String {
         val s = start ?: return ""
         val e = end ?: return ""
         prepare(s.unit..e.unit)
-        return selectedText()
+        return textBetween(s, e)
     }
 
     /** The selected text: the parts of several units joined by line breaks, as Compose's selection copied them. */
     fun selectedText(): String {
         val s = start ?: return ""
         val e = end ?: return ""
+        return textBetween(s, e)
+    }
+
+    private fun textBetween(s: TextPoint, e: TextPoint): String {
         lastUnits = s.unit..e.unit
         val out = StringBuilder()
         var unit = s.unit
         while (unit <= e.unit) {
             val text = texts[unit]?.text ?: textOf(unit)
-            val range = text?.let { rangeIn(unit, it.length) }
+            val range = text?.let { rangeIn(unit, it.length, s, e) }
             if (text != null && range != null) {
                 if (out.isNotEmpty()) out.append('\n')
                 out.append(text, range.first, range.last + 1)
@@ -292,7 +303,7 @@ class ListSelection {
     /** The selection's part on screen below [top] (the find bar's room), in the area: where the bar goes; null when none shows. */
     internal fun visibleBounds(area: LayoutCoordinates, top: Float = 0f): Rect? {
         if (!area.isAttached) return null
-        val screen = Rect(Offset(0f, top), area.size.toSize())
+        val screen = Rect(0f, top, area.size.width.toFloat(), area.size.height.toFloat())
         var bounds: Rect? = null
         for (t in texts.values) {
             val coordinates = t.coordinates?.takeIf { it.isAttached } ?: continue

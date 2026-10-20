@@ -354,6 +354,7 @@ fun ReaderScreen(
             textSize = textSize,
             selection = mainSpec,
             textSelection = textSelection,
+            findBarBand = !wide,
             onZoom = { factor -> app.prefs.setTextSize(textSize * factor) },
             modifier = mod,
         ) {
@@ -462,22 +463,20 @@ private fun mainAction(
 ) {
     val book = state.book ?: return
     val lines = selectionLines()
-    // The selection's first and last lines: every line between them is selected whole, so only the edges need finding
-    // (the second at each end covers a start at its first line's very end, or an end at its last line's start)
-    val edges = if (lines.size <= 4) lines else lines.take(2) + lines.takeLast(2)
     when (action) {
         SelectionAction.Copy -> copyText(context, text)
         SelectionAction.CopyWithoutNikud -> copyText(context, HebrewTextUtils.removeAllDiacritics(text))
-        SelectionAction.CopyWithSource -> copyText(context, buildCopyWithSourcePayload(text, book, state.rootCategory?.title, edges))
-        SelectionAction.CopyLink -> copyLink(context, bookShareLink(book.id, resolveLineRangeFromSelection(text, edges)?.first?.id ?: state.primaryLineId))
+        SelectionAction.CopyWithSource -> copyText(context, buildCopyWithSourcePayload(text, book, state.rootCategory?.title, lines))
+        SelectionAction.CopyLink -> copyLink(context, bookShareLink(book.id, resolveLineRangeFromSelection(text, lines)?.first?.id ?: state.primaryLineId))
         SelectionAction.SearchDatabase -> selectionQuery(text)?.let(nav.search)
         SelectionAction.FindInPage -> selectionQuery(text)?.let(vm::openFind)
         SelectionAction.AddNote -> {
+            // The note's passage starts on the selection's first line (or its second, when it starts at the first's end)
             val range = resolveHighlightRangesForSelection(lines.take(2).map { it.id to vm.plainText(it) }, text, state.diacritics).firstOrNull()
             if (range != null) vm.startNoteDraft(NoteDraftAnchor(range.lineId, range.range.first, range.range.last + 1, text.trim().substringBefore('\n').trim()))
         }
         SelectionAction.ReportError -> scope.launch {
-            val range = resolveLineRangeFromSelection(text, edges) ?: state.primaryLineId?.let { id -> vm.lineById(id)?.let { it to it } }
+            val range = resolveLineRangeFromSelection(text, lines) ?: state.primaryLineId?.let { id -> vm.lineById(id)?.let { it to it } }
             val mailto = runCatching { bookErrorReportMailto(app.libraryStore.repository(), book, state.rootCategory?.title, range, text) }.getOrNull() ?: return@launch
             try {
                 context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse(mailto)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -494,7 +493,7 @@ private fun mainAction(
         }
         SelectionAction.MultiSelect -> {
             vm.setMultiSelect(true)
-            resolveLineRangeFromSelection(text, edges)?.first?.takeIf { it.id !in state.selectedLineIds }?.let { vm.toggleLine(it) }
+            resolveLineRangeFromSelection(text, lines)?.first?.takeIf { it.id !in state.selectedLineIds }?.let { vm.toggleLine(it) }
         }
         SelectionAction.OpenInPlace -> Unit
     }
