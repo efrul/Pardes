@@ -7,22 +7,12 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.BackgroundColorSpan
 import android.text.style.RelativeSizeSpan
-import io.github.kdroidfilter.seforimapp.legacy.data.Diacritics
+import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
 import kotlin.math.abs
 
 /** How a line's HTML (h1, h2, big, strong, small, sup) is shown: Android's own HTML reader, which 4.4 has. */
 object LineText {
-    /** Cantillation marks and meteg: dropped to show the niqqud alone. */
-    private val CANTILLATION = Regex("[\u0591-\u05AF\u05BD]")
-
-    /** Every point and mark but maqaf, paseq, sof pasuq and nun hafukha: no niqqud. */
-    private val ALL_MARKS = Regex("[\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7]")
-
-    fun stripMarks(html: String, diacritics: Diacritics): String = when (diacritics) {
-        Diacritics.All -> html
-        Diacritics.Niqqud -> html.replace(CANTILLATION, "")
-        Diacritics.None -> html.replace(ALL_MARKS, "")
-    }
+    fun stripMarks(html: String, diacritics: DiacriticsMode): String = diacritics.apply(html)
 
     private val HEADING_SIZES = mapOf(1.4f to 1.25f, 1.3f to 1.125f, 1.2f to 1f, 1.1f to 1f)
 
@@ -33,7 +23,7 @@ object LineText {
      * app's heading sizes (HtmlCompose: h1 1.5, h2 1.25, h3 1.125 times the text, h4 to h6 the text's own) where Html
      * makes them 1.5, 1.4, 1.3, 1.2 and 1.1 (<big>'s 1.25 and <small>'s 0.8 stay).
      */
-    fun render(html: String, diacritics: Diacritics): SpannableStringBuilder {
+    fun render(html: String, diacritics: DiacriticsMode): SpannableStringBuilder {
         val text = SpannableStringBuilder(fromHtml(stripMarks(html, diacritics)))
         text.getSpans(0, text.length, RelativeSizeSpan::class.java).forEach { span ->
             val size = HEADING_SIZES.entries.firstOrNull { abs(it.key - span.sizeChange) < 0.01f }?.value ?: return@forEach

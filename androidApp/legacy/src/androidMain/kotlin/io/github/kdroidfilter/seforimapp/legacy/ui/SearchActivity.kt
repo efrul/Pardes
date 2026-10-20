@@ -24,14 +24,14 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.TextView
+import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceResolver
+import io.github.kdroidfilter.seforimapp.features.search.domain.reference.RepositoryReferenceSource
 import io.github.kdroidfilter.seforimapp.legacy.R
-import io.github.kdroidfilter.seforimapp.legacy.data.Diacritics
 import io.github.kdroidfilter.seforimapp.legacy.data.Entry
 import io.github.kdroidfilter.seforimapp.legacy.data.Hit
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.NoLibraryException
-import io.github.kdroidfilter.seforimapp.legacy.data.References
 import io.github.kdroidfilter.seforimapp.legacy.data.TextSearch
 import io.github.kdroidfilter.seforimapp.legacy.db.SqliteException
 import kotlinx.coroutines.CancellationException
@@ -119,7 +119,7 @@ class SearchActivity : BaseActivity() {
     private val snippets = object : LinkedHashMap<Pair<Long, Int>, CharSequence>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Long, Int>, CharSequence>): Boolean = size > MAX_SNIPPETS
     }
-    private var snippetMarks: Diacritics? = null
+    private var snippetMarks: DiacriticsMode? = null
 
     /** The chips drawn (their categories, null for הכל) and the one chosen then: built again only when these change. */
     private var drawnTabs: List<Long?> = emptyList()
@@ -277,7 +277,7 @@ class SearchActivity : BaseActivity() {
                 return@launch
             }
             opened = lib
-            resolver = ReferenceResolver(References(lib.repository))
+            resolver = ReferenceResolver(RepositoryReferenceSource(lib.repository))
             search = TextSearch(lib)
             roots = rootEntries
             if (runAtOnce && field.text.isNotBlank()) startTextSearch(field.text.toString().trim()) else suggest()
@@ -948,7 +948,7 @@ class SearchActivity : BaseActivity() {
      * The passage around the first word found, as the main app's compactSnippet: a little before it and up to 200
      * letters after it, the words bold.
      */
-    private fun snippet(html: String, marks: Diacritics): CharSequence {
+    private fun snippet(html: String, marks: DiacriticsMode): CharSequence {
         val text = LineText.render(html, marks)
         val first = highlight?.find(text)
         var from = first?.let { maxOf(0, it.range.first - SNIPPET_BEFORE) } ?: 0

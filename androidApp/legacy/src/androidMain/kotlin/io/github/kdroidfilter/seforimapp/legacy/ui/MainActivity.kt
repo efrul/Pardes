@@ -23,9 +23,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import io.github.kdroidfilter.seforimapp.android.data.CatalogMenu
+import io.github.kdroidfilter.seforimapp.android.ui.Destination
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.PARDES_BASED_ON
+import io.github.kdroidfilter.seforimapp.android.ui.shell.parseZayitDeepLink
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.Catalog
-import io.github.kdroidfilter.seforimapp.legacy.data.CatalogMenu
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.NoLibraryException
 import io.github.kdroidfilter.seforimapp.legacy.data.Place
@@ -333,7 +336,7 @@ class MainActivity : BaseActivity() {
         content.addView(logo(), lp(MATCH, WRAP))
         content.addView(card().apply {
             addView(label("ברוכים הבאים לפרדס!", 20f, colors.text, bold = true).apply { gravity = Gravity.CENTER })
-            addView(label(ABOUT_LINE, 14f, colors.secondary).apply {
+            addView(label(PARDES_BASED_ON, 14f, colors.secondary).apply {
                 gravity = Gravity.CENTER
                 setPadding(0, dp(6), 0, dp(4))
             })
@@ -397,18 +400,12 @@ class MainActivity : BaseActivity() {
         val link = pendingLink ?: return
         if (app.library.current == null) return
         pendingLink = null
-        if (link.scheme != "zayit") return
-        when (link.host) {
-            "search" -> startActivity(
-                Intent(this, SearchActivity::class.java).putExtra(SearchActivity.EXTRA_QUERY, link.getQueryParameter("q"))
-                    .putExtra(SearchActivity.EXTRA_RUN, true),
+        when (val target = parseZayitDeepLink(link.toString())) {
+            is Destination.Search -> startActivity(
+                Intent(this, SearchActivity::class.java).putExtra(SearchActivity.EXTRA_QUERY, target.query).putExtra(SearchActivity.EXTRA_RUN, true),
             )
-            "book" -> {
-                val segments = link.pathSegments
-                val bookId = segments.getOrNull(0)?.toLongOrNull() ?: return
-                val lineId = segments.getOrNull(2)?.takeIf { segments.getOrNull(1) == "line" }?.toLongOrNull()
-                if (lineId != null) openAt(bookId, lineId) else BookActivity.start(this, bookId, null)
-            }
+            is Destination.Book -> target.lineId?.let { openAt(target.bookId, it) } ?: BookActivity.start(this, target.bookId, null)
+            else -> Unit
         }
     }
 
@@ -522,8 +519,5 @@ class MainActivity : BaseActivity() {
 
         /** The books opened lately, and the favourites, that the Home shows. */
         private const val PLACES = 4
-
-        /** The main app's sentence (AndroidStrings.welcomeSubtitle): who made what. */
-        private const val ABOUT_LINE = "פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה."
     }
 }

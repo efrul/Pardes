@@ -32,9 +32,6 @@ data class BookInfo(
     val hasTeamim: Boolean = false,
 )
 
-/** A category of the library: its parent and its title. */
-data class CategoryRow(val id: Long, val parentId: Long?, val title: String)
-
 class NoLibraryException : Exception("No library")
 
 /**
@@ -153,15 +150,6 @@ class Library(private val context: Context) {
             }.firstOrNull()
 
         fun bookTitle(id: Long): String? = query("SELECT title FROM book WHERE id = ?", { bindLong(0, id) }) { it.getString(0) }.firstOrNull()
-
-        /** Every category (a few hundred rows): the Home's catalog row reads its titles and parents. */
-        fun categories(): List<CategoryRow> = query("SELECT id, parentId, title FROM category") { CategoryRow(it.getLong(0)!!, it.getLong(1), it.getString(2) ?: "") }
-
-        /** A category's own books, in order (not its subcategories'). */
-        fun booksIn(categoryId: Long): List<Entry> =
-            query("SELECT id, title FROM book WHERE categoryId = ? ORDER BY orderIndex, title", { bindLong(0, categoryId) }) {
-                Entry(it.getLong(0)!!, it.getString(1)!!, isBook = true)
-            }
 
         /** The table of contents' entry of a line ("פרק כו"), the place the title bar and the search's results name. */
         fun heading(bookId: Long, lineIndex: Int): String? =

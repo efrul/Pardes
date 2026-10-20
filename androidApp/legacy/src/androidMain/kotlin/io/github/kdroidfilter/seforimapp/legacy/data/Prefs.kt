@@ -1,18 +1,20 @@
 package io.github.kdroidfilter.seforimapp.legacy.data
 
 import android.content.Context
+import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
 import org.json.JSONArray
 import org.json.JSONObject
 
 /** A book opened lately, or a marked passage. */
 data class Place(val bookId: Long, val title: String, val lineIndex: Int, val note: String = "")
 
-/** How a book's niqqud and cantillation marks are shown (the main app's ניקוד toggle, with the cantillation as a step). */
-enum class Diacritics(val label: String) {
-    All("ניקוד וטעמים"),
-    Niqqud("ניקוד בלי טעמים"),
-    None("בלי ניקוד"),
-}
+/** How a book's niqqud and cantillation marks are shown, as Settings names the main app's DiacriticsMode. */
+val DiacriticsMode.label: String
+    get() = when (this) {
+        DiacriticsMode.All -> "ניקוד וטעמים"
+        DiacriticsMode.NikudOnly -> "ניקוד בלי טעמים"
+        DiacriticsMode.None -> "בלי ניקוד"
+    }
 
 /** The book fonts this edition carries (assets/fonts), the main app's defaults among them, or the system's. */
 enum class BookFont(val label: String, val asset: String?) {
@@ -39,8 +41,8 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_BOOK_FONT, null)?.let { name -> BookFont.entries.firstOrNull { it.name == name } } ?: BookFont.NotoSerif
         set(value) = sp.edit().putString(KEY_BOOK_FONT, value.name).apply()
 
-    var diacritics: Diacritics
-        get() = sp.getString(KEY_DIACRITICS, null)?.let { name -> Diacritics.entries.firstOrNull { it.name == name } } ?: Diacritics.All
+    var diacritics: DiacriticsMode
+        get() = sp.getString(KEY_DIACRITICS, null)?.let { name -> if (name == "Niqqud") DiacriticsMode.NikudOnly else DiacriticsMode.entries.firstOrNull { it.name == name } } ?: DiacriticsMode.All
         set(value) = sp.edit().putString(KEY_DIACRITICS, value.name).apply()
 
     var keepScreenOn: Boolean

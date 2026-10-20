@@ -17,6 +17,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.CONDITIONS_MARKDOWN
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.PARDES_LICENSE_URL
+import io.github.kdroidfilter.seforimapp.android.ui.settings.DATA_NOTE
+import io.github.kdroidfilter.seforimapp.android.ui.settings.LICENCES_INTRO
+import io.github.kdroidfilter.seforimapp.android.ui.settings.PARDES_LICENCE
+import io.github.kdroidfilter.seforimapp.android.ui.settings.reflow
 import io.github.kdroidfilter.seforimapp.legacy.R
 
 /**
@@ -52,7 +56,7 @@ class TextActivity : BaseActivity() {
             else -> {
                 val path = intent.getStringExtra(EXTRA_ASSET) ?: ""
                 val text = runCatching { assets.open(path).bufferedReader().use { it.readText() } }.getOrElse { intent.getStringExtra(EXTRA_TEXT) ?: "" }
-                body.addView(label(text, 13f, colors.text).apply {
+                body.addView(label(reflow(text).joinToString("\n\n"), 13f, colors.text).apply {
                     // Licence texts are English: left to right, whatever the screen's direction.
                     textDirection = View.TEXT_DIRECTION_LTR
                     textAlignment = View.TEXT_ALIGNMENT_VIEW_START
@@ -165,20 +169,6 @@ class TextActivity : BaseActivity() {
                 }
             }
         }
-
-        /** The main app's Settings › רישיונות (LicencesSettings), for what this edition carries. */
-        private const val LICENCES_INTRO =
-            "פרדס מופץ תחת רישיון GNU AGPL v3 עם תנאי ייחוס נוסף, וכולל רכיבים של אחרים, כל אחד ברישיון שלו. כאן רשומים " +
-                "כולם, ונוסח כל רישיון נפתח בלחיצה על שמו."
-
-        private val PARDES_LICENCE = listOf(
-            "פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.",
-            "זית ו־SeforimLibrary: ⁦Copyright (C) 2025 Elie Gambache⁩, ברישיון GNU AGPL v3 עם תנאי ייחוס נוסף לפי סעיף 7ב:",
-            "⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩",
-            "גם פרדס מופץ תחת רישיון זה, וקוד המקור שלו זמין תחת אותו רישיון. הוא מסופק כמות שהוא, ללא כל אחריות.",
-        )
-
-        private const val DATA_NOTE = "הספרים עצמם מגיעים מ־Sefaria ומאוצריא דרך SeforimLibrary, כל ספר ברישיון שלו (ראו תנאים)."
 
         private const val APACHE = "Apache License 2.0"
 
