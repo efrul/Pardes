@@ -54,6 +54,9 @@ class MainActivity : BaseActivity() {
     private var homeLibrary: Library.Opened? = null
     private var search: View? = null
 
+    /** Where the Home has the catalog row, filled once the catalog is read ([showCatalog]). */
+    private var catalogSlot: LinearLayout? = null
+
     /** Where the Home has the cards of the books opened lately and of the favourites, and what each shows. */
     private var recentsSlot: LinearLayout? = null
     private var favoritesSlot: LinearLayout? = null
@@ -132,6 +135,7 @@ class MainActivity : BaseActivity() {
             result.onSuccess { opened ->
                 showHome(opened)
                 handleLink()
+                showCatalog(opened)
             }.onFailure { error ->
                 if (error is NoLibraryException) showNoLibrary() else showError(error)
             }
@@ -243,12 +247,9 @@ class MainActivity : BaseActivity() {
      * (refreshPlaces), so it keeps its scroll and a keypad its place.
      */
     private suspend fun showHome(opened: Library.Opened) {
-        val (roots, menus) = withContext(Dispatchers.IO) {
-            val roots = runCatching { opened.rootEntries() }.getOrDefault(emptyList())
-            roots to runCatching { Catalog.menus(opened) }.getOrDefault(emptyList())
-        }
+        val roots = withContext(Dispatchers.IO) { runCatching { opened.rootEntries() }.getOrDefault(emptyList()) }
         content.removeAllViews()
-        if (menus.isNotEmpty()) content.addView(catalogRow(menus), lp(MATCH, WRAP).apply { topMargin = dp(4) })
+        catalogSlot = placesSlot().also { content.addView(it) }
         content.addView(logo(), lp(MATCH, WRAP))
         val search = searchField()
         this.search = search
@@ -268,6 +269,15 @@ class MainActivity : BaseActivity() {
         refreshPlaces()
         // A keypad starts on the search field, the Home's first stop.
         if (!search.isInTouchMode) search.requestFocus()
+    }
+
+    /**
+     * The catalog row, read once the rest of the Home is drawn and a link handled, as the main app's CatalogRow loads
+     * apart from its Home: a whole library's catalog.pb takes seconds to read on an old phone (12 s on the emulator).
+     */
+    private suspend fun showCatalog(opened: Library.Opened) {
+        val menus = withContext(Dispatchers.IO) { runCatching { Catalog.menus(opened) }.getOrDefault(emptyList()) }
+        if (menus.isNotEmpty()) catalogSlot?.addView(catalogRow(menus), lp(MATCH, WRAP).apply { topMargin = dp(4) })
     }
 
     private fun placesSlot(): LinearLayout = LinearLayout(this).apply {

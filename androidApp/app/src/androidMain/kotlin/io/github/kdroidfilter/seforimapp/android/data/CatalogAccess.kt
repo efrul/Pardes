@@ -67,6 +67,7 @@ class CatalogAccess private constructor(catalog: PrecomputedCatalog) {
 
         val byCategory = HashMap<Long, List<BookRef>>()
         val ancestorTitlesCache = HashMap<Long, List<String>>()
+        val labelPatterns = HashMap<String, Regex>()
 
         fun walkBooks(cat: CatalogCategory) {
             val excludedPrefixes = excludedBookPrefixesFor(cat.id, parentIdByCategory)
@@ -78,7 +79,7 @@ class CatalogAccess private constructor(catalog: PrecomputedCatalog) {
             // a forbidden prefix (e.g. שולחן ערוך, הקדמה → הקדמה → filtered).
             val refs =
                 cat.books.mapNotNull { book ->
-                    val display = stripAnyLabelPrefix(ancestorLabels, book.title)
+                    val display = stripAnyLabelPrefix(ancestorLabels, book.title, labelPatterns)
                     val trimmed = display.trimStart()
                     if (excludedPrefixes.any { trimmed.startsWith(it) }) null else BookRef(book.id, display)
                 }
@@ -134,32 +135,33 @@ class CatalogAccess private constructor(catalog: PrecomputedCatalog) {
     private fun stripAnyLabelPrefix(
         labels: List<String>,
         title: String,
+        patterns: MutableMap<String, Regex>,
     ): String {
         var result = title
-        for (label in labels) result = stripLabelPrefix(label, result)
+        for (label in labels) result = stripLabelPrefix(label, result, patterns)
         return result
     }
 
+    /**
+     * [title] without [label] and what follows it (a comma, a colon or a dash, a plus, spaces). Desktop's five
+     * patterns, tried in turn, are one alternation in the same order: its first alternative that matches is the pattern
+     * desktop stops at, with the same match, since nothing follows it. Each label's pattern is compiled once, kept in
+     * [patterns].
+     */
     private fun stripLabelPrefix(
         label: String,
         title: String,
+        patterns: MutableMap<String, Regex>,
     ): String {
-        if (label.isBlank()) return title
-        val prefix = Regex.escape(label)
-        val patterns =
-            listOf(
-                Regex("^$prefix\\s*,\\s*"),
-                Regex("^$prefix,\\s*"),
-                Regex("^$prefix\\s*[:–—-]\\s*"),
-                Regex("^$prefix\\s*\\+\\s*"),
-                Regex("^$prefix\\s+"),
-            )
+        // Every pattern starts with the label as it is, so a title that doesn't is left as it is, with no pattern run.
+        // The release's catalog has 31,776 (book, label) pairs and 4,666 start with the label; on Android 4.4, where
+        // each pattern and each match is a native object, five patterns compiled and run per pair took its catalog
+        // 85 s to load on the emulator, and 12 s (nearly all of it the decode) this way.
+        if (label.isBlank() || !title.startsWith(label)) return title
+        val pattern = patterns.getOrPut(label) { Regex("^${Regex.escape(label)}(?:\\s*,\\s*|,\\s*|\\s*[:–—-]\\s*|\\s*\\+\\s*|\\s+)") }
         // Desktop compares the replaced string by identity; a match is the same test, whatever the JDK returns
-        for (p in patterns) {
-            val match = p.find(title) ?: continue
-            return title.substring(match.range.last + 1).trimStart()
-        }
-        return title
+        val match = pattern.find(title) ?: return title
+        return title.substring(match.range.last + 1).trimStart()
     }
 
     companion object {
