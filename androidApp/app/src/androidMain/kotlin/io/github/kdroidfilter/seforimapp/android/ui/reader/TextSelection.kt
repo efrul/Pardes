@@ -48,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
@@ -58,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
@@ -77,6 +79,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
@@ -87,6 +90,7 @@ import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -190,6 +194,12 @@ fun SelectableArea(
     LaunchedEffect(selection, list) { edgeScroll(selection, list) }
     val selected by remember(selection) { derivedStateOf { selection.hasSelection } }
     BackHandler(enabled = selected) { selection.clear() }
+    // The reader's Ctrl+C copies the selection made last, in its text or a pane
+    val focus = LocalSelectionFocus.current
+    LaunchedEffect(focus, selection) {
+        snapshotFlow { selection.generation to selection.hasSelection }.collect { (_, has) -> if (has) focus?.current = selection }
+    }
+    DisposableEffect(focus, selection) { onDispose { if (focus?.current === selection) focus.current = null } }
     val haptics = LocalHapticFeedback.current
     val handleColor = LocalTextSelectionColors.current.handleColor
     Box(modifier.onSizeChanged { areaSize = it }) {
@@ -217,6 +227,18 @@ fun SelectableArea(
     }
     if (isTabInFront()) sheetText?.let { text -> SelectionSheet(text, spec, onDismiss = { sheetText = null }) }
 }
+
+/** Which selection a reader's Ctrl+C copies: the one made last in its text or one of its panes ([SelectableArea]). */
+@Stable
+class SelectionFocus {
+    internal var current: ListSelection? = null
+
+    /** That selection, while something is selected in it. */
+    val selection: ListSelection? get() = current?.takeIf { it.hasSelection }
+}
+
+/** The reader's [SelectionFocus]; null outside a reader. */
+val LocalSelectionFocus = staticCompositionLocalOf<SelectionFocus?> { null }
 
 /** The area's coordinates, which the gestures and the handles convert positions with. */
 private class AreaHolder {
@@ -269,19 +291,42 @@ private val HandleSize = 24.dp
 /** Room around a handle that still takes its drag. */
 private val HandleTouchMargin = 12.dp
 
-/** Long presses, handle drags and mouse drags, in the area's coordinates, taken before the list and its lines see them. */
+/** Long presses, taps, handle drags and the mouse, in the area's coordinates, taken before the list and its lines see them. */
 private suspend fun PointerInputScope.selectionGestures(selection: ListSelection, area: AreaHolder, haptics: HapticFeedback) {
+    val clicks = Clicks()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         val handle = selection.handleAt(down.position)
         when {
-            handle >= 0 -> {
+            // One finger on a handle; with a second one it is a pinch, which the handle leaves to the text
+            handle >= 0 && currentEvent.changes.count { it.pressed } == 1 -> {
                 down.consume()
                 dragHandle(selection, isStart = handle == 0, down, area, haptics)
             }
-            down.type == PointerType.Mouse -> if (currentEvent.buttons.isPrimaryPressed) mouseSelect(selection, down, area)
-            else -> longPressSelect(selection, down, area, haptics)
+            down.type == PointerType.Mouse -> if (currentEvent.buttons.isPrimaryPressed) mouseSelect(selection, down, area, clicks)
+            else -> touchSelect(selection, down, area, haptics, clicks)
         }
+    }
+}
+
+/** Presses in a row on one spot, as Compose's ClicksCounter counts them: each within the double-tap time and slop of the last. */
+private class Clicks {
+    private var count = 0
+    private var lastTime = 0L
+    private var lastPosition = Offset.Zero
+
+    fun press(down: PointerInputChange, configuration: ViewConfiguration): Int {
+        val again = count > 0 && down.uptimeMillis - lastTime < configuration.doubleTapTimeoutMillis &&
+            (down.position - lastPosition).getDistance() < configuration.touchSlop
+        count = if (again) count + 1 else 1
+        lastTime = down.uptimeMillis
+        lastPosition = down.position
+        return count
+    }
+
+    /** The press was no click (a long press, a drag, a scroll): the next one starts a new row. */
+    fun reset() {
+        count = 0
     }
 }
 
@@ -304,19 +349,29 @@ private suspend fun AwaitPointerEventScope.awaitPressEnd(down: PointerInputChang
     }
 }
 
-/** A touch: held still, the word under it, then a drag extends it a word at a time either way; a tap ends a selection. */
-private suspend fun AwaitPointerEventScope.longPressSelect(selection: ListSelection, down: PointerInputChange, area: AreaHolder, haptics: HapticFeedback) {
-    val ended = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { awaitPressEnd(down, takeMove = false) }
-    if (ended != null) {
-        // A tap ends the selection and stays the line's tap, as desktop's click; a move is the list's scroll
-        if (ended == PressEnd.Released) selection.clear()
+/**
+ * A touch: held still, the word under it, then a drag extends the selection a word at a time either way. Taps: the
+ * first ends a selection, a second selects the word, a third the whole text ([tapped]).
+ */
+private suspend fun AwaitPointerEventScope.touchSelect(selection: ListSelection, down: PointerInputChange, area: AreaHolder, haptics: HapticFeedback, clicks: Clicks) {
+    val count = clicks.press(down, viewConfiguration)
+    // A press that stopped a fling, or a pager settling, belongs to the list: it took the down in its own pass, after
+    // this one saw it. Held still, it would otherwise select the word where the text stopped.
+    if (awaitPointerEvent(PointerEventPass.Final).changes.any { it.id == down.id && it.isConsumed }) {
+        clicks.reset()
         return
+    }
+    when (withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { awaitPressEnd(down, takeMove = false) }) {
+        PressEnd.Released -> return tapped(selection, down, area, count, extend = false)
+        // A move is the list's scroll, a second finger its pinch
+        PressEnd.Moved, PressEnd.Taken -> return clicks.reset()
+        null -> clicks.reset()
     }
     val coordinates = area.coordinates ?: return
     val word = selection.pointAt(down.position, coordinates, exact = true)?.let(selection::wordAt) ?: return
     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
     selection.begin(word.first, word.second)
-    holdDrag(selection, down, down.position, area, haptics) { finger ->
+    holdDrag(selection, down, down.position, area, haptics, startMoves = false) { finger ->
         val c = area.coordinates
         val w = c?.let { selection.pointAt(finger.within(it), it, exact = false) }?.let { p -> selection.wordAt(p) ?: (p to p) }
         when {
@@ -333,6 +388,28 @@ private suspend fun AwaitPointerEventScope.longPressSelect(selection: ListSelect
     }
 }
 
+/**
+ * A tap or click, the [count]th in a row: the first ends a selection and stays the line's tap (as desktop's click),
+ * the second selects the word, the third the whole text; with [extend] (Shift), a click moves the nearer end to it.
+ */
+private fun tapped(selection: ListSelection, down: PointerInputChange, area: AreaHolder, count: Int, extend: Boolean) {
+    val coordinates = area.coordinates
+    val start = selection.start
+    val end = selection.end
+    if (extend && coordinates != null && start != null && end != null && selection.hasSelection) {
+        val point = selection.pointAt(down.position, coordinates, exact = false) ?: return
+        if (point < start) selection.select(point, end) else selection.select(start, point)
+        return
+    }
+    val point = if (count > 1 && coordinates != null) selection.pointAt(down.position, coordinates, exact = true) else null
+    val range = when {
+        point == null -> null
+        count == 2 -> selection.wordAt(point)
+        else -> selection.unitAt(point)
+    }
+    if (range != null) selection.begin(range.first, range.second) else selection.clear()
+}
+
 /** A handle: the text under its point follows the finger, past the other end too (the two swap). */
 private suspend fun AwaitPointerEventScope.dragHandle(selection: ListSelection, isStart: Boolean, down: PointerInputChange, area: AreaHolder, haptics: HapticFeedback) {
     val coordinates = area.coordinates ?: return
@@ -340,7 +417,7 @@ private suspend fun AwaitPointerEventScope.dragHandle(selection: ListSelection, 
     val fixed = (if (isStart) selection.end else selection.start) ?: return
     // From the finger to the handle's point, just above its row's bottom
     val toPoint = Offset(spot.x, spot.bottom - 1f) - down.position
-    holdDrag(selection, down, down.position, area, haptics) { finger ->
+    holdDrag(selection, down, down.position, area, haptics, startMoves = isStart) { finger ->
         val c = area.coordinates
         val p = c?.let { selection.pointAt((finger + toPoint).within(it), it, exact = false) }
         if (p != null && p != fixed) selection.select(fixed, p)
@@ -348,17 +425,23 @@ private suspend fun AwaitPointerEventScope.dragHandle(selection: ListSelection, 
     }
 }
 
-/** A mouse: a click stays the line's click (and ends a selection); a drag selects from where it was pressed, as desktop. */
-private suspend fun AwaitPointerEventScope.mouseSelect(selection: ListSelection, down: PointerInputChange, area: AreaHolder) {
+/**
+ * A mouse, as desktop: a drag selects from where it was pressed; clicks as [tapped], Shift+click extending the
+ * selection.
+ */
+private suspend fun AwaitPointerEventScope.mouseSelect(selection: ListSelection, down: PointerInputChange, area: AreaHolder, clicks: Clicks) {
+    val count = clicks.press(down, viewConfiguration)
+    val shift = currentEvent.keyboardModifiers.isShiftPressed
     when (awaitPressEnd(down, takeMove = true)) {
-        PressEnd.Released -> selection.clear()
-        PressEnd.Taken -> Unit
+        PressEnd.Released -> tapped(selection, down, area, count, extend = shift)
+        PressEnd.Taken -> clicks.reset()
         PressEnd.Moved -> {
+            clicks.reset()
             val coordinates = area.coordinates ?: return
             val anchor = selection.pointAt(down.position, coordinates, exact = false) ?: return
             selection.begin(anchor, anchor)
             val from = currentEvent.changes.firstOrNull { it.id == down.id }?.position ?: down.position
-            holdDrag(selection, down, from, area, haptics = null) { finger ->
+            holdDrag(selection, down, from, area, haptics = null, startMoves = false) { finger ->
                 val p = area.coordinates?.let { selection.pointAt(finger.within(it), it, exact = false) }
                 if (p != null) selection.select(anchor, p)
                 (p ?: anchor) < anchor
@@ -368,9 +451,11 @@ private suspend fun AwaitPointerEventScope.mouseSelect(selection: ListSelection,
 }
 
 /**
- * Follows [down]'s pointer until it is let go, its events kept from the list (no scroll) and the lines (no tap).
- * [moveTo] applies the drag at a finger position, here from [from] on and again each frame the list scrolls under a
- * finger held at an edge ([edgeScroll]); it tells whether the end it moved is the start, for the magnifier.
+ * Follows [down]'s pointer until it is let go, its events kept from the list (no scroll) and the lines (no tap); a
+ * second finger ends it, leaving the pinch to the text. [moveTo] applies the drag at a finger position: from [from]
+ * on (at once when the pointer already moved there), and again each frame the list scrolls under a finger held at an
+ * edge ([edgeScroll]). It tells whether the end it moved is the start, for the magnifier; [startMoves] says so before
+ * any move.
  */
 private suspend fun AwaitPointerEventScope.holdDrag(
     selection: ListSelection,
@@ -378,6 +463,7 @@ private suspend fun AwaitPointerEventScope.holdDrag(
     from: Offset,
     area: AreaHolder,
     haptics: HapticFeedback?,
+    startMoves: Boolean,
     moveTo: (Offset) -> Boolean,
 ) {
     var finger = from
@@ -388,18 +474,29 @@ private suspend fun AwaitPointerEventScope.holdDrag(
         if (haptics != null && (selection.start != start || selection.end != end)) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         selection.magnifier = magnifierSource(selection, area, finger, movedStart)
     }
+    val slop = viewConfiguration.touchSlop
     selection.dragging = true
     selection.redrag = ::apply
     try {
-        apply()
+        // A press on a handle changes nothing until it moves
+        if (from != down.position) apply() else selection.magnifier = magnifierSource(selection, area, finger, startMoves)
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            if (event.changes.count { it.pressed } > 1) break
             event.changes.forEach { it.consume() }
             if (!change.pressed) break
             if (change.position != finger) {
                 finger = change.position
-                selection.edgeSpeed = edgeSpeed(finger.y, size.height)
+                // Only a move toward an edge scrolls: a finger resting in a band (a long press on the first or last
+                // row, or anywhere in half of a short pane) jitters, and a handle pulled away from the edge it starts
+                // near asks for no scroll toward it
+                val speed = edgeSpeed(finger.y, size.height)
+                selection.edgeSpeed = when {
+                    speed < 0f && finger.y < from.y - slop -> speed
+                    speed > 0f && finger.y > from.y + slop -> speed
+                    else -> 0f
+                }
                 apply()
             }
         }
