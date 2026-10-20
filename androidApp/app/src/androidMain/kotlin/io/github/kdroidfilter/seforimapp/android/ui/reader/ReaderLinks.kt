@@ -36,7 +36,20 @@ class ReaderLinks(private val repository: SeforimRepository) {
     }
 
     /** One page of the links of [ids] to [targetBookId] of [type]; none when the read fails. */
-    suspend fun linksPage(ids: List<Long>, type: ConnectionType, targetBookId: Long, offset: Int, limit: Int): List<CommentaryWithText> {
+    suspend fun linksPage(ids: List<Long>, type: ConnectionType, targetBookId: Long, offset: Int, limit: Int): List<CommentaryWithText> =
+        linksPageOrNull(ids, type, targetBookId, offset, limit).orEmpty()
+
+    /**
+     * [linksPage], null when the read fails: the Android 4.4 edition says so under the texts already shown, where an
+     * empty page would read as the end of the list.
+     */
+    suspend fun linksPageOrNull(
+        ids: List<Long>,
+        type: ConnectionType,
+        targetBookId: Long,
+        offset: Int,
+        limit: Int,
+    ): List<CommentaryWithText>? {
         val distinct = type != ConnectionType.COMMENTARY && ids.size > 1
         return runCatching {
             // A whole section (a heading's targum and sources) can pass the 999 bound parameters of SQLite below 3.32
@@ -52,7 +65,7 @@ class ReaderLinks(private val repository: SeforimRepository) {
             }
         }.getOrElse { e ->
             if (e is CancellationException) throw e
-            emptyList()
+            null
         }
     }
 
