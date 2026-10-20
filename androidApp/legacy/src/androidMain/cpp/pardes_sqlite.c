@@ -1,13 +1,15 @@
 /*
 ** Pardes on Android 4.4: the JNI side of db/NativeSqlite.kt, over the SQLite compiled into this library.
 **
-** It gives Kotlin what SQLDelight's driver needs (open, prepare, bind, step, read a column) and nothing more, so
-** that a book row of 4 MB is read as a string, with no cursor window in between. At load it registers the multiplex
+** It gives Kotlin what SQLDelight's driver needs (open, prepare, bind, step, read a column) and the column names
+** the search's dictionary reads (lexical.db, through data/NativeCursor.kt), and nothing more, so that a book row of
+** 4 MB is read as a string, with no cursor window in between. At load it registers the multiplex
 ** VFS (multiplex.c) as the default one: a library kept in chunks on a FAT32 card (seforim.db, seforim.db001...) opens
 ** like one in a single file, and a single file larger than a chunk is read as it is.
 **
-** It also adds pardes_match(text, query), the line test of the search (data/TextSearch.kt): Android 4.4 cannot run
-** the desktop's Lucene search (Android 8.0 is its floor), so lines are scanned, here in C.
+** It also adds pardes_match(text, query), the line test of the search without the desktop's Lucene index
+** (data/TextSearch.kt): when the library has no index, or the phone cannot hold or open it (data/LegacySearch.kt),
+** lines are scanned, here in C.
 */
 #include <jni.h>
 #include <stdint.h>
@@ -401,6 +403,18 @@ static jint nColumnCount(JNIEnv *env, jclass cls, jlong stmt) {
   return sqlite3_column_count(STMT(stmt));
 }
 
+/* A result column's name (its AS name), as UTF-16: the search's dictionary reads its columns by name. */
+static jstring nColumnName(JNIEnv *env, jclass cls, jlong stmt, jint i) {
+  const jchar *name = (const jchar *) sqlite3_column_name16(STMT(stmt), i);
+  jsize len = 0;
+  if (!name) {
+    throwSqlite(env, SQLITE_NOMEM, "column name", NULL);
+    return NULL;
+  }
+  while (name[len]) len++;
+  return (*env)->NewString(env, name, len);
+}
+
 static jint nColumnType(JNIEnv *env, jclass cls, jlong stmt, jint i) {
   return sqlite3_column_type(STMT(stmt), i);
 }
@@ -491,6 +505,7 @@ static const JNINativeMethod gMethods[] = {
     {"bindBlob", "(JI[B)V", (void *) nBindBlob},
     {"step", "(J)Z", (void *) nStep},
     {"columnCount", "(J)I", (void *) nColumnCount},
+    {"columnName", "(JI)Ljava/lang/String;", (void *) nColumnName},
     {"columnType", "(JI)I", (void *) nColumnType},
     {"columnLong", "(JI)J", (void *) nColumnLong},
     {"columnDouble", "(JI)D", (void *) nColumnDouble},

@@ -51,6 +51,9 @@ internal object NativeSqlite {
 
     @JvmStatic external fun columnCount(stmt: Long): Int
 
+    /** The name of a column of the result (its AS name), which the search's dictionary reads its columns by. */
+    @JvmStatic external fun columnName(stmt: Long, index: Int): String
+
     @JvmStatic external fun columnType(stmt: Long, index: Int): Int
 
     @JvmStatic external fun columnLong(stmt: Long, index: Int): Long

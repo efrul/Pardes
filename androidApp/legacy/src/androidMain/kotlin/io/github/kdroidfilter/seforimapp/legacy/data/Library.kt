@@ -44,19 +44,45 @@ class NoLibraryException : Exception("No library")
 class Library(private val context: Context) {
     private val prefs = Prefs(context)
 
-    /** A place the library may be in. */
-    data class Location(val dir: File, val label: String)
+    /** A place the library may be in, and its Linux filesystem (vfat, ext4, ...) when /proc/mounts tells it. */
+    data class Location(val dir: File, val label: String, val fileSystem: String? = null) {
+        /** FAT32 takes no file of 4 GB or more (the main app's LibraryLocation.maxFileBytes); null: no such limit known. */
+        val maxFileBytes: Long? get() = if (fileSystem in FAT_TYPES) FAT_MAX_FILE_BYTES else null
+
+        val isFat: Boolean get() = maxFileBytes != null
+    }
 
     /** The app's folder on the phone's shared storage, then on each memory card, then its internal storage. */
     fun locations(): List<Location> {
         val external = runCatching { context.getExternalFilesDirs(null).toList() }.getOrDefault(emptyList())
+        val mounts = readMounts()
         val list = ArrayList<Location>()
         external.forEachIndexed { i, files ->
-            if (files != null) list += Location(File(files, FOLDER), if (i == 0) PHONE_LABEL else CARD_LABEL)
+            if (files != null) list += Location(File(files, FOLDER), if (i == 0) PHONE_LABEL else CARD_LABEL, fileSystemOf(files, mounts))
         }
-        list += Location(File(context.filesDir, FOLDER), INTERNAL_LABEL)
+        list += Location(File(context.filesDir, FOLDER), INTERNAL_LABEL, fileSystemOf(context.filesDir, mounts))
         return list
     }
+
+    /** The location [dir] is in (the folder of an open library), or one made for it. */
+    fun locationOf(dir: File): Location =
+        locations().firstOrNull { it.dir == dir } ?: Location(dir, dir.path, fileSystemOf(dir, readMounts()))
+
+    /**
+     * The library's files in [dir] that [location] could not hold, the largest first (the main app's LibraryMover.plan
+     * check): on FAT32 any file of 4 GB or more but the database's, which goes there in chunks (seforim.db,
+     * seforim.db001...; the release's 8 GB database), as Lucene's do not (its largest, the release's .doc, is 1.4 GB).
+     * Empty where files have no such limit.
+     */
+    fun tooLargeFor(location: Location, dir: File): List<File> {
+        val max = location.maxFileBytes ?: return emptyList()
+        return largestFiles(dir).filter { it.length() > max && !it.name.startsWith(DB_NAME + "0") && it.name != DB_NAME }
+    }
+
+    /** The library's files in [dir] (the database's chunks and the index folders' files), the largest first. */
+    fun largestFiles(dir: File): List<File> =
+        (dir.listFiles() ?: emptyArray()).flatMap { f -> if (f.isDirectory) (f.listFiles() ?: emptyArray()).filter { it.isFile } else listOf(f) }
+            .sortedByDescending { it.length() }
 
     /**
      * The library database: in the folder it was last opened from, else the first location that holds one. A
@@ -271,6 +297,39 @@ class Library(private val context: Context) {
     }
 
     companion object {
+        /** The largest file FAT32 holds: 4 GiB less one byte. */
+        const val FAT_MAX_FILE_BYTES = 4_294_967_295L
+        private val FAT_TYPES = setOf("vfat", "msdos", "fat")
+        private val VIEW_TYPES = setOf("fuse", "sdcardfs", "esdfs")
+
+        /** Mount point → filesystem type, from this process's /proc/self/mounts. */
+        private fun readMounts(): Map<String, String> = runCatching {
+            File("/proc/self/mounts").readLines().mapNotNull { line ->
+                val fields = line.split(' ')
+                if (fields.size >= 3) fields[1].replace("\\040", " ") to fields[2] else null
+            }.toMap()
+        }.getOrDefault(emptyMap())
+
+        /**
+         * The filesystem [path] is on: that of the deepest mount point holding it. Android 4.4 to 7.1 show a memory card
+         * through a FUSE view (/storage/<name>, here vfat at /mnt/media_rw/<name>, mounted by vold) and the phone's
+         * shared storage through one over /data (/storage/emulated): their own filesystems are what holds the files.
+         * The main app reads the card's volume by its UUID with API 23/24 calls instead (LibraryLocation).
+         */
+        fun fileSystemOf(path: File, mounts: Map<String, String>): String? {
+            val at = runCatching { path.canonicalPath }.getOrDefault(path.path)
+            val point = mounts.keys.filter { at == it || at.startsWith(if (it.endsWith("/")) it else "$it/") }.maxByOrNull { it.length } ?: return null
+            val type = mounts.getValue(point)
+            if (type !in VIEW_TYPES) return type
+            val name = point.removePrefix("/storage/").substringBefore('/')
+            return when {
+                point == "/storage/emulated" || name == "emulated" -> mounts["/data"]
+                point.startsWith("/storage/") -> mounts["/mnt/media_rw/$name"]
+                point.startsWith("/mnt/shell/emulated") -> mounts["/data"]
+                else -> null
+            }
+        }
+
         const val DB_NAME = "seforim.db"
         const val FOLDER = "library"
         const val PHONE_LABEL = "זיכרון הטלפון"

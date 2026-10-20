@@ -10,13 +10,16 @@
     <uses-sdk tools:overrideLibrary="co.touchlab.kermit,co.touchlab.kermit.core,com.kdroid.gematria" />
 
     <!-- Back is handled in onBackPressed (an open pane, a category level), which Android 4.4 to 7.1 call: predictive
-         back (Android 13 and later) is turned off so that a device that installs this edition anyway keeps calling it. -->
+         back (Android 13 and later) is turned off so that a device that installs this edition anyway keeps calling it.
+         largeHeap: the desktop search (Lucene) needs room for a search of several words beside the screens' bitmaps,
+         which Android 4.4 to 7.1 keep on the Java heap; data/LegacySearch.kt reads the heap it gets. -->
     <application
         android:name=".PardesApp"
         android:allowBackup="true"
         android:enableOnBackInvokedCallback="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Pardes">
 

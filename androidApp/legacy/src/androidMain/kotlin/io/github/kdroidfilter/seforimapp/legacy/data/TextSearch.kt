@@ -8,9 +8,9 @@ import kotlinx.coroutines.ensureActive
 data class Hit(val bookId: Long, val bookTitle: String, val lineIndex: Int, val content: String)
 
 /**
- * The text search of this edition. The main app searches the desktop's Lucene index, which Android 4.4 cannot run
- * (Lucene needs Android 8.0), so here the lines of the books in scope are read one book after the other and tested in
- * C (pardes_sqlite.c), points, cantillation and punctuation aside: pardes_match for the query as a phrase,
+ * The text search of this edition without the desktop's Lucene index: when the library has none, or the phone cannot
+ * hold or open it (LegacySearch's levels Lookup and Scan), the lines of the books in scope are read one book after the
+ * other and tested in C (pardes_sqlite.c), points, cantillation and punctuation aside: pardes_match for the query as a phrase,
  * pardes_match_all for its words anywhere in the line. A book is a few milliseconds; the whole library (7 million lines)
  * takes minutes on an old phone, so the scope is usually a book or a category.
  */

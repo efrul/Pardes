@@ -17,6 +17,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
 import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.BookFont
+import io.github.kdroidfilter.seforimapp.legacy.data.LegacySearch
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
 import io.github.kdroidfilter.seforimapp.legacy.data.label
 import io.github.kdroidfilter.seforimapp.legacy.db.NativeSqlite
@@ -276,13 +277,22 @@ class SettingsActivity : BaseActivity() {
         keypadFocus(search)
     }
 
-    private fun libraryInfo(): String {
+    private suspend fun libraryInfo(): String {
         val file = app.library.current?.file ?: app.library.findDatabase()
+        // Opens the search if it is not open yet, to tell its level
+        runCatching { app.search.service() }
+        val search = app.search.level.value
         return buildString {
             if (file == null) {
                 append("לא נמצאה ספרייה.")
             } else {
                 append("מיקום: ").append(Bidi.ltr(file.parent ?: "")).append('\n')
+                val location = app.library.locationOf(file.parentFile ?: file)
+                location.fileSystem?.let { fs ->
+                    append("מערכת קבצים: ").append(Bidi.ltr(if (location.isFat) "FAT32" else fs))
+                    if (location.isFat) append(" (קובץ אחד עד 4 ג׳יגה־בייט: מאגר גדול ממנו נשמר בחלקים)")
+                    append('\n')
+                }
                 val chunks = generateSequence(1) { it + 1 }.map { File(file.path + String.format(java.util.Locale.ROOT, "%03d", it)) }.takeWhile { it.isFile }.toList()
                 val size = file.length() + chunks.sumOf { it.length() }
                 append("גודל המאגר: ").append(formatBytes(size))
@@ -291,6 +301,13 @@ class SettingsActivity : BaseActivity() {
                 File(file.parentFile, "release_info.txt").takeIf { it.isFile }?.readText()?.trim()?.let {
                     append("מהדורה: ").append(Bidi.ltr(it)).append('\n')
                 }
+                append("חיפוש: ").append(
+                    when (search) {
+                        LegacySearch.Level.Full -> "באינדקס החיפוש של הספרייה"
+                        LegacySearch.Level.Lookup -> "ספרים ומחברים באינדקס, הטקסט בסריקה"
+                        LegacySearch.Level.Scan -> "בסריקה, בלי אינדקס"
+                    },
+                ).append('\n')
             }
             append("SQLite ").append(NativeSqlite.version())
         }
