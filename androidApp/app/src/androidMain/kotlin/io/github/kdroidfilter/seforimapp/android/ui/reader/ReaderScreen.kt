@@ -258,6 +258,7 @@ fun ReaderScreen(
     // The text selected in the book; an action finds its text on the lines it was read from, which may reach past the
     // screen, and on those on screen when no selection was read
     val textSelection = remember(vm) { ListSelection() }
+    val selectionFocus = remember(vm) { SelectionFocus() }
     fun selectionLines(): List<Line> {
         val units = textSelection.lastUnits ?: return visibleLines()
         val lines = ((units.first / LINE_UNITS).toInt()..(units.last / LINE_UNITS).toInt()).mapNotNull { vm.lines[it] }
@@ -324,9 +325,10 @@ fun ReaderScreen(
         if (session?.isFront != false && (!state.find.open || state.find.focusRequest == 0)) runCatching { focus.requestFocus() }
     }
     val keyHandler: (KeyEvent) -> Boolean = { e ->
-        // Ctrl+C copies the text selected (desktop's SelectionContainer)
-        if (e.type == KeyEventType.KeyDown && (e.isCtrlPressed || e.isMetaPressed) && e.key == Key.C && textSelection.hasSelection) {
-            trimSelectionEdges(textSelection.selectedText()).takeIf { it.isNotBlank() }?.let { copyText(context, it) }
+        // Ctrl+C copies the text selected last, in the book or a pane (desktop's SelectionContainer)
+        val selected = selectionFocus.selection
+        if (e.type == KeyEventType.KeyDown && (e.isCtrlPressed || e.isMetaPressed) && e.key == Key.C && selected != null) {
+            trimSelectionEdges(selected.selectedText()).takeIf { it.isNotBlank() }?.let { copyText(context, it) }
             true
         } else readerKey(e, vm, current, listState, wide, onTree = {
             if (wide) vm.toggleTree() else scope.launch { drawerTab = 1; drawerState.open() }
@@ -363,7 +365,7 @@ fun ReaderScreen(
         }
     }
 
-    CompositionLocalProvider(LocalUriHandler provides uriHandler) {
+    CompositionLocalProvider(LocalUriHandler provides uriHandler, LocalSelectionFocus provides selectionFocus) {
         // onKeyEvent, not onPreviewKeyEvent: a focused field (find, a note, the TOC or book search) gets the keys first,
         // so its arrows, Home/End and the book search's ↑/↓ work; what it leaves reaches the reader's shortcuts.
         Box(Modifier.fillMaxSize().focusRequester(focus).focusable().onKeyEvent(keyHandler)) {

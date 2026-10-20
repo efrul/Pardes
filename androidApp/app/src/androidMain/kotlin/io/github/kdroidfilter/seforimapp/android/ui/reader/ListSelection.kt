@@ -180,23 +180,46 @@ class ListSelection {
 
     /**
      * The word at [point], without the spaces and maqaf at its edges (Android's word boundary keeps the maqaf joining it
-     * to the next word, which desktop leaves out); the one character there when it is no word, null on a space.
+     * to the next word, which desktop leaves out); the one letter there, with its marks, when it is no word; null on a
+     * space.
      */
     internal fun wordAt(point: TextPoint): Pair<TextPoint, TextPoint>? {
         val layout = texts[point.unit]?.layout ?: return null
         val text = layout.layoutInput.text.text
         if (text.isEmpty()) return null
-        val boundary = layout.getWordBoundary(point.offset.coerceIn(0, text.length))
+        val offset = point.offset.coerceIn(0, text.length)
+        var boundary = layout.getWordBoundary(offset)
+        // Compose's word iterator counts letters and digits only, not the points and cantillation after a letter: at the
+        // end of a pointed word (a press on the end half of its last letter) it found no word. From before that letter
+        // it finds it.
+        val base = clusterStart(text, offset)
+        if (boundary.collapsed && base < offset) boundary = layout.getWordBoundary(base)
         var a = boundary.min
         var b = boundary.max
         while (a < b && text[a].isSelectionEdge()) a++
         while (b > a && text[b - 1].isSelectionEdge()) b--
         if (a >= b) {
-            a = point.offset.coerceIn(0, text.length - 1)
-            if (text[a].isWhitespace()) return null
+            // The letter before the press at a word's end or the text's, else the one after it
+            val before = offset == text.length || text[offset].isWhitespace()
+            a = if (before && offset > 0) base.takeIf { it < offset } ?: (offset - 1) else offset
             b = a + 1
+            while (b < text.length && text[b].isMark()) b++
+            if (text[a].isWhitespace()) return null
         }
         return TextPoint(point.unit, a) to TextPoint(point.unit, b)
+    }
+
+    /** Where the letter that ends at [offset] starts, its marks before [offset] included; [offset] when none ends there. */
+    private fun clusterStart(text: String, offset: Int): Int {
+        var i = offset
+        while (i > 0 && text[i - 1].isMark()) i--
+        return if (i < offset && i > 0) i - 1 else offset
+    }
+
+    /** The whole of [point]'s text (a triple click); null when it is empty or not laid out. */
+    internal fun unitAt(point: TextPoint): Pair<TextPoint, TextPoint>? {
+        val length = texts[point.unit]?.layout?.layoutInput?.text?.length ?: return null
+        return if (length == 0) null else TextPoint(point.unit, 0) to TextPoint(point.unit, length)
     }
 
     /** Where an end's handle hangs, in the area: [x] on its character's outer edge, under its row ([top] to [bottom]). */
@@ -210,12 +233,25 @@ class ListSelection {
         val layout = text.layout ?: return null
         val length = layout.layoutInput.text.length
         if (length == 0) return null
-        // The first selected character, or the last: its outer edge is the right one in Hebrew, the left one in Latin
-        val char = (if (isStart) point.offset else point.offset - 1).coerceIn(0, length - 1)
-        val box = layout.getBoundingBox(char)
-        val outwardRight = isStart == (layout.getBidiRunDirection(char) == ResolvedTextDirection.Rtl)
-        val row = layout.getLineForOffset(char)
-        val top = area.localPositionOf(coordinates, Offset(if (outwardRight) box.right else box.left, layout.getLineTop(row)))
+        val x: Float
+        val row: Int
+        val outwardRight: Boolean
+        if (if (isStart) point.offset >= length else point.offset <= 0) {
+            // No character of this text is selected (a start at its end, an end at its start): the caret's place, which
+            // a press on the handle maps back to the same offset
+            val caret = point.offset.coerceIn(0, length)
+            row = layout.getLineForOffset(caret)
+            x = layout.getHorizontalPosition(caret, usePrimaryDirection = true)
+            outwardRight = isStart == (layout.getParagraphDirection(caret) == ResolvedTextDirection.Rtl)
+        } else {
+            // The first selected character, or the last: its outer edge is the right one in Hebrew, the left one in Latin
+            val char = if (isStart) point.offset else point.offset - 1
+            val box = layout.getBoundingBox(char)
+            row = layout.getLineForOffset(char)
+            outwardRight = isStart == (layout.getBidiRunDirection(char) == ResolvedTextDirection.Rtl)
+            x = if (outwardRight) box.right else box.left
+        }
+        val top = area.localPositionOf(coordinates, Offset(x, layout.getLineTop(row)))
         return Spot(top.x, top.y, top.y + layout.getLineBottom(row) - layout.getLineTop(row), outwardRight)
     }
 
@@ -260,6 +296,12 @@ class ListSelection {
 private const val MAQAF = '־'
 
 private fun Char.isSelectionEdge() = isWhitespace() || this == MAQAF
+
+/** A point, cantillation or other mark drawn on the letter before it. */
+private fun Char.isMark(): Boolean {
+    val type = Character.getType(this)
+    return type == Character.NON_SPACING_MARK.toInt() || type == Character.COMBINING_SPACING_MARK.toInt() || type == Character.ENCLOSING_MARK.toInt()
+}
 
 /**
  * One of a [ListSelection]'s texts: [modifier] goes on its Text after its padding (where its layout starts), [onLayout]
