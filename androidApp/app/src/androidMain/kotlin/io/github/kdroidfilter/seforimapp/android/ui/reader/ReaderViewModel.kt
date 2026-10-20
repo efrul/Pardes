@@ -35,7 +35,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 
 /** Panes of the reader (desktop features/bookcontent/ui/panes/ReaderPanes.kt), with desktop's titles. */
 enum class ReaderPane(val title: String) {
@@ -218,7 +217,7 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
     private var tocSearchJob: Job? = null
     private var bookToc: Deferred<List<TocEntry>?>? = null
     private var noteDraftBaseline: Long? = null
-    private val sectionCache = HashMap<Long, List<Long>>()
+    private val readerLinks = ReaderLinks(repository)
 
     // The place on screen ([followPlace]): a scroll settles on line after line of the same chapter, so the TOC entry of
     // each line and the path of each entry are read once (the selection fills them too)
@@ -472,13 +471,7 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
     }
 
     /** Up to 128 lines of a section around [lineId] (desktop's sliding window). */
-    private suspend fun sectionWindow(tocId: Long, lineId: Long): List<Long> {
-        val all = sectionCache[tocId] ?: runCatching { repository.getLineIdsForTocEntry(tocId) }.getOrElse { emptyList() }.also { sectionCache[tocId] = it }
-        if (all.size <= MAX_SECTION) return all
-        val idx = all.indexOf(lineId).coerceAtLeast(0)
-        val start = (idx - MAX_SECTION / 2).coerceAtLeast(0)
-        return all.subList(start, min(all.size, start + MAX_SECTION))
-    }
+    private suspend fun sectionWindow(tocId: Long, lineId: Long): List<Long> = readerLinks.sectionWindow(tocId, lineId)
 
     fun consumeScrollRequest(request: ScrollRequest) = _state.update { if (it.scrollRequest == request) it.copy(scrollRequest = null) else it }
 
@@ -558,7 +551,7 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
     fun updateSelectedCommentators(lineId: Long, selected: Set<Long>, available: Collection<Long>) {
         _state.update { s ->
             val previous = selectedCommentators(lineId, available)
-            val sticky = s.stickyCommentators + (selected - previous) - (previous - selected)
+            val sticky = ReaderLinks.stickyAfter(s.stickyCommentators, previous, selected)
             app.prefs.setSelectedCommentators(bookId, sticky)
             s.copy(
                 stickyCommentators = sticky,
@@ -576,31 +569,10 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
             is LinkSelection.Single -> sectionOrLine(selection.lineId, windowed = type == ConnectionType.COMMENTARY)
             is LinkSelection.Multi -> selection.lineIds
         }
-        val distinct = type != ConnectionType.COMMENTARY && ids.size > 1
-        return runCatching {
-            // A whole section (a heading's targum and sources) can pass the 999 bound parameters of SQLite below 3.32
-            SqlVariableLimit.linksPage(ids, type, distinct, offset, limit) { lineIds, o, l ->
-                repository.getCommentariesForLineRange(
-                    lineIds = lineIds,
-                    activeCommentatorIds = setOf(targetBookId),
-                    connectionTypes = setOf(type),
-                    offset = o,
-                    limit = l,
-                    distinctByTargetLine = distinct,
-                )
-            }
-        }.getOrElse { e ->
-            if (e is CancellationException) throw e
-            emptyList()
-        }
+        return readerLinks.linksPage(ids, type, targetBookId, offset, limit)
     }
 
-    private suspend fun sectionOrLine(lineId: Long, windowed: Boolean): List<Long> {
-        val heading = runCatching { repository.getHeadingTocEntryByLineId(lineId) }.getOrNull() ?: return listOf(lineId)
-        val lines = (sectionCache[heading.id] ?: repository.getLineIdsForTocEntry(heading.id).also { sectionCache[heading.id] = it }).filter { it != lineId }
-        if (!windowed || lines.size <= MAX_COMMENT_WINDOW) return lines.ifEmpty { listOf(lineId) }
-        return lines.take(MAX_COMMENT_WINDOW)
-    }
+    private suspend fun sectionOrLine(lineId: Long, windowed: Boolean): List<Long> = readerLinks.sectionOrLine(lineId, windowed)
 
     /** The line of [commentatorId]'s book its first commentary on [selection] is (desktop resolveCommentaryTargetLine). */
     suspend fun commentaryTargetLine(selection: LinkSelection, commentatorId: Long): Long? = try {
@@ -984,8 +956,6 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         /** Chunks asked for further than this from the latest ask are dropped before they are read. */
         private const val LOAD_WINDOW_CHUNKS = 2
         private const val TAG = "Zayit"
-        private const val MAX_SECTION = 128
-        private const val MAX_COMMENT_WINDOW = 256
         private const val FIND_DEBOUNCE_MS = 150L
         private const val FIND_WAIT_MS = 30_000
 

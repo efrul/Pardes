@@ -87,6 +87,10 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.android.R
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.CatalogAccess
+import io.github.kdroidfilter.seforimapp.android.data.CatalogMenu
+import io.github.kdroidfilter.seforimapp.android.data.catalogMenu
+import io.github.kdroidfilter.seforimapp.android.data.catalogPresets
+import io.github.kdroidfilter.seforimapp.android.data.load
 import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.ToolKind
 import io.github.kdroidfilter.seforimapp.android.ui.components.Island
@@ -372,31 +376,6 @@ private fun LogoImage(modifier: Modifier = Modifier) {
     }
 }
 
-/** Desktop CatalogPresets.Dropdowns of the catalog row, in its order. */
-private sealed interface Catalog {
-    /** A category's books under the category of [labelId]'s title, by section ([sectionIds]) or alone. */
-    data class Categories(val labelId: Long, val sectionIds: List<Long>) : Catalog
-
-    /** A book's TOC quick links (the Tur's four parts): label and the line each opens on. */
-    data class TocLinks(val bookId: Long, val links: List<Pair<String, Long>>) : Catalog
-}
-
-private val catalogs =
-    listOf(
-        Catalog.Categories(1, listOf(2, 3, 4)),
-        Catalog.Categories(5, listOf(6, 7, 8, 9, 10, 11)),
-        Catalog.Categories(13, listOf(14, 15, 16, 17, 18, 19)),
-        Catalog.Categories(20, listOf(21, 22, 23, 24, 25)),
-        Catalog.Categories(45, listOf(46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 59, 56, 57, 58, 60)),
-        Catalog.TocLinks(380, listOf("אורח חיים" to 252_607, "יורה דעה" to 254_014, "אבן העזר" to 254_828, "חושן משפט" to 255_198)),
-        Catalog.Categories(62, emptyList()),
-    )
-
-/** A dropdown entry: a section header, or a book (at a line for a quick link). */
-private data class CatalogItem(val label: String, val bookId: Long? = null, val lineId: Long? = null)
-
-private data class CatalogMenu(val label: String, val items: List<CatalogItem>)
-
 /** The catalog row's dropdowns as last built, for the catalog they were built from ([CatalogAccess.load] keeps it). */
 private class BuiltCatalog(val access: CatalogAccess, val menus: List<CatalogMenu>)
 
@@ -422,7 +401,7 @@ private fun CatalogRow(
                 withContext(Dispatchers.IO) {
                     val access = CatalogAccess.load(app.libraryStore)
                     builtCatalog?.takeIf { it.access === access }?.menus
-                        ?: catalogs.mapNotNull { catalogMenu(access, it) }.also { builtCatalog = BuiltCatalog(access, it) }
+                        ?: catalogPresets.mapNotNull { catalogMenu(access, it) }.also { builtCatalog = BuiltCatalog(access, it) }
                 }
             }.onFailure { Log.w("Zayit", "catalog", it) }.getOrNull() ?: value.orEmpty()
     }
@@ -484,30 +463,3 @@ private fun CatalogRow(
         }
     }
 }
-
-/** A dropdown as desktop's CatalogDropdown fills it; null when the library has none of its books. */
-private fun catalogMenu(
-    access: CatalogAccess,
-    catalog: Catalog,
-): CatalogMenu? =
-    when (catalog) {
-        is Catalog.TocLinks -> {
-            val title = access.bookTitle(catalog.bookId)
-            title?.let { CatalogMenu(it, catalog.links.map { (label, lineId) -> CatalogItem(label, catalog.bookId, lineId) }) }
-        }
-        is Catalog.Categories -> {
-            val label = access.categoryTitle(catalog.labelId)
-            if (catalog.sectionIds.isEmpty()) {
-                val books = access.booksFor(catalog.labelId)
-                if (label == null || books.isEmpty()) null else CatalogMenu(label, books.map { CatalogItem(it.title, it.id) })
-            } else {
-                val sections =
-                    catalog.sectionIds.mapNotNull { id ->
-                        val title = access.categoryTitle(id) ?: return@mapNotNull null
-                        val books = access.booksFor(id)
-                        if (books.isEmpty()) null else listOf(CatalogItem(title)) + books.map { CatalogItem(it.title, it.id) }
-                    }
-                if (label == null || sections.isEmpty()) null else CatalogMenu(label, sections.flatten())
-            }
-        }
-    }

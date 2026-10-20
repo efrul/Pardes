@@ -136,7 +136,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import io.github.kdroidfilter.seforimapp.android.R
 import io.github.kdroidfilter.seforimapp.android.data.SearchScope
-import io.github.kdroidfilter.seforimapp.android.search.searchKey
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.findActivity
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalAppViewModel
@@ -144,7 +143,6 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalTabSession
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
-import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ResolvedReference
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
 import io.github.kdroidfilter.seforimapp.icons.JournalBookmark
 import io.github.kdroidfilter.seforimapp.icons.bookOpenTabs
@@ -160,42 +158,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-
-// Desktop 0.6.1 strings (composeResources/values/strings.xml).
-private const val SEARCH_TEXT_ROW = "חיפוש במאגר: %1\$s"
-private const val SEARCH_TEXT_ROW_IN_BOOK = "חיפוש בתוך %2\$s: %1\$s"
-private const val SEARCH_TEXT_ROW_IN_AUTHOR = "חיפוש בספרי %2\$s: %1\$s"
-private const val SEARCH_IN_BOOK_PLACEHOLDER = "מה לחפש בספר זה? פרק, סימן או כל מילה"
-private const val ROW_ACTION_OPEN = "פתיחה"
-private const val ROW_ACTION_SEARCH_INSIDE = "חיפוש בתוך"
-private const val ROW_ACTION_SEARCH = "חיפוש"
-private const val ROW_ACTION_SEARCH_BASE = "בספרי יסוד"
-private const val ROW_ACTION_SEARCH_ALL = "בכל הספרים"
-private const val AUTOCOMPLETE_NO_RESULTS = "לא נמצאו תוצאות"
-private const val AUTOCOMPLETE_LOADING = "טוען…"
-private const val AUTHOR_BOOKS_COUNT = "%1\$d ספרים"
-private const val SEARCH_CLEAR = "ניקוי"
-private const val SEARCH_ICON_DESCRIPTION = "חיפוש"
-private const val REMOVE_SELECTED_BOOK = "הסר ספר שנבחר"
-internal const val BREADCRUMB_SEPARATOR = " > "
-
-private val REFERENCE_HINTS = listOf(
-    "שו\"ע אורח חיים סימן רסח",
-    "רמב\"ם הלכות שבת פרק כ",
-    "משנה ברורה סימן רלה סעיף קטן ד",
-    "ברכות דף ב עמוד א",
-    "תהילים פרק כג פסוק ד",
-)
-private val TEXT_HINTS = listOf(
-    "הכל בידי שמים חוץ מיראת שמים",
-    "ואהבת לרעך כמוך",
-    "שמע ישראל ה׳ אלקינו ה׳ אחד",
-    "מי שטרח בערב שבת יאכל בשבת",
-    "אין עוד מלבדו",
-)
-
-// The one bar takes references and texts alike: both hints, in turn
-private val HINTS = REFERENCE_HINTS.zip(TEXT_HINTS).flatMap { (reference, text) -> listOf(reference, text) }
 
 /** Desktop's placeholder grey (HomeView SearchBar, both themes). */
 private val PlaceholderGrey = Color(0xFF9AA0A6)
@@ -224,54 +186,6 @@ class SearchBarActions(
     /** A zayit:// link pasted into the bar. */
     val openDestination: (Destination) -> Unit,
 )
-
-/** A row of the book-stage list; see [catBookRows] for their order. */
-private sealed interface CatBookRow {
-    data class Jump(val reference: ResolvedReference) : CatBookRow
-
-    data object TextSearch : CatBookRow
-
-    data class Author(val hit: AuthorHit) : CatBookRow
-
-    data class BookRow(val suggestion: BookSuggestionDto) : CatBookRow
-}
-
-/**
- * The book-stage rows in order: the references, then the books and authors named exactly as typed (`חולין` opens
- * Chullin on Enter; `שוע` puts the שולחן ערוך parts first), the text search, then the other authors and books.
- * A title being typed past its first word (`בבא ק`) is no text search: with no book named exactly,
- * the first book whose title it begins comes before the text search too (desktop 0.6.2 fix 51463d23).
- */
-private fun catBookRows(
-    query: String,
-    jumps: List<ResolvedReference>,
-    textSearch: Boolean,
-    authors: List<AuthorHit>,
-    books: List<BookSuggestionDto>,
-): List<CatBookRow> {
-    val key = query.searchKey()
-    val (exactAuthors, otherAuthors) = authors.partition { author ->
-        listOfNotNull(author.name, AuthorNames.display(author.name), author.alias).any { it.searchKey() == key }
-    }
-    val (namedBooks, otherBooks) = books.partition { it.exactAcronym || it.book.title.searchKey() == key }
-    val typedTitle =
-        otherBooks.firstOrNull()?.takeIf { book ->
-            val title =
-                book.book.title
-                    .searchKey()
-                    .replace(",", "")
-            namedBooks.isEmpty() && ' ' in key && title.startsWith(key)
-        }
-    val exactBooks = namedBooks + listOfNotNull(typedTitle)
-    return buildList {
-        jumps.mapTo(this) { CatBookRow.Jump(it) }
-        exactBooks.mapTo(this) { CatBookRow.BookRow(it) }
-        exactAuthors.mapTo(this) { CatBookRow.Author(it) }
-        if (textSearch) add(CatBookRow.TextSearch)
-        otherAuthors.mapTo(this) { CatBookRow.Author(it) }
-        otherBooks.filter { it !== typedTitle }.mapTo(this) { CatBookRow.BookRow(it) }
-    }
-}
 
 /**
  * The one smart search bar (references, books, authors, texts) with its suggestions: the home page's, reused by the
@@ -1437,32 +1351,6 @@ private fun String.withBold(part: String?): AnnotatedString {
         append(this@withBold)
         addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, start + part!!.length)
     }
-}
-
-/**
- * The TOC suggestions to show (and let the keyboard select), each with its display breadcrumb. Entries whose
- * breadcrumb collapses to nothing once the book prefix is stripped are dropped. Desktop tocSuggestionsForDisplay.
- */
-private fun tocSuggestionsForDisplay(selectedBook: Book?, tocSuggestions: List<TocSuggestionDto>): List<Pair<TocSuggestionDto, List<String>>> =
-    tocSuggestions.mapNotNull { ts ->
-        val parts = stripBookPrefixFromTocPath(selectedBook, dedupAdjacent(ts.path))
-        if (parts.isNotEmpty()) ts to parts else null
-    }
-
-/** Strips the selected book's title if it redundantly opens a TOC path. Desktop stripBookPrefixFromTocPath. */
-private fun stripBookPrefixFromTocPath(selectedBook: Book?, parts: List<String>): List<String> {
-    if (selectedBook == null || parts.isEmpty()) return parts
-    val bookTitle = selectedBook.title.trim()
-    val first = parts.first().trim()
-    if (first == bookTitle) return parts.drop(1)
-    if (first.length > bookTitle.length && first.startsWith(bookTitle)) {
-        val ch = first[bookTitle.length]
-        if (ch == ',' || ch == ' ' || ch == ':' || ch == '-' || ch == '—') {
-            val remainder = first.substring(bookTitle.length + 1).trim().trimStart(',', ' ', ':', '-', '—').trim()
-            if (remainder.isNotEmpty()) return listOf(remainder) + parts.drop(1)
-        }
-    }
-    return parts
 }
 
 /** Desktop texteffects CachedRectShape: a horizontal slice of the hint, revealed as it is typed. */

@@ -24,7 +24,11 @@ object SqlVariableLimit {
 
     /** How many ids one statement may bind beside its [otherParameters], or null when the platform's SQLite needs no split. */
     fun idsPerStatement(otherParameters: Int): Int? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) null else LEGACY_MAX_VARIABLES - otherParameters
+        if (bindsMany || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) null else LEGACY_MAX_VARIABLES - otherParameters
+
+    /** Set by an app whose every statement runs on SQLite 3.32 or later (the Android 4.4 edition's own 3.49). */
+    @Volatile
+    var bindsMany = false
 
     /**
      * [read] over [ids] for a lookup with no ORDER BY and no paging (`SELECT * FROM line WHERE id IN ?`): one statement

@@ -4,11 +4,11 @@
 // API, lookup SQL, caches, prefetch and the expansion shape are the desktop ones.
 package io.github.kdroidfilter.seforimlibrary.search
 
-import android.database.sqlite.SQLiteDatabase
+import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase.LibraryReader
 import co.touchlab.kermit.Logger
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.FutureTask
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -39,7 +39,7 @@ class MagicDictionaryIndex private constructor(
 
     // Android: desktop keeps a JDBC connection per thread. A read-only SQLiteDatabase outside WAL mode has a single
     // connection, which would queue the parallel lookups, so a few handles are opened on demand and lent per lookup.
-    private val handles = LinkedBlockingDeque<SQLiteDatabase>()
+    private val handles = LinkedBlockingDeque<LibraryReader>()
     private val openedHandles = AtomicInteger()
 
     @Volatile
@@ -51,7 +51,7 @@ class MagicDictionaryIndex private constructor(
     }
     private val lookupParamCount: Int by lazy { lookupSql.count { it == '?' } }
 
-    private fun <T> withDb(block: (SQLiteDatabase) -> T): T {
+    private fun <T> withDb(block: (LibraryReader) -> T): T {
         val db = borrow()
         try {
             return block(db)
@@ -79,7 +79,7 @@ class MagicDictionaryIndex private constructor(
         }
     }
 
-    private fun borrow(): SQLiteDatabase {
+    private fun borrow(): LibraryReader {
         while (true) {
             handles.pollFirst()?.let { return it }
             if (openedHandles.getAndUpdate { if (it < MAX_HANDLES) it + 1 else it } < MAX_HANDLES) {
@@ -101,8 +101,8 @@ class MagicDictionaryIndex private constructor(
      * Cache expansions per normalized token to avoid repeated DB hits. Lookups in progress are cached too, so
      * concurrent searches (facets and results start together) share them.
      */
-    private val tokenCache = object : LinkedHashMap<String, CompletableFuture<List<Expansion>>>(TOKEN_CACHE_SIZE, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CompletableFuture<List<Expansion>>>?): Boolean =
+    private val tokenCache = object : LinkedHashMap<String, FutureTask<List<Expansion>>>(TOKEN_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, FutureTask<List<Expansion>>>?): Boolean =
             size > TOKEN_CACHE_SIZE
     }
 
@@ -142,21 +142,19 @@ class MagicDictionaryIndex private constructor(
         return ownEntries.ifEmpty { expansions }.maxByOrNull { it.surface.size }
     }
 
-    private fun expansionsForToken(token: String): List<Expansion> = lookup(token, async = false).join()
+    // A lookup still queued is run here rather than waited for (a FutureTask runs once)
+    private fun expansionsForToken(token: String): List<Expansion> = lookup(token, async = false).let { it.run(); it.get() }
 
-    private fun lookup(token: String, async: Boolean): CompletableFuture<List<Expansion>> {
+    private fun lookup(token: String, async: Boolean): FutureTask<List<Expansion>> {
         val normalized = norm(token)
-        if (normalized.isEmpty()) return CompletableFuture.completedFuture(emptyList())
-        val future = CompletableFuture<List<Expansion>>()
+        // fetchExpansions logs and skips its failures: an empty result is cached like any other
+        val future = FutureTask { if (normalized.isEmpty()) emptyList() else runCatching { fetchForToken(token, normalized) }.getOrDefault(emptyList()) }
+        if (normalized.isEmpty()) return future
         synchronized(tokenCache) {
             tokenCache[normalized]?.let { return it }
             tokenCache[normalized] = future
         }
-        val fetch = Runnable {
-            // fetchExpansions logs and skips its failures: an empty result is cached like any other
-            future.complete(runCatching { fetchForToken(token, normalized) }.getOrDefault(emptyList()))
-        }
-        if (async) lookupExecutor.execute(fetch) else fetch.run()
+        if (async) lookupExecutor.execute(future) else future.run()
         return future
     }
 
@@ -268,12 +266,7 @@ class MagicDictionaryIndex private constructor(
         private val MAX_HANDLES = minOf(Runtime.getRuntime().availableProcessors(), 4)
         private const val HANDLE_WAIT_MS = 100L
 
-        private fun openReadOnly(file: Path): SQLiteDatabase =
-            SQLiteDatabase.openDatabase(
-                file.toAbsolutePath().toString(),
-                null,
-                SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS,
-            )
+        private fun openReadOnly(file: Path): LibraryReader = openLexicalDb(file.toAbsolutePath().toString())
 
         /**
          * Load from SQLite DB (expected tables: surface(value, base_id), variant(value, surface_id), base(value)).
@@ -288,7 +281,7 @@ class MagicDictionaryIndex private constructor(
             }
             return runCatching {
                 // Validate DB is reachable
-                openReadOnly(file).use { it.rawQuery("SELECT 1", null).use { c -> c.moveToFirst() } }
+                openReadOnly(file).use { it.rawQuery("SELECT 1").use { c -> c.moveToFirst() } }
                 logger.d { "[MagicDictionary] Streaming lexical db from $file (lazy on-demand)" }
                 MagicDictionaryIndex(norm, file)
             }.onFailure {
@@ -320,7 +313,7 @@ class MagicDictionaryIndex private constructor(
                     SELECT name FROM sqlite_master
                     WHERE type = 'table' AND name IN ('surface', 'variant', 'base', 'surface_variant')
                 """.trimIndent()
-                db.rawQuery(sql, null).use { c ->
+                db.rawQuery(sql).use { c ->
                     val names = mutableSetOf<String>()
                     while (c.moveToNext()) names += c.getString(0) ?: ""
                     names.containsAll(listOf("surface", "variant", "base", "surface_variant"))
@@ -389,7 +382,7 @@ class MagicDictionaryIndex private constructor(
             LEFT JOIN variant v ON sv.variant_id = v.id
         """
 
-        private fun SQLiteDatabase.hasTable(name: String): Boolean =
+        private fun LibraryReader.hasTable(name: String): Boolean =
             rawQuery("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", arrayOf(name)).use { it.moveToFirst() }
     }
 
@@ -437,7 +430,7 @@ class MagicDictionaryIndex private constructor(
                     JOIN base b ON s.base_id = b.id
                     WHERE b.value = 'יהוה'
                 """.trimIndent()
-                db.rawQuery(sql, null).use { c ->
+                db.rawQuery(sql).use { c ->
                     while (c.moveToNext()) {
                         val v = c.getString(0) ?: continue
                         val trimmed = v.trim()

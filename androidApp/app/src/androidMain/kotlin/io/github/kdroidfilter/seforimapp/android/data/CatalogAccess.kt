@@ -11,6 +11,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.protobuf.ProtoBuf
+import java.io.File
 
 /** A book of a catalog dropdown: its id and the title it shows (desktop core/catalog BookRef). */
 data class BookRef(val id: Long, val title: String)
@@ -170,30 +171,18 @@ class CatalogAccess private constructor(catalog: PrecomputedCatalog) {
         @Volatile
         private var cached: Pair<String, CatalogAccess>? = null
 
-        /** The catalog of the installed library, read once (desktop CatalogCache): off the main thread. */
-        suspend fun load(store: LibraryStore): CatalogAccess = mutex.withLock {
-            val catalogFile = store.catalogFile
+        /** The catalog in [catalogFile], read once per file; the database's tree ([fromDatabase]) without it. */
+        suspend fun load(catalogFile: File, fromDatabase: suspend () -> PrecomputedCatalog): CatalogAccess = mutex.withLock {
             val stamp = "${catalogFile.path}:${catalogFile.length()}:${catalogFile.lastModified()}"
             cached?.takeIf { it.first == stamp }?.let { return@withLock it.second }
             val access = withContext(Dispatchers.IO) {
                 val catalog = runCatching {
                     if (catalogFile.isFile) ProtoBuf.decodeFromByteArray(PrecomputedCatalog.serializer(), catalogFile.readBytes()) else null
-                }.onFailure { Log.w("CatalogAccess", "catalog.pb", it) }.getOrNull() ?: fromDatabase(store)
+                }.onFailure { Log.w("CatalogAccess", "catalog.pb", it) }.getOrNull() ?: fromDatabase()
                 CatalogAccess(catalog)
             }
             cached = stamp to access
             access
-        }
-
-        /** The catalog tree of the database, for a library without catalog.pb: categories, then each one's books in order. */
-        private suspend fun fromDatabase(store: LibraryStore): PrecomputedCatalog {
-            val repo = store.repository()
-            val books = store.catalogBooks()
-            suspend fun category(id: Long, title: String, level: Int, parentId: Long?): CatalogCategory {
-                val children = repo.getCategoryChildren(id).map { category(it.id, it.title, it.level, it.parentId) }
-                return CatalogCategory(id, title, level, parentId, books[id].orEmpty(), children)
-            }
-            return PrecomputedCatalog(repo.getRootCategories().map { category(it.id, it.title, it.level, it.parentId) })
         }
     }
 }
