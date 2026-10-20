@@ -568,8 +568,15 @@ private fun BoxScope.SelectionBar(bounds: Rect, spec: SelectionMenuSpec, area: I
     var barSize by remember { mutableStateOf(IntSize.Zero) }
     val margin = with(density) { 8.dp.roundToPx() }
     val x = (bounds.center.x - barSize.width / 2f).roundToInt().coerceIn(margin, (area.width - barSize.width - margin).coerceAtLeast(margin))
+    // Above the selection, else below it (clear of the handles), else, when it fills the screen, over its middle: at
+    // the bottom edge the bar covered the end's handle
     val above = bounds.top - barSize.height - margin
-    val y = (if (above >= margin) above else bounds.bottom + margin * 3).roundToInt().coerceIn(margin, (area.height - barSize.height - margin).coerceAtLeast(margin))
+    val below = bounds.bottom + margin * 3
+    val y = when {
+        above >= margin -> above
+        below + barSize.height <= area.height - margin -> below
+        else -> bounds.center.y - barSize.height / 2f
+    }.roundToInt().coerceIn(margin, (area.height - barSize.height - margin).coerceAtLeast(margin))
 
     fun act(block: (String) -> Unit) {
         val text = trimSelectionEdges(capture()).takeIf { it.isNotBlank() } ?: return
