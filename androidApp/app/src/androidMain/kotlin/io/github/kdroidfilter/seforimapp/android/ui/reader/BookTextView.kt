@@ -230,7 +230,17 @@ fun BookText(
     }
 
     Box(modifier) {
-        SelectableArea(selection, textSelection, listState, textOf, resetKey = Triple(bookId, diacritics, shnayimMikra), Modifier.fillMaxSize()) {
+        SelectableArea(
+            selection,
+            textSelection,
+            listState,
+            textOf,
+            resetKey = Triple(bookId, diacritics, shnayimMikra),
+            modifier = Modifier.fillMaxSize(),
+            // The find bar covers the top of the text: nothing under it is selected, and the edge scroll starts below it
+            topInset = if (state.find.open) FindBarRoom else 0.dp,
+            prepare = { units -> vm.loadRange((units.first / LINE_UNITS).toInt(), (units.last / LINE_UNITS).toInt()) },
+        ) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().onGloballyPositioned {

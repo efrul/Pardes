@@ -72,6 +72,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -147,11 +148,13 @@ import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.core.text.HebrewTextUtils
 import io.github.kdroidfilter.seforimlibrary.dao.repository.CommentaryWithText
 import kotlin.math.abs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Callbacks the reader needs from the app shell. */
 data class ReaderNav(
@@ -259,6 +262,9 @@ fun ReaderScreen(
     // screen, and on those on screen when no selection was read
     val textSelection = remember(vm) { ListSelection() }
     val selectionFocus = remember(vm) { SelectionFocus() }
+    val focus = remember { FocusRequester() }
+    // A new selection takes the keys from a find or note field, so Ctrl+C copies it (its SelectionContainer did)
+    SideEffect { selectionFocus.takeFocus = { runCatching { focus.requestFocus() } } }
     fun selectionLines(): List<Line> {
         val units = textSelection.lastUnits ?: return visibleLines()
         val lines = ((units.first / LINE_UNITS).toInt()..(units.last / LINE_UNITS).toInt()).mapNotNull { vm.lines[it] }
@@ -277,8 +283,11 @@ fun ReaderScreen(
             onHighlight = { color, text ->
                 val book = current.book
                 if (book != null) {
-                    val ranges = resolveHighlightRangesForSelection(selectionLines().map { it.id to vm.plainText(it) }, text, current.diacritics)
+                    val lines = selectionLines()
+                    val diacritics = current.diacritics
                     scope.launch {
+                        // Off the main thread: a selection the edge scroll drew out may span thousands of lines
+                        val ranges = withContext(Dispatchers.Default) { resolveHighlightRangesForSelection(lines.map { it.id to vm.plainText(it) }, text, diacritics) }
                         guardedWrite("Highlight") {
                             ranges.forEach { (lineId, r) ->
                                 if (color == Color.Transparent) app.userData.removeOverlappingHighlights(book.id, lineId, r.first, r.last + 1)
@@ -311,15 +320,15 @@ fun ReaderScreen(
         )
     }
 
-    // Back: a text selection (SelectableArea's own handler, registered later), the find bar, the multi-selection, then
-    // the panes (the drawer's own handler is registered later too). A search result's seeded find bar the user never
-    // asked for nor edited leaves Back to the shell, which returns to the results.
+    // Back: an open drawer (its handler is composed when it opens, so it is the newest), a text selection
+    // (SelectableArea's own handler, registered later than these), the find bar, the multi-selection, then the panes.
+    // A search result's seeded find bar the user never asked for nor edited leaves Back to the shell, which returns to
+    // the results.
     val findBack = state.find.open && (state.find.focusRequest > 0 || state.find.query != state.searchQuery)
     BackHandler(enabled = findBack) { vm.closeFind() }
     BackHandler(enabled = !findBack && state.multiSelect) { vm.setMultiSelect(false) }
     BackHandler(enabled = !wide && !findBack && !state.multiSelect && state.phonePane != null) { vm.closePhonePane() }
 
-    val focus = remember { FocusRequester() }
     // The reader takes the keys unless the find bar asked for the cursor (a search result's seeded bar did not)
     LaunchedEffect(session?.isFront, state.find.open) {
         if (session?.isFront != false && (!state.find.open || state.find.focusRequest == 0)) runCatching { focus.requestFocus() }
@@ -328,7 +337,7 @@ fun ReaderScreen(
         // Ctrl+C copies the text selected last, in the book or a pane (desktop's SelectionContainer)
         val selected = selectionFocus.selection
         if (e.type == KeyEventType.KeyDown && (e.isCtrlPressed || e.isMetaPressed) && e.key == Key.C && selected != null) {
-            trimSelectionEdges(selected.selectedText()).takeIf { it.isNotBlank() }?.let { copyText(context, it) }
+            scope.launch { trimSelectionEdges(selected.read()).takeIf { it.isNotBlank() }?.let { copyText(context, it) } }
             true
         } else readerKey(e, vm, current, listState, wide, onTree = {
             if (wide) vm.toggleTree() else scope.launch { drawerTab = 1; drawerState.open() }
@@ -453,19 +462,22 @@ private fun mainAction(
 ) {
     val book = state.book ?: return
     val lines = selectionLines()
+    // The selection's first and last lines: every line between them is selected whole, so only the edges need finding
+    // (the second at each end covers a start at its first line's very end, or an end at its last line's start)
+    val edges = if (lines.size <= 4) lines else lines.take(2) + lines.takeLast(2)
     when (action) {
         SelectionAction.Copy -> copyText(context, text)
         SelectionAction.CopyWithoutNikud -> copyText(context, HebrewTextUtils.removeAllDiacritics(text))
-        SelectionAction.CopyWithSource -> copyText(context, buildCopyWithSourcePayload(text, book, state.rootCategory?.title, lines))
-        SelectionAction.CopyLink -> copyLink(context, bookShareLink(book.id, resolveLineRangeFromSelection(text, lines)?.first?.id ?: state.primaryLineId))
+        SelectionAction.CopyWithSource -> copyText(context, buildCopyWithSourcePayload(text, book, state.rootCategory?.title, edges))
+        SelectionAction.CopyLink -> copyLink(context, bookShareLink(book.id, resolveLineRangeFromSelection(text, edges)?.first?.id ?: state.primaryLineId))
         SelectionAction.SearchDatabase -> selectionQuery(text)?.let(nav.search)
         SelectionAction.FindInPage -> selectionQuery(text)?.let(vm::openFind)
         SelectionAction.AddNote -> {
-            val range = resolveHighlightRangesForSelection(lines.map { it.id to vm.plainText(it) }, text, state.diacritics).firstOrNull()
+            val range = resolveHighlightRangesForSelection(lines.take(2).map { it.id to vm.plainText(it) }, text, state.diacritics).firstOrNull()
             if (range != null) vm.startNoteDraft(NoteDraftAnchor(range.lineId, range.range.first, range.range.last + 1, text.trim().substringBefore('\n').trim()))
         }
         SelectionAction.ReportError -> scope.launch {
-            val range = resolveLineRangeFromSelection(text, lines) ?: state.primaryLineId?.let { id -> vm.lineById(id)?.let { it to it } }
+            val range = resolveLineRangeFromSelection(text, edges) ?: state.primaryLineId?.let { id -> vm.lineById(id)?.let { it to it } }
             val mailto = runCatching { bookErrorReportMailto(app.libraryStore.repository(), book, state.rootCategory?.title, range, text) }.getOrNull() ?: return@launch
             try {
                 context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse(mailto)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -482,7 +494,7 @@ private fun mainAction(
         }
         SelectionAction.MultiSelect -> {
             vm.setMultiSelect(true)
-            resolveLineRangeFromSelection(text, lines)?.first?.takeIf { it.id !in state.selectedLineIds }?.let { vm.toggleLine(it) }
+            resolveLineRangeFromSelection(text, edges)?.first?.takeIf { it.id !in state.selectedLineIds }?.let { vm.toggleLine(it) }
         }
         SelectionAction.OpenInPlace -> Unit
     }
@@ -883,8 +895,9 @@ private fun PhoneReader(
     val c = Zayit.colors
     val scope = rememberCoroutineScope()
     val narrowPhone = LocalConfiguration.current.screenWidthDp < 300
-    // Registered last so it wins: back closes an open drawer before anything else
-    BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
+    // Composed each time the drawer opens, so it is the newest handler and wins: Back closes the drawer before anything
+    // else, a text selection's handler (SelectableArea, registered when the book was shown) included
+    if (drawerState.isOpen || drawerState.targetValue == DrawerValue.Open) BackHandler { scope.launch { drawerState.close() } }
     // The chapter on screen, not the selected line's: it follows scrolls and fast-scroller drops
     val subtitle = listOfNotNull(state.categories.lastOrNull()?.title, state.placeHeading.ifBlank { null }).joinToString(" › ")
     // Material's drawer leaves 56dp of scrim to tap; under 300dp (Jelly Star) the two tabs share the row, on two lines
