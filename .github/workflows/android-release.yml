@@ -53,10 +53,10 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7
 
-      # Android builds only against this submodule, pinned to the SeforimLibrary commit desktop Zayit 0.6.1 was built
-      # with (381fbea). The root SeforimLibrary and SeforimAcronymizer submodules belong to the desktop fork.
-      - name: Check out androidApp/upstream/SeforimLibrary
-        run: git submodule update --init androidApp/upstream/SeforimLibrary
+      # Android compiles SeforimLibrary from the repository's submodule, at the commit desktop Zayit 0.6.7 builds with
+      # (7ddf045). SeforimAcronymizer is the desktop's only.
+      - name: Check out SeforimLibrary
+        run: git submodule update --init SeforimLibrary
 
       # The release notes say what is new from this version's section of androidApp/CHANGELOG.md ("## <versionName> ·
       # <date>", which the site shows too), its "###" headings one level down. No release of a version the changelog
@@ -178,10 +178,10 @@ jobs:
           apk="pardes-$tag.apk"
           cp androidApp/app/build/outputs/apk/release/app-release.apk "$apk"
           # AGPL §6: the APK's Corresponding Source. GitHub's own "Source code" archives leave out submodules, and the
-          # build compiles androidApp/upstream/SeforimLibrary, so this archive adds it at its path.
+          # build compiles SeforimLibrary, so this archive adds it at its path.
           src="pardes-$tag-source.tar.gz"
           git archive --prefix="pardes-$tag/" -o source.tar HEAD
-          git -C androidApp/upstream/SeforimLibrary archive --prefix="pardes-$tag/androidApp/upstream/SeforimLibrary/" \
+          git -C SeforimLibrary archive --prefix="pardes-$tag/SeforimLibrary/" \
             -o "$GITHUB_WORKSPACE/submodule.tar" HEAD
           tar --concatenate -f source.tar submodule.tar
           gzip -n -9 -c source.tar > "$src"
@@ -220,7 +220,7 @@ jobs:
 
           $NOTE
 
-          פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.1 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
+          פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.7 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
 
           ### מה חדש בגרסה $VERSION
           $(cat "$RUNNER_TEMP/whatsnew.md")

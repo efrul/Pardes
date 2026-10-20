@@ -9,9 +9,9 @@ plugins {
     id("pardes.compose-vector-moves")
 }
 
-// SeforimLibrary as desktop Zayit 0.6.1 builds it: the Android-only submodule upstream/SeforimLibrary, pinned to
-// 381fbea. The root SeforimLibrary submodule stays on the older commit the desktop fork builds with.
-val seforimLibrary = rootDir.resolve("upstream/SeforimLibrary")
+// SeforimLibrary as desktop Zayit 0.6.7 builds it: the repository's SeforimLibrary submodule (7ddf045), the same
+// checkout the desktop app and the shared modules build with.
+val seforimLibrary = rootDir.resolve("../SeforimLibrary")
 // Other shared sources reused as-is from the desktop project.
 val desktopRoot = rootDir.resolve("..")
 

@@ -5,9 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,12 +21,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
@@ -84,26 +84,29 @@ internal fun PassagePreviewPane(
                 // 0.6.5 46a1ecb8)
                 val annotated = remember(line.id, textSize, accent) { buildAnnotatedFromHtml(line.content, textSize, footnoteMarkerColor = accent) }
                 val text = remember(annotated, previewLine.ranges, highlight) { annotated.withBackground(previewLine.ranges, highlight) }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(IntrinsicSize.Min)
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable { if (found) onOpen() else onOpenLine(line.id) }
-                        .onGloballyPositioned { if (found) foundTop = it.positionInParent().y.toInt() },
-                ) {
-                    // The found line: a bar on its side, the text at full strength
-                    Box(Modifier.width(3.dp).fillMaxHeight().background(if (found) accent else Color.Transparent))
-                    Text(
-                        text = text,
-                        fontFamily = bookFont,
-                        fontSize = textSize.sp,
-                        lineHeight = (textSize * 1.8f).sp,
-                        color = if (found) ink else ink.copy(alpha = 0.45f),
-                        textAlign = TextAlign.Justify,
-                        modifier = Modifier.weight(1f).padding(start = 14.dp),
-                    )
-                }
+                // The found line: a bar on its side, the text at full strength. Drawn, not measured (desktop 0.6.6
+                // 25dde83d): an intrinsic height at a collapsed pane's 0 width overflows Constraints
+                Text(
+                    text = text,
+                    fontFamily = bookFont,
+                    fontSize = textSize.sp,
+                    lineHeight = (textSize * 1.8f).sp,
+                    color = if (found) ink else ink.copy(alpha = 0.45f),
+                    textAlign = TextAlign.Justify,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .drawBehind {
+                                if (found) {
+                                    val bar = 3.dp.toPx()
+                                    val x = if (layoutDirection == LayoutDirection.Rtl) size.width - bar else 0f
+                                    drawRect(accent, Offset(x, 0f), Size(bar, size.height))
+                                }
+                            }.clickable { if (found) onOpen() else onOpenLine(line.id) }
+                            .onGloballyPositioned { if (found) foundTop = it.positionInParent().y.toInt() }
+                            .padding(start = 17.dp),
+                )
             }
         }
     }

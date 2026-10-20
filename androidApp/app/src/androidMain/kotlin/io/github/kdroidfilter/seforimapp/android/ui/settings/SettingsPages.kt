@@ -136,7 +136,7 @@ private fun AppHeaderCard() {
             Text("פרדס אינו מטעם אליהו גמבש: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.", fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
             Text("הליבה של זית היא קוד פתוח תחת רישיון AGPL-3.0, וגם קוד המקור של פרדס זמין תחת רישיון זה.", fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
             LinkText("קוד המקור של פרדס", { uri.openSafely("https://github.com/efrul/Pardes") })
-            Text("המודולים הקנייניים של הגרסאות הרשמיות של זית (החיפוש הסמנטי והסידור החכם המלא) אינם כלולים בפרדס.", fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
+            Text("המודולים הקנייניים של הגרסאות הרשמיות של זית (החיפוש הסמנטי, הסידור החכם המלא וקישורי הפסוקים המצוטטים בתלמוד) אינם כלולים בפרדס.", fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
             Text("⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩", fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
         }
     }

@@ -88,7 +88,7 @@ The app follows desktop Zayit 0.6.1 screen by screen. [docs/PARITY.md](docs/PARI
 
 ## Licence and credits
 
-- **Zayit and SeforimLibrary:** by Elie (Elyahou) Gambache. Copyright (C) 2025 Elie Gambache, under the GNU AGPL v3 with an additional attribution term (§7b); see [../LICENSE](../LICENSE). Pardes is a modified version of that code (from desktop Zayit 0.6.1, adapted to Android in 2026). It is distributed under the same licence, keeps those notices, and its source is available under AGPL-3.0: this repository, and the complete source attached to every release.
+- **Zayit and SeforimLibrary:** by Elie (Elyahou) Gambache. Copyright (C) 2025 Elie Gambache, under the GNU AGPL v3 with an additional attribution term (§7b); see [../LICENSE](../LICENSE). Pardes is a modified version of that code (from desktop Zayit 0.6.7, adapted to Android in 2026). It is distributed under the same licence, keeps those notices, and its source is available under AGPL-3.0: this repository, and the complete source attached to every release.
 - **Attribution (§7b):** Powered by the technologies that drive Zayit — https://zayitapp.com/
-- **Not included:** the official desktop releases add proprietary modules (meaning-based search, the full smart siddur) that Pardes does not have.
+- **Not included:** the official desktop releases add proprietary modules (meaning-based search, the full smart siddur, the Talmud's verse quote links) that Pardes does not have.
 - **Library data:** the [SeforimLibrary releases](https://github.com/kdroidFilter/SeforimLibrary/releases), built from [Sefaria](https://www.sefaria.org.il/) and [Otzaria](https://github.com/Otzaria/otzaria-library) sources.
