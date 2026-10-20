@@ -11,8 +11,12 @@ import java.io.File
 
 /** The Home's catalog row as the main app builds it (CatalogAccess over catalog.pb, else the database's tree). */
 object Catalog {
+    /**
+     * The dropdowns of [opened], its catalog read once; read again for a library opened again (Settings › ספרייה ›
+     * "חפש את הספרייה מחדש"), which may be another one copied into the same folder, with no catalog.pb.
+     */
     suspend fun menus(opened: Library.Opened): List<CatalogMenu> {
-        val access = CatalogAccess.load(File(opened.file.parentFile, "catalog.pb")) { fromDatabase(opened) }
+        val access = CatalogAccess.load(File(opened.file.parentFile, "catalog.pb"), opened) { fromDatabase(opened) }
         return catalogPresets.mapNotNull { catalogMenu(access, it) }
     }
 
