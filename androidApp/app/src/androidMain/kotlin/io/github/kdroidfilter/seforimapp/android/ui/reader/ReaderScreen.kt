@@ -421,6 +421,21 @@ private fun placeOnScreen(list: LazyListState, vm: ReaderViewModel, state: Reade
     return vm.lines[index]?.id to false
 }
 
+/**
+ * A selection as a search or find query: one line, and at most [MAX_SELECTION_QUERY_CHARS] (cut at a word). A selection
+ * the edge scroll drew out can run to thousands of characters; whole, it made the find field lay out all of it, which
+ * froze the app, and no line's text can hold a query that spans lines anyway.
+ */
+private fun selectionQuery(text: String): String? {
+    val line = text.replace(Regex("\\s+"), " ").trim()
+    if (line.isEmpty()) return null
+    if (line.length <= MAX_SELECTION_QUERY_CHARS) return line
+    val cut = line.take(MAX_SELECTION_QUERY_CHARS)
+    return cut.substringBeforeLast(' ', cut).trim()
+}
+
+private const val MAX_SELECTION_QUERY_CHARS = 300
+
 /** As desktop HighlightStore stores it: `color.toArgb().toLong()` (rounded channels, sign-extended). */
 private fun Color.toArgbLong(): Long = toArgb().toLong()
 
@@ -443,8 +458,8 @@ private fun mainAction(
         SelectionAction.CopyWithoutNikud -> copyText(context, HebrewTextUtils.removeAllDiacritics(text))
         SelectionAction.CopyWithSource -> copyText(context, buildCopyWithSourcePayload(text, book, state.rootCategory?.title, lines))
         SelectionAction.CopyLink -> copyLink(context, bookShareLink(book.id, resolveLineRangeFromSelection(text, lines)?.first?.id ?: state.primaryLineId))
-        SelectionAction.SearchDatabase -> text.replace('\n', ' ').replace('\r', ' ').replace(Regex("\\s+"), " ").trim().takeIf { it.isNotEmpty() }?.let(nav.search)
-        SelectionAction.FindInPage -> vm.openFind(text.replace('\n', ' ').replace(Regex("\\s+"), " ").trim())
+        SelectionAction.SearchDatabase -> selectionQuery(text)?.let(nav.search)
+        SelectionAction.FindInPage -> selectionQuery(text)?.let(vm::openFind)
         SelectionAction.AddNote -> {
             val range = resolveHighlightRangesForSelection(lines.map { it.id to vm.plainText(it) }, text, state.diacritics).firstOrNull()
             if (range != null) vm.startNoteDraft(NoteDraftAnchor(range.lineId, range.range.first, range.range.last + 1, text.trim().substringBefore('\n').trim()))
@@ -496,8 +511,8 @@ private fun paneSpec(
             when (action) {
                 SelectionAction.Copy -> copyText(context, text)
                 SelectionAction.CopyWithoutNikud -> copyText(context, HebrewTextUtils.removeAllDiacritics(text))
-                SelectionAction.SearchDatabase -> text.replace(Regex("\\s+"), " ").trim().takeIf { it.isNotEmpty() }?.let(nav.search)
-                SelectionAction.FindInPage -> vm.openFind(text.replace(Regex("\\s+"), " ").trim())
+                SelectionAction.SearchDatabase -> selectionQuery(text)?.let(nav.search)
+                SelectionAction.FindInPage -> selectionQuery(text)?.let(vm::openFind)
                 SelectionAction.OpenInPlace -> itemOf(text)?.let { openBookAt(it.link.targetBookId, it.link.targetLineId) }
                 else -> Unit
             }
