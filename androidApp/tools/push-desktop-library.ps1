@@ -12,7 +12,8 @@ Copies the library of desktop Zayit to Pardes (an Android app based on Zayit) ov
                    /storage/<UUID>/Android/data/<app>/files/library/. On a FAT32 card seforim.db goes in chunks of
                    2 GiB less 64 KiB (seforim.db, seforim.db001...), which the app reads as one database. Once the copy
                    is complete, a library in the phone's storage is removed: the app keeps one library. Needs
-                   Pardes 0.3.0 or later (versionCode 2), the first that opens a library on the card.
+                   Pardes 0.3.0 or later (versionCode 2), the first that opens a library on the card, or Pardes for
+                   Android 4.4 to 7.1 (versionCode 1). Below Android 6.0 -CardUuid takes a card's name (sdcard1).
   -WithNotes       also copy notes and highlights (settings\user_settings.db); they replace the phone's own
   -DryRun          print the adb commands instead of running them
 
@@ -27,6 +28,11 @@ for 2 GiB). An item is
 written as .zayit-incoming-<name> and renamed when complete (the app deletes <name>.part when it opens). The files belong to adb's `shell` user, so they are made writable
 for the app (SQLite opens the database read-write). Folders the app made itself (its own download) cannot be emptied
 by adb: they are renamed .zayit-old-* and the app deletes them when it next starts. Linux/macOS: push-desktop-library.sh.
+
+Android 4.4 to 6.0 (Pardes for Android 4.4 to 7.1): adb push writes into the app's folder there, so each file goes
+straight to it, with no stage and no piece over 2 GiB but a FAT32 database's chunks; their phones have no stat or find
+(sizes come from ls -l), print df's sizes as 1.8G, list no volumes (sm, Android 6.0) and may keep the phone's own
+storage on a FAT32 card, where seforim.db then goes in chunks as on a memory card.
 #>
 param(
     [string]$Source = '', [string]$Serial = '', [switch]$SdCard, [string]$CardUuid = '', [switch]$WithNotes, [switch]$DryRun, [switch]$Help,
@@ -136,11 +142,14 @@ if (-not $Serial) {
     }
 }
 Say "מכשיר: $Serial" "device: $Serial"
-if ((Ask "package:/data/app/$Pkg/base.apk" @('shell', 'pm', 'path', $Pkg)) -notmatch '^package:') { Die 'פרדס אינו מותקן במכשיר' "Pardes ($Pkg) is not installed on the device" }
+# A line of its own: the Android 4.4 emulator's x86 Dalvik prints a linker warning first
+if ((Ask "package:/data/app/$Pkg/base.apk" @('shell', 'pm', 'path', $Pkg)) -notmatch '(?m)^package:') { Die 'פרדס אינו מותקן במכשיר' "Pardes ($Pkg) is not installed on the device" }
 # Android 11's adb shell is not in the ext_data_rw group (Android 12 added it): Android/data/<app>/ is out of its reach.
 # Android 8 to 10 reach it (their sdcardfs gives the shell sdcard_rw), and take no chmod there (see the copy below).
 $sdk = 0; [void][int]::TryParse(((Ask '33' @('shell', 'getprop', 'ro.build.version.sdk')) -replace '\D', ''), [ref]$sdk)
 $SdcardFs = $sdk -gt 0 -and $sdk -lt 30
+# Android 4.4 to 6.0 (below 7.0, API 24): see the top of this file.
+$Old = $sdk -gt 0 -and $sdk -lt 24
 if ($sdk -eq 30 -and (Ask 'yes' @('shell', 'ls /sdcard/Android/data >/dev/null 2>&1 && echo yes')) -ne 'yes') {
     Die 'באנדרואיד 11 כלי ההעברה (adb) אינו יכול לגשת לתיקייה של פרדס בטלפון; זה אפשרי מאנדרואיד 12. במקום זאת הורידו מעמוד ההפצה של הספרייה את הקבצים ‎.part ואת ‎.manifest.json, העתיקו אותם לתיקיית Download בטלפון ובחרו אותם בפרדס: מדריך ההגדרה ← התקנה לא-מקוונת' "Android 11: adb cannot reach Pardes's folder on the phone (it can from Android 12). Instead, download the library's .part and .manifest.json files from its release page, copy them to the phone's Download folder and pick them in Pardes: setup guide, offline install"
 }
@@ -150,18 +159,52 @@ function SumOf([string]$out) {
     foreach ($n in ("$out" -split '\s+')) { if ($n -match '^\d+$') { $sum += [long]$n } }
     return $sum
 }
+# Adds up the file sizes of an ls -l (below Android 7.0, which has no stat): the field before the date, in toolbox's
+# and toybox's lines alike.
+function LsBytes([string]$out) {
+    [long]$sum = 0
+    foreach ($line in ("$out" -split "`n")) {
+        if (-not $line.StartsWith('-')) { continue }
+        $f = $line.Trim() -split '\s+'
+        for ($i = 2; $i -lt $f.Count; $i++) { if ($f[$i] -match '^\d{4}-\d{2}-\d{2}$') { $sum += [long]$f[$i - 1]; break } }
+    }
+    return $sum
+}
+# Below Android 7.0 the mounts tell the cards (no sm before 6.0) and the filesystem of the phone's own storage, which
+# on some phones is the card itself (FAT32, /storage/sdcard): vold mounts each at /mnt/media_rw/<name>, under the FUSE
+# view /storage/<name>.
+$Mounts = ''; $Primary = ''; $PrimaryName = ''
+if ($Old) {
+    $Mounts = Ask '/dev/block/vold/179:1 /mnt/media_rw/sdcard1 vfat rw 0 0' @('shell', 'cat', '/proc/mounts')
+    $Primary = (Ask '/storage/emulated/0' @('shell', 'echo $EXTERNAL_STORAGE')).Trim().TrimEnd('/')
+    $PrimaryName = ($Primary -replace '^/storage/', '').Split('/')[0]
+}
+function MediaFs([string]$name) {
+    foreach ($m in ($Mounts -split "`n")) {
+        $f = $m.Trim() -split '\s+'
+        if ($f.Count -ge 3 -and $f[1] -eq "/mnt/media_rw/$name") { return $f[2] }
+    }
+    return ''
+}
 
 # --- the memory card (-SdCard): its app folder, and its filesystem (FAT32 takes no file of 4 GB)
 $PhoneFiles = $Files
 $PhoneLib = $Lib
 $Fs = ''
 if ($SdCard -or $CardUuid) {
-    # An older Pardes finds no library on the card, and the phone's copy is removed at the end.
+    # An older Pardes finds no library on the card, and the phone's copy is removed at the end. Below Android 8.0 the
+    # app can only be Pardes for Android 4.4 to 7.1 (versionCode 1), which looks for its library on the cards too.
     $vc = 0
     if ((Ask '    versionCode=2 minSdk=33 targetSdk=36' @('shell', 'dumpsys', 'package', $Pkg)) -match 'versionCode=(\d+)') { $vc = [int]$Matches[1] }
-    if ($vc -lt 2) { Die 'כדי להעתיק לכרטיס הזיכרון צריך פרדס 0.3.0 ומעלה. עדכנו את פרדס בטלפון ונסו שוב.' "copying to the memory card needs Pardes 0.3.0 or later (versionCode 2, installed $vc): update the app first" }
-    $vols = @((Ask 'public:179,1 mounted 1234-ABCD' @('shell', 'sm', 'list-volumes', 'public')) -split "`n" |
-        ForEach-Object { $f = $_.Trim() -split '\s+'; if ($f.Count -ge 3 -and $f[1] -eq 'mounted' -and $f[2] -ne 'null') { $f[2] } })
+    if ($vc -lt 2 -and -not ($sdk -gt 0 -and $sdk -lt 26)) { Die 'כדי להעתיק לכרטיס הזיכרון צריך פרדס 0.3.0 ומעלה. עדכנו את פרדס בטלפון ונסו שוב.' "copying to the memory card needs Pardes 0.3.0 or later (versionCode 2, installed $vc): update the app first" }
+    if ($sdk -gt 0 -and $sdk -lt 23) {
+        # Cards by name: what vold mounted besides the phone's own storage
+        $vols = @($Mounts -split "`n" | ForEach-Object { $f = $_.Trim() -split '\s+'
+            if ($f.Count -ge 3 -and $f[1].StartsWith('/mnt/media_rw/')) { $n = $f[1].Substring(14); if ($n -ne $PrimaryName) { $n } } })
+    } else {
+        $vols = @((Ask 'public:179,1 mounted 1234-ABCD' @('shell', 'sm', 'list-volumes', 'public')) -split "`n" |
+            ForEach-Object { $f = $_.Trim() -split '\s+'; if ($f.Count -ge 3 -and $f[1] -eq 'mounted' -and $f[2] -ne 'null') { $f[2] } })
+    }
     if (-not $CardUuid) {
         if ($vols.Count -eq 0) { Die 'לא נמצא כרטיס זיכרון מחובר' 'no memory card is mounted' }
         if ($vols.Count -gt 1) { Die "יש כמה כרטיסים, בחרו אחד עם -CardUuid: $vols" "several cards, pick one with -CardUuid: $vols" }
@@ -171,13 +214,18 @@ if ($SdCard -or $CardUuid) {
     $Files = "/storage/$CardUuid/Android/data/$Pkg/files"
     $Lib = "$Files/library"
     # Read here, not on the phone: stock Android 8.x has no awk.
-    foreach ($m in ((Ask "/dev/block/vold/public:179,1 /mnt/media_rw/$CardUuid vfat rw 0 0" @('shell', 'cat', '/proc/mounts')) -split "`n")) {
-        $f = $m.Trim() -split '\s+'
-        if ($f.Count -ge 3 -and $f[1] -eq "/mnt/media_rw/$CardUuid") { $Fs = $f[2]; break }
+    if ($Old) { $Fs = MediaFs $CardUuid } else {
+        foreach ($m in ((Ask "/dev/block/vold/public:179,1 /mnt/media_rw/$CardUuid vfat rw 0 0" @('shell', 'cat', '/proc/mounts')) -split "`n")) {
+            $f = $m.Trim() -split '\s+'
+            if ($f.Count -ge 3 -and $f[1] -eq "/mnt/media_rw/$CardUuid") { $Fs = $f[2]; break }
+        }
     }
     Say "כרטיס זיכרון: $CardUuid ($Fs)" "memory card: $CardUuid ($Fs)"
+} elseif ($Old) {
+    $Fs = MediaFs $PrimaryName
+    if ($Fs) { Say "זיכרון הטלפון: $Primary ($Fs)" "phone storage: $Primary ($Fs)" }
 }
-$SplitDb = ($SdCard -or $CardUuid) -and ($Split -or ($Fs -eq 'vfat' -and (Get-Item -LiteralPath $Db).Length -gt 4294967295))
+$SplitDb = ($SdCard -or $CardUuid -or $Old) -and ($Split -or ($Fs -eq 'vfat' -and (Get-Item -LiteralPath $Db).Length -gt 4294967295))
 if ($SplitDb) { Say 'הכרטיס מפורמט ב-FAT32: seforim.db יועתק בחלקים' 'FAT32 card: seforim.db is copied in chunks (seforim.db, seforim.db001...)' }
 
 # --- the app's folder exists only once it has run
@@ -195,17 +243,28 @@ if (-not (Run @('shell', "mkdir -p $Lib; chmod 777 $Lib 2>/dev/null; rm -f $Lib/
 # --- free space: what is free now plus what the old copies take. A stage left by an interrupted run (stopped while
 # the phone copied a file into place) is removed first, so its space counts as free.
 $null = Run @('shell', "rm -rf $Stage")
-$df = Ask "Filesystem 1K-blocks Used Available Use% Mounted on`n/dev/fuse 0 0 52428800 0% /storage/emulated" @('shell', 'df', '-k', $Files)
-$AvailKb = [long](((($df -split "`n")[1]).Trim() -split '\s+')[3])
+if ($Old) {
+    # toolbox df takes no -k and prints its sizes as 1.8G (toybox, Android 6.0: 1K blocks); the free one is the 4th
+    $df = Ask "Filesystem Size Used Free Blksize`n/storage/sdcard 2.0G 240.5M 50.0G 4096" @('shell', 'df', $Files)
+    $free = ((($df -split "`n")[1]).Trim() -split '\s+')[3]
+    $AvailKb = 0L
+    if ($free -match '^([\d.]+)([KMGT]?)$') {
+        $unit = @{ '' = 1; 'K' = 1; 'M' = 1024; 'G' = 1048576; 'T' = 1073741824 }[$Matches[2]]
+        $AvailKb = [long]([double]::Parse($Matches[1], [Globalization.CultureInfo]::InvariantCulture) * $unit)
+    }
+} else {
+    $df = Ask "Filesystem 1K-blocks Used Available Use% Mounted on`n/dev/fuse 0 0 52428800 0% /storage/emulated" @('shell', 'df', '-k', $Files)
+    $AvailKb = [long](((($df -split "`n")[1]).Trim() -split '\s+')[3])
+}
 $du = Ask '0' @('shell', "cd $Lib && du -sk $Items $($Items | ForEach-Object { "$Incoming$_" }) seforim.db[0-9][0-9][0-9] $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true")
 $OldKb = [long](($du -split "`n" | Where-Object { $_ -match '^\d+' } | ForEach-Object { [long](($_ -split '\s+')[0]) } | Measure-Object -Sum).Sum)
 $OnCard = $SdCard -or $CardUuid
 $NeedKb = $TotalKb + 512 * 1024
-# The stage is on the phone's /data, which /sdcard shares; a card does not.
-if (-not $OnCard) { $NeedKb += $LargestKb }
+# The stage is on the phone's /data, which /sdcard shares; a card does not. Below Android 7.0 there is no stage.
+if (-not $OnCard -and -not $Old) { $NeedKb += $LargestKb }
 Say "פנוי במכשיר: $([long](($AvailKb + $OldKb) / 1024)) מ״ב, נדרש: $([long]($NeedKb / 1024)) מ״ב" "free on device: $([long](($AvailKb + $OldKb) / 1024)) MB (incl. the old library), needed: $([long]($NeedKb / 1024)) MB"
 if ($AvailKb + $OldKb -lt $NeedKb) { Die 'אין מספיק מקום פנוי במכשיר' 'not enough free space on the device' }
-if ($OnCard) {
+if ($OnCard -and -not $Old) {
     $sdf = Ask "Filesystem 1K-blocks Used Available Use% Mounted on`n/dev/block/dm-0 0 0 52428800 0% /data" @('shell', 'df', '-k', '/data/local/tmp')
     $StageAvailKb = [long](((($sdf -split "`n")[1]).Trim() -split '\s+')[3])
     $StageNeedKb = $LargestKb + 64 * 1024
@@ -221,6 +280,7 @@ function ClearItem($i) {
 
 # Bytes in a file or folder on the phone.
 function RemoteBytes([string]$path, [long]$fake) {
+    if ($Old) { return LsBytes (Ask "-rw-rw---- u0_a1 sdcard_r $fake 2026-01-01 00:00 x" @('shell', "ls -lR '$path' 2>/dev/null; true")) }
     return SumOf (Ask "$fake" @('shell', "find '$path' -type f -exec stat -c %s {} + 2>/dev/null; true"))
 }
 
@@ -265,8 +325,9 @@ function SendPieces([string]$local, [string]$remote, [bool]$chunks) {
 # Sends one file to the phone. adb on Windows reads its standard input as text, so a stream through `adb shell -T`
 # (or exec-in) ends at the first 0x1A byte; adb push reads the file itself. It cannot write into the app's folder, so
 # the file lands in $Stage and the phone's shell copies it into place (separate mounts: a move would copy too).
+# Below Android 7.0 adb push writes into the app's folder: the file goes straight there (whole: no '>>').
 function SendFile([string]$local, [string]$remote, [string]$op = '>') {
-    $tmp = "$Stage/file"
+    $tmp = if ($Old) { $remote } else { "$Stage/file" }
     # A piece that -DryRun did not write counts as large.
     $big = if (Test-Path -LiteralPath $local) { (Get-Item -LiteralPath $local -Force).Length -ge 64MB } else { $true }
     # Large files show adb's own progress line; small ones (the index files) stay quiet.
@@ -281,6 +342,7 @@ function SendFile([string]$local, [string]$remote, [string]$op = '>') {
         $p.WaitForExit()
         if ($p.ExitCode -ne 0) { return $false }
     }
+    if ($Old) { return $true }
     if ($big) { Write-Host '    placing it in the app''s folder' }
     return Run @('shell', "cat $tmp $op '$remote' && rm -f $tmp")
 }
@@ -310,13 +372,14 @@ try {
             }
         } elseif ($i -eq 'seforim.db' -and $SplitDb) {
             if (-not (SendPieces $local "$Lib/$Incoming$i" $true)) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
-            $got = SumOf (Ask "$want" @('shell', "cd $Lib && stat -c %s $Incoming$i $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true"))
+            $got = if ($Old) { LsBytes (Ask "-rw-rw---- u0_a1 sdcard_r $want 2026-01-01 00:00 x" @('shell', "cd $Lib && ls -l $Incoming$i $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true")) }
+                   else { SumOf (Ask "$want" @('shell', "cd $Lib && stat -c %s $Incoming$i $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true")) }
             if ($got -ne $want) { Die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again" }
             # The overflow chunks first, the first chunk (seforim.db) last: the app sees a library only once it is all there.
             $fix = "cd $Lib && for c in $($Incoming)seforim.db[0-9][0-9][0-9]; do [ -e `$c ] && mv `$c `${c#$Incoming}; done; mv $Incoming$i $i"
             if (-not (Run @('shell', $fix))) { Die "לא ניתן להעביר את $i למקומו בתיקיית היישום" "could not move $i into place in the app's folder" }
             continue
-        } elseif ((Get-Item -LiteralPath $local -Force).Length -gt $ChunkBytes) {
+        } elseif (-not $Old -and (Get-Item -LiteralPath $local -Force).Length -gt $ChunkBytes) {
             if (-not (SendPieces $local "$Lib/$Incoming$i" $false)) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
         } elseif (-not (SendFile $local "$Lib/$Incoming$i")) { Die "ההעתקה של $i נכשלה" "copying $i failed" }
         if ((RemoteBytes "$Lib/$Incoming$i" $want) -ne $want) { Die "ההעתקה של $i לא הושלמה, נסו שוב" "$i did not arrive complete; run the script again" }
@@ -335,7 +398,7 @@ try {
             $names = "seforim.db seforim.db-wal seforim.db-shm seforim.db-journal $Items local_update_version.txt seforim.db.applying delta-cache"
             $null = Run @('shell', "cd $PhoneLib && rm -rf $names seforim.db[0-9][0-9][0-9] 2>/dev/null; for i in $names; do [ ! -e `$i ] || mv `$i .zayit-old-`$i-$Stamp; done; true")
         }
-    } elseif (Ask '' @('shell', "ls /storage/*/Android/data/$Pkg/files/library/seforim.db 2>/dev/null | grep -v emulated; true")) {
+    } elseif (Ask '' @('shell', "ls /storage/*/Android/data/$Pkg/files/library/seforim.db 2>/dev/null | grep -v emulated$(if ($Primary) { " | grep -v '^$Primary/'" }); true")) {
         Say 'שימו לב: גם בכרטיס הזיכרון יש ספרייה. אם פרדס ממשיך להשתמש בה, עברו לספרייה שבטלפון בהגדרות › ניהול נתונים › מיקום הספרייה' 'note: the memory card has a library too; if Pardes keeps using it, switch in Settings › ניהול נתונים › מיקום הספרייה'
     }
     if ($WithNotes) {
