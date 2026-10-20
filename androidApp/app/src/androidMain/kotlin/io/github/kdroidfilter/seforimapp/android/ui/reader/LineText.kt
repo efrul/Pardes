@@ -59,17 +59,20 @@ class HtmlAnnotation(val text: AnnotatedString, val inline: Map<String, InlineTe
 @Composable
 fun rememberHtmlAnnotation(html: String, textSize: Float, diacritics: DiacriticsMode): HtmlAnnotation {
     val c = Zayit.colors
-    return remember(html, textSize, diacritics, c.isDark, c.accent) {
-        val inline = HashMap<String, InlineTextContent>()
-        val text = buildAnnotatedFromHtml(
-            diacritics.apply(html),
-            textSize,
-            footnoteMarkerColor = c.accent,
-            inlineContent = inline,
-            imageContentBuilder = readerImageBuilder(c.isDark),
-        )
-        HtmlAnnotation(text, inline)
-    }
+    return remember(html, textSize, diacritics, c.isDark, c.accent) { buildHtmlAnnotation(html, textSize, diacritics, c.isDark, c.accent) }
+}
+
+/** What [rememberHtmlAnnotation] shows, built outside composition (a selected text scrolled away is read with it). */
+fun buildHtmlAnnotation(html: String, textSize: Float, diacritics: DiacriticsMode, dark: Boolean, accent: Color): HtmlAnnotation {
+    val inline = HashMap<String, InlineTextContent>()
+    val text = buildAnnotatedFromHtml(
+        diacritics.apply(html),
+        textSize,
+        footnoteMarkerColor = accent,
+        inlineContent = inline,
+        imageContentBuilder = readerImageBuilder(dark),
+    )
+    return HtmlAnnotation(text, inline)
 }
 
 /**
@@ -160,6 +163,7 @@ class FindMatchLocator {
  * passages, citation links and images. A tap selects the line (Ctrl+tap adds it); a long press selects text.
  * [findLocator] is given to the line holding the current find match, which tells it where the match is;
  * [noteLocator] to the line a note is being written on, which tells it where the note's passage starts.
+ * [selectable] makes it one of a [ListSelection]'s texts.
  */
 @Composable
 fun LineItem(
@@ -180,6 +184,7 @@ fun LineItem(
     findLocator: FindMatchLocator? = null,
     noteLocator: FindMatchLocator? = null,
     lineId: Long = -1L,
+    selectable: SelectableText? = null,
 ) {
     val c = Zayit.colors
     val annotation = rememberHtmlAnnotation(html, textSize, diacritics)
@@ -225,6 +230,7 @@ fun LineItem(
             text = justified.text,
             inlineContent = annotation.inline,
             modifier = modifier
+                .then(selectable?.modifier ?: Modifier)
                 .then(if (findLocator != null) Modifier.onGloballyPositioned { findLocator.publishText(lineId, it) } else Modifier)
                 .then(if (noteLocator != null) Modifier.onGloballyPositioned { noteLocator.publishText(lineId, it) } else Modifier)
                 .fillMaxWidth()
@@ -243,6 +249,7 @@ fun LineItem(
             onTextLayout = {
                 layout = it
                 justified.onLayout(it)
+                selectable?.onLayout(it)
                 findLocator?.publishLayout(lineId, it)
                 noteLocator?.publishLayout(lineId, it)
             },
@@ -286,16 +293,20 @@ fun MarkedEnd(label: String) {
 
 /** A verse's targum under the verse read twice, in shnayim mikra (desktop ShnayimMikraTargum, 0.9× and secondary). */
 @Composable
-fun ShnayimMikraTargum(html: String, textSize: Float, diacritics: DiacriticsMode) {
-    val size = textSize * 0.9f
+fun ShnayimMikraTargum(html: String, textSize: Float, diacritics: DiacriticsMode, selectable: SelectableText? = null) {
+    val size = shnayimMikraTargumSize(textSize)
     val annotation = rememberHtmlAnnotation(html, size, diacritics)
     Text(
         annotation.text,
         inlineContent = annotation.inline,
-        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp).then(selectable?.modifier ?: Modifier),
+        onTextLayout = { selectable?.onLayout(it) },
         style = TextStyle(fontFamily = Zayit.fonts.targum, fontSize = size.sp, lineHeight = (size * READER_LINE_HEIGHT).sp, color = Zayit.colors.textSecondary),
     )
 }
+
+/** The targum's size in shnayim mikra, 0.9× the text's. */
+fun shnayimMikraTargumSize(textSize: Float): Float = textSize * 0.9f
 
 @Composable
 fun LinePlaceholder(textSize: Float) {

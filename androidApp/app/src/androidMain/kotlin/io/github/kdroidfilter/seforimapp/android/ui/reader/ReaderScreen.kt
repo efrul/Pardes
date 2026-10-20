@@ -255,6 +255,15 @@ fun ReaderScreen(
 
     fun visibleLines(): List<Line> = listState.layoutInfo.visibleItemsInfo.mapNotNull { vm.lines[it.index] }.distinctBy { it.id }.sortedBy { it.lineIndex }
 
+    // The text selected in the book; an action finds its text on the lines it was read from, which may reach past the
+    // screen, and on those on screen when no selection was read
+    val textSelection = remember(vm) { ListSelection() }
+    fun selectionLines(): List<Line> {
+        val units = textSelection.lastUnits ?: return visibleLines()
+        val lines = ((units.first / LINE_UNITS).toInt()..(units.last / LINE_UNITS).toInt()).mapNotNull { vm.lines[it] }
+        return lines.ifEmpty { visibleLines() }
+    }
+
     // Desktop BookTextMenus on the book's text
     val mainSpec = remember(vm) {
         SelectionMenuSpec(
@@ -263,11 +272,11 @@ fun ReaderScreen(
                 val b = current.book
                 b != null && (b.hasNekudot || b.hasTeamim) && current.diacritics != DiacriticsMode.None && hasDiacritics(text)
             },
-            onAction = { action, text -> mainAction(action, text, vm, current, ::visibleLines, nav, context, scope, app) },
+            onAction = { action, text -> mainAction(action, text, vm, current, ::selectionLines, nav, context, scope, app) },
             onHighlight = { color, text ->
                 val book = current.book
                 if (book != null) {
-                    val ranges = resolveHighlightRangesForSelection(visibleLines().map { it.id to vm.plainText(it) }, text, current.diacritics)
+                    val ranges = resolveHighlightRangesForSelection(selectionLines().map { it.id to vm.plainText(it) }, text, current.diacritics)
                     scope.launch {
                         guardedWrite("Highlight") {
                             ranges.forEach { (lineId, r) ->
@@ -301,8 +310,9 @@ fun ReaderScreen(
         )
     }
 
-    // Back: the find bar, the multi-selection, then the panes (the drawer's own handler is registered later). A search
-    // result's seeded find bar the user never asked for nor edited leaves Back to the shell, which returns to the results.
+    // Back: a text selection (SelectableArea's own handler, registered later), the find bar, the multi-selection, then
+    // the panes (the drawer's own handler is registered later too). A search result's seeded find bar the user never
+    // asked for nor edited leaves Back to the shell, which returns to the results.
     val findBack = state.find.open && (state.find.focusRequest > 0 || state.find.query != state.searchQuery)
     BackHandler(enabled = findBack) { vm.closeFind() }
     BackHandler(enabled = !findBack && state.multiSelect) { vm.setMultiSelect(false) }
@@ -314,7 +324,11 @@ fun ReaderScreen(
         if (session?.isFront != false && (!state.find.open || state.find.focusRequest == 0)) runCatching { focus.requestFocus() }
     }
     val keyHandler: (KeyEvent) -> Boolean = { e ->
-        readerKey(e, vm, current, listState, wide, onTree = {
+        // Ctrl+C copies the text selected (desktop's SelectionContainer)
+        if (e.type == KeyEventType.KeyDown && (e.isCtrlPressed || e.isMetaPressed) && e.key == Key.C && textSelection.hasSelection) {
+            trimSelectionEdges(textSelection.selectedText()).takeIf { it.isNotBlank() }?.let { copyText(context, it) }
+            true
+        } else readerKey(e, vm, current, listState, wide, onTree = {
             if (wide) vm.toggleTree() else scope.launch { drawerTab = 1; drawerState.open() }
         }, onToc = {
             if (wide) vm.toggleToc() else scope.launch { drawerTab = 0; drawerState.open() }
@@ -328,6 +342,7 @@ fun ReaderScreen(
             listState = listState,
             textSize = textSize,
             selection = mainSpec,
+            textSelection = textSelection,
             onZoom = { factor -> app.prefs.setTextSize(textSize * factor) },
             modifier = mod,
         ) {
@@ -413,14 +428,14 @@ private fun mainAction(
     text: String,
     vm: ReaderViewModel,
     state: ReaderUiState,
-    visibleLines: () -> List<Line>,
+    selectionLines: () -> List<Line>,
     nav: ReaderNav,
     context: android.content.Context,
     scope: kotlinx.coroutines.CoroutineScope,
     app: ZayitApplication,
 ) {
     val book = state.book ?: return
-    val lines = visibleLines()
+    val lines = selectionLines()
     when (action) {
         SelectionAction.Copy -> copyText(context, text)
         SelectionAction.CopyWithoutNikud -> copyText(context, HebrewTextUtils.removeAllDiacritics(text))

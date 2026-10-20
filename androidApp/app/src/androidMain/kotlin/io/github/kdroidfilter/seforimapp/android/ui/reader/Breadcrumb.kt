@@ -343,8 +343,16 @@ fun FavoriteEditSheet(favoriteKey: String, title: String, onDismiss: () -> Unit)
 @OptIn(ExperimentalFoundationApi::class)
 private fun Modifier.combinedClickableCompat(onClick: () -> Unit, onLongClick: (() -> Unit)? = null): Modifier = combinedClickable(onClick = onClick, onLongClick = onLongClick)
 
-/** Copies [text] to the clipboard (Android 13 shows its own confirmation). */
+/**
+ * Copies [text] to the clipboard (Android 13 shows its own confirmation). A text past what the clipboard's binder call
+ * carries (about 1 MB, a long selection drawn out by the edge scroll) throws there: it is said rather than closing the app.
+ */
 fun copyText(context: Context, text: String) {
-    copyLink(context, text)
+    try {
+        copyLink(context, text)
+    } catch (_: RuntimeException) {
+        Toast.makeText(context, "הקטע ארוך מדי להעתקה", Toast.LENGTH_LONG).show()
+        return
+    }
     if (android.os.Build.VERSION.SDK_INT < 33) Toast.makeText(context, "הועתק", Toast.LENGTH_SHORT).show()
 }

@@ -55,7 +55,7 @@ Paths below are relative to `app/src/androidMain/kotlin/io/github/kdroidfilter/s
 | `ui/home/` | `HomeScreen` (wallpaper, `WideHome` with hideable tree), `HomeSearchBar`, `widgets/` (desktop's editable widget grid: 17 widgets, gallery, persistence) | features/home |
 | `ui/search/` | `UnifiedSearchBar` + `SearchBarViewModel` (suggestions, references, in-book scope), `SearchScreen` + `SearchViewModel` (category tabs, base-books status line, grouping by book, knowledge panel), `PassagePreview` (tablet split from 1000dp), `SearchTocPane` | features/search |
 | `ui/author/AuthorScreen.kt` | author page | features/author |
-| `ui/reader/` | `ReaderScreen` + `ReaderViewModel`, `BookTextView`, `TextSelection` (range selection), `FindBar` + `BookFindMatches` (engine find-in-page), `ReaderPanes` (commentaries/targum/sources with `LineConnections`), `NotesPane`, `TocPane` + `TocSearch`, `Breadcrumb`, `BookDetailsPane`, `FastScroller`, `ReaderCopy`, `ReaderPrefs` (diacritics per root category) | features/bookcontent, notes |
+| `ui/reader/` | `ReaderScreen` + `ReaderViewModel`, `BookTextView`, `TextSelection` + `ListSelection` (text selection over the lazy lists, kept by line and offset, with edge scroll), `FindBar` + `BookFindMatches` (engine find-in-page), `ReaderPanes` (commentaries/targum/sources with `LineConnections`), `NotesPane`, `TocPane` + `TocSearch`, `Breadcrumb`, `BookDetailsPane`, `FastScroller`, `ReaderCopy`, `ReaderPrefs` (diacritics per root category) | features/bookcontent, notes |
 | `ui/notes/NotesScreen.kt` | "ההערות שלי" | features/notes |
 | `ui/library/LibraryTree.kt` | book tree with search (books before subcategories) | categorytree panel |
 | `ui/settings/` | settings pages, `DbDeltaUpdateSection` | features/settings (+ dbupdate) |
