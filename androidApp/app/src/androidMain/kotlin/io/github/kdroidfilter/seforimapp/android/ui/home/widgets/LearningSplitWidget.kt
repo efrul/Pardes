@@ -49,6 +49,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.settings.ZDropdown
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import java.time.LocalDate
+import java.util.Locale
 
 // Pardes's own widget (desktop 0.6.1 has none such): "לעולם ישלש אדם שנותיו, שליש במקרא, שליש במשנה, שליש בתלמוד"
 // (Kiddushin 30a). How the learning splits between the three, by the books opened (the history) or by the time read
@@ -226,10 +227,19 @@ private fun timeLabel(seconds: Long): String {
     }
 }
 
+/** A book's amount, short, beside its title: "12", "45 ד׳", "7.7 ש׳" (the part's total says it to the minute). */
 private fun amountLabel(
     measure: LearningMeasure,
     amount: Long,
-): String = if (measure == LearningMeasure.TIME) timeLabel(amount) else amount.toString()
+): String {
+    if (measure == LearningMeasure.OPENS) return amount.toString()
+    val minutes = maxOf(1L, (amount + 59) / 60)
+    return when {
+        minutes < 60 -> "$minutes ד׳"
+        minutes < 600 -> "${"%.1f".format(Locale.ROOT, minutes / 60.0)} ש׳"
+        else -> "${(minutes + 30) / 60} ש׳"
+    }
+}
 
 /** "32 פתיחות", "2 ש׳ 10 ד׳": an amount that says what it counts. */
 private fun totalLabel(
