@@ -26,7 +26,8 @@ object SplitDatabase {
 
     fun openReader(db: File, writable: Boolean = false): LibraryReader {
         val library = library
-        if (library != null && db.name == Library.DB_NAME) {
+        // Only the library's own seforim.db: another one (a library folder an install checks) opens on its own.
+        if (library != null && db.name == Library.DB_NAME && library.current?.file?.absolutePath == db.absolutePath) {
             // The open library at each query: one opened again after this reader was made is the one read
             return LibraryReader({ sql, args -> library.open().driver.withConnection { NativeCursor.rows(it, sql, args) } }, {})
         }
