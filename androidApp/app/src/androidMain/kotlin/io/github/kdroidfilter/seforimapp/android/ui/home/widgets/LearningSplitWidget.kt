@@ -231,6 +231,17 @@ private fun amountLabel(
     amount: Long,
 ): String = if (measure == LearningMeasure.TIME) timeLabel(amount) else amount.toString()
 
+/** "32 פתיחות", "2 ש׳ 10 ד׳": an amount that says what it counts. */
+private fun totalLabel(
+    measure: LearningMeasure,
+    amount: Long,
+): String =
+    when {
+        measure == LearningMeasure.TIME -> timeLabel(amount)
+        amount == 1L -> "פתיחה אחת"
+        else -> "$amount פתיחות"
+    }
+
 /**
  * Each part's colour, the same three hues in light and dark, stepped for each surface: told apart under protan and
  * deutan vision too (checked as a categorical palette against the panel), and never alone, as every part is named.
@@ -307,7 +318,7 @@ private fun subtitle(
     period: LearningPeriod,
 ): String =
     when (measure) {
-        LearningMeasure.OPENS -> if (split.total == 1L) "פתיחה אחת" else "${split.total} פתיחות"
+        LearningMeasure.OPENS -> totalLabel(measure, split.total)
         LearningMeasure.TIME -> if (split.total == 0L) "זמן קריאה ${period.since}" else "${timeLabel(split.total)} ${period.since}"
     }
 
@@ -372,10 +383,10 @@ private fun SplitBar(
                 if (amount > 0) Box(Modifier.weight(maxOf(amount.toFloat(), split.total * 0.02f)).fillMaxHeight().background(part.color(dark)))
             }
         }
-        Canvas(Modifier.fillMaxWidth().height(5.dp)) {
+        Canvas(Modifier.fillMaxWidth().height(7.dp)) {
             for (third in 1..2) {
                 val x = size.width * third / 3
-                drawLine(tick.copy(alpha = 0.7f), Offset(x, 1.dp.toPx()), Offset(x, size.height), 1.dp.toPx())
+                drawLine(tick, Offset(x, 1.dp.toPx()), Offset(x, size.height), 1.5.dp.toPx())
             }
         }
     }
@@ -397,7 +408,7 @@ private fun PartColumn(
     Column(modifier) {
         PartName(part, dark)
         Text("$percent%", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.text, maxLines = 1)
-        Text(amountLabel(measure, split.amounts.getValue(part)).takeIf { books.isNotEmpty() } ?: "—", fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
+        Text(totalLabel(measure, split.amounts.getValue(part)).takeIf { books.isNotEmpty() } ?: "—", fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
         HorizontalDivider(Modifier.padding(vertical = 6.dp), color = c.divider)
         FitColumn(Modifier.fillMaxWidth().weight(1f)) {
             books.forEach { book ->
@@ -433,7 +444,7 @@ private fun PartRow(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("$percent%", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = c.text, maxLines = 1)
-                if (top != null) Text(amountLabel(measure, split.amounts.getValue(part)), fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
+                if (top != null) Text(totalLabel(measure, split.amounts.getValue(part)), fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
             }
         }
     }
