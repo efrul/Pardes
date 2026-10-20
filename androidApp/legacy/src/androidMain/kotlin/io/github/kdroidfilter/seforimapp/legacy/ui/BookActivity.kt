@@ -1205,9 +1205,14 @@ class BookActivity : BaseActivity() {
             into.addView(waiting, lp(WRAP, WRAP).apply { gravity = Gravity.CENTER_HORIZONTAL })
             loads.launch {
                 val page = withContext(Dispatchers.IO) {
-                    readerLinks.linksPage(ids, type, target, offset, LINKS_PAGE)
+                    readerLinks.linksPageOrNull(ids, type, target, offset, LINKS_PAGE)
                 }
                 into.removeView(waiting)
+                // A page that cannot be read says so, the first or one after "עוד": none would end the list as if complete.
+                if (page == null) {
+                    into.addView(paneNote("לא ניתן לקרוא את הטקסט"))
+                    return@launch
+                }
                 if (offset == 0) {
                     page.firstOrNull()?.let { first ->
                         keyable(header) { start(this@BookActivity, first.link.targetBookId, first.link.targetLineIndex) }
