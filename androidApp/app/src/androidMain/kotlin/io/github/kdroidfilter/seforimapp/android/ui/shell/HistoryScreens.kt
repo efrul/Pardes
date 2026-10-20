@@ -188,11 +188,15 @@ fun HistoryPage(wide: Boolean, onOpen: (Destination, String) -> Unit, topBar: (@
     if (confirmClear && isTabInFront()) {
         ConfirmDialog(
             title = "ניקוי היסטוריה",
-            message = "האם אתה בטוח שברצונך למחוק את כל ההיסטוריה? פעולה זו אינה ניתנת לביטול.",
+            message = "האם אתה בטוח שברצונך למחוק את כל ההיסטוריה וזמני הקריאה? פעולה זו אינה ניתנת לביטול.",
             confirmText = "כן, נקה",
             onConfirm = {
                 confirmClear = false
-                scope.launch { guardedWrite("History clearing") { store.clearAll() } }
+                // The reading time says what was read too: it goes with the history
+                scope.launch {
+                    guardedWrite("History clearing") { store.clearAll() }
+                    guardedWrite("Reading time clearing") { app.userData.readingTime.clearAll() }
+                }
             },
             onDismiss = { confirmClear = false },
         )

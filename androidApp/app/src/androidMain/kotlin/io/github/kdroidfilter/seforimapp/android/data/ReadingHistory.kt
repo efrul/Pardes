@@ -105,7 +105,10 @@ class ReadingHistory(private val app: ZayitApplication) {
     }
 
     fun clearHistory() {
-        scope.launch { runCatching { app.userData.history.clearAll() } }
+        scope.launch {
+            runCatching { app.userData.history.clearAll() }
+            runCatching { app.userData.readingTime.clearAll() }
+        }
     }
 
     fun isBookmarked(bookId: Long, heading: String): Boolean = _bookmarks.value.any { it.bookId == bookId && it.heading == heading }

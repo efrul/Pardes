@@ -26,6 +26,7 @@ import io.github.kdroidfilter.seforimapp.android.appwidget.WidgetLaunch
 import io.github.kdroidfilter.seforimapp.android.appwidget.ZayitWidgets
 import io.github.kdroidfilter.seforimapp.android.appwidget.open
 import io.github.kdroidfilter.seforimapp.android.appwidget.widgetLaunchOf
+import io.github.kdroidfilter.seforimapp.android.data.LastTouch
 import io.github.kdroidfilter.seforimapp.android.data.LibraryInstaller
 import io.github.kdroidfilter.seforimapp.android.data.SavedSession
 import io.github.kdroidfilter.seforimapp.android.data.SessionStore
@@ -307,6 +308,12 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = shortcuts.dispatch(event) || super.dispatchKeyEvent(event)
+
+    // Any touch or key: the reading time goes on counting (data/ReadingTime.kt)
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        LastTouch.now()
+    }
 
     override fun onProvideKeyboardShortcuts(data: MutableList<KeyboardShortcutGroup>, menu: Menu?, deviceId: Int) {
         super.onProvideKeyboardShortcuts(data, menu, deviceId)

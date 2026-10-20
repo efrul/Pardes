@@ -65,6 +65,10 @@ abstract class SettingsGroup(
             ),
         )
 
+    /** One of [E]'s entries; an unknown name reads as [default]. */
+    protected inline fun <reified E : Enum<E>> enum(default: E) =
+        setting(default, SettingCodec({ it.name }, { name -> enumValues<E>().find { it.name == name } }))
+
     /** Null by default; an empty or unknown name reads as null. */
     protected inline fun <reified E : Enum<E>> enumOrNull() =
         setting<E?>(null, SettingCodec({ it?.name.orEmpty() }, { name -> enumValues<E>().find { it.name == name } }))
