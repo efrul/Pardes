@@ -55,29 +55,47 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.kdroid.gematria.converter.toHebrewNumeral
 import io.github.kdroidfilter.seforim.desktop.VirtualDesktop
-import io.github.kdroidfilter.seforimapp.core.presentation.theme.ThemeUtils
+import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.MaterialSymbolsDesktop_landscape
 import io.github.kdroidfilter.seforimapp.icons.MaterialSymbolsDesktop_landscape_add
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
-import org.jetbrains.jewel.ui.icon.IconKey
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.desktop_default_name
 import seforimapp.seforimapp.generated.resources.desktop_new
+import seforimapp.seforimapp.generated.resources.desktop_open_in_new_window
 import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
 
 @Composable
-fun DesktopSwitcher(modifier: Modifier = Modifier) {
+fun DesktopSwitcher(
+    modifier: Modifier = Modifier,
+    // Its icon and chevron alone, the name left out: when the tab strip needs the room.
+    compact: Boolean = false,
+) {
     val appGraph = LocalAppGraph.current
     val desktopManager = appGraph.desktopManager
+    val openWindow = LocalOpenWindow.current
     val desktops by desktopManager.desktops.collectAsState()
-    val activeDesktopId by desktopManager.activeDesktopId.collectAsState()
+    val activeDesktopId by openWindow.desktopId.collectAsState()
+    val windows by desktopManager.windows.collectAsState()
+    // Observe every window's desktopId: an in-place switch changes a window's desktop WITHOUT
+    // touching the windows list, so a snapshot keyed on the list alone would go stale and keep
+    // showing the previous desktop as "open".
+    val openDesktopIds by remember(windows) {
+        if (windows.isEmpty()) {
+            flowOf(emptySet())
+        } else {
+            combine(windows.map { it.desktopId }) { ids -> ids.toSet() }
+        }
+    }.collectAsState(initial = windows.map { it.desktopId.value }.toSet())
     val activeDesktop = desktops.find { it.id == activeDesktopId }
 
     var showDropdown by remember { mutableStateOf(false) }
@@ -88,6 +106,7 @@ fun DesktopSwitcher(modifier: Modifier = Modifier) {
     ) {
         DesktopSwitcherTrigger(
             desktopName = activeDesktop?.name ?: "1",
+            compact = compact,
             onClick = { showDropdown = !showDropdown },
         )
 
@@ -100,11 +119,13 @@ fun DesktopSwitcher(modifier: Modifier = Modifier) {
                 DesktopDropdownContent(
                     desktops = desktops,
                     activeDesktopId = activeDesktopId,
+                    openDesktopIds = openDesktopIds,
                     onMove = desktopManager::moveDesktop,
-                    onSwitch = desktopManager::switchTo,
+                    onSwitch = { id -> desktopManager.switchTo(openWindow.id, id) },
+                    onOpenInNewWindow = desktopManager::openInNewWindow,
                     onRename = desktopManager::renameDesktop,
                     onDelete = desktopManager::deleteDesktop,
-                    onCreate = { name -> desktopManager.createDesktop(name) },
+                    onCreate = { name -> desktopManager.createDesktop(openWindow.id, name) },
                     onDismiss = { showDropdown = false },
                 )
             }
@@ -115,28 +136,22 @@ fun DesktopSwitcher(modifier: Modifier = Modifier) {
 @Composable
 private fun DesktopSwitcherTrigger(
     desktopName: String,
+    compact: Boolean,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
     val accent = JewelTheme.globalColors.outlines.focused
     val hoverBg = if (isHovered) accent.copy(alpha = 0.08f) else Color.Transparent
-    val isIslands = ThemeUtils.isIslandsStyle()
-    val cornerRadius = if (isIslands) 8.dp else 4.dp
 
     Row(
         modifier =
             Modifier
-                .width(DESKTOP_SWITCHER_WIDTH)
+                .width(if (compact) DESKTOP_SWITCHER_COMPACT_WIDTH else DESKTOP_SWITCHER_WIDTH)
                 .fillMaxHeight()
-                .then(
-                    if (isIslands) {
-                        Modifier.padding(horizontal = 2.dp, vertical = 4.dp)
-                    } else {
-                        Modifier
-                    },
-                ).hoverable(interactionSource)
-                .background(hoverBg, RoundedCornerShape(cornerRadius))
+                .padding(horizontal = 2.dp, vertical = 4.dp)
+                .hoverable(interactionSource)
+                .background(hoverBg, RoundedCornerShape(8.dp))
                 .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
                 .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -144,16 +159,19 @@ private fun DesktopSwitcherTrigger(
     ) {
         Image(
             painter = rememberVectorPainter(MaterialSymbolsDesktop_landscape),
-            contentDescription = null,
+            // Its name told some other way once it no longer shows.
+            contentDescription = if (compact) desktopName else null,
             modifier = Modifier.size(16.dp),
             colorFilter = ColorFilter.tint(JewelTheme.globalColors.text.normal),
         )
-        Text(
-            text = desktopName,
-            color = JewelTheme.globalColors.text.normal,
-            maxLines = 1,
-            modifier = Modifier.weight(1f),
-        )
+        if (!compact) {
+            Text(
+                text = desktopName,
+                color = JewelTheme.globalColors.text.normal,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+        }
         Icon(
             key = AllIconsKeys.General.ChevronDown,
             contentDescription = null,
@@ -167,8 +185,10 @@ private fun DesktopSwitcherTrigger(
 private fun DesktopDropdownContent(
     desktops: ImmutableList<VirtualDesktop>,
     activeDesktopId: String,
+    openDesktopIds: Set<String>,
     onMove: (Int, Int) -> Unit,
     onSwitch: (String) -> Unit,
+    onOpenInNewWindow: (String) -> Unit,
     onRename: (String, String) -> Unit,
     onDelete: (String) -> Unit,
     onCreate: (String) -> String,
@@ -213,9 +233,14 @@ private fun DesktopDropdownContent(
                         DesktopItem(
                             desktop = desktop,
                             isActive = desktop.id == activeDesktopId,
+                            isOpenElsewhere = desktop.id != activeDesktopId && desktop.id in openDesktopIds,
                             canDelete = desktops.size > 1,
                             onClick = {
                                 onSwitch(desktop.id)
+                                onDismiss()
+                            },
+                            onOpenInNewWindow = {
+                                onOpenInNewWindow(desktop.id)
                                 onDismiss()
                             },
                             onRename = { renamingDesktopId = desktop.id },
@@ -263,8 +288,10 @@ private fun DesktopDropdownContent(
 private fun DesktopItem(
     desktop: VirtualDesktop,
     isActive: Boolean,
+    isOpenElsewhere: Boolean,
     canDelete: Boolean,
     onClick: () -> Unit,
+    onOpenInNewWindow: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -276,6 +303,7 @@ private fun DesktopItem(
     val bgColor =
         when {
             isActive -> accent.copy(alpha = 0.12f)
+            isOpenElsewhere -> accent.copy(alpha = 0.04f)
             isHovered -> accent.copy(alpha = 0.06f)
             else -> Color.Transparent
         }
@@ -303,6 +331,24 @@ private fun DesktopItem(
             modifier = Modifier.weight(1f),
             maxLines = 1,
         )
+        // Fixed-width slot after the name so every row aligns: either the "open in another
+        // window" indicator (clicking the row focuses that window), or the open-in-new-window
+        // action, invisible-but-reserved when not applicable.
+        if (isOpenElsewhere) {
+            Box(
+                modifier = Modifier.size(18.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(modifier = Modifier.size(6.dp).background(accent, CircleShape))
+            }
+        } else {
+            ActionIcon(
+                key = AllIconsKeys.Actions.OpenNewTab,
+                visible = isHovered && !isActive,
+                onClick = onOpenInNewWindow,
+                contentDescription = stringResource(Res.string.desktop_open_in_new_window),
+            )
+        }
         if (canDelete) {
             ActionIcon(
                 key = AllIconsKeys.Actions.Close,
@@ -310,35 +356,6 @@ private fun DesktopItem(
                 onClick = onDelete,
             )
         }
-    }
-}
-
-@Composable
-private fun ActionIcon(
-    key: IconKey,
-    visible: Boolean,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsHoveredAsState()
-    val accent = JewelTheme.globalColors.outlines.focused
-    val hoverBg = if (isHovered && visible) accent.copy(alpha = 0.12f) else Color.Transparent
-
-    Box(
-        modifier =
-            Modifier
-                .size(18.dp)
-                .hoverable(interactionSource)
-                .background(hoverBg, CircleShape)
-                .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            key = key,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = if (visible) JewelTheme.globalColors.text.normal else Color.Transparent,
-        )
     }
 }
 
@@ -424,7 +441,13 @@ private fun DesktopRenameField(
 }
 
 internal val DESKTOP_SWITCHER_WIDTH = 110.dp
-private val DROPDOWN_WIDTH = 130.dp
+
+// Its icon and chevron alone: outer padding (2 × 2), inner padding (2 × 4), icon (16), gap (4) and chevron (14).
+internal val DESKTOP_SWITCHER_COMPACT_WIDTH = 46.dp
+
+// Wide enough for an 8-char Hebrew name plus the per-item actions (rename,
+// open-in-new-window, delete) that flank it.
+private val DROPDOWN_WIDTH = 172.dp
 private const val MAX_DESKTOP_NAME_LENGTH = 8
 private val DropdownShape = RoundedCornerShape(6.dp)
 private val ItemShape = RoundedCornerShape(4.dp)

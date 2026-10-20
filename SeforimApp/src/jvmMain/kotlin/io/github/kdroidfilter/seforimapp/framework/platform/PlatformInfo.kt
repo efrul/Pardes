@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.framework.platform
 
 import dev.nucleusframework.core.runtime.Platform
+import dev.nucleusframework.systeminfo.SystemInfo
 
 /**
  * Cached platform information.
@@ -26,4 +27,16 @@ object PlatformInfo {
      * True if running on Linux.
      */
     val isLinux: Boolean = currentOS == Platform.Linux
+
+    /**
+     * True on a machine too weak for the heavy 3D widgets (the Earth, the solar system): under 6 GB of RAM (a machine
+     * sold with 8 GB passes even with up to 2 GB taken by its GPU; one with 4 or 6 GB doesn't). Lazy: the memory query
+     * is only paid when a widget asks.
+     */
+    val isLowEnd: Boolean by lazy {
+        val totalMemory = runCatching { SystemInfo.memoryInfo()?.totalMemory }.getOrNull()
+        totalMemory != null && totalMemory < LOW_END_MEMORY_BYTES
+    }
+
+    private const val LOW_END_MEMORY_BYTES = 6L * 1024 * 1024 * 1024
 }
