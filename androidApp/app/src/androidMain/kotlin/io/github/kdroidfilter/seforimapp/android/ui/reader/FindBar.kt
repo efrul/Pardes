@@ -2,6 +2,8 @@ package io.github.kdroidfilter.seforimapp.android.ui.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +46,7 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextRange
@@ -107,7 +110,9 @@ fun FindBar(find: FindState, onQuery: (String) -> Unit, onPrevious: () -> Unit, 
     val count = results?.occurrences
     val shape = RoundedCornerShape(10.dp)
     Row(
-        modifier
+        // The bar takes the touches that miss its field and buttons (the phone band's padding, the gaps): they no longer
+        // fall through to the text under it, a tap selecting a hidden line, a long press its text
+        Modifier.pointerInput(Unit) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false) } }.then(modifier)
             .shadow(6.dp, shape)
             .clip(shape)
             .background(c.panel)

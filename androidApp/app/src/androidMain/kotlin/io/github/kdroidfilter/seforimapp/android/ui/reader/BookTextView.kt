@@ -242,6 +242,8 @@ fun BookText(
             // The phone's find bar spans the top of the text: nothing under it is selected, and the edge scroll starts
             // below it (the tablet's floats at a corner, beside visible text)
             topInset = if (state.find.open && findBarBand) FindBarRoom else 0.dp,
+            // The bar keeps below either find bar, the tablet's floating one included
+            barTop = if (state.find.open) FindBarRoom else 0.dp,
             prepare = { units -> vm.loadRange((units.first / LINE_UNITS).toInt(), (units.last / LINE_UNITS).toInt()) },
         ) {
             LazyColumn(

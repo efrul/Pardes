@@ -189,6 +189,7 @@ fun SelectableArea(
     resetKey: Any?,
     modifier: Modifier = Modifier,
     topInset: Dp = 0.dp,
+    barTop: Dp = topInset,
     prepare: suspend (LongRange) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -196,7 +197,10 @@ fun SelectableArea(
     var areaSize by remember { mutableStateOf(IntSize.Zero) }
     val area = remember { AreaHolder() }
     val scope = rememberCoroutineScope()
-    area.top = with(LocalDensity.current) { topInset.toPx() }
+    with(LocalDensity.current) {
+        area.top = topInset.toPx()
+        area.barTop = barTop.toPx()
+    }
     // One selection at a time in a reader, as its SelectionContainers had (one lost its selection with the focus): a
     // new one in the text or a pane lets the other go and takes the keys, so Ctrl+C copies it
     val focus = LocalSelectionFocus.current
@@ -207,7 +211,7 @@ fun SelectableArea(
     }
     // Before the next layout: offsets kept into the old texts (diacritics just hidden) would point past their new ends
     DisposableEffect(selection, resetKey) {
-        selection.clear()
+        selection.reset()
         onDispose { }
     }
     DisposableEffect(focus, selection) { onDispose { if (focus?.current === selection) focus.current = null } }
@@ -232,18 +236,15 @@ fun SelectableArea(
         }
         // Over the part on screen once the drag and the scrolling stop (Android hides its bar meanwhile)
         if (selected && !selection.dragging && !list.isScrollInProgress && area.coordinates?.let { selection.visibleBounds(it, area.top) } != null) {
-            val generation = selection.generation
-            key(generation) {
+            key(selection.generation) {
                 SelectionBar(
+                    selection = selection,
                     bounds = { area.coordinates?.let { selection.visibleBounds(it, area.top) } },
-                    top = { area.top },
+                    top = { area.barTop },
                     list = list,
                     spec = spec,
                     area = areaSize,
                     scope = scope,
-                    capture = selection::read,
-                    // Not a newer selection made while the lines were read
-                    dismiss = { if (selection.generation == generation) selection.clear() },
                 ) { sheetText = it }
             }
         }
@@ -280,6 +281,9 @@ val LocalSelectionFocus = staticCompositionLocalOf<SelectionFocus?> { null }
 private class AreaHolder {
     var coordinates: LayoutCoordinates? = null
     var top: Float = 0f
+
+    /** Where the bar may start (px): below a find bar, the tablet's floating one too, which [top] leaves out. */
+    var barTop: Float = 0f
 }
 
 /**
@@ -291,6 +295,8 @@ private class AreaHolder {
 @Composable
 private fun BoxScope.SelectionHandle(selection: ListSelection, isStart: Boolean, list: LazyListState, area: AreaHolder, color: Color) {
     val index = if (isStart) 0 else 1
+    // Leaving (the selection made by a mouse now, or let go), the handle takes no touches any more
+    DisposableEffect(selection, index) { onDispose { selection.handleRects[index] = null } }
     Spacer(
         Modifier.matchParentSize().drawBehind {
             list.layoutInfo // read, so the handle is drawn again as the list scrolls and lays out
@@ -599,20 +605,19 @@ private suspend fun edgeScroll(selection: ListSelection, list: LazyListState) {
 }
 
 /**
- * The floating bar over the selection's part on screen ([bounds]), placed when the list is laid out so it follows a
+ * The floating bar over the [selection]'s part on screen ([bounds]), placed when the list is laid out so it follows a
  * reflow (pinch zoom, the find bar opening) as the handles do. Its actions read the selection in [scope], the area's:
  * the bar leaves the composition when the list scrolls, while the lines a long selection spans may still be read.
  */
 @Composable
 private fun BoxScope.SelectionBar(
+    selection: ListSelection,
     bounds: () -> Rect?,
     top: () -> Float,
     list: LazyListState,
     spec: SelectionMenuSpec,
     area: IntSize,
     scope: CoroutineScope,
-    capture: suspend () -> String,
-    dismiss: () -> Unit,
     onMore: (String) -> Unit,
 ) {
     val c = Zayit.colors
@@ -641,10 +646,17 @@ private fun BoxScope.SelectionBar(
         return IntOffset(x, y)
     }
 
+    // The selection as it is when tapped: once its lines are read, it is let go only if still that one (not a newer one,
+    // nor one being adjusted by a handle meanwhile), and the action finds its lines by the units it was read from
     fun act(block: (String) -> Unit) {
+        val generation = selection.generation
+        val start = selection.start
+        val end = selection.end
         scope.launch {
-            val text = trimSelectionEdges(capture()).takeIf { it.isNotBlank() } ?: return@launch
-            dismiss()
+            val captured = selection.read() ?: return@launch
+            val text = trimSelectionEdges(captured.text).takeIf { it.isNotBlank() } ?: return@launch
+            if (selection.generation == generation && selection.start == start && selection.end == end && !selection.dragging) selection.clear()
+            selection.lastUnits = captured.units
             block(text)
         }
     }
