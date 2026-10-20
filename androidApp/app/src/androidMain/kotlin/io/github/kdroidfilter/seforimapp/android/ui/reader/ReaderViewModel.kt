@@ -391,6 +391,34 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         }
     }
 
+    /**
+     * Every line from [from] to [to] read now: a text selection may reach over lines a jump passed without loading
+     * them (the fast scroller, Ctrl+End, the TOC), and its actions read them all.
+     */
+    suspend fun loadRange(from: Int, to: Int) {
+        val last = min(to, _state.value.totalLines - 1)
+        var c = max(0, from) / CHUNK
+        while (c * CHUNK <= last) {
+            val start = c * CHUNK
+            if ((max(start, from)..min(start + CHUNK - 1, last)).any { lines[it] == null }) {
+                loadedChunks.add(c)
+                val loaded = try {
+                    repository.getLines(bookId, start, start + CHUNK - 1)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Lines $start.. of $bookId failed to load", e)
+                    emptyList()
+                }
+                for (l in loaded) {
+                    lines[l.lineIndex] = l
+                    indexById[l.id] = l.lineIndex
+                }
+            }
+            c++
+        }
+    }
+
     suspend fun lineIndexOf(lineId: Long): Int? = indexById[lineId] ?: repository.getLine(lineId)?.takeIf { it.bookId == bookId }?.lineIndex
 
     fun lineById(lineId: Long): Line? = indexById[lineId]?.let { lines[it] }

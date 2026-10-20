@@ -57,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -79,7 +80,6 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
-import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
@@ -95,6 +95,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -103,8 +104,10 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.WindowBackScope
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -184,22 +187,32 @@ fun SelectableArea(
     textOf: (Long) -> String?,
     resetKey: Any?,
     modifier: Modifier = Modifier,
+    topInset: Dp = 0.dp,
+    prepare: suspend (LongRange) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     var sheetText by remember { mutableStateOf<String?>(null) }
     var areaSize by remember { mutableStateOf(IntSize.Zero) }
     val area = remember { AreaHolder() }
-    SideEffect { selection.textOf = textOf }
-    LaunchedEffect(selection, resetKey) { selection.clear() }
+    val scope = rememberCoroutineScope()
+    area.top = with(LocalDensity.current) { topInset.toPx() }
+    // One selection at a time in a reader, as its SelectionContainers had (one lost its selection with the focus): a
+    // new one in the text or a pane lets the other go and takes the keys, so Ctrl+C copies it
+    val focus = LocalSelectionFocus.current
+    SideEffect {
+        selection.textOf = textOf
+        selection.prepare = prepare
+        selection.onBegin = { focus?.take(selection) }
+    }
+    // Before the next layout: offsets kept into the old texts (diacritics just hidden) would point past their new ends
+    DisposableEffect(selection, resetKey) {
+        selection.clear()
+        onDispose { }
+    }
+    DisposableEffect(focus, selection) { onDispose { if (focus?.current === selection) focus.current = null } }
     LaunchedEffect(selection, list) { edgeScroll(selection, list) }
     val selected by remember(selection) { derivedStateOf { selection.hasSelection } }
     BackHandler(enabled = selected) { selection.clear() }
-    // The reader's Ctrl+C copies the selection made last, in its text or a pane
-    val focus = LocalSelectionFocus.current
-    LaunchedEffect(focus, selection) {
-        snapshotFlow { selection.generation to selection.hasSelection }.collect { (_, has) -> if (has) focus?.current = selection }
-    }
-    DisposableEffect(focus, selection) { onDispose { if (focus?.current === selection) focus.current = null } }
     val haptics = LocalHapticFeedback.current
     val handleColor = LocalTextSelectionColors.current.handleColor
     Box(modifier.onSizeChanged { areaSize = it }) {
@@ -217,11 +230,17 @@ fun SelectableArea(
             }
         }
         // Over the part on screen once the drag and the scrolling stop (Android hides its bar meanwhile)
-        if (selected && !selection.dragging && !list.isScrollInProgress) {
-            area.coordinates?.let(selection::visibleBounds)?.let { bounds ->
-                key(selection.generation) {
-                    SelectionBar(bounds, spec, areaSize, capture = selection::selectedText, dismiss = selection::clear) { sheetText = it }
-                }
+        if (selected && !selection.dragging && !list.isScrollInProgress && area.coordinates?.let { selection.visibleBounds(it, area.top) } != null) {
+            key(selection.generation) {
+                SelectionBar(
+                    bounds = { area.coordinates?.let { selection.visibleBounds(it, area.top) } },
+                    list = list,
+                    spec = spec,
+                    area = areaSize,
+                    scope = scope,
+                    capture = selection::read,
+                    dismiss = selection::clear,
+                ) { sheetText = it }
             }
         }
     }
@@ -233,56 +252,60 @@ fun SelectableArea(
 class SelectionFocus {
     internal var current: ListSelection? = null
 
+    /** Gives the reader the keys (a find or note field may hold them), so its Ctrl+C reaches a new selection. */
+    var takeFocus: () -> Unit = {}
+
     /** That selection, while something is selected in it. */
     val selection: ListSelection? get() = current?.takeIf { it.hasSelection }
+
+    /** [selection] made anew: the one of another area is let go. */
+    internal fun take(selection: ListSelection) {
+        current?.takeIf { it !== selection }?.clear()
+        current = selection
+        takeFocus()
+    }
 }
 
 /** The reader's [SelectionFocus]; null outside a reader. */
 val LocalSelectionFocus = staticCompositionLocalOf<SelectionFocus?> { null }
 
-/** The area's coordinates, which the gestures and the handles convert positions with. */
+/**
+ * The area's coordinates, which the gestures and the handles convert positions with, and [top], the room at its top
+ * that the find bar covers (px): no selection reaches under it and the edge band starts below it.
+ */
 private class AreaHolder {
     var coordinates: LayoutCoordinates? = null
+    var top: Float = 0f
 }
 
 /**
  * One end's handle, Android's drop with its point on the end's outer edge under its row; hidden while that end is off
- * screen. It takes no touches itself: [selectionGestures] finds it by [ListSelection.handleRects].
+ * screen or under the find bar. Placed when it is drawn, after the whole layout pass, so it is where the text is after
+ * a scroll. Kept inside the area, which clips it: on the last row it rises into the row, and at a side it turns
+ * inward. It takes no touches itself: [selectionGestures] finds it by [ListSelection.handleRects].
  */
 @Composable
 private fun BoxScope.SelectionHandle(selection: ListSelection, isStart: Boolean, list: LazyListState, area: AreaHolder, color: Color) {
     val index = if (isStart) 0 else 1
-    fun shown(): ListSelection.Spot? {
-        val coordinates = area.coordinates ?: return null
-        return selection.spot(isStart, coordinates)?.takeIf { it.bottom >= 0f && it.bottom <= coordinates.size.height }
-    }
     Spacer(
-        Modifier
-            .align(AbsoluteAlignment.TopLeft)
-            .layout { measurable, _ ->
-                val size = HandleSize.roundToPx()
-                val placeable = measurable.measure(Constraints.fixed(size, size))
-                layout(size, size) {
-                    list.layoutInfo // read, so the handle moves with the text as the list scrolls and lays out
-                    val spot = shown()
-                    if (spot == null) {
-                        selection.handleRects[index] = null
-                        placeable.place(0, 0)
-                    } else {
-                        val x = if (spot.outwardRight) spot.x else spot.x - size
-                        selection.handleRects[index] = Rect(x, spot.bottom, x + size, spot.bottom + size).inflate(HandleTouchMargin.toPx())
-                        placeable.place(x.roundToInt(), spot.bottom.roundToInt())
-                    }
-                }
+        Modifier.matchParentSize().drawBehind {
+            list.layoutInfo // read, so the handle is drawn again as the list scrolls and lays out
+            val handle = HandleSize.toPx()
+            val spot = area.coordinates?.let { selection.spot(isStart, it) }?.takeIf { it.bottom >= area.top && it.bottom <= size.height }
+            if (spot == null) {
+                selection.handleRects[index] = null
+                return@drawBehind
             }
-            .drawBehind {
-                list.layoutInfo
-                val spot = shown() ?: return@drawBehind
-                val r = size.width / 2f
-                drawCircle(color, r, Offset(r, r))
-                // The square corner is the point, toward the selected text
-                drawRect(color, topLeft = Offset(if (spot.outwardRight) 0f else r, 0f), size = Size(r, r))
-            },
+            var right = spot.outwardRight
+            if (right && spot.x + handle > size.width) right = false else if (!right && spot.x - handle < 0f) right = true
+            val x = (if (right) spot.x else spot.x - handle).coerceIn(0f, (size.width - handle).coerceAtLeast(0f))
+            val y = spot.bottom.coerceAtMost((size.height - handle).coerceAtLeast(0f))
+            selection.handleRects[index] = Rect(x, y, x + handle, y + handle).inflate(HandleTouchMargin.toPx())
+            val r = handle / 2f
+            drawCircle(color, r, Offset(x + r, y + r))
+            // The square corner is the point, toward the selected text
+            drawRect(color, topLeft = Offset(if (right) x else x + r, y), size = Size(r, r))
+        },
     )
 }
 
@@ -362,18 +385,19 @@ private suspend fun AwaitPointerEventScope.touchSelect(selection: ListSelection,
         return
     }
     when (withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { awaitPressEnd(down, takeMove = false) }) {
-        PressEnd.Released -> return tapped(selection, down, area, count, extend = false)
+        PressEnd.Released -> return tapped(selection, down, area, count)
         // A move is the list's scroll, a second finger its pinch
         PressEnd.Moved, PressEnd.Taken -> return clicks.reset()
         null -> clicks.reset()
     }
     val coordinates = area.coordinates ?: return
+    if (down.position.y < area.top) return // under the find bar
     val word = selection.pointAt(down.position, coordinates, exact = true)?.let(selection::wordAt) ?: return
     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
     selection.begin(word.first, word.second)
     holdDrag(selection, down, down.position, area, haptics, startMoves = false) { finger ->
         val c = area.coordinates
-        val w = c?.let { selection.pointAt(finger.within(it), it, exact = false) }?.let { p -> selection.wordAt(p) ?: (p to p) }
+        val w = c?.let { selection.pointAt(finger.within(it, area.top), it, exact = false) }?.let { p -> selection.wordAt(p) ?: (p to p) }
         when {
             w == null -> false
             w.first < word.first -> {
@@ -390,18 +414,12 @@ private suspend fun AwaitPointerEventScope.touchSelect(selection: ListSelection,
 
 /**
  * A tap or click, the [count]th in a row: the first ends a selection and stays the line's tap (as desktop's click),
- * the second selects the word, the third the whole text; with [extend] (Shift), a click moves the nearer end to it.
+ * the second selects the word, the third the whole text. (Shift+click extends nothing, as on desktop, whose
+ * SafeSelectionContainer takes it: it could reach over lines a jump never loaded.)
  */
-private fun tapped(selection: ListSelection, down: PointerInputChange, area: AreaHolder, count: Int, extend: Boolean) {
+private fun tapped(selection: ListSelection, down: PointerInputChange, area: AreaHolder, count: Int) {
     val coordinates = area.coordinates
-    val start = selection.start
-    val end = selection.end
-    if (extend && coordinates != null && start != null && end != null && selection.hasSelection) {
-        val point = selection.pointAt(down.position, coordinates, exact = false) ?: return
-        if (point < start) selection.select(point, end) else selection.select(start, point)
-        return
-    }
-    val point = if (count > 1 && coordinates != null) selection.pointAt(down.position, coordinates, exact = true) else null
+    val point = if (count > 1 && coordinates != null && down.position.y >= area.top) selection.pointAt(down.position, coordinates, exact = true) else null
     val range = when {
         point == null -> null
         count == 2 -> selection.wordAt(point)
@@ -419,30 +437,26 @@ private suspend fun AwaitPointerEventScope.dragHandle(selection: ListSelection, 
     val toPoint = Offset(spot.x, spot.bottom - 1f) - down.position
     holdDrag(selection, down, down.position, area, haptics, startMoves = isStart) { finger ->
         val c = area.coordinates
-        val p = c?.let { selection.pointAt((finger + toPoint).within(it), it, exact = false) }
+        val p = c?.let { selection.pointAt((finger + toPoint).within(it, area.top), it, exact = false) }
         if (p != null && p != fixed) selection.select(fixed, p)
         (p ?: fixed) < fixed
     }
 }
 
-/**
- * A mouse, as desktop: a drag selects from where it was pressed; clicks as [tapped], Shift+click extending the
- * selection.
- */
+/** A mouse, as desktop: a drag selects from where it was pressed; clicks as [tapped]. */
 private suspend fun AwaitPointerEventScope.mouseSelect(selection: ListSelection, down: PointerInputChange, area: AreaHolder, clicks: Clicks) {
     val count = clicks.press(down, viewConfiguration)
-    val shift = currentEvent.keyboardModifiers.isShiftPressed
     when (awaitPressEnd(down, takeMove = true)) {
-        PressEnd.Released -> tapped(selection, down, area, count, extend = shift)
+        PressEnd.Released -> tapped(selection, down, area, count)
         PressEnd.Taken -> clicks.reset()
         PressEnd.Moved -> {
             clicks.reset()
             val coordinates = area.coordinates ?: return
-            val anchor = selection.pointAt(down.position, coordinates, exact = false) ?: return
+            val anchor = selection.pointAt(down.position.within(coordinates, area.top), coordinates, exact = false) ?: return
             selection.begin(anchor, anchor)
             val from = currentEvent.changes.firstOrNull { it.id == down.id }?.position ?: down.position
             holdDrag(selection, down, from, area, haptics = null, startMoves = false) { finger ->
-                val p = area.coordinates?.let { selection.pointAt(finger.within(it), it, exact = false) }
+                val p = area.coordinates?.let { selection.pointAt(finger.within(it, area.top), it, exact = false) }
                 if (p != null) selection.select(anchor, p)
                 (p ?: anchor) < anchor
             }
@@ -467,19 +481,21 @@ private suspend fun AwaitPointerEventScope.holdDrag(
     moveTo: (Offset) -> Boolean,
 ) {
     var finger = from
+    // Touch only: a mouse shows what it selects under its pointer (desktop and Android show no magnifier for it)
+    val magnify = down.type != PointerType.Mouse
     fun apply() {
         val start = selection.start
         val end = selection.end
         val movedStart = moveTo(finger)
         if (haptics != null && (selection.start != start || selection.end != end)) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        selection.magnifier = magnifierSource(selection, area, finger, movedStart)
+        if (magnify) selection.magnifier = magnifierSource(selection, area, finger, movedStart)
     }
     val slop = viewConfiguration.touchSlop
     selection.dragging = true
     selection.redrag = ::apply
     try {
         // A press on a handle changes nothing until it moves
-        if (from != down.position) apply() else selection.magnifier = magnifierSource(selection, area, finger, startMoves)
+        if (from != down.position) apply() else if (magnify) selection.magnifier = magnifierSource(selection, area, finger, startMoves)
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -491,7 +507,7 @@ private suspend fun AwaitPointerEventScope.holdDrag(
                 // Only a move toward an edge scrolls: a finger resting in a band (a long press on the first or last
                 // row, or anywhere in half of a short pane) jitters, and a handle pulled away from the edge it starts
                 // near asks for no scroll toward it
-                val speed = edgeSpeed(finger.y, size.height)
+                val speed = edgeSpeed(finger.y - area.top, size.height - area.top.roundToInt())
                 selection.edgeSpeed = when {
                     speed < 0f && finger.y < from.y - slop -> speed
                     speed > 0f && finger.y > from.y + slop -> speed
@@ -511,13 +527,14 @@ private suspend fun AwaitPointerEventScope.holdDrag(
 /** The magnifier's source: the moved end's row, where the finger is along it; none while the finger is off the area. */
 private fun magnifierSource(selection: ListSelection, area: AreaHolder, finger: Offset, isStart: Boolean): Offset {
     val coordinates = area.coordinates ?: return Offset.Unspecified
-    if (finger.y < 0f || finger.y > coordinates.size.height) return Offset.Unspecified
+    if (finger.y < area.top || finger.y > coordinates.size.height) return Offset.Unspecified
     val spot = selection.spot(isStart, coordinates) ?: return Offset.Unspecified
     return Offset(finger.x, (spot.top + spot.bottom) / 2f)
 }
 
-private fun Offset.within(coordinates: LayoutCoordinates) =
-    Offset(x.coerceIn(0f, coordinates.size.width.toFloat()), y.coerceIn(0f, coordinates.size.height.toFloat()))
+/** This position kept inside the area and below [top] (the find bar's room): a drag past an edge picks the edge's text. */
+private fun Offset.within(coordinates: LayoutCoordinates, top: Float) =
+    Offset(x.coerceIn(0f, coordinates.size.width.toFloat()), y.coerceIn(top.coerceAtMost(coordinates.size.height.toFloat()), coordinates.size.height.toFloat()))
 
 /**
  * The edge scroll's speed for a finger at [y] in an area [height] px tall, px/s, negative toward the top: from
@@ -560,28 +577,53 @@ private suspend fun edgeScroll(selection: ListSelection, list: LazyListState) {
     }
 }
 
+/**
+ * The floating bar over the selection's part on screen ([bounds]), placed when the list is laid out so it follows a
+ * reflow (pinch zoom, the find bar opening) as the handles do. Its actions read the selection in [scope], the area's:
+ * the bar leaves the composition when the list scrolls, while the lines a long selection spans may still be read.
+ */
 @Composable
-private fun BoxScope.SelectionBar(bounds: Rect, spec: SelectionMenuSpec, area: IntSize, capture: () -> String, dismiss: () -> Unit, onMore: (String) -> Unit) {
+private fun BoxScope.SelectionBar(
+    bounds: () -> Rect?,
+    list: LazyListState,
+    spec: SelectionMenuSpec,
+    area: IntSize,
+    scope: CoroutineScope,
+    capture: suspend () -> String,
+    dismiss: () -> Unit,
+    onMore: (String) -> Unit,
+) {
     val c = Zayit.colors
     val density = LocalDensity.current
     var palette by remember { mutableStateOf(false) }
     var barSize by remember { mutableStateOf(IntSize.Zero) }
     val margin = with(density) { 8.dp.roundToPx() }
-    val x = (bounds.center.x - barSize.width / 2f).roundToInt().coerceIn(margin, (area.width - barSize.width - margin).coerceAtLeast(margin))
+    val placed = remember { IntArray(2) }
+
     // Above the selection, else below it (clear of the handles), else, when it fills the screen, over its middle: at
     // the bottom edge the bar covered the end's handle
-    val above = bounds.top - barSize.height - margin
-    val below = bounds.bottom + margin * 3
-    val y = when {
-        above >= margin -> above
-        below + barSize.height <= area.height - margin -> below
-        else -> bounds.center.y - barSize.height / 2f
-    }.roundToInt().coerceIn(margin, (area.height - barSize.height - margin).coerceAtLeast(margin))
+    fun place(): IntOffset {
+        list.layoutInfo // read, so the bar is placed again as the list lays out
+        val b = bounds() ?: return IntOffset(placed[0], placed[1])
+        val x = (b.center.x - barSize.width / 2f).roundToInt().coerceIn(margin, (area.width - barSize.width - margin).coerceAtLeast(margin))
+        val above = b.top - barSize.height - margin
+        val below = b.bottom + margin * 3
+        val y = when {
+            above >= margin -> above
+            below + barSize.height <= area.height - margin -> below
+            else -> b.center.y - barSize.height / 2f
+        }.roundToInt().coerceIn(margin, (area.height - barSize.height - margin).coerceAtLeast(margin))
+        placed[0] = x
+        placed[1] = y
+        return IntOffset(x, y)
+    }
 
     fun act(block: (String) -> Unit) {
-        val text = trimSelectionEdges(capture()).takeIf { it.isNotBlank() } ?: return
-        dismiss()
-        block(text)
+        scope.launch {
+            val text = trimSelectionEdges(capture()).takeIf { it.isNotBlank() } ?: return@launch
+            dismiss()
+            block(text)
+        }
     }
     // The palette's six swatches narrow to fit a Jelly Star's text (about 232dp) rather than losing the last ones
     val swatch = with(density) { ((area.width - 2 * margin - 4.dp.roundToPx()) / 6).toDp() }.coerceIn(32.dp, 44.dp)
@@ -589,7 +631,7 @@ private fun BoxScope.SelectionBar(bounds: Rect, spec: SelectionMenuSpec, area: I
         Modifier
             // x and y are physical (LayoutCoordinates): placed from the left edge, not mirrored in RTL as offset() is
             .align(AbsoluteAlignment.TopLeft)
-            .absoluteOffset { IntOffset(x, y) }
+            .absoluteOffset { place() }
             .onSizeChanged { barSize = it }
             .shadow(6.dp, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
