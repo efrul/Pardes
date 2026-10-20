@@ -14,7 +14,7 @@ import org.apache.lucene.util.QueryBuilder;
 
 /**
  * JVM test of the Lucene calls of the main app's search, for the Android 4.4 jar (single-file program):
- * ./run-desugared.sh ReadPath44.java <full-text index> <lookup index> [single]
+ * ./run-desugared.sh ReadPath44.java <full-text index> <lookup index> [single] [heap] [buffer=N] [skipVectors] [legacy]
  *
  * <p>The calls of app/.../android/search/LuceneSearchEngine.kt and LuceneLookupSearchService.kt, in the same shapes:
  * NIOFSDirectory, SearcherManager with a partitioned IndexSearcher on an executor (or a single one: "single", as on a
@@ -23,17 +23,34 @@ import org.apache.lucene.util.QueryBuilder;
  * and searchAfter(); then the lookup index with an LRUQueryCache and a doc-values Sort. run-desugared.sh runs it
  * with the jar and this class desugared for minSdk 19 (D8 with desugar_jdk_libs_nio), on the desugared library's
  * emulated file system as on Android 4.4. Expected figures: README.md.
+ *
+ * <p>Options after the two folders: {@code single}, one slice; {@code heap}, both directories wrapped in an
+ * AndroidHeapFilesDirectory for {@link #HEAP_EXTENSIONS}; {@code buffer=N}, the system property
+ * lucene.android.niofsBufferSize; {@code skipVectors}, lucene.android.skipVectors (the index may then lack its vector
+ * files); {@code legacy}, single, heap and skipVectors, as Pardes for Android 4.4 runs (legacy/.../data/LegacySearch.kt,
+ * which leaves the buffers at 1 KB). The figures do not change with any of them.
  */
 public class ReadPath44 {
   static boolean single;
+  static boolean heap;
+  /** As LegacySearch's HEAP_EXTENSIONS and HEAP_MAX_FILE_BYTES (Pardes for Android 4.4). */
+  static final Set<String> HEAP_EXTENSIONS = Set.of("tip", "kdi", "fdx", "tmd", "psm", "nvm", "dvm", "kdm", "fdm");
+  static final long HEAP_MAX_FILE_BYTES = 2L << 20;
   static final ExecutorService executor = Executors.newFixedThreadPool(4, r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
 
   public static void main(String[] a) throws Exception {
-    single = a.length > 2 && a[2].equals("single");
-    System.out.println("mode " + (single ? "single (cores == 1: IndexSearcher(reader))" : "partitioned (IndexSearcher(reader, executor), slices with partitions)"));
+    List<String> options = Arrays.asList(a).subList(2, a.length);
+    boolean legacy = options.contains("legacy");
+    single = legacy || options.contains("single");
+    heap = legacy || options.contains("heap");
+    for (String o : options) if (o.startsWith("buffer=")) System.setProperty("lucene.android.niofsBufferSize", o.substring(7));
+    if (legacy || options.contains("skipVectors")) System.setProperty("lucene.android.skipVectors", "true");
+    System.out.println("mode " + (single ? "single (cores == 1: IndexSearcher(reader))" : "partitioned (IndexSearcher(reader, executor), slices with partitions)")
+        + (heap ? ", heap files" : "") + ", buffer " + System.getProperty("lucene.android.niofsBufferSize", "default")
+        + (Boolean.getBoolean("lucene.android.skipVectors") ? ", vectors skipped" : ""));
     IndexSearcher.setMaxClauseCount(Math.max(IndexSearcher.getMaxClauseCount(), 4096));
     Analyzer analyzer = new StandardAnalyzer();
-    try (Directory dir = new NIOFSDirectory(Paths.get(a[0]))) {
+    try (Directory dir = open(Paths.get(a[0]))) {
       SearcherManager mgr = new SearcherManager(dir, new SearcherFactory() {
         @Override public IndexSearcher newSearcher(IndexReader reader, IndexReader prev) {
           int docsPerSlice = Math.max(1000, reader.maxDoc() / 4 + 1);
@@ -133,7 +150,7 @@ public class ReadPath44 {
       mgr.close();
     }
     // lookup index (LuceneLookupSearchService)
-    try (Directory dir = new NIOFSDirectory(Paths.get(a[1]))) {
+    try (Directory dir = open(Paths.get(a[1]))) {
       SearcherManager mgr = new SearcherManager(dir, new SearcherFactory() {
         @Override public IndexSearcher newSearcher(IndexReader reader, IndexReader prev) {
           IndexSearcher s = new IndexSearcher(reader);
@@ -159,6 +176,11 @@ public class ReadPath44 {
       mgr.close();
     }
     executor.shutdown();
+  }
+
+  static Directory open(Path path) throws IOException {
+    Directory dir = new NIOFSDirectory(path);
+    return heap ? new AndroidHeapFilesDirectory(dir, HEAP_EXTENSIONS, HEAP_MAX_FILE_BYTES) : dir;
   }
 
   static List<String> analyze(Analyzer an, String field, String text) throws IOException {

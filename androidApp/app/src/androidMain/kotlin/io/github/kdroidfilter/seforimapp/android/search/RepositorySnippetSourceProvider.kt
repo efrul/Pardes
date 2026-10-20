@@ -1,5 +1,7 @@
 // Vendored unchanged from Zayit 0.6.1: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/RepositorySnippetSourceProvider.kt
 // (tag v0.6.1). Keep it identical; Android changes belong in a variant file.
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimapp.framework.search
 
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository

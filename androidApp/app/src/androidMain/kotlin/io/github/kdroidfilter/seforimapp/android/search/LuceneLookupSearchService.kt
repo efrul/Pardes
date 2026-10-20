@@ -3,6 +3,8 @@
 // once each). Differences: the index is opened with NIOFSDirectory (FSDirectory.open picks MMapDirectory, which needs
 // java.lang.foreign, absent on Android), or the directory the caller opens (LuceneTuning.directory), and the query
 // cache is smaller for a phone heap.
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimapp.framework.search
 
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames

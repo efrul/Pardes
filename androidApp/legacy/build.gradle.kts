@@ -93,6 +93,23 @@ val sharedAppSources by tasks.registering(Sync::class) {
         include("io/github/kdroidfilter/seforimapp/android/ui/settings/LicenceTexts.kt")
         include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/OnboardingFormat.kt")
         include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/DesktopStrings.kt")
+        // The search: the desktop engine on the release's prebuilt Lucene indexes and lexical.db (data/LegacySearch.kt
+        // opens it and falls back), with its book and author lookup, acronyms, snippets and knowledge panel, and the
+        // results' and the search bar's view models and rows. LibraryStore, SplitDatabase, LexicalDb (openLexicalDb)
+        // and PreviewText are this edition's own, under the same names (src/androidMain/.../seforimapp/android), and
+        // so are AndroidX's ViewModel and Compose's @Immutable (src/*/kotlin/androidx).
+        include("io/github/kdroidfilter/seforimapp/android/search/AcronymFrequencyCache.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/LuceneLookupSearchService.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/LuceneSearchEngine.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/LuceneTuning.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/MagicDictionaryIndex.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/RepositorySnippetSourceProvider.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/SearchEntityFinder.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/SearchService.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/search/SearchViewModel.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/search/SearchBarViewModel.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/search/SearchResults.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/search/SearchBarRows.kt")
     }
     into(layout.buildDirectory.dir("generated/sharedAppSources"))
 }
@@ -250,6 +267,8 @@ android {
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
+    // hallucination_blacklist.tsv, read by LuceneSearchEngine as a class-path resource (as the main app's).
+    sourceSets["main"].resources.srcDirs(seforimLibrary.resolve("search/src/jvmMain/resources"))
     // licenses/desugar_jdk_libs-LICENSE.txt; the rest of assets/ is copied from the main app (LegacyAssets).
     sourceSets["main"].assets.srcDirs("src/androidMain/assets")
 
@@ -288,6 +307,13 @@ kotlin {
         androidMain {
             kotlin.srcDir(seforimLibrary.resolve("dao/src/androidMain/kotlin"))
             kotlin.srcDir(sharedAppSources)
+            // Desktop full-text search (Lucene), as-is, as the main app compiles it: the two files left out read SQLite
+            // through JDBC or open the index with MMapDirectory; their Android variants come with sharedAppSources.
+            kotlin.srcDir(seforimLibrary.resolve("search/src/jvmMain/kotlin"))
+            kotlin.exclude(
+                "io/github/kdroidfilter/seforimlibrary/search/LuceneSearchEngine.kt",
+                "io/github/kdroidfilter/seforimlibrary/search/MagicDictionaryIndex.kt",
+            )
             dependencies {
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.androidx.multidex)

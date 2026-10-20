@@ -2,6 +2,8 @@
 // v0.6.1): the desktop file reads seforim.db through JDBC (sqlite-jdbc, absent on Android) at the path its
 // DatabasePathProvider gives. Same queries and API; it reads the installed library with the platform SQLite, read-only
 // (or, for a database split on a FAT32 card and below Android 9, with the app's own SQLite: SplitDatabase).
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimapp.framework.search
 
 import co.touchlab.kermit.Logger

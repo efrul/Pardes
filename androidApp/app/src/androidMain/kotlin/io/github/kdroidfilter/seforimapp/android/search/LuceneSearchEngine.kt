@@ -10,6 +10,8 @@
 //  - computeFacetsCancellable: facets stop cooperatively, never by Thread.interrupt (see there);
 //  - close() also closes lexical.db (MagicDictionaryIndex.close);
 //  - Lucene's clause limit is raised to MAX_QUERY_CLAUSES: a pasted verse rewrites past the default 1024 leaf clauses.
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimlibrary.search
 
 import co.touchlab.kermit.Logger

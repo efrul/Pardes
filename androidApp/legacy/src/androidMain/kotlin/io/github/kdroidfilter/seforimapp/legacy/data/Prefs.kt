@@ -65,6 +65,19 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_LIBRARY_DIR, null)
         set(value) = sp.edit().putString(KEY_LIBRARY_DIR, value).apply()
 
+    /**
+     * Why the search last fell back from a level (LegacySearch): the library's release, this app's version code, the
+     * level that failed and what Lucene threw, as LegacySearch writes it; null when nothing failed.
+     */
+    var searchFailure: String?
+        get() = sp.getString(KEY_SEARCH_FAILURE, null)
+        set(value) = sp.edit().apply { if (value == null) remove(KEY_SEARCH_FAILURE) else putString(KEY_SEARCH_FAILURE, value) }.apply()
+
+    /** Opens the full-text index even with a heap LegacySearch finds too small for it (the user's choice). */
+    var searchIndexOnSmallHeap: Boolean
+        get() = sp.getBoolean(KEY_SEARCH_SMALL_HEAP, false)
+        set(value) = sp.edit().putBoolean(KEY_SEARCH_SMALL_HEAP, value).apply()
+
     /** Books opened lately, the latest first, each with the line it was left at. */
     val recents: List<Place> get() = readPlaces(KEY_RECENTS)
 
@@ -123,6 +136,8 @@ class Prefs(context: Context) {
         private const val KEY_WALLPAPER = "wallpaper"
         private const val KEY_COMMENTATORS = "commentators_"
         private const val KEY_LIBRARY_DIR = "library_dir"
+        private const val KEY_SEARCH_FAILURE = "search_failure"
+        private const val KEY_SEARCH_SMALL_HEAP = "search_index_small_heap"
         private const val KEY_RECENTS = "recents"
         private const val KEY_BOOKMARKS = "bookmarks"
     }

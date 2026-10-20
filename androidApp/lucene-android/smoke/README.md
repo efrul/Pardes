@@ -35,6 +35,12 @@ with `SDK_INT` 19 and the library's own emulated file system, as on Android 4.4 
   ```
   The lookup line depends on the lookup index: the subset's gives 21 hits, the release's 40. Stock lucene-core on
   a plain JVM (`java -cp lucene-core-10.5.2.jar smoke/ReadPath44.java ...`) prints the same.
+  More options, each leaving the figures the same: `heap` (both folders read through AndroidHeapFilesDirectory, the
+  terms index and the small files in the heap), `buffer=N` (`lucene.android.niofsBufferSize`), `skipVectors`
+  (`lucene.android.skipVectors`), and `legacy`, `single`, `heap` and `skipVectors` as Pardes for Android 4.4 runs
+  (legacy/.../data/LegacySearch.kt). With `skipVectors` the text index may lack its vector files
+  (`*_Lucene99HnswVectorsFormat_0.vec`, `.vex`, `.vem`, `.vemf`); without it, such an index fails to open with a
+  CorruptIndexException naming the missing file.
 - `smoke/run-desugared.sh smoke/LuceneSmoke.java <copy of seforim.db.lookup.lucene>`: the figures above, then `OK`
   after writing through NIOFSDirectory (an fsync of the directory the desugared file system cannot make,
   FSDirectory.syncMetaData) and ByteBuffersDirectory (ConcurrentHashMap.keySet() of the desugared library).

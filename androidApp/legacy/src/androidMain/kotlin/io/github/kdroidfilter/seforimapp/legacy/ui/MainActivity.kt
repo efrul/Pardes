@@ -136,6 +136,8 @@ class MainActivity : BaseActivity() {
                 showHome(opened)
                 handleLink()
                 showCatalog(opened)
+                // The search's indexes open in the background, ready for the first search
+                app.search.prepare()
             }.onFailure { error ->
                 if (error is NoLibraryException) showNoLibrary() else showError(error)
             }

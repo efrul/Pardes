@@ -2,6 +2,8 @@
 // upstream/SeforimLibrary at 381fbea), which app/build.gradle.kts excludes: the desktop file reads lexical.db through
 // JDBC (sqlite-jdbc), which Android does not have, so this one reads it with the platform SQLite, read-only. Public
 // API, lookup SQL, caches, prefetch and the expansion shape are the desktop ones.
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimlibrary.search
 
 import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase.LibraryReader

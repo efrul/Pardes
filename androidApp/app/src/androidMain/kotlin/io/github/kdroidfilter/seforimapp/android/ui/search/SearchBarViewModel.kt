@@ -1,3 +1,6 @@
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): of Compose and AndroidX
+// lifecycle only @Immutable, ViewModel, viewModelScope and ViewModelProvider.Factory, which that edition stands in for
+// (legacy/src/*/kotlin/androidx), and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug).
 package io.github.kdroidfilter.seforimapp.android.ui.search
 
 import android.util.Log

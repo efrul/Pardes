@@ -1,3 +1,5 @@
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimapp.android.ui.search
 
 import io.github.kdroidfilter.seforimapp.android.search.searchKey

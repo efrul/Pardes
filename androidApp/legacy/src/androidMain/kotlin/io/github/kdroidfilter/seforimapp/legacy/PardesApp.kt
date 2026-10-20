@@ -3,16 +3,21 @@ package io.github.kdroidfilter.seforimapp.legacy
 import android.app.Application
 import android.content.Context
 import androidx.multidex.MultiDex
+import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase
 import io.github.kdroidfilter.seforimapp.android.data.SqlVariableLimit
+import io.github.kdroidfilter.seforimapp.legacy.data.LegacySearch
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
 
-/** The app's singletons: the library and the preferences. */
+/** The app's singletons: the library, the preferences and the search. */
 class PardesApp : Application() {
     lateinit var library: Library
         private set
     lateinit var prefs: Prefs
         private set
+
+    /** The desktop search on the library's Lucene indexes, made when first asked for (it sets Lucene's properties). */
+    val search: LegacySearch by lazy { LegacySearch(this, library, prefs) }
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -26,6 +31,8 @@ class PardesApp : Application() {
         SqlVariableLimit.bindsMany = true
         prefs = Prefs(this)
         library = Library(this)
+        // The search reads seforim.db through the library's own connection (SplitDatabase, this edition's).
+        SplitDatabase.library = library
     }
 
     companion object {
