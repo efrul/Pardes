@@ -105,13 +105,13 @@ The incremental updater (`delta/`) writes new lines into the full-text index exa
 
 ## R8
 
-Lucene loads codecs and formats through `ServiceLoader` (the `META-INF/services` entries), creates attribute implementations by name, and stores some class names in the index. `app/proguard-rules.pro` keeps (each group verified by shrinking the jar and running a search; no blanket `-keep org.apache.lucene.**`):
+Lucene loads codecs and formats through `ServiceLoader` (the `META-INF/services` entries), creates attribute implementations by name, and stores some class names in the index. `androidApp/lucene-android/proguard-lucene.pro`, which both release builds list (`app/build.gradle.kts` and `legacy/build.gradle.kts`, Pardes for Android 4.4), keeps (each group verified by shrinking the jar and running a search; no blanket `-keep org.apache.lucene.**`):
 - the service types' names and their providers' names and public no-arg constructors (Codec, PostingsFormat, DocValuesFormat, KnnVectorsFormat, SortFieldProvider, TokenizerFactory);
 - analysis factories' `NAME` field and `(Map)` constructor;
 - names of `Attribute` interfaces and of `AttributeImpl` classes with their public no-arg constructor ("Cannot lookup accessible no-arg constructor for PackedTokenAttributeImpl" without it);
 - names of `Lucene90StoredFieldsFormat` and the three `PerField*Format` classes, which form keys stored in the index ("missing value for <obfuscated>.mode" without it).
 
-When search works in debug but not in release, suspect these rules first; an SPI crash usually names a codec, for example "An SPI class of type Codec with name 'Lucene104' does not exist".
+Add a new Lucene rule there, not to `app/proguard-rules.pro`, which keeps only the main jar's AndroidCompatApi33 (above) and which the Android 4.4 build does not read. When search works in debug but not in release, suspect these rules first; an SPI crash usually names a codec, for example "An SPI class of type Codec with name 'Lucene104' does not exist".
 
 ## Testing search
 
