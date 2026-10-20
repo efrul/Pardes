@@ -385,7 +385,8 @@ class SettingsActivity : BaseActivity() {
         const val SAMPLE = "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃"
 
         // The main app's About (AboutSettings ABOUT_MD), word for word, its links' texts left in place. Its thanks for
-        // Lucene and Compose and its Emoji One credit are left out: this edition has neither, nor that icon.
+        // Lucene and Compose and its Emoji One credit are left out: this edition has no Compose nor that icon, and its
+        // search does not use the Lucene it carries yet (רישיונות credits it).
         const val ABOUT_PARDES =
             "פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו " +
                 "אחראי לו ואינו נותן לו תמיכה. פרדס נבנה מהקוד הפתוח של זית 0.6.1 (רישיון AGPL-3.0), ושונה כדי לפעול באנדרואיד."

@@ -79,7 +79,8 @@ val sharedAppSources by tasks.registering(Sync::class) {
 
 /**
  * The fonts, licence texts and Home wallpapers this edition takes from the main app (assets/fonts, assets/licenses,
- * assets/home), and the repository LICENSE (AGPL-3.0 with Zayit's §7b terms), word for word, as the main app copies it.
+ * assets/home), and the repository LICENSE (AGPL-3.0 with Zayit's §7b terms) and Lucene's LICENSE.txt and NOTICE.txt
+ * (lucene-android, which Apache 2.0 §4(d) asks to ship with it), word for word, as the main app copies them.
  */
 abstract class LegacyAssets : DefaultTask() {
     @get:InputDirectory
@@ -93,6 +94,14 @@ abstract class LegacyAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val appLicence: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val luceneLicence: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val luceneNotice: RegularFileProperty
 
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -115,6 +124,8 @@ abstract class LegacyAssets : DefaultTask() {
         val licencesOut = out.resolve("licenses").apply { mkdirs() }
         licences.get().forEach { licenceDir.get().asFile.resolve(it).copyTo(licencesOut.resolve(it)) }
         appLicence.get().asFile.copyTo(licencesOut.resolve("Pardes-LICENSE.txt"))
+        luceneLicence.get().asFile.copyTo(licencesOut.resolve("Lucene-LICENSE.txt"))
+        luceneNotice.get().asFile.copyTo(licencesOut.resolve("Lucene-NOTICE.txt"))
         // The Home's wallpapers, their 960px copies (assets rather than resources: decoded once, at the view's size).
         val homeOut = out.resolve("home").apply { mkdirs() }
         wallpapers.get().forEach { wallpaperDir.get().asFile.resolve(it).copyTo(homeOut.resolve(it)) }
@@ -207,7 +218,12 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Lucene's keep rules are the main app's (lucene-android/proguard-lucene.pro): its codecs are found by name.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+                rootProject.file("lucene-android/proguard-lucene.pro"),
+            )
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
@@ -219,8 +235,13 @@ android {
 
     lint {
         // lint.xml: NewApi is not checked in the shared desktop sources, which hold code this edition never calls
-        // (catalog.pb read through java.nio.file); the release dex is checked for calls above API 19 instead (README.md).
+        // (catalog.pb read through java.nio.file); the release dex is checked for calls above API 19 instead
+        // (lucene-android/check-release-dex.sh --legacy).
         lintConfig = file("lint.xml")
+        // The API level checks only, on the generated sources too: the main app's files copied in (sharedAppSources)
+        // are written for API 26 and must not call above API 19 here.
+        checkOnly += setOf("NewApi", "InlinedApi")
+        checkGeneratedSources = true
     }
 }
 
@@ -252,6 +273,10 @@ kotlin {
                 implementation(libs.androidx.multidex)
                 // Hebrew numerals for the references (ReferenceParser), as the main app.
                 implementation(libs.hebrew.numerals)
+                // The main app's search engine, lucene-core 10.5.2, from the same sources built for minSdk 19 (jarApi19 of
+                // lucene-android/build.gradle.kts), and jsoup, which its snippets (SeforimLibrary search) and htmlparser use.
+                implementation(project(":lucene-android-api19"))
+                implementation(libs.jsoup)
             }
         }
     }
@@ -267,6 +292,8 @@ androidComponents {
             fontDir.set(mainApp.resolve("res/font"))
             licenceDir.set(mainApp.resolve("assets/licenses"))
             appLicence.set(rootDir.resolve("../LICENSE"))
+            luceneLicence.set(rootDir.resolve("lucene-android/LICENSE.txt"))
+            luceneNotice.set(rootDir.resolve("lucene-android/NOTICE.txt"))
             wallpaperDir.set(mainApp.resolve("res/drawable-nodpi"))
             wallpapers.set(listOf("homepage_wallpaper_small.jpg", "homepage_wallpaper_dark_small.jpg"))
             // The main app's default book and commentary fonts, and a cantillation font for the targum.
@@ -278,6 +305,7 @@ androidComponents {
                     "OFL-Frank-Ruhl-Libre.txt",
                     "GPL-2.0.txt",
                     "Culmus-LICENSE.txt",
+                    "jsoup-LICENSE.txt",
                 ),
             )
         }

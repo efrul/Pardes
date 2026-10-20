@@ -185,10 +185,18 @@ class TextActivity : BaseActivity() {
         private val COMPONENTS = listOf(
             Component("פרדס, זית ו־SeforimLibrary", "GNU AGPL v3 עם תנאי ייחוס נוסף", "licenses/Pardes-LICENSE.txt"),
             Component("SQLite", "נחלת הכלל (public domain), sqlite.org/copyright.html", null),
+            // As the main app's credit (LicencesSettings): the jar is lucene-android's, built for this edition (jarApi19).
+            Component(
+                "Apache Lucene 10.5.2 (The Apache Software Foundation)",
+                "$APACHE. מנוע החיפוש: lucene-core ושלוש מחלקות של lucene-analysis-common, ששונו כדי לפעול מאנדרואיד 4.4.",
+                "licenses/Lucene-LICENSE.txt",
+            ),
+            Component("Apache Lucene: NOTICE", "Copyright 2001-2025 The Apache Software Foundation", "licenses/Lucene-NOTICE.txt"),
             Component("Kotlin, kotlinx.coroutines ו־kotlinx.serialization (JetBrains)", APACHE, "licenses/Apache-2.0.txt"),
             Component("SQLDelight (Cash App)", APACHE, "licenses/Apache-2.0.txt"),
             Component("Kermit (Touchlab)", APACHE, "licenses/Apache-2.0.txt"),
             Component("HebrewNumerals (kdroidFilter)", APACHE, "licenses/Apache-2.0.txt"),
+            Component("jsoup (Jonathan Hedley)", "MIT", "licenses/jsoup-LICENSE.txt"),
             Component("AndroidX Multidex (Google)", APACHE, "licenses/Apache-2.0.txt"),
             Component("desugar_jdk_libs (Google, מ־OpenJDK)", "GNU GPL v2 עם חריגת Classpath", "licenses/desugar_jdk_libs-LICENSE.txt"),
             Component("Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),
