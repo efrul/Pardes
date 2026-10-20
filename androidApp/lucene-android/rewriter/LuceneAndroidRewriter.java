@@ -4,6 +4,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.TreeSet;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -26,11 +28,18 @@ import org.objectweb.asm.commons.Remapper;
 /**
  * Turns the lucene-core jar into one that links on Android 8.0 (API 26), see ../build.gradle.kts.
  *
- * <p>Usage: {@code LuceneAndroidRewriter <lucene-core.jar> <patched classes dir> <out dir>
- * <out MANIFEST.MF> [<extra jar> <class,class,...>]...}. Every entry of the original jar is copied to the out dir except: classes
- * whose top-level class was rebuilt from src/main/java (replaced), classes that can never load on
- * ART (stripped), and the manifest (handed to the Jar task). Copied classes get the call-site
- * rewrites below; classes without a match are copied byte for byte.
+ * <p>Usage: {@code LuceneAndroidRewriter [--api19] <lucene-core.jar> <patched classes dir> <out dir>
+ * <out MANIFEST.MF> [<extra jar> <class,class,...>]...}. Every entry of the original jar is copied
+ * to the out dir except: classes whose top-level class was rebuilt from src/main/java (replaced),
+ * classes that can never load on ART (stripped), and the manifest (handed to the Jar task). Copied
+ * classes get the call-site rewrites below; classes without a match are copied byte for byte.
+ *
+ * <p>{@code --api19} is the mode of the Android 4.4 edition's jar (jarApi19, minSdk 19, with core
+ * library desugaring): on top of the rewrites of the main jar, the API 24 types that
+ * desugar_jdk_libs does not add ({@link #API19_TYPES}), the ConcurrentHashMap.keySet() call that
+ * has no target in the desugared library ({@link #CHM_KEY_SET}), and the @FunctionalInterface
+ * annotations ({@link #FUNCTIONAL_INTERFACE}). The main jar does not get them: the app's classes
+ * stay as they were on Android 8.0 and later.
  */
 public final class LuceneAndroidRewriter {
 
@@ -62,6 +71,18 @@ public final class LuceneAndroidRewriter {
           "java/util/HexFormat", "org/apache/lucene/util/CompatHexFormat", // API 34
           "java/lang/Runtime$Version", "org/apache/lucene/util/CompatRuntimeVersion", // never on ART
           VAR_HANDLE, COMPAT_VAR_HANDLE); // API 33
+
+  /**
+   * --api19 only: the API 24 types that core library desugaring (desugar_jdk_libs_nio) does not add,
+   * what the Android 4.4 edition (minSdk 19) still lacks; their look-alikes are in src/api19/java.
+   */
+  private static final Map<String, String> API19_TYPES =
+      Map.of(
+          "java/util/concurrent/atomic/LongAdder", "org/apache/lucene/util/CompatLongAdder",
+          "java/util/concurrent/atomic/LongAccumulator", "org/apache/lucene/util/CompatLongAccumulator",
+          "java/util/SplittableRandom", "org/apache/lucene/util/CompatSplittableRandom",
+          "java/util/concurrent/CompletableFuture", "org/apache/lucene/util/CompatCompletableFuture",
+          "java/util/concurrent/CompletionException", "org/apache/lucene/util/CompatCompletionException");
 
   private static final String COMPAT = "org/apache/lucene/util/AndroidCompat";
 
@@ -151,6 +172,30 @@ public final class LuceneAndroidRewriter {
 
   private static final String PRINT_STREAM_NAME = "(Ljava/io/OutputStream;ZLjava/lang/String;)V";
 
+  /**
+   * --api19 only: {@code ConcurrentHashMap.keySet()} declared as Java 8 does, returning {@code
+   * KeySetView}. Below API 24 core library desugaring (the minSdk 19 edition) retargets
+   * ConcurrentHashMap to its own copy, whose keySet() returns Set only: the call has no target there
+   * (NoSuchMethodError, ByteBuffersDirectory.listAll). It becomes {@code Map.keySet()} plus a cast
+   * back to KeySetView, which the object is on every level (the platform's from API 24, the
+   * desugared library's below), so the calls that follow on the view stay as they are.
+   */
+  private static final String CHM_KEY_SET =
+      "java/util/concurrent/ConcurrentHashMap.keySet()Ljava/util/concurrent/ConcurrentHashMap$KeySetView;";
+
+  /**
+   * --api19 only: the annotation dropped from Lucene's interfaces. It is API 24 and nothing reads it
+   * at run time; on Android 4.4 to 6 it named a class Dalvik lacks, which leaves each interface
+   * unverified by dexopt.
+   */
+  private static final String FUNCTIONAL_INTERFACE = "Ljava/lang/FunctionalInterface;";
+
+  /** --api19: the Android 4.4 jar's rewrites on top of the main jar's. */
+  private final boolean api19;
+
+  /** {@link #TYPES}, plus {@link #API19_TYPES} with --api19. */
+  private final Map<String, String> types;
+
   private static Map.Entry<String, String[]> call(
       String jdk, String owner, String name, String desc) {
     return Map.entry(jdk, new String[] {owner, name, desc});
@@ -182,13 +227,28 @@ public final class LuceneAndroidRewriter {
 
   private final Map<String, Set<String>> rewrites = new TreeMap<>();
 
+  private LuceneAndroidRewriter(boolean api19) {
+    this.api19 = api19;
+    if (api19) {
+      final Map<String, String> all = new TreeMap<>(TYPES);
+      all.putAll(API19_TYPES);
+      this.types = Collections.unmodifiableMap(all);
+    } else {
+      this.types = TYPES;
+    }
+  }
+
   public static void main(String[] args) throws IOException {
+    final boolean api19 = args.length > 0 && args[0].equals("--api19");
+    if (api19) {
+      args = Arrays.copyOfRange(args, 1, args.length);
+    }
     if (args.length < 4 || args.length % 2 != 0) {
       throw new IllegalArgumentException(
-          "usage: LuceneAndroidRewriter <lucene-core.jar> <patched classes> <out dir> <out manifest>"
+          "usage: LuceneAndroidRewriter [--api19] <lucene-core.jar> <patched classes> <out dir> <out manifest>"
               + " [<extra jar> <class,class,...>]...");
     }
-    final LuceneAndroidRewriter rewriter = new LuceneAndroidRewriter();
+    final LuceneAndroidRewriter rewriter = new LuceneAndroidRewriter(api19);
     rewriter.run(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), Path.of(args[3]));
     for (int i = 4; i < args.length; i += 2) {
       rewriter.copyExtra(Path.of(args[i]), List.of(args[i + 1].split(",")), Path.of(args[2]));
@@ -281,7 +341,8 @@ public final class LuceneAndroidRewriter {
     }
     final Set<String> added = new TreeSet<>(patched);
     replaced.forEach(c -> added.remove(c.contains("$") ? c.substring(0, c.indexOf('$')) : c));
-    System.out.println("lucene-android: " + copied + " entries copied from " + jar.getFileName());
+    System.out.println(
+        "lucene-android" + (api19 ? " (--api19)" : "") + ": " + copied + " entries copied from " + jar.getFileName());
     System.out.println("  replaced from src/main/java: " + replaced);
     System.out.println("  added from src/main/java: " + added);
     System.out.println("  stripped (" + stripped.size() + "): " + summarize(stripped));
@@ -295,7 +356,7 @@ public final class LuceneAndroidRewriter {
         new Remapper(Opcodes.ASM9) {
           @Override
           public String map(String internalName) {
-            final String target = TYPES.get(internalName);
+            final String target = types.get(internalName);
             if (target == null) {
               return internalName;
             }
@@ -310,9 +371,18 @@ public final class LuceneAndroidRewriter {
           public void visitInnerClass(String name, String outer, String inner, int access) {
             // The InnerClasses entry of a remapped JDK nested type (Runtime$Version) would make
             // its replacement look like a member of java.lang.Runtime.
-            if (!TYPES.containsKey(name)) {
+            if (!types.containsKey(name)) {
               super.visitInnerClass(name, outer, inner, access);
             }
+          }
+
+          @Override
+          public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+            if (api19 && descriptor.equals(FUNCTIONAL_INTERFACE)) {
+              hits.add("@java.lang.FunctionalInterface dropped");
+              return null;
+            }
+            return super.visitAnnotation(descriptor, visible);
           }
 
           @Override
@@ -333,6 +403,12 @@ public final class LuceneAndroidRewriter {
                       Opcodes.INVOKEVIRTUAL,
                       "java/nio/charset/Charset", "name", "()Ljava/lang/String;", false);
                   super.visitMethodInsn(opcode, owner, name, PRINT_STREAM_NAME, false);
+                } else if (api19 && (owner + "." + name + desc).equals(CHM_KEY_SET)) {
+                  hits.add("java.util.concurrent.ConcurrentHashMap.keySet() -> Map.keySet() + checkcast");
+                  super.visitMethodInsn(
+                      Opcodes.INVOKEINTERFACE, "java/util/Map", "keySet", "()Ljava/util/Set;", true);
+                  super.visitTypeInsn(
+                      Opcodes.CHECKCAST, "java/util/concurrent/ConcurrentHashMap$KeySetView");
                 } else if (target == null) {
                   // The VarHandle type is remapped as a whole: a JDK call on or with a VarHandle
                   // without a stand-in would call a CompatVarHandle method that does not exist.

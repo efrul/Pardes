@@ -16,9 +16,6 @@
  */
 package org.apache.lucene.util;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -36,14 +33,17 @@ public abstract class AttributeFactory {
   public abstract AttributeImpl createAttributeInstance(Class<? extends Attribute> attClass)
       throws UndeclaredThrowableException;
 
-  /** Returns a correctly typed {@link MethodHandle} for the no-arg ctor of the given class. */
-  static final MethodHandle findAttributeImplCtor(Class<? extends AttributeImpl> clazz) {
-    try {
-      return lookup.findConstructor(clazz, NO_ARG_CTOR).asType(NO_ARG_RETURNING_ATTRIBUTEIMPL);
-    } catch (NoSuchMethodException | IllegalAccessException e) {
-      throw new IllegalArgumentException(
-          "Cannot lookup accessible no-arg constructor for: " + clazz.getName(), e);
-    }
+  // Android: java.lang.invoke is API 26, so the lookup, its two MethodTypes and the invokeExact
+  // calls are in AndroidCompatMethodHandles, which only the API 30+ path loads, and the handle
+  // travels as an Object. As static fields here they made AttributeFactory's static initializer
+  // throw NoClassDefFoundError on Android 4.4-7.1 (no TokenStream, no analyzer); and D8 cannot dex
+  // invokeExact below API 26, so the Android 4.4 jar replaces that one class with a stub.
+  /**
+   * Returns a correctly typed {@link java.lang.invoke.MethodHandle} for the no-arg ctor of the
+   * given class.
+   */
+  static final Object findAttributeImplCtor(Class<? extends AttributeImpl> clazz) {
+    return AndroidCompatMethodHandles.findAttributeImplCtor(clazz);
   }
 
   // Android: below API 30 (AndroidCompat.API_30 false) the attributes come from their reflected
@@ -79,11 +79,6 @@ public abstract class AttributeFactory {
     }
   }
 
-  private static final MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-  private static final MethodType NO_ARG_CTOR = MethodType.methodType(void.class);
-  private static final MethodType NO_ARG_RETURNING_ATTRIBUTEIMPL =
-      MethodType.methodType(AttributeImpl.class);
-
   /**
    * This is the default factory that creates {@link AttributeImpl}s using the class name of the
    * supplied {@link Attribute} interface class by appending <code>Impl</code> to it.
@@ -91,11 +86,12 @@ public abstract class AttributeFactory {
   public static final AttributeFactory DEFAULT_ATTRIBUTE_FACTORY = new DefaultAttributeFactory();
 
   private static final class DefaultAttributeFactory extends AttributeFactory {
-    // Android: CompatClassValue, as the rewriter maps ClassValue (API 34) in the classes it copies.
-    private final CompatClassValue<MethodHandle> constructors =
-        new CompatClassValue<MethodHandle>() {
+    // Android: CompatClassValue, as the rewriter maps ClassValue (API 34) in the classes it copies;
+    // the handles as Objects (see findAttributeImplCtor).
+    private final CompatClassValue<Object> constructors =
+        new CompatClassValue<Object>() {
           @Override
-          protected MethodHandle computeValue(Class<?> attClass) {
+          protected Object computeValue(Class<?> attClass) {
             return findAttributeImplCtor(findImplClass(attClass.asSubclass(Attribute.class)));
           }
         };
@@ -119,7 +115,8 @@ public abstract class AttributeFactory {
         return newAttributeImpl(reflectedConstructors.get(attClass));
       }
       try {
-        return (AttributeImpl) constructors.get(attClass).invokeExact();
+        // Android: (AttributeImpl) handle.invokeExact(), see findAttributeImplCtor.
+        return AndroidCompatMethodHandles.newInstance(constructors.get(attClass));
       } catch (Error | RuntimeException e) {
         throw e;
       } catch (Throwable e) {
@@ -192,7 +189,7 @@ public abstract class AttributeFactory {
    * specific {@code AttributeImpl} which combines multiple attributes over separate classes.
    *
    * <p>Please save instances created by this method in a static final field, because on each call,
-   * this does reflection for creating a {@link MethodHandle}.
+   * this does reflection for creating a {@link java.lang.invoke.MethodHandle}.
    */
   public static <A extends AttributeImpl> AttributeFactory getStaticImplementation(
       AttributeFactory delegate, Class<A> clazz) {
@@ -207,14 +204,15 @@ public abstract class AttributeFactory {
         }
       };
     }
-    final MethodHandle constr = findAttributeImplCtor(clazz);
+    final Object constr = findAttributeImplCtor(clazz);
     return new StaticImplementationAttributeFactory<A>(delegate, clazz) {
       @Override
       @SuppressWarnings("unchecked")
       protected A createInstance() {
         try {
           // be explicit with casting, so javac compiles correct call to polymorphic signature:
-          final AttributeImpl impl = (AttributeImpl) constr.invokeExact();
+          // Android: (AttributeImpl) constr.invokeExact(), see findAttributeImplCtor.
+          final AttributeImpl impl = AndroidCompatMethodHandles.newInstance(constr);
           // now cast to generic type:
           return (A) impl;
         } catch (Error | RuntimeException e) {

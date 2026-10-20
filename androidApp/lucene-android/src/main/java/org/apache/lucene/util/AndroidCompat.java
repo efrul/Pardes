@@ -49,18 +49,23 @@ public final class AndroidCompat {
   /**
    * True on Android 13 (API 33) and later, and on a JVM (there is no android.os.Build): the JDK
    * methods of {@link AndroidCompatApi33} exist. android.os.Build is read reflectively, once,
-   * because this jar is built without android.jar.
+   * because this jar is built without android.jar. Always false in the Android 4.4 jar ({@link
+   * AndroidCompatFlags#polymorphicCalls}), whose AndroidCompatApi33 is a stub, even where that
+   * edition runs on Android 13.
    */
-  static final boolean API_33 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 33;
+  static final boolean API_33 =
+      !Boolean.getBoolean(FORCE_FALLBACKS) && AndroidCompatFlags.polymorphicCalls() && sdkInt() >= 33;
 
   /**
    * True on Android 11 (API 30) and later, and on a JVM: a constructor's MethodHandle may be given
    * another return type with asType. The ART of Android 8 and 9 creates the instance from the
    * handle's type (seen on the API 26 and 28 emulators; Android 10 was not checked, so it is treated
    * the same), so there AttributeFactory uses the reflected constructor instead. {@link
-   * #FORCE_FALLBACKS} makes it false too.
+   * #FORCE_FALLBACKS} makes it false too, and so does the Android 4.4 jar, whose
+   * AndroidCompatMethodHandles is a stub.
    */
-  static final boolean API_30 = !Boolean.getBoolean(FORCE_FALLBACKS) && sdkInt() >= 30;
+  static final boolean API_30 =
+      !Boolean.getBoolean(FORCE_FALLBACKS) && AndroidCompatFlags.polymorphicCalls() && sdkInt() >= 30;
 
   private static int sdkInt() {
     final Class<?> version;

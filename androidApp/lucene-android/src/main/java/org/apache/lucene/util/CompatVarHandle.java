@@ -4,7 +4,6 @@
  */
 package org.apache.lucene.util;
 
-import java.lang.invoke.WrongMethodTypeException;
 import java.nio.ByteOrder;
 
 /**
@@ -244,8 +243,13 @@ public final class CompatVarHandle {
     }
   }
 
-  private WrongMethodTypeException wrongType(String callType) {
-    return new WrongMethodTypeException(
+  // Android: the WrongMethodTypeException (API 26) comes from AndroidCompatMethodHandles, typed RuntimeException here.
+  // Dalvik (Android 4.4) types a value of a class it cannot resolve as java.lang.Object, and "throw" of an Object
+  // rejects the whole class (VerifyError), so every byte-array view of BitUtil would fail there; and dexopt leaves a
+  // class that names a missing class unverified and unoptimized, to verify at every start. Only a wrong view/call type
+  // reaches this, never Lucene.
+  private RuntimeException wrongType(String callType) {
+    return AndroidCompatMethodHandles.wrongMethodType(
         "cannot convert " + viewArrayClass.getSimpleName() + " view to " + callType);
   }
 }

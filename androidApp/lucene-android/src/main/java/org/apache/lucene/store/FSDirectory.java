@@ -271,7 +271,16 @@ public abstract class FSDirectory extends BaseDirectory {
   public void syncMetaData() throws IOException {
     // TODO: to improve listCommits(), IndexFileDeleter could call this after deleting segments_Ns
     ensureOpen();
-    IOUtils.fsync(directory, true);
+    // Android: below API 26 java.nio.file comes from the desugared library (desugar_jdk_libs_nio), whose FileChannel
+    // is a RandomAccessFile, and Android's RandomAccessFile refuses a directory (FileNotFoundException, EISDIR): the
+    // directory cannot be fsynced there, as on Windows (IOUtils.fsync), so IndexWriter.commit must not fail on it.
+    try {
+      IOUtils.fsync(directory, true);
+    } catch (FileNotFoundException e) {
+      if (!Files.isDirectory(directory)) {
+        throw e;
+      }
+    }
     maybeDeletePendingFiles();
   }
 
