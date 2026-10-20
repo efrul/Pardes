@@ -34,7 +34,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tan
 
-// Desktop 0.6.1 features/home/widgets/sky/SkyWidget.kt and earthwidget SkyWidgetView.kt, in 2D: desktop shades the air
+// Desktop 0.6.7 features/home/widgets/sky/SkyWidget.kt and earthwidget SkyWidgetView.kt, in 2D: desktop shades the air
 // with a scattering shader (Skia SkSL) over a Filament scene. Android keeps desktop's camera and what it shows (the
 // same aim: the Sun while any of its light is left, the Moon in full night if it is up, else the south; the stars of
 // the HYG catalogue turning with the night; the day's path of the Sun with its rise, highest point and set), on a sky

@@ -73,8 +73,8 @@ data class SearchBarUiState(
 
 /**
  * The smart search bar's state: books, authors and references suggested as the user types, the picked book's TOC,
- * and where a text search runs. Port of desktop 0.6.1 features/search/SearchHomeViewModel.kt (one per Home tab and
- * one per results tab, as desktop TabsContent's "search-bar" ViewModel), with the 0.6.2 fix 90552dbc (author
+ * and where a text search runs. Port of desktop 0.6.7 features/search/SearchHomeViewModel.kt (one per Home tab and
+ * one per results tab, as desktop TabsContent's "search-bar" ViewModel): 0.6.1's with the 0.6.2 fix 90552dbc (author
  * suggestions kept only when typed word by word) and the 0.6.5 commits 1723de06 and 9e3d19a8 (a picked author is a
  * search scope: the text is searched in all their books; a restored tab searches there before the chip has loaded);
  * the navigation it emits there is done by the caller here with what

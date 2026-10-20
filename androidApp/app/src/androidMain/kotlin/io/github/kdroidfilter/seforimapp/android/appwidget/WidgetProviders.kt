@@ -8,7 +8,7 @@ import android.content.Intent
 import android.os.Bundle
 
 /**
- * The launcher (home-screen) widgets: Android only, desktop 0.6.1 has no OS widgets. Each one shows what a widget of
+ * The launcher (home-screen) widgets: Android only, desktop 0.6.7 has no OS widgets. Each one shows what a widget of
  * the app's Home shows (desktop features/home/widgets, ported in ui/home/widgets), drawn as RemoteViews by
  * [ZayitWidgets] from the same data/ functions. No polling (updatePeriodMillis 0): a broadcast only hands its widgets
  * over, the work runs off the main thread while the broadcast is kept alive ([goAsync]) for a bounded time.

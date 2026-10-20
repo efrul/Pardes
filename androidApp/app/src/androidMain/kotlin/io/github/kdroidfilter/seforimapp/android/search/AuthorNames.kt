@@ -1,5 +1,6 @@
-// Vendored from Zayit 0.6.1: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt
-// (tag v0.6.1), with the 0.6.2 fix 90552dbc applied as is. Keep it identical; Android changes belong in a variant file.
+// Vendored from Zayit 0.6.7: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt
+// (tag v0.6.7: 0.6.1's with the 0.6.2 fix 90552dbc, its only change since). Keep it identical; Android changes belong
+// in a variant file.
 package io.github.kdroidfilter.seforimapp.features.search.domain
 
 /**

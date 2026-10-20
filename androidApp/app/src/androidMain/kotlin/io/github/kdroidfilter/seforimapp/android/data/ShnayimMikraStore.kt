@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * The aliyos read of each parsha, by Hebrew year, in the user DB (table shnayim_mikra_aliya, shared with desktop);
- * [revision] bumps on every write. Verbatim port of desktop 0.6.1 core/shnayimmikra/ShnayimMikraStore.kt.
+ * [revision] bumps on every write. Verbatim port of desktop 0.6.7 core/shnayimmikra/ShnayimMikraStore.kt.
  */
 class ShnayimMikraStore(
     database: UserSettingsDb,

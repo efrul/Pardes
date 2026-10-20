@@ -84,7 +84,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Desktop 0.6.1 strings (composeResources/values/strings.xml).
+// Desktop 0.6.7 strings (composeResources/values/strings.xml).
 private const val AUTHOR_BOOKS = "ספרים במאגר"
 private const val AUTHOR_INFO_ERA = "תקופה"
 private const val AUTHOR_INFO_YEARS = "שנים"
@@ -105,7 +105,7 @@ private const val NAME_SCALE = 1.75f
 private const val LINE_SPACING = 1.75f
 
 /**
- * An author's page, port of desktop 0.6.1 features/author/AuthorScreen.kt: the name, the era and years, the
+ * An author's page, port of desktop 0.6.7 features/author/AuthorScreen.kt: the name, the era and years, the
  * biography (its summary as the lead, its sections, the AI notice) at the app's text size, the author's books by
  * category, and the aliases, the biography's sources and its license. Laid out like a book's page on desktop: from
  * [WideLayout] the books pane at the start, the text, the info pane at the end; on a tablet below that, the books

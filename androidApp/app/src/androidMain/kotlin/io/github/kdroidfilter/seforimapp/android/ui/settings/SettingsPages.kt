@@ -57,7 +57,7 @@ import io.github.kdroidfilter.seforimapp.android.update.AppUpdateStrings
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 
 /*
- * The pages of desktop 0.6.1's settings window (features/settings/ui): GeneralSettingsScreen, DisplaySettingsScreen,
+ * The pages of desktop 0.6.7's settings window (features/settings/ui): GeneralSettingsScreen, DisplaySettingsScreen,
  * ProfileSettingsScreen and FontsSettingsScreen. DataSettings.kt and AboutSettings.kt hold the other three.
  */
 

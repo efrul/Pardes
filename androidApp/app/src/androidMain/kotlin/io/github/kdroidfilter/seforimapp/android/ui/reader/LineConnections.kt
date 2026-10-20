@@ -29,7 +29,7 @@ data class LineConnectionsSnapshot(
 }
 
 /**
- * The connections of the book's lines, as desktop 0.6.1 CommentariesUseCase computes them (computeLineConnections,
+ * The connections of the book's lines, as desktop 0.6.7 CommentariesUseCase computes them (computeLineConnections,
  * resolveBaseLineResolution, filterTargumConnections, buildLineConnectionsSnapshot, buildSourceMap): a heading line
  * stands for up to 128 lines of its TOC section (its targum then only the default one), commentators are grouped and
  * ranked by [CommentatorGrouping] under their sanitized names. Cached per line (LRU of 512).

@@ -66,7 +66,7 @@ import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
-// Port of desktop 0.6.1 luach/LuachMonth.kt and LuachPopup.kt: a month of the luach, Hebrew or civil, the Calendar
+// Port of desktop 0.6.7 luach/LuachMonth.kt and LuachPopup.kt: a month of the luach, Hebrew or civil, the Calendar
 // widget's and the day picker of the tools, the siddur and the Earth widget. The picker is a bottom sheet on a phone,
 // a popup under its anchor on a tablet.
 

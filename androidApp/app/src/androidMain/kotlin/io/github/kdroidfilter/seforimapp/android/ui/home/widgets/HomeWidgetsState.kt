@@ -37,7 +37,7 @@ import java.util.Date
 
 /**
  * What the Home widgets share: the day and moment they show, and where. A zman card sets [targetTime], the Earth
- * widget [selectDate] / [selectLocation], and every widget follows. Port of desktop 0.6.1
+ * widget [selectDate] / [selectLocation], and every widget follows. Port of desktop 0.6.7
  * features/home/widgets/HomeWidgetsState.kt; the user's place and community are kept up to date by
  * [rememberHomeWidgetsState] (desktop builds a new state when they change), and the tools share one state for the app
  * (desktop ToolWindows' rememberToolsState), so a day picked in the calendar moves the limud, the tefila and the rest.

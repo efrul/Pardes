@@ -10,7 +10,7 @@ import io.github.kdroidfilter.seforimapp.android.delta.queryWide
 import java.nio.file.Path
 
 /**
- * Android variant of SeforimLibrary (381fbea) `delta-updater/.../LuceneUpdater.kt`, the read side of the Lucene delta:
+ * Android variant of SeforimLibrary (7ddf045) `delta-updater/.../LuceneUpdater.kt`, the read side of the Lucene delta:
  *  - `patch.delete_line.id` → [DeleteSink.deleteLineById];
  *  - `patch.upsert_line.*` → [UpsertSink.upsertLine];
  *  - books in `upsert_book` without any `upsert_line` (metadata-only changes) → every line of theirs from the live

@@ -36,7 +36,7 @@ class ShellKeyActions(
 )
 
 /**
- * The desktop window shortcuts (0.6.1 core/presentation/window/MainAppWindow.kt 350-470) and the zoom and find keys
+ * The desktop window shortcuts (0.6.7 core/presentation/window/MainAppWindow.kt 361-481) and the zoom and find keys
  * of core/presentation/utils/WindowUtils.kt processKeyShortcuts, without the macOS variants. Ctrl+N makes a new
  * workspace, as Ctrl+Alt+N (one window on Android). Returns true when the key was used.
  */

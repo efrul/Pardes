@@ -1,5 +1,5 @@
-// Vendored unchanged from desktop Zayit 0.6.1 htmlparser/src/commonMain (citation hrefs, plainTextFromHtml); the
-// fork's ../htmlparser predates them. Android only: the desktop build keeps compiling ../htmlparser.
+// Vendored unchanged from desktop Zayit 0.6.7 htmlparser/src/commonMain (citation hrefs, plainTextFromHtml; the same
+// since 0.6.1). Android only: the desktop build compiles ../htmlparser, now the same file.
 package io.github.kdroidfilter.seforim.htmlparser
 
 import org.jsoup.Jsoup

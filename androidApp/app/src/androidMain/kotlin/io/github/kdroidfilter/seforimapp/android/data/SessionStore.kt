@@ -12,7 +12,7 @@ import java.io.File
 
 /**
  * The navigation session: every workspace with its tabs (titles, pins), the selected ones, and each tab's reading
- * position. The Android subset of desktop 0.6.1 framework/session/SessionModels.kt `DesktopsState`
+ * position. The Android subset of desktop 0.6.7 framework/session/SessionModels.kt `DesktopsState`
  * (desktops, activeDesktopId, snapshots, tabStates).
  */
 @Serializable

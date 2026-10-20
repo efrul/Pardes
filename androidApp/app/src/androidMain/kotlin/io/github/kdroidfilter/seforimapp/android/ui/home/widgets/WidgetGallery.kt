@@ -81,7 +81,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-// Port of desktop 0.6.1 features/home/widgets/WidgetGallery.kt and WidgetOptionsDialog.kt for touch: the gallery panel
+// Port of desktop 0.6.7 features/home/widgets/WidgetGallery.kt and WidgetOptionsDialog.kt for touch: the gallery panel
 // over the bottom of the Home (a tap adds a widget in the first vacant area), the pencil that opens it, the undo bar,
 // and a widget's options (a bottom sheet on a phone, a dialog of desktop's size on a tablet). Android only: the compact
 // page opens the edit mode from a button in its flow (no pencil over its widgets), and on a short screen the gallery

@@ -232,7 +232,8 @@ private fun stripLabel(tab: Tab): String = if (tab.destination == Destination.Ho
 
 /**
  * Tablet title bar, like the desktop custom title bar (MainTitleBar + TabsView + TitleBarActionsButtonsView): the tab
- * strip (scrolling, the shown tab kept in view, "+" after the last tab), the workspace switcher, then home, find in
+ * strip (scrolling, the shown tab kept in view, "+" after the last tab; desktop 0.6.5's "עוד N" chip for the tabs that
+ * no longer fit, ec91acdc, is left out on purpose: PARITY.md), the workspace switcher, then home, find in
  * page, favorites, tab search & history, tools, theme and settings. A long press on a tab opens its menu, on "+" the
  * reopen-closed-tab item, and on any button its tooltip.
  */
@@ -321,8 +322,8 @@ private fun TabStrip(state: AppUiState, appVm: AppViewModel, modifier: Modifier)
                 onClick = { appVm.selectTab(i) },
                 onClose = { appVm.closeTab(i) },
                 menuItems = { tabMenuItems(context, appVm, i, vertical = false) },
-                // Pin, unpin, reorder and reopen slide a tab to its new place; a new tab grows in place (desktop 0.6.5
-                // a991be12, a009b0d4)
+                // Pin, unpin and reopen slide a tab to its new place; a new tab grows in place (desktop 0.6.5
+                // a991be12, a009b0d4; 0.6.7 f8057ed1)
                 modifier = Modifier.animateItem(),
             )
         }

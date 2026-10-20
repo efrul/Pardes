@@ -3,7 +3,7 @@ package io.github.kdroidfilter.seforimlibrary.common.patch
 import android.database.sqlite.SQLiteDatabase
 
 /**
- * Android variant of SeforimLibrary (381fbea) `generator/common/.../patch/PatchDbSchema.kt`: the part the client uses,
+ * Android variant of SeforimLibrary (7ddf045) `generator/common/.../patch/PatchDbSchema.kt`: the part the client uses,
  * [CURRENT_VERSION] and [readTableInfo], read through android.database instead of JDBC. The DDL that creates a
  * patch.db belongs to the producer and stays on the desktop side. [ColumnInfo.pk] is added for the hasher's paging.
  */
