@@ -125,6 +125,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
@@ -226,6 +229,14 @@ fun ReaderScreen(
                 }
         }
         LaunchedEffect(session) { session.findRequests.collect { vm.openFind() } }
+
+        // The reading time (data/ReadingTime.kt, for the Home's learning split): while the tab is in front and the app on screen
+        val resumed = LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(Lifecycle.State.RESUMED)
+        val readingBookId = state.book?.id
+        val reading = readingBookId != null && session.isFront && resumed
+        LaunchedEffect(readingBookId, reading) {
+            if (reading && readingBookId != null) app.userData.readingTime.track(readingBookId)
+        }
     }
 
     // Citation links (seforim://line/<id>) open their line in a new tab; any other link goes to the system
