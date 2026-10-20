@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Bundle
-import android.text.format.Formatter
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -14,10 +13,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
+import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.BookFont
-import io.github.kdroidfilter.seforimapp.legacy.data.Diacritics
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
+import io.github.kdroidfilter.seforimapp.legacy.data.label
 import io.github.kdroidfilter.seforimapp.legacy.db.NativeSqlite
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -212,7 +213,7 @@ class SettingsActivity : BaseActivity() {
             prefs.bookFont = fonts[i]
             update()
         })
-        val modes = Diacritics.entries
+        val modes = DiacriticsMode.entries
         val marks = card(body, "ניקוד וטעמים")
         marks.addView(choiceChips(modes.map { it.label }, modes.indexOf(prefs.diacritics)) { i ->
             prefs.diacritics = modes[i]
@@ -284,7 +285,7 @@ class SettingsActivity : BaseActivity() {
                 append("מיקום: ").append(Bidi.ltr(file.parent ?: "")).append('\n')
                 val chunks = generateSequence(1) { it + 1 }.map { File(file.path + String.format(java.util.Locale.ROOT, "%03d", it)) }.takeWhile { it.isFile }.toList()
                 val size = file.length() + chunks.sumOf { it.length() }
-                append("גודל המאגר: ").append(Bidi.ltr(Formatter.formatFileSize(this@SettingsActivity, size)))
+                append("גודל המאגר: ").append(formatBytes(size))
                 if (chunks.isNotEmpty()) append(" (מחולק ל־${chunks.size + 1} קבצים)")
                 append('\n')
                 File(file.parentFile, "release_info.txt").takeIf { it.isFile }?.readText()?.trim()?.let {

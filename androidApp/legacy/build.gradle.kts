@@ -59,20 +59,40 @@ val sqliteAmalgamation by tasks.registering(SqliteAmalgamation::class) {
 
 // ------------------------------------------------------------------ what this edition shares with the main app
 
-// Desktop's commentator grouping and line connections as the main app ported them, and its terms text (pure Kotlin, no
-// Compose), copied in at build time rather than kept twice.
+// The main app's plain Kotlin (no Compose, no AndroidX lifecycle, nothing above API 19 unguarded), copied in at build
+// time rather than kept twice, under its own names and packages. Each of these files says so in its first lines, and
+// lint checks them for API 19 here (lint below).
 val sharedAppSources by tasks.registering(Sync::class) {
     from(mainApp.resolve("kotlin")) {
+        // Desktop's commentator grouping and line connections as the main app ported them, and the panes' reads.
         include("io/github/kdroidfilter/seforimapp/android/data/CommentatorGrouping.kt")
         include("io/github/kdroidfilter/seforimapp/android/ui/reader/LineConnections.kt")
-        // CONDITIONS_MARKDOWN (desktop's CONDITIONS.md under Pardes's name), shown by Settings › תנאים.
-        include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/LicenceText.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/reader/ReaderLinks.kt")
+        // The niqqud and cantillation modes (the ניקוד button, Settings), and פרטי הספר.
+        include("io/github/kdroidfilter/seforimapp/android/ui/reader/Diacritics.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/BookDetailsLoader.kt")
         // How an author's name is shown (פרטי הספר), vendored from desktop.
         include("io/github/kdroidfilter/seforimapp/android/search/AuthorNames.kt")
-        // The search bar's references (ברכות דף ב, בראשית א ג), vendored from desktop; this edition's source is
-        // data/References.kt (the main app's reads through SqlVariableLimit, which SQLite 3.49 does not need).
+        // The search bar's references (ברכות דף ב, בראשית א ג), vendored from desktop, and the main app's source for
+        // them. Its id lists are not split here: PardesApp sets SqlVariableLimit.bindsMany (SQLite 3.49 binds 32,766).
         include("io/github/kdroidfilter/seforimapp/android/search/reference/ReferenceParser.kt")
         include("io/github/kdroidfilter/seforimapp/android/search/reference/ReferenceResolver.kt")
+        include("io/github/kdroidfilter/seforimapp/android/search/reference/RepositoryReferenceSource.kt")
+        include("io/github/kdroidfilter/seforimapp/android/data/SqlVariableLimit.kt")
+        // The Home's catalog row: catalog.pb (else the database's tree) and desktop's dropdowns.
+        include("io/github/kdroidfilter/seforimapp/android/data/CatalogAccess.kt")
+        include("io/github/kdroidfilter/seforimapp/android/data/CatalogMenus.kt")
+        // zayit:// links (desktop's ZayitDeepLink) and the places they open.
+        include("io/github/kdroidfilter/seforimapp/android/ui/shell/DeepLinks.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/Destination.kt")
+        include("io/github/kdroidfilter/seforimapp/android/data/SearchScope.kt")
+        // CONDITIONS_MARKDOWN (desktop's CONDITIONS.md under Pardes's name), shown by Settings › תנאים; the texts of
+        // אודות and רישיונות; who made Pardes (PARDES_BASED_ON) and sizes as desktop prints them (formatBytes).
+        include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/LicenceText.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/settings/AboutText.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/settings/LicenceTexts.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/OnboardingFormat.kt")
+        include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/DesktopStrings.kt")
     }
     into(layout.buildDirectory.dir("generated/sharedAppSources"))
 }

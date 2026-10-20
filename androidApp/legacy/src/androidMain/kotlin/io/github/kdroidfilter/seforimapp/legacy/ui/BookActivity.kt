@@ -32,16 +32,25 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.ScrollView
 import android.widget.TextView
+import io.github.kdroidfilter.seforimapp.android.search.BookDetailsLoader
+import io.github.kdroidfilter.seforimapp.android.search.OTZARIA_CREDIT
+import io.github.kdroidfilter.seforimapp.android.search.OTZARIA_URL
+import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
+import io.github.kdroidfilter.seforimapp.android.search.licenseLabel
 import io.github.kdroidfilter.seforimapp.android.ui.reader.CommentatorItem
+import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.android.ui.reader.LineConnections
 import io.github.kdroidfilter.seforimapp.android.ui.reader.LineConnectionsSnapshot
+import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderLinks
+import io.github.kdroidfilter.seforimapp.android.ui.reader.nextActionLabel
+import io.github.kdroidfilter.seforimapp.android.ui.shell.bookShareLink
+import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.legacy.R
-import io.github.kdroidfilter.seforimapp.legacy.data.BookDetails
 import io.github.kdroidfilter.seforimapp.legacy.data.BookInfo
-import io.github.kdroidfilter.seforimapp.legacy.data.Diacritics
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.Place
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
+import io.github.kdroidfilter.seforimapp.legacy.data.label
 import io.github.kdroidfilter.seforimlibrary.core.models.ConnectionType
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.dao.repository.CommentaryWithText
@@ -72,6 +81,7 @@ class BookActivity : BaseActivity() {
     private var book: BookInfo? = null
     private lateinit var opened: Library.Opened
     private lateinit var connections: LineConnections
+    private lateinit var readerLinks: ReaderLinks
     private lateinit var bar: TopBar
     private lateinit var body: LinearLayout
     private lateinit var textCard: FrameLayout
@@ -96,7 +106,7 @@ class BookActivity : BaseActivity() {
     private var scrolling = false
 
     /** The marks the lines are drawn with, to see on coming back from Settings whether they changed. */
-    private var marks = Diacritics.All
+    private var marks = DiacriticsMode.All
 
     /** What the marked line links to, for the toolbar's faded buttons; null until known. */
     private var available: LineConnectionsSnapshot? = null
@@ -224,6 +234,7 @@ class BookActivity : BaseActivity() {
                 pane.sticky = loaded.sticky
                 categoryTitle = loaded.category
                 connections = LineConnections(loaded.library.repository) { loaded.info.title }
+                readerLinks = ReaderLinks(loaded.library.repository)
                 bar.title.text = loaded.info.title
                 buildToolbar()
                 adapter.total = loaded.total
@@ -467,7 +478,7 @@ class BookActivity : BaseActivity() {
             prefs.removeBookmark(Place(info.id, info.title, index))
             toast("הוסר מהמועדפים")
         } else {
-            val text = adapter.lineAt(index)?.let { LineText.plain(LineText.stripMarks(it.content, Diacritics.None)).take(80) } ?: ""
+            val text = adapter.lineAt(index)?.let { LineText.plain(LineText.stripMarks(it.content, DiacriticsMode.None)).take(80) } ?: ""
             prefs.addBookmark(Place(info.id, info.title, index, heading.ifEmpty { text }))
             toast("נוסף למועדפים")
         }
@@ -484,7 +495,7 @@ class BookActivity : BaseActivity() {
     }
 
     private fun copyLinkTo(lineId: Long) {
-        copy("zayit://book/$bookId/line/$lineId")
+        copy(bookShareLink(bookId, lineId))
         toast("הקישור הועתק")
     }
 
@@ -503,7 +514,7 @@ class BookActivity : BaseActivity() {
             })
             add(MenuEntry("העתק קישור", R.drawable.ic_link) { copyLink(index) })
             add(MenuEntry("הוסף למועדפים", R.drawable.ic_star_border) {
-                prefs.addBookmark(Place(info.id, info.title, index, LineText.plain(LineText.stripMarks(line.content, Diacritics.None)).take(80)))
+                prefs.addBookmark(Place(info.id, info.title, index, LineText.plain(LineText.stripMarks(line.content, DiacriticsMode.None)).take(80)))
                 toast("נוסף למועדפים")
             })
             if (info.hasCommentaries) add(MenuEntry("מפרשים", R.drawable.ic_comment) { mark(index); showPane(Pane.Commentaries) })
@@ -544,12 +555,7 @@ class BookActivity : BaseActivity() {
         }
         if (info.hasNekudot || info.hasTeamim) {
             val mode = prefs.diacritics
-            val levels = when (mode) {
-                Diacritics.All -> 2
-                Diacritics.Niqqud -> 1
-                Diacritics.None -> 0
-            }
-            add(Action("diacritics", R.drawable.ic_text_format, "ניקוד", nextDiacriticsLabel(), mode != Diacritics.None, levels = if (info.hasTeamim) levels else null) { cycleDiacritics() })
+            add(Action("diacritics", R.drawable.ic_text_format, "ניקוד", mode.nextActionLabel(info.hasTeamim), mode != DiacriticsMode.None, levels = if (info.hasTeamim) mode.shownLevel else null) { cycleDiacritics() })
         }
     }
 
@@ -625,27 +631,13 @@ class BookActivity : BaseActivity() {
     /** The ניקוד button's step: all marks, the niqqud alone (when the book has cantillation), none. */
     private fun cycleDiacritics() {
         val info = book ?: return
-        val next = when (prefs.diacritics) {
-            Diacritics.All -> if (info.hasTeamim) Diacritics.Niqqud else Diacritics.None
-            Diacritics.Niqqud -> Diacritics.None
-            Diacritics.None -> Diacritics.All
-        }
+        val next = prefs.diacritics.next(info.hasTeamim)
         prefs.diacritics = next
         marks = next
         adapter.clearRendered()
         pane.restyle()
         updateToolbar()
         toast(next.label)
-    }
-
-    /** What the ניקוד button does next (ReaderText nextActionLabel), its name in עוד. */
-    private fun nextDiacriticsLabel(): String {
-        val teamim = book?.hasTeamim == true
-        return when (prefs.diacritics) {
-            Diacritics.All -> if (teamim) "הסתר טעמים" else "הסתר ניקוד וטעמים"
-            Diacritics.Niqqud -> "הסתר ניקוד"
-            Diacritics.None -> "הצג ניקוד וטעמים"
-        }
     }
 
     // ------------------------------------------------------------------ the place shown
@@ -864,7 +856,7 @@ class BookActivity : BaseActivity() {
         private var loads = newLoads()
         private var spinnerJob: Job? = null
         private var scrollView: ScrollView? = null
-        private var details: BookDetails? = null
+        private var details: SearchEntity.BookEntity? = null
         private var detailsView: View? = null
 
         /** The tab the tabs were drawn for (drawn again only for another), and its view: a keypad's way into the pane. */
@@ -1001,7 +993,7 @@ class BookActivity : BaseActivity() {
                         val ids = if (!any) {
                             emptyList()
                         } else {
-                            runCatching { sectionOrLine(line.id, windowed = p == Pane.Commentaries) }.getOrDefault(listOf(line.id))
+                            runCatching { readerLinks.sectionOrLine(line.id, windowed = p == Pane.Commentaries) }.getOrDefault(listOf(line.id))
                         }
                         snap to ids
                     }.getOrNull()
@@ -1213,22 +1205,9 @@ class BookActivity : BaseActivity() {
             into.addView(waiting, lp(WRAP, WRAP).apply { gravity = Gravity.CENTER_HORIZONTAL })
             loads.launch {
                 val page = withContext(Dispatchers.IO) {
-                    runCatching {
-                        opened.repository.getCommentariesForLineRange(
-                            lineIds = ids,
-                            activeCommentatorIds = setOf(target),
-                            connectionTypes = setOf(type),
-                            offset = offset,
-                            limit = LINKS_PAGE,
-                            distinctByTargetLine = type != ConnectionType.COMMENTARY && ids.size > 1,
-                        )
-                    }.getOrNull()
+                    readerLinks.linksPage(ids, type, target, offset, LINKS_PAGE)
                 }
                 into.removeView(waiting)
-                if (page == null) {
-                    into.addView(paneNote("לא ניתן לקרוא את הטקסט"))
-                    return@launch
-                }
                 if (offset == 0) {
                     page.firstOrNull()?.let { first ->
                         keyable(header) { start(this@BookActivity, first.link.targetBookId, first.link.targetLineIndex) }
@@ -1269,14 +1248,6 @@ class BookActivity : BaseActivity() {
             setPadding(dp(12), dp(8), dp(12), dp(8))
         }
 
-        /** The lines a link selection stands for: a heading's section (the first 256 for commentaries), else the line. */
-        private suspend fun sectionOrLine(lineId: Long, windowed: Boolean): List<Long> {
-            val heading = runCatching { opened.repository.getHeadingTocEntryByLineId(lineId) }.getOrNull() ?: return listOf(lineId)
-            val lines = opened.repository.getLineIdsForTocEntry(heading.id).filter { it != lineId }
-            if (!windowed || lines.size <= MAX_COMMENT_WINDOW) return lines.ifEmpty { listOf(lineId) }
-            return lines.take(MAX_COMMENT_WINDOW)
-        }
-
         /** סנן: which of the line's commentators the pane shows, for this book from now on (CommentatorChecklist). */
         private fun filter(snap: LineConnectionsSnapshot) {
             val all = snap.commentatorGroups.flatMap { it.commentators }
@@ -1299,7 +1270,7 @@ class BookActivity : BaseActivity() {
                 // The book's choice moves as the line's did (ReaderViewModel updateSelectedCommentators), from what it had
                 // of the line's: from all of them, what is left unchecked would not be in it to leave.
                 if (chosen != before) {
-                    sticky = sticky + (chosen - had) - (had - chosen)
+                    sticky = ReaderLinks.stickyAfter(sticky, had, chosen)
                     prefs.setCommentators(bookId, sticky)
                     refresh()
                 }
@@ -1314,7 +1285,7 @@ class BookActivity : BaseActivity() {
             if (known == null) {
                 loadingSoon()
                 loads.launch {
-                    val loaded = withContext(Dispatchers.IO) { runCatching { BookDetails.load(opened.repository, bookId) }.getOrNull() }
+                    val loaded = withContext(Dispatchers.IO) { BookDetailsLoader(opened.repository).load(bookId) }
                     if (loaded == null) {
                         hint("לא ניתן לקרוא את פרטי הספר")
                     } else {
@@ -1328,9 +1299,9 @@ class BookActivity : BaseActivity() {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16), dp(8), dp(16), dp(16))
             }
-            box.addView(label(known.title, 22f, colors.text, typeface = Fonts.book(this@BookActivity)))
+            box.addView(label(known.book.title, 22f, colors.text, typeface = Fonts.book(this@BookActivity)))
             if (known.categories.isNotEmpty()) box.addView(label(known.categories.joinToString(" › "), 12f, colors.secondary).apply { setPadding(0, dp(4), 0, 0) })
-            known.authors.forEach { name ->
+            known.authors.map { AuthorNames.display(it.name) }.forEach { name ->
                 section(box, "מחבר")
                 box.addView(label(name, 14f, colors.text).apply { setPadding(0, dp(4), 0, dp(4)) })
             }
@@ -1358,13 +1329,13 @@ class BookActivity : BaseActivity() {
                             keyable(this) { openUrl(url) }
                         }
                     })
-                    box.addView(label(BookDetails.licenseLabel(edition.licenseCode), 12f, colors.secondary))
+                    box.addView(label(licenseLabel(edition.licenseCode), 12f, colors.secondary))
                 }
                 if (known.fromOtzaria) {
-                    box.addView(label(BookDetails.OTZARIA_CREDIT, 12f, colors.secondary).apply {
+                    box.addView(label(OTZARIA_CREDIT, 12f, colors.secondary).apply {
                         setPadding(0, dp(6), 0, 0)
                         background = states(colors, 0, dp(4).toFloat())
-                        keyable(this) { openUrl(BookDetails.OTZARIA_URL) }
+                        keyable(this) { openUrl(OTZARIA_URL) }
                     })
                 }
             }
@@ -1578,7 +1549,6 @@ class BookActivity : BaseActivity() {
         private const val MAX_PAGES = 40
         private const val MAX_RENDERED = 300
         private const val LINKS_PAGE = 25
-        private const val MAX_COMMENT_WINDOW = 256
         private const val FOLLOW_DELAY_MS = 300L
 
         /** The title bar's place, read once the text has stopped this long; the pane's spinner, once a read takes this long. */

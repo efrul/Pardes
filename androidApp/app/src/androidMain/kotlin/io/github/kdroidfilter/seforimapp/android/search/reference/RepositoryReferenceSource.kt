@@ -1,6 +1,8 @@
 // Android variant of the Zayit 0.6.1 file SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/reference/RepositoryReferenceSource.kt
 // (tag v0.6.1), with the 0.6.2 fix 2126c238 applied as is. One difference: linesOf reads a TOC entry's lines in lists
 // the SQLite of Android 8 to 11 can bind (999 parameters; a section reaches 9,400 lines), through SqlVariableLimit.
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimapp.features.search.domain.reference
 
 import io.github.kdroidfilter.seforimapp.android.data.SqlVariableLimit
