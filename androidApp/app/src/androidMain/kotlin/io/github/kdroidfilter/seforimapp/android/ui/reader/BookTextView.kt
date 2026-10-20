@@ -59,6 +59,8 @@ fun BookText(
     textSelection: ListSelection,
     onZoom: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    /** The find bar spans the text's top (phone), not floats at its corner (tablet). */
+    findBarBand: Boolean = true,
     overlay: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit = {},
 ) {
     val app = LocalContext.current.applicationContext as ZayitApplication
@@ -237,8 +239,9 @@ fun BookText(
             textOf,
             resetKey = Triple(bookId, diacritics, shnayimMikra),
             modifier = Modifier.fillMaxSize(),
-            // The find bar covers the top of the text: nothing under it is selected, and the edge scroll starts below it
-            topInset = if (state.find.open) FindBarRoom else 0.dp,
+            // The phone's find bar spans the top of the text: nothing under it is selected, and the edge scroll starts
+            // below it (the tablet's floats at a corner, beside visible text)
+            topInset = if (state.find.open && findBarBand) FindBarRoom else 0.dp,
             prepare = { units -> vm.loadRange((units.first / LINE_UNITS).toInt(), (units.last / LINE_UNITS).toInt()) },
         ) {
             LazyColumn(

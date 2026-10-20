@@ -80,6 +80,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
@@ -224,22 +225,25 @@ fun SelectableArea(
                 .pointerInput(selection) { selectionGestures(selection, area, haptics) },
         ) {
             content()
-            if (selected) {
+            if (selected && selection.touch) {
                 SelectionHandle(selection, isStart = true, list, area, handleColor)
                 SelectionHandle(selection, isStart = false, list, area, handleColor)
             }
         }
         // Over the part on screen once the drag and the scrolling stop (Android hides its bar meanwhile)
         if (selected && !selection.dragging && !list.isScrollInProgress && area.coordinates?.let { selection.visibleBounds(it, area.top) } != null) {
-            key(selection.generation) {
+            val generation = selection.generation
+            key(generation) {
                 SelectionBar(
                     bounds = { area.coordinates?.let { selection.visibleBounds(it, area.top) } },
+                    top = { area.top },
                     list = list,
                     spec = spec,
                     area = areaSize,
                     scope = scope,
                     capture = selection::read,
-                    dismiss = selection::clear,
+                    // Not a newer selection made while the lines were read
+                    dismiss = { if (selection.generation == generation) selection.clear() },
                 ) { sheetText = it }
             }
         }
@@ -319,7 +323,8 @@ private suspend fun PointerInputScope.selectionGestures(selection: ListSelection
     val clicks = Clicks()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        val handle = selection.handleAt(down.position)
+        // A mouse's selection has no handles; a second or third tap on a short word is a click, not a handle's drag
+        val handle = if (down.type == PointerType.Mouse || clicks.continues(down, viewConfiguration)) -1 else selection.handleAt(down.position)
         when {
             // One finger on a handle; with a second one it is a pinch, which the handle leaves to the text
             handle >= 0 && currentEvent.changes.count { it.pressed } == 1 -> {
@@ -338,10 +343,13 @@ private class Clicks {
     private var lastTime = 0L
     private var lastPosition = Offset.Zero
 
-    fun press(down: PointerInputChange, configuration: ViewConfiguration): Int {
-        val again = count > 0 && down.uptimeMillis - lastTime < configuration.doubleTapTimeoutMillis &&
+    /** Whether [down] goes on the row (without counting it). */
+    fun continues(down: PointerInputChange, configuration: ViewConfiguration): Boolean =
+        count > 0 && down.uptimeMillis - lastTime < configuration.doubleTapTimeoutMillis &&
             (down.position - lastPosition).getDistance() < configuration.touchSlop
-        count = if (again) count + 1 else 1
+
+    fun press(down: PointerInputChange, configuration: ViewConfiguration): Int {
+        count = if (continues(down, configuration)) count + 1 else 1
         lastTime = down.uptimeMillis
         lastPosition = down.position
         return count
@@ -391,7 +399,8 @@ private suspend fun AwaitPointerEventScope.touchSelect(selection: ListSelection,
         null -> clicks.reset()
     }
     val coordinates = area.coordinates ?: return
-    if (down.position.y < area.top) return // under the find bar
+    // Under the find bar: no selection, and no tap of the line hidden there when it is let go
+    if (down.position.y < area.top) return consumeUntilUp(down)
     val word = selection.pointAt(down.position, coordinates, exact = true)?.let(selection::wordAt) ?: return
     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
     selection.begin(word.first, word.second)
@@ -425,7 +434,7 @@ private fun tapped(selection: ListSelection, down: PointerInputChange, area: Are
         count == 2 -> selection.wordAt(point)
         else -> selection.unitAt(point)
     }
-    if (range != null) selection.begin(range.first, range.second) else selection.clear()
+    if (range != null) selection.begin(range.first, range.second, touch = down.type != PointerType.Mouse) else selection.clear()
 }
 
 /** A handle: the text under its point follows the finger, past the other end too (the two swap). */
@@ -445,6 +454,8 @@ private suspend fun AwaitPointerEventScope.dragHandle(selection: ListSelection, 
 
 /** A mouse, as desktop: a drag selects from where it was pressed; clicks as [tapped]. */
 private suspend fun AwaitPointerEventScope.mouseSelect(selection: ListSelection, down: PointerInputChange, area: AreaHolder, clicks: Clicks) {
+    // Shift+click does nothing, as on desktop (its SafeSelectionContainer takes it): the selection and the line stay
+    if (currentEvent.keyboardModifiers.isShiftPressed) return consumeUntilUp(down)
     val count = clicks.press(down, viewConfiguration)
     when (awaitPressEnd(down, takeMove = true)) {
         PressEnd.Released -> tapped(selection, down, area, count)
@@ -453,7 +464,7 @@ private suspend fun AwaitPointerEventScope.mouseSelect(selection: ListSelection,
             clicks.reset()
             val coordinates = area.coordinates ?: return
             val anchor = selection.pointAt(down.position.within(coordinates, area.top), coordinates, exact = false) ?: return
-            selection.begin(anchor, anchor)
+            selection.begin(anchor, anchor, touch = false)
             val from = currentEvent.changes.firstOrNull { it.id == down.id }?.position ?: down.position
             holdDrag(selection, down, from, area, haptics = null, startMoves = false) { finger ->
                 val p = area.coordinates?.let { selection.pointAt(finger.within(it, area.top), it, exact = false) }
@@ -524,6 +535,16 @@ private suspend fun AwaitPointerEventScope.holdDrag(
     }
 }
 
+/** Takes [down]'s pointer until it is let go, so nothing under it (the list, a line's tap) acts on it. */
+private suspend fun AwaitPointerEventScope.consumeUntilUp(down: PointerInputChange) {
+    down.consume()
+    while (true) {
+        val event = awaitPointerEvent(PointerEventPass.Initial)
+        event.changes.forEach { it.consume() }
+        if (event.changes.none { it.pressed }) return
+    }
+}
+
 /** The magnifier's source: the moved end's row, where the finger is along it; none while the finger is off the area. */
 private fun magnifierSource(selection: ListSelection, area: AreaHolder, finger: Offset, isStart: Boolean): Offset {
     val coordinates = area.coordinates ?: return Offset.Unspecified
@@ -585,6 +606,7 @@ private suspend fun edgeScroll(selection: ListSelection, list: LazyListState) {
 @Composable
 private fun BoxScope.SelectionBar(
     bounds: () -> Rect?,
+    top: () -> Float,
     list: LazyListState,
     spec: SelectionMenuSpec,
     area: IntSize,
@@ -601,18 +623,19 @@ private fun BoxScope.SelectionBar(
     val placed = remember { IntArray(2) }
 
     // Above the selection, else below it (clear of the handles), else, when it fills the screen, over its middle: at
-    // the bottom edge the bar covered the end's handle
+    // the bottom edge the bar covered the end's handle. Always below [top], the find bar's room, which covers it.
     fun place(): IntOffset {
         list.layoutInfo // read, so the bar is placed again as the list lays out
         val b = bounds() ?: return IntOffset(placed[0], placed[1])
         val x = (b.center.x - barSize.width / 2f).roundToInt().coerceIn(margin, (area.width - barSize.width - margin).coerceAtLeast(margin))
+        val minY = top() + margin
         val above = b.top - barSize.height - margin
         val below = b.bottom + margin * 3
         val y = when {
-            above >= margin -> above
+            above >= minY -> above
             below + barSize.height <= area.height - margin -> below
             else -> b.center.y - barSize.height / 2f
-        }.roundToInt().coerceIn(margin, (area.height - barSize.height - margin).coerceAtLeast(margin))
+        }.roundToInt().coerceIn(minY.roundToInt(), (area.height - barSize.height - margin).coerceAtLeast(minY.roundToInt()))
         placed[0] = x
         placed[1] = y
         return IntOffset(x, y)
