@@ -120,7 +120,7 @@ The whole app runs with `LayoutDirection.Rtl`.
 - **Release-only crashes** come from missing keep rules (`app/proguard-rules.pro`):
   - kotlinx-serialization: `$$serializer`, `Companion`, `serializer()` for `io.github.kdroidfilter.**`. Without them, settings and onboarding crashed when deserializing.
   - zstd-jni: `-keep class com.github.luben.zstd.** { *; }`, because the JNI side looks up fields by name.
-  - Lucene: SPI codecs and the reflective attribute implementations. See lucene-android.md.
+  - Lucene: SPI codecs and the reflective attribute implementations, in `lucene-android/proguard-lucene.pro`, which the main app and the Android 4.4 build both list (only AndroidCompatApi33's `-keep` stays in `app/proguard-rules.pro`). See lucene-android.md.
   - `-dontwarn` for optional deps (jspecify, re2j, awt, javax.annotation, slf4j, brotli, xz, asm).
 - **zstd-jni on Android** needs the `@aar` artifact, which ships the `.so` files. The plain jar only has desktop natives.
 - **Kotlin and AGP versions** are pinned in `androidApp/gradle/libs.versions.toml`: AGP 8.12.3, Kotlin 2.4.20, Gradle 9.1.0, compileSdk 36. Don't bump them casually; the KMP androidTarget plus the SeforimLibrary sources compile with this set.
