@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
@@ -14,6 +15,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.HorizontalScrollView
@@ -24,11 +26,15 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceResolver
 import io.github.kdroidfilter.seforimapp.legacy.R
+import io.github.kdroidfilter.seforimapp.legacy.data.Diacritics
 import io.github.kdroidfilter.seforimapp.legacy.data.Entry
 import io.github.kdroidfilter.seforimapp.legacy.data.Hit
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
+import io.github.kdroidfilter.seforimapp.legacy.data.NoLibraryException
 import io.github.kdroidfilter.seforimapp.legacy.data.References
 import io.github.kdroidfilter.seforimapp.legacy.data.TextSearch
+import io.github.kdroidfilter.seforimapp.legacy.db.SqliteException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -44,7 +50,9 @@ import kotlinx.coroutines.withContext
  * search was opened from goes back to it.
  *
  * The main app searches the desktop's Lucene index, which Android 4.4 cannot run: here the books are read one after
- * the other (TextSearch), so the whole library takes minutes on an old phone, and the base books seconds.
+ * the other (TextSearch), so the whole library takes minutes on an old phone, and the base books seconds. The scan
+ * holds the library's one connection a book at a time: it pauses while a book opened from here is read, and goes on
+ * from where it was when the search is back.
  */
 class SearchActivity : BaseActivity() {
     private lateinit var opened: Library.Opened
@@ -53,7 +61,7 @@ class SearchActivity : BaseActivity() {
     private lateinit var clear: View
     private lateinit var bookChip: TextView
     private lateinit var tabs: LinearLayout
-    private lateinit var tabsScroll: View
+    private lateinit var tabsScroll: HorizontalScrollView
     private lateinit var statusRow: View
     private lateinit var status: TextView
     private lateinit var switchLink: TextView
@@ -77,13 +85,45 @@ class SearchActivity : BaseActivity() {
     private var fellBack = false
     private var stopped = false
     private val hits = ArrayList<Hit>()
-    private val rootOfBook = HashMap<Long, Long>()
     private var roots: List<Entry> = emptyList()
     private var tab: Long? = null
+
+    /** The library's books in the order the search reads them, read once (the first search in the library). */
+    private var order: SearchOrder? = null
+
+    // Where the search is: the books it reads (null until they are known) from [nextBook] on, then [fallback] if the
+    // base books have nothing
+    private var queue: List<Entry>? = null
+    private var nextBook = 0
+    private var fallback: List<Entry>? = null
+
+    /** The search has not ended: it is reading, or [paused]. */
+    private var running = false
+
+    /** Stopped while another screen reads the library, to go on when this one is back. */
+    private var paused = false
+    private var scan: Scan? = null
+
+    /** The hits the scan found that the list has not taken yet ([take]); its lock also guards the [Scan]. */
+    private val arrived = ArrayList<Hit>()
 
     /** The books whose results are all shown ("עוד N תוצאות מ…" chosen). */
     private val expanded = HashSet<Long>()
     private val headings = HashMap<Pair<Long, Int>, String>()
+
+    /** The places still to look up for the rows drawn, the last one drawn first: one query at a time. */
+    private val wanted = LinkedHashMap<Pair<Long, Int>, Hit>()
+    private var lookups: Job? = null
+
+    /** The last passages drawn: a row drawn again (scrolled back to, or as more results come) is not parsed again. */
+    private val snippets = object : LinkedHashMap<Pair<Long, Int>, CharSequence>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Long, Int>, CharSequence>): Boolean = size > MAX_SNIPPETS
+    }
+    private var snippetMarks: Diacritics? = null
+
+    /** The chips drawn (their categories, null for הכל) and the one chosen then: built again only when these change. */
+    private var drawnTabs: List<Long?> = emptyList()
+    private var drawnTab: Long? = null
 
     private sealed interface Row {
         /** A suggestion: its icon, its text and second line; a tap (OK) runs [open], a long press [more]. */
@@ -94,7 +134,36 @@ class SearchActivity : BaseActivity() {
         class More(val bookId: Long, val title: String, val count: Int) : Row
     }
 
-    private val adapter = ItemsAdapter<Row> { row, reuse, _ ->
+    /** The library's books as the search reads them, the base books apart, and each book's top category (its chip). */
+    private class SearchOrder(val base: List<Entry>, val others: List<Entry>, val rootOf: Map<Long, Long>)
+
+    /**
+     * One run of the scan, as its thread tells it (under [arrived]'s lock): the book it is at, and whether it is in that
+     * book's query, the only time an interrupt stops the scan and not another query on the one connection.
+     */
+    private class Scan(val from: Int) {
+        /** The book it is at: the ones before it are read, and their hits handed over. */
+        @Volatile
+        var done = from
+
+        @Volatile
+        var reading = false
+
+        /** Stopped: it reads no other book, and drops the hits of the one it is in (read again if it goes on). */
+        var cancelled = false
+    }
+
+    // Each kind of row is handed back only a view of its own kind to reuse.
+    private val adapter = ItemsAdapter<Row>(
+        types = 3,
+        typeOf = { row ->
+            when (row) {
+                is Row.Suggestion -> 0
+                is Row.Found -> 1
+                is Row.More -> 2
+            }
+        },
+    ) { row, reuse, _ ->
         when (row) {
             is Row.Suggestion -> (reuse as? TreeRow ?: TreeRow(this, colors)).bind(row.text, iconRes = row.icon, secondLine = row.detail)
             is Row.Found -> hitView(row, reuse as? HitView)
@@ -195,17 +264,44 @@ class SearchActivity : BaseActivity() {
 
         val runAtOnce = intent.getBooleanExtra(EXTRA_RUN, false)
         scope.launch {
-            opened = withContext(Dispatchers.IO) { app.library.open() }
-            resolver = ReferenceResolver(References(opened.repository))
-            search = TextSearch(opened)
-            roots = withContext(Dispatchers.IO) { runCatching { opened.rootEntries() }.getOrDefault(emptyList()) }
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val lib = app.library.open()
+                    lib to runCatching { lib.rootEntries() }.getOrDefault(emptyList())
+                }
+            }
+            // No library yet (the Home's welcome offers the search too), or one that cannot be read: nothing to search.
+            val (lib, rootEntries) = result.getOrElse { e ->
+                toast(if (e is NoLibraryException) "עדיין אין ספרייה במכשיר" else "לא ניתן לפתוח את הספרייה")
+                finish()
+                return@launch
+            }
+            opened = lib
+            resolver = ReferenceResolver(References(lib.repository))
+            search = TextSearch(lib)
+            roots = rootEntries
             if (runAtOnce && field.text.isNotBlank()) startTextSearch(field.text.toString().trim()) else suggest()
         }
     }
 
-    override fun onDestroy() {
-        search?.cancel()
-        super.onDestroy()
+    override fun onResume() {
+        super.onResume()
+        // Back from a book opened from here: the search goes on from the book it was in.
+        if (paused) {
+            paused = false
+            launchSearch()
+        }
+    }
+
+    override fun onPause() {
+        // Leaving: the scan stops before the screen under this one reads the library again.
+        if (isFinishing) stopScan()
+        super.onPause()
+    }
+
+    override fun onStop() {
+        pause()
+        super.onStop()
     }
 
     @Deprecated("Deprecated in Java")
@@ -214,6 +310,10 @@ class SearchActivity : BaseActivity() {
         if (!showingResults && hits.isNotEmpty()) {
             field.setText(lastQuery)
             field.setSelection(lastQuery.length)
+            // setText runs the watcher, whose suggestions would cover the results again; the ones there were are for
+            // the text typed over it.
+            suggestJob?.cancel()
+            suggestions = emptyList()
             showResults()
             return
         }
@@ -254,6 +354,8 @@ class SearchActivity : BaseActivity() {
             contentDescription = "הסר ספר שנבחר"
             keyable(this) {
                 scopeBook = null
+                // To the field before the chip goes: a keypad's focus would go to the title bar.
+                field.requestFocus()
                 drawScope()
                 suggest()
             }
@@ -270,12 +372,19 @@ class SearchActivity : BaseActivity() {
             setText(initial)
             setSelection(initial.length)
             setOnEditorActionListener { _, actionId, event ->
-                if (actionId == EditorInfo.IME_ACTION_SEARCH || event?.keyCode == KeyEvent.KEYCODE_ENTER || event?.keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH || event?.keyCode == KeyEvent.KEYCODE_ENTER) {
                     if (event == null || event.action == KeyEvent.ACTION_DOWN) enter()
                     true
                 } else {
                     false
                 }
+            }
+            // A keypad's OK (D-pad centre) is Enter too: TextView gives its editor-action listener the Enter key only.
+            // In an empty field OK stays the field's own (it opens the keyboard, where there is one).
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode != KeyEvent.KEYCODE_DPAD_CENTER || text.isNullOrBlank()) return@setOnKeyListener false
+                if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) enter()
+                true
             }
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -381,9 +490,13 @@ class SearchActivity : BaseActivity() {
         ))
     }
 
-    private fun openBook(entry: Entry) = BookActivity.start(this, entry.id, prefs.lastLine(entry.id), entry.title)
+    private fun openBook(entry: Entry) {
+        pause()
+        BookActivity.start(this, entry.id, prefs.lastLine(entry.id), entry.title)
+    }
 
     private fun openPlace(bookId: Long, title: String, lineId: Long) {
+        pause()
         scope.launch {
             val index = withContext(Dispatchers.IO) { runCatching { opened.lineIndex(lineId) }.getOrNull() }
             if (index != null && fromBook(bookId)) {
@@ -405,11 +518,11 @@ class SearchActivity : BaseActivity() {
      * books after "חיפוש בכל הספרים".
      */
     private fun startTextSearch(q: String, everywhere: Boolean = false, words: Boolean = false) {
-        val engine = search ?: return
-        if (q.isEmpty()) return
-        searchJob?.cancel()
-        engine.cancel()
+        if (search == null || q.isEmpty()) return
+        stopScan()
         suggestJob?.cancel()
+        // A keypad on the suggestion that started it: to the field, as the list empties (else to the title bar).
+        if (list.hasFocus()) field.requestFocus()
         lastQuery = q
         allBooks = everywhere
         allWords = words
@@ -417,131 +530,275 @@ class SearchActivity : BaseActivity() {
         stopped = false
         tab = null
         highlight = LineText.highlighter(q, phrase = !words)
+        synchronized(arrived) { arrived.clear() }
         hits.clear()
         expanded.clear()
+        snippets.clear()
+        queue = scopeBook?.let { listOf(it) }
+        nextBook = 0
+        fallback = null
+        running = true
+        paused = false
+        launchSearch()
         showResults()
-        progress.visibility = View.VISIBLE
-        stop.visibility = View.VISIBLE
-        val book = scopeBook
+    }
+
+    /**
+     * Runs the search from where it is to its end. Its progress and the hits found are drawn a few times a second: the
+     * scan never waits for the screen, and the list is not drawn again for each book.
+     */
+    private fun launchSearch() {
+        val engine = search ?: return
         searchJob = scope.launch {
-            val all = withContext(Dispatchers.IO) {
-                runCatching { if (book != null) emptyList() else opened.booksUnder(null) }.getOrDefault(emptyList())
+            val ticker = launch {
+                while (true) {
+                    take()
+                    drawStatus()
+                    delay(REFRESH_MS)
+                }
             }
-            all.forEach { rootOfBook[it.id] = it.root }
-            val books = when {
-                book != null -> listOf(book)
-                everywhere -> all.filter { it.base } + all.filterNot { it.base }
-                else -> all.filter { it.base }
+            if (queue == null) {
+                val books = order ?: withContext(Dispatchers.IO) { runCatching { searchOrder() }.getOrNull() }?.also { order = it }
+                queue = when {
+                    books == null -> emptyList()
+                    allBooks -> books.base + books.others
+                    else -> books.base
+                }
+                fallback = if (allBooks) null else books?.others
             }
-            // Nothing in the base books: all the others (the main app's fallback).
-            if (scan(engine, q, books, words) == 0 && book == null && !everywhere && !stopped) {
-                fellBack = true
-                scan(engine, q, all.filterNot { it.base }, words)
-            }
-            progress.visibility = View.GONE
-            stop.visibility = View.GONE
-            drawStatus(done = true)
+            read(engine)
+            ticker.cancel()
+            running = false
+            take()
+            drawStatus()
         }
     }
 
-    private suspend fun scan(engine: TextSearch, q: String, books: List<Entry>, words: Boolean): Int {
-        progress.max = maxOf(1, books.size)
-        progress.progress = 0
-        return withContext(Dispatchers.IO) {
-            runCatching {
-                engine.run(
-                    q, books, MAX_HITS, words,
-                    onBook = { i, book ->
-                        withContext(Dispatchers.Main) {
-                            progress.progress = i
-                            status.text = "מחפש ב${book.title} (${i + 1} מתוך ${books.size}) · ${hits.size} תוצאות"
-                        }
-                    },
-                    onHits = { found ->
-                        withContext(Dispatchers.Main) {
-                            hits += found
-                            if (showingResults) showHits()
-                        }
-                    },
-                )
-            }.getOrDefault(0)
+    /** The library's books in the search's order, and each one's top category: read off the main thread, once. */
+    private fun searchOrder(): SearchOrder {
+        val all = opened.booksUnder(null)
+        val rootOf = HashMap<Long, Long>(all.size * 2)
+        for (book in all) rootOf[book.id] = book.root
+        return SearchOrder(all.filter { it.base }, all.filterNot { it.base }, rootOf)
+    }
+
+    /** Reads [queue] from [nextBook] on, then [fallback] if the base books had nothing. */
+    private suspend fun read(engine: TextSearch) {
+        while (true) {
+            take()
+            val books = queue ?: return
+            val limit = MAX_HITS - hits.size
+            if (nextBook < books.size && limit > 0) {
+                val s = Scan(nextBook)
+                scan = s
+                val q = lastQuery
+                val words = allWords
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        engine.run(
+                            q, books.subList(s.from, books.size), limit, words,
+                            onBook = { i, _ ->
+                                synchronized(arrived) {
+                                    if (s.cancelled) throw CancellationException("stopped")
+                                    s.done = s.from + i
+                                    s.reading = true
+                                }
+                            },
+                            onHits = { found ->
+                                synchronized(arrived) {
+                                    s.reading = false
+                                    if (!s.cancelled) {
+                                        arrived += found
+                                        s.done++
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    s.reading = false
+                }
+                scan = null
+            }
+            nextBook = books.size
+            take()
+            val others = fallback
+            if (others == null || hits.isNotEmpty()) return
+            // Nothing in the base books: all the others (the main app's fallback).
+            fellBack = true
+            fallback = null
+            queue = others
+            nextBook = 0
         }
+    }
+
+    /** Moves the hits found since the last time into the results, and draws them. */
+    private fun take() {
+        val found = synchronized(arrived) {
+            if (arrived.isEmpty()) return
+            ArrayList(arrived).also { arrived.clear() }
+        }
+        hits += found
+        if (showingResults) showHits()
+    }
+
+    /**
+     * Stops the scan where it is, keeping what it found. The book it is reading is stopped (sqlite3_interrupt) only
+     * while it is in that book's query: at any other time the interrupt would fail another query on the one
+     * connection, a result's place here or the reader's lines.
+     */
+    private fun stopScan() {
+        val s = scan
+        scan = null
+        if (s != null) {
+            synchronized(arrived) {
+                s.cancelled = true
+                nextBook = s.done
+            }
+        }
+        searchJob?.cancel()
+        if (s?.reading == true) search?.cancel()
+    }
+
+    /**
+     * Stops the search while another screen reads the library, to go on when this one is back (onResume): before a
+     * book is opened from here, so that the interrupt cannot meet the reader's first queries, and when the screen
+     * goes away.
+     */
+    private fun pause() {
+        if (!running || paused) return
+        paused = true
+        stopScan()
     }
 
     private fun stopSearch() {
-        if (searchJob?.isActive != true) return
+        if (!running) return
+        stopScan()
+        running = false
+        paused = false
         stopped = true
-        searchJob?.cancel()
-        search?.cancel()
-        progress.visibility = View.GONE
-        stop.visibility = View.GONE
-        drawStatus(done = true)
+        take()
+        drawStatus()
     }
 
     private fun showResults() {
         showingResults = true
         statusRow.visibility = View.VISIBLE
-        drawStatus(done = searchJob?.isActive != true)
         showHits()
+        drawStatus()
     }
 
-    /** SearchStatusLine: how many, where, and the other choice as a link (all the books, or the base books only). */
-    private fun drawStatus(done: Boolean) {
-        val book = scopeBook
-        switchLink.visibility = View.GONE
-        if (!done) {
-            status.text = "מחפש..."
+    /**
+     * SearchStatusLine: where the search is; once it ends, how many it found and where, and the other choice as a link
+     * (all the books, or the base books only).
+     */
+    private fun drawStatus() {
+        if (!showingResults) return
+        if (running) {
+            progress.visibility = View.VISIBLE
+            stop.visibility = View.VISIBLE
+            hide(switchLink)
+            val books = queue.orEmpty()
+            val at = (scan?.done ?: nextBook).coerceIn(0, maxOf(0, books.size - 1))
+            progress.max = maxOf(1, books.size)
+            progress.progress = at
+            setStatus(if (books.isEmpty()) "מחפש..." else "מחפש ב${books[at].title} (${at + 1} מתוך ${books.size}) · ${hits.size} תוצאות")
             return
         }
+        progress.visibility = View.GONE
+        hide(stop)
+        val book = scopeBook
         val n = hits.size
         val first = if (n >= MAX_HITS) "$n התוצאות הראשונות" else "$n תוצאות"
-        status.text = when {
-            n == 0 -> "לא נמצאו תוצאות"
-            book != null -> "$first ב${book.title}"
-            fellBack -> "לא נמצא בספרי יסוד · מוצגות $first מכל הספרים"
-            allBooks -> "$first בכל הספרים"
-            else -> "$first בספרי יסוד"
-        } + if (stopped) " (החיפוש הופסק)" else ""
+        setStatus(
+            when {
+                n == 0 -> "לא נמצאו תוצאות"
+                book != null -> "$first ב${book.title}"
+                fellBack -> "לא נמצא בספרי יסוד · מוצגות $first מכל הספרים"
+                allBooks -> "$first בכל הספרים"
+                else -> "$first בספרי יסוד"
+            } + if (stopped) " (החיפוש הופסק)" else "",
+        )
         val link: Pair<String, () -> Unit>? = when {
             n == 0 && !allWords && lastQuery.trim().contains(' ') -> "חיפוש כל מילה בנפרד" to { startTextSearch(lastQuery, allBooks, words = true) }
             book != null || fellBack -> null
             allBooks -> "רק ספרי יסוד" to { startTextSearch(lastQuery, everywhere = false, words = allWords) }
             else -> "חיפוש בכל הספרים" to { startTextSearch(lastQuery, everywhere = true, words = allWords) }
         }
-        if (link != null) {
+        if (link == null) {
+            hide(switchLink)
+        } else {
             switchLink.text = link.first
             switchLink.visibility = View.VISIBLE
             keyable(switchLink) { link.second() }
         }
-        drawTabs()
+    }
+
+    /** The status's text, set only when it changes: each change lays the screen out again. */
+    private fun setStatus(text: String) {
+        if (!TextUtils.equals(status.text, text)) status.text = text
+    }
+
+    /**
+     * Hides [view]; a keypad's focus in it goes to the results, or the field. Android 4.4 to 7.1 would give it to the
+     * title bar's Back, where the next OK leaves the search.
+     */
+    private fun hide(view: View) {
+        if (view.visibility == View.GONE) return
+        if (view.hasFocus() && !(adapter.count > 0 && list.requestFocus())) field.requestFocus()
+        view.visibility = View.GONE
     }
 
     /** CategoryTabs: הכל, then the top categories the results are in, in the library's order. */
     private fun drawTabs() {
-        tabs.removeAllViews()
-        val present = hits.mapNotNull { rootOfBook[it.bookId] }.toSet()
+        val rootOf = order?.rootOf.orEmpty()
+        val present = hits.mapNotNullTo(HashSet()) { rootOf[it.bookId] }
         val shown = roots.filter { it.id in present }
         if (scopeBook != null || shown.size < 2) {
-            tabsScroll.visibility = View.GONE
+            hide(tabsScroll)
+            drawnTabs = emptyList()
             return
         }
         tabsScroll.visibility = View.VISIBLE
+        val ids = listOf<Long?>(null) + shown.map { it.id }
+        if (ids == drawnTabs && tab == drawnTab) return
+        // The chip a keypad is on gets the focus back: removing it sends the focus to the title bar.
+        val focusedAt = tabs.focusedChild?.let { tabs.indexOfChild(it) } ?: -1
+        val focusedId = drawnTabs.getOrNull(focusedAt)
+        tabs.removeAllViews()
+        drawnTabs = ids
+        drawnTab = tab
         fun add(text: String, id: Long?) {
             tabs.addView(chip(text, colors, tab == id) {
                 tab = id
-                drawTabs()
                 showHits()
             }, lp(WRAP, WRAP).apply { marginEnd = dp(6) })
         }
         add("הכל", null)
         shown.forEach { add(it.title, it.id) }
+        if (focusedAt >= 0) tabs.getChildAt(maxOf(0, ids.indexOf(focusedId))).requestFocus() else reveal()
+    }
+
+    /**
+     * Scrolls the chips to the one chosen (הכל: their start). A HorizontalScrollView keeps its place from the left as
+     * chips are added, and Android 4.4's starts at the left whatever the direction: in a right-to-left row, its end.
+     */
+    private fun reveal() {
+        tabs.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                tabs.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                val chosen = tabs.getChildAt(maxOf(0, drawnTabs.indexOf(drawnTab))) ?: return
+                val max = maxOf(0, tabs.width - tabsScroll.width)
+                tabsScroll.scrollTo(((chosen.left + chosen.right) / 2 - tabsScroll.width / 2).coerceIn(0, max), 0)
+            }
+        })
     }
 
     /** The results, a book's first one with "עוד N תוצאות מ…" under it, or all of them once that is chosen. */
     private fun showHits() {
         val rows = ArrayList<Row>()
         val filter = tab
-        val shown = if (filter == null) hits else hits.filter { rootOfBook[it.bookId] == filter }
+        val rootOf = order?.rootOf.orEmpty()
+        val shown = if (filter == null) hits else hits.filter { rootOf[it.bookId] == filter }
         for ((bookId, group) in shown.groupBy { it.bookId }) {
             if (bookId in expanded || group.size == 1) {
                 group.forEachIndexed { i, hit -> rows += Row.Found(hit, last = i == group.size - 1) }
@@ -551,7 +808,7 @@ class SearchActivity : BaseActivity() {
             }
         }
         adapter.items = rows
-        if (searchJob?.isActive == true) drawTabs()
+        drawTabs()
     }
 
     private fun open(position: Int) {
@@ -571,6 +828,7 @@ class SearchActivity : BaseActivity() {
                     )
                     finish()
                 } else {
+                    pause()
                     BookActivity.start(this, hit.bookId, hit.lineIndex, hit.bookTitle, lastQuery, allWords)
                 }
             }
@@ -614,22 +872,57 @@ class SearchActivity : BaseActivity() {
     private fun hitView(row: Row.Found, reuse: HitView?): View {
         val view = reuse ?: HitView()
         val hit = row.hit
-        view.title.text = hit.bookTitle
-        view.snippet.text = snippet(hit.content)
-        view.line.visibility = if (row.last) View.VISIBLE else View.GONE
         val key = hit.bookId to hit.lineIndex
         view.key = key
+        view.title.text = hit.bookTitle
+        val marks = prefs.diacritics
+        if (marks != snippetMarks) {
+            snippets.clear()
+            snippetMarks = marks
+        }
+        view.snippet.text = snippets.getOrPut(key) { snippet(hit.content, marks) }
+        view.line.visibility = if (row.last) View.VISIBLE else View.GONE
         val known = headings[key]
         view.place.text = known?.let { "· $it" } ?: ""
-        if (known == null && ::opened.isInitialized) {
-            scope.launch {
-                val heading = withContext(Dispatchers.IO) { runCatching { opened.heading(hit.bookId, hit.lineIndex) }.getOrNull() }
-                    ?.takeIf { it.isNotBlank() && it != hit.bookTitle } ?: "שורה ${hit.lineIndex + 1}"
-                headings[key] = heading
-                if (view.key == key) view.place.text = "· $heading"
+        if (known == null) lookUp(key, hit)
+        return view
+    }
+
+    /**
+     * Looks up the place of [key]'s result (its table of contents entry) for its row: one query at a time, the last
+     * row drawn first, none for a row scrolled past meanwhile (it asks again when it is drawn again).
+     */
+    private fun lookUp(key: Pair<Long, Int>, hit: Hit) {
+        wanted.remove(key)
+        wanted[key] = hit
+        if (lookups?.isActive == true || !::opened.isInitialized) return
+        lookups = scope.launch {
+            while (wanted.isNotEmpty()) {
+                val next = wanted.keys.last()
+                val of = wanted.remove(next) ?: continue
+                if (rowOf(next) == null) continue
+                val result = withContext(Dispatchers.IO) { runCatching { opened.heading(of.bookId, of.lineIndex) } }
+                val error = result.exceptionOrNull()
+                if (error != null) {
+                    // The scan's interrupt can meet this query on the one connection: once more. Any other failure
+                    // is not kept, and the row asks again when it is drawn again.
+                    if ((error as? SqliteException)?.interrupted == true) wanted[next] = of
+                    continue
+                }
+                val heading = result.getOrNull()?.takeIf { it.isNotBlank() && it != of.bookTitle } ?: "שורה ${of.lineIndex + 1}"
+                headings[next] = heading
+                rowOf(next)?.place?.text = "· $heading"
             }
         }
-        return view
+    }
+
+    /** The row on screen that shows [key]'s result, if one does. */
+    private fun rowOf(key: Pair<Long, Int>): HitView? {
+        for (i in 0 until list.childCount) {
+            val row = list.getChildAt(i) as? HitView ?: continue
+            if (row.key == key) return row
+        }
+        return null
     }
 
     /** "עוד N תוצאות מ…": the book's other results (ResultLink). */
@@ -651,16 +944,22 @@ class SearchActivity : BaseActivity() {
         text.text = "עוד ${row.count} תוצאות מ${row.title}"
     }
 
-    /** The passage around the first word found: a little before it (as the main app's compactSnippet), the words bold. */
-    private fun snippet(html: String): CharSequence {
-        val text = LineText.render(html, prefs.diacritics)
+    /**
+     * The passage around the first word found, as the main app's compactSnippet: a little before it and up to 200
+     * letters after it, the words bold.
+     */
+    private fun snippet(html: String, marks: Diacritics): CharSequence {
+        val text = LineText.render(html, marks)
         val first = highlight?.find(text)
         var from = first?.let { maxOf(0, it.range.first - SNIPPET_BEFORE) } ?: 0
         if (from > 0) {
             val space = text.lastIndexOf(' ', from)
             if (space in 1 until (first?.range?.first ?: 0)) from = space + 1
         }
-        val out = if (from > 0) SpannableStringBuilder("...").append(text.subSequence(from, text.length)) else SpannableStringBuilder(text)
+        val end = text.indexOf(' ', (first?.range?.first ?: 0) + SNIPPET_AFTER)
+        val to = if (end > from) end else text.length
+        val out = SpannableStringBuilder(if (from > 0) "..." else "").append(text.subSequence(from, to))
+        if (to < text.length) out.append("...")
         highlight?.findAll(out)?.forEach { match ->
             out.setSpan(StyleSpan(Typeface.BOLD), match.range.first, match.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             out.setSpan(ForegroundColorSpan(colors.text), match.range.first, match.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -678,6 +977,11 @@ class SearchActivity : BaseActivity() {
         private const val MAX_BOOK_SUGGESTIONS = 12
         private const val SUGGEST_DELAY_MS = 250L
         private const val SNIPPET_BEFORE = 40
+        private const val SNIPPET_AFTER = 200
+        private const val MAX_SNIPPETS = 64
+
+        /** How often a running search draws where it is and the hits it found. */
+        private const val REFRESH_MS = 250L
 
         /** Desktop's placeholder grey (HomeView SearchBar, both themes). */
         const val PLACEHOLDER_GREY = 0xFF9AA0A6.toInt()
