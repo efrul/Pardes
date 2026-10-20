@@ -25,4 +25,13 @@ object Bidi {
 
     /** A path, a file size or a version number kept left to right inside a Hebrew sentence. */
     fun ltr(text: String): String = "$LRE$text$PDF"
+
+    /**
+     * The main app's texts put U+200E (left-to-right mark) before a Latin token that starts with a dot (.part01,
+     * .manifest.json). Android 4.4 draws that dot on the token's Hebrew side whatever mark or embedding comes before it
+     * ("part01."), so each such token goes without its dot (part01, manifest.json): the file it names reads the same.
+     */
+    fun marks(text: String): String = MARKED_TOKEN.replace(text) { it.groupValues[1] }
+
+    private val MARKED_TOKEN = Regex("\u200E\\.([\\w.-]+)")
 }

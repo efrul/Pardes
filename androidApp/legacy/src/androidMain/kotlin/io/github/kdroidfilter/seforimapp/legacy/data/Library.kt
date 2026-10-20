@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.legacy.data
 
 import android.content.Context
 import android.media.MediaScannerConnection
+import android.os.StatFs
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlPreparedStatement
@@ -34,6 +35,9 @@ data class BookInfo(
 
 class NoLibraryException : Exception("No library")
 
+/** The library is being installed (Library.installing): it opens once the install ends. */
+class InstallingException : Exception("Installing")
+
 /**
  * The library: where it is, and the desktop repository on top of it. The library is the desktop's databases folder
  * (seforim.db, the rest unused here) in one of the folders the main app uses, the app's own folder on the phone or on a
@@ -50,6 +54,16 @@ class Library(private val context: Context) {
         val maxFileBytes: Long? get() = if (fileSystem in FAT_TYPES) FAT_MAX_FILE_BYTES else null
 
         val isFat: Boolean get() = maxFileBytes != null
+
+        /** A memory card (a library on another card than the one installed to is left alone, as the main app does). */
+        val isCard: Boolean get() = label == CARD_LABEL
+
+        /** Free and total bytes there (the main app's LibraryLocation.space), 0 when it cannot be read. */
+        fun space(): Pair<Long, Long> = runCatching {
+            dir.mkdirs()
+            val stat = StatFs(dir.path)
+            stat.availableBytes to stat.totalBytes
+        }.getOrDefault(0L to 0L)
     }
 
     /** The app's folder on the phone's shared storage, then on each memory card, then its internal storage. */
@@ -62,6 +76,20 @@ class Library(private val context: Context) {
         }
         list += Location(File(context.filesDir, FOLDER), INTERNAL_LABEL, fileSystemOf(context.filesDir, mounts))
         return list
+    }
+
+    /**
+     * The folder of the filesystem that holds [path] (under Android's FUSE view of a card or of the shared storage), or
+     * null when /proc/mounts does not tell: two paths with the same one are on one volume, where a rename moves a file.
+     */
+    fun volumeOf(path: File): String? = backingMount(path, readMounts())
+
+    /** The location the library is in now (it has seforim.db), or null. */
+    fun currentLocation(): Location? = findDatabase()?.parentFile?.let(::locationOf)
+
+    /** Remembers [dir] as the library's folder (an install put a library there): it is opened from there next. */
+    fun remember(dir: File) {
+        prefs.libraryDir = dir.path
     }
 
     /** The location [dir] is in (the folder of an open library), or one made for it. */
@@ -266,11 +294,19 @@ class Library(private val context: Context) {
 
     val current: Opened? get() = opened
 
+    /**
+     * Set while an install runs (LegacyInstaller): the library it may replace is not opened again meanwhile, by the Home
+     * or the search, and [open] throws [InstallingException].
+     */
+    @Volatile
+    var installing: Boolean = false
+
     /** Opens the library (blocking: call it off the main thread). [NoLibraryException] when there is none. */
     fun open(): Opened {
         opened?.let { return it }
         synchronized(this) {
             opened?.let { return it }
+            if (installing) throw InstallingException()
             val file = findDatabase() ?: throw NoLibraryException()
             val driver = NativeSqliteDriver.open(file.path)
             val repository = try {
@@ -316,16 +352,19 @@ class Library(private val context: Context) {
          * shared storage through one over /data (/storage/emulated): their own filesystems are what holds the files.
          * The main app reads the card's volume by its UUID with API 23/24 calls instead (LibraryLocation).
          */
-        fun fileSystemOf(path: File, mounts: Map<String, String>): String? {
+        fun fileSystemOf(path: File, mounts: Map<String, String>): String? = backingMount(path, mounts)?.let { mounts[it] }
+
+        /** The mount point of the filesystem that holds [path] ([fileSystemOf]): the one behind a FUSE view. */
+        private fun backingMount(path: File, mounts: Map<String, String>): String? {
             val at = runCatching { path.canonicalPath }.getOrDefault(path.path)
             val point = mounts.keys.filter { at == it || at.startsWith(if (it.endsWith("/")) it else "$it/") }.maxByOrNull { it.length } ?: return null
             val type = mounts.getValue(point)
-            if (type !in VIEW_TYPES) return type
+            if (type !in VIEW_TYPES) return point
             val name = point.removePrefix("/storage/").substringBefore('/')
             return when {
-                point == "/storage/emulated" || name == "emulated" -> mounts["/data"]
-                point.startsWith("/storage/") -> mounts["/mnt/media_rw/$name"]
-                point.startsWith("/mnt/shell/emulated") -> mounts["/data"]
+                point == "/storage/emulated" || name == "emulated" -> "/data"
+                point.startsWith("/storage/") -> "/mnt/media_rw/$name"
+                point.startsWith("/mnt/shell/emulated") -> "/data"
                 else -> null
             }
         }

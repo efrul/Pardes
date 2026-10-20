@@ -29,12 +29,14 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.PARDES_BASED_ON
 import io.github.kdroidfilter.seforimapp.android.ui.shell.parseZayitDeepLink
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.Catalog
+import io.github.kdroidfilter.seforimapp.legacy.data.InstallingException
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.NoLibraryException
 import io.github.kdroidfilter.seforimapp.legacy.data.Place
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
@@ -42,12 +44,15 @@ import java.lang.ref.WeakReference
 /**
  * The Home of the main app (HomeScreen), without its tools: the wallpaper under its two blending layers, the catalog's
  * dropdowns, the logo and the search field, then (where the main app has its widgets) the books opened lately, the
- * favourites and the library's sections. With no library it says where to copy one. It also takes the desktop's links
- * (zayit://book/<id>/line/<id>, zayit://search).
+ * favourites and the library's sections. With no library it offers the install from files and says where to copy
+ * one; while an install runs it says so. It also takes the desktop's links (zayit://book/<id>/line/<id>, zayit://search).
  */
 class MainActivity : BaseActivity() {
     private lateinit var content: LinearLayout
     private var loadJob: Job? = null
+
+    /** Waits for an install to end ([showInstalling]), then opens the library again. */
+    private var installWait: Job? = null
     private var pendingLink: Uri? = null
 
     /** The library the Home shows; null while it opens, and with no library or one that cannot be read. */
@@ -103,7 +108,11 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        val home = homeLibrary ?: return
+        val home = homeLibrary ?: run {
+            // An install from files ended behind the Home without a library, and opened its library.
+            if (loadJob?.isActive != true && installWait?.isActive != true && app.library.current != null) load()
+            return
+        }
         // The library was closed behind the Home (Settings searches for it again): open it again, or say it is gone.
         // Otherwise only the books opened lately and the favourites can have changed (in a book, in Settings).
         if (app.library.current !== home) load() else refreshPlaces()
@@ -128,6 +137,7 @@ class MainActivity : BaseActivity() {
 
     private fun load() {
         loadJob?.cancel()
+        installWait?.cancel()
         homeLibrary = null
         showProgress()
         loadJob = scope.launch {
@@ -139,7 +149,11 @@ class MainActivity : BaseActivity() {
                 // The search's indexes open in the background, ready for the first search
                 app.search.prepare()
             }.onFailure { error ->
-                if (error is NoLibraryException) showNoLibrary() else showError(error)
+                when (error) {
+                    is NoLibraryException -> showNoLibrary()
+                    is InstallingException -> showInstalling()
+                    else -> showError(error)
+                }
             }
         }
     }
@@ -340,7 +354,28 @@ class MainActivity : BaseActivity() {
             keyable(this) { BookActivity.start(this@MainActivity, place.bookId, place.lineIndex, place.title) }
         }
 
-    /** Where to copy a library: the desktop's databases folder, into the app's folder on the phone or a card. */
+    /** An install from files runs (the library may be replaced): the Home waits for it, and shows it on OK. */
+    private fun showInstalling() {
+        content.removeAllViews()
+        content.addView(logo(), lp(MATCH, WRAP))
+        content.addView(card().apply {
+            addView(spinner(colors), lp(WRAP, WRAP).apply { gravity = Gravity.CENTER_HORIZONTAL })
+            addView(label(InstallTexts.INSTALLING, 16f, colors.text).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, dp(8), 0, dp(4))
+            })
+            addView(textButton(InstallTexts.SHOW_INSTALL) { InstallActivity.start(this@MainActivity, replacing = false) }.also { if (!it.isInTouchMode) it.post { it.requestFocus() } })
+        })
+        installWait = scope.launch {
+            app.installer.running.first { !it }
+            load()
+        }
+    }
+
+    /**
+     * No library yet: the install from files (a bundle, a .zst, or a library folder on the phone), then where to copy a
+     * library by hand, the desktop's databases folder, into the app's folder on the phone or a card.
+     */
     private fun showNoLibrary() {
         content.removeAllViews()
         val folder = app.library.prepareFolder()
@@ -354,22 +389,28 @@ class MainActivity : BaseActivity() {
             })
         })
         content.addView(card("עדיין אין ספרייה במכשיר").apply {
+            addView(label(Bidi.marks(InstallTexts.NO_LIBRARY_INTRO), 15f, colors.text).apply { setLineSpacing(0f, 1.15f) })
+            addView(textButton(InstallTexts.TITLE) { InstallActivity.start(this@MainActivity, replacing = false) }.also { if (!it.isInTouchMode) it.post { it.requestFocus() } })
             val steps = buildString {
-                append("פרדס קורא את הספרייה של זית למחשב. כדי להעביר אותה:\n\n")
+                append("פרדס קורא את הספרייה של זית למחשב. כדי להעביר אותה בכבל:\n\n")
                 append("1. במחשב, מצאו את תיקיית הספרייה של זית למחשב, databases. ב־Windows היא:\n")
                 append(Bidi.ltr("%APPDATA%\\io.github.kdroidfilter.seforimapp\\databases")).append("\n\n")
                 append("2. חברו את הטלפון למחשב בכבל USB, במצב העברת קבצים (MTP).\n\n")
-                append("3. העתיקו את הקובץ seforim.db (ואת שאר הקבצים שלצדו) לתיקייה הזו בזיכרון הטלפון:\n")
+                append("3. העתיקו את הקובץ seforim.db ואת מה שלצדו, התיקיות seforim.db.lucene ו־seforim.db.lookup.lucene ")
+                append("(אינדקס החיפוש) והקבצים lexical.db, catalog.pb ו־release_info.txt, לתיקייה הזו בזיכרון הטלפון:\n")
                 append(shortPath(folder?.path ?: "/Android/data/io.github.efrul.pardes/files/library"))
                 if (cards.isNotEmpty()) append("\nאו לאותה תיקייה בכרטיס הזיכרון.")
                 append("\n\n4. חזרו לפרדס ובחרו \"חפש שוב\".\n\n")
-                append("הספרייה המלאה תופסת כ־8 ג׳יגה־בייט. בטלפון עם מעט מקום אפשר להעביר ספרייה קטנה של ספרים נבחרים, ")
-                append("שבונה הכלי Zayit Subset במחשב. בכרטיס זיכרון בפורמט FAT32 אין מקום לקובץ של 8 ג׳יגה־בייט: ")
-                append("את הספרייה המלאה שומרים שם מחולקת לחלקים (").append(Bidi.ltr("seforim.db, seforim.db001…"))
-                append("), כפי שפרדס לאנדרואיד 8 ומעלה מחלק אותה.")
+                append("הספרייה המלאה תופסת כ־13 ג׳יגה־בייט: מסד הנתונים כ־8 ואינדקס החיפוש כ־5. בטלפון עם מעט מקום אפשר ")
+                append("להעביר ספרייה קטנה של ספרים נבחרים, שבונה הכלי Zayit Subset במחשב. בכרטיס זיכרון בפורמט FAT32 אין מקום ")
+                append("לקובץ של 8 ג׳יגה־בייט: את מסד הנתונים המלא שומרים שם מחולק לחלקים (").append(Bidi.ltr("seforim.db, seforim.db001"))
+                append(" וכו׳), כפי שפרדס לאנדרואיד 8 ומעלה מחלק אותו, וכפי שההתקנה מקבצים כותבת אותו שם.")
             }
-            addView(label(steps, 15f, colors.text).apply { setLineSpacing(0f, 1.15f) })
-            addView(textButton("חפש שוב") { reload() }.also { if (!it.isInTouchMode) it.post { it.requestFocus() } })
+            addView(label(steps, 15f, colors.text).apply {
+                setLineSpacing(0f, 1.15f)
+                setPadding(0, dp(10), 0, 0)
+            })
+            addView(textButton("חפש שוב") { reload() })
         })
     }
 

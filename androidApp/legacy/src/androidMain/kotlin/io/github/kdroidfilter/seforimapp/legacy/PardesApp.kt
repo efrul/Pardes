@@ -5,11 +5,12 @@ import android.content.Context
 import androidx.multidex.MultiDex
 import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase
 import io.github.kdroidfilter.seforimapp.android.data.SqlVariableLimit
+import io.github.kdroidfilter.seforimapp.legacy.data.LegacyInstaller
 import io.github.kdroidfilter.seforimapp.legacy.data.LegacySearch
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
 
-/** The app's singletons: the library, the preferences and the search. */
+/** The app's singletons: the library, the preferences, the search and the install from files. */
 class PardesApp : Application() {
     lateinit var library: Library
         private set
@@ -18,6 +19,9 @@ class PardesApp : Application() {
 
     /** The desktop search on the library's Lucene indexes, made when first asked for (it sets Lucene's properties). */
     val search: LegacySearch by lazy { LegacySearch(this, library, prefs) }
+
+    /** The install of a library from files (Settings › ספרייה, the Home without a library): one run at a time. */
+    val installer: LegacyInstaller by lazy { LegacyInstaller(this) }
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)

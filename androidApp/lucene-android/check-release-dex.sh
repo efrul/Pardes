@@ -31,6 +31,19 @@ LEGACY_ALLOWED=(
   "21	method	android/view/Window	setStatusBarColor(I)V"
   "24	method	android/text/Html	fromHtml(Ljava/lang/String;I)Landroid/text/Spanned;"
   "26	method	android/widget/TextView	setJustificationMode(I)V"
+  # The install from files (legacy ui/InstallActivity.kt, InstallService.kt): storage access asked for from API 23, a
+  # notification channel from API 26
+  "23	method	android/app/Activity	checkSelfPermission(Ljava/lang/String;)I"
+  "23	method	android/app/Activity	onRequestPermissionsResult(I[Ljava/lang/String;[I)V"
+  "23	method	android/app/Activity	requestPermissions([Ljava/lang/String;I)V"
+  "26	method	android/app/Notification\$Builder	<init>(Landroid/content/Context;Ljava/lang/String;)V"
+  "26	method	android/app/NotificationChannel	<init>(Ljava/lang/String;Ljava/lang/CharSequence;I)V"
+  "26	method	android/app/NotificationManager	createNotificationChannel(Landroid/app/NotificationChannel;)V"
+  "26	type	android/app/NotificationChannel	"
+  # Core library desugaring's bridges on a List the app implements (kotlinx.serialization's JsonArray, the bundle
+  # manifest's): stream() and spliterator() convert to the platform's types, and only Android 7.0+ calls them
+  "24	type	java/util/Spliterator	"
+  "24	type	java/util/stream/Stream	"
 )
 
 usage() {

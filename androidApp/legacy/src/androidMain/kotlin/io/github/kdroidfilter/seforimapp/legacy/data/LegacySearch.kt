@@ -277,6 +277,19 @@ class LegacySearch(context: Context, private val library: Library, private val p
         reopen()
     }
 
+    /**
+     * Closes the indexes and their files, for an install that replaces the library (a deleted file still open keeps its
+     * space, as the main app's install closes its search). The next [service] opens the new library's, the failures of
+     * this session forgotten: they were the old library's.
+     */
+    suspend fun close() = mutex.withLock {
+        val current = opened
+        opened = null
+        _level.value = Level.Scan
+        synchronized(sessionFailures) { sessionFailures.clear() }
+        current?.service?.close()
+    }
+
     /** [service] in the background: closes what failed, opens what is now allowed. */
     private fun reopen() {
         scope.launch { runCatching { service() } }

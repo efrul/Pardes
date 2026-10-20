@@ -38,7 +38,7 @@ class SettingsActivity : BaseActivity() {
 
     private enum class Page(val title: String, val summary: String, val icon: Int) {
         Display("תצוגה", "ערכת נושא, תמונת רקע, גודל הטקסט, גופן וניקוד", R.drawable.ic_text_format),
-        Library("ספרייה", "מיקום הספרייה וגודלה, ורשימת הספרים האחרונים", R.drawable.ic_library),
+        Library("ספרייה", "מיקום הספרייה וגודלה, התקנה מקבצים ורשימת הספרים האחרונים", R.drawable.ic_library),
         About("אודות", "על פרדס ותודות", R.drawable.ic_info),
         Terms("תנאים", "מקורות, זכויות ורישיון", R.drawable.ic_book),
         Licences("רישיונות", "רישיון פרדס ורישיונות הספריות, הגופנים והנתונים", R.drawable.ic_copy),
@@ -269,6 +269,10 @@ class SettingsActivity : BaseActivity() {
             finish()
         }
         actions.addView(search)
+        // The main app's database update from local files (DatabaseUpdateWindow), for a newer or another library.
+        actions.addView(link(InstallTexts.TITLE) {
+            InstallActivity.start(this, replacing = app.library.current != null || app.library.findDatabase() != null)
+        })
         actions.addView(link("נקה את רשימת הספרים האחרונים") {
             prefs.clearRecents()
             toast("הרשימה נוקתה")

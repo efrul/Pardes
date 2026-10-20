@@ -2,6 +2,8 @@
 // lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforimapp.android.ui.onboarding
 
+import io.github.kdroidfilter.seforimapp.android.data.InstallError
+import io.github.kdroidfilter.seforimapp.android.data.InstallState
 import java.util.Locale
 
 /** Sizes as desktop prints them (FormatUtils.formatBytes): powers of 1024, two decimals, Hebrew unit. */
@@ -100,3 +102,16 @@ internal object AndroidStrings {
     const val continueWithFiles = "המשך להתקנה מקבצים"
     const val installationOnlineNoSpace = "אין במכשיר מספיק מקום להורדת הספרייה המלאה. אפשר להתקין מקבצים ספרייה קטנה יותר."
 }
+
+/** Desktop message for a failed install (DownloadScreen / ExtractScreen / OfflineFileSelectionScreen). */
+internal fun installErrorMessage(failed: InstallState.Failed): String = when (failed.error) {
+    InstallError.InsufficientSpace -> DesktopStrings.dbInstallInsufficientSpace
+    InstallError.IncompleteBundle -> DesktopStrings.dbInstallIncompleteBundle
+    InstallError.Incompatible -> DesktopStrings.onboardingVersionErrorMessage
+    InstallError.FileTooLarge -> AndroidStrings.fileTooLarge
+    InstallError.Generic -> failed.detail?.takeIf { it.isNotBlank() }?.let { DesktopStrings.onboardingErrorWithDetail.format(it) }
+        ?: DesktopStrings.onboardingErrorOccurred
+}
+
+internal val InstallState.isBusy: Boolean
+    get() = this is InstallState.Preparing || this is InstallState.Downloading || this is InstallState.Extracting || this is InstallState.Verifying

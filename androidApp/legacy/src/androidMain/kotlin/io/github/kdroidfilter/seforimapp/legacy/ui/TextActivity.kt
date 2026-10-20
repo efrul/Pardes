@@ -187,9 +187,16 @@ class TextActivity : BaseActivity() {
             Component("Kermit (Touchlab)", APACHE, "licenses/Apache-2.0.txt"),
             Component("HebrewNumerals (kdroidFilter)", APACHE, "licenses/Apache-2.0.txt"),
             Component("jsoup (Jonathan Hedley)", "MIT", "licenses/jsoup-LICENSE.txt"),
+            // The install from files, as the main app's (LicencesSettings): tar.zst bundles read with zstd-jni and
+            // Commons Compress, which brings Commons IO, Lang and Codec.
+            Component("Apache Commons Compress, IO, Lang, Codec (The Apache Software Foundation)", APACHE, "licenses/Apache-2.0.txt"),
+            Component("Apache Commons: NOTICE", "Copyright 2001-2025 The Apache Software Foundation", "licenses/Apache-Commons-NOTICE.txt"),
+            Component("zstd-jni (Luben Karavelov)", "BSD 2-Clause", "licenses/zstd-jni-LICENSE.txt"),
+            Component("Zstandard (Meta Platforms, Inc. and affiliates)", "BSD", "licenses/Zstandard-LICENSE.txt"),
             Component("AndroidX Multidex (Google)", APACHE, "licenses/Apache-2.0.txt"),
             Component("desugar_jdk_libs (Google, מ־OpenJDK)", "GNU GPL v2 עם חריגת Classpath", "licenses/desugar_jdk_libs-LICENSE.txt"),
             Component("Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),
+            Component("Bootstrap Icons (The Bootstrap Authors)", "MIT", "licenses/Bootstrap-Icons-LICENSE.txt"),
             Component("Noto Serif Hebrew", "SIL Open Font License 1.1", "licenses/OFL-Noto-Hebrew.txt"),
             Component("Frank Ruhl Libre", "SIL Open Font License 1.1", "licenses/OFL-Frank-Ruhl-Libre.txt"),
             // Its own notice (Fonts-NOTICE.txt): the GPL with the font exception, and the MIT text of its layout logic.

@@ -35,6 +35,9 @@ The whole app runs with `LayoutDirection.Rtl`.
   - Cause: under 300dp (Jelly Star) the top bar has no room for every action.
   - Fix: `narrowPhone` moves find-in-page into the overflow menu.
 
+- **Android 4.4 draws a leading dot on the Hebrew side** of a Latin token whatever comes before it: U+200E and an LRE…PDF embedding both left ".part01" (marked or embedded) drawn as "part01." on the pardes19 AVD, and an embedded "seforim.db001…" with its "…" on the left. The 4.4 edition names file types without the dot (`Bidi.marks` turns the main app's U+200E-marked ".part01" into "part01") and keeps neutrals out of the ends of embedded Latin text.
+- **Android 4.4's StaticLayout throws on a middle (or start) ellipsis of a TextView with maxLines 1** (ArrayIndexOutOfBoundsException in calculateEllipsis, the install's progress line): use `setSingleLine(true)` with an end ellipsis.
+
 ## Compose layout
 
 - **Justified text selects beside the word.**

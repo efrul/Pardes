@@ -44,19 +44,6 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.ZCheckRow
 import io.github.kdroidfilter.seforimapp.android.ui.settings.BundledLicenceLinks
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 
-/** Desktop message for a failed install (DownloadScreen / ExtractScreen / OfflineFileSelectionScreen). */
-internal fun installErrorMessage(failed: InstallState.Failed): String = when (failed.error) {
-    InstallError.InsufficientSpace -> DesktopStrings.dbInstallInsufficientSpace
-    InstallError.IncompleteBundle -> DesktopStrings.dbInstallIncompleteBundle
-    InstallError.Incompatible -> DesktopStrings.onboardingVersionErrorMessage
-    InstallError.FileTooLarge -> AndroidStrings.fileTooLarge
-    InstallError.Generic -> failed.detail?.takeIf { it.isNotBlank() }?.let { DesktopStrings.onboardingErrorWithDetail.format(it) }
-        ?: DesktopStrings.onboardingErrorOccurred
-}
-
-internal val InstallState.isBusy: Boolean
-    get() = this is InstallState.Preparing || this is InstallState.Downloading || this is InstallState.Extracting || this is InstallState.Verifying
-
 @Composable
 internal fun InitStep(onNext: () -> Unit) {
     val wide = LocalOnboardingWide.current

@@ -21,8 +21,18 @@ import android.widget.TextView
  * kind) rather than Android 4.4's Holo ones. Every row is focusable, so a keypad moves through them and picks with OK.
  */
 object Dialogs {
-    /** A dialog with [title], [content] and, at its foot, [buttons] (label → action; each closes the dialog first). */
-    fun show(activity: Activity, colors: Colors, title: String?, content: View, buttons: List<Pair<String, () -> Unit>> = listOf("סגור" to {})): Dialog {
+    /**
+     * A dialog with [title], [content] and, at its foot, [buttons] (label → action; each closes the dialog first). A
+     * keypad starts on button [focusButton] when it is given (a question's answer), else on the dialog's first stop.
+     */
+    fun show(
+        activity: Activity,
+        colors: Colors,
+        title: String?,
+        content: View,
+        buttons: List<Pair<String, () -> Unit>> = listOf("סגור" to {}),
+        focusButton: Int = -1,
+    ): Dialog {
         val dialog = Dialog(activity)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         val box = LinearLayout(activity).apply {
@@ -35,14 +45,16 @@ object Dialogs {
             box.addView(activity.label(title, 17f, colors.text, bold = true).apply { setPadding(activity.dp(10), 0, activity.dp(10), activity.dp(8)) })
         }
         box.addView(ScrollView(activity).apply { addView(content) }, lp(MATCH, 0, 1f).apply { weight = 1f })
+        var focus: View? = null
         if (buttons.isNotEmpty()) {
             val row = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 setPadding(0, activity.dp(6), 0, 0)
             }
-            buttons.forEach { (label, action) ->
+            buttons.forEachIndexed { i, (label, action) ->
                 row.addView(activity.label(label, 15f, colors.accent, bold = true).apply {
+                    if (i == focusButton) focus = this
                     gravity = Gravity.CENTER
                     minWidth = activity.dp(64)
                     minHeight = activity.dp(40)
@@ -60,6 +72,7 @@ object Dialogs {
         dialog.window?.setBackgroundDrawable(ColorDrawable(0))
         dialog.window?.setLayout((activity.resources.displayMetrics.widthPixels * 0.9f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
         dialog.show()
+        focus?.let { if (!it.isInTouchMode) it.requestFocus() }
         return dialog
     }
 

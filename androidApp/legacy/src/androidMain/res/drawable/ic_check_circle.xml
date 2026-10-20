@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bootstrap Icons "check2-circle" (MIT), the main app's "הכול מוכן!" illustration (OnboardingIcons.Check2Circle),
+     path for path; white, the screens tint it (ui/Ui.kt).
+     96dp: the install screen shows it that large, and below Android 5.0 the build draws it into a PNG of this size. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2.5,8a5.5,5.5 0,0 1,8.25 -4.764a0.5,0.5 0,0 0,0.5 -0.866A6.5,6.5 0,1 0,14.5 8a0.5,0.5 0,0 0,-1 0a5.5,5.5 0,1 1,-11 0" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M15.354,3.354a0.5,0.5 0,0 0,-0.708 -0.708L8,9.293L5.354,6.646a0.5,0.5 0,1 0,-0.708 0.708l3,3a0.5,0.5 0,0 0,0.708 0Z" />
+</vector>
