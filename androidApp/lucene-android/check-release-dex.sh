@@ -27,13 +27,23 @@ LEGACY_ALLOWED=(
   "26	method	android/widget/TextView	setJustificationMode(I)V"
 )
 
+usage() {
+  echo "usage: $0 <app-release.apk> <mapping.txt>" >&2
+  echo "       $0 --legacy <legacy-release.apk>" >&2
+  exit 2
+}
+
 legacy=false
 if [ "${1:-}" = --legacy ]; then
   legacy=true
   shift
 fi
-apk="$1"
+apk="${1:-}"
 mapping="${2:-}"
+[ -f "$apk" ] || usage
+# Without mapping.txt the holders below would keep their obfuscated names (and awk would read stdin): the main
+# app's check needs it.
+$legacy || [ -f "$mapping" ] || usage
 here="$(cd "$(dirname "$0")" && pwd)"
 sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 if [ -z "$sdk" ] && [ -f "$here/../local.properties" ]; then
