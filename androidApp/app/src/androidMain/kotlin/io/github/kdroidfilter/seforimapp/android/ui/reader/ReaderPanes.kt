@@ -248,7 +248,7 @@ fun paneTextSize(textSize: Float) = textSize * 0.875f
 
 /** One link's text (desktop CommentaryItem / LinkItem): highlights of its own book, the find query, links, images. */
 @Composable
-fun LinkItem(item: CommentaryWithText, textSize: Float, font: FontFamily, diacritics: DiacriticsMode, highlights: List<UserHighlight>, findQuery: String) {
+fun LinkItem(item: CommentaryWithText, textSize: Float, font: FontFamily, diacritics: DiacriticsMode, highlights: List<UserHighlight>, findQuery: String, selectable: SelectableText? = null) {
     val c = Zayit.colors
     val annotation = rememberHtmlAnnotation(item.targetText, textSize, diacritics)
     val needsOriginal = diacritics != DiacriticsMode.All && highlights.isNotEmpty()
@@ -264,8 +264,11 @@ fun LinkItem(item: CommentaryWithText, textSize: Float, font: FontFamily, diacri
         Text(
             justified.text,
             inlineContent = annotation.inline,
-            modifier = Modifier.fillMaxWidth(),
-            onTextLayout = justified.onLayout,
+            modifier = Modifier.fillMaxWidth().then(selectable?.modifier ?: Modifier),
+            onTextLayout = {
+                justified.onLayout(it)
+                selectable?.onLayout(it)
+            },
             style = style.copy(textAlign = justified.textAlign),
         )
     }
@@ -325,12 +328,19 @@ private fun CommentatorColumn(
     }
     val highlights = rememberLinkHighlights(paged.items)
     val spec = remember(paged) { actions.paneSelection { paged.items.toList() } }
+    // Units: the commentaries' places in the column
+    val textSelection = remember(paged) { ListSelection() }
+    val colors = Zayit.colors
+    val textOf: (Long) -> String? = { unit ->
+        paged.items.getOrNull(unit.toInt())?.let { buildHtmlAnnotation(it.targetText, textSize, diacritics, colors.isDark, colors.accent).text.text }
+    }
     Column(modifier) {
         CommentatorHeader(name, textSize, compact = compactHeader) { scope.launch { actions.openBookAt(commentatorId, vm.commentaryTargetLine(selection, commentatorId)) } }
-        SelectableArea(spec, Modifier.weight(1f).fillMaxWidth()) {
+        SelectableArea(spec, textSelection, list, textOf, resetKey = diacritics, Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
-                itemsIndexed(paged.items, key = { i, it -> "${it.link.id}-$i" }) { _, item ->
-                    LinkItem(item, textSize, Zayit.fonts.commentary, diacritics, highlights[item.link.targetBookId]?.get(item.link.targetLineId).orEmpty(), findQuery)
+                itemsIndexed(paged.items, key = { i, it -> "${it.link.id}-$i" }) { i, item ->
+                    val selectable = rememberSelectableText(textSelection, i.toLong())
+                    LinkItem(item, textSize, Zayit.fonts.commentary, diacritics, highlights[item.link.targetBookId]?.get(item.link.targetLineId).orEmpty(), findQuery, selectable)
                 }
                 if (paged.loading && paged.items.isEmpty()) item { LoadingBox(Modifier.fillMaxWidth().height(80.dp)) }
             }
@@ -339,6 +349,9 @@ private fun CommentatorColumn(
 }
 
 // Grid capacity (desktop views/CommentatorsGrid.kt), at the reference commentary size 14
+/** A sources or targum section's span of [ListSelection] units: more than one line's links from one book ever are. */
+private const val SECTION_UNITS = 10_000L
+
 private const val MIN_CELL_WIDTH_AT_REF = 320f
 private const val MIN_CELL_HEIGHT_AT_REF = 150f
 private const val MAX_ROWS_PER_PAGE = 2
@@ -590,14 +603,24 @@ fun LinksPane(vm: ReaderViewModel, state: ReaderUiState, type: ConnectionType, t
                 val all = sections.flatMap { it.second.items }
                 val highlights = rememberLinkHighlights(all)
                 val spec = remember(sections.map { it.second }) { actions.paneSelection { sections.flatMap { it.second.items } } }
-                SelectableArea(spec, Modifier.fillMaxSize()) {
-                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+                // Units: a section's place × SECTION_UNITS + the source's place in it, which its paging keeps
+                val textSelection = remember(sections.map { it.second }) { ListSelection() }
+                val list = rememberLazyListState()
+                val colors = Zayit.colors
+                val textOf: (Long) -> String? = { unit ->
+                    sections.getOrNull((unit / SECTION_UNITS).toInt())?.second?.items?.getOrNull((unit % SECTION_UNITS).toInt())?.let {
+                        buildHtmlAnnotation(it.targetText, pane, state.diacritics, colors.isDark, colors.accent).text.text
+                    }
+                }
+                SelectableArea(spec, textSelection, list, textOf, resetKey = state.diacritics, Modifier.fillMaxSize()) {
+                    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 16.dp)) {
                         sections.forEachIndexed { s, (name, paged) ->
                             item(key = "h-${ids[s]}") {
                                 CommentatorHeader(name, pane) { actions.openBookAt(ids[s], paged.items.firstOrNull()?.link?.targetLineId) }
                             }
                             itemsIndexed(paged.items, key = { i, it -> "${ids[s]}-${it.link.id}-$i" }) { i, item ->
-                                LinkItem(item, pane, font, state.diacritics, highlights[item.link.targetBookId]?.get(item.link.targetLineId).orEmpty(), state.find.activeQuery)
+                                val selectable = rememberSelectableText(textSelection, s * SECTION_UNITS + i)
+                                LinkItem(item, pane, font, state.diacritics, highlights[item.link.targetBookId]?.get(item.link.targetLineId).orEmpty(), state.find.activeQuery, selectable)
                                 if (i == paged.items.lastIndex && !paged.done) LaunchedEffect(paged.items.size) { paged.more() }
                             }
                         }
