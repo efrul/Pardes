@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.OpenableColumns
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
+import io.github.kdroidfilter.seforimapp.android.data.DatabaseChunks
 import io.github.kdroidfilter.seforimapp.android.data.DatabaseVersion
 import io.github.kdroidfilter.seforimapp.android.data.HttpStatusException
 import io.github.kdroidfilter.seforimapp.android.data.InstallToken
@@ -12,7 +13,6 @@ import io.github.kdroidfilter.seforimapp.android.data.LibraryInstaller
 import io.github.kdroidfilter.seforimapp.android.data.LibraryMover
 import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.android.data.ResumingHttpInputStream
-import io.github.kdroidfilter.seforimapp.android.data.SplitDatabase
 import io.github.kdroidfilter.seforimapp.android.readAtMost
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.AndroidStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
@@ -374,7 +374,7 @@ class DbDeltaUpdateService private constructor(private val app: ZayitApplication
      */
     private fun deltaRefusal(): String? = when {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.R -> DeltaStrings.androidTooOld
-        SplitDatabase.isSplit(store.databaseFile) -> DeltaStrings.splitUnsupported
+        DatabaseChunks.isSplit(store.databaseFile) -> DeltaStrings.splitUnsupported
         else -> null
     }
 

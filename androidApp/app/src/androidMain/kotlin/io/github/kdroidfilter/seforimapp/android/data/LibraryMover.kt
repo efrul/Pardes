@@ -55,7 +55,7 @@ data class MovePlan(
     val databaseBytes: Long = 0L,
 ) {
     /** The database will be kept in chunks there (SplitDatabase): a FAT32 card and a database over one chunk. */
-    val splits: Boolean get() = target.isFat && databaseBytes > SplitDatabase.CHUNK_BYTES
+    val splits: Boolean get() = target.isFat && databaseBytes > DatabaseChunks.CHUNK_BYTES
 
     val fits: Boolean get() = availableBytes >= totalBytes + LibraryMover.SPACE_HEADROOM_BYTES
     val fileTooLarge: Boolean get() = target.maxFileBytes?.let { largestFileBytes > it } == true
@@ -102,7 +102,7 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
         if (!LibraryStore.hasDatabase(source) || source == target.dir) return null
         val database = File(source, LibraryStore.DB_NAME)
         val others = items(source).filter { it != database }.flatMap { it.walkTopDown().filter(File::isFile).toList() }
-        val databaseBytes = SplitDatabase.size(database)
+        val databaseBytes = DatabaseChunks.size(database)
         val available = target.space().availableBytes + leftoverBytes(target.dir)
         // The database goes to a FAT32 card in chunks (SplitDatabase), elsewhere as one file.
         val largest = maxOf(others.maxOfOrNull { it.length() } ?: 0L, if (target.isFat) 0L else databaseBytes)
@@ -180,7 +180,7 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
             val staged = staged(target.dir, item.name)
             when {
                 item.isDirectory -> item.walkTopDown().filter(File::isFile).forEach { file -> copyFile(file, File(staged, file.relativeTo(item).path)) }
-                item.name == LibraryStore.DB_NAME -> SplitDatabase.openInput(item).use { input ->
+                item.name == LibraryStore.DB_NAME -> DatabaseChunks.openInput(item).use { input ->
                     (if (target.isFat) ChunkedOutputStream(staged) else FileOutputStream(staged)).use { out -> copy(input, out) }
                 }
                 else -> copyFile(item, staged)
@@ -196,14 +196,14 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
         for (item in sourceItems) {
             val final = File(target.dir, item.name)
             // A split database's overflow chunks take their names just before its first chunk does.
-            if (item.name == LibraryStore.DB_NAME) SplitDatabase.renameOverflow(staged(target.dir, item.name), final)
+            if (item.name == LibraryStore.DB_NAME) DatabaseChunks.renameOverflow(staged(target.dir, item.name), final)
             final.deleteRecursively()
             if (!staged(target.dir, item.name).renameTo(final)) throw IOException("Cannot rename ${item.name}")
         }
         store.refreshLocations()
         // The old copy: the database first, so it never looks like a library again.
         (listOf(File(plan.source, LibraryStore.DB_NAME)) + DB_SIDECARS.map { File(plan.source, LibraryStore.DB_NAME + it) }).forEach { it.delete() }
-        SplitDatabase.deleteOverflow(plan.source, LibraryStore.DB_NAME)
+        DatabaseChunks.deleteOverflow(plan.source, LibraryStore.DB_NAME)
         (sourceItems + LEFTOVERS.map { File(plan.source, it) }).forEach { runCatching { it.deleteRecursively() } }
     }
 
@@ -227,8 +227,8 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
             return
         }
         // The database counts across its chunks (the copy may be split where the original is not, or the reverse).
-        if (!copy.isFile || SplitDatabase.size(copy) != SplitDatabase.size(source)) throw MoveException(MoveStrings.verifyFailed)
-        if (!SplitDatabase.files(copy).all(PageCache::drop)) throw MoveException(MoveStrings.verifyUnavailable)
+        if (!copy.isFile || DatabaseChunks.size(copy) != DatabaseChunks.size(source)) throw MoveException(MoveStrings.verifyFailed)
+        if (!DatabaseChunks.files(copy).all(PageCache::drop)) throw MoveException(MoveStrings.verifyUnavailable)
         if (tailChecksum(source) != tailChecksum(copy)) throw MoveException(MoveStrings.verifyFailed)
     }
 
@@ -236,7 +236,7 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
     private fun tailChecksum(file: File): Long {
         val tail = ArrayDeque<ByteArray>()
         var need = VERIFY_TAIL_BYTES
-        for (part in SplitDatabase.files(file).asReversed()) {
+        for (part in DatabaseChunks.files(file).asReversed()) {
             if (need <= 0) break
             RandomAccessFile(part, "r").use { raf ->
                 val n = minOf(need, raf.length())
@@ -259,7 +259,7 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
 
     private fun targetLeftovers(dir: File): List<File> {
         val names = LibraryStore.LIBRARY_ITEMS + DB_SIDECARS.map { LibraryStore.DB_NAME + it } + LEFTOVERS + (LibraryStore.DB_NAME + APPLYING_SUFFIX)
-        val chunks = SplitDatabase.allOverflowChunks(dir, LibraryStore.DB_NAME) + SplitDatabase.allOverflowChunks(dir, LibraryStore.DB_NAME + LibraryStore.PARTIAL_SUFFIX)
+        val chunks = DatabaseChunks.allOverflowChunks(dir, LibraryStore.DB_NAME) + DatabaseChunks.allOverflowChunks(dir, LibraryStore.DB_NAME + LibraryStore.PARTIAL_SUFFIX)
         return (names.map { File(dir, it) } + names.map { staged(dir, it) }).filter(File::exists) + chunks
     }
 
