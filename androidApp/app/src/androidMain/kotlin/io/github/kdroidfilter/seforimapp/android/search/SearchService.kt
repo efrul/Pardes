@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.search
 
+import android.os.Build
 import android.system.Os
 import android.util.Log
 import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
@@ -103,7 +104,7 @@ class SearchService(private val store: LibraryStore) {
     /** Changes when any search file is replaced: index commits by name, databases by inode. */
     private fun libraryKey(dir: File): String {
         fun segments(name: String) = File(dir, name).list()?.filter { it.startsWith("segments_") }?.sorted()?.joinToString(",").orEmpty()
-        fun inode(file: File) = runCatching { Os.stat(file.path).st_ino }.getOrDefault(-1L)
+        fun inode(file: File) = runCatching { if (Build.VERSION.SDK_INT >= 21) Os.stat(file.path).st_ino else file.lastModified() xor file.length() }.getOrDefault(-1L)
         return listOf(dir.path, segments(TEXT_INDEX), segments(LOOKUP_INDEX), inode(File(dir, DICTIONARY)), inode(store.databaseFile)).joinToString("|")
     }
 

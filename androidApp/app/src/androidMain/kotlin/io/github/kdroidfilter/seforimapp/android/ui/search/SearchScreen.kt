@@ -52,7 +52,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -110,7 +109,6 @@ import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.AppPrefs
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
-import io.github.kdroidfilter.seforimapp.android.search.searchKey
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.components.Island
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
@@ -134,7 +132,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Below this the list takes the whole width and a tap opens a result (desktop TWO_PANES_MIN_WIDTH). */
@@ -160,36 +157,6 @@ private val ShortHeight = 600.dp
 
 /** Desktop AppSettings.increaseTextSize / decreaseTextSize step. */
 private const val ZOOM_STEP = 2f
-
-// Desktop 0.6.1 strings.
-private const val SEARCH_SEARCHING = "מחפש..."
-private const val SEARCH_NO_RESULTS = "לא נמצאו תוצאות"
-private const val SEARCH_MORE_FROM_BOOK = "עוד %1\$d תוצאות מ%2\$s"
-private const val SEARCH_STATUS_BASE = "כ־%1\$s תוצאות בספרי יסוד"
-private const val SEARCH_STATUS_ALL = "כ־%1\$s תוצאות בכל הספרים"
-private const val SEARCH_STATUS_IN = "כ־%1\$s תוצאות ב%2\$s"
-private const val SEARCH_STATUS_FALLBACK = "לא נמצא בספרי יסוד · מוצגות %1\$s תוצאות מכל הספרים"
-private const val SEARCH_SWITCH_ALL = "חיפוש בכל הספרים"
-private const val SEARCH_SWITCH_BASE = "רק ספרי יסוד"
-private const val SEARCH_TAB_ALL = "הכל"
-private const val SEARCH_TABS_MORE = "עוד"
-private const val SEARCH_TABS_LESS = "פחות"
-private const val SEARCH_BACK_TO_ALL = "→ חזרה לכל התוצאות (מוצגות התוצאות מ%1\$s)"
-private const val SEARCH_STOP = "בטל חיפוש"
-private const val SEARCH_IN_PAGE = "הקלד כדי לחפש בעמוד..."
-private const val FIND_PREVIOUS = "התוצאה הקודמת"
-private const val FIND_NEXT = "התוצאה הבאה"
-private const val FIND_CLOSE = "סגירת החיפוש"
-private const val ZOOM_IN = "הגדל"
-private const val ZOOM_IN_TOOLTIP = "הגדל גודל הטקסט"
-private const val ZOOM_OUT = "הקטן"
-private const val ZOOM_OUT_TOOLTIP = "הקטן גודל הטקסט"
-private const val SEARCH_BOOK_DETAILS = "פרטי הספר"
-
-// Android only: the engine failed (an I/O error, or Lucene unable to run on this device).
-private const val SEARCH_FAILED = "החיפוש נכשל"
-
-private fun String.fill(vararg args: Any): String = String.format(Locale.ROOT, this, *args)
 
 /**
  * The search results page, a port of desktop 0.6.1 features/search/SearchResultScreen.kt (and TabsContent's search tab
@@ -788,34 +755,6 @@ private fun CategoryTab(label: String, selected: Boolean, wide: Boolean, onClick
     }
 }
 
-/** One result of the flat list: a passage, and how many more its book has ([more], on the book's first result only). */
-@Immutable
-private data class ResultItem(val hit: SearchResult, val more: Int)
-
-/**
- * The results in relevance order, one passage per run of a book (its next ones are behind the "more" link), and a
- * passage whose text was already shown (the same prayer in two siddurim sections) dropped. A book may come back lower
- * with a later run. [bookCounts] (exact per-book totals) gives the "more in this book" count of a book's first result.
- * Desktop flattenResults; a line Lucene returned twice across pages shows once (the list is keyed by line).
- */
-private fun flattenResults(results: List<SearchResult>, bookCounts: Map<Long, Int>, oneBook: Boolean): List<ResultItem> {
-    val linesSeen = HashSet<Long>()
-    if (oneBook) return results.filter { linesSeen.add(it.lineId) }.map { ResultItem(it, more = 0) }
-    val items = ArrayList<ResultItem>()
-    val booksSeen = HashSet<Long>()
-    val textsSeen = HashSet<String>()
-    var runBook = -1L
-    for (r in results) {
-        if (r.bookId == runBook) continue
-        runBook = r.bookId
-        if (!textsSeen.add(r.snippet.replace(HTML_TAG, "").searchKey())) continue
-        if (!linesSeen.add(r.lineId)) continue
-        val more = if (booksSeen.add(r.bookId)) ((bookCounts[r.bookId] ?: 1) - 1).coerceAtLeast(0) else 0
-        items += ResultItem(r, more)
-    }
-    return items
-}
-
 /**
  * A result as on Google: the book as the bold title with the passage's place beside it in grey, the passage in grey
  * with the matched words bold, then a link to the book's other results. Desktop ResultView; on a phone one size up.
@@ -897,38 +836,6 @@ private fun Snippet(hit: SearchResult, findQuery: String, wide: Boolean, compact
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(vertical = 2.dp),
     )
-}
-
-/**
- * Phones: the snippet keeps text on each side of the first hit, which pushes the hit past the two lines shown on a
- * narrow screen. Keep less before it; cuts are made at spaces outside <b>…</b>, so tags stay balanced.
- */
-internal fun compactSnippet(html: String, before: Int = 40, after: Int = 200): String {
-    val first = html.indexOf("<b>")
-    if (first < 0) return html
-    val spaces = ArrayList<Int>()
-    var depth = 0
-    var i = 0
-    while (i < html.length) {
-        when {
-            html.startsWith("<b>", i) -> {
-                depth++
-                i += 3
-            }
-            html.startsWith("</b>", i) -> {
-                depth--
-                i += 4
-            }
-            else -> {
-                if (html[i] == ' ' && depth == 0) spaces += i
-                i++
-            }
-        }
-    }
-    val start = spaces.lastOrNull { it <= first - before }
-    val end = spaces.firstOrNull { it >= first + after }
-    if (start == null && end == null) return html
-    return (if (start != null) "..." else "") + html.substring((start ?: -1) + 1, end ?: html.length) + (if (end != null) "..." else "")
 }
 
 /**

@@ -26,12 +26,13 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.android.search.AUTHOR_ERAS
+import io.github.kdroidfilter.seforimapp.android.search.OTZARIA_CREDIT
+import io.github.kdroidfilter.seforimapp.android.search.OTZARIA_URL
+import io.github.kdroidfilter.seforimapp.android.search.licenseLabel
 import io.github.kdroidfilter.seforimapp.android.search.authorYears
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
-
-private const val OTZARIA_URL = "https://otzaria.org"
 
 /**
  * The book-details pane (desktop features/bookcontent/ui/panels/bookdetails/BookDetails.kt): title, categories, each
@@ -74,7 +75,7 @@ fun BookDetailsPane(vm: ReaderViewModel, onOpenPart: (lineId: Long) -> Unit, onO
                 }
                 if (entity.fromOtzaria) {
                     Text(
-                        "התכנים שלפניכם נאספו, מוינו, סוננו ונערכו בעמל רב ובמסירות על ידי צוות פרויקט 'אוצריא' (otzaria.org).",
+                        OTZARIA_CREDIT,
                         fontSize = 12.sp,
                         color = c.textSecondary,
                         modifier = Modifier.clickable { openUrl(OTZARIA_URL) },
@@ -83,13 +84,6 @@ fun BookDetailsPane(vm: ReaderViewModel, onOpenPart: (lineId: Long) -> Unit, onO
             }
         }
     }
-}
-
-/** A license code in plain Hebrew where it has a name, else as Creative Commons writes it (desktop licenseLabel). */
-private fun licenseLabel(code: String): String = when (code) {
-    "Public Domain" -> "נחלת הכלל"
-    "unknown" -> "רישיון לא ידוע"
-    else -> if (code.startsWith("CC-")) "CC " + code.removePrefix("CC-") else code
 }
 
 @Composable

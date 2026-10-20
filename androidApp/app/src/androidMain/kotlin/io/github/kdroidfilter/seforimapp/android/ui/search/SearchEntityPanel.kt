@@ -37,7 +37,6 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 
 // Desktop 0.6.1 strings.
-private const val AUTHOR_BOOKS_COUNT = "%1\$d ספרים"
 private const val SEARCH_PANEL_AUTHOR = "מחבר"
 private const val SEARCH_PANEL_PARTS = "חלקי הספר"
 private const val SEARCH_PANEL_SOURCE = "מקור ורישיון"

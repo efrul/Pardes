@@ -48,6 +48,9 @@ internal fun etaSeconds(downloadedBytes: Long, totalBytes: Long, speedBytesPerSe
     return (remaining + speedBytesPerSec - 1) / speedBytesPerSec
 }
 
+/** Who made Pardes, as every text that names its maker says it (CLAUDE.md): one sentence for both editions. */
+internal const val PARDES_BASED_ON = "פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה."
+
 /**
  * Texts that only exist on Android: what the phone does differently from desktop (streamed install,
  * picking every part at once, a library pushed to the device, metered networks), and the welcome subtitle,
@@ -55,8 +58,8 @@ internal fun etaSeconds(downloadedBytes: Long, totalBytes: Long, speedBytesPerSe
  */
 internal object AndroidStrings {
     const val welcomeSubtitle =
-        "יישום חדש, מודרני ומהיר ללימוד התורה. פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: " +
-            "הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. פרדס שואף לחולל מהפכה בלימוד טקסטים דיגיטליים באמצעות חוויה חלקה, אלגנטית וללא צורך בחיבור לאינטרנט."
+        "יישום חדש, מודרני ומהיר ללימוד התורה. " + PARDES_BASED_ON +
+            " פרדס שואף לחולל מהפכה בלימוד טקסטים דיגיטליים באמצעות חוויה חלקה, אלגנטית וללא צורך בחיבור לאינטרנט."
     const val installationOfflineDesc =
         "עליכם לבחור קובץ מסד נתונים מוכן שהורד מראש מעמוד ההפצות האחרון. הורידו את כל הקבצים עם הסיומות ‎.part01, ‎.part02 וכו׳ " +
             "מעמוד ההפצה (וכן את קובץ ‎.manifest.json אם קיים), ולאחר מכן בחרו כאן את כולם יחד להמשך ההתקנה."

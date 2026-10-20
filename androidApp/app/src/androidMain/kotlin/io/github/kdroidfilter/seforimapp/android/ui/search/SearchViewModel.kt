@@ -5,7 +5,6 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.data.SearchScope
 import io.github.kdroidfilter.seforimapp.android.search.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
@@ -128,7 +127,7 @@ data class ExecutedSearch(val query: String, val scope: SearchScope, val globalE
 /** What a restored search tab showed (desktop SearchPersistedState): its category tab and its place in the list. */
 data class SearchViewRestore(val categoryIds: Set<Long>, val index: Int, val offset: Int, val anchorId: Long)
 
-/** A line of the preview, with the ranges of its text (as [buildAnnotatedFromHtml] lays it) the search highlights. */
+/** A line of the preview, with the ranges of its text (as [previewText] lays it) the search highlights. */
 @Immutable
 data class PreviewLine(val line: Line, val ranges: List<IntRange>)
 
@@ -339,7 +338,7 @@ class SearchViewModel(
         }
         val engine = runCatching { service.engine() }.getOrNull()
         return lines.map { line ->
-            val ranges = if (engine == null || query.isBlank()) emptyList() else engine.highlightRanges(buildAnnotatedFromHtml(line.content, PREVIEW_LAYOUT_SIZE).text, query)
+            val ranges = if (engine == null || query.isBlank()) emptyList() else engine.highlightRanges(previewText(line.content), query)
             PreviewLine(line, ranges)
         }
     }
@@ -870,9 +869,6 @@ class SearchViewModel(
 
     companion object {
         private const val TAG = "Zayit"
-
-        /** The text size the preview's highlight ranges are computed at (ranges do not depend on it). */
-        private const val PREVIEW_LAYOUT_SIZE = 16f
 
         fun factory(repo: SeforimRepository, service: SearchService, destination: Destination.Search, restore: SearchViewRestore? = null) =
             object : ViewModelProvider.Factory {
