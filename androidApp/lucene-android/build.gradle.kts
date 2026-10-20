@@ -7,7 +7,9 @@ import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 //  - classes rebuilt from src/main/java: original sources edited at "// Android:" comments, plus the small
 //    compat classes the rewriter points to (AndroidCompat, AndroidCompatApi33, CompatClassValue, CompatHexFormat,
 //    CompatRuntimeVersion, CompatVarHandle) and two that those and AttributeFactory call (AndroidCompatFlags,
-//    AndroidCompatMethodHandles);
+//    AndroidCompatMethodHandles); and, for Pardes for Android 4.4, AndroidHeapFilesDirectory and two system
+//    properties, which change nothing while unset: lucene.android.skipVectors (Lucene99HnswVectorsFormat), which it
+//    sets, and lucene.android.niofsBufferSize (NIOFSDirectory), which it leaves unset (see there);
 //  - JDK calls and types that Android lacks, redirected by rewriter/ (ASM): those of API 34/35 always run the compat
 //    code, those of API 33 run the JDK method on Android 13+ and the compat code on Android 8.0 to 12;
 //  - Panama/MMap/Module-only classes that can never load on ART, stripped.
