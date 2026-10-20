@@ -11,7 +11,8 @@
 #   --sdcard       copy to the memory card instead of the phone's storage (the card's UUID when there are several):
 #                  /storage/<UUID>/Android/data/<app>/files/library/. On a FAT32 card seforim.db goes in chunks of
 #                  2 GiB less 64 KiB (seforim.db, seforim.db001…), which the app reads as one database. Once the copy is
-#                  complete, a library in the phone's storage is removed: the app keeps one library. Needs Pardes
+#                  complete, a library in the phone's storage is removed: the app keeps one library (below Android
+#                  7.0 a copy to the phone's storage removes a library on a card in turn). Needs Pardes
 #                  0.3.0 or later (versionCode 2), the first that opens a library on the card, or Pardes for Android
 #                  4.4 to 7.1 (versionCode 1). Below Android 6.0 a card has a name, not a UUID (sdcard1, extSdCard).
 #   --with-notes   also copy notes and highlights (settings/user_settings.db); they replace the phone's own
@@ -56,7 +57,7 @@ while [ $# -gt 0 ]; do
     # For tests: chunks on any card, and their size (a multiple of 64 KiB; the app reads any such size).
     --split) FORCE_SPLIT=1; shift ;;
     --chunk-bytes) CHUNK="${2:?}"; shift 2 ;;
-    -h|--help) sed -n 2,32p "$0"; exit 0 ;;
+    -h|--help) sed -n 2,33p "$0"; exit 0 ;;
     *) die "אפשרות לא מוכרת: $1" "unknown option $1 (see --help)" ;;
   esac
 done
@@ -134,18 +135,23 @@ if [ $OLD = 1 ]; then
   PRIMARY_NAME=${PRIMARY#/storage/}; PRIMARY_NAME=${PRIMARY_NAME%%/*}
   media_fs() { echo "$MOUNTS" | awk -v m="/mnt/media_rw/$1" '$2 == m { print $3 }'; }
 fi
+# The memory cards mounted, by name below Android 6.0 (what vold mounted besides the phone's own storage, from the
+# mounts: no `sm` there), else by UUID. Not /storage/*: the phone's own storage shows there under other names too
+# (sdcard0 is emulated/legacy on Android 4.4).
+card_volumes() {
+  if [ "$SDK" -lt 23 ]; then
+    echo "$MOUNTS" | awk -v p="$PRIMARY_NAME" '$2 ~ /^\/mnt\/media_rw\// { n = substr($2, 15); if (n != p) print n }'
+  else
+    ask "public:179,1 mounted 1234-ABCD" shell sm list-volumes public | awk '$2 == "mounted" && $3 != "null" { print $3 }'
+  fi
+}
 if [ -n "$CARD" ]; then
   # An older Pardes finds no library on the card, and the phone's copy is removed at the end. Below Android 8.0 the
   # app can only be Pardes for Android 4.4 to 7.1 (versionCode 1), which looks for its library on the cards too.
   DUMP=$(ask "    versionCode=2 minSdk=33 targetSdk=36" shell dumpsys package $PKG || true)
   VC=0; [[ "$DUMP" =~ versionCode=([0-9]+) ]] && VC=${BASH_REMATCH[1]}
   [ "$VC" -ge 2 ] || [ "$SDK" -lt 26 ] || die "כדי להעתיק לכרטיס הזיכרון צריך פרדס 0.3.0 ומעלה. עדכנו את פרדס בטלפון ונסו שוב." "copying to the memory card needs Pardes 0.3.0 or later (versionCode 2, installed $VC): update the app first"
-  if [ "$SDK" -lt 23 ]; then
-    # Cards by name: what vold mounted besides the phone's own storage
-    VOLS=$(echo "$MOUNTS" | awk -v p="$PRIMARY_NAME" '$2 ~ /^\/mnt\/media_rw\// { n = substr($2, 15); if (n != p) print n }')
-  else
-    VOLS=$(ask "public:179,1 mounted 1234-ABCD" shell sm list-volumes public | awk '$2 == "mounted" && $3 != "null" { print $3 }')
-  fi
+  VOLS=$(card_volumes)
   if [ "$CARD" = auto ]; then
     set -- $VOLS
     [ $# = 0 ] && die "לא נמצא כרטיס זיכרון מחובר" "no memory card is mounted"
@@ -319,6 +325,19 @@ if [ -n "$CARD" ]; then
     say "מסיר את הספרייה שבזיכרון הטלפון: פרדס ישתמש בזו שבכרטיס" "removing the library in the phone's storage: Pardes uses the card's"
     run shell "cd $PHONE_LIB && rm -rf seforim.db seforim.db-wal seforim.db-shm seforim.db-journal seforim.db[0-9][0-9][0-9] ${ITEMS[*]} local_update_version.txt seforim.db.applying delta-cache 2>/dev/null; for i in seforim.db ${ITEMS[*]} delta-cache; do [ ! -e \$i ] || mv \$i .zayit-old-\$i-$STAMP; done; true"
   fi
+elif [ $OLD = 1 ]; then
+  # Pardes for Android 4.4 to 7.1 also keeps one library, and opens the folder it opened last: a library it used on a
+  # memory card would leave this copy unused. It has no setting to switch.
+  for v in $(card_volumes); do
+    CARD_LIB=/storage/$v/Android/data/$PKG/files/library
+    [ "$(ask "" shell "[ -f $CARD_LIB/seforim.db ] && echo yes")" = yes ] || continue
+    say "מסיר את הספרייה שבכרטיס הזיכרון $v: פרדס ישתמש בזו שבזיכרון הטלפון" "removing the library on the memory card $v: Pardes uses the phone's"
+    run shell "cd $CARD_LIB && rm -rf seforim.db seforim.db-wal seforim.db-shm seforim.db-journal seforim.db[0-9][0-9][0-9] ${ITEMS[*]} local_update_version.txt seforim.db.applying delta-cache 2>/dev/null; true"
+    if [ "$(ask "" shell "[ -f $CARD_LIB/seforim.db ] && echo yes")" = yes ]; then
+      say "לא ניתן להסיר אותה מכאן. מחקו את התיקייה $CARD_LIB (בטלפון או מהמחשב), אחרת פרדס עלול להמשיך לפתוח אותה" \
+        "could not remove it from here: delete the folder $CARD_LIB (on the phone or from a computer), or Pardes may keep opening it"
+    fi
+  done
 elif [ -n "$(ask "" shell "ls /storage/*/Android/data/$PKG/files/library/seforim.db 2>/dev/null | grep -v emulated${PRIMARY:+ | grep -v '^$PRIMARY/'}; true")" ]; then
   say "שימו לב: גם בכרטיס הזיכרון יש ספרייה. אם פרדס ממשיך להשתמש בה, עברו לספרייה שבטלפון בהגדרות › ניהול נתונים › מיקום הספרייה" \
     "note: the memory card has a library too; if Pardes keeps using it, switch in Settings › ניהול נתונים › מיקום הספרייה"
@@ -339,7 +358,13 @@ if [ $NOTES = 1 ]; then
   fi
 fi
 if [ -n "$(ask "" shell "ls -a $LIB | grep '^\.zayit-old-'; true")" ]; then
-  say "עותקים ישנים שהיישום יצר בעצמו ימחקו כשיפתח" "old copies the app made itself were renamed .zayit-old-*; it deletes them when it next opens"
+  if [ $OLD = 1 ]; then
+    # Pardes for Android 4.4 to 7.1 leaves them
+    say "עותקים ישנים שהיישום יצר בעצמו שונו לשם ‎.zayit-old-*‎. מחקו אותם מהתיקייה $LIB כדי לפנות את מקומם" \
+      "old copies the app made itself were renamed .zayit-old-*; delete them from $LIB to free their space"
+  else
+    say "עותקים ישנים שהיישום יצר בעצמו ימחקו כשיפתח" "old copies the app made itself were renamed .zayit-old-*; it deletes them when it next opens"
+  fi
 fi
 
 say "הושלם. פתחו את פרדס בטלפון; אם יופיע מדריך ההגדרה, הוא ימצא את הספרייה אחרי אישור הרישיון" \

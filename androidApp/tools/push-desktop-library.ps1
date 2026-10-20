@@ -11,7 +11,8 @@ Copies the library of desktop Zayit to Pardes (an Android app based on Zayit) ov
   -SdCard          copy to the memory card instead of the phone's storage (-CardUuid picks one of several cards):
                    /storage/<UUID>/Android/data/<app>/files/library/. On a FAT32 card seforim.db goes in chunks of
                    2 GiB less 64 KiB (seforim.db, seforim.db001...), which the app reads as one database. Once the copy
-                   is complete, a library in the phone's storage is removed: the app keeps one library. Needs
+                   is complete, a library in the phone's storage is removed: the app keeps one library (below
+                   Android 7.0 a copy to the phone's storage removes a library on a card in turn). Needs
                    Pardes 0.3.0 or later (versionCode 2), the first that opens a library on the card, or Pardes for
                    Android 4.4 to 7.1 (versionCode 1). Below Android 6.0 -CardUuid takes a card's name (sdcard1).
   -WithNotes       also copy notes and highlights (settings\user_settings.db); they replace the phone's own
@@ -186,6 +187,17 @@ function MediaFs([string]$name) {
     }
     return ''
 }
+# The memory cards mounted, by name below Android 6.0 (what vold mounted besides the phone's own storage, from the
+# mounts: no sm there), else by UUID. Not /storage/*: the phone's own storage shows there under other names too
+# (sdcard0 is emulated/legacy on Android 4.4).
+function CardVolumes {
+    if ($sdk -gt 0 -and $sdk -lt 23) {
+        return @($Mounts -split "`n" | ForEach-Object { $f = $_.Trim() -split '\s+'
+            if ($f.Count -ge 3 -and $f[1].StartsWith('/mnt/media_rw/')) { $n = $f[1].Substring(14); if ($n -ne $PrimaryName) { $n } } })
+    }
+    return @((Ask 'public:179,1 mounted 1234-ABCD' @('shell', 'sm', 'list-volumes', 'public')) -split "`n" |
+        ForEach-Object { $f = $_.Trim() -split '\s+'; if ($f.Count -ge 3 -and $f[1] -eq 'mounted' -and $f[2] -ne 'null') { $f[2] } })
+}
 
 # --- the memory card (-SdCard): its app folder, and its filesystem (FAT32 takes no file of 4 GB)
 $PhoneFiles = $Files
@@ -197,14 +209,7 @@ if ($SdCard -or $CardUuid) {
     $vc = 0
     if ((Ask '    versionCode=2 minSdk=33 targetSdk=36' @('shell', 'dumpsys', 'package', $Pkg)) -match 'versionCode=(\d+)') { $vc = [int]$Matches[1] }
     if ($vc -lt 2 -and -not ($sdk -gt 0 -and $sdk -lt 26)) { Die 'כדי להעתיק לכרטיס הזיכרון צריך פרדס 0.3.0 ומעלה. עדכנו את פרדס בטלפון ונסו שוב.' "copying to the memory card needs Pardes 0.3.0 or later (versionCode 2, installed $vc): update the app first" }
-    if ($sdk -gt 0 -and $sdk -lt 23) {
-        # Cards by name: what vold mounted besides the phone's own storage
-        $vols = @($Mounts -split "`n" | ForEach-Object { $f = $_.Trim() -split '\s+'
-            if ($f.Count -ge 3 -and $f[1].StartsWith('/mnt/media_rw/')) { $n = $f[1].Substring(14); if ($n -ne $PrimaryName) { $n } } })
-    } else {
-        $vols = @((Ask 'public:179,1 mounted 1234-ABCD' @('shell', 'sm', 'list-volumes', 'public')) -split "`n" |
-            ForEach-Object { $f = $_.Trim() -split '\s+'; if ($f.Count -ge 3 -and $f[1] -eq 'mounted' -and $f[2] -ne 'null') { $f[2] } })
-    }
+    $vols = @(CardVolumes)
     if (-not $CardUuid) {
         if ($vols.Count -eq 0) { Die 'לא נמצא כרטיס זיכרון מחובר' 'no memory card is mounted' }
         if ($vols.Count -gt 1) { Die "יש כמה כרטיסים, בחרו אחד עם -CardUuid: $vols" "several cards, pick one with -CardUuid: $vols" }
@@ -398,6 +403,18 @@ try {
             $names = "seforim.db seforim.db-wal seforim.db-shm seforim.db-journal $Items local_update_version.txt seforim.db.applying delta-cache"
             $null = Run @('shell', "cd $PhoneLib && rm -rf $names seforim.db[0-9][0-9][0-9] 2>/dev/null; for i in $names; do [ ! -e `$i ] || mv `$i .zayit-old-`$i-$Stamp; done; true")
         }
+    } elseif ($Old) {
+        # Pardes for Android 4.4 to 7.1 also keeps one library, and opens the folder it opened last: a library it used
+        # on a memory card would leave this copy unused. It has no setting to switch.
+        foreach ($v in @(CardVolumes)) {
+            $cardLib = "/storage/$v/Android/data/$Pkg/files/library"
+            if ((Ask '' @('shell', "[ -f $cardLib/seforim.db ] && echo yes")) -ne 'yes') { continue }
+            Say "מסיר את הספרייה שבכרטיס הזיכרון $($v): פרדס ישתמש בזו שבזיכרון הטלפון" "removing the library on the memory card $($v): Pardes uses the phone's"
+            $null = Run @('shell', "cd $cardLib && rm -rf seforim.db seforim.db-wal seforim.db-shm seforim.db-journal seforim.db[0-9][0-9][0-9] $Items local_update_version.txt seforim.db.applying delta-cache 2>/dev/null; true")
+            if ((Ask '' @('shell', "[ -f $cardLib/seforim.db ] && echo yes")) -eq 'yes') {
+                Say "לא ניתן להסיר אותה מכאן. מחקו את התיקייה $cardLib (בטלפון או מהמחשב), אחרת פרדס עלול להמשיך לפתוח אותה" "could not remove it from here: delete the folder $cardLib (on the phone or from a computer), or Pardes may keep opening it"
+            }
+        }
     } elseif (Ask '' @('shell', "ls /storage/*/Android/data/$Pkg/files/library/seforim.db 2>/dev/null | grep -v emulated$(if ($Primary) { " | grep -v '^$Primary/'" }); true")) {
         Say 'שימו לב: גם בכרטיס הזיכרון יש ספרייה. אם פרדס ממשיך להשתמש בה, עברו לספרייה שבטלפון בהגדרות › ניהול נתונים › מיקום הספרייה' 'note: the memory card has a library too; if Pardes keeps using it, switch in Settings › ניהול נתונים › מיקום הספרייה'
     }
@@ -417,7 +434,12 @@ try {
     $Staging = $false
 }
 if (Ask '' @('shell', "ls -a $Lib | grep '^\.zayit-old-'; true")) {
-    Say 'עותקים ישנים שהיישום יצר בעצמו ימחקו כשיפתח' 'old copies the app made itself were renamed .zayit-old-*; it deletes them when it next opens'
+    if ($Old) {
+        # Pardes for Android 4.4 to 7.1 leaves them
+        Say "עותקים ישנים שהיישום יצר בעצמו שונו לשם ‎.zayit-old-*‎. מחקו אותם מהתיקייה $Lib כדי לפנות את מקומם" "old copies the app made itself were renamed .zayit-old-*; delete them from $Lib to free their space"
+    } else {
+        Say 'עותקים ישנים שהיישום יצר בעצמו ימחקו כשיפתח' 'old copies the app made itself were renamed .zayit-old-*; it deletes them when it next opens'
+    }
 }
 
 Say 'הושלם. פתחו את פרדס בטלפון; אם יופיע מדריך ההגדרה, הוא ימצא את הספרייה אחרי אישור הרישיון' 'done. Open Pardes on the phone; if its setup guide appears, it finds the library after the licence step'
