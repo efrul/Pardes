@@ -28,7 +28,7 @@ import javax.xml.stream.XMLStreamReader;
  * <pre>
  * java DexApiLevels.java split &lt;in.jar&gt; &lt;class prefix&gt; &lt;rest.jar&gt; &lt;matching.jar&gt;
  * java DexApiLevels.java levels &lt;api-versions.xml&gt; &lt;max level&gt; &lt;program.jar&gt;
- *     &lt;dex file or dir&gt;...
+ *     &lt;dex file or dir&gt;... [--defined &lt;dex file or dir&gt;...]
  * </pre>
  *
  * <p>split: copies the classes of a jar whose internal name starts with the prefix into one jar and
@@ -37,12 +37,15 @@ import javax.xml.stream.XMLStreamReader;
  * written.
  *
  * <p>levels: lists every type, field and method the dex files take from the platform (ids of
- * classes neither defined in the dex nor in the program jar) with the API level api-versions.xml
- * gives it, declared or inherited through extends/implements (the lowest level at which it
- * resolves). Prints the references above the max level, then as info those api-versions.xml does
- * not list (dalvik annotations, covariant-return overloads such as ByteBuffer.flip()ByteBuffer,
- * members inherited from hidden classes such as StringBuilder.getChars): only TraceReferences can
- * check those. The last line is "&lt;n&gt; above API &lt;max level&gt;".
+ * classes neither defined in the dex files nor in the program jar) with the API level
+ * api-versions.xml gives it, declared or inherited through extends/implements (the lowest level at
+ * which it resolves). Prints the references above the max level, then as info those
+ * api-versions.xml does not list (dalvik annotations, covariant-return overloads such as
+ * ByteBuffer.flip()ByteBuffer, members inherited from hidden classes such as
+ * StringBuilder.getChars): only TraceReferences can check those. The last line is "&lt;n&gt; above
+ * API &lt;max level&gt;". The program jar may be "-" (none: an APK's dex files). The dex files after
+ * --defined only define classes, which the others may use, and are not checked themselves: the
+ * desugared library's dex (L8), whose j$ classes the program's dex calls.
  */
 public class DexApiLevels {
   public static void main(String[] args) throws Exception {
@@ -51,16 +54,23 @@ public class DexApiLevels {
       split(Path.of(args[1]), args[2], Path.of(args[3]), Path.of(args[4]));
     } else if (args.length >= 5 && args[0].equals("levels")) {
       final List<Path> dexes = new ArrayList<>();
+      final List<Path> defining = new ArrayList<>();
+      List<Path> into = dexes;
       for (int i = 4; i < args.length; i++) {
+        if (args[i].equals("--defined")) {
+          into = defining;
+          continue;
+        }
         try (Stream<Path> files = Files.walk(Path.of(args[i]))) {
-          files.filter(p -> p.toString().endsWith(".dex")).sorted().forEach(dexes::add);
+          files.filter(p -> p.toString().endsWith(".dex")).sorted().forEach(into::add);
         }
       }
-      levels(Path.of(args[1]), Double.parseDouble(args[2]), Path.of(args[3]), dexes);
+      levels(Path.of(args[1]), Double.parseDouble(args[2]), args[3], dexes, defining);
     } else {
       throw new IllegalArgumentException(
           "usage: DexApiLevels split <in.jar> <class prefix> <rest.jar> <matching.jar>\n"
-              + "       DexApiLevels levels <api-versions.xml> <max level> <program.jar> <dex|dir>...");
+              + "       DexApiLevels levels <api-versions.xml> <max level> <program.jar|-> <dex|dir>..."
+              + " [--defined <dex|dir>...]");
     }
   }
 
@@ -249,28 +259,39 @@ public class DexApiLevels {
     return best == null ? null : Math.max(best, info.since);
   }
 
-  private static void levels(Path xml, double max, Path programJar, List<Path> dexes) throws Exception {
+  private static void levels(
+      Path xml, double max, String programJar, List<Path> dexes, List<Path> defining) throws Exception {
     if (dexes.isEmpty()) {
       throw new IllegalArgumentException("no .dex files");
     }
     final Map<String, ApiClass> api = readApi(xml);
-    final Set<String> program = new HashSet<>();
-    try (ZipFile zip = new ZipFile(programJar.toFile())) {
-      for (ZipEntry entry : Collections.list(zip.entries())) {
-        if (entry.getName().endsWith(".class")) {
-          final String name = entry.getName();
-          program.add("L" + name.substring(0, name.length() - ".class".length()) + ";");
+    // Classes of the program: the jar's, and those any of the dex files define (an APK's classes.dex
+    // calls classes2.dex's).
+    final Set<String> local = new HashSet<>();
+    if (!programJar.equals("-")) {
+      try (ZipFile zip = new ZipFile(programJar)) {
+        for (ZipEntry entry : Collections.list(zip.entries())) {
+          if (entry.getName().endsWith(".class")) {
+            final String name = entry.getName();
+            local.add("L" + name.substring(0, name.length() - ".class".length()) + ";");
+          }
         }
       }
+    }
+    final List<Dex> read = new ArrayList<>();
+    for (Path path : dexes) {
+      final Dex dex = readDex(path);
+      read.add(dex);
+      local.addAll(dex.defined());
+    }
+    for (Path path : defining) {
+      local.addAll(readDex(path).defined());
     }
     // "level<TAB>kind<TAB>owner<TAB>member", level "?" when api-versions.xml does not list it.
     final Set<String> above = new TreeSet<>();
     final Set<String> unknown = new TreeSet<>();
     final Set<String> all = new TreeSet<>();
-    for (Path path : dexes) {
-      final Dex dex = readDex(path);
-      final Set<String> local = new HashSet<>(dex.defined());
-      local.addAll(program);
+    for (Dex dex : read) {
       for (String type : dex.types()) {
         final String element = type.replaceFirst("^\\[+", "");
         if (element.startsWith("L") && !local.contains(element)) {

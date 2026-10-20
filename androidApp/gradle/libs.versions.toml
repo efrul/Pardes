@@ -19,6 +19,8 @@ hebrew-numerals = "0.2.6"
 # Same versions as the desktop app (zstd-jni is added as its Android AAR in app/build.gradle.kts).
 zstd-jni = "1.5.7-10"
 commons-compress = "1.28.0"
+# Core library desugaring of the Android 4.4 edition (legacy/); lucene-android's gate checks against the same version.
+desugar-jdk-libs = "2.1.5"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -52,10 +54,11 @@ requery-sqlite = { module = "com.github.requery:sqlite-android", version = "3.49
 # Android's SQLite behind SQLDelight's driver (its runtime dependency, at the version it brings), named for LibraryStore.
 androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version = "2.6.2" }
 # The Android 4.4 edition (legacy/): SQLDelight's runtime alone (its own driver over its own SQLite), legacy multidex,
-# and the desugared Java 8+ library for what the shared Kotlin code calls from java.util on API 19.
+# and the desugared Java 8+ library for what the shared Kotlin code calls from java.util on API 19. The nio flavour:
+# Lucene's directories need java.nio.file (API 26), which the default one leaves out (lucene-android/check-min-api.sh).
 sqlDelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqlDelight" }
 androidx-multidex = { module = "androidx.multidex:multidex", version = "2.0.1" }
-desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version = "2.1.5" }
+desugar-jdk-libs-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugar-jdk-libs" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 
 [plugins]

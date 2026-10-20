@@ -286,7 +286,11 @@ androidComponents {
 }
 
 dependencies {
-    coreLibraryDesugaring(libs.desugar.jdk.libs)
+    // The nio flavour: Lucene's directories need java.nio.file, which Android has from 8.0 only (and the default flavour
+    // leaves out); see lucene-android/check-min-api.sh --legacy. On Android 4.4 logcat shows "VFY: unable to resolve"
+    // notes for its j$ classes that convert to the platform's java.nio.file, streams and Unsafe: Dalvik replaces those
+    // calls, which run on later Android versions only, and the classes load (no VerifyError).
+    coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
 }
 
 sqldelight {
