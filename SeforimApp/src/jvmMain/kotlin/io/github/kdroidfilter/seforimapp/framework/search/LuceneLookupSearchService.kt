@@ -1,5 +1,7 @@
 package io.github.kdroidfilter.seforimapp.framework.search
 
+import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.IndexReader
@@ -52,6 +54,8 @@ class LuceneLookupSearchService(
         )
     }
 
+    private val authorSort = Sort(SortField("book_count", SortField.Type.LONG, true))
+
     private val bookSort =
         Sort(
             SortField("is_base_book", SortField.Type.INT, true),
@@ -66,6 +70,15 @@ class LuceneLookupSearchService(
         val text: String,
         val level: Int,
         val score: Float,
+    )
+
+    /** An author of the lookup index, with the number of its books. */
+    data class AuthorHit(
+        val id: Long,
+        val name: String,
+        val bookCount: Int,
+        // The alias the query was found by, when not the name (חפץ חיים); set by the caller
+        val alias: String? = null,
     )
 
     data class BookHit(
@@ -84,7 +97,20 @@ class LuceneLookupSearchService(
         val orderIndex: Int,
         val score: Double,
         val matchedAcronyms: List<String>,
-    )
+        // The query is one of the book's acronyms, whole (שוע for שולחן ערוך)
+        val exactAcronym: Boolean = false,
+    ) {
+        /** A lightweight [Book] for display; load the full one by [id] when opening it. */
+        fun toBook(): Book =
+            Book(
+                id = id,
+                categoryId = categoryId,
+                sourceId = 0,
+                title = title,
+                order = orderIndex.toFloat(),
+                isBaseBook = isBaseBook,
+            )
+    }
 
     fun close() {
         kotlin.runCatching { searcherManager.close() }
@@ -129,6 +155,58 @@ class LuceneLookupSearchService(
         }
     }
 
+    /**
+     * Authors whose name or alias (רעק״א, ראב״ע...) starts with the typed words, those with the
+     * most books first. Empty below [MIN_BOOK_QUERY_LENGTH] characters, or with an index built
+     * before authors were indexed.
+     */
+    fun suggestAuthors(
+        raw: String,
+        limit: Int,
+    ): List<AuthorHit> {
+        // הרב is added on display only: a query typed as shown finds the bare name, else a stored one with it
+        val bare = AuthorNames.withoutHonorific(raw)
+        if (bare != raw && bare.isNotBlank()) authorsFor(bare, limit).takeIf { it.isNotEmpty() }?.let { return it }
+        return authorsFor(raw, limit)
+    }
+
+    private fun authorsFor(
+        raw: String,
+        limit: Int,
+    ): List<AuthorHit> {
+        val q = normalizeHebrew(raw)
+        if (q.length < MIN_BOOK_QUERY_LENGTH) return emptyList()
+        // Aliases are indexed whole (רעקא) and split at their gershayim (רעק + א): the split reading
+        // only when the whole one finds nobody, as its one-letter pieces match many names
+        val whole = authorsMatching(q, limit)
+        if (whole.isNotEmpty()) return whole
+        val split = normalizeHebrew(raw.replace(Regex("[\"'״׳]"), " "))
+        return if (split == q) whole else authorsMatching(split, limit)
+    }
+
+    private fun authorsMatching(
+        normalized: String,
+        limit: Int,
+    ): List<AuthorHit> {
+        val tokens = normalized.split("\\s+".toRegex()).filter { it.isNotEmpty() }
+        if (tokens.isEmpty()) return emptyList()
+        return withSearcher { searcher ->
+            val query = BooleanQuery.Builder()
+            query.add(TermQuery(Term("type", "author")), BooleanClause.Occur.FILTER)
+            tokens.forEach { t -> query.add(PrefixQuery(Term("q", t)), BooleanClause.Occur.MUST) }
+            val top = searcher.search(query.build(), limit, authorSort)
+            val stored = searcher.storedFields()
+            top.scoreDocs.map { sd ->
+                val doc = stored.document(sd.doc)
+                AuthorHit(
+                    id = doc.getField("author_id").numericValue().toLong(),
+                    name = doc.getField("author_name").stringValue(),
+                    bookCount = doc.getField("book_count").numericValue().toInt(),
+                )
+            }
+        }
+    }
+
     fun searchTocPrefix(
         raw: String,
         limit: Int = 20,
@@ -158,6 +236,19 @@ class LuceneLookupSearchService(
     }
 
     /**
+     * Book suggestions for a typed query, as in the home search bar: diacritics and geresh
+     * dropped, acronym-aware ranking. Empty below [MIN_BOOK_QUERY_LENGTH] characters.
+     */
+    fun suggestBooks(
+        raw: String,
+        limit: Int,
+    ): List<ScoredBookHit> {
+        val q = raw.trim()
+        if (q.length < MIN_BOOK_QUERY_LENGTH) return emptyList()
+        return searchBooksWithScoring(sanitizeHebrewForAcronym(q), limit)
+    }
+
+    /**
      * Search books with enhanced acronym scoring.
      * Requires acronymCache to be initialized.
      */
@@ -180,8 +271,20 @@ class LuceneLookupSearchService(
             }
         }
 
-        // 1. Get base results from Lucene (existing logic)
-        val baseHits = searchBooksPrefix(raw, limit * 3) // Get more for re-ranking
+        // 1. Get base results from Lucene (existing logic), without those found by reading one title
+        // or acronym word twice (`בבא ב`: תוספתא בבא קמא). An acronym may be stored as one word
+        // (`דבהי ב` for דבהיב). When none is left, all are kept: the index misses some acronyms'
+        // books and finds their neighbours
+        val luceneHits = searchBooksPrefix(raw, limit * 3) // Get more for re-ranking
+        val typedJoined = normalizeHebrew(raw).replace(" ", "")
+        val baseHits =
+            luceneHits
+                .filter { hit ->
+                    typedAsWordsOf(raw, hit.title) ||
+                        getAcronymsForBook(hit.title).any { acronym ->
+                            typedAsWordsOf(raw, acronym) || normalizeHebrew(acronym).replace(" ", "").startsWith(typedJoined)
+                        }
+                }.ifEmpty { luceneHits }
 
         // 2. Normalize query for acronym matching
         val normalizedQuery = normalizeHebrew(raw)
@@ -203,13 +306,30 @@ class LuceneLookupSearchService(
                     orderIndex = hit.orderIndex,
                     score = score,
                     matchedAcronyms = findMatchedAcronyms(hit.title, normalizedQuery),
+                    exactAcronym = hasExactAcronymMatch(hit.title, normalizedQuery),
                 )
             }
 
-        // 4. Re-sort by enhanced score and return top results
-        return scoredHits
-            .sortedByDescending { it.score }
-            .take(limit)
+        // 4. Re-sort: titles equal to the query, then titles beginning with it, then the rest; the
+        // score only orders within a tier, as its base-book boost reads orderIndex, a rank within the
+        // category (תוספתא בבא קמא, alone in its own, came before בבא קמא for `בבא ק`). A short query
+        // or one that is a book's acronym (`חו"מ`, `הטור`) is no title being typed: no prefix tier.
+        val titleTyped = normalizedQuery.length > 3 && scoredHits.none { it.exactAcronym }
+        val order = compareByDescending<ScoredBookHit> { titleTier(it.title, normalizedQuery, titleTyped) }.thenByDescending { it.score }
+        return scoredHits.sortedWith(order).take(limit)
+    }
+
+    private fun titleTier(
+        title: String,
+        query: String,
+        titleTyped: Boolean,
+    ): Int {
+        val normalized = normalizeHebrew(title)
+        return when {
+            normalized == query -> 2
+            titleTyped && normalized.startsWith(query) -> 1
+            else -> 0
+        }
     }
 
     private fun calculateEnhancedScore(
@@ -374,6 +494,35 @@ class LuceneLookupSearchService(
 
     private fun getAcronymsForBook(bookTitle: String): List<String> = acronymCache?.getAcronymsForBook(bookTitle) ?: emptyList()
 
+    /**
+     * Whether each word of [typed] begins a different word of [name], as the index matches them but
+     * for one word read twice: the index takes each typed word as a prefix of any word, so `בבא ב`
+     * finds תוספתא בבא קמא and רב בבאר שבע, both words on the same בבא(ר). Words compare as the
+     * index normalizes them.
+     */
+    fun typedAsWordsOf(
+        typed: String,
+        name: String,
+    ): Boolean {
+        val words = normalizeHebrew(typed).split(' ').filter { it.isNotEmpty() }
+        val nameWords = normalizeHebrew(name).split(' ').filter { it.isNotEmpty() }
+        if (words.isEmpty() || words.size > nameWords.size) return false
+        val used = BooleanArray(nameWords.size)
+
+        // Backtracking: a short word must not take the only word a longer one could begin
+        fun assign(i: Int): Boolean {
+            if (i == words.size) return true
+            for (j in nameWords.indices) {
+                if (used[j] || !nameWords[j].startsWith(words[i])) continue
+                used[j] = true
+                if (assign(i + 1)) return true
+                used[j] = false
+            }
+            return false
+        }
+        return assign(0)
+    }
+
     private fun normalizeHebrew(input: String): String {
         if (input.isBlank()) return ""
         var s = input.trim()
@@ -424,4 +573,25 @@ class LuceneLookupSearchService(
 
         return s
     }
+}
+
+/** Minimum length of a query before books are suggested. */
+const val MIN_BOOK_QUERY_LENGTH = 2
+
+// Sanitization aligned with the generator’s acronym normalization, but minimal and local to app
+private fun sanitizeHebrewForAcronym(input: String): String {
+    if (input.isBlank()) return ""
+    var s = input.trim()
+    // Remove Hebrew diacritics: teamim U+0591–U+05AF
+    s = s.replace("[\u0591-\u05AF]".toRegex(), "")
+    // Remove nikud signs (set incl. meteg U+05BD and QAMATZ QATAN U+05C7)
+    val nikud = "[\u05B0\u05B1\u05B2\u05B3\u05B4\u05B5\u05B6\u05B7\u05B8\u05B9\u05BB\u05BC\u05BD\u05C1\u05C2\u05C7]".toRegex()
+    s = s.replace(nikud, "")
+    // Replace maqaf (U+05BE) with space
+    s = s.replace('\u05BE', ' ')
+    // Remove gershayim (U+05F4) and geresh (U+05F3)
+    s = s.replace("\u05F4", "").replace("\u05F3", "")
+    // Collapse whitespace
+    s = s.replace("\\s+".toRegex(), " ").trim()
+    return s
 }
