@@ -72,6 +72,12 @@ class ListSelection {
     /** The text of a unit that is not composed (scrolled away), as its Text shows it; null where there is none. */
     internal var textOf: (Long) -> String? = { null }
 
+    /** Reads the data of the units in a range before [read] reads them (book lines a jump passed without loading). */
+    internal var prepare: suspend (LongRange) -> Unit = {}
+
+    /** Called when a selection is made anew ([begin]), so the reader's other areas let theirs go. */
+    internal var onBegin: (() -> Unit)? = null
+
     /** Scroll speed at the edge, px/s, negative toward the top; 0 when no drag is held at an edge. */
     internal var edgeSpeed by mutableFloatStateOf(0f)
 
@@ -107,10 +113,11 @@ class ListSelection {
         }
     }
 
-    /** A selection started anew (a long press, a mouse drag). */
+    /** A selection started anew (a long press, a mouse drag, a double or triple click). */
     internal fun begin(a: TextPoint, b: TextPoint) {
         select(a, b)
         generation++
+        onBegin?.invoke()
     }
 
     internal fun register(text: SelectableText) {
@@ -129,6 +136,14 @@ class ListSelection {
         val from = if (unit == s.unit) s.offset.coerceIn(0, length) else 0
         val to = if (unit == e.unit) e.offset.coerceIn(0, length) else length
         return if (to > from) from until to else null
+    }
+
+    /** [selectedText], once the data of every unit it spans is read ([prepare]): what actions and copies take. */
+    suspend fun read(): String {
+        val s = start ?: return ""
+        val e = end ?: return ""
+        prepare(s.unit..e.unit)
+        return selectedText()
     }
 
     /** The selected text: the parts of several units joined by line breaks, as Compose's selection copied them. */
@@ -190,10 +205,10 @@ class ListSelection {
         val offset = point.offset.coerceIn(0, text.length)
         var boundary = layout.getWordBoundary(offset)
         // Compose's word iterator counts letters and digits only, not the points and cantillation after a letter: at the
-        // end of a pointed word (a press on the end half of its last letter) it found no word. From before that letter
-        // it finds it.
+        // end of a pointed word (a press on the end half of its last letter) it found no word, or only the sof pasuq or
+        // maqaf after it. From before that letter it finds the word.
         val base = clusterStart(text, offset)
-        if (boundary.collapsed && base < offset) boundary = layout.getWordBoundary(base)
+        if (base < offset && boundary.min >= offset) boundary = layout.getWordBoundary(base)
         var a = boundary.min
         var b = boundary.max
         while (a < b && text[a].isSelectionEdge()) a++
@@ -233,19 +248,21 @@ class ListSelection {
         val layout = text.layout ?: return null
         val length = layout.layoutInput.text.length
         if (length == 0) return null
+        // Clamped: for a frame after the text changes (diacritics hidden) the point may lie past its new end
+        val offset = point.offset.coerceIn(0, length)
         val x: Float
         val row: Int
         val outwardRight: Boolean
-        if (if (isStart) point.offset >= length else point.offset <= 0) {
+        if (if (isStart) offset >= length else offset <= 0) {
             // No character of this text is selected (a start at its end, an end at its start): the caret's place, which
             // a press on the handle maps back to the same offset
-            val caret = point.offset.coerceIn(0, length)
+            val caret = offset
             row = layout.getLineForOffset(caret)
             x = layout.getHorizontalPosition(caret, usePrimaryDirection = true)
             outwardRight = isStart == (layout.getParagraphDirection(caret) == ResolvedTextDirection.Rtl)
         } else {
             // The first selected character, or the last: its outer edge is the right one in Hebrew, the left one in Latin
-            val char = if (isStart) point.offset else point.offset - 1
+            val char = if (isStart) offset else offset - 1
             val box = layout.getBoundingBox(char)
             row = layout.getLineForOffset(char)
             outwardRight = isStart == (layout.getBidiRunDirection(char) == ResolvedTextDirection.Rtl)
@@ -272,10 +289,10 @@ class ListSelection {
         return found
     }
 
-    /** The selection's part on screen, in the area: where the bar goes; null when none of it shows. */
-    internal fun visibleBounds(area: LayoutCoordinates): Rect? {
+    /** The selection's part on screen below [top] (the find bar's room), in the area: where the bar goes; null when none shows. */
+    internal fun visibleBounds(area: LayoutCoordinates, top: Float = 0f): Rect? {
         if (!area.isAttached) return null
-        val screen = Rect(Offset.Zero, area.size.toSize())
+        val screen = Rect(Offset(0f, top), area.size.toSize())
         var bounds: Rect? = null
         for (t in texts.values) {
             val coordinates = t.coordinates?.takeIf { it.isAttached } ?: continue
