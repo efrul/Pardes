@@ -49,7 +49,6 @@ import io.github.kdroidfilter.seforimapp.android.ui.settings.ZDropdown
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import java.time.LocalDate
-import java.util.Locale
 
 // Pardes's own widget (desktop 0.6.1 has none such): "לעולם ישלש אדם שנותיו, שליש במקרא, שליש במשנה, שליש בתלמוד"
 // (Kiddushin 30a). How the learning splits between the three, by the books opened (the history) or by the time read
@@ -216,32 +215,19 @@ private fun percents(values: List<Long>): List<Int> {
     return floors
 }
 
-/** "5 ד׳", "2 ש׳ 10 ד׳": a time read, to the minute (a part of one counts as one). */
+/** "45 ד׳", "8 ש׳": a time read, in minutes under an hour, else in whole hours (a part of a minute counts as one). */
 private fun timeLabel(seconds: Long): String {
     val minutes = maxOf(1L, (seconds + 59) / 60)
-    val hours = minutes / 60
-    return when {
-        hours == 0L -> "$minutes ד׳"
-        minutes % 60 == 0L -> "$hours ש׳"
-        else -> "$hours ש׳ ${minutes % 60} ד׳"
-    }
+    return if (minutes < 60) "$minutes ד׳" else "${(minutes + 30) / 60} ש׳"
 }
 
-/** A book's amount, short, beside its title: "12", "45 ד׳", "7.7 ש׳" (the part's total says it to the minute). */
+/** A book's amount beside its title: its openings, or its time read. */
 private fun amountLabel(
     measure: LearningMeasure,
     amount: Long,
-): String {
-    if (measure == LearningMeasure.OPENS) return amount.toString()
-    val minutes = maxOf(1L, (amount + 59) / 60)
-    return when {
-        minutes < 60 -> "$minutes ד׳"
-        minutes < 600 -> "${"%.1f".format(Locale.ROOT, minutes / 60.0)} ש׳"
-        else -> "${(minutes + 30) / 60} ש׳"
-    }
-}
+): String = if (measure == LearningMeasure.TIME) timeLabel(amount) else amount.toString()
 
-/** "32 פתיחות", "2 ש׳ 10 ד׳": an amount that says what it counts. */
+/** "32 פתיחות", "8 ש׳": an amount that says what it counts. */
 private fun totalLabel(
     measure: LearningMeasure,
     amount: Long,
@@ -321,7 +307,7 @@ internal object LearningSplitWidget : HomeWidget {
     override fun Options(state: HomeWidgetsState) = LearningSplitOptions(state)
 }
 
-/** "84 פתיחות", "6 ש׳ 20 ד׳ בחודש האחרון". */
+/** "84 פתיחות", "6 ש׳ בחודש האחרון". */
 private fun subtitle(
     split: LearningSplit,
     measure: LearningMeasure,
