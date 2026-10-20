@@ -69,7 +69,7 @@ import java.util.Locale
 private fun noteDate(millis: Long): String = SimpleDateFormat("d.M.yyyy", Locale.US).format(Date(millis))
 
 /**
- * "ההערות שלי", the user's notes of every book (desktop 0.6.1 features/notes/NotesScreen.kt): grouped by book, the
+ * "ההערות שלי", the user's notes of every book (desktop 0.6.7 features/notes/NotesScreen.kt): grouped by book, the
  * book of the latest note first, searchable by note, passage or book ("חיפוש בהערות"); opening one opens its book on
  * its line with the notes pane showing it ([onOpen] gets book, line and title). A full-screen page over the tabs.
  */

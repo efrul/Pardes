@@ -39,7 +39,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.ToolKind
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import kotlinx.coroutines.launch
 
-// Port of the widget part of desktop 0.6.1 features/home/widgets/luach/ShnayimMikraWidget.kt: the week's parsha by
+// Port of the widget part of desktop 0.6.7 features/home/widgets/luach/ShnayimMikraWidget.kt: the week's parsha by
 // aliyos, each one ticked once read (in the user DB, shared with desktop) and opened in the Chumash.
 
 /** The week's ticks, followed as they're written (a tick here, in the tool, or in a desktop DB imported). */

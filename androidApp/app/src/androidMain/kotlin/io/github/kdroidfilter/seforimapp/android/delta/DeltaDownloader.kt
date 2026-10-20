@@ -10,7 +10,7 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
 /**
- * Android variant of SeforimLibrary (381fbea) `delta-updater/.../DeltaDownloader.kt`, same contract:
+ * Android variant of SeforimLibrary (7ddf045) `delta-updater/.../DeltaDownloader.kt`, same contract:
  *  - each file is downloaded next to its target as `<file>.part`; a target already carrying the right sha256 is reused;
  *  - a later attempt resumes from the `.part` (HTTP Range), feeding the saved bytes into the sha256 first;
  *  - a short transfer keeps the `.part` for the next attempt, a sha256 mismatch deletes it.

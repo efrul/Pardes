@@ -2,7 +2,7 @@ package io.github.kdroidfilter.seforimapp.android.ui.onboarding
 
 /**
  * Onboarding texts copied verbatim from the desktop app
- * (SeforimApp/src/commonMain/composeResources/values/strings.xml, Zayit 0.6.1), with this app's name, Pardes, where
+ * (SeforimApp/src/commonMain/composeResources/values/strings.xml, Zayit 0.6.7), with this app's name, Pardes, where
  * desktop's says Zayit. Each constant keeps the desktop key in camelCase; `%1\$s` placeholders are filled with
  * [String.format]. The welcome subtitle is not here: desktop's says who built Zayit, and this app's
  * ([AndroidStrings.welcomeSubtitle]) says Pardes is based on Zayit.
@@ -78,7 +78,7 @@ internal object DesktopStrings {
     const val etaSecondsUnitPlural = "שניות"
     const val settingsCancel = "ביטול"
 
-    // Database update window (db_update_*), Zayit 0.6.1.
+    // Database update window (db_update_*), Zayit 0.6.7.
     const val dbUpdateTitleBar = "עדכון מסד הנתונים"
     const val dbUpdateVersionCheckTitle = "יש לעדכן את מסד הנתונים"
     const val dbUpdateReinstallTitle = "יש להתקין מחדש את מסד הנתונים"

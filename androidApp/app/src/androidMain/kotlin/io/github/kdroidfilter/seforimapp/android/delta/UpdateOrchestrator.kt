@@ -9,7 +9,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 
 /**
- * Android variant of SeforimLibrary (381fbea) `delta-updater/.../UpdateOrchestrator.kt`: turns an
+ * Android variant of SeforimLibrary (7ddf045) `delta-updater/.../UpdateOrchestrator.kt`: turns an
  * [UpdatePath.Chain] into applied deltas, with desktop's steps and progress statuses ("downloading manifest",
  * "downloading patch files", "decompressing …", "applying sqlite delta", "updating lucene", "updating catalog",
  * "done"). For each delta:

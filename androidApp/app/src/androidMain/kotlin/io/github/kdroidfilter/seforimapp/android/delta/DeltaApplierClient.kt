@@ -13,7 +13,7 @@ import java.nio.file.StandardCopyOption
 class NotEnoughSpaceException(val required: Long, val available: Long, message: String) : IllegalStateException(message)
 
 /**
- * Android variant of SeforimLibrary (381fbea) `delta-updater/.../DeltaApplierClient.kt`: the same gates around
+ * Android variant of SeforimLibrary (7ddf045) `delta-updater/.../DeltaApplierClient.kt`: the same gates around
  * [PatchApplier] (schema version, `fromContentHash` before, `toContentHash` inside the transaction, free space, a
  * marker that doubles as a lock), with one difference that a phone needs.
  *

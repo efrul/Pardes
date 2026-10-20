@@ -43,7 +43,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The book's text: desktop 0.6.1 features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt on the reader's
+ * The book's text: desktop 0.6.7 features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt on the reader's
  * index-paged lines. Selection bars (thick for the primary line, thin for its section), inline alt headings, the marked
  * passage, shnayim mikra, highlights and notes, find-in-page matches, text selection with desktop's menu, pinch zoom,
  * and a fast scroller over the whole book. Prefetches the visible lines' connections for the rails and panes.

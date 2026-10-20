@@ -12,7 +12,7 @@ import java.net.URLEncoder
  *  - zayit://book/<bookId>/line/<lineId>   -> open the book scrolled to a precise line
  *  - zayit://search/<url-encoded-query>    -> open a search
  *
- * Verbatim port of desktop 0.6.1 core/deeplink/ZayitDeepLink.kt, mapped to the Android [Destination]. Also reads
+ * Verbatim port of desktop 0.6.7 core/deeplink/ZayitDeepLink.kt, mapped to the Android [Destination]. Also reads
  * `zayit://search?q=…`, the form this app produced before.
  */
 const val ZAYIT_SCHEME = "zayit"

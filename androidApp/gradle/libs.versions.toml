@@ -13,7 +13,7 @@ lifecycle = "2.10.0"
 core-ktx = "1.17.0"
 paging = "3.3.6"
 zmanim = "2.5.0"
-# Same as desktop 0.6.1 (its zmanim engine); resolves the androidJvm artifact kosherkotlin-android.
+# Same as desktop 0.6.7 (its zmanim engine); resolves the androidJvm artifact kosherkotlin-android.
 kosherkotlin = "3.0.5"
 hebrew-numerals = "0.2.6"
 # Same versions as the desktop app (zstd-jni is added as its Android AAR in app/build.gradle.kts).

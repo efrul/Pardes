@@ -7,9 +7,9 @@ package io.github.kdroidfilter.seforimapp.android.ui.onboarding
 internal const val PARDES_LICENSE_URL = "https://github.com/efrul/Pardes/blob/HEAD/LICENSE"
 
 /**
- * Desktop `files/CONDITIONS.md` (Zayit 0.6.7, unchanged since 0.6.1), shown by the licence step and Settings › תנאים, under this app's name,
- * Pardes. The font and licence paragraphs are reworded: desktop's speak for the official releases ("הוענק לנו", "הגרסאות
- * הרשמיות כוללות"), and Rashi Amiti, licensed to the Zayit app only, is not in Pardes.
+ * Desktop `files/CONDITIONS.md` (Zayit 0.6.7, unchanged since 0.6.1), shown by the licence step and Settings › תנאים,
+ * under this app's name, Pardes. The font and licence paragraphs are reworded: desktop's speak for the official releases
+ * ("הוענק לנו", "הגרסאות הרשמיות כוללות"), and Rashi Amiti, licensed to the Zayit app only, is not in Pardes.
  */
 internal const val CONDITIONS_MARKDOWN = """
 פרדס עושה שימוש במאגרי נתונים שמקורם בפרויקטים **[Sefaria](https://www.sefaria.org.il/)** ו־**[Otzaria Library](https://github.com/Otzaria/otzaria-library)**, אשר הומרו ונערכו לפורמט SQL במאגר

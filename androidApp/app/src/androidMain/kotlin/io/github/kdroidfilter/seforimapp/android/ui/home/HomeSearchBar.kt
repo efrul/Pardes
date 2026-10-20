@@ -28,7 +28,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 
 /**
- * The home page's search bar: desktop 0.6.1 HomeView's UnifiedSearchBar with its SearchHomeViewModel (one per Home tab,
+ * The home page's search bar: desktop 0.6.7 HomeView's UnifiedSearchBar with its SearchHomeViewModel (one per Home tab,
  * as the results tab's bar is one per tab). Everything it opens replaces the Home in this tab, as desktop's
  * replaceCurrentTabDestination: a book or a place ([onOpenBook], which also reveals it in the book tree), an author's
  * page, a text search (in the base books, or all of them from "בכל הספרים" / Ctrl+Enter, scoped to the picked book or

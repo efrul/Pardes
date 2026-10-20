@@ -73,7 +73,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-// Port of desktop 0.6.1 features/home/widgets/temple/TempleCountdownWidget.kt: years, months and days since the
+// Port of desktop 0.6.7 features/home/widgets/temple/TempleCountdownWidget.kt: years, months and days since the
 // Temple's destruction (the Hebrew day turning at Jerusalem's sunset), over the burning Temple. Desktop plays the
 // animated WebP frame by frame with Skia; Android plays it with AnimatedImageDrawable, and shows the still picture on a
 // low-RAM device.

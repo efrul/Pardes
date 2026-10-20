@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import kotlinx.coroutines.delay
 
-// The parts the widgets are made of, after desktop 0.6.1 features/home/widgets/WidgetCard.kt and WidgetParts.kt: the
+// The parts the widgets are made of, after desktop 0.6.7 features/home/widgets/WidgetCard.kt and WidgetParts.kt: the
 // card frames, a title, rows lit on press, lists as long as the card holds.
 
 val WidgetShape = RoundedCornerShape(18.dp)

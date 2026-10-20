@@ -1,18 +1,19 @@
-# Parity with desktop Zayit 0.6.1
+# Parity with desktop Zayit 0.6.7
 
-A gap list from comparing the real 0.6.1 sources (upstream `kdroidFilter/Zayit` tag `v0.6.1` and SeforimLibrary `381fbea`) with this Android app, area by area, on 2026-10-13. 119 gaps, plus 12 from a completeness review.
+The base is desktop Zayit 0.6.7 (upstream `kdroidFilter/Zayit` tag `v0.6.7`, SeforimLibrary `7ddf045`) since 2026-10-20; it was 0.6.1 before. The lists below started as a gap list from comparing the real 0.6.1 sources (tag `v0.6.1` and SeforimLibrary `381fbea`) with this Android app, area by area, on 2026-10-13: 119 gaps, plus 12 from a completeness review. What each later desktop release changed, and what became of it here, is under "Later desktop releases".
 
 - **Severity:** **H** = a missing or broken feature the user will notice; **M** = a noticeable difference; **L** = polish.
-- **Tick an item when it lands.** Before porting anything, read the 0.6.1 code it names. The full findings, with desktop and Android file:line references and fix plans, were produced by the audit workflow; re-run a focused audit for an area rather than trusting stale line numbers.
+- **Tick an item when it lands.** Before porting anything, read the desktop code it names, as 0.6.7 has it (`git diff v0.6.1 v0.6.7 -- <path>` shows what changed since the audit). The full findings, with desktop and Android file:line references and fix plans, were produced by the audit workflow; re-run a focused audit for an area rather than trusting stale line numbers.
 - **Not portable from public sources:**
   - semantic (meaning-based) search: a private, token-gated package; Android behaves like the desktop community build;
   - Google Drive backup: a desktop loopback OAuth client;
-  - the full template siddur: a private package.
+  - the full template siddur: a private package;
+  - the Talmud's verse quote links (0.6.5): a private package too, in the official builds only.
 - **Different on purpose: authorship.** Desktop's welcome ("שנבנה באהבה על ידי אברך ומפתח חרדי"), settings header ("נוצר על ידי אליהו גמבש"), About and terms describe desktop Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept. Not a gap.
 
-## Later desktop releases (0.6.2 to 0.6.5)
+## Later desktop releases (0.6.2 to 0.6.7)
 
-The base stays desktop 0.6.1 (SeforimLibrary submodule pinned at `381fbea`). 0.6.5 left SeforimLibrary and the library format as 0.6.4 had them (`2265fcb`, no new minimum library version).
+The base was desktop 0.6.1 (SeforimLibrary `381fbea`, in an Android-only submodule) until 2026-10-20. Since then it is 0.6.7: Android compiles the repository's own SeforimLibrary submodule at `7ddf045`, the commit desktop 0.6.7 builds with, and `androidApp/upstream/SeforimLibrary` is gone. Upstream's release commits, for `git log` between them (only the `v0.6.1` and `v0.6.7` tags are fetched here): 0.6.2 `41988a7d`, 0.6.3 `56bb1c3a` (SeforimLibrary `2265fcb`), 0.6.4 `b6331c88`, 0.6.5 `c13ffdde`, 0.6.6 `fb78498d` (SeforimLibrary `7ddf045`), 0.6.7 `7549ca72`. No release since 0.6.1 raised the minimum library version (`20261011170830`).
 
 ### 0.6.2 to 0.6.4
 
@@ -25,10 +26,10 @@ From `git diff v0.6.1 v0.6.4` upstream, only these four 0.6.2 fixes were ported,
 | `51463d23` | A title being typed past its first word (`בבא ק`) puts the book before the text search, so Enter opens it | `ui/search/UnifiedSearchBar.kt` (`catBookRows`) |
 | `411280b9` | The תפילת היום widget turns to the next Hebrew day at צאת הכוכבים | `ui/home/widgets/LuachWidgets.kt` (`TefilaWidget`) |
 
-Each of these files says in its header that it is the 0.6.1 port plus the named 0.6.2 commit. Deliberately not ported:
-- the SeforimLibrary bump (meaning-based highlighting infrastructure; it would need `LuceneSearchEngine.kt` changes with no gain for the user here);
-- semantic search, Filament and the Windows solar-system work, and dependency updates (nucleus, seforim-siddur, seforim-semantic), none of which exist in this port;
-- `25dde83d` (`IntrinsicSize.Min` in the result preview): a crash guard for a zero-width preview that this layout never produces.
+Each of these files names the 0.6.2 commit in its header. Not ported then:
+- the SeforimLibrary bump (meaning-based highlighting infrastructure; it needed `LuceneSearchEngine.kt` changes with no gain for the user here). It came with the move to 0.6.7 (see "0.6.6 and 0.6.7");
+- semantic search (and `41988a7d`, which keeps semantic results out of a quoted search: a quoted search here was always the lexical one alone), Filament and the Windows solar-system work, and dependency updates (nucleus, seforim-siddur, seforim-semantic), none of which exist in this port;
+- `25dde83d` (`IntrinsicSize.Min` in the result preview): a crash guard for a zero-width preview that this layout never produces. Ported with 0.6.7 all the same, so the preview's layout stays desktop's.
 
 Kept as desktop has it: typing an author's acronym with its gershayim (`ש"ך`) does not suggest that author (הרב שבתי בן מאיר הכהן). The lookup query drops the quote while the index keeps it (`ש"ך`); desktop 0.6.1 misses him the same way. An Android-only reading that finds him was tried and left out, to keep search the same as desktop.
 
@@ -57,13 +58,41 @@ Found by a review of the port against the 0.6.5 code (2026-10-16), and fixed wit
 - Citation links in the passage preview open their line in a new tab, as in the reader; desktop's link handler is window-wide (`ui/search/SearchScreen.kt`).
 - Links in the siddur, Shnayim Mikra and the dictionary widget take the accent, as in the books, not the parser's blue, which was hard to read in dark mode (`ui/tools/SiddurTool.kt`, `ShnayimMikraTool.kt`, `ui/home/widgets/DictionaryWidget.kt`).
 
-Not ported from 0.6.5:
-- the rest of `1d50541d`, and `a991be12`, `a009b0d4`, `6ba92fb7`, `ce6e2b0c` (pinned tabs moved to the strip's start, sliding there): pinned tabs here already come first, at the right of the RTL strip;
-- `ec91acdc` (an "עוד N" menu for the tabs that no longer fit): the tablet strip scrolls, and the phone lists its tabs;
+Not ported from 0.6.5 at the time:
+- the rest of `1d50541d` (pinned tabs moved to the strip's start): pinned tabs here already come first, at the right of the RTL strip. The slides that came with it (`a991be12`, `a009b0d4`) were ported with 0.6.7 (see "0.6.6 and 0.6.7");
+- `ec91acdc` (an "עוד N" menu for the tabs that no longer fit): the tablet strip scrolls, and the phone lists its tabs. Still a deliberate difference with 0.6.7;
 - `90217b2b`, `17080195`, `8c96d1f4`, `b563e911` (verse quote links in the Talmud): a private package, like the siddur. Once the database carries these links, they show here as citation links;
-- `f96e98f3` (shortcuts with nothing focused), the Nucleus bump `df4b7d12`, CI and docs: desktop only.
+- `f96e98f3` (shortcuts with nothing focused): ported with 0.6.7 (see "0.6.6 and 0.6.7");
+- the Nucleus bump `df4b7d12`, CI and docs: desktop only.
 
-To watch: `cc3c6712` fixes text selection in a tab shown again under Compose 1.12 (an unplaced selectable Text never subscribes to its SelectionContainer again), with a patch to Compose's bytecode. This app is on Compose foundation 1.10.5 (BOM 2026.03.00), and `TabHost` unplaces hidden tabs the same way: when the BOM moves to Compose 1.12, check text selection after switching tabs.
+To watch: `cc3c6712` fixes text selection in a tab shown again under Compose 1.12 (an unplaced selectable Text never subscribes to its SelectionContainer again), with a patch to Compose's bytecode. Desktop 0.6.7 is on Compose 1.12.1; this app is on Compose foundation 1.10.5 (BOM 2026.03.00), and `TabHost` unplaces hidden tabs the same way. The reader's own text selection (`ui/reader/TextSelection.kt`) does not rely on a SelectionContainer; the plain SelectionContainers are in `ui/author/AuthorScreen.kt` (`PlainCopySelectionContainer`, about :215 and :260), `ui/search/SearchParts.kt` (about :163) and `ui/search/SearchScreen.kt` (about :513). When the BOM moves to Compose 1.12, check text selection there after switching tabs.
+
+### 0.6.6 and 0.6.7
+
+The move to 0.6.7 (2026-10-20), with what 0.6.3 to 0.6.5 had left for it. From `git diff v0.6.1 v0.6.7` upstream and `git diff 381fbea 7ddf045` in SeforimLibrary:
+
+| Upstream commit | Release | Change | Here |
+|---|---|---|---|
+| SeforimLibrary `c3190c4` (in `2265fcb`) | 0.6.3 | The search API: `rangeSnippet` takes the found line's range in the text, and `LineHit` carries it (`lineStart`, `lineEnd`), so the preview and snippets mark only the found line | **Ported**: the two upstream hunks in `search/LuceneSearchEngine.kt` (Android variant) |
+| SeforimLibrary `7ddf045` | 0.6.6 | `zayit cli` tooling | **Not applicable**: no CLI here |
+| SeforimLibrary `9bcac65`, `772151b`, `7c8f42f`, `651113a` | 0.6.3 | Generator and blacklist fixes; for the generator, the dao gains two link queries (`LinkQueries.sq` `changes`, `selectLineKeyById`) and their repository calls | **Already present**: library data, which arrives with library release v3. The new dao queries compile and stay unused here. core, `Database.sq`, delta-updater and generator-common are unchanged since `381fbea`, so installed libraries, deltas and the Lucene index stay as they are |
+| `4fe26694` | 0.6.3 | The found line highlighted by meaning, without the query's words | **Not applicable**: `highlightsByMeaning` needs the semantic engine. The lexical engine says no, and desktop then highlights the query's words in every line, as here |
+| `25dde83d` | 0.6.4 | The preview's found-line bar drawn, not measured (`IntrinsicSize.Min` overflowed at a collapsed pane's zero width) | **Ported**: `Modifier.drawBehind` on the RTL side, `padding(start = 17.dp)` (`ui/search/PassagePreview.kt`) |
+| `a991be12`, `a009b0d4` | 0.6.5 | Tabs slide to their new place on pin, unpin, reorder and reopen | **Ported** with Compose's `Modifier.animateItem()`, on the tablet strip (`ui/shell/TopBar.kt`) and the phone's tab list (`ui/shell/ZayitApp.kt`) |
+| `6ba92fb7`, `ce6e2b0c` | 0.6.5 | Desktop's own slide: drag releases spared, the hit area moving with the tab, the farther-travelling tab drawn on top | **Not applicable**: `animateItem` places the items itself, and the strip here has no tab drag |
+| `f8057ed1` | 0.6.7 | A new tab grows at its place instead of sliding from the strip's end | **Already the case**: a new tab is inserted next to its opener in one step (`AppViewModel.openInNewTab`), and `animateItem` brings it in there |
+| `ec91acdc`, `df4b7d12` | 0.6.5 | "עוד N" chip for the tabs that no longer fit (popup, "סגור את הלשוניות המוסתרות", `+` in its menu), with a compact workspace switcher | **Deliberate difference**: the tablet strip (≥840dp) scrolls and keeps the shown tab in view; the phone lists its tabs. The strings `more_tabs` and `close_hidden_tabs` are not used |
+| `f96e98f3` | 0.6.5 | The pane and workspace shortcuts work when nothing has the focus | **Ported**: the keys no view used reach `KeyShortcuts.fallback` (`MainActivity.onKeyDown`), where the front tab puts its book shortcuts: a reader tab Ctrl+B, Ctrl+Shift+B, Ctrl+K and its variants, Ctrl+J (`ui/reader/ReaderScreen.kt` `bookShortcut`), a tablet Home tab Ctrl+B for the book tree (`ui/home/HomeScreen.kt` `WideHome`). The workspace keys (Ctrl+Alt+←/→, Ctrl+Alt+N) were already handled before the views see them (`MainActivity.dispatchKeyEvent`) |
+| `90217b2b`, `17080195`, `8c96d1f4`, `b563e911` | 0.6.5 | Verse quote links in the Talmud | **Not included**: a private package of the official builds. `LinesPagingSource.decorate`, the hook they use, has no counterpart in `ReaderViewModel` yet |
+| `7380286b` | 0.6.6 | Alt+Home goes Home (`Key.MoveHome`, not `SystemHome`) | **Already the case**: `KEYCODE_MOVE_HOME` (`ui/shell/KeyShortcuts.kt`) |
+| `58e8beb5` | 0.6.6 | The search engine's setup shared with `zayit cli` (`AcronymFrequencyCache` takes the path as a function) | **Not applicable**: desktop's CLI. `search/SearchService.kt` wires the same lexical engine |
+| `37748ba7` | 0.6.6 | Website page `open.html` that redirects to a `zayit://` link | **Already the case**: the app's `zayit://` filter is BROWSABLE, so a browser hands it such links |
+| `0380bb5a`, `fb1fb6e8` | 0.6.6, 0.6.2 | Filament KMP 0.7.10 and Windows fixes for the 3D widgets | **Not applicable**: the Earth, sky and solar-system widgets are drawn in 2D here |
+| `2a3a2f30` | 0.6.7 | The find bar keeps its width while typing (the counter keeps a slot while matches are computed) | **Not applicable**: the bar here has a set width (the band's on a phone, up to 420dp on a tablet), so the counter coming and going only resizes the field |
+| `aa87fa66` | 0.6.7 | Closing the app's last tab opens a fresh Home tab instead of quitting | **Already the case** |
+| `c222f4e4`, `368dd669`, `a08c20db`, `5a1b6068`, `2a604516` | 0.6.3 to 0.6.7 | Nucleus and seforim-siddur bumps, CI, docs | Desktop only |
+
+The deliberate differences recorded under 0.6.5 (the author status line, the author's books filtered by what is typed after the pick) stay as they are. The modified-version notices (Settings › אודות and תנאים, onboarding, the README, the site and the release notes) now name Zayit 0.6.7, and their lists of what Pardes does not include add the Talmud's verse quote links. File headers that name a desktop file now name it as 0.6.7 has it: the desktop files the port follows are unchanged since 0.6.1, or changed only as this section and the ones above record. The headers of vendored and variant files (`search/`, `search/reference/`, `htmlparser/`) also name the commits that changed their desktop file since 0.6.1.
 
 Fixes land in waves:
 1. 0.6.1 engine, zmanim, places and network trust.

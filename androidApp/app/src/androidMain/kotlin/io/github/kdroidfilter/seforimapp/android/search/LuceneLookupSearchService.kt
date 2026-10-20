@@ -1,7 +1,7 @@
-// Android variant of the Zayit 0.6.1 file SeforimApp/src/jvmMain/.../framework/search/LuceneLookupSearchService.kt
-// (tag v0.6.1), with the 0.6.2 fixes 2126c238 and 90552dbc applied as is (book suggestions: title tiers, words typed
-// once each). Differences: the index is always opened with NIOFSDirectory (FSDirectory.open picks MMapDirectory,
-// which needs java.lang.foreign, absent on Android) and the query cache is smaller for a phone heap.
+// Android variant of the Zayit 0.6.7 file SeforimApp/src/jvmMain/.../framework/search/LuceneLookupSearchService.kt
+// (tag v0.6.7: 0.6.1's with the 0.6.2 fixes 2126c238 and 90552dbc, its only changes since: book suggestions by title
+// tiers, words typed once each). Differences: the index is always opened with NIOFSDirectory (FSDirectory.open picks
+// MMapDirectory, which needs java.lang.foreign, absent on Android) and the query cache is smaller for a phone heap.
 package io.github.kdroidfilter.seforimapp.framework.search
 
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames

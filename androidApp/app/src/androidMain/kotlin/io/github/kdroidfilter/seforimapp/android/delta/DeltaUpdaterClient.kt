@@ -7,7 +7,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Android variant of SeforimLibrary (381fbea) `delta-updater/.../DeltaUpdaterClient.kt`: the facade over
+ * Android variant of SeforimLibrary (7ddf045) `delta-updater/.../DeltaUpdaterClient.kt`: the facade over
  * [DeltaApplierClient], [DeltaDownloader], [LuceneUpdater], [CatalogUpdater] and [UpdateOrchestrator], with desktop's
  * surface ([recoverIfNeeded], [checkForUpdate], [applyChain]) and the Android needs around it:
  *  - the downloader is passed in (it carries the app's resumable, CA-aware HTTP stream) and so are the progress and

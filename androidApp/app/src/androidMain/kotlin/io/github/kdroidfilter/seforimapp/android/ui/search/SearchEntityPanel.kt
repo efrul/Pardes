@@ -36,7 +36,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.AccentButton
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 
-// Desktop 0.6.1 strings.
+// Desktop 0.6.7 strings.
 private const val AUTHOR_BOOKS_COUNT = "%1\$d ספרים"
 private const val SEARCH_PANEL_AUTHOR = "מחבר"
 private const val SEARCH_PANEL_PARTS = "חלקי הספר"
@@ -48,7 +48,7 @@ private const val OTZARIA_CREDIT = "התכנים שלפניכם נאספו, מו
 private const val OTZARIA_URL = "https://otzaria.org"
 
 /**
- * The book or author a query names, as Google's knowledge panel: what it is, and buttons to go there. Desktop 0.6.1
+ * The book or author a query names, as Google's knowledge panel: what it is, and buttons to go there. Desktop 0.6.7
  * SearchResultScreen.kt EntityPanel / EntityDetails, with features/bookcontent/ui/panels/bookdetails/BookDetails.kt for
  * a book. Beside the preview on wide screens (as desktop); on narrower ones (where desktop has none) the first card
  * of the list.

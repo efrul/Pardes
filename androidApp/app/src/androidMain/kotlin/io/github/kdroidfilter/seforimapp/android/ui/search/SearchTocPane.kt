@@ -46,7 +46,7 @@ private class VisibleEntry(val entry: TocEntry, val depth: Int, val hasChildren:
 
 /**
  * The scoped search's TOC pane (tablets): the book's entries that have results, with their counts, those with results
- * opened; checking entries narrows the results to them, searched whole. Port of desktop 0.6.1 BookTocPanel.kt
+ * opened; checking entries narrows the results to them, searched whole. Port of desktop 0.6.7 BookTocPanel.kt
  * SearchBookTocPanel over BookTocView (showCounts, onlyWithResults, multiSelectIds).
  */
 @Composable
