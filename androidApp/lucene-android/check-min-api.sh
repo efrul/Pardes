@@ -23,6 +23,7 @@
 #  - below API 21 (Dalvik, Android 4.4): no class the KitKat verifier rejects (gate/DalvikVerify44.java:
 #    a throw of a value typed with a class it cannot resolve, ...) and no catch handler whose catch types
 #    all fail to resolve (gate/dexcatch.py on dexdump's output). Either is a VerifyError for the whole class.
+#    A method DalvikVerify44 could not analyse, or a dex file dexcatch.py gave no result for, fails too.
 #
 # Usage: ./check-min-api.sh [--baseline] [--legacy] [--min-api N] [--desugared-lib default|nio] [jar...]
 #   Without jars it builds :lucene-android:jar and checks that. --baseline also reports (without
@@ -283,7 +284,7 @@ check() {
 # dalvik_checks <jar> <out dir>: below API 26 the signature-polymorphic calls, below 21 the KitKat verifier's
 # class rejections and catch handlers; one line, details in <out dir>. Fails if any is found.
 dalvik_checks() {
-  local jar="$1" out="$2" asm poly line hard handlers
+  local jar="$1" out="$2" asm poly line hard unchecked handlers
   asm="$(tool asm)"
   "$java" -cp "$asm" "$here/gate/PolyScan.java" "$jar" > "$out/polyscan.txt" 2>&1 || { cat "$out/polyscan.txt" >&2; return 2; }
   poly="$(tail -1 "$out/polyscan.txt" | cut -d' ' -f1)"
@@ -295,20 +296,38 @@ dalvik_checks() {
     "$java" -cp "$asm" "$here/gate/DalvikVerify44.java" "$out/main.jar" "$out/levels.txt" > "$out/dalvik.txt" 2>&1 \
       || { cat "$out/dalvik.txt" >&2; return 2; }
     hard="$(tail -1 "$out/dalvik.txt" | cut -d' ' -f1)"
+    # A method the replay could not analyse (ANALYSIS-ERROR, or an ASM error that names no missing type: OTHER) is
+    # not a pass: counted, and fails the gate like a hard failure.
+    unchecked="$(grep -c -e $'\tOTHER ' -e $'\tANALYSIS-ERROR ' "$out/dalvik.txt" || true)"
+    # Likewise a failed dexdump or dexcatch.py run (pipefail) must not read as "0 rejected catch handlers": each
+    # dex file needs its own "<n> hard," line.
+    local dexes=0
     : > "$out/dexcatch.txt"
     for file in "$out"/dex/*.dex; do
-      "$dexdump" -d "$file" 2>/dev/null | python3 -I "$here/gate/dexcatch.py" - "$out/levels.txt" >> "$out/dexcatch.txt"
+      dexes=$((dexes + 1))
+      if ! "$dexdump" -d "$file" 2> "$out/dexdump.log" \
+          | python3 -I "$here/gate/dexcatch.py" - "$out/levels.txt" >> "$out/dexcatch.txt"; then
+        cat "$out/dexdump.log" >&2
+        echo "dexdump -d $file | dexcatch.py failed" >&2
+        return 2
+      fi
     done
+    if [ "$(grep -cE '^[0-9]+ hard,' "$out/dexcatch.txt" || true)" != "$dexes" ]; then
+      echo "dexcatch.py did not report on each of the $dexes dex files: $out/dexcatch.txt" >&2
+      return 2
+    fi
     handlers="$(grep -E '^[0-9]+ hard,' "$out/dexcatch.txt" | awk '{ n += $1 } END { print n + 0 }')"
-    line="$line; Dalvik (API $min_api): $hard hard verifier failures, $handlers rejected catch handlers"
+    line="$line; Dalvik (API $min_api): $hard hard verifier failures, $unchecked methods not analysed,"
+    line="$line $handlers rejected catch handlers"
   else
     hard=0
+    unchecked=0
     handlers=0
   fi
   echo "$line"
-  if [ "$poly" != "0" ] || [ "$hard" != "0" ] || [ "$handlers" != "0" ]; then
+  if [ "$poly" != "0" ] || [ "$hard" != "0" ] || [ "$unchecked" != "0" ] || [ "$handlers" != "0" ]; then
     grep -v ' signature-polymorphic calls or method handle constants$' "$out/polyscan.txt" | sed 's/^/  polyscan: /' | cut -c1-240 >&2
-    [ -f "$out/dalvik.txt" ] && sed '$d' "$out/dalvik.txt" | sed 's/^/  dalvik: /' | cut -c1-240 >&2
+    [ -f "$out/dalvik.txt" ] && grep $'\t' "$out/dalvik.txt" | sed 's/^/  dalvik: /' | cut -c1-240 >&2
     grep 'HARD' "$out/dexcatch.txt" 2>/dev/null | sed 's/^/  dexcatch: /' | cut -c1-240 >&2
     return 1
   fi

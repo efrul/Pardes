@@ -34,8 +34,10 @@ def missing_types(levels):
 
 
 def handlers(dump, missing):
-    """(class, method, handler address, catch types, first opcode) of each handler whose catch types are all missing."""
+    """(class, method, handler address, catch types, first opcode) of each handler whose catch types are all missing,
+    and the number of classes read."""
     found = []
+    classes = 0
     cls = method = name = None
     insns = {}
     catches = {}
@@ -52,6 +54,7 @@ def handlers(dump, missing):
             flush()
             insns, catches, in_catches = {}, {}, False
             cls = match.group(1)
+            classes += 1
             continue
         match = re.match(r"\s+name\s+: '(.*)'", line)
         if match:
@@ -77,17 +80,20 @@ def handlers(dump, missing):
             elif re.match(r'\s+(positions|locals)\s+:', line):
                 in_catches = False
     flush()
-    return found
+    return found, classes
 
 
 def main():
     dump, levels = sys.argv[1:3]
     missing = missing_types(levels)
     if dump == '-':
-        found = handlers(io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8', errors='replace'), missing)
+        found, classes = handlers(io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8', errors='replace'), missing)
     else:
         with open(dump, encoding='utf-8', errors='replace') as lines:
-            found = handlers(lines, missing)
+            found, classes = handlers(lines, missing)
+    # An empty dump (dexdump printed nothing) is not "0 handlers": no result line, exit 1.
+    if not classes:
+        sys.exit('dexcatch.py: no class in the dexdump output of %s' % dump)
     hard = 0
     for cls, method, address, types, opcode in found:
         if opcode == 'move-exception':
