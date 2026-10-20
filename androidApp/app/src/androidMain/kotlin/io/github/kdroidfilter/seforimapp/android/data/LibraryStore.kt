@@ -282,7 +282,7 @@ class LibraryStore(private val context: Context) {
         fun libraryBytes(dir: File): Long = LIBRARY_ITEMS.sumOf { name ->
             val f = File(dir, name)
             if (f.isDirectory) f.walkTopDown().filter { it.isFile }.sumOf { it.length() } else f.length()
-        } + SplitDatabase.overflowChunks(File(dir, DB_NAME)).sumOf { it.length() }
+        } + DatabaseChunks.overflowChunks(File(dir, DB_NAME)).sumOf { it.length() }
 
         /** [dir] holds a library database (complete: an install or a move only gives it its name once done). */
         fun hasDatabase(dir: File): Boolean = File(dir, DB_NAME).isFile
