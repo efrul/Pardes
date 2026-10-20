@@ -72,6 +72,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -136,6 +137,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.library.LibraryTree
 import io.github.kdroidfilter.seforimapp.android.ui.library.LibraryViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.notes.NotesPage
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalAppViewModel
+import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalKeyShortcuts
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalTabSession
 import io.github.kdroidfilter.seforimapp.android.ui.shell.bookShareLink
 import io.github.kdroidfilter.seforimapp.android.ui.shell.copyLink
@@ -333,17 +335,27 @@ fun ReaderScreen(
     LaunchedEffect(session?.isFront, state.find.open) {
         if (session?.isFront != false && (!state.find.open || state.find.focusRequest == 0)) runCatching { focus.requestFocus() }
     }
+    val onTree: () -> Unit = { if (wide) vm.toggleTree() else scope.launch { drawerTab = 1; drawerState.open() } }
+    val onToc: () -> Unit = { if (wide) vm.toggleToc() else scope.launch { drawerTab = 0; drawerState.open() } }
+    val onPane: (ReaderPane) -> Unit = { p -> if (wide) vm.togglePane(p) else vm.togglePhonePane(p) }
     val keyHandler: (KeyEvent) -> Boolean = { e ->
         // Ctrl+C copies the text selected last, in the book or a pane (desktop's SelectionContainer)
         val selected = selectionFocus.selection
         if (e.type == KeyEventType.KeyDown && (e.isCtrlPressed || e.isMetaPressed) && e.key == Key.C && selected != null) {
             scope.launch { selected.read()?.let { trimSelectionEdges(it.text) }?.takeIf { it.isNotBlank() }?.let { copyText(context, it) } }
             true
-        } else readerKey(e, vm, current, listState, wide, onTree = {
-            if (wide) vm.toggleTree() else scope.launch { drawerTab = 1; drawerState.open() }
-        }, onToc = {
-            if (wide) vm.toggleToc() else scope.launch { drawerTab = 0; drawerState.open() }
-        }, onPane = { p -> if (wide) vm.togglePane(p) else vm.togglePhonePane(p) }, scope = scope)
+        } else {
+            bookShortcut(e, vm, onTree, onToc, onPane) || readerKey(e, vm, current, listState, scope)
+        }
+    }
+    // The book shortcuts work when nothing has the focus too, in the front tab: the keys no view used reach them
+    // (desktop 0.6.5 f96e98f3, the window's readerShortcuts)
+    val shortcuts = LocalKeyShortcuts.current
+    val bookKeys by rememberUpdatedState<(KeyEvent) -> Boolean> { e -> bookShortcut(e, vm, onTree, onToc, onPane) }
+    DisposableEffect(shortcuts, session?.isFront) {
+        val fallback: (android.view.KeyEvent) -> Boolean = { native -> bookKeys(KeyEvent(native)) }
+        if (shortcuts != null && session?.isFront != false) shortcuts.fallback = fallback
+        onDispose { if (shortcuts?.fallback === fallback) shortcuts.fallback = null }
     }
 
     val text: @Composable (Modifier) -> Unit = { mod ->
@@ -556,21 +568,16 @@ private fun paneSpec(
     vm: ReaderViewModel,
 ): SelectionMenuSpec = paneSpec(items, { vm.state.value }, nav, context, scope, app, openBookAt, vm)
 
-/** Desktop's reader shortcuts (BookContentScreen handleBookShortcut, BookContentView keys, the find steps). */
-private fun readerKey(
+/** Desktop's book shortcuts (BookContentScreen handleBookShortcut): the book tree, the TOC, the panes, diacritics. */
+private fun bookShortcut(
     e: KeyEvent,
     vm: ReaderViewModel,
-    state: ReaderUiState,
-    list: LazyListState,
-    wide: Boolean,
     onTree: () -> Unit,
     onToc: () -> Unit,
     onPane: (ReaderPane) -> Unit,
-    scope: kotlinx.coroutines.CoroutineScope,
 ): Boolean {
     if (e.type != KeyEventType.KeyDown) return false
     val ctrl = e.isCtrlPressed || e.isMetaPressed
-    val top = vm.lines[list.firstVisibleItemIndex]?.lineIndex ?: list.firstVisibleItemIndex
     when {
         ctrl && e.key == Key.B -> if (e.isShiftPressed) onToc() else onTree()
         ctrl && e.key == Key.K -> onPane(
@@ -581,6 +588,23 @@ private fun readerKey(
             },
         )
         ctrl && e.key == Key.J -> vm.cycleDiacritics()
+        else -> return false
+    }
+    return true
+}
+
+/** Desktop's other reader keys (BookContentView keys, the find steps), which need the reader to have the focus. */
+private fun readerKey(
+    e: KeyEvent,
+    vm: ReaderViewModel,
+    state: ReaderUiState,
+    list: LazyListState,
+    scope: kotlinx.coroutines.CoroutineScope,
+): Boolean {
+    if (e.type != KeyEventType.KeyDown) return false
+    val ctrl = e.isCtrlPressed || e.isMetaPressed
+    val top = vm.lines[list.firstVisibleItemIndex]?.lineIndex ?: list.firstVisibleItemIndex
+    when {
         (ctrl && e.key == Key.G) || e.key == Key.F3 -> {
             if (!state.find.open) vm.openFind()
             vm.navigateFind(!e.isShiftPressed, top)

@@ -1,5 +1,5 @@
-// Android variant of the SeforimLibrary 0.6.1 file search/src/jvmMain/.../MagicDictionaryIndex.kt (submodule
-// upstream/SeforimLibrary at 381fbea), which app/build.gradle.kts excludes: the desktop file reads lexical.db through
+// Android variant of the SeforimLibrary file search/src/jvmMain/.../MagicDictionaryIndex.kt (submodule
+// SeforimLibrary at 7ddf045, unchanged since 0.6.1's 381fbea), which app/build.gradle.kts excludes: the desktop file reads lexical.db through
 // JDBC (sqlite-jdbc), which Android does not have, so this one reads it with the platform SQLite, read-only. Public
 // API, lookup SQL, caches, prefetch and the expansion shape are the desktop ones.
 package io.github.kdroidfilter.seforimlibrary.search

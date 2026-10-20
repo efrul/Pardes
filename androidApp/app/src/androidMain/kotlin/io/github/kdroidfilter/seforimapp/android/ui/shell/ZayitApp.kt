@@ -327,7 +327,7 @@ fun ZayitApp(
         )
     }
 
-    CompositionLocalProvider(LocalAppViewModel provides appVm) {
+    CompositionLocalProvider(LocalAppViewModel provides appVm, LocalKeyShortcuts provides shortcuts) {
         BoxWithConstraints(Modifier.fillMaxSize().background(c.ground)) {
             val wide = maxWidth >= WideBreakpoint
             // The title bars (phone top bar, page headers, tablet tab strip) lie under the status bar
@@ -560,6 +560,8 @@ private fun TabsOverview(state: AppUiState, appVm: AppViewModel) {
                 val sel = i == state.selectedIndex
                 Row(
                     Modifier
+                        // Pin, unpin, reorder and reopen slide a tab to its new place (desktop 0.6.5 a991be12)
+                        .animateItem()
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                         .heightIn(min = 56.dp)

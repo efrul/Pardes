@@ -321,6 +321,9 @@ private fun TabStrip(state: AppUiState, appVm: AppViewModel, modifier: Modifier)
                 onClick = { appVm.selectTab(i) },
                 onClose = { appVm.closeTab(i) },
                 menuItems = { tabMenuItems(context, appVm, i, vertical = false) },
+                // Pin, unpin, reorder and reopen slide a tab to its new place; a new tab grows in place (desktop 0.6.5
+                // a991be12, a009b0d4)
+                modifier = Modifier.animateItem(),
             )
         }
         item(key = "+") {
@@ -361,12 +364,19 @@ private val PinMarkWidth = PinMarkSize + PinMarkGap
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TabChip(tab: Tab, selected: Boolean, onClick: () -> Unit, onClose: () -> Unit, menuItems: () -> List<TabMenuItem>) {
+private fun TabChip(
+    tab: Tab,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onClose: () -> Unit,
+    menuItems: () -> List<TabMenuItem>,
+    modifier: Modifier = Modifier,
+) {
     val c = Zayit.colors
     var menu by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(8.dp)
     val label = stripLabel(tab)
-    Box {
+    Box(modifier) {
         Row(
             Modifier
                 .then(if (tab.pinned) Modifier.widthIn(min = 40.dp + PinMarkWidth, max = 96.dp + PinMarkWidth) else Modifier.widthIn(min = 96.dp, max = 220.dp))

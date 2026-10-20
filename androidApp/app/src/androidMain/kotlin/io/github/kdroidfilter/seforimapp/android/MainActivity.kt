@@ -308,6 +308,9 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = shortcuts.dispatch(event) || super.dispatchKeyEvent(event)
 
+    // The keys no view used: the front reader's book shortcuts (KeyShortcuts.fallback)
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = shortcuts.dispatchUnused(event) || super.onKeyDown(keyCode, event)
+
     override fun onProvideKeyboardShortcuts(data: MutableList<KeyboardShortcutGroup>, menu: Menu?, deviceId: Int) {
         super.onProvideKeyboardShortcuts(data, menu, deviceId)
         data.add(shellKeyboardShortcuts())
