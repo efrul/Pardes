@@ -56,6 +56,7 @@ fun BookText(
     listState: LazyListState,
     textSize: Float,
     selection: SelectionMenuSpec,
+    textSelection: ListSelection,
     onZoom: (Float) -> Unit,
     modifier: Modifier = Modifier,
     overlay: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit = {},
@@ -211,8 +212,25 @@ fun BookText(
     val current = state.find.current
     val markEnd = if (state.shnayimMikra) "סוף הקריאה" else "סוף הלימוד"
 
+    // The selection's texts scrolled away, read as their Texts show them (LineItem, ShnayimMikraTargum)
+    val diacritics = state.diacritics
+    val shnayimMikra = state.shnayimMikra
+    val textOf: (Long) -> String? = { unit ->
+        val line = vm.lines[(unit / LINE_UNITS).toInt()]
+        val verse = shnayimMikra && !line?.heRef.isNullOrBlank()
+        when {
+            line == null -> null
+            unit % LINE_UNITS == LINE_PART_TEXT || (unit % LINE_UNITS == LINE_PART_AGAIN && verse) ->
+                buildHtmlAnnotation(line.content, textSize, diacritics, c.isDark, c.accent).text.text
+            unit % LINE_UNITS == LINE_PART_TARGUM && verse -> targum[normalizedRef(line.heRef!!)]?.let {
+                buildHtmlAnnotation(it, shnayimMikraTargumSize(textSize), diacritics, c.isDark, c.accent).text.text
+            }
+            else -> null
+        }
+    }
+
     Box(modifier) {
-        SelectableArea(selection, Modifier.fillMaxSize()) {
+        SelectableArea(selection, textSelection, listState, textOf, resetKey = Triple(bookId, diacritics, shnayimMikra), Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().onGloballyPositioned {
@@ -260,6 +278,7 @@ fun BookText(
                             val tap: (Boolean) -> Unit = { ctrl -> if (ctrl) vm.toggleLine(line) else vm.onLineTap(line) }
                             val lineHighlights: List<UserHighlight> = highlightsByLine[line.id] ?: emptyList()
                             val lineNotes: List<UserNote> = notesByLine[line.id] ?: emptyList()
+                            val unit = index * LINE_UNITS
                             LineItem(
                                 html = line.content,
                                 textSize = textSize,
@@ -276,6 +295,7 @@ fun BookText(
                                 findLocator = locator.takeIf { state.find.open && current?.lineId == line.id },
                                 noteLocator = noteLocator.takeIf { state.noteDraft?.lineId == line.id },
                                 lineId = line.id,
+                                selectable = rememberSelectableText(textSelection, unit + LINE_PART_TEXT),
                             )
                             // The verse read again, then its targum (headings have no reference)
                             if (state.shnayimMikra && !line.heRef.isNullOrBlank()) {
@@ -292,8 +312,11 @@ fun BookText(
                                     searchRanges = searchRanges,
                                     onTap = tap,
                                     modifier = Modifier.padding(vertical = LineVerticalPadding),
+                                    selectable = rememberSelectableText(textSelection, unit + LINE_PART_AGAIN),
                                 )
-                                targum[normalizedRef(line.heRef)]?.let { ShnayimMikraTargum(it, textSize, state.diacritics) }
+                                targum[normalizedRef(line.heRef)]?.let {
+                                    ShnayimMikraTargum(it, textSize, state.diacritics, rememberSelectableText(textSelection, unit + LINE_PART_TARGUM))
+                                }
                             }
                             if (state.markedRange?.last == line.lineIndex) MarkedEnd(markEnd)
                         }
@@ -313,6 +336,15 @@ fun BookText(
         overlay()
     }
 }
+
+/**
+ * Each line's selectable texts in [ListSelection] units (index × [LINE_UNITS] + part): the line, then in shnayim mikra
+ * the verse read again and its targum.
+ */
+internal const val LINE_UNITS = 4L
+private const val LINE_PART_TEXT = 0L
+private const val LINE_PART_AGAIN = 1L
+private const val LINE_PART_TARGUM = 2L
 
 /** The text's top padding (the find bar's room replaces it while the bar is open). */
 private val TextTopPadding = 10.dp
