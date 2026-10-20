@@ -51,9 +51,10 @@ import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import java.time.LocalDate
 
 // Pardes's own widget (desktop 0.6.1 has none such): "לעולם ישלש אדם שנותיו, שליש במקרא, שליש במשנה, שליש בתלמוד"
-// (Kiddushin 30a). How the learning splits between the three, by the books opened (the history) or by the time read
-// (data/ReadingTime.kt). A book falls in the part of its place in the library, its root category (a commentary sits
-// under the text it explains); the options move a root category to another part, or leave it out.
+// (Kiddushin 30a). How the learning splits between the three, by the books opened (the history), by the time read
+// (data/ReadingTime.kt), or by both side by side. A book falls in the part of its place in the library, its root
+// category (a commentary sits under the text it explains); the options move a root category to another part, or leave
+// it out.
 
 /** The three parts of learning. */
 internal enum class LearningPart(
@@ -64,12 +65,23 @@ internal enum class LearningPart(
     TALMUD("תלמוד"),
 }
 
-/** What is counted: each opening of a book in a tab (the history), or the time a book was on screen. */
+/** What is counted: each opening of a book in a tab (the history), the time a book was on screen, or both. */
 internal enum class LearningMeasure(
+    val label: String,
+    /** What it shows, the first leading (the order of its bars, of its books). */
+    val amounts: List<Amount>,
+) {
+    OPENS("פתיחות", listOf(Amount.OPENS)),
+    TIME("זמן קריאה", listOf(Amount.SECONDS)),
+    BOTH("זמן ופתיחות", listOf(Amount.SECONDS, Amount.OPENS)),
+}
+
+/** What a split is counted in, with its name beside its bar. */
+internal enum class Amount(
     val label: String,
 ) {
     OPENS("פתיחות"),
-    TIME("זמן קריאה"),
+    SECONDS("זמן"),
 }
 
 /** The days the time read is counted over; the openings have no days (the history keeps a book's last visit only). */
@@ -92,22 +104,35 @@ internal object LearningSplitSettings : WidgetSettings(LearningSplitWidget.id) {
     val parts by stringSet(emptySet())
 }
 
-/** A book of the split: [amount] openings or seconds; it reopens at [lineId], where it was last read. */
+/** A book of the split, opened [opens] times and read [seconds]; it reopens at [lineId], where it was last read. */
 @Immutable
 internal data class SplitBook(
     val bookId: Long,
     val title: String,
-    val amount: Long,
+    val opens: Long,
+    val seconds: Long,
     val lineId: Long?,
-)
+) {
+    fun amount(of: Amount): Long = if (of == Amount.SECONDS) seconds else opens
+}
 
 /** The books counted, by part, the most first. */
 @Immutable
 internal data class LearningSplit(
     val books: Map<LearningPart, List<SplitBook>>,
 ) {
-    val amounts: Map<LearningPart, Long> = LearningPart.entries.associateWith { part -> books[part].orEmpty().sumOf { it.amount } }
-    val total: Long = amounts.values.sum()
+    private val sums: Map<Amount, Map<LearningPart, Long>> =
+        Amount.entries.associateWith { of -> LearningPart.entries.associateWith { part -> books[part].orEmpty().sumOf { it.amount(of) } } }
+
+    fun amount(
+        of: Amount,
+        part: LearningPart,
+    ): Long = sums.getValue(of).getValue(part)
+
+    fun total(of: Amount): Long = sums.getValue(of).values.sum()
+
+    /** Each part's share of [of] in whole percents adding up to 100; null when nothing was counted. */
+    fun percents(of: Amount): Map<LearningPart, Int>? = if (total(of) == 0L) null else LearningPart.entries.zip(wholePercents(LearningPart.entries.map { amount(of, it) })).toMap()
 }
 
 // The history rows read: far more than anyone's history holds
@@ -184,25 +209,26 @@ internal suspend fun learningSplit(
     val repository = app.libraryStore.repository()
     // One row per chapter opened, newest first: the first is where the book was last read
     val visits = app.userData.history.query("", HISTORY_LIMIT).filter { it.kind == VisitKind.BOOK && it.bookId != null }.groupBy { it.bookId!! }
-    val amounts =
-        when (measure) {
-            LearningMeasure.OPENS -> visits.mapValues { (_, rows) -> rows.sumOf { it.visitCount } }
-            LearningMeasure.TIME -> app.userData.readingTime.totals(period.days?.let { LocalDate.now().toEpochDay() - it + 1 })
-        }
+    val opens = if (Amount.OPENS in measure.amounts) visits.mapValues { (_, rows) -> rows.sumOf { it.visitCount } } else emptyMap()
+    val seconds =
+        if (Amount.SECONDS in measure.amounts) app.userData.readingTime.totals(period.days?.let { LocalDate.now().toEpochDay() - it + 1 }) else emptyMap()
     val units = HashMap<Long, String?>()
     val byPart = LearningPart.entries.associateWith { mutableListOf<SplitBook>() }
-    for ((bookId, amount) in amounts) {
-        if (amount <= 0) continue
+    for (bookId in opens.keys + seconds.keys) {
+        val opened = opens[bookId] ?: 0L
+        val read = seconds[bookId] ?: 0L
+        if (opened <= 0 && read <= 0) continue
         val book = repository.getBookCore(bookId) ?: continue
         val unit = units.getOrPut(book.categoryId) { unitOf(categoryPath(repository, book.categoryId)) } ?: continue
         val part = partOf(unit, overrides) ?: continue
-        byPart.getValue(part) += SplitBook(bookId, book.title, amount, visits[bookId]?.first()?.lineId)
+        byPart.getValue(part) += SplitBook(bookId, book.title, opened, read, visits[bookId]?.first()?.lineId)
     }
-    return LearningSplit(byPart.mapValues { (_, books) -> books.sortedByDescending { it.amount } })
+    val order = compareByDescending<SplitBook> { it.amount(measure.amounts.first()) }.thenByDescending { it.amount(measure.amounts.last()) }
+    return LearningSplit(byPart.mapValues { (_, books) -> books.sortedWith(order) })
 }
 
 /** Whole percents of [values] that add up to 100 (the largest remainders rounded up). */
-private fun percents(values: List<Long>): List<Int> {
+private fun wholePercents(values: List<Long>): List<Int> {
     val total = values.sum()
     if (total == 0L) return values.map { 0 }
     val exact = values.map { it * 100.0 / total }
@@ -215,28 +241,34 @@ private fun percents(values: List<Long>): List<Int> {
     return floors
 }
 
-/** "45 ד׳", "8 ש׳": a time read, in minutes under an hour, else in whole hours (a part of a minute counts as one). */
+/** "דקה", "45 דקות", "שעה", "שעתיים", "8 שעות": a time read, in minutes under an hour, else in whole hours. */
 private fun timeLabel(seconds: Long): String {
+    // A part of a minute counts as one
     val minutes = maxOf(1L, (seconds + 59) / 60)
-    return if (minutes < 60) "$minutes ד׳" else "${(minutes + 30) / 60} ש׳"
+    if (minutes < 60) return if (minutes == 1L) "דקה" else "$minutes דקות"
+    return when (val hours = (minutes + 30) / 60) {
+        1L -> "שעה"
+        2L -> "שעתיים"
+        else -> "$hours שעות"
+    }
 }
 
-/** A book's amount beside its title: its openings, or its time read. */
-private fun amountLabel(
-    measure: LearningMeasure,
-    amount: Long,
-): String = if (measure == LearningMeasure.TIME) timeLabel(amount) else amount.toString()
-
-/** "32 פתיחות", "8 ש׳": an amount that says what it counts. */
+/** "פתיחה אחת", "32 פתיחות", "8 שעות": an amount that says what it counts. */
 private fun totalLabel(
-    measure: LearningMeasure,
+    of: Amount,
     amount: Long,
 ): String =
     when {
-        measure == LearningMeasure.TIME -> timeLabel(amount)
+        of == Amount.SECONDS -> timeLabel(amount)
         amount == 1L -> "פתיחה אחת"
         else -> "$amount פתיחות"
     }
+
+/** A book's amount beside its title: the bare number of openings, or its time read. */
+private fun amountLabel(
+    of: Amount,
+    amount: Long,
+): String = if (of == Amount.SECONDS) timeLabel(amount) else amount.toString()
 
 /** Each part's shade of the accent: the full colour, then lighter; every part is also named beside its share. */
 private fun LearningPart.color(accent: Color): Color =
@@ -251,6 +283,9 @@ private fun LearningPart.color(accent: Color): Color =
 
 // Narrower, the parts go one under the other (the Jelly Star, a phone's half)
 private val SIDE_BY_SIDE_WIDTH = 300.dp
+
+// The room of a bar's name when there are two bars ("זמן", "פתיחות")
+private val BAR_LABEL_WIDTH = 44.dp
 
 /** How the learning splits between מקרא, משנה and תלמוד, against the third each should have; a book opens where it was last read. */
 internal object LearningSplitWidget : HomeWidget {
@@ -290,10 +325,10 @@ internal object LearningSplitWidget : HomeWidget {
                 }
                 Spacer(Modifier.height(10.dp))
                 Box(Modifier.fillMaxWidth().weight(1f).padding(end = 8.dp)) {
-                    if (shown.total == 0L) {
+                    if (measure.amounts.all { shown.total(it) == 0L }) {
                         EmptySplit(measure)
                     } else {
-                        SplitBody(shown, measure, open = { open(it.bookId, it.lineId) })
+                        SplitBody(shown, measure.amounts, open = { open(it.bookId, it.lineId) })
                     }
                 }
             }
@@ -307,52 +342,55 @@ internal object LearningSplitWidget : HomeWidget {
     override fun Options(state: HomeWidgetsState) = LearningSplitOptions(state)
 }
 
-/** "84 פתיחות", "6 ש׳ בחודש האחרון". */
+/** "84 פתיחות", "6 שעות בחודש האחרון", "6 שעות בחודש האחרון · 84 פתיחות". */
 private fun subtitle(
     split: LearningSplit,
     measure: LearningMeasure,
     period: LearningPeriod,
 ): String =
-    when (measure) {
-        LearningMeasure.OPENS -> totalLabel(measure, split.total)
-        LearningMeasure.TIME -> if (split.total == 0L) "זמן קריאה ${period.since}" else "${timeLabel(split.total)} ${period.since}"
+    measure.amounts.joinToString(" · ") { of ->
+        val total = split.total(of)
+        when {
+            of == Amount.OPENS -> totalLabel(of, total)
+            total == 0L -> "אין זמן קריאה ${period.since}"
+            else -> "${timeLabel(total)} ${period.since}"
+        }
     }
 
 @Composable
 private fun EmptySplit(measure: LearningMeasure) {
     val text =
         when (measure) {
-            LearningMeasure.OPENS -> "פתחו ספרים, והחלוקה תופיע כאן"
             LearningMeasure.TIME -> "זמן הקריאה נמדד בזמן שספר פתוח על המסך. קראו, והחלוקה תופיע כאן"
+            else -> "פתחו ספרים, והחלוקה תופיע כאן"
         }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text, fontSize = 13.sp, color = Zayit.colors.textSecondary, modifier = Modifier.padding(horizontal = 8.dp))
     }
 }
 
-/** The bar, then the parts side by side with their books, or one under the other when narrow. */
+/** The bars, then the parts side by side with their books, or one under the other when narrow. */
 @Composable
 private fun SplitBody(
     split: LearningSplit,
-    measure: LearningMeasure,
+    shown: List<Amount>,
     open: (SplitBook) -> Unit,
 ) {
     val accent = Zayit.colors.accent
-    val percent = percents(LearningPart.entries.map { split.amounts.getValue(it) }).let { p -> LearningPart.entries.zip(p).toMap() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val sideBySide = maxWidth >= SIDE_BY_SIDE_WIDTH
         Column(Modifier.fillMaxSize()) {
-            SplitBar(split, percent, accent)
+            SplitBars(split, shown, accent)
             Spacer(Modifier.height(14.dp))
             if (sideBySide) {
                 Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LearningPart.entries.forEach { part ->
-                        PartColumn(part, percent.getValue(part), split, measure, accent, open, Modifier.weight(1f).fillMaxHeight())
+                        PartColumn(part, split, shown, accent, open, Modifier.weight(1f).fillMaxHeight())
                     }
                 }
             } else {
                 FitColumn(Modifier.fillMaxWidth().weight(1f), spacing = 6.dp) {
-                    LearningPart.entries.forEach { part -> PartRow(part, percent.getValue(part), split, measure, accent, open) }
+                    LearningPart.entries.forEach { part -> PartRow(part, split, shown, accent, open) }
                 }
             }
         }
@@ -360,73 +398,128 @@ private fun SplitBody(
 }
 
 /**
- * The parts side by side, the first at the start, each as wide as its share, 2 dp apart; ticks under it at the thirds,
- * where an even split would part them.
+ * A bar for each amount shown, named when there are two; in each the parts side by side, the first at the start, each
+ * as wide as its share, 2 dp apart. Ticks under them at the thirds, where an even split would part them.
  */
 @Composable
-private fun SplitBar(
+private fun SplitBars(
     split: LearningSplit,
-    percent: Map<LearningPart, Int>,
+    shown: List<Amount>,
     accent: Color,
-) {
-    val tick = Zayit.colors.textSecondary
-    val description = LearningPart.entries.joinToString(", ") { "${it.label} ${percent.getValue(it)}%" }
-    Column(Modifier.fillMaxWidth().semantics { contentDescription = description }) {
-        Row(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            LearningPart.entries.forEach { part ->
-                val amount = split.amounts.getValue(part)
-                // A sliver still shows: never under 2% of the bar
-                if (amount > 0) Box(Modifier.weight(maxOf(amount.toFloat(), split.total * 0.02f)).fillMaxHeight().background(part.color(accent)))
-            }
-        }
-        Canvas(Modifier.fillMaxWidth().height(7.dp)) {
-            for (third in 1..2) {
-                val x = size.width * third / 3
-                drawLine(tick, Offset(x, 1.dp.toPx()), Offset(x, size.height), 1.5.dp.toPx())
-            }
-        }
-    }
-}
-
-/** A part's name and share, its amount, then its books, the most first: as many as fit. */
-@Composable
-private fun PartColumn(
-    part: LearningPart,
-    percent: Int,
-    split: LearningSplit,
-    measure: LearningMeasure,
-    accent: Color,
-    open: (SplitBook) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val c = Zayit.colors
-    val books = split.books[part].orEmpty()
-    Column(modifier) {
-        PartName(part, accent)
-        Text("$percent%", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.text, maxLines = 1)
-        Text(totalLabel(measure, split.amounts.getValue(part)).takeIf { books.isNotEmpty() } ?: "—", fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
-        HorizontalDivider(Modifier.padding(vertical = 6.dp), color = c.divider)
-        FitColumn(Modifier.fillMaxWidth().weight(1f)) {
-            books.forEach { book ->
-                HoverBox(onClick = { open(book) }, modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth().heightIn(min = 32.dp).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(book.title, fontSize = 12.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Spacer(Modifier.width(4.dp))
-                        Text(amountLabel(measure, book.amount), fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
+    val named = shown.size > 1
+    val description =
+        shown.joinToString("; ") { of ->
+            val percent = split.percents(of)
+            "${of.label}: " + LearningPart.entries.joinToString(", ") { "${it.label} ${percent?.get(it) ?: 0}%" }
+        }
+    Column(Modifier.fillMaxWidth().semantics { contentDescription = description }) {
+        shown.forEachIndexed { i, of ->
+            if (i > 0) Spacer(Modifier.height(5.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (named) Text(of.label, fontSize = 11.sp, color = c.textSecondary, maxLines = 1, modifier = Modifier.width(BAR_LABEL_WIDTH))
+                val total = split.total(of)
+                Row(
+                    Modifier
+                        .weight(1f)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        // Nothing counted yet: its track
+                        .background(if (total == 0L) c.text.copy(alpha = 0.08f) else Color.Transparent),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    LearningPart.entries.forEach { part ->
+                        val amount = split.amount(of, part)
+                        // A sliver still shows: never under 2% of the bar
+                        if (amount > 0) Box(Modifier.weight(maxOf(amount.toFloat(), total * 0.02f)).fillMaxHeight().background(part.color(accent)))
                     }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth()) {
+            if (named) Spacer(Modifier.width(BAR_LABEL_WIDTH))
+            Canvas(Modifier.weight(1f).height(7.dp)) {
+                for (third in 1..2) {
+                    val x = size.width * third / 3
+                    drawLine(c.textSecondary, Offset(x, 1.dp.toPx()), Offset(x, size.height), 1.5.dp.toPx())
                 }
             }
         }
     }
 }
 
-/** A part on one line when narrow: its name, its share and amount, and its book read most (tapped, it opens). */
+/** "38%", or "—" when nothing was counted. */
+private fun LearningSplit.percentLabel(
+    of: Amount,
+    part: LearningPart,
+): String = percents(of)?.let { "${it.getValue(part)}%" } ?: "—"
+
+/** A part's name, its share of each amount shown with the amount under it, then its books, the most first: as many as fit. */
+@Composable
+private fun PartColumn(
+    part: LearningPart,
+    split: LearningSplit,
+    shown: List<Amount>,
+    accent: Color,
+    open: (SplitBook) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = Zayit.colors
+    Column(modifier) {
+        PartName(part, accent)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            shown.forEach { of ->
+                val amount = split.amount(of, part)
+                Column(Modifier.weight(1f, fill = false)) {
+                    Text(split.percentLabel(of, part), fontSize = if (shown.size > 1) 18.sp else 22.sp, fontWeight = FontWeight.Bold, color = c.text, maxLines = 1)
+                    Text(if (amount > 0) totalLabel(of, amount) else "—", fontSize = 11.sp, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        HorizontalDivider(Modifier.padding(vertical = 6.dp), color = c.divider)
+        FitColumn(Modifier.fillMaxWidth().weight(1f)) {
+            split.books[part].orEmpty().forEach { book -> BookRow(book, shown, open) }
+        }
+    }
+}
+
+/** A book and its amount beside it; with two amounts, both under its title ("4 שעות · 10 פתיחות"). */
+@Composable
+private fun BookRow(
+    book: SplitBook,
+    shown: List<Amount>,
+    open: (SplitBook) -> Unit,
+) {
+    val c = Zayit.colors
+    HoverBox(onClick = { open(book) }, modifier = Modifier.fillMaxWidth()) {
+        if (shown.size == 1) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 32.dp).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(book.title, fontSize = 12.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(4.dp))
+                Text(amountLabel(shown[0], book.amount(shown[0])), fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
+            }
+        } else {
+            Column(Modifier.fillMaxWidth().heightIn(min = 32.dp).padding(vertical = 3.dp)) {
+                Text(book.title, fontSize = 12.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    shown.filter { book.amount(it) > 0 }.joinToString(" · ") { totalLabel(it, book.amount(it)) },
+                    fontSize = 11.sp,
+                    color = c.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/** A part on one line when narrow: its name and its book read most (tapped, it opens), its shares and amounts. */
 @Composable
 private fun PartRow(
     part: LearningPart,
-    percent: Int,
     split: LearningSplit,
-    measure: LearningMeasure,
+    shown: List<Amount>,
     accent: Color,
     open: (SplitBook) -> Unit,
 ) {
@@ -439,8 +532,11 @@ private fun PartRow(
                 Text(top?.title ?: "—", fontSize = 11.sp, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("$percent%", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = c.text, maxLines = 1)
-                if (top != null) Text(totalLabel(measure, split.amounts.getValue(part)), fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
+                Text(shown.joinToString("  ") { split.percentLabel(it, part) }, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = c.text, maxLines = 1)
+                val amounts = shown.filter { split.amount(it, part) > 0 }
+                if (amounts.isNotEmpty()) {
+                    Text(amounts.joinToString(" · ") { totalLabel(it, split.amount(it, part)) }, fontSize = 11.sp, color = c.textSecondary, maxLines = 1)
+                }
             }
         }
     }
@@ -498,11 +594,12 @@ private fun LearningSplitOptions(state: HomeWidgetsState) {
             when (measure) {
                 LearningMeasure.OPENS -> "כל ספר שנפתח בלשונית נספר פעם אחת, לפי ההיסטוריה."
                 LearningMeasure.TIME -> "הזמן שספר פתוח על המסך. אחרי 5 דקות בלי מגע המדידה נעצרת עד המגע הבא."
+                LearningMeasure.BOTH -> "שני פסים, הזמן והפתיחות. הזמן נספר בתקופה שנבחרה, והפתיחות מכל ההיסטוריה."
             },
             fontSize = 12.sp,
             color = c.textSecondary,
         )
-        if (measure == LearningMeasure.TIME) {
+        if (Amount.SECONDS in measure.amounts) {
             OptionsHeading("תקופה")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LearningPeriod.entries.forEach { p -> ZChip(p.label, period == p, { state[LearningSplitSettings.period] = p }) }
