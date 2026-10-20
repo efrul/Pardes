@@ -401,18 +401,21 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         while (c * CHUNK <= last) {
             val start = c * CHUNK
             if ((max(start, from)..min(start + CHUNK - 1, last)).any { lines[it] == null }) {
-                loadedChunks.add(c)
                 val loaded = try {
                     repository.getLines(bookId, start, start + CHUNK - 1)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Log.w(TAG, "Lines $start.. of $bookId failed to load", e)
-                    emptyList()
+                    null
                 }
-                for (l in loaded) {
-                    lines[l.lineIndex] = l
-                    indexById[l.id] = l.lineIndex
+                // Marked loaded only once read: a chunk that failed (or whose read was cancelled) is asked for again
+                if (loaded != null) {
+                    for (l in loaded) {
+                        lines[l.lineIndex] = l
+                        indexById[l.id] = l.lineIndex
+                    }
+                    loadedChunks.add(c)
                 }
             }
             c++

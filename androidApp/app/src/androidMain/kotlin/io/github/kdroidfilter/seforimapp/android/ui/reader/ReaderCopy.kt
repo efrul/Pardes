@@ -19,21 +19,25 @@ private fun normalizeForMatch(text: String): String = HebrewTextUtils.removeAllD
 
 private fun stripHtmlToPlainText(html: String): String = normalizeForMatch(Jsoup.parse(html).text())
 
-/** The first and last of [lines] a free-form [selectedText] overlaps, edges partially (desktop resolveLineRangeFromSelection). */
+/**
+ * The first and last of [lines] a free-form [selectedText] overlaps, edges partially (desktop resolveLineRangeFromSelection).
+ * Looked for from each end of the lines in order, which gives the same pair as testing them all: a selection the edge
+ * scroll drew out spans thousands of lines, each test scans the whole selection, and the ends are found at once.
+ */
 fun resolveLineRangeFromSelection(selectedText: String, lines: List<Line>): Pair<Line, Line>? {
     val cleaned = normalizeForMatch(selectedText)
     if (cleaned.isEmpty() || lines.isEmpty()) return null
-    val matches = lines.filter { line ->
+    fun matches(line: Line): Boolean {
         val plain = stripHtmlToPlainText(line.content)
-        plain.isNotEmpty() && (
+        return plain.isNotEmpty() && (
             cleaned.contains(plain) || plain.contains(cleaned) ||
                 (plain.length >= MIN_EDGE_OVERLAP && cleaned.endsWith(plain.take(MIN_EDGE_OVERLAP))) ||
                 (plain.length >= MIN_EDGE_OVERLAP && cleaned.startsWith(plain.takeLast(MIN_EDGE_OVERLAP)))
             )
     }
-    if (matches.isEmpty()) return null
-    val sorted = matches.sortedBy { it.lineIndex }
-    return sorted.first() to sorted.last()
+    val sorted = lines.sortedBy { it.lineIndex }
+    val first = sorted.firstOrNull(::matches) ?: return null
+    return first to (sorted.lastOrNull(::matches) ?: first)
 }
 
 /** "בראשית א, ב – בראשית א, ה", "ברכות ב." (desktop formatHebrewSourceReference). */
