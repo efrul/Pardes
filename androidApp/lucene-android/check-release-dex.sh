@@ -4,12 +4,36 @@
 # loads, and Android 11's verifier rejected that class (VerifyError: no search). Fails unless every
 # signature-polymorphic VarHandle call of the APK is in AndroidCompatApi33, the one class only Android 13+ loads.
 #
+# --legacy, for the APK of Pardes for Android 4.4 (minSdk of ../legacy/build.gradle.kts, 19), shrunk by R8 with
+# the Lucene jar of jarApi19 and core library desugaring. Fails unless:
+#  - every dex is version 035, the one Dalvik reads;
+#  - the app's dex files (all but the desugared library's, which only define the j$ classes they use) take
+#    nothing from the platform above the min API (gate/DexApiLevels.java), apart from LEGACY_ALLOWED below.
+#    Lint's NewApi does not see the shared desktop sources (legacy/lint.xml) nor the libraries' bytecode;
+#  - every class named by Lucene's META-INF/services files is in the dex: R8 must keep the codecs and formats
+#    the index is read with (lucene-android/proguard-lucene.pro).
+#
 # Usage: ./check-release-dex.sh <app-release.apk> <mapping.txt>
-# Env: ANDROID_HOME (default: sdk.dir of ../local.properties) for build-tools/*/dexdump.
+#        ./check-release-dex.sh --legacy <legacy-release.apk>
+# Env: ANDROID_HOME (default: sdk.dir of ../local.properties) for build-tools/*/dexdump and the compile SDK's
+#      data/api-versions.xml.
 set -euo pipefail
 
+# --legacy: references above the min API that the APK may have, each behind an SDK_INT check in legacy's own
+# sources, which lint's NewApi checks there ("<level> <kind> <owner> <member>" as DexApiLevels prints them).
+LEGACY_ALLOWED=(
+  "21	method	android/view/Window	setStatusBarColor(I)V"
+  "24	method	android/text/Html	fromHtml(Ljava/lang/String;I)Landroid/text/Spanned;"
+  "26	method	android/widget/TextView	setJustificationMode(I)V"
+)
+
+legacy=false
+if [ "${1:-}" = --legacy ]; then
+  legacy=true
+  shift
+fi
 apk="$1"
-mapping="$2"
+mapping="${2:-}"
 here="$(cd "$(dirname "$0")" && pwd)"
 sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 if [ -z "$sdk" ] && [ -f "$here/../local.properties" ]; then
@@ -21,6 +45,67 @@ dexdump="$(ls -d "$sdk"/build-tools/*/dexdump 2>/dev/null | sort -V | tail -1 ||
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 unzip -q -o "$apk" 'classes*.dex' -d "$work"
+
+if $legacy; then
+  failed=false
+  min_api="$(sed -n 's/^ *minSdk = \([0-9][0-9]*\).*/\1/p' "$here/../legacy/build.gradle.kts" | head -1)"
+  compile_sdk="$(sed -n 's/^ *compileSdk = \([0-9][0-9.]*\).*/\1/p' "$here/../legacy/build.gradle.kts" | head -1)"
+  api_versions="$sdk/platforms/android-$compile_sdk/data/api-versions.xml"
+  [ -f "$api_versions" ] || { echo "no $api_versions (set ANDROID_HOME)" >&2; exit 2; }
+  mkdir -p "$work/app" "$work/library"
+  : > "$work/classes.txt"
+  for dex in "$work"/classes*.dex; do
+    version="$(head -c 8 "$dex" | tail -c 4 | tr -d '\0')"
+    if [ "$version" != 035 ]; then
+      echo "$(basename "$dex"): dex version $version, Dalvik reads 035 only"
+      failed=true
+    fi
+    "$dexdump" "$dex" 2>/dev/null | sed -n "s/^ *Class descriptor *: 'L\(.*\);'$/\1/p" > "$dex.classes"
+    cat "$dex.classes" >> "$work/classes.txt"
+    # The desugared library's dex (L8): only j$ classes and the java.* ones it adds.
+    if grep -q '^j\$/' "$dex.classes" && ! grep -qv -e '^j\$/' -e '^java/' "$dex.classes"; then
+      mv "$dex" "$work/library/"
+    else
+      mv "$dex" "$work/app/"
+    fi
+  done
+  java "$here/gate/DexApiLevels.java" levels "$api_versions" "$min_api" - "$work/app" --defined "$work/library" \
+    > "$work/levels.txt"
+  sed -n '/^above API/,/^not in api-versions/p' "$work/levels.txt" | sed '1d;$d' | sed 's/^  //' > "$work/above.txt"
+  allowed=0
+  unexpected=()
+  while IFS= read -r line; do
+    if printf '%s\n' "${LEGACY_ALLOWED[@]}" | grep -qxF "$line"; then
+      allowed=$((allowed + 1))
+    else
+      unexpected+=("$line")
+    fi
+  done < "$work/above.txt"
+  echo "$(ls "$work/app" | wc -l) app dex, $(ls "$work/library" | wc -l) desugared library dex:" \
+    "${#unexpected[@]} references above API $min_api, $allowed allowed (guarded, linted)"
+  if [ ${#unexpected[@]} -gt 0 ]; then
+    printf '  %s\n' "${unexpected[@]}" >&2
+    failed=true
+  fi
+  services=0
+  for service in $(unzip -Z1 "$apk" 'META-INF/services/org.apache.lucene.*' 2>/dev/null); do
+    for provider in $(unzip -p "$apk" "$service" | sed 's/#.*//' | tr -d ' \r'); do
+      services=$((services + 1))
+      if ! grep -qxF "$(echo "$provider" | tr . /)" "$work/classes.txt"; then
+        echo "  ${service#META-INF/services/}: $provider is not in the dex" >&2
+        failed=true
+      fi
+    done
+  done
+  echo "Lucene's META-INF/services: $services providers"
+  [ "$services" -gt 0 ] || { echo "no Lucene META-INF/services in $apk: is lucene-android in it?" >&2; failed=true; }
+  if $failed; then
+    echo "FAIL" >&2
+    exit 1
+  fi
+  echo "OK"
+  exit 0
+fi
 
 # Obfuscated class names (as dexdump prints them) of the classes holding a VarHandle invoke-polymorphic
 holders="$("$dexdump" -d "$work"/classes*.dex 2>/dev/null \

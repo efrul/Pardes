@@ -2,6 +2,12 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
+# Optional dependencies of jsoup that are not on Android (as in the main app's rules).
+-dontwarn org.jspecify.annotations.**
+-dontwarn com.google.re2j.**
+
+# Lucene's keep rules: lucene-android/proguard-lucene.pro, listed in build.gradle.kts.
+
 # libpardes_sqlite.so registers NativeSqlite's methods by name and builds SqliteException(int, String) (pardes_sqlite.c).
 -keep class io.github.kdroidfilter.seforimapp.legacy.db.NativeSqlite { native <methods>; }
 -keep class io.github.kdroidfilter.seforimapp.legacy.db.SqliteException { <init>(int, java.lang.String); }
