@@ -9,6 +9,19 @@
          reference above API 19 outside guarded code, README.md). -->
     <uses-sdk tools:overrideLibrary="co.touchlab.kermit,co.touchlab.kermit.core,com.kdroid.gematria" />
 
+    <!-- The install from files (ui/InstallActivity.kt) browses the phone's storage and its memory cards: reading them
+         needs this permission on Android 4.4 to 7.1 (asked for while the app runs from 6.0). Writing lets a library folder
+         copied to the phone be moved into the library folder (a rename) instead of copied; Android 4.4 writes a memory
+         card only in the app's own folder whatever the app holds. The library folder itself needs neither. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- The install runs in a foreground service (ui/InstallService.kt) and keeps the CPU awake, as the main app's. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
     <!-- Back is handled in onBackPressed (an open pane, a category level), which Android 4.4 to 7.1 call: predictive
          back (Android 13 and later) is turned off so that a device that installs this edition anyway keeps calling it.
          largeHeap: the desktop search (Lucene) needs room for a search of several words beside the screens' bitmaps,
@@ -53,5 +66,12 @@
             android:windowSoftInputMode="stateVisible|adjustResize" />
         <activity android:name=".ui.SettingsActivity" />
         <activity android:name=".ui.TextActivity" />
+        <activity
+            android:name=".ui.InstallActivity"
+            android:launchMode="singleTop" />
+        <service
+            android:name=".ui.InstallService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

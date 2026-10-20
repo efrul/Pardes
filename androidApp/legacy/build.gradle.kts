@@ -110,6 +110,11 @@ val sharedAppSources by tasks.registering(Sync::class) {
         include("io/github/kdroidfilter/seforimapp/android/ui/search/SearchBarViewModel.kt")
         include("io/github/kdroidfilter/seforimapp/android/ui/search/SearchResults.kt")
         include("io/github/kdroidfilter/seforimapp/android/ui/search/SearchBarRows.kt")
+        // The install from files (data/LegacyInstaller.kt): the main app's bundle naming, manifest, tar.zst streaming,
+        // free-space and compatibility checks, staged names, and the database's chunks on a FAT32 card. Its texts and
+        // error messages (installErrorMessage) come with DesktopStrings and OnboardingFormat above.
+        include("io/github/kdroidfilter/seforimapp/android/data/LibraryInstallerBase.kt")
+        include("io/github/kdroidfilter/seforimapp/android/data/DatabaseChunks.kt")
     }
     into(layout.buildDirectory.dir("generated/sharedAppSources"))
 }
@@ -323,6 +328,10 @@ kotlin {
                 // lucene-android/build.gradle.kts), and jsoup, which its snippets (SeforimLibrary search) and htmlparser use.
                 implementation(project(":lucene-android-api19"))
                 implementation(libs.jsoup)
+                // The install from files reads tar.zst bundles as the main app does: zstd-jni's Android AAR (its natives,
+                // minSdk 16) and Commons Compress.
+                implementation("com.github.luben:zstd-jni:${libs.versions.zstd.jni.get()}@aar")
+                implementation(libs.commons.compress)
             }
         }
     }
@@ -352,6 +361,10 @@ androidComponents {
                     "GPL-2.0.txt",
                     "Culmus-LICENSE.txt",
                     "jsoup-LICENSE.txt",
+                    "Apache-Commons-NOTICE.txt",
+                    "zstd-jni-LICENSE.txt",
+                    "Zstandard-LICENSE.txt",
+                    "Bootstrap-Icons-LICENSE.txt",
                 ),
             )
         }
