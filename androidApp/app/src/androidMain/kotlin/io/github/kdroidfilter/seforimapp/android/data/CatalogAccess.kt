@@ -171,19 +171,27 @@ class CatalogAccess private constructor(catalog: PrecomputedCatalog) {
         private val mutex = Mutex()
 
         @Volatile
-        private var cached: Pair<String, CatalogAccess>? = null
+        private var cached: Triple<String, Any?, CatalogAccess>? = null
 
-        /** The catalog in [catalogFile], read once per file; the database's tree ([fromDatabase]) without it. */
-        suspend fun load(catalogFile: File, fromDatabase: suspend () -> PrecomputedCatalog): CatalogAccess = mutex.withLock {
+        /**
+         * The catalog in [catalogFile], read once per file; the database's tree ([fromDatabase]) without it.
+         * [library], when given, is the open database it is for (compared by identity): another one reads it again,
+         * since a library copied over the last one with no catalog.pb leaves the same stamp, that of a missing file.
+         */
+        suspend fun load(
+            catalogFile: File,
+            library: Any? = null,
+            fromDatabase: suspend () -> PrecomputedCatalog,
+        ): CatalogAccess = mutex.withLock {
             val stamp = "${catalogFile.path}:${catalogFile.length()}:${catalogFile.lastModified()}"
-            cached?.takeIf { it.first == stamp }?.let { return@withLock it.second }
+            cached?.takeIf { it.first == stamp && it.second === library }?.let { return@withLock it.third }
             val access = withContext(Dispatchers.IO) {
                 val catalog = runCatching {
                     if (catalogFile.isFile) ProtoBuf.decodeFromByteArray(PrecomputedCatalog.serializer(), catalogFile.readBytes()) else null
                 }.onFailure { Log.w("CatalogAccess", "catalog.pb", it) }.getOrNull() ?: fromDatabase()
                 CatalogAccess(catalog)
             }
-            cached = stamp to access
+            cached = Triple(stamp, library, access)
             access
         }
     }
