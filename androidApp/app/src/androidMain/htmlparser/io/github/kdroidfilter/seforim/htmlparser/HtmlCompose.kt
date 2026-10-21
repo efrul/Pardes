@@ -50,22 +50,7 @@ private fun refLinkStyles(color: Color) =
         hoveredStyle = SpanStyle(color = color, textDecoration = TextDecoration.Underline),
     )
 
-/**
- * The text [buildAnnotatedFromHtml] produces with its defaults (footnote markers hidden, their
- * content shown, no images), without building any style: for matching text, not showing it.
- */
-fun plainTextFromHtml(html: String): String =
-    buildString {
-        for (e in htmlParser.parse(html)) {
-            when {
-                e.isLineBreak -> append("\n")
-                e.isImage || e.text.isBlank() -> Unit
-                // A hidden marker leaves a space so its neighbours don't collapse
-                e.isFootnoteMarker -> if (isNotEmpty() && !endsWith(" ")) append(" ")
-                else -> append(e.text)
-            }
-        }
-    }
+// plainTextFromHtml, the text this builds without its styles, is in HtmlPlainText.kt (no Compose there).
 
 fun buildAnnotatedFromHtml(
     html: String,
