@@ -140,14 +140,14 @@ fun HistoryPage(wide: Boolean, onOpen: (Destination, String) -> Unit, topBar: (@
         else -> day.format(dateFormatter)
     }
 
-    val clearButton: @Composable () -> Unit = { ZIconButton(Icons.Outlined.Delete, "נקה היסטוריה", { confirmClear = true }) }
+    val clearButton: @Composable () -> Unit = { ZIconButton(Icons.Outlined.Delete, ShellTexts.CLEAR_HISTORY, { confirmClear = true }) }
     Column(Modifier.fillMaxSize()) {
         topBar?.invoke(clearButton)
         ListPageColumn(wide) {
             if (topBar == null) PageHeader("היסטוריה") { clearButton() }
             PageSearchField(query, { query = it }, "חיפוש…")
             if (entries.isEmpty()) {
-                EmptyState(Icons.Outlined.History, "ההיסטוריה ריקה")
+                EmptyState(Icons.Outlined.History, ShellTexts.HISTORY_EMPTY)
             } else {
                 LazyColumn(
                     Modifier.weight(1f).fillMaxWidth(),
@@ -187,9 +187,9 @@ fun HistoryPage(wide: Boolean, onOpen: (Destination, String) -> Unit, topBar: (@
     }
     if (confirmClear && isTabInFront()) {
         ConfirmDialog(
-            title = "ניקוי היסטוריה",
-            message = "האם אתה בטוח שברצונך למחוק את כל ההיסטוריה? פעולה זו אינה ניתנת לביטול.",
-            confirmText = "כן, נקה",
+            title = ShellTexts.CLEAR_HISTORY_TITLE,
+            message = ShellTexts.CLEAR_HISTORY_MESSAGE,
+            confirmText = ShellTexts.CLEAR_HISTORY_CONFIRM,
             onConfirm = {
                 confirmClear = false
                 scope.launch { guardedWrite("History clearing") { store.clearAll() } }
@@ -233,7 +233,7 @@ fun FavoritesPage(wide: Boolean, onOpen: (Destination, String) -> Unit, topBar: 
             if (topBar == null) PageHeader("מועדפים") { addButton() }
             PageSearchField(query, { query = it }, "חפש במועדפים...")
             if (entries.isEmpty() && folders.isEmpty()) {
-                EmptyState(Icons.Outlined.StarOutline, "אין מועדפים")
+                EmptyState(Icons.Outlined.StarOutline, ShellTexts.FAVORITES_EMPTY)
             } else {
                 LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val shownFolders = folders.filter { query.isBlank() || byFolder[it.id].orEmpty().isNotEmpty() }
@@ -538,7 +538,7 @@ private fun SectionHeader(
         if (icon != null) Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
         Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         if (count != null) Text(count.toString(), fontSize = 12.sp, color = c.textSecondary)
-        if (onDelete != null) ZIconButton(Icons.Outlined.Close, "מחק", onDelete, tint = c.textSecondary) else Box(Modifier.size(8.dp))
+        if (onDelete != null) ZIconButton(Icons.Outlined.Close, ShellTexts.DELETE, onDelete, tint = c.textSecondary) else Box(Modifier.size(8.dp))
     }
 }
 
@@ -578,7 +578,7 @@ private fun ListRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            ZIconButton(Icons.Outlined.Close, "מחק", onDelete, tint = c.textSecondary)
+            ZIconButton(Icons.Outlined.Close, ShellTexts.DELETE, onDelete, tint = c.textSecondary)
         }
         if (showDivider) HorizontalDivider(color = c.divider.copy(alpha = 0.5f), modifier = Modifier.padding(start = 28.dp))
     }

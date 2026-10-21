@@ -352,7 +352,7 @@ private fun VersionCheckStep(reason: DatabaseUpdateReason, onContinue: () -> Uni
         BodyText(if (outdated) DesktopStrings.dbUpdateNeedToUpdate else DesktopStrings.dbUpdateDatabaseMissingError, Modifier.fillMaxWidth(0.9f))
         if (reason == DatabaseUpdateReason.Broken) {
             // Android only: a library copied from a computer usually just needs its permissions fixed.
-            InfoBanner(BROKEN_LIBRARY_HINT, Modifier.fillMaxWidth())
+            InfoBanner(AndroidStrings.brokenLibraryHint, Modifier.fillMaxWidth())
         }
     }
 }
@@ -583,6 +583,3 @@ private fun CompletionStep(installer: LibraryInstaller, refused: Boolean, onOpen
 /** The colour of IntelliJ's General.Warning icon, which desktop shows here. */
 @Composable
 private fun warningColor(): Color = if (Zayit.colors.isDark) Color(0xFFF2C55C) else Color(0xFFFFAF0F)
-
-private const val BROKEN_LIBRARY_HINT =
-    "אם הספרייה הועתקה מהמחשב, הריצו שוב את סקריפט ההעתקה (push-desktop-library) כדי לתקן את ההרשאות, ואחר כך לחצו \"נסה שוב\"."

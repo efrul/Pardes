@@ -93,6 +93,9 @@ val sharedAppSources by tasks.registering(Sync::class) {
         include("io/github/kdroidfilter/seforimapp/android/ui/settings/LicenceTexts.kt")
         include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/OnboardingFormat.kt")
         include("io/github/kdroidfilter/seforimapp/android/ui/onboarding/DesktopStrings.kt")
+        // The title bar's theme item, the book list's title and the history's and favourites' texts (empty states,
+        // clearing), as the main app's shell shows them.
+        include("io/github/kdroidfilter/seforimapp/android/ui/shell/ShellTexts.kt")
         // The search: the desktop engine on the release's prebuilt Lucene indexes and lexical.db (data/LegacySearch.kt
         // opens it and falls back), with its book and author lookup, acronyms, snippets and knowledge panel, and the
         // results' and the search bar's view models and rows. LibraryStore, SplitDatabase, LexicalDb (openLexicalDb)

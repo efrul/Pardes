@@ -49,6 +49,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.notes.NotesPage
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalAppViewModel
+import io.github.kdroidfilter.seforimapp.android.ui.shell.ShellTexts
 import io.github.kdroidfilter.seforimapp.android.ui.shell.destination
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
@@ -84,8 +85,8 @@ internal object HistoryWidget : HomeWidget {
         ListCard(
             title = "היסטוריה",
             onShowAll = { state.openPage(Destination.History) },
-            showAllLabel = "הצג את כל ההיסטוריה",
-            empty = "ההיסטוריה ריקה".takeIf { entries.isEmpty() },
+            showAllLabel = ShellTexts.SHOW_ALL_HISTORY,
+            empty = ShellTexts.HISTORY_EMPTY.takeIf { entries.isEmpty() },
             modifier = modifier,
         ) {
             entries.forEach { entry ->
@@ -129,8 +130,8 @@ internal object FavoritesWidget : HomeWidget {
         ListCard(
             title = "מועדפים",
             onShowAll = { state.openPage(Destination.Favorites) },
-            showAllLabel = "הצג את כל המועדפים",
-            empty = "אין מועדפים".takeIf { entries.isEmpty() },
+            showAllLabel = ShellTexts.SHOW_ALL_FAVORITES,
+            empty = ShellTexts.FAVORITES_EMPTY.takeIf { entries.isEmpty() },
             header = { if (folders.isNotEmpty()) FolderChips(folders, folder) { folder = it } },
             modifier = modifier,
         ) {

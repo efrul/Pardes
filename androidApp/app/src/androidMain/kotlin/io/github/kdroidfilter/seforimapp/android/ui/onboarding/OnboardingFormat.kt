@@ -101,6 +101,11 @@ internal object AndroidStrings {
             "המקום שהיא צריכה ייבדק לפי הקבצים שתבחרו."
     const val continueWithFiles = "המשך להתקנה מקבצים"
     const val installationOnlineNoSpace = "אין במכשיר מספיק מקום להורדת הספרייה המלאה. אפשר להתקין מקבצים ספרייה קטנה יותר."
+
+    // A library that cannot be opened (DatabaseUpdateScreen's Broken): one copied from a computer usually just needs
+    // its permissions fixed.
+    const val brokenLibraryHint =
+        "אם הספרייה הועתקה מהמחשב, הריצו שוב את סקריפט ההעתקה (push-desktop-library) כדי לתקן את ההרשאות, ואחר כך לחצו \"נסה שוב\"."
 }
 
 /** Desktop message for a failed install (DownloadScreen / ExtractScreen / OfflineFileSelectionScreen). */

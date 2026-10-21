@@ -439,7 +439,7 @@ private fun TabContent(
             // Desktop keeps "רשימת הספרים" beside the home page; on a phone it is a drawer.
             LibraryDrawer(library, onOpenBook = { nav.openBook(it, null) }, onOpenBookInNewTab = { nav.openBookInNewTab(it, null) }) { openDrawer ->
                 Column(Modifier.fillMaxSize()) {
-                    phoneTopBar("פרדס", null, { ZIconButton(Icons.AutoMirrored.Outlined.LibraryBooks, "רשימת הספרים", openDrawer) }, null)
+                    phoneTopBar("פרדס", null, { ZIconButton(Icons.AutoMirrored.Outlined.LibraryBooks, ShellTexts.BOOK_LIST, openDrawer) }, null)
                     HomeScreen(onOpenBook = { nav.openBook(it, null) }, onSearch = { q -> appVm.openInCurrentTab(Destination.Search(q), q) }, wide = false, onOpenBookAt = { b, l -> nav.openBook(b, l) })
                 }
             }
@@ -494,7 +494,7 @@ private fun LibraryDrawer(
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = Zayit.colors.panel, modifier = Modifier.width(drawerWidthFor(LocalConfiguration.current.screenWidthDp))) {
-                Text("רשימת הספרים", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Zayit.colors.text, modifier = Modifier.padding(16.dp))
+                Text(ShellTexts.BOOK_LIST, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Zayit.colors.text, modifier = Modifier.padding(16.dp))
                 if (treeBuilt || drawerState.isOpen || drawerState.targetValue == DrawerValue.Open) {
                     LibraryTree(
                         library,

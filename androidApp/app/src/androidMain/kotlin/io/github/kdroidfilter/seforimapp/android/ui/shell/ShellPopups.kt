@@ -220,12 +220,12 @@ fun ColumnScope.TabSearchContent(
         if (tabs.isEmpty() && history.isEmpty()) {
             item(key = "empty") {
                 Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("אין תוצאות", fontSize = 13.sp, color = Zayit.colors.textSecondary)
+                    Text(ShellTexts.NO_RESULTS, fontSize = 13.sp, color = Zayit.colors.textSecondary)
                 }
             }
         }
     }
-    PopupFooterRow("הצג את כל ההיסטוריה", Icons.Outlined.History, if (tablet) "Ctrl+H" else null) {
+    PopupFooterRow(ShellTexts.SHOW_ALL_HISTORY, Icons.Outlined.History, if (tablet) "Ctrl+H" else null) {
         appVm.showPage(Destination.History)
         onDismiss()
     }
@@ -273,12 +273,12 @@ fun ColumnScope.FavoritesMenuContent(appVm: AppViewModel, tablet: Boolean, onDis
         if (entries.isEmpty()) {
             item(key = "empty") {
                 Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("אין מועדפים", fontSize = 13.sp, color = Zayit.colors.textSecondary)
+                    Text(ShellTexts.FAVORITES_EMPTY, fontSize = 13.sp, color = Zayit.colors.textSecondary)
                 }
             }
         }
     }
-    PopupFooterRow("הצג את כל המועדפים", Icons.Outlined.StarOutline, if (tablet) "Ctrl+Shift+O" else null) {
+    PopupFooterRow(ShellTexts.SHOW_ALL_FAVORITES, Icons.Outlined.StarOutline, if (tablet) "Ctrl+Shift+O" else null) {
         appVm.showPage(Destination.Favorites)
         onDismiss()
     }
