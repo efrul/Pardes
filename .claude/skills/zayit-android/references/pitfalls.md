@@ -37,6 +37,12 @@ The whole app runs with `LayoutDirection.Rtl`.
 
 - **Android 4.4 draws a leading dot on the Hebrew side** of a Latin token whatever comes before it: U+200E and an LRE…PDF embedding both left ".part01" (marked or embedded) drawn as "part01." on the pardes19 AVD, and an embedded "seforim.db001…" with its "…" on the left. The 4.4 edition names file types without the dot (`Bidi.marks` turns the main app's U+200E-marked ".part01" into "part01") and keeps neutrals out of the ends of embedded Latin text.
 - **Android 4.4's StaticLayout throws on a middle (or start) ellipsis of a TextView with maxLines 1** (ArrayIndexOutOfBoundsException in calculateEllipsis, the install's progress line): use `setSingleLine(true)` with an end ellipsis.
+- **Justified text on the 4.4 edition (`legacy/.../ui/Justify.kt`).** Below API 26 there is no justification mode, and below API 21 no letter spacing: each inner space becomes a `ReplacementSpan` of its share of the line's leftover width.
+  - Put the spans on the TextView's own Spannable text (`setText(text, BufferType.SPANNABLE)`) after its layout: the layout keeps its line breaks and draws the widened spaces. Laying the text out again first (a second `StaticLayout`) cost 20-37 ms a line on the pardes19 AVD's release build, 5-7 times the line's rendering.
+  - Remove the TextView's `SpanWatcher` (its ChangeWatcher) before adding them: told of each span, it re-measured the view each time, 0.1-0.4 s a line.
+  - A replaced character is drawn by its span alone, without the `BackgroundColorSpan` over it: the gap draws a find match's background itself.
+  - Even so, measuring the lines and drawing them word by word made fling frames about a fifth slower, and doing it on a background thread was worse on the 2-core AVD. The reader leaves the lines a fling brings in start-aligned and justifies them when it stops.
+- **`ListView.setSelectionFromTop` right after `setPadding`** measures from the padding of the last measure (`getListPaddingTop()`): the 4.4 reader's find bar opened with the line put at the old 6dp padding, under the 60dp bar. Add `paddingTop - listPaddingTop` to the offset (`BookActivity.place`).
 
 ## Compose layout
 
