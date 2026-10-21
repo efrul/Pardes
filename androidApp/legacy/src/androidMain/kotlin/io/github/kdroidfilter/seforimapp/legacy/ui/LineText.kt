@@ -26,11 +26,12 @@ object LineText {
     /**
      * The line as styled text, without the blank lines that Html.fromHtml leaves after a heading, and with the main
      * app's heading sizes (HtmlCompose: h1 1.5, h2 1.25, h3 1.125 times the text, h4 to h6 the text's own) where Html
-     * makes them 1.5, 1.4, 1.3, 1.2 and 1.1 (<big>'s 1.25 and <small>'s 0.8 stay). With a [linkColor], its links
-     * (the citations, <a class="ref" href="seforim://line/<id>">) are [Link]s in that colour.
+     * makes them 1.5, 1.4, 1.3, 1.2 and 1.1 (<big>'s 1.25 and <small>'s 0.8 stay), and without its footnotes' markers
+     * ([hideFootnoteMarkers]). With a [linkColor], its links (the citations, <a class="ref" href="seforim://line/<id>">)
+     * are [Link]s in that colour.
      */
     fun render(html: String, diacritics: DiacriticsMode, linkColor: Int = 0): SpannableStringBuilder {
-        val text = SpannableStringBuilder(fromHtml(stripMarks(html, diacritics)))
+        val text = SpannableStringBuilder(fromHtml(stripMarks(hideFootnoteMarkers(html), diacritics)))
         if (linkColor != 0) {
             text.getSpans(0, text.length, URLSpan::class.java).forEach { span ->
                 val start = text.getSpanStart(span)
@@ -75,8 +76,25 @@ object LineText {
 
     private const val CITATION = "seforim://line/"
 
-    /** Plain text of a line's HTML (for copying and snippets). */
-    fun plain(html: String): String = fromHtml(html).toString().trim()
+    /** Plain text of a line's HTML as the reader shows it (for copying and snippets). */
+    fun plain(html: String): String = fromHtml(hideFootnoteMarkers(html)).toString().trim()
+
+    /**
+     * [html] without its footnotes' markers (<sup class="footnote-marker">), each leaving a space between its neighbours:
+     * the main app hides them so (buildAnnotatedFromHtml's showFootnoteMarkers), and the find counts its matches on that
+     * text (plainTextFromHtml), so a marker shown here would be lit without being counted or reached by ▲ ▼. Html.fromHtml
+     * then folds the space into one next to another, as the main app adds none there.
+     */
+    fun hideFootnoteMarkers(html: String): String =
+        if (html.contains(FOOTNOTE_MARKER_CLASS, ignoreCase = true)) FOOTNOTE_MARKER.replace(html, " ") else html
+
+    private const val FOOTNOTE_MARKER_CLASS = "footnote-marker"
+
+    /** A <sup> whose classes (as jsoup's hasClass reads them) include footnote-marker, with its content. */
+    private val FOOTNOTE_MARKER = Regex(
+        "<sup\\s[^>]*?class\\s*=\\s*([\"'])(?:[^\"']*\\s)?$FOOTNOTE_MARKER_CLASS(?:\\s[^\"']*)?\\1[^>]*>.*?</sup\\s*>",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+    )
 
     /**
      * A pattern that finds [query] in a line's text as the search compares them (pardes_match): any points,

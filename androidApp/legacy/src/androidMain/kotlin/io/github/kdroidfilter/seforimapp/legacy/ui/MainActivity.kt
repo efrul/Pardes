@@ -123,7 +123,7 @@ class MainActivity : BaseActivity() {
         MenuEntry("ספרייה", R.drawable.ic_library) { openLibrary(null) },
         MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(this, colors) { refreshPlaces() } },
         MenuEntry("מועדפים", R.drawable.ic_star_border) { PlacesDialogs.favorites(this, colors) { refreshPlaces() } },
-        MenuEntry(if (prefs.dark) "ערכת נושא: כהה" else "ערכת נושא: בהירה", if (prefs.dark) R.drawable.ic_dark_mode else R.drawable.ic_light_mode) {
+        MenuEntry(if (prefs.dark) "ערכת נושא כהה" else "ערכת נושא בהירה", if (prefs.dark) R.drawable.ic_dark_mode else R.drawable.ic_light_mode) {
             prefs.dark = !prefs.dark
             recreate()
         },
