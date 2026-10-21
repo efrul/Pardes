@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.legacy.ui
 import android.content.Context
 import android.content.Intent
 import android.graphics.PorterDuff
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -18,6 +19,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
+import io.github.kdroidfilter.seforimapp.android.ui.shell.ShellTexts
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.Entry
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
@@ -29,9 +31,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The library tree of the main app's drawer (LibraryTree): categories open in place, a category's books before its
- * subcategories. On a keypad, OK opens and closes a category, and the arrows do too: ← into it, → out of it, as the
- * tree reads from right to left.
+ * The library tree of the main app's drawer, "רשימת הספרים" (LibraryTree): categories open in place, a category's books
+ * before its subcategories, each row one line. Opened from a book, the tree opens at it, marked (the main app's
+ * selected row) three rows from the top. On a keypad, OK opens and closes a category, and the arrows do too: ← into it,
+ * → out of it, as the tree reads from right to left.
  *
  * Above it the book search ("חיפוש ספר"), as the drawer's: from two letters the tree narrows to the books found, by the
  * library's lookup index as the main app's (its ranking, acronyms; the books' titles in the database without it), with
@@ -56,10 +59,14 @@ class LibraryActivity : BaseActivity() {
     private lateinit var clear: View
     private lateinit var none: TextView
 
+    /** The book the tree was opened from (the reader's), marked in it; null from the Home. */
+    private var currentBook: Long? = null
+
     private val adapter = ItemsAdapter<Node> { node, reuse, _ ->
-        val row = reuse as? TreeRow ?: TreeRow(this, colors)
+        val row = reuse as? TreeRow ?: TreeRow(this, colors, titleLines = 1)
         if (node.entry.isBook) {
-            row.bind(node.entry.title, node.depth, R.drawable.ic_book, keepArrowSpace = true, marked = found?.best == node.entry.id)
+            val marked = found?.let { it.best == node.entry.id } ?: (node.entry.id == currentBook)
+            row.bind(node.entry.title, node.depth, R.drawable.ic_book, keepArrowSpace = true, marked = marked)
         } else {
             row.bind(node.entry.title, node.depth, R.drawable.ic_folder, if (node.open) R.drawable.ic_arrow_down else R.drawable.ic_arrow_left)
         }
@@ -79,13 +86,18 @@ class LibraryActivity : BaseActivity() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val bar = TopBar(this, colors).apply {
             leading(R.drawable.ic_back, "חזרה") { finish() }
-            title.text = "ספרייה"
+            title.text = ShellTexts.BOOK_LIST
+            overflow { shellMenu() }
         }
         topBar = bar
         root.addView(bar, lp(MATCH, WRAP))
         list = ListView(this).apply {
             divider = null
-            selector = states(colors, 0, dp(6).toFloat())
+            // Over the rows, see-through: a marked row (the book shown, the search's best match) has a fill of its own,
+            // which would hide a keypad's highlight drawn under it.
+            val r = dp(6).toFloat()
+            selector = states(ColorDrawable(0), roundRect(Palette.withAlpha(colors.text, 0.08f), r), roundRect(colors.focus, r))
+            setDrawSelectorOnTop(true)
             cacheColorHint = 0
             setPadding(dp(4), dp(4), dp(4), dp(4))
             clipToPadding = false
@@ -106,7 +118,7 @@ class LibraryActivity : BaseActivity() {
             background = island(colors)
         }
         card.addView(searchField(), lp(MATCH, WRAP))
-        none = label("לא נמצאו ספרים", 14f, colors.secondary, typeface = Fonts.ui(this)).apply {
+        none = label(ShellTexts.NO_BOOKS_FOUND, 14f, colors.secondary).apply {
             setPadding(dp(16), dp(16), dp(16), dp(16))
             visibility = View.GONE
         }
@@ -118,6 +130,7 @@ class LibraryActivity : BaseActivity() {
         setContentView(root)
 
         val focus = intent.getLongExtra(EXTRA_CATEGORY, 0L).takeIf { it != 0L }
+        currentBook = intent.getLongExtra(EXTRA_BOOK, 0L).takeIf { it != 0L }
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { app.library.open() } }
             // No library yet (the Home's welcome has the library button too), or one that cannot be read.
@@ -129,7 +142,8 @@ class LibraryActivity : BaseActivity() {
             val roots = withContext(Dispatchers.IO) { runCatching { opened.rootEntries() }.getOrDefault(emptyList()) }
             roots.forEach { nodes += Node(it, 0) }
             adapter.items = ArrayList(nodes)
-            // Opened from a section of the Home: that section, open, at the top.
+            // Opened from a section of the Home: that section, open, at the top. From a book: its category, open, the
+            // book three rows from the top (a keypad on it).
             if (focus != null) {
                 val path = withContext(Dispatchers.IO) { runCatching { opened.categoryPath(focus) }.getOrDefault(emptyList()) }
                 var at = -1
@@ -140,7 +154,12 @@ class LibraryActivity : BaseActivity() {
                     at = nodes.indexOf(node)
                     if (at < 0) break
                 }
-                if (at >= 0) list.setSelection(at)
+                val book = currentBook?.let { id -> nodes.indexOfFirst { it.entry.isBook && it.entry.id == id } } ?: -1
+                if (book >= 0) {
+                    list.setSelectionFromTop(book, dp(ROW_DP) * 3)
+                } else if (at >= 0) {
+                    list.setSelection(at)
+                }
             }
             // A keypad starts in the tree: the title bar's Back took the first focus while the list was empty.
             if (!list.isInTouchMode) list.requestFocus()
@@ -331,14 +350,21 @@ class LibraryActivity : BaseActivity() {
 
     companion object {
         private const val EXTRA_CATEGORY = "category"
+        private const val EXTRA_BOOK = "book"
+
+        /** A row's height (TreeRow's least): where a book opened from the reader is put, three rows down. */
+        private const val ROW_DP = 44
 
         /** The drawer's book search: from two letters (MIN_BOOK_QUERY_LENGTH), 120 ms after the last, 120 books at most. */
         private const val MIN_QUERY = 2
         private const val SEARCH_DELAY_MS = 120L
         private const val MAX_BOOKS = 120
 
-        fun start(context: Context, categoryId: Long?) {
-            context.startActivity(Intent(context, LibraryActivity::class.java).putExtra(EXTRA_CATEGORY, categoryId ?: 0L))
+        /** The tree, open at [categoryId] (null: its roots), [bookId] marked in it (the book the reader shows). */
+        fun start(context: Context, categoryId: Long?, bookId: Long? = null) {
+            context.startActivity(
+                Intent(context, LibraryActivity::class.java).putExtra(EXTRA_CATEGORY, categoryId ?: 0L).putExtra(EXTRA_BOOK, bookId ?: 0L),
+            )
         }
     }
 }

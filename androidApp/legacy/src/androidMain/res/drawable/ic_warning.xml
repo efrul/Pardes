@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Icons Filled "warning" by Google (Apache License 2.0), the main app's update screen's (Icons.Filled.Warning);
+     white, the screens tint it (ui/Ui.kt). 80dp: the Home shows it that large, and below Android 5.0 the build draws it
+     into a PNG of this size. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M1,21h22L12,2 1,21zM13,18h-2v-2h2v2zM13,14h-2v-4h2v4z" />
+</vector>

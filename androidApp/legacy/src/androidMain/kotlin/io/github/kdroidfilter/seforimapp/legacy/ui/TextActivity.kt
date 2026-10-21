@@ -1,22 +1,14 @@
 package io.github.kdroidfilter.seforimapp.legacy.ui
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.method.LinkMovementMethod
-import android.text.style.ClickableSpan
-import android.text.style.URLSpan
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.CONDITIONS_MARKDOWN
-import io.github.kdroidfilter.seforimapp.android.ui.onboarding.PARDES_LICENSE_URL
 import io.github.kdroidfilter.seforimapp.android.ui.settings.DATA_NOTE
 import io.github.kdroidfilter.seforimapp.android.ui.settings.LICENCES_INTRO
 import io.github.kdroidfilter.seforimapp.android.ui.settings.PARDES_LICENCE
@@ -24,10 +16,12 @@ import io.github.kdroidfilter.seforimapp.android.ui.settings.reflow
 import io.github.kdroidfilter.seforimapp.legacy.R
 
 /**
- * A text to read: the terms (desktop's CONDITIONS.md under Pardes's name, as the main app shows it), the list of
- * licences, or one licence's text from assets/licenses.
+ * A text to read: the terms (desktop's CONDITIONS.md under Pardes's name, as the main app shows it), the licences (the
+ * main app's רישיונות page, with what this edition carries), or one licence's text from assets/licenses.
  */
 class TextActivity : BaseActivity() {
+    private lateinit var page: LinearLayout
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -37,26 +31,21 @@ class TextActivity : BaseActivity() {
         }
         topBar = bar
         root.addView(bar, lp(MATCH, WRAP))
-        // An Island on the ground, as the main app's settings pages.
-        val body = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = island(colors)
-            setPadding(dp(14), dp(10), dp(14), dp(16))
-        }
-        val page = LinearLayout(this).apply {
+        page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(10), dp(10), dp(24))
-            addView(body, lp(MATCH, WRAP))
         }
         root.addView(ScrollView(this).apply { addView(page) }, lp(MATCH, 0, 1f))
         setContentView(root)
         when (intent.getStringExtra(EXTRA_KIND)) {
-            KIND_TERMS -> body.addView(rich(markdownToHtml(Bidi.compat(CONDITIONS_MARKDOWN))))
-            KIND_LICENCES -> licences(body)
+            KIND_TERMS -> card().addView(MarkdownText.view(this, colors, CONDITIONS_MARKDOWN))
+            KIND_LICENCES -> licences()
             else -> {
                 val path = intent.getStringExtra(EXTRA_ASSET) ?: ""
                 val text = runCatching { assets.open(path).bufferedReader().use { it.readText() } }.getOrElse { intent.getStringExtra(EXTRA_TEXT) ?: "" }
-                body.addView(label(reflow(text).joinToString("\n\n"), 13f, colors.text).apply {
+                // The main app's licence text: its paragraphs joined again (reflow), 14sp, 21sp apart.
+                card().addView(label(reflow(text).joinToString("\n\n"), 14f, colors.text).apply {
+                    lineHeightFactor(1.5f)
                     // Licence texts are English: left to right, whatever the screen's direction.
                     textDirection = View.TEXT_DIRECTION_LTR
                     textAlignment = View.TEXT_ALIGNMENT_VIEW_START
@@ -69,66 +58,82 @@ class TextActivity : BaseActivity() {
         }
     }
 
-    private fun licences(body: LinearLayout) {
-        body.addView(paragraph(LICENCES_INTRO))
-        PARDES_LICENCE.forEach { body.addView(paragraph(Bidi.compat(it))) }
-        body.addView(label("הרכיבים שבפרדס לאנדרואיד 4.4", 15f, colors.text, bold = true).apply { setPadding(0, dp(16), 0, dp(4)) })
-        COMPONENTS.forEachIndexed { i, c ->
-            if (i > 0) body.addView(divider(colors))
-            body.addView(componentRow(c))
+    /** An Island on the ground, as the main app's settings cards (SettingsCard): an optional title, rows 10dp apart. */
+    private fun card(title: String? = null): LinearLayout {
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = island(colors)
+            setPadding(dp(14), dp(12), dp(14), dp(14))
         }
-        body.addView(paragraph(DATA_NOTE))
+        if (title != null) box.addView(label(title, 15f, colors.text, bold = true).apply { setPadding(0, 0, 0, dp(4)) })
+        page.addView(box, lp(MATCH, WRAP).apply { bottomMargin = dp(10) })
+        return box
     }
 
-    /** A component's row as a TreeRow draws one, its licence line in full: a TreeRow cuts its second line to one. */
-    private fun componentRow(c: Component): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(44)
-        setPaddingRelative(dp(8), dp(4), dp(10), dp(4))
-        background = states(colors, 0, dp(6).toFloat())
-        addView(label(c.name, 15f, colors.text, maxLines = 2))
-        addView(label(c.licence, 12f, colors.secondary))
-        keyable(this) {
-            if (c.asset != null) showAsset(this@TextActivity, c.name, c.asset) else showPlain(this@TextActivity, c.name, c.licence)
-        }
+    /**
+     * The main app's רישיונות (LicencesSettings): its intro; פרדס's licence with the AGPL and the source; then the
+     * libraries, icons, fonts and data this edition carries, each with its copyright holders, a note, and its texts.
+     */
+    private fun licences() {
+        page.addView(label(LICENCES_INTRO, 15f, colors.text).apply {
+            lineHeightFactor(23f / 15f)
+            setPadding(dp(4), 0, dp(4), dp(10))
+        })
+        val pardes = card("פרדס")
+        PARDES_LICENCE.forEach { pardes.addView(rtl(label(Bidi.compat(it), 15f, colors.text)).apply { lineHeightFactor(23f / 15f) }) }
+        pardes.addView(docLinks(listOf(Doc(MarkdownText.PARDES_LICENCE_TITLE, asset = MarkdownText.PARDES_LICENCE_ASSET), Doc("קוד המקור", url = SOURCE_URL))))
+        credits("ספריות", LIBRARY_CREDITS)
+        credits("אייקונים", ICON_CREDITS)
+        credits("גופנים", FONT_CREDITS)
+        credits("נתונים ותמונות", emptyList(), DATA_NOTE)
     }
 
-    private fun paragraph(text: CharSequence): TextView = label(text, 14f, colors.text).apply {
-        setLineSpacing(0f, 1.15f)
-        setPadding(0, dp(6), 0, dp(6))
-    }
-
-    /** HTML with its links clickable: Pardes's licence opens the copy in the app, the others the browser. */
-    private fun rich(html: String): TextView {
-        val text = SpannableStringBuilder(LineText.fromHtml(html))
-        text.getSpans(0, text.length, URLSpan::class.java).forEach { span ->
-            val start = text.getSpanStart(span)
-            val end = text.getSpanEnd(span)
-            val url = span.url
-            text.removeSpan(span)
-            text.setSpan(object : ClickableSpan() {
-                override fun onClick(widget: View) {
-                    if (url == PARDES_LICENSE_URL) {
-                        showAsset(this@TextActivity, "רישיון פרדס", "licenses/Pardes-LICENSE.txt")
-                    } else {
-                        try {
-                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        } catch (_: ActivityNotFoundException) {
-                            toast(url)
-                        }
-                    }
-                }
-            }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    /** CreditsCard: each credit's name (bold), holders and note in grey, its texts as links; a line between credits. */
+    private fun credits(title: String, credits: List<Credit>, footer: String? = null) {
+        val box = card(title)
+        credits.forEachIndexed { i, credit ->
+            if (i > 0) box.addView(divider(colors).apply { (layoutParams as LinearLayout.LayoutParams).setMargins(0, dp(8), 0, dp(8)) })
+            box.addView(rtl(label(isolated(credit.name), 15f, colors.text, bold = true)))
+            box.addView(rtl(label(isolated(credit.holder), 13f, colors.secondary)).apply { setPadding(0, dp(2), 0, 0) })
+            credit.note?.let { box.addView(label(it, 13f, colors.secondary).apply { setPadding(0, dp(2), 0, 0) }) }
+            box.addView(docLinks(credit.docs))
         }
-        return label(text, 15f, colors.text).apply {
-            setLineSpacing(0f, 1.2f)
-            setLinkTextColor(colors.accent)
-            movementMethod = LinkMovementMethod.getInstance()
+        if (footer != null) {
+            if (credits.isNotEmpty()) box.addView(divider(colors).apply { (layoutParams as LinearLayout.LayoutParams).setMargins(0, dp(8), 0, dp(8)) })
+            box.addView(label(footer, 13f, colors.secondary))
         }
     }
 
-    private data class Component(val name: String, val licence: String, val asset: String?)
+    /**
+     * Right to left, as the main app lays out a text that starts with an isolated Latin passage (a credit's name, the §7b
+     * line): Android 4.4 takes that passage's embedding ([isolated]) for the paragraph's direction.
+     */
+    private fun rtl(view: TextView): TextView = view.apply { textDirection = View.TEXT_DIRECTION_RTL }
+
+    /** DocLinks: a credit's texts side by side, wrapping, each a stop for a keypad (OK opens it). */
+    private fun docLinks(docs: List<Doc>): View {
+        val row = FlowRow(this, dp(16), 0, centered = false)
+        docs.forEach { doc ->
+            row.addView(label(isolated(doc.title), 15f, colors.accent, maxLines = 1).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                minHeight = dp(40)
+                setPadding(dp(4), 0, dp(4), 0)
+                background = states(colors, 0, dp(4).toFloat())
+                keyable(this) { open(doc) }
+            })
+        }
+        return row
+    }
+
+    private fun open(doc: Doc) {
+        val url = doc.url
+        if (url != null) MarkdownText.open(this, url) else showAsset(this, doc.title, doc.asset ?: return)
+    }
+
+    /** A licence text: bundled under assets/licenses, or online (the Creative Commons ones, the public domain's page). */
+    private class Doc(val title: String, val asset: String? = null, val url: String? = null)
+
+    private class Credit(val name: String, val holder: String, val docs: List<Doc>, val note: String? = null)
 
     companion object {
         private const val EXTRA_TITLE = "title"
@@ -137,6 +142,7 @@ class TextActivity : BaseActivity() {
         private const val EXTRA_TEXT = "text"
         private const val KIND_TERMS = "terms"
         private const val KIND_LICENCES = "licences"
+        private const val SOURCE_URL = "https://github.com/efrul/Pardes"
 
         fun showTerms(context: Context) = context.startActivity(
             Intent(context, TextActivity::class.java).putExtra(EXTRA_TITLE, "תנאים").putExtra(EXTRA_KIND, KIND_TERMS),
@@ -150,66 +156,77 @@ class TextActivity : BaseActivity() {
             Intent(context, TextActivity::class.java).putExtra(EXTRA_TITLE, title).putExtra(EXTRA_ASSET, asset),
         )
 
-        fun showPlain(context: Context, title: String, text: String) = context.startActivity(
-            Intent(context, TextActivity::class.java).putExtra(EXTRA_TITLE, title).putExtra(EXTRA_TEXT, text),
+        /**
+         * Latin text inside the RTL page kept left to right (the main app isolates it; Android 4.4 knows only the older
+         * embeddings, [Bidi.ltr]). A title with Hebrew in it is left to the RTL paragraph, which orders its words right.
+         */
+        private fun isolated(text: String): String = if (text.any { it in '֐'..'׿' }) text else Bidi.ltr(text)
+
+        private fun bundled(title: String, file: String) = Doc(title, asset = "licenses/$file")
+
+        private val APACHE = bundled("Apache License 2.0", "Apache-2.0.txt")
+        private val GPL = bundled("GNU GPL v2", "GPL-2.0.txt")
+        private val FONT_NOTICES = bundled("הודעות הגופנים", "Fonts-NOTICE.txt")
+
+        // The main app's credits (LicencesSettings) for what this edition carries, and this edition's own: its SQLite,
+        // Multidex and the desugared Java library. Not here: what only the main app has (Compose, requery, KosherJava,
+        // the other fonts and icon sets, the widgets' data).
+        private val LIBRARY_CREDITS = listOf(
+            Credit(
+                "Apache Lucene 10.5.2",
+                "Copyright 2001-2025 The Apache Software Foundation",
+                listOf(bundled("Apache License 2.0 (Lucene)", "Lucene-LICENSE.txt"), bundled("NOTICE (Lucene)", "Lucene-NOTICE.txt")),
+                "מנוע החיפוש: lucene-core ושלוש מחלקות של lucene-analysis-common, ששונו כדי לפעול מאנדרואיד 4.4.",
+            ),
+            Credit(
+                "Apache Commons Compress, IO, Lang, Codec",
+                "Copyright 2001-2025 The Apache Software Foundation",
+                listOf(APACHE, bundled("NOTICE (Apache Commons)", "Apache-Commons-NOTICE.txt")),
+            ),
+            Credit(
+                "zstd-jni, Zstandard",
+                "Copyright (c) 2015-present, Luben Karavelov; Copyright (c) Meta Platforms, Inc. and affiliates",
+                listOf(bundled("BSD 2-Clause (zstd-jni)", "zstd-jni-LICENSE.txt"), bundled("BSD (Zstandard)", "Zstandard-LICENSE.txt")),
+            ),
+            Credit("jsoup", "Copyright (c) 2009-2025 Jonathan Hedley", listOf(bundled("MIT (jsoup)", "jsoup-LICENSE.txt"))),
+            Credit(
+                "SQLite",
+                "SQLite and its multiplex VFS: public domain",
+                listOf(Doc("נחלת הכלל", url = "https://www.sqlite.org/copyright.html")),
+                "מנוע SQLite של היישום, שקורא גם ספרייה שנשמרת בחלקים בכרטיס זיכרון FAT32 (עם רכיב ה-multiplex של SQLite).",
+            ),
+            Credit("HebrewNumerals", "kdroidFilter", listOf(APACHE)),
+            Credit("Kotlin, kotlinx.coroutines, kotlinx.serialization", "Copyright JetBrains s.r.o. and contributors", listOf(APACHE)),
+            Credit("SQLDelight, Kermit", "Copyright Square, Inc.; Touchlab", listOf(APACHE)),
+            Credit("AndroidX Multidex", "Copyright The Android Open Source Project", listOf(APACHE)),
+            Credit(
+                "desugar_jdk_libs",
+                "Copyright Google LLC; OpenJDK: Copyright Oracle and/or its affiliates",
+                listOf(bundled("GNU GPL v2 עם חריגת Classpath", "desugar_jdk_libs-LICENSE.txt")),
+                "ספריית Java של אנדרואיד 8 ומעלה, שהיישום כולל כדי לפעול באנדרואיד 4.4.",
+            ),
         )
 
-        /** Enough Markdown for the terms: ## headings, **bold**, [links](…), > quotes and paragraphs. */
-        fun markdownToHtml(md: String): String {
-            fun inline(s: String): String = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                .replace(Regex("\\*\\*(.+?)\\*\\*"), "<b>$1</b>")
-                .replace(Regex("\\[([^\\]]+)]\\(([^)]+)\\)"), "<a href=\"$2\">$1</a>")
-            return md.trim().split(Regex("\n\\s*\n")).joinToString("") { block ->
-                val b = block.trim()
-                when {
-                    b.startsWith("### ") -> "<h4>${inline(b.removePrefix("### "))}</h4>"
-                    b.startsWith("## ") -> "<h3>${inline(b.removePrefix("## "))}</h3>"
-                    b.startsWith("> ") -> "<blockquote>${inline(b.removePrefix("> "))}</blockquote>"
-                    else -> "<p>${inline(b.lines().joinToString(" ") { it.trim() })}</p>"
-                }
-            }
-        }
-
-        private const val APACHE = "Apache License 2.0"
-
-        private val COMPONENTS = listOf(
-            Component("פרדס, זית ו־SeforimLibrary", "GNU AGPL v3 עם תנאי ייחוס נוסף", "licenses/Pardes-LICENSE.txt"),
-            Component("SQLite", "נחלת הכלל (public domain), sqlite.org/copyright.html", null),
-            // As the main app's credit (LicencesSettings): the jar is lucene-android's, built for this edition (jarApi19).
-            Component(
-                "Apache Lucene 10.5.2 (The Apache Software Foundation)",
-                "$APACHE. מנוע החיפוש: lucene-core ושלוש מחלקות של lucene-analysis-common, ששונו כדי לפעול מאנדרואיד 4.4.",
-                "licenses/Lucene-LICENSE.txt",
+        private val ICON_CREDITS = listOf(
+            Credit("Bootstrap Icons", "Copyright (c) 2019-2024 The Bootstrap Authors", listOf(bundled("MIT (Bootstrap Icons)", "Bootstrap-Icons-LICENSE.txt"))),
+            Credit("Material Symbols, Material Icons", "Copyright Google LLC", listOf(APACHE)),
+            Credit(
+                "Emoji One",
+                "Emoji One",
+                listOf(Doc("CC BY 4.0", url = "https://creativecommons.org/licenses/by/4.0/")),
+                "אייקון היד הכותבת (Writing hand, Monotone).",
             ),
-            Component("Apache Lucene: NOTICE", "Copyright 2001-2025 The Apache Software Foundation", "licenses/Lucene-NOTICE.txt"),
-            Component("Kotlin, kotlinx.coroutines ו־kotlinx.serialization (JetBrains)", APACHE, "licenses/Apache-2.0.txt"),
-            Component("SQLDelight (Cash App)", APACHE, "licenses/Apache-2.0.txt"),
-            Component("Kermit (Touchlab)", APACHE, "licenses/Apache-2.0.txt"),
-            Component("HebrewNumerals (kdroidFilter)", APACHE, "licenses/Apache-2.0.txt"),
-            Component("jsoup (Jonathan Hedley)", "MIT", "licenses/jsoup-LICENSE.txt"),
-            // The install from files, as the main app's (LicencesSettings): tar.zst bundles read with zstd-jni and
-            // Commons Compress, which brings Commons IO, Lang and Codec.
-            Component("Apache Commons Compress, IO, Lang, Codec (The Apache Software Foundation)", APACHE, "licenses/Apache-2.0.txt"),
-            Component("Apache Commons: NOTICE", "Copyright 2001-2025 The Apache Software Foundation", "licenses/Apache-Commons-NOTICE.txt"),
-            Component("zstd-jni (Luben Karavelov)", "BSD 2-Clause", "licenses/zstd-jni-LICENSE.txt"),
-            Component("Zstandard (Meta Platforms, Inc. and affiliates)", "BSD", "licenses/Zstandard-LICENSE.txt"),
-            Component("AndroidX Multidex (Google)", APACHE, "licenses/Apache-2.0.txt"),
-            Component("desugar_jdk_libs (Google, מ־OpenJDK)", "GNU GPL v2 עם חריגת Classpath", "licenses/desugar_jdk_libs-LICENSE.txt"),
-            Component("Material Symbols, Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),
-            Component("Bootstrap Icons (The Bootstrap Authors)", "MIT", "licenses/Bootstrap-Icons-LICENSE.txt"),
-            // As the main app's credit (LicencesSettings iconCredits): the search's authors.
-            Component("Emoji One", "CC BY 4.0, creativecommons.org/licenses/by/4.0. אייקון היד הכותבת (Writing hand, Monotone).", null),
-            Component("Noto Serif Hebrew", "SIL Open Font License 1.1", "licenses/OFL-Noto-Hebrew.txt"),
-            Component("Frank Ruhl Libre", "SIL Open Font License 1.1", "licenses/OFL-Frank-Ruhl-Libre.txt"),
-            // Its own notice (Fonts-NOTICE.txt): the GPL with the font exception, and the MIT text of its layout logic.
-            // Culmus-LICENSE.txt is the notice of the Culmus package's other fonts, and never names it.
-            Component(
-                "Taamey Frank CLM (פרויקט הקולמוס)",
+        )
+
+        private val FONT_CREDITS = listOf(
+            Credit(
+                "Taamey Frank CLM",
+                "Copyright Yoram Gnat; Hebrew OpenType Layout logic (c) 2003 & 2007, Ralph Hancock & John Hudson",
+                listOf(GPL, FONT_NOTICES),
                 "ברישיון GPL v2 עם חריג הגופנים; לוגיקת הפריסה של הטעמים ברישיון MIT (בהודעות הגופנים).",
-                "licenses/Fonts-NOTICE.txt",
             ),
-            Component("GNU GPL v2", "נוסח הרישיון", "licenses/GPL-2.0.txt"),
-            Component("הודעות הגופנים", "כפי שהן כתובות בגופנים עצמם", "licenses/Fonts-NOTICE.txt"),
+            Credit("Frank Ruhl Libre", "Copyright 2015 The Frank Ruhl Libre Project Authors", listOf(bundled("SIL OFL 1.1 (Frank Ruhl Libre)", "OFL-Frank-Ruhl-Libre.txt"))),
+            Credit("Noto Serif Hebrew", "Copyright 2022 The Noto Project Authors", listOf(bundled("SIL OFL 1.1 (Noto)", "OFL-Noto-Hebrew.txt"))),
         )
     }
 }

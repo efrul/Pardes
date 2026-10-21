@@ -6,6 +6,8 @@ import android.os.StatFs
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlPreparedStatement
+import io.github.kdroidfilter.seforimapp.android.data.DatabaseVersion
+import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.legacy.db.NativeSqliteDriver
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import java.io.File
@@ -39,6 +41,13 @@ class NoLibraryException : Exception("No library")
 
 /** The library is being installed (Library.installing): it opens once the install ends. */
 class InstallingException : Exception("Installing")
+
+/**
+ * The library is older than this app reads, or does not say which release it is (no release_info.txt): the main app's
+ * check at its start (DatabaseVersion, desktop 0.6.1's MINIMUM_REQUIRED_VERSION), whose dao fails on such a database.
+ * [version]: release_info.txt's, null without one.
+ */
+class OutdatedLibraryException(val version: String?) : Exception("Library release ${version ?: "unknown"} is older than ${DatabaseVersion.MINIMUM_REQUIRED_VERSION}")
 
 /**
  * The library: where it is, and the desktop repository on top of it. The library is the desktop's databases folder
@@ -303,13 +312,18 @@ class Library(private val context: Context) {
     @Volatile
     var installing: Boolean = false
 
-    /** Opens the library (blocking: call it off the main thread). [NoLibraryException] when there is none. */
+    /**
+     * Opens the library (blocking: call it off the main thread). [NoLibraryException] when there is none,
+     * [OutdatedLibraryException] when its release is too old for this app or unknown.
+     */
     fun open(): Opened {
         opened?.let { return it }
         synchronized(this) {
             opened?.let { return it }
             if (installing) throw InstallingException()
             val file = findDatabase() ?: throw NoLibraryException()
+            val release = runCatching { File(file.parentFile, LibraryStore.RELEASE_INFO_NAME).takeIf { it.isFile }?.readText()?.trim() }.getOrNull()
+            if (!DatabaseVersion.isCompatible(release)) throw OutdatedLibraryException(release)
             val driver = NativeSqliteDriver.open(file.path)
             val repository = try {
                 SeforimRepository(file.path, driver).also {

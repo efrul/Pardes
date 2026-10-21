@@ -58,6 +58,8 @@
             android:name="io.github.kdroidfilter.seforimapp.android.MainActivity"
             android:exported="true"
             android:targetActivity=".ui.MainActivity" />
+        <!-- The licence, accepted once before the first Home (the main app's onboarding step). -->
+        <activity android:name=".ui.LicenceActivity" />
         <activity android:name=".ui.LibraryActivity" />
         <!-- The find bar's keyboard shrinks the reader rather than covering the text (the main app's imePadding). -->
         <activity

@@ -15,6 +15,7 @@ import android.graphics.Shader
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -24,14 +25,19 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.android.data.CatalogMenu
+import io.github.kdroidfilter.seforimapp.android.data.DatabaseVersion
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.AndroidStrings
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.PARDES_BASED_ON
+import io.github.kdroidfilter.seforimapp.android.ui.shell.ShellTexts
 import io.github.kdroidfilter.seforimapp.android.ui.shell.parseZayitDeepLink
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.Catalog
 import io.github.kdroidfilter.seforimapp.legacy.data.InstallingException
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.NoLibraryException
+import io.github.kdroidfilter.seforimapp.legacy.data.OutdatedLibraryException
 import io.github.kdroidfilter.seforimapp.legacy.data.Place
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +51,9 @@ import java.lang.ref.WeakReference
  * The Home of the main app (HomeScreen), without its tools: the wallpaper under its two blending layers, the catalog's
  * dropdowns, the logo and the search field, then (where the main app has its widgets) the books opened lately, the
  * favourites and the library's sections. With no library it offers the install from files and says where to copy
- * one; while an install runs it says so. It also takes the desktop's links (zayit://book/<id>/line/<id>, zayit://search).
+ * one; while an install runs it says so; a library too old for this app, or one that cannot be read, gets the main
+ * app's update screen's words. It also takes the desktop's links (zayit://book/<id>/line/<id>, zayit://search). Before
+ * the first Home, the licence is accepted (LicenceActivity).
  */
 class MainActivity : BaseActivity() {
     private lateinit var content: LinearLayout
@@ -70,11 +78,17 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The main app's onboarding asks for the licence before anything else: the Home comes after it.
+        if (!prefs.licenceAccepted) {
+            LicenceActivity.start(this, intent)
+            finish()
+            return
+        }
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val bar = TopBar(this, colors).apply {
-            leading(R.drawable.ic_library, "ספרייה") { openLibrary(null) }
+            leading(R.drawable.ic_library, ShellTexts.BOOK_LIST) { openLibrary(null) }
             title.text = getString(R.string.app_name)
-            overflow { menu() }
+            overflow { shellMenu() }
         }
         topBar = bar
         root.addView(bar, lp(MATCH, WRAP))
@@ -108,6 +122,8 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Left for the licence (onCreate), or rebuilt in another theme (BaseActivity).
+        if (isFinishing || rebuilding) return
         val home = homeLibrary ?: run {
             // An install from files ended behind the Home without a library, and opened its library.
             if (loadJob?.isActive != true && installWait?.isActive != true && app.library.current != null) load()
@@ -118,17 +134,8 @@ class MainActivity : BaseActivity() {
         if (app.library.current !== home) load() else refreshPlaces()
     }
 
-    private fun menu(): List<MenuEntry> = listOf(
-        MenuEntry("חיפוש במאגר", R.drawable.ic_search) { openSearch() },
-        MenuEntry("ספרייה", R.drawable.ic_library) { openLibrary(null) },
-        MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(this, colors) { refreshPlaces() } },
-        MenuEntry("מועדפים", R.drawable.ic_star_border) { PlacesDialogs.favorites(this, colors) { refreshPlaces() } },
-        MenuEntry(if (prefs.dark) "ערכת נושא כהה" else "ערכת נושא בהירה", if (prefs.dark) R.drawable.ic_dark_mode else R.drawable.ic_light_mode) {
-            prefs.dark = !prefs.dark
-            recreate()
-        },
-        MenuEntry("הגדרות", R.drawable.ic_settings) { startActivity(Intent(this, SettingsActivity::class.java)) },
-    )
+    /** A history or favourites dialog of the ⋮ menu removed or cleared some: the cards show it. */
+    override fun onPlacesChanged() = refreshPlaces()
 
     private fun reload() {
         app.library.close()
@@ -152,7 +159,11 @@ class MainActivity : BaseActivity() {
                 when (error) {
                     is NoLibraryException -> showNoLibrary()
                     is InstallingException -> showInstalling()
-                    else -> showError(error)
+                    is OutdatedLibraryException -> showUpdate(outdated = true, version = error.version)
+                    else -> {
+                        Log.w(TAG, "The library cannot be opened", error)
+                        showUpdate(outdated = false, version = null)
+                    }
                 }
             }
         }
@@ -216,17 +227,21 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    /** The Home's search field: a white pill with the accent's border; it opens the search. */
+    /**
+     * The Home's search field (UnifiedSearchBar): a 48dp pill on the panel with a thin grey border, which turns to the
+     * accent, 2dp, when focused (where a keypad starts); it opens the search.
+     */
     private fun searchField(): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         minimumHeight = dp(48)
         setPadding(dp(14), 0, dp(14), 0)
         val r = dp(24).toFloat()
+        val thin = maxOf(1, dp(1))
         background = states(
+            roundRect(colors.panel, r, colors.border, thin),
+            roundRect(colors.pressed, r, colors.border, thin),
             roundRect(colors.panel, r, colors.accent, dp(2)),
-            roundRect(colors.pressed, r, colors.accent, dp(2)),
-            roundRect(colors.accentTint, r, colors.accent, dp(3)),
         )
         addView(ImageView(this@MainActivity).apply {
             setImageResource(R.drawable.ic_search)
@@ -239,22 +254,69 @@ class MainActivity : BaseActivity() {
 
     // ------------------------------------------------------------------ states
 
+    /** While the library opens: the main app's bare spinner (LoadingBox). */
     private fun showProgress() {
         content.removeAllViews()
         content.addView(spinner(colors), lp(WRAP, WRAP).apply {
             gravity = Gravity.CENTER_HORIZONTAL
             topMargin = dp(80)
         })
-        content.addView(label("פותח את הספרייה…", 16f, colors.secondary).apply { gravity = Gravity.CENTER }, lp(MATCH, WRAP))
     }
 
-    private fun showError(error: Throwable) {
+    /**
+     * The main app's update screen's first step (DatabaseUpdateScreen VersionCheckStep): a library too old for this app
+     * ([outdated]: its release and the one needed, then "המשך" to the install from files), or one that cannot be read
+     * (reinstall, the hint for a library copied by hand, "נסה שוב" and "המשך").
+     */
+    private fun showUpdate(outdated: Boolean, version: String?) {
         content.removeAllViews()
-        content.addView(logo(), lp(MATCH, WRAP).apply { topMargin = dp(24) })
         content.addView(card().apply {
-            addView(label("לא ניתן לפתוח את הספרייה", 17f, colors.text, bold = true))
-            addView(label(error.message ?: error.javaClass.simpleName, 14f, colors.secondary).apply { setPadding(0, dp(6), 0, dp(6)) })
-            addView(textButton("נסה שוב") { reload() })
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(16), dp(16), dp(16), dp(12))
+            addView(label(if (outdated) DesktopStrings.dbUpdateVersionCheckTitle else DesktopStrings.dbUpdateReinstallTitle, 22f, colors.text).apply {
+                gravity = Gravity.CENTER
+            }, lp(MATCH, WRAP))
+            addView(ImageView(this@MainActivity).apply {
+                setImageResource(R.drawable.ic_warning)
+                // IntelliJ's General.Warning, as the main app's
+                setColorFilter(if (colors.dark) 0xFFF2C55C.toInt() else 0xFFFFAF0F.toInt(), PorterDuff.Mode.SRC_IN)
+            }, lp(dp(80), dp(80)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                setMargins(0, dp(16), 0, dp(12))
+            })
+            fun body(text: String) = label(text, 15f, colors.text).apply {
+                gravity = Gravity.CENTER
+                setLineSpacing(0f, 1.15f)
+                setPadding(0, dp(4), 0, dp(4))
+            }
+            if (outdated) {
+                val current = version?.takeIf { it.isNotEmpty() }?.let(DatabaseVersion::formatForDisplay) ?: DesktopStrings.dbUpdateVersionUnknown
+                addView(body(DesktopStrings.dbUpdateCurrentVersion.format(current)), lp(MATCH, WRAP))
+                addView(body(DesktopStrings.dbUpdateRequiredVersion.format(DatabaseVersion.formatForDisplay(DatabaseVersion.MINIMUM_REQUIRED_VERSION))), lp(MATCH, WRAP))
+            }
+            addView(body(if (outdated) DesktopStrings.dbUpdateNeedToUpdate else DesktopStrings.dbUpdateDatabaseMissingError).apply {
+                setPadding(0, dp(12), 0, dp(4))
+            }, lp(MATCH, WRAP))
+            if (!outdated) {
+                // Android only: a library copied from a computer usually just needs its permissions fixed. The script's
+                // name kept left to right: Android 4.4 would put its parenthesis and hyphen on the wrong sides.
+                val hint = AndroidStrings.brokenLibraryHint.replace(SCRIPT, Bidi.ltr(SCRIPT))
+                addView(label(hint, 14f, colors.text).apply {
+                    setLineSpacing(0f, 1.15f)
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    background = roundRect(colors.accentTint, dp(8).toFloat())
+                }, lp(MATCH, WRAP).apply { topMargin = dp(10) })
+            }
+            val buttons = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                setPadding(0, dp(16), 0, dp(4))
+            }
+            if (!outdated) buttons.addView(textButton(DesktopStrings.dbUpdateRetry) { reload() }, lp(WRAP, WRAP).apply { marginEnd = dp(12) })
+            val next = accentButton(DesktopStrings.dbUpdateContinue, colors) { InstallActivity.start(this@MainActivity, replacing = true) }
+            buttons.addView(next)
+            addView(buttons, lp(MATCH, WRAP))
+            if (!next.isInTouchMode) next.post { next.requestFocus() }
         })
     }
 
@@ -307,28 +369,30 @@ class MainActivity : BaseActivity() {
      */
     private fun refreshPlaces() {
         if (homeLibrary == null) return
-        // One more than shown: whether there are more, for the button to all of them.
-        val recents = prefs.recents.take(PLACES + 1)
+        val recents = prefs.recents.take(PLACES)
         if (recents != shownRecents) {
             shownRecents = recents
             recentsSlot?.let { slot ->
-                fillPlaces(slot, "המשך מהמקום שבו עצרת", recents, R.drawable.ic_history, "כל ההיסטוריה") {
+                fillPlaces(slot, "היסטוריה", recents, R.drawable.ic_history, ShellTexts.SHOW_ALL_HISTORY) {
                     PlacesDialogs.recents(this, colors) { refreshPlaces() }
                 }
             }
         }
-        val favorites = prefs.bookmarks.take(PLACES + 1)
+        val favorites = prefs.bookmarks.take(PLACES)
         if (favorites != shownFavorites) {
             shownFavorites = favorites
             favoritesSlot?.let { slot ->
-                fillPlaces(slot, "מועדפים", favorites, R.drawable.ic_star, "כל המועדפים") {
+                fillPlaces(slot, "מועדפים", favorites, R.drawable.ic_star, ShellTexts.SHOW_ALL_FAVORITES) {
                     PlacesDialogs.favorites(this, colors) { refreshPlaces() }
                 }
             }
         }
     }
 
-    /** [slot]'s card: [title], the first [PLACES] of [places], and [allLabel] to all of them; no card for none. */
+    /**
+     * [slot]'s card, as the main app's History and Favorites widgets: [title], the first [PLACES] of [places], and
+     * [allLabel] to all of them; no card for none (the main app's default Home has neither).
+     */
     private fun fillPlaces(slot: LinearLayout, title: String, places: List<Place>, icon: Int, allLabel: String, showAll: () -> Unit) {
         // A keypad on the card being redrawn stays at the same row: removing the row it is on would send it to the
         // title bar.
@@ -342,7 +406,7 @@ class MainActivity : BaseActivity() {
         }
         val card = card(title).apply {
             places.take(PLACES).forEach { place -> addView(placeRow(place, icon)) }
-            if (places.size > PLACES) addView(textButton(allLabel) { showAll() })
+            addView(textButton(allLabel) { showAll() })
         }
         slot.addView(card)
         // Its rows come after its title.
@@ -572,5 +636,10 @@ class MainActivity : BaseActivity() {
 
         /** The books opened lately, and the favourites, that the Home shows. */
         private const val PLACES = 4
+
+        private const val TAG = "Pardes"
+
+        /** The transfer script the main app's hint names. */
+        private const val SCRIPT = "push-desktop-library"
     }
 }
