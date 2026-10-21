@@ -314,10 +314,13 @@ kotlin {
             kotlin.srcDir(sharedAppSources)
             // Desktop full-text search (Lucene), as-is, as the main app compiles it: the two files left out read SQLite
             // through JDBC or open the index with MMapDirectory; their Android variants come with sharedAppSources.
+            // HebrewTextUtils is this edition's (src/androidMain/.../android/search): the same results, without
+            // compiling regular expressions for every word the dictionary normalizes.
             kotlin.srcDir(seforimLibrary.resolve("search/src/jvmMain/kotlin"))
             kotlin.exclude(
                 "io/github/kdroidfilter/seforimlibrary/search/LuceneSearchEngine.kt",
                 "io/github/kdroidfilter/seforimlibrary/search/MagicDictionaryIndex.kt",
+                "io/github/kdroidfilter/seforimlibrary/search/HebrewTextUtils.kt",
             )
             dependencies {
                 implementation(libs.kotlinx.coroutines.android)
