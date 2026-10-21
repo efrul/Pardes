@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -33,9 +35,11 @@ import android.widget.ListView
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.android.data.SearchScope
 import io.github.kdroidfilter.seforimapp.android.search.AUTHOR_ERAS
+import io.github.kdroidfilter.seforimapp.android.search.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.android.search.OTZARIA_CREDIT
 import io.github.kdroidfilter.seforimapp.android.search.OTZARIA_URL
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
+import io.github.kdroidfilter.seforimapp.android.search.SearchEntityFinder
 import io.github.kdroidfilter.seforimapp.android.search.SearchService
 import io.github.kdroidfilter.seforimapp.android.search.authorYears
 import io.github.kdroidfilter.seforimapp.android.search.licenseLabel
@@ -57,7 +61,6 @@ import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_BACK_TO_ALL
 import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_CLEAR
 import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_FAILED
 import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_INDEX_MISSING
-import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_INDEX_MISSING_TEXT
 import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_IN_BOOK_PLACEHOLDER
 import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_LIBRARY_FOLDER
 import io.github.kdroidfilter.seforimapp.android.ui.search.SEARCH_MORE_FROM_BOOK
@@ -104,8 +107,14 @@ import io.github.kdroidfilter.seforimapp.legacy.data.ScanSearch
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.SearchResult
 import io.github.kdroidfilter.seforimlibrary.dao.repository.AuthorDetails
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -128,7 +137,8 @@ import kotlinx.coroutines.withContext
  *
  * A keypad starts in the field; OK runs the row highlighted (the first) or the one chosen in the list, a long OK offers
  * its other actions (פתיחה, חיפוש בתוך, בספרי יסוד / בכל הספרים); Back closes the suggestions, then one book's
- * results, then the screen. The view models and the scan outlive a rotation and are cleared when the screen goes.
+ * results, then the screen. The view models and the scan outlive a rotation and are cleared when the screen goes, and
+ * the search shown is searched again in a screen built anew after Android ended the app behind it.
  */
 class SearchActivity : BaseActivity() {
     /** What the screen keeps across a rotation: its view models, its scan, and what the bar holds. */
@@ -139,6 +149,19 @@ class SearchActivity : BaseActivity() {
         val bar: SearchBarViewModel,
         val scan: ScanSearch,
     ) {
+        /**
+         * Where a search the screen asked for starts (its level asked first, off the main thread), and the scan's
+         * knowledge panel is found: a rotation meanwhile does not stop them. Its coroutines reach the view models and
+         * the scan only, never a screen, and say what changed through [changes]; it ends with [clear].
+         */
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+        /** The last text search started, until it reached the view model or the scan. */
+        var searchJob: Job? = null
+
+        /** Bumped when what the screen shows changed outside the view models' flows (the scan chosen, and why). */
+        val changes = MutableStateFlow(0)
+
         /** The results shown are the scan's: the search ran below LegacySearch.Level.Full. */
         var scanMode = false
 
@@ -155,8 +178,9 @@ class SearchActivity : BaseActivity() {
         /** The book's field was typed in since the book was picked: Backspace in it then drops no book. */
         var tocEdited = false
 
-        /** The category tabs past the first five are shown ("עוד"). */
+        /** The category tabs past the first five are shown ("עוד"), for the tabs of [allTabsOf] only. */
         var allTabs = false
+        var allTabsOf: List<SearchTreeCategory>? = null
 
         /** The last text search, to run again ("נסה שוב", a level that changed meanwhile). */
         var lastQuery = ""
@@ -169,7 +193,67 @@ class SearchActivity : BaseActivity() {
         /** Where the list stood, for the screen built again after a rotation. */
         var listTop = 0 to 0
 
+        /**
+         * The knowledge panel of the scan's query: the view model finds the book or author its own searches name
+         * (SearchViewModel.entity), and the lookup index, open at LegacySearch.Level.Lookup, finds the scan's the same way.
+         */
+        val scanEntity = MutableStateFlow<SearchEntity?>(null)
+        private var entityJob: Job? = null
+        private val bookDetails by lazy { BookDetailsLoader(opened.repository) }
+
+        fun changed() {
+            changes.value = changes.value + 1
+        }
+
+        /**
+         * The scan's search of [q] in [barScope]'s books (an author's, all of them; a TOC entry's book whole), with why
+         * the text is not searched in the index ([legacy]'s textUnavailable) and the knowledge panel of [q].
+         */
+        suspend fun startScan(legacy: LegacySearch, q: String, barScope: SearchScope, extended: Boolean) {
+            scanMode = true
+            val picked = bar.uiState.value
+            val (why, books) = withContext(Dispatchers.IO) {
+                val books = runCatching {
+                    when (barScope) {
+                        is SearchScope.Book -> listOfNotNull(picked.selectedScopeBook?.takeIf { it.id == barScope.bookId } ?: opened.repository.getBookCore(barScope.bookId))
+                        is SearchScope.Toc -> listOfNotNull(picked.selectedScopeBook?.takeIf { it.id == barScope.bookId } ?: opened.repository.getBookCore(barScope.bookId))
+                        is SearchScope.Author -> opened.repository.getAuthorDetails(barScope.authorId)?.books.orEmpty()
+                        else -> null
+                    }
+                }.getOrNull()
+                legacy.textUnavailable() to books
+            }
+            reason = why
+            val title = when (barScope) {
+                is SearchScope.Author -> picked.selectedScopeAuthor?.name?.let { "ספרי " + AuthorNames.display(it) }
+                else -> books?.singleOrNull()?.title
+            }
+            scan.search(q, books, title, extended)
+            findScanEntity(q)
+            changed()
+        }
+
+        private fun findScanEntity(q: String) {
+            entityJob?.cancel()
+            scanEntity.value = null
+            entityJob = scope.launch {
+                scanEntity.value = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val lookup = service.lookup() ?: return@runCatching null
+                        SearchEntityFinder(lookup, opened.repository, bookDetails).find(q)
+                    }.getOrNull()
+                }
+            }
+        }
+
+        /** The view model's search shows its own panel. */
+        fun dropScanEntity() {
+            entityJob?.cancel()
+            scanEntity.value = null
+        }
+
         fun clear() {
+            scope.cancel()
             search.clear()
             bar.clear()
             scan.clear()
@@ -239,7 +323,9 @@ class SearchActivity : BaseActivity() {
 
     /** The field's text is being set by the screen, not typed: no suggestions for it. */
     private var settingField = false
-    private var searchJob: Job? = null
+
+    /** Backspace went down in an empty field: its release drops the book or author picked. */
+    private var delStartedEmpty = false
 
     private val adapter = ItemsAdapter<Item>(
         types = 7,
@@ -271,20 +357,43 @@ class SearchActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val run = intent.getBooleanExtra(EXTRA_RUN, false)
+        @Suppress("DEPRECATION")
+        val kept = lastNonConfigurationInstance as? Models
+        // Built again after Android ended the app behind it (a rotation keeps the models): the search it showed
+        val saved = savedInstanceState?.takeIf { kept == null }
+        val run = intent.getBooleanExtra(EXTRA_RUN, false) || saved?.getString(STATE_QUERY) != null
         // A zayit://search link searches at once: no keyboard over its results
         @Suppress("DEPRECATION")
         if (run) window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         compact = resources.configuration.screenWidthDp < 360
         narrow = resources.configuration.screenWidthDp < 336
         buildViews()
-        @Suppress("DEPRECATION")
-        val kept = lastNonConfigurationInstance as? Models
-        if (kept != null) attach(kept) else open(run)
+        // What was typed, which no view of the screen keeps (the field has no id: a rotation sets it from the models)
+        saved?.getString(STATE_FIELD)?.let { showField(it) }
+        if (kept != null) attach(kept) else open(run, saved)
     }
 
     @Deprecated("Deprecated in Java")
     override fun onRetainNonConfigurationInstance(): Any? = models?.takeIf { keepModels }
+
+    /** The search shown (its text, where, in all the books or not) and the field, for a screen built again without its models. */
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_FIELD, field.text.toString())
+        val m = models ?: return
+        if (!m.searched || m.lastQuery.isEmpty()) return
+        outState.putString(STATE_QUERY, m.lastQuery)
+        outState.putBoolean(STATE_EXTENDED, m.lastExtended)
+        when (val where = m.lastScope) {
+            is SearchScope.Book -> outState.putLong(STATE_BOOK, where.bookId)
+            is SearchScope.Toc -> {
+                outState.putLong(STATE_BOOK, where.bookId)
+                outState.putLong(STATE_TOC, where.tocId)
+            }
+            is SearchScope.Author -> outState.putLong(STATE_AUTHOR, where.authorId)
+            else -> Unit
+        }
+    }
 
     override fun onResume() {
         super.onResume()
@@ -400,7 +509,9 @@ class SearchActivity : BaseActivity() {
         list = ListView(this).apply {
             divider = null
             dividerHeight = 0
-            selector = states(colors, 0, dp(6).toFloat())
+            // The rows' highlight leaves out the space under them (ROW_GAP_DP), as the main app's items are spaced. A layer
+            // inset, not an InsetDrawable: AbsListView widens its selector by the padding that one would report
+            selector = LayerDrawable(arrayOf<Drawable>(states(colors, 0, dp(6).toFloat()))).apply { setLayerInset(0, 0, 0, 0, dp(ROW_GAP_DP)) }
             cacheColorHint = 0
             // The knowledge panel's links and the notices' buttons are reached by a keypad inside their rows
             itemsCanFocus = true
@@ -481,7 +592,7 @@ class SearchActivity : BaseActivity() {
             typeface = Fonts.ui(this@SearchActivity)
             setTextColor(colors.text)
             setHintTextColor(PLACEHOLDER_GREY)
-            hint = nextHint()
+            hint = barHint
             background = null
             setPadding(0, dp(8), 0, dp(8))
             val initial = intent.getStringExtra(EXTRA_QUERY)?.trim().orEmpty()
@@ -533,29 +644,52 @@ class SearchActivity : BaseActivity() {
     /**
      * A keypad's OK (D-pad centre) runs the field as Enter does (TextView gives its editor-action listener the Enter key
      * only); in an empty field it stays the field's own (it opens the keyboard, where there is one). Backspace (a
-     * keypad's C) in an empty field drops the book or author picked, as the main app's.
+     * keypad's C) in a field already empty when it went down drops the book or author picked, as the main app's: the
+     * press that deletes the last letter does not.
      */
     private fun fieldKey(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER && !field.text.isNullOrBlank()) {
             if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) enter()
             return true
         }
-        if (keyCode == KeyEvent.KEYCODE_DEL && field.text.isNullOrEmpty()) {
+        if (keyCode == KeyEvent.KEYCODE_DEL) {
             val m = models ?: return false
             val ui = m.bar.uiState.value
             val drop = (ui.selectedScopeBook != null && !m.tocEdited) || (ui.selectedScopeBook == null && ui.selectedScopeAuthor != null)
-            if (!drop) return false
-            if (event.action == KeyEvent.ACTION_UP) dropChip()
-            return true
+            val empty = field.text.isNullOrEmpty()
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    delStartedEmpty = empty
+                    // Nothing to delete: the press is the chip's
+                    return drop && empty
+                }
+                KeyEvent.ACTION_UP -> {
+                    val clear = delStartedEmpty && empty && drop
+                    delStartedEmpty = false
+                    if (clear) dropChip()
+                    return clear
+                }
+            }
         }
         return false
     }
 
     // ------------------------------------------------------------------ the view models
 
-    /** Opens the library and the search off the main thread, and makes the view models on them. */
-    private fun open(run: Boolean) {
-        val scopeId = intent.getLongExtra(EXTRA_BOOK_SCOPE, 0L).takeIf { it != 0L }
+    /**
+     * Opens the library and the search off the main thread, and makes the view models on them; searches at once for
+     * [run] (a zayit://search link), or what [saved] says this screen showed before Android ended the app.
+     */
+    private fun open(run: Boolean, saved: Bundle?) {
+        val restored = saved?.getString(STATE_QUERY)
+        val restoredScope = saved?.takeIf { restored != null }?.let { savedScope(it) }
+        // The book of the chip: the restored search's (a TOC entry's whole book, as the main app's restored tab), else
+        // the reader's find's
+        val scopeId = if (restored != null) {
+            (restoredScope as? SearchScope.Book)?.bookId ?: (restoredScope as? SearchScope.Toc)?.bookId
+        } else {
+            intent.getLongExtra(EXTRA_BOOK_SCOPE, 0L).takeIf { it != 0L }
+        }
         scope.launch {
             val made = withContext(Dispatchers.IO) {
                 runCatching {
@@ -571,13 +705,13 @@ class SearchActivity : BaseActivity() {
                 finish()
                 return@launch
             }
-            val query = if (run) intent.getStringExtra(EXTRA_QUERY)?.trim().orEmpty() else ""
-            val full = app.search.level.value == LegacySearch.Level.Full
-            val bookScope = book?.let { SearchScope.Book(it.id) } ?: SearchScope.Global
-            // Made without the query, which is searched once it is made (below): the view model's init runs its search in
-            // a coroutine of Dispatchers.Main.immediate, which on a phone of one core can reach it before the
-            // constructor has set the fields the search uses (a NullPointerException on the AVD's release build)
-            val destination = Destination.Search(query = "", scope = bookScope)
+            val query = restored ?: if (run) intent.getStringExtra(EXTRA_QUERY)?.trim().orEmpty() else ""
+            val where = restoredScope ?: book?.let { SearchScope.Book(it.id) } ?: SearchScope.Global
+            // Made without the query, which runTextSearch searches once the view model has checked its index: its init
+            // would search a query set before that a second time, and on a phone of one core its init can reach the
+            // search before the constructor has set the fields the search uses (a NullPointerException on the AVD's
+            // release build) when the query is in the destination
+            val destination = Destination.Search(query = "", scope = where)
             val m = Models(
                 lib,
                 service,
@@ -585,21 +719,13 @@ class SearchActivity : BaseActivity() {
                 app.search.searchBarViewModel(service, lib.repository),
                 ScanSearch(app.library, prefs),
             )
-            // The reader's find: the bar in its book (showScope), the text typed searched there
+            // The reader's find, or a restored search in a book: the bar in its book (showScope), the text typed
+            // searched there; a restored search in an author's books: their chip
             if (book != null) m.bar.onPickBook(book, showSuggestions = false)
+            if (restoredScope is SearchScope.Author) m.bar.showScope(restoredScope)
             val typed = field.text.toString()
             if (query.isNotEmpty()) {
-                m.searched = true
-                m.lastQuery = query
-                m.lastScope = bookScope
                 if (book != null) m.toc = query else m.reference = query
-                setTitle(query)
-                if (full) {
-                    m.search.setQuery(query)
-                    m.search.executeSearch(report = false)
-                } else {
-                    startScan(m, query, bookScope, extended = false)
-                }
             } else if (typed.isNotBlank()) {
                 // What was typed while the search opened
                 if (book != null) m.toc = typed else m.reference = typed
@@ -607,6 +733,20 @@ class SearchActivity : BaseActivity() {
                 if (book != null) m.bar.onTocQueryChanged(typed) else m.bar.onReferenceQueryChanged(typed)
             }
             attach(m)
+            if (query.isNotEmpty()) runTextSearch(query, where, extended = restored != null && saved.getBoolean(STATE_EXTENDED))
+        }
+    }
+
+    /** Where the search kept in [saved] (onSaveInstanceState) looked. */
+    private fun savedScope(saved: Bundle): SearchScope {
+        val book = saved.getLong(STATE_BOOK, 0L)
+        val toc = saved.getLong(STATE_TOC, 0L)
+        val author = saved.getLong(STATE_AUTHOR, 0L)
+        return when {
+            book != 0L && toc != 0L -> SearchScope.Toc(book, toc)
+            book != 0L -> SearchScope.Book(book)
+            author != 0L -> SearchScope.Author(author)
+            else -> SearchScope.Global
         }
     }
 
@@ -623,6 +763,8 @@ class SearchActivity : BaseActivity() {
         scope.launch { m.search.entity.collect { requestRender() } }
         scope.launch { m.scan.state.collect { requestRender() } }
         scope.launch { m.scan.progress.collect { requestRender() } }
+        scope.launch { m.scanEntity.collect { requestRender() } }
+        scope.launch { m.changes.collect { requestRender() } }
         scope.launch { app.search.level.collect { requestRender() } }
         requestRender()
     }
@@ -831,7 +973,8 @@ class SearchActivity : BaseActivity() {
         val barScope = m.bar.barScope()
         m.bar.onGlobalExtendedChange(extended)
         m.bar.dismissSuggestions()
-        scope.launch {
+        // At once for a text, which deepLinkTarget does not wait for: no turn of the main thread (a rotation) between
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
             // A zayit:// link pasted into the bar opens what it names (desktop submitSearch)
             when (val link = m.bar.deepLinkTarget(q)) {
                 is Destination.Book -> openBookAt(m, link.bookId, link.lineId, link.title)
@@ -846,7 +989,8 @@ class SearchActivity : BaseActivity() {
 
     /**
      * Searches [q] in [barScope]: by the main app's engine at LegacySearch.Level.Full, else by the scan. The level is
-     * asked again first (off the main thread), so that an index copied in or renamed away meanwhile counts.
+     * asked again first (off the main thread), so that an index copied in or renamed away meanwhile counts. It starts
+     * in the models' scope: a screen built again after a rotation meanwhile shows it.
      */
     private fun runTextSearch(q: String, barScope: SearchScope, extended: Boolean) {
         val m = models ?: return
@@ -863,46 +1007,24 @@ class SearchActivity : BaseActivity() {
         hideKeyboard()
         // A keypad on the suggestion that started it: to the field, as the list empties (else to the title bar)
         if (list.hasFocus()) field.requestFocus()
-        searchJob?.cancel()
-        searchJob = scope.launch {
-            withContext(Dispatchers.IO) { runCatching { app.search.screenService() } }
-            if (app.search.level.value == LegacySearch.Level.Full) {
+        val legacy = app.search
+        m.searchJob?.cancel()
+        m.searchJob = m.scope.launch {
+            withContext(Dispatchers.IO) { runCatching { legacy.screenService() } }
+            if (legacy.level.value == LegacySearch.Level.Full) {
                 m.scan.cancel()
                 m.scanMode = false
+                m.dropScanEntity()
+                m.changed()
+                // Once the view model has checked its index: its init searches a query it finds set then, a second time
+                m.search.state.first { it.availability != SearchAvailability.Checking }
                 m.search.searchFromBar(q, barScope, widen = extended)
             } else {
                 m.search.cancel()
-                startScan(m, q, barScope, extended)
+                m.startScan(legacy, q, barScope, extended)
             }
-            requestRender()
         }
         requestRender()
-    }
-
-    /** The scan's search of [q] in [barScope]'s books (an author's, all of them; a TOC entry's book whole). */
-    private fun startScan(m: Models, q: String, barScope: SearchScope, extended: Boolean) {
-        m.scanMode = true
-        val picked = m.bar.uiState.value
-        scope.launch {
-            val (reason, books) = withContext(Dispatchers.IO) {
-                val books = runCatching {
-                    when (barScope) {
-                        is SearchScope.Book -> listOfNotNull(picked.selectedScopeBook?.takeIf { it.id == barScope.bookId } ?: m.opened.repository.getBookCore(barScope.bookId))
-                        is SearchScope.Toc -> listOfNotNull(picked.selectedScopeBook?.takeIf { it.id == barScope.bookId } ?: m.opened.repository.getBookCore(barScope.bookId))
-                        is SearchScope.Author -> m.opened.repository.getAuthorDetails(barScope.authorId)?.books.orEmpty()
-                        else -> null
-                    }
-                }.getOrNull()
-                app.search.textUnavailable() to books
-            }
-            m.reason = reason
-            val title = when (barScope) {
-                is SearchScope.Author -> picked.selectedScopeAuthor?.name?.let { "ספרי " + AuthorNames.display(it) }
-                else -> books?.singleOrNull()?.title
-            }
-            m.scan.search(q, books, title, extended)
-            requestRender()
-        }
     }
 
     /** "בטל חיפוש": the search stops, the results found stay. */
@@ -1120,7 +1242,7 @@ class SearchActivity : BaseActivity() {
         header(m, s)
         val inBook = s.bookFilterIds.isNotEmpty()
         val oneBook = inBook || s.scopeBook != null || s.scopeTocId != null
-        val entity = if (m.scanMode) null else m.search.entity.value
+        val entity = if (m.scanMode) m.scanEntity.value else m.search.entity.value
         val notice: LegacySearch.TextUnavailable? = when {
             m.scanMode && s.failure != null -> LegacySearch.TextUnavailable.Failed(s.failure.orEmpty())
             m.scanMode -> m.reason
@@ -1132,12 +1254,15 @@ class SearchActivity : BaseActivity() {
             area(list = false, center = null, waitingShown = true)
             return
         }
-        val key = listOf(s.results, s.bookCounts, oneBook, entity, notice, s.isLoadingMore, s.isLoading && s.results.isEmpty())
+        val key = listOf(s.results, s.bookCounts, oneBook, entity, notice, m.scanMode, s.isLoadingMore, s.isLoading && s.results.isEmpty())
         if (key != shownKey) {
             val items = ArrayList<Item>()
             // In full in the results' place, as the main app shows it; over the scan's results, a line that opens it
             notice?.let { items += Item.Notice(it, full = s.results.isEmpty()) }
-            entity?.let { items += Item.Entity(it) }
+            // A search that failed, or an index missing, is shown alone, as the main app's (no knowledge panel under it);
+            // the scan's reason is no failure, and its panel stays
+            val alone = notice != null && s.results.isEmpty() && (!m.scanMode || notice is LegacySearch.TextUnavailable.Failed)
+            if (!alone) entity?.let { items += Item.Entity(it) }
             for (r in flattenResults(s.results, s.bookCounts, oneBook)) {
                 items += Item.Result(r.hit, last = r.more == 0)
                 if (r.more > 0) items += Item.More(r.hit, r.more)
@@ -1150,8 +1275,7 @@ class SearchActivity : BaseActivity() {
             setItems(items, key)
         }
         val empty = adapter.items.isEmpty()
-        area(list = !empty, center = if (empty) (if (s.isLoading) SEARCH_SEARCHING else SEARCH_NO_RESULTS) else null, waitingShown = false)
-        overlay.visibility = if (s.isFiltering) View.VISIBLE else View.GONE
+        area(list = !empty, center = if (empty) (if (s.isLoading) SEARCH_SEARCHING else SEARCH_NO_RESULTS) else null, waitingShown = false, filtering = s.isFiltering)
         scrollTo(m, s)
     }
 
@@ -1164,14 +1288,18 @@ class SearchActivity : BaseActivity() {
         adapter.items = items
     }
 
-    /** Which of the list, a centred message and the spinner shows in the list's place. */
-    private fun area(list: Boolean, center: String?, waitingShown: Boolean) {
+    /**
+     * Which of the list, a centred message and the spinner shows in the list's place, and the loader over the results
+     * while a tab or one book's results are searched ([filtering]): only over results, as the main app's is (its
+     * suggestions are a popup over it), where it would take the taps of the suggestions.
+     */
+    private fun area(list: Boolean, center: String?, waitingShown: Boolean, filtering: Boolean = false) {
         if (!list && this.list.hasFocus()) field.requestFocus()
         this.list.visibility = if (list) View.VISIBLE else View.INVISIBLE
         centerText.text = center
         centerText.visibility = if (center != null) View.VISIBLE else View.GONE
         waiting.visibility = if (waitingShown) View.VISIBLE else View.GONE
-        if (!list || waitingShown) overlay.visibility = View.GONE
+        overlay.visibility = if (filtering && list && !waitingShown) View.VISIBLE else View.GONE
     }
 
     /** The chip, the hint and ✕ of the bar, as its state says. */
@@ -1185,6 +1313,7 @@ class SearchActivity : BaseActivity() {
         if (!TextUtils.equals(field.hint, hint)) field.hint = hint
     }
 
+    /** This screen's hint, the next of the bar's: one a screen, so that they come in turn (a place, then a text). */
     private val barHint = nextHint()
 
     /** The tabs, the way back from one book and the status line, over results ([s]); hidden over suggestions. */
@@ -1232,7 +1361,7 @@ class SearchActivity : BaseActivity() {
             else -> SEARCH_STATUS_BASE.fill(count)
         }
         val link = if (!s.isLoading && !s.baseBooksHadNoResults && scopeName == null) {
-            (if (s.globalExtended) SEARCH_SWITCH_BASE else SEARCH_SWITCH_ALL) to { m.search.setGlobalExtended(!s.globalExtended) }
+            (if (s.globalExtended) SEARCH_SWITCH_BASE else SEARCH_SWITCH_ALL) to { switchExtended(m, !s.globalExtended) }
         } else {
             null
         }
@@ -1265,10 +1394,16 @@ class SearchActivity : BaseActivity() {
         val link: Pair<String, () -> Unit>? = when {
             p.found == 0 && !p.allWords && m.lastQuery.trim().contains(' ') -> "חיפוש כל מילה בנפרד" to { m.scan.searchWords() }
             scopeName != null || s.baseBooksHadNoResults -> null
-            s.globalExtended -> SEARCH_SWITCH_BASE to { m.scan.setGlobalExtended(false) }
-            else -> SEARCH_SWITCH_ALL to { m.scan.setGlobalExtended(true) }
+            s.globalExtended -> SEARCH_SWITCH_BASE to { switchExtended(m, false) }
+            else -> SEARCH_SWITCH_ALL to { switchExtended(m, true) }
         }
         statusLine(text, link, false, null)
+    }
+
+    /** The status line's link: the same search in all the books, or in the base books only, kept as the last search's. */
+    private fun switchExtended(m: Models, extended: Boolean) {
+        m.lastExtended = extended
+        if (m.scanMode) m.scan.setGlobalExtended(extended) else m.search.setGlobalExtended(extended)
     }
 
     /** Sets the status line: [text], "·" and the [link], the progress and ✕ while [running]. */
@@ -1299,7 +1434,7 @@ class SearchActivity : BaseActivity() {
             // The ✕'s room kept, so that the line does not jump; not on a narrow phone, where the text wants it
             compact -> hide(stop)
             else -> {
-                if (stop.hasFocus()) list.requestFocus()
+                focusOff(stop)
                 stop.visibility = View.INVISIBLE
             }
         }
@@ -1316,6 +1451,9 @@ class SearchActivity : BaseActivity() {
      */
     private fun renderTabs(m: Models, s: SearchUiState) {
         val tree = s.tree
+        // "עוד" holds for the tabs it was chosen in, as the main app's (remember(categories)): a search that builds
+        // them again (the status line's link, a new search) starts with the top five
+        if (m.allTabs && tree !== m.allTabsOf && tree != m.allTabsOf) m.allTabs = false
         if (tree.isEmpty()) {
             hide(tabsBox)
             drawnTree = null
@@ -1354,6 +1492,7 @@ class SearchActivity : BaseActivity() {
             if (sorted.size > TOP_TABS) {
                 tabs += tab(if (m.allTabs) SEARCH_TABS_LESS else SEARCH_TABS_MORE, null, false, MORE_TAG) {
                     m.allTabs = !m.allTabs
+                    m.allTabsOf = tree
                     requestRender()
                 }
             }
@@ -1385,8 +1524,13 @@ class SearchActivity : BaseActivity() {
      */
     private fun hide(view: View) {
         if (view.visibility == View.GONE) return
-        if (view.hasFocus() && !(adapter.count > 0 && list.visibility == View.VISIBLE && list.requestFocus())) field.requestFocus()
+        focusOff(view)
         view.visibility = View.GONE
+    }
+
+    /** A keypad's focus in [view], which goes: to the results when they show, else to the field. */
+    private fun focusOff(view: View) {
+        if (view.hasFocus() && !(adapter.count > 0 && list.visibility == View.VISIBLE && list.requestFocus())) field.requestFocus()
     }
 
     /** A new search, a tab, one book's results or the way back: the list goes where its state asks, once. */
@@ -1602,7 +1746,7 @@ class SearchActivity : BaseActivity() {
             }
         }
         val frame = FrameLayout(this).apply {
-            setPadding(0, dp(4), 0, dp(4))
+            setPadding(0, 0, 0, dp(ROW_GAP_DP))
             addView(box, FrameLayout.LayoutParams(MATCH, WRAP))
         }
         entityShown = entity
@@ -1638,6 +1782,7 @@ class SearchActivity : BaseActivity() {
         row.addView(label(DETAILS, 14f, colors.accent, typeface = Fonts.ui(this)), lp(WRAP, WRAP).apply { marginStart = dp(8) })
         val frame = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, dp(ROW_GAP_DP))
             addView(row, lp(MATCH, WRAP))
             addView(View(this@SearchActivity).apply { setBackgroundColor(Palette.withAlpha(colors.border, 0.5f)) }, lp(MATCH, maxOf(1, dp(1))).apply { marginStart = dp(8) })
         }
@@ -1688,7 +1833,7 @@ class SearchActivity : BaseActivity() {
         when (notice) {
             LegacySearch.TextUnavailable.Missing -> {
                 box.addView(label(SEARCH_INDEX_MISSING, 17f, colors.text, bold = true, typeface = Fonts.ui(this)))
-                box.addView(label(SEARCH_INDEX_MISSING_TEXT, 15f, colors.text, typeface = Fonts.ui(this)).apply {
+                box.addView(label(INDEX_MISSING_TEXT, 15f, colors.text, typeface = Fonts.ui(this)).apply {
                     setLineSpacing(0f, 1.3f)
                     setPadding(0, dp(10), 0, 0)
                 })
@@ -1748,11 +1893,30 @@ class SearchActivity : BaseActivity() {
         private const val RETRY = "נסה שוב"
         private const val DETAILS = "פרטים"
 
+        // What onSaveInstanceState keeps (the search shown, and the field)
+        private const val STATE_QUERY = "search_query"
+        private const val STATE_EXTENDED = "search_extended"
+        private const val STATE_BOOK = "search_book"
+        private const val STATE_TOC = "search_toc"
+        private const val STATE_AUTHOR = "search_author"
+        private const val STATE_FIELD = "search_field"
+
         // The main app's author page (AuthorScreen), under the biography.
         private const val AUTHOR_BIO_NOTE =
             "שימו לב: הביוגרפיה נכתבה באופן אוטומטי בעזרת בינה מלאכותית על פי המקורות המצוינים בה, ולא עברה בדיקה אנושית. " +
                 "ייתכנו טעויות בתאריכים, בשמות ובפרטים; אמתו מול מקור מהימן לפני הסתמכות."
         private const val AUTHOR_BIO_LICENSE = "הביוגרפיה מתפרסמת ברישיון CC BY-SA 4.0, על פי המקורות המצוינים בה."
+
+        /**
+         * The main app's SEARCH_INDEX_MISSING_TEXT, word for word up to how to install the library again: this edition
+         * does it in its Settings › ספרייה (InstallActivity), and has no "איפוס האפליקציה" nor notes and highlights to
+         * export first.
+         */
+        private const val INDEX_MISSING_TEXT =
+            "החיפוש בטקסט המלא משתמש באותו אינדקס שהאפליקציה למחשב שומרת לצד מסד הנתונים: התיקיות seforim.db.lucene " +
+                "ו־seforim.db.lookup.lucene והקובץ lexical.db. האינדקס אינו נבנה על המכשיר. כדי לקבל אותו, העבירו את הקבצים מהמחשב " +
+                "לתיקיית הספרייה בעזרת סקריפט ההעברה (push-desktop-library), או התקינו את הספרייה מחדש (החבילה המלאה כוללת אותו) " +
+                "בהגדרות › ספרייה › " + InstallTexts.TITLE + "."
 
         // This edition's: the index is there, but the phone's memory for an app is small for it (LegacySearch).
         private const val SMALL_HEAP_TITLE = "אינדקס החיפוש לא נפתח בטלפון הזה"

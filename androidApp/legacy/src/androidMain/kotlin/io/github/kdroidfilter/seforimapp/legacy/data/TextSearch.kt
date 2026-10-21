@@ -18,7 +18,9 @@ class TextSearch(private val opened: Library.Opened) {
     /**
      * Searches [books] in order for [query] and reports each book's hits with [onHits], and its place with [onBook]
      * (before the book is read). Stops after [limit] hits, or when the calling coroutine is cancelled: the book being
-     * read is stopped by [cancel] (sqlite3_interrupt), from any thread.
+     * read is stopped by [cancel] (sqlite3_interrupt), from any thread. [inQuery] is told true once the book's query
+     * has the connection to itself and false before it lets it go: only in between does [cancel] meet the search's
+     * query and no other on the one connection (it may throw to stop before the book is read).
      */
     suspend fun run(
         query: String,
@@ -26,6 +28,7 @@ class TextSearch(private val opened: Library.Opened) {
         limit: Int,
         allWords: Boolean,
         onBook: suspend (index: Int, book: Entry) -> Unit,
+        inQuery: (Boolean) -> Unit,
         onHits: suspend (List<Hit>) -> Unit,
     ): Int {
         var found = 0
@@ -34,10 +37,18 @@ class TextSearch(private val opened: Library.Opened) {
             currentCoroutineContext().ensureActive()
             onBook(i, book)
             val hits = try {
-                opened.query(
-                    "SELECT id, lineIndex, content FROM line WHERE bookId = ? AND $test(content, ?) ORDER BY lineIndex LIMIT ?",
-                    { bindLong(0, book.id); bindString(1, query); bindLong(2, (limit - found).toLong()) },
-                ) { Hit(book.id, book.title, it.getLong(0)!!, it.getLong(1)!!.toInt(), it.getString(2) ?: "") }
+                // The driver's lock is reentrant: the query below takes it again inside
+                opened.driver.withConnection { _ ->
+                    inQuery(true)
+                    try {
+                        opened.query(
+                            "SELECT id, lineIndex, content FROM line WHERE bookId = ? AND $test(content, ?) ORDER BY lineIndex LIMIT ?",
+                            { bindLong(0, book.id); bindString(1, query); bindLong(2, (limit - found).toLong()) },
+                        ) { Hit(book.id, book.title, it.getLong(0)!!, it.getLong(1)!!.toInt(), it.getString(2) ?: "") }
+                    } finally {
+                        inQuery(false)
+                    }
+                }
             } catch (e: SqliteException) {
                 if (e.interrupted) {
                     currentCoroutineContext().ensureActive()

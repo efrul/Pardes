@@ -24,12 +24,19 @@ import io.github.kdroidfilter.seforimapp.legacy.R
 // The search screen's rows and pieces (SearchActivity), drawn as the main app's UnifiedSearchBar and SearchScreen draw
 // theirs: each kind of row is one view the list reuses, its texts set on bind.
 
+/**
+ * The space under each row of the search screen's list, as the main app's lists space theirs (Arrangement.spacedBy):
+ * inside the row's view, under what it shows, as a ListView's rows have no margins. A result followed by "עוד N
+ * תוצאות מ…" has none (the main app's is one item with it); the list's highlight leaves it out (SearchActivity).
+ */
+const val ROW_GAP_DP = 6
+
 /** What a suggestion leads to, shown by its icon (UnifiedSearchBar SuggestionKind and SuggestionIcon). */
 enum class SuggestionKind(val icon: Int) {
-    PLACE(R.drawable.ic_find_in_page),
+    PLACE(R.drawable.ic_journal_bookmark),
     TEXT_SEARCH(R.drawable.ic_search),
     AUTHOR(R.drawable.ic_writing_hand),
-    BOOK(R.drawable.ic_book),
+    BOOK(R.drawable.ic_book_open_tabs),
 }
 
 /** One thing a suggestion row does (RowAction): its button's label, and what it does. */
@@ -73,6 +80,8 @@ fun suggestionLabel(parts: List<String>, emphasis: String?, detail: String?, tit
  * long OK, so they take no focus (the list moves from row to row).
  */
 class SuggestionView(context: Context, private val colors: Colors) : LinearLayout(context) {
+    /** The row itself, with its highlight; the [ROW_GAP_DP] under it is the view's. */
+    private val box = LinearLayout(context)
     private val icon = ImageView(context)
     private val text: TextView
     private val chipsBeside = LinearLayout(context)
@@ -81,9 +90,11 @@ class SuggestionView(context: Context, private val colors: Colors) : LinearLayou
 
     init {
         orientation = VERTICAL
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = context.dp(44)
-        setPadding(context.dp(8), context.dp(4), context.dp(8), context.dp(4))
+        setPadding(0, 0, 0, context.dp(ROW_GAP_DP))
+        box.orientation = VERTICAL
+        box.gravity = Gravity.CENTER_VERTICAL
+        box.minimumHeight = context.dp(44)
+        box.setPadding(context.dp(8), context.dp(4), context.dp(8), context.dp(4))
         val row = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -96,17 +107,18 @@ class SuggestionView(context: Context, private val colors: Colors) : LinearLayou
         chipsBeside.orientation = HORIZONTAL
         chipsBeside.gravity = Gravity.CENTER_VERTICAL
         row.addView(chipsBeside, lp(WRAP, WRAP).apply { marginStart = context.dp(8) })
-        addView(row, lp(MATCH, WRAP))
+        box.addView(row, lp(MATCH, WRAP))
         chipsUnder.orientation = HORIZONTAL
         chipsUnder.gravity = Gravity.END
-        addView(chipsUnder, lp(MATCH, WRAP).apply { topMargin = context.dp(4) })
+        box.addView(chipsUnder, lp(MATCH, WRAP).apply { topMargin = context.dp(4) })
+        addView(box, lp(MATCH, WRAP))
     }
 
     fun bind(label: CharSequence, kind: SuggestionKind, titleFirst: Boolean, highlighted: Boolean, shown: List<RowAction>, under: Boolean): SuggestionView {
         icon.setImageResource(kind.icon)
         text.text = label
         text.ellipsize = if (titleFirst) TextUtils.TruncateAt.END else TextUtils.TruncateAt.START
-        background = if (highlighted) roundRect(Palette.withAlpha(colors.accent, 0.12f), context.dp(4).toFloat()) else null
+        box.background = if (highlighted) roundRect(Palette.withAlpha(colors.accent, 0.12f), context.dp(4).toFloat()) else null
         chips(chipsBeside, if (under) emptyList() else shown)
         chips(chipsUnder, if (under) shown else emptyList())
         return this
@@ -142,8 +154,8 @@ class SuggestionView(context: Context, private val colors: Colors) : LinearLayou
 
 /**
  * A result (ResultView): its book's title, bold, with its place in the book after it in grey, then two lines of the
- * passage (three on a narrow phone) in grey with the words found bold, and a line under it unless "עוד N תוצאות מ…"
- * follows ([MoreView]).
+ * passage (three on a narrow phone) in grey with the words found bold, and a line and the [ROW_GAP_DP] under it unless
+ * "עוד N תוצאות מ…" follows ([MoreView]).
  */
 class ResultView(context: Context, colors: Colors, compact: Boolean) : LinearLayout(context) {
     val title: TextView = context.label(sizeSp = 15f, color = colors.text, bold = true, maxLines = 1, typeface = Fonts.ui(context))
@@ -179,6 +191,8 @@ class ResultView(context: Context, colors: Colors, compact: Boolean) : LinearLay
 
     fun setLast(last: Boolean) {
         line.visibility = if (last) VISIBLE else GONE
+        val gap = if (last) context.dp(ROW_GAP_DP) else 0
+        if (paddingBottom != gap) setPadding(0, 0, 0, gap)
     }
 }
 
@@ -192,6 +206,7 @@ class MoreView(context: Context, colors: Colors) : LinearLayout(context) {
 
     init {
         orientation = VERTICAL
+        setPadding(0, 0, 0, context.dp(ROW_GAP_DP))
         addView(text, lp(MATCH, WRAP))
         addView(View(context).apply { setBackgroundColor(Palette.withAlpha(colors.border, 0.5f)) }, lp(MATCH, maxOf(1, context.dp(1))).apply { marginStart = context.dp(8) })
     }
