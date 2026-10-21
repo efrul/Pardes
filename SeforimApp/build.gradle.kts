@@ -395,3 +395,6 @@ dependencies {
     // Generates availableHomeWidgets from every HomeWidget object (see :widgetprocessor).
     add("kspJvm", project(":widgetprocessor"))
 }
+
+// Pardes for desktop: its name, ids, icons and texts over the Zayit values above (branding/README.md)
+apply(from = rootProject.file("branding/brand.gradle"))

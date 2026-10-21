@@ -1,7 +1,7 @@
 package io.github.kdroidfilter.seforimapp.framework.backup
 
-import com.russhwolf.settings.Settings
 import io.github.kdroidfilter.seforimapp.backup.writeBytesAtomically
+import io.github.kdroidfilter.seforimapp.branding.Brand
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.framework.database.getUserSettingsDatabasePath
 import io.github.kdroidfilter.seforimapp.logger.infoln
@@ -50,7 +50,7 @@ object PendingUserDataRestore {
             }
             File(dbFile.path + "-journal").delete()
             dbFile.writeBytesAtomically(database)
-            AppSettings.importPortablePreferences(Settings(), manifest.preferences)
+            AppSettings.importPortablePreferences(Brand.settings(), manifest.preferences)
             pending.delete()
             infoln { "[PendingUserDataRestore] Restored the backup of ${manifest.createdAtEpochMs}" }
         }.onFailure {
