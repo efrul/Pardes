@@ -1,0 +1,411 @@
+name: Desktop release
+
+# Builds Pardes for desktop (פרדס למחשב: Zayit's desktop app built through branding/, see branding/README.md) and
+# publishes its installers as a GitHub release, with the update feeds installed apps read and the build's complete
+# source. Zayit's own release workflow (deploy.yaml) stays removed: it would publish Zayit-branded installers.
+#
+# Version: the top section of desktop/CHANGELOG.md, "## <x.y.z> · <date>" (Pardes for desktop's own line, from 1.0.0).
+# Tag desktop-<x.y.z>-<run number>, -r<attempt> on a re-run of a run that already released; never a v* tag. Installed
+# apps (branding/pardes/kotlin/.../PardesDesktopReleases.kt) read only these tags, skip drafts and pre-releases, and
+# offer a release only when its x.y.z is higher than theirs: raise the version for every release that should reach them.
+#
+# Platforms are Zayit's without macOS: Windows x64 (GraalVM) and arm64 (JVM) as the NSIS installer, Linux x64 and arm64
+# as deb, rpm and pacman (GraalVM). The NSIS exe is the download: upstream's Rust wrapper (installer/) is Zayit's own,
+# launches zayit.exe and uninstalls an MSI-installed Zayit, so it is not built here. Asset names are a contract with
+# the updater (Nucleus FileSelector): Windows keeps "-nsis." and an arch token, Linux an arch token; latest.yml and
+# latest-linux.yml list them. Every release is --latest=false, so the Android release stays the repository's Latest.
+#
+# Community edition only: no token of Zayit's private add-ons, no Sentry or Google Drive keys, and no GitHub token in a
+# Gradle step (settings.gradle.kts would ask gh for one); branding/brand.gradle stops a build that would compile them.
+# Optional secrets: PARDES_LINUX_GPG_PRIVATE_KEY, PARDES_LINUX_GPG_KEY_ID, PARDES_LINUX_GPG_PASSPHRASE sign the deb and
+# rpm, and their updates then install without a password. Once a signed release is out, never change that key:
+# installed packages verify updates against the key they were installed with.
+
+# Runs only by hand, never on a push: Actions › Desktop release › Run workflow (on main, the default branch).
+on:
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: 'Windows x64 only, for a quick test: a pre-release that installed apps do not take'
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Pre-release for testers (installed apps do not offer it)'
+        type: boolean
+        default: false
+      note:
+        description: 'Optional paragraph at the top of the release notes (e.g. what was tested)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    name: Version and platforms
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      prerelease: ${{ steps.matrix.outputs.prerelease }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      # No release of a version the changelog does not describe; checked before the builds. Nucleus takes the version
+      # for every package format: digits only (deb, rpm, pacman), MAJOR and MINOR up to 255 and BUILD up to 65535
+      # (Windows). A '-' would also turn pre-releases on in the installed app.
+      - name: Version from desktop/CHANGELOG.md
+        id: version
+        run: |
+          version="$(awk '/^## / { print $2; exit }' desktop/CHANGELOG.md)"
+          if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] \
+            || (( BASH_REMATCH[1] > 255 || BASH_REMATCH[2] > 255 || BASH_REMATCH[3] > 65535 )); then
+            echo "desktop/CHANGELOG.md: its top section must be \"## <x.y.z> · <date>\" (x, y ≤ 255, z ≤ 65535), not \"$version\"" >&2
+            exit 1
+          fi
+          awk -v v="$version" '
+            /^## / { if (found) exit; if ($2 == v "") { found = 1; next } }
+            found && !/^<\/?div/ { print }
+          ' desktop/CHANGELOG.md > "$RUNNER_TEMP/whatsnew.md"
+          grep -q '[^[:space:]]' "$RUNNER_TEMP/whatsnew.md" \
+            || { echo "desktop/CHANGELOG.md has an empty section \"## $version\": write what is new in it first" >&2; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Pardes for desktop $version" >> "$GITHUB_STEP_SUMMARY"
+
+      # Installed apps take only a higher x.y.z: a stable release that is not higher would reach none of them
+      - name: Newer than the published version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ inputs.prerelease || inputs.quick }}
+        run: |
+          latest="$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName -q '.[].tagName' \
+            | sed -n 's/^desktop-\([0-9]*\.[0-9]*\.[0-9]*\)-[0-9].*$/\1/p' | sort -V | tail -1 || true)"
+          highest="$(printf '%s\n%s\n' "$latest" "$VERSION" | sort -V | tail -1)"
+          if [ -n "$latest" ] && { [ "$latest" = "$VERSION" ] || [ "$highest" != "$VERSION" ]; }; then
+            message="$VERSION is not higher than the published $latest: installed apps would not offer this release"
+            if [ "$PRERELEASE" = true ]; then echo "::warning::$message"; else echo "$message; raise the version in desktop/CHANGELOG.md" >&2; exit 1; fi
+          fi
+
+      # One entry per package. asset: the artifact name, which Nucleus's generate-update-yml reads (windows or linux
+      # in it puts the files in latest.yml or latest-linux.yml). graalvm: the native image (all but Windows arm64,
+      # which has no native-image toolchain and ships the JVM build, as Zayit's does).
+      - name: Platforms
+        id: matrix
+        env:
+          QUICK: ${{ inputs.quick }}
+          PRERELEASE_INPUT: ${{ inputs.prerelease }}
+        run: |
+          windows_x64='{"asset":"release-assets-windows-amd64","os":"windows-latest","graalvm":true,"arch":"x64"}'
+          if [ "$QUICK" = true ]; then
+            entries="$windows_x64"
+            prerelease=true
+          else
+            entries="$windows_x64"
+            entries+=',{"asset":"release-assets-windows-arm64","os":"windows-11-arm","graalvm":false,"arch":"arm64"}'
+            for pkg in deb rpm pacman; do
+              entries+=",{\"asset\":\"release-assets-linux-amd64-$pkg\",\"os\":\"ubuntu-latest\",\"graalvm\":true,\"pkg\":\"$pkg\",\"deb_arch\":\"amd64\",\"rpm_arch\":\"x86_64\"}"
+              entries+=",{\"asset\":\"release-assets-linux-arm64-$pkg\",\"os\":\"ubuntu-24.04-arm\",\"graalvm\":true,\"pkg\":\"$pkg\",\"deb_arch\":\"arm64\",\"rpm_arch\":\"aarch64\"}"
+            done
+            prerelease="$PRERELEASE_INPUT"
+          fi
+          echo "matrix={\"include\":[$entries]}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: ${{ matrix.asset }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      # SeforimLibrary only: the desktop build compiles its core, dao, search, cli, generator-common and delta-updater.
+      # Not recursive: SeforimAcronymizer and SeforimLibrary's own submodules are not part of the app.
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Check out SeforimLibrary
+        run: git submodule update --init SeforimLibrary
+
+      # JDK 25 for Gradle (and jpackage in the JVM build), MSVC on Windows for the native image, Linux packaging tools.
+      # The plugin downloads Oracle GraalVM itself (graalvm { } in SeforimApp/build.gradle.kts).
+      - name: Set up Nucleus
+        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@712f1e520c73fd68e1e7514b17700e577643802c
+        with:
+          graalvm: ${{ matrix.graalvm }}
+          graalvm-distribution: oracle
+
+      # Gradle properties only: Nucleus reads no environment for signing. Skipped (unsigned packages, updates that ask
+      # for a password) without the key.
+      - name: Linux signing key
+        if: matrix.pkg == 'deb' || matrix.pkg == 'rpm'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.PARDES_LINUX_GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.PARDES_LINUX_GPG_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.PARDES_LINUX_GPG_PASSPHRASE }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ] || [ -z "$GPG_KEY_ID" ]; then
+            echo "::notice::No PARDES_LINUX_GPG_* secrets: the ${{ matrix.pkg }} stays unsigned, and its updates ask for a password"
+            exit 0
+          fi
+          key_file="$RUNNER_TEMP/pardes-signing-key.asc"
+          printf '%s' "$GPG_PRIVATE_KEY" > "$key_file"
+          {
+            echo ""
+            echo "compose.desktop.linux.sign=true"
+            echo "compose.desktop.linux.signing.keyId=$GPG_KEY_ID"
+            echo "compose.desktop.linux.signing.keyFile=$key_file"
+            echo "compose.desktop.linux.signing.passphrase=$GPG_PASSPHRASE"
+            echo "compose.desktop.linux.signing.silentUpdate=true"
+          } >> gradle.properties
+          echo "LINUX_SIGNED=true" >> "$GITHUB_ENV"
+
+      # The version reaches buildSrc's Versioning only as GITHUB_REF, which the runner resets for every step (GITHUB_ENV
+      # cannot override it), so it is set in the same shell as Gradle. No GitHub token there: settings.gradle.kts would
+      # ask gh to read Zayit's private packages with it.
+      - name: Build the Linux package
+        if: runner.os == 'Linux'
+        run: |
+          case "${{ matrix.pkg }}" in
+            deb) task=packageGraalvmDeb ;;
+            rpm) task=packageGraalvmRpm ;;
+            pacman) task=packageGraalvmPacman ;;
+            *) echo "Unknown package format ${{ matrix.pkg }}" >&2; exit 1 ;;
+          esac
+          unset GH_TOKEN GITHUB_TOKEN
+          export GITHUB_REF="refs/tags/v$VERSION"
+          ./gradlew --console=plain ":SeforimApp:$task"
+
+      - name: Build the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Remove-Item Env:GH_TOKEN, Env:GITHUB_TOKEN -ErrorAction SilentlyContinue
+          $env:GITHUB_REF = "refs/tags/v$env:VERSION"
+          if ('${{ matrix.graalvm }}' -eq 'true') {
+            .\gradlew.bat --console=plain :SeforimApp:packageGraalvmNsis
+          } else {
+            .\gradlew.bat --console=plain :SeforimApp:createReleaseDistributable :SeforimApp:packageReleaseNsis
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Exactly one package, Pardes's (pardes-*), built with this version; renamed to the names installed apps match
+      - name: Stage the Linux package
+        if: runner.os == 'Linux'
+        run: |
+          case "${{ matrix.pkg }}" in
+            deb) ext=deb; name="pardes_${VERSION}_${{ matrix.deb_arch }}.deb" ;;
+            rpm) ext=rpm; name="pardes-${VERSION}-1.${{ matrix.rpm_arch }}.rpm" ;;
+            pacman) ext=pacman; name="pardes-${VERSION}-1-${{ matrix.rpm_arch }}.pacman" ;;
+          esac
+          dir="SeforimApp/build/compose/binaries/main/graalvm-${{ matrix.pkg }}"
+          mapfile -t found < <(find "$dir" -maxdepth 1 -type f -name "*.$ext")
+          [ "${#found[@]}" -eq 1 ] || { echo "Expected one .$ext in $dir, found ${#found[@]}: ${found[*]}" >&2; exit 1; }
+          src="${found[0]}"
+          case "$(basename "$src")" in
+            pardes*"$VERSION"*) ;;
+            *) echo "$(basename "$src") is not Pardes $VERSION" >&2; exit 1 ;;
+          esac
+          mkdir -p staging
+          cp "$src" "staging/$name"
+          # The detached signature the updater fetches beside the package (<asset>.asc); not the .pub.asc
+          if [ "${LINUX_SIGNED:-}" = true ]; then
+            [ -f "$src.asc" ] || { echo "No detached signature for $src" >&2; exit 1; }
+            cp "$src.asc" "staging/$name.asc"
+          fi
+          ls -l staging
+
+      - name: Stage the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = if ('${{ matrix.graalvm }}' -eq 'true') { 'SeforimApp\build\compose\binaries\main\graalvm-nsis' } else { 'SeforimApp\build\compose\binaries\main-release\nsis' }
+          $found = @(Get-ChildItem -Path $dir -Filter '*-nsis.exe' -File)
+          if ($found.Count -ne 1) { Write-Error "Expected one *-nsis.exe in $dir, found $($found.Count): $($found.Name -join ', ')" }
+          $src = $found[0]
+          if (-not ($src.Name -like "pardes*$env:VERSION*")) { Write-Error "$($src.Name) is not Pardes $env:VERSION" }
+          New-Item -ItemType Directory -Force staging | Out-Null
+          Copy-Item $src.FullName "staging\Pardes-$env:VERSION-windows-${{ matrix.arch }}-nsis.exe"
+          Get-ChildItem staging
+
+      - name: Upload
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.asset }}
+          path: staging/*
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+      QUICK: ${{ inputs.quick }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Check out SeforimLibrary
+        run: git submodule update --init SeforimLibrary
+
+      - name: Download the packages
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          pattern: release-assets-*
+
+      # Every package that should be there, and nothing else: generate-update-yml lists every file it finds
+      - name: Check the packages
+        run: |
+          expected=("release-assets-windows-amd64/Pardes-$VERSION-windows-x64-nsis.exe")
+          if [ "$QUICK" != true ]; then
+            expected+=("release-assets-windows-arm64/Pardes-$VERSION-windows-arm64-nsis.exe")
+            for arch in amd64:x86_64 arm64:aarch64; do
+              deb="${arch%%:*}" rpm="${arch##*:}"
+              expected+=("release-assets-linux-$deb-deb/pardes_${VERSION}_$deb.deb")
+              expected+=("release-assets-linux-$deb-rpm/pardes-$VERSION-1.$rpm.rpm")
+              expected+=("release-assets-linux-$deb-pacman/pardes-$VERSION-1-$rpm.pacman")
+            done
+          fi
+          for file in "${expected[@]}"; do
+            [ -s "artifacts/$file" ] || { echo "Missing: $file" >&2; exit 1; }
+          done
+          find artifacts -type f | sort
+          unexpected="$(find artifacts -type f ! -name '*.asc' | sed 's|^artifacts/||' | sort \
+            | comm -23 - <(printf '%s\n' "${expected[@]}" | sort))"
+          [ -z "$unexpected" ] || { echo "Unexpected files: $unexpected" >&2; exit 1; }
+
+      # latest.yml (Windows) and latest-linux.yml: version, file names, sizes and SHA-512 hashes, made from the files
+      # themselves. Installed apps find a release only by these files.
+      - name: Update feeds
+        uses: kdroidFilter/Nucleus/.github/actions/generate-update-yml@712f1e520c73fd68e1e7514b17700e577643802c
+        with:
+          artifacts-path: artifacts
+          version: ${{ needs.prepare.outputs.version }}
+          channel: latest
+
+      - name: Check the update feeds
+        run: |
+          feeds=(latest.yml)
+          [ "$QUICK" = true ] || feeds+=(latest-linux.yml)
+          for feed in "${feeds[@]}"; do
+            file="artifacts/update-yml/$feed"
+            [ -s "$file" ] || { echo "No $feed" >&2; exit 1; }
+            grep -qx "version: $VERSION" "$file" || { echo "$feed is not for $VERSION" >&2; exit 1; }
+            cat "$file"
+          done
+
+      - name: Name the release
+        id: name
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="desktop-$VERSION-$GITHUB_RUN_NUMBER"
+          if gh release view "$tag" > /dev/null 2>&1; then tag="$tag-r$GITHUB_RUN_ATTEMPT"; fi
+          # AGPL §6: the installers' Corresponding Source. GitHub's own "Source code" archives leave out submodules, and
+          # the build compiles SeforimLibrary, so this archive adds it at its path.
+          src="pardes-$tag-source.tar.gz"
+          git archive --prefix="pardes-$tag/" -o source.tar HEAD
+          git -C SeforimLibrary archive --prefix="pardes-$tag/SeforimLibrary/" -o "$GITHUB_WORKSPACE/submodule.tar" HEAD
+          tar --concatenate -f source.tar submodule.tar
+          gzip -n -9 -c source.tar > "$src"
+          awk -v v="$VERSION" '
+            /^## / { if (found) exit; if ($2 == v "") { found = 1; next } }
+            found && !/^<\/?div/ { print }
+          ' desktop/CHANGELOG.md | sed 's/^### /#### /' > "$RUNNER_TEMP/whatsnew.md"
+          {
+            echo "tag=$tag"
+            echo "src=$src"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.name.outputs.tag }}
+          SRC: ${{ steps.name.outputs.src }}
+          NOTE: ${{ inputs.note }}
+        run: |
+          if [ "$QUICK" = true ]; then
+            kind=--prerelease
+            title_suffix=", גרסת ניסיון ל־Windows x64"
+            pre="**גרסת ניסיון לבודקים, ל־Windows x64 בלבד.** פרדס למחשב המותקן לא מציע אותה כעדכון. מתקינים אותה ידנית מהקובץ שלמטה."
+          elif [ "$PRERELEASE" = true ]; then
+            kind=--prerelease
+            title_suffix=", גרסת ניסיון"
+            pre="**גרסת ניסיון לבודקים.** פרדס למחשב המותקן לא מציע אותה כעדכון. מתקינים אותה ידנית מהקבצים שלמטה."
+          else
+            kind=""
+            title_suffix=""
+            pre=""
+          fi
+          windows="- **Windows**: מורידים את \`Pardes-$VERSION-windows-x64-nsis.exe\`"
+          if [ "$QUICK" = true ]; then
+            windows+=" ופותחים אותו."
+            linux=""
+          else
+            windows+=" (במחשב ARM: \`Pardes-$VERSION-windows-arm64-nsis.exe\`) ופותחים אותו."
+            # Signed packages carry the helper that installs their updates without a password
+            if find artifacts -name '*.asc' | grep -q .; then password="בלי סיסמה"; else password="בבקשת סיסמה"; fi
+            linux="- **לינוקס** (x64 ו־ARM64): \`.deb\` לאובונטו, דביאן ודומיהן (\`sudo apt install ./pardes_${VERSION}_amd64.deb\`), \`.rpm\` לפדורה ודומיהן (\`sudo dnf install ./pardes-$VERSION-1.x86_64.rpm\`), ו־\`.pacman\` לארץ' (\`sudo pacman -U ./pardes-$VERSION-1-x86_64.pacman\`). התקנה מ־deb או rpm מתעדכנת מתוכה ($password), ומ־pacman מתקינים כל גרסה חדשה ידנית."
+          fi
+          windows+=" הוא מתקין לחשבון שלכם בלבד, בלי הרשאות מנהל, ופותח את פרדס בסיום. הקובץ אינו חתום, ולכן Windows עשוי להזהיר שהוא לא מוכר: לוחצים על **מידע נוסף**, ואז על הכפתור שמפעיל אותו בכל זאת."
+          cat > notes.md <<EOF
+          $pre
+
+          $NOTE
+
+          פרדס למחשב הוא יישום ללימוד התורה ל־Windows וללינוקס, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס למחשב נבנה מהקוד הפתוח של זית 0.6.7 ושונה כדי לפעול כיישום נפרד בשם פרדס, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`), וגם ב־https://github.com/efrul/Pardes.
+
+          המודולים הקנייניים של הגרסאות הרשמיות של זית (הסידור החכם, החיפוש הסמנטי וקישורי הפסוקים המצוטטים בתלמוד) אינם קוד פתוח, ואינם כלולים בפרדס.
+
+          ### מה חדש בגרסה $VERSION
+          $(cat "$RUNNER_TEMP/whatsnew.md")
+
+          כל הגרסאות ב[יומן השינויים]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/desktop/CHANGELOG.md)
+
+          ### התקנה
+          $windows
+          $linux
+          - פרדס למחשב מותקן לצד זית למחשב ולא במקומו, ולכל אחד ההערות, ההגדרות והלשוניות שלו.
+          - פרדס מתעדכן מתוכו: כשיוצאת גרסה חדשה הוא מודיע עליה, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. הספרייה וההגדרות נשמרות.
+
+          ---
+          Copyright (C) 2025 Elie Gambache. GNU AGPL v3 with an additional attribution term (§7b), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
+          Powered by the technologies that drive Zayit — https://zayitapp.com/
+
+          נבנה מ-commit \`$GITHUB_SHA\`.
+          EOF
+          mapfile -t files < <(find artifacts -path artifacts/update-yml -prune -o -type f -print | sort)
+          files+=(artifacts/update-yml/*.yml "$SRC")
+          gh release create "$TAG" "${files[@]}" \
+            --target "$GITHUB_SHA" \
+            --title "פרדס למחשב $VERSION (בנייה $GITHUB_RUN_NUMBER$title_suffix) – מבוסס על זית" \
+            --notes-file notes.md \
+            --latest=false \
+            ${kind:+"$kind"}
+          echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
