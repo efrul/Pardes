@@ -2,6 +2,8 @@ package io.github.kdroidfilter.seforimapp.framework.update
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import dev.nucleusframework.core.runtime.ExecutableRuntime
+import dev.nucleusframework.core.runtime.ExecutableType
 import dev.nucleusframework.core.runtime.Platform
 import dev.nucleusframework.nativehttp.NativeHttpClient
 import dev.nucleusframework.updater.DownloadProgress
@@ -120,6 +122,18 @@ private const val LINUX_UPDATE_HELPER = "nucleus-update-helper"
 
 /** Parents walked up from the launcher, as Nucleus does (`/usr/bin/zayit` → `/opt/Zayit/...`). */
 private const val LINUX_HELPER_SEARCH_DEPTH = 3
+
+/**
+ * The Linux package the app was installed from, so the feed's .rpm reaches an RPM install: with no format the updater
+ * takes the first Linux package, the .deb. A GraalVM build has no nucleus.executable.type property, only Nucleus's
+ * marker file, which [ExecutableRuntime] reads as well. Null for a pacman install or a run from the build.
+ */
+internal fun linuxPackageFormat(): String? =
+    when (ExecutableRuntime.type()) {
+        ExecutableType.DEB -> "deb"
+        ExecutableType.RPM -> "rpm"
+        else -> null
+    }
 
 /**
  * True when this install carries Nucleus' passwordless update helper (signed deb/rpm), mirroring the
@@ -448,6 +462,7 @@ class AppUpdateService(
                             ?: when (os) {
                                 Platform.Windows -> "nsis"
                                 Platform.MacOS -> "zip"
+                                Platform.Linux -> linuxPackageFormat()
                                 else -> null
                             }
                     val updater =
