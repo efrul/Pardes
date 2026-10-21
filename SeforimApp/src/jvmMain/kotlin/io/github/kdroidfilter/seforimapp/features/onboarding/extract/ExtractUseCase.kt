@@ -2,9 +2,7 @@ package io.github.kdroidfilter.seforimapp.features.onboarding.extract
 
 import com.github.luben.zstd.ZstdInputStream
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.databasesDir
-import io.github.vinceglb.filekit.path
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -28,8 +26,8 @@ class ExtractUseCase(
         onProgress: (Float) -> Unit,
     ): String =
         withContext(Dispatchers.Default) {
-            val dbDirV = FileKit.databasesDir
-            val dbDir = File(dbDirV.path).apply { mkdirs() }
+            // The folder the user chose for the library (LibraryLocation), the app's own by default
+            val dbDir = LibraryLocation.installDir(appSettings).apply { mkdirs() }
             val source = File(sourcePath)
             require(source.exists()) { "Selected file not found" }
 

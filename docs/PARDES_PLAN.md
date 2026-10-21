@@ -465,6 +465,30 @@ Still open (from the reviews):
   (MIT in its POM, Apache-2.0 in its repository); map the file names Nucleus's notice cites; a desktop mode of
   `scripts/font-notices.py` for `Fonts-NOTICE.txt`.
 
+## Library location on desktop (2026-10-21, from efrul/zayit-move)
+
+What zayit-move does for Zayit, built into the app, for both brands (`LibraryLocation`, generic code):
+- **Install anywhere.** The onboarding's disk step shows the install folder with "שינוי…": the library goes to a
+  folder of its own there (`Pardes library`, `BrandInfo.LIBRARY_FOLDER_NAME`), on any drive. The space check measures
+  that drive; a FAT32 drive, a folder the app cannot write in, or a folder already holding a library is refused.
+  Full installs and updates go to that folder (`library_install_dir`, this machine's, not in backups).
+- **Move it later.** Settings › ניהול נתונים › מיקום הספרייה: the folder, drive, size and free space; "העברה למקום
+  אחר…" checks the target at once (as zayit-move: FAT32, space with a 200 MB margin, a library already there, into
+  itself), and the move runs at the next start, before anything opens the library (`PendingLibraryMove`,
+  `LibraryMoveWindow`): rename on the same drive; elsewhere copy, check every size, point `database_path` at the copy
+  (flushed to disk), then delete the original. A stop, a failure or closing the window removes the partial copy; a
+  move the app was killed in is undone at the next start (`LibraryLocation.undo`).
+- **Keep a copy.** The original can stay; kept copies are listed with "מעבר לעותק" (switch, no copying) and
+  "מחיקה". A full install's cleanup leaves them, the reset deletes them. Zayit's library used in place is always
+  copied, never deleted, and never listed as a copy.
+- Checked on Linux (Xvfb): a copy from Zayit's folder to another folder, the main app opening it, the copy back with a
+  kept copy, the card, deleting the copy, the onboarding row. `LibraryLocationTest` covers rename, copy, stop, undo,
+  the refusals and the install folder.
+- Open: on Windows, a test with a real second drive and a FAT32 stick; offering to use a library found in the chosen
+  install folder (after reinstalling the OS) instead of refusing it.
+- `WidgetSizesScreenshotTest` fails in this container (calendar and tefila sizes) with both brands; this work touches
+  no widget. Check it on CI.
+
 ## Phase 4: Personal books (placeholder; the full design comes later)
 
 Earlier findings that constrain the design:

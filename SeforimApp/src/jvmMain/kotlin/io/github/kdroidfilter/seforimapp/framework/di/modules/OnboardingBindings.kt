@@ -16,6 +16,7 @@ import io.github.kdroidfilter.seforimapp.features.onboarding.navigation.Progress
 import io.github.kdroidfilter.seforimapp.features.onboarding.region.RegionConfigUseCase
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.UserProfileUseCase
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.releasefetcher.github.GitHubReleaseFetcher
 import io.ktor.client.HttpClient
@@ -29,9 +30,13 @@ object OnboardingBindings {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideDownloadUseCase(httpClient: HttpClient): DownloadUseCase =
+    fun provideDownloadUseCase(
+        httpClient: HttpClient,
+        appSettings: AppSettings,
+    ): DownloadUseCase =
         DownloadUseCase(
             gitHubReleaseFetcher = GitHubReleaseFetcher(owner = "kdroidFilter", repo = "SeforimLibrary", httpClient = httpClient),
+            targetDir = { LibraryLocation.installDir(appSettings) },
         )
 
     @Provides
@@ -40,7 +45,8 @@ object OnboardingBindings {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideAvailableDiskSpaceUseCase(): AvailableDiskSpaceUseCase = AvailableDiskSpaceUseCase()
+    fun provideAvailableDiskSpaceUseCase(appSettings: AppSettings): AvailableDiskSpaceUseCase =
+        AvailableDiskSpaceUseCase { LibraryLocation.installDir(appSettings) }
 
     @Provides
     @SingleIn(AppScope::class)

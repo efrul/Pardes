@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.core.settings
 
+import com.russhwolf.settings.PreferencesSettings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
+import java.util.prefs.Preferences
 
 /**
  * Manages application settings and preferences that persist across app restarts.
@@ -283,6 +285,20 @@ class AppSettings(
             settings[KEY_DATABASE_PATH] = path
             _databasePathFlow.value = path
         }
+    }
+
+    // The folder a full library install or update goes to (LibraryLocation); null for the app's own databases folder.
+    // This machine's: not portable
+    fun getLibraryInstallDir(): String? = settings[KEY_LIBRARY_INSTALL_DIR, ""].ifBlank { null }
+
+    fun setLibraryInstallDir(path: String?) {
+        settings[KEY_LIBRARY_INSTALL_DIR] = path.orEmpty()
+    }
+
+    /** Writes the settings to disk now (Java preferences do it within 30 s otherwise), before a step that relies on them. */
+    fun flush() {
+        // The app's node is under the user root, whose flush writes its descendants
+        if (settings is PreferencesSettings) runCatching { Preferences.userRoot().flush() }
     }
 
     // Session persistence preference
@@ -672,6 +688,7 @@ class AppSettings(
         private const val KEY_MAX_COMMENTATORS_PER_PAGE = "max_commentators_per_page"
         private const val KEY_CLOSE_TREE_ON_NEW_BOOK = "close_tree_on_new_book"
         private const val KEY_DATABASE_PATH = "database_path"
+        private const val KEY_LIBRARY_INSTALL_DIR = "library_install_dir"
         private const val KEY_PERSIST_SESSION = "persist_session"
         private const val KEY_KEEP_SCREEN_AWAKE_ON_BOOK = "keep_screen_awake_on_book"
         private const val KEY_FONT_BOOK = "font_book"

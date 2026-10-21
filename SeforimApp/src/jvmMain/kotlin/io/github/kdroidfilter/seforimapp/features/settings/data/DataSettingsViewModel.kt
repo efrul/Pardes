@@ -13,6 +13,7 @@ import io.github.kdroidfilter.seforimapp.backup.drive.GoogleDriveSync
 import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.databasesDir
@@ -107,6 +108,8 @@ class DataSettingsViewModel(
             val customDbPath = runCatching { appSettings.getDatabasePath() }.getOrNull()
             // Another app's library used in place is not ours to delete: clearAll() only forgets where it is.
             val customDbIsForeign = customDbPath != null && ForeignLibraries.isForeign(File(customDbPath).parentFile)
+            // Copies kept by a library move (LibraryLocation) go too: nothing would know of them after the reset.
+            LibraryLocation.copies(appSettings).forEach { LibraryLocation.deleteCopy(it, appSettings) }
 
             appSettings.clearAll()
 

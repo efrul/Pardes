@@ -15,6 +15,8 @@ import java.io.File
  */
 class DownloadUseCase(
     private val gitHubReleaseFetcher: GitHubReleaseFetcher,
+    // Where the parts go: the folder the library is installed to (LibraryLocation), on the same drive
+    private val targetDir: () -> File = { File(FileKit.databasesDir.path) },
 ) {
     private val http = HttpFileDownloader()
 
@@ -61,7 +63,7 @@ class DownloadUseCase(
                 }
             if (downloads.isEmpty()) error("No bundle assets found in latest release")
 
-            val dbDir = File(FileKit.databasesDir.path).apply { mkdirs() }
+            val dbDir = targetDir().apply { mkdirs() }
 
             // Keep running stats for a smoother, more stable UX
             var lastBytes = 0L

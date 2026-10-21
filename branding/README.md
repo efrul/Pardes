@@ -57,6 +57,26 @@ New files in upstream folders (no conflict, but generic code a Zayit merge must 
 `framework/database/ForeignLibraries.kt` (the only reader of `BrandLibraries`),
 `features/onboarding/existinglibrary/ExistingLibraryScreen.kt` and `jvmTest/.../ForeignLibrariesTest.kt`.
 
+Pardes features that are not branding, written to fit Zayit as well, also touch upstream files. The library
+location (install anywhere, move between drives, kept copies; `framework/database/LibraryLocation.kt`,
+`PendingLibraryMove.kt`, `features/database/move/LibraryMoveWindow.kt`, `features/settings/library/`,
+`features/onboarding/diskspace/InstallLocationRow.kt`, `jvmTest/.../LibraryLocationTest.kt`):
+
+| File | Hook |
+|---|---|
+| `SeforimApp/.../main.kt` | `PendingLibraryMove.read()` before the graph (no `warmCatalog` then); `LibraryMoveWindow` before the onboarding |
+| `SeforimApp/.../core/settings/AppSettings.kt` | `library_install_dir` (get/set) and `flush()` |
+| `SeforimApp/.../features/onboarding/extract/ExtractUseCase.kt` | extracts to `LibraryLocation.installDir` |
+| `SeforimApp/.../features/onboarding/download/DownloadUseCase.kt` | `targetDir` parameter |
+| `SeforimApp/.../features/onboarding/diskspace/AvailableDiskSpaceUseCase.kt` | `targetDir` parameter (its drive is measured) |
+| `SeforimApp/.../features/onboarding/diskspace/AvailableDiskSpaceScreen.kt` | `InstallLocationRow(...)` |
+| `SeforimApp/.../framework/di/modules/OnboardingBindings.kt` | both use cases get `LibraryLocation.installDir` |
+| `SeforimApp/.../features/database/update/DatabaseCleanupUseCase.kt` | also cleans the install folder; skips kept copies |
+| `SeforimApp/.../features/settings/ui/DataSettingsScreen.kt` | `LibraryLocationCard()` |
+| `SeforimApp/.../features/settings/data/DataSettingsViewModel.kt` | the reset deletes kept copies |
+| `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `library_*` strings (one block) |
+| `branding/<brand>/kotlin/.../BrandInfo.kt` | `LIBRARY_FOLDER_NAME` |
+
 Licence-restricted files are replaced in place, not overlaid, because they must not be in the repository at all:
 the Rashi Amiti font (removed, with its `FontCatalog` entry; `FontCatalogTest` counts 27 fonts) and the temple
 picture (`files/temple_jerusalem_in_fire.webp`, a public-domain painting by David Roberts instead of a Shutterstock

@@ -113,6 +113,8 @@ fun AvailableDiskSpaceView(
                 }
             }
 
+            InstallLocationRow(onChange = { onEvent(AvailableDiskSpaceEvents.Refresh) })
+
             Row(modifier = Modifier.weight(0.2f)) {
                 val recheckLabel = stringResource(Res.string.recheck_button)
 
