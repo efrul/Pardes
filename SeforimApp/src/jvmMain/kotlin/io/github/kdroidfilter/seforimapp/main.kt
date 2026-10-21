@@ -16,6 +16,7 @@ import dev.nucleusframework.window.jewel.rememberJewelWindowStyle
 import dev.zacsweers.metro.createGraph
 import dev.zacsweers.metrox.viewmodel.LocalMetroViewModelFactory
 import dev.zacsweers.metrox.viewmodel.metroViewModel
+import io.github.kdroidfilter.seforimapp.branding.Brand
 import io.github.kdroidfilter.seforimapp.core.deeplink.ContentDeepLinkHandler
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
 import io.github.kdroidfilter.seforimapp.core.e2e.E2eAuthorScenario
@@ -188,7 +189,7 @@ fun main(args: Array<String>) {
     // when nothing is in flight; never throws (failures are logged).
 //    DbDeltaRecoveryBootstrap.runOnce()
 
-    val appId = "io.github.kdroidfilter.seforimapp"
+    val appId = Brand.APP_ID
 
     nucleusApplication(
         args,

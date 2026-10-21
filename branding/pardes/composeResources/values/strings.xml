@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pardes for desktop: only the strings that differ from upstream's values/strings.xml, each replacing the one of the
+     same name there (buildSrc BrandResources). Who made the app: see the name and authorship rules of the
+     zayit-android skill. -->
+<resources>
+    <string name="app_name">פרדס</string>
+</resources>

@@ -14,6 +14,7 @@ import io.github.kdroidfilter.seforimapp.BuildConfig
 import io.github.kdroidfilter.seforimapp.backup.BackupManager
 import io.github.kdroidfilter.seforimapp.backup.drive.DriveSyncConfig
 import io.github.kdroidfilter.seforimapp.backup.drive.GoogleDriveSync
+import io.github.kdroidfilter.seforimapp.branding.Brand
 import io.github.kdroidfilter.seforimapp.core.MainAppState
 import io.github.kdroidfilter.seforimapp.core.annotations.HighlightStore
 import io.github.kdroidfilter.seforimapp.core.annotations.NoteStore
@@ -87,7 +88,7 @@ object AppCoreBindings {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideSettings(): Settings = Settings()
+    fun provideSettings(): Settings = Brand.settings()
 
     @Provides
     @SingleIn(AppScope::class)
