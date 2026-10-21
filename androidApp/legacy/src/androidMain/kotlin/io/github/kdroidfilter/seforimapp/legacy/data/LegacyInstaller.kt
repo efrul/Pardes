@@ -81,8 +81,14 @@ class LegacyInstaller(private val app: PardesApp) : LibraryInstallerBase() {
     @Volatile
     private var chosen: Library.Location? = null
 
-    /** A folder's items moved in so far, each with its staged name: a failed run puts them back ([discardStaged]). */
-    private val moved = ArrayList<Pair<File, File>>()
+    /**
+     * A folder's items moved in so far, each with its staged name and the name it takes in the library: a failed run
+     * puts them back ([discardStaged]).
+     */
+    private val moved = ArrayList<Moved>()
+
+    /** An item of a library folder moved from [from] to [staged], to be renamed [final] when the install ends. */
+    private class Moved(val from: File, val staged: File, val final: File)
 
     /** What a run takes, and where the library goes (null: where it is now, else the phone). */
     private sealed class Request(val target: Library.Location?, val replacing: Boolean) {
@@ -251,13 +257,13 @@ class LegacyInstaller(private val app: PardesApp) : LibraryInstallerBase() {
                 }
                 throw IOException("Cannot move ${item.name}")
             }
-            synchronized(moved) { moved += item to staged }
+            synchronized(moved) { moved += Moved(item, staged, File(target, item.name)) }
             // A database in chunks: its overflow chunks follow it, under the staged database's chunk names.
             if (item.name == LibraryStore.DB_NAME) {
                 DatabaseChunks.overflowChunks(item).forEachIndexed { i, chunk ->
                     val to = File(target, DatabaseChunks.chunkName(staged.name, i + 1))
                     if (!chunk.renameTo(to)) throw IOException("Cannot move ${chunk.name}")
-                    synchronized(moved) { moved += chunk to to }
+                    synchronized(moved) { moved += Moved(chunk, to, File(target, DatabaseChunks.chunkName(LibraryStore.DB_NAME, i + 1))) }
                 }
             }
         }
@@ -316,10 +322,20 @@ class LegacyInstaller(private val app: PardesApp) : LibraryInstallerBase() {
         item = name
     }
 
-    /** A folder moved in goes back where it was: a failed run never deletes the user's library. */
+    /**
+     * A folder moved in goes back where it was: a failed run never deletes the user's library. An item is under its
+     * staged name, or, when the run failed while the install put the items in place (finishInstall renames them one by
+     * one, the old database deleted first), already under its name in the library: it goes back from there too, so
+     * that the folder is whole again rather than split between the two places.
+     */
     override fun discardStaged() {
         synchronized(moved) {
-            moved.asReversed().forEach { (from, staged) -> if (staged.exists()) staged.renameTo(from) }
+            moved.asReversed().forEach { item ->
+                when {
+                    item.staged.exists() -> item.staged.renameTo(item.from)
+                    item.final.exists() && !item.from.exists() -> item.final.renameTo(item.from)
+                }
+            }
             moved.clear()
         }
         super.discardStaged()

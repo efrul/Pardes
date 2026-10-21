@@ -40,6 +40,13 @@ class TocActivity : BaseActivity() {
         (reuse as? TreeRow ?: TreeRow(this, colors)).bind(node.entry.text, node.depth, arrowRes = arrow, keepArrowSpace = true, marked = node.entry.id == current)
     }
 
+    override val heldLibrary: Library.Opened? get() = if (::opened.isInitialized) opened else null
+
+    /** The tree holds only the book's entries' ids: it stays as it is, open where it was. */
+    override fun onLibraryReopened(library: Library.Opened) {
+        opened = library
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         bookId = intent.getLongExtra(BookActivity.EXTRA_BOOK, 0L)

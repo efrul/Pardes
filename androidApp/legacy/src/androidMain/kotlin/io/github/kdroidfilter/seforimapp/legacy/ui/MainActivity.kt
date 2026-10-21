@@ -364,7 +364,7 @@ class MainActivity : BaseActivity() {
                 gravity = Gravity.CENTER
                 setPadding(0, dp(8), 0, dp(4))
             })
-            addView(textButton(InstallTexts.SHOW_INSTALL) { InstallActivity.start(this@MainActivity, replacing = false) }.also { if (!it.isInTouchMode) it.post { it.requestFocus() } })
+            addView(textButton(InstallTexts.SHOW_INSTALL) { InstallActivity.start(this@MainActivity, replacing = app.installer.replacing) }.also { if (!it.isInTouchMode) it.post { it.requestFocus() } })
         })
         installWait = scope.launch {
             app.installer.running.first { !it }

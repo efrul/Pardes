@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.legacy.ui
 import android.Manifest
 import android.annotation.TargetApi
 import android.app.Activity
+import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -58,8 +59,17 @@ class InstallActivity : BaseActivity() {
     private lateinit var frame: FrameLayout
     private val installer: LegacyInstaller get() = app.installer
 
-    /** Whether the run replaces a library (Settings › ספרייה) rather than installing the first: the main app's update wording. */
+    /**
+     * Whether the run replaces a library (Settings › ספרייה) rather than installing the first: the main app's update
+     * wording. The screen's own for a run it starts; a run already going or ended has its own ([render]).
+     */
     private var replacing = false
+
+    /** The window keeps the screen on: set and cleared only when a run starts and ends, as each change lays it out again. */
+    private var keptOn = false
+
+    /** ביטול's question, while it is shown. */
+    private var cancelDialog: Dialog? = null
 
     private enum class Mode { Browser, Progress, Result }
 
@@ -118,6 +128,11 @@ class InstallActivity : BaseActivity() {
         super.onPause()
     }
 
+    override fun onDestroy() {
+        dismissCancel()
+        super.onDestroy()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         folder?.let { outState.putString(STATE_FOLDER, it.path) }
@@ -138,8 +153,14 @@ class InstallActivity : BaseActivity() {
     // ------------------------------------------------------------------ the state
 
     private fun render(state: InstallState) {
+        // A run this screen did not start (shown from the notification or the Home) speaks as it was started.
+        if (state !is InstallState.Idle) replacing = installer.replacing
         // The screen stays on while the library installs (the work goes on with it off, in the service).
-        if (state.isBusy) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (state.isBusy != keptOn) {
+            keptOn = state.isBusy
+            if (keptOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        if (!state.isBusy) dismissCancel()
         when {
             state.isBusy -> showProgress(state)
             state is InstallState.Done || state is InstallState.Failed -> showResult(state)
@@ -233,7 +254,8 @@ class InstallActivity : BaseActivity() {
     private fun folderPage(dir: File): Pair<List<Row>, File?> {
         val rows = ArrayList<Row>()
         val pick = pickIn(dir)
-        rows += Row.Item(InstallTexts.PICK_FOLDER, pick?.let { "${pickTitle(it)} · ${it.detail}" } ?: InstallTexts.NOTHING_HERE, R.drawable.ic_check_circle) {
+        // Hebrew first, as the first page's rows: a line that starts with a file's Latin name is laid out left to right.
+        rows += Row.Item(InstallTexts.PICK_FOLDER, pick?.let { "${it.detail} · ${pickTitle(it)}" } ?: InstallTexts.NOTHING_HERE, R.drawable.ic_check_circle) {
             if (pick != null) start(pick) else toast(InstallTexts.NOTHING_HERE)
         }
         val upTo = if (isPlace(dir)) null else dir.parentFile
@@ -528,7 +550,7 @@ class InstallActivity : BaseActivity() {
             }, lp(MATCH, WRAP).apply { topMargin = dp(14) })
         }
         body.addView(label(InstallTexts.BACKGROUND, 13f, colors.secondary).apply { gravity = Gravity.CENTER }, lp(MATCH, WRAP).apply { topMargin = dp(10) })
-        val cancel = button(DesktopStrings.settingsCancel) { installer.cancel() }
+        val cancel = button(DesktopStrings.settingsCancel) { askCancel() }
         body.addView(cancel, lp(WRAP, WRAP).apply {
             gravity = Gravity.CENTER_HORIZONTAL
             topMargin = dp(8)
@@ -538,8 +560,30 @@ class InstallActivity : BaseActivity() {
             clipToPadding = false
             addView(body)
         }, FrameLayout.LayoutParams(MATCH, MATCH))
-        // A keypad is on ביטול, the page's one control.
+        // A keypad is on ביטול, the page's one control: it asks first, on its safe answer.
         if (!frame.isInTouchMode) cancel.requestFocus()
+    }
+
+    /**
+     * ביטול throws away what the run has unpacked (hours on an old phone, for the full library): it asks first, with the
+     * answer that goes on in a keypad's focus, so that a stray OK loses nothing. The main app has it in its notification
+     * only, which a keypad phone may not reach.
+     */
+    private fun askCancel() {
+        if (!installer.isBusy || cancelDialog != null) return
+        cancelDialog = Dialogs.show(
+            this,
+            colors,
+            InstallTexts.CANCEL_TITLE,
+            Dialogs.text(this, colors, InstallTexts.CANCEL_QUESTION),
+            listOf(InstallTexts.CANCEL_YES to { if (installer.isBusy) installer.cancel() }, InstallTexts.CANCEL_NO to {}),
+            focusButton = 1,
+        ).apply { setOnDismissListener { cancelDialog = null } }
+    }
+
+    private fun dismissCancel() {
+        cancelDialog?.dismiss()
+        cancelDialog = null
     }
 
     private fun clearProgressViews() {

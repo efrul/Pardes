@@ -96,7 +96,7 @@ class InstallService : Service() {
     @Suppress("DEPRECATION")
     private fun progressNotification(installer: LegacyInstaller, state: InstallState): Notification {
         val update = installer.replacing
-        val builder = baseBuilder()
+        val builder = baseBuilder(installer)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -133,7 +133,7 @@ class InstallService : Service() {
     }
 
     private fun resultNotification(installer: LegacyInstaller, done: Boolean): Notification =
-        baseBuilder()
+        baseBuilder(installer)
             .setSmallIcon(if (done) android.R.drawable.stat_sys_download_done else android.R.drawable.stat_notify_error)
             .setContentTitle(
                 when {
@@ -147,12 +147,12 @@ class InstallService : Service() {
             .setAutoCancel(true)
             .build()
 
-    private fun baseBuilder(): Notification.Builder {
+    private fun baseBuilder(installer: LegacyInstaller): Notification.Builder {
         @Suppress("DEPRECATION")
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this)
         builder.setShowWhen(false)
-        // The install screen, over the app's task: its progress, or what the run ended with.
-        val open = Intent(this, InstallActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        // The install screen, over the app's task: its progress, or what the run ended with, in the run's wording.
+        val open = Intent(this, InstallActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(InstallActivity.EXTRA_REPLACE, installer.replacing)
         builder.setContentIntent(PendingIntent.getActivity(this, 0, open, immutable(PendingIntent.FLAG_UPDATE_CURRENT)))
         return builder
     }

@@ -36,6 +36,13 @@ class LibraryActivity : BaseActivity() {
         }
     }
 
+    override val heldLibrary: Library.Opened? get() = if (::opened.isInitialized) opened else null
+
+    /** The tree holds only the library's ids: it stays as it is, open where it was. */
+    override fun onLibraryReopened(library: Library.Opened) {
+        opened = library
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
