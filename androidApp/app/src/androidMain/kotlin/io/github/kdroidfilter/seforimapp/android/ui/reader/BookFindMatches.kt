@@ -167,7 +167,8 @@ suspend fun findSearchMatchesInBook(
     for (chunk in ids.toList().chunked(FIND_CHUNK)) {
         for (line in loadLines(chunk)) {
             ensureActive()
-            if (searchEngine.highlightRanges(plainTextFromHtml(line.content), query).isNotEmpty()) lit += line
+            // Only what ofLines reads: the texts of every line lit, held until the last chunk, would grow with the book
+            if (searchEngine.highlightRanges(plainTextFromHtml(line.content), query).isNotEmpty()) lit += line.copy(content = "", heRef = null)
         }
     }
     BookFindMatches.ofLines(lit)
