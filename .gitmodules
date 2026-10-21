@@ -5,6 +5,3 @@
 [submodule "SeforimAcronymizer"]
 	path = SeforimAcronymizer
 	url = https://github.com/kdroidFilter/SeforimAcronymizer.git
-[submodule "androidApp/upstream/SeforimLibrary"]
-	path = androidApp/upstream/SeforimLibrary
-	url = https://github.com/kdroidFilter/SeforimLibrary

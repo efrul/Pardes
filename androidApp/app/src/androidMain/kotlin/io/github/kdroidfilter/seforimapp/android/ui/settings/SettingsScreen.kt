@@ -78,7 +78,7 @@ enum class SettingsPage(val title: String, val summary: String, val icon: ImageV
 }
 
 /**
- * Settings, mirroring desktop 0.6.1's settings window (features/settings/SettingsWindow.kt and SettingsSidebar.kt):
+ * Settings, mirroring desktop 0.6.7's settings window (features/settings/SettingsWindow.kt and SettingsSidebar.kt):
  * on phones a list of the pages, each opening full-screen; on tablets the desktop two-pane layout (page list on the
  * right, page on the left, "סגור" at the bottom).
  */

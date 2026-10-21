@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.android.ui.shell
 import android.view.KeyEvent
 import android.view.KeyboardShortcutGroup
 import android.view.KeyboardShortcutInfo
+import androidx.compose.runtime.staticCompositionLocalOf
 import io.github.kdroidfilter.seforimapp.android.data.AppPrefs
 import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
@@ -11,12 +12,22 @@ import io.github.kdroidfilter.seforimapp.android.ui.Overlay
 /**
  * Hardware-keyboard shortcuts (tablets, DeX, Chromebooks). MainActivity forwards every key press here before the
  * views see it, so the shortcuts work whatever has the focus; ZayitApp installs the [handler] while it is shown.
+ *
+ * [fallback] gets the key presses no view used (MainActivity.onKeyDown), as desktop's window onKeyEvent gets what the
+ * focused component leaves: the front reader tab's book shortcuts, so they work when nothing has the focus, a field
+ * that has it still getting its keys first (desktop 0.6.5 f96e98f3).
  */
 class KeyShortcuts {
     var handler: ((KeyEvent) -> Boolean)? = null
+    var fallback: ((KeyEvent) -> Boolean)? = null
 
     fun dispatch(event: KeyEvent): Boolean = event.action == KeyEvent.ACTION_DOWN && handler?.invoke(event) == true
+
+    fun dispatchUnused(event: KeyEvent): Boolean = event.action == KeyEvent.ACTION_DOWN && fallback?.invoke(event) == true
 }
+
+/** The activity's [KeyShortcuts], for the screens that add their own keys to [KeyShortcuts.fallback]. */
+val LocalKeyShortcuts = staticCompositionLocalOf<KeyShortcuts?> { null }
 
 /** What the shortcuts do that lives in ZayitApp's own state. */
 class ShellKeyActions(
@@ -25,7 +36,7 @@ class ShellKeyActions(
 )
 
 /**
- * The desktop window shortcuts (0.6.1 core/presentation/window/MainAppWindow.kt 350-470) and the zoom and find keys
+ * The desktop window shortcuts (0.6.7 core/presentation/window/MainAppWindow.kt 361-481) and the zoom and find keys
  * of core/presentation/utils/WindowUtils.kt processKeyShortcuts, without the macOS variants. Ctrl+N makes a new
  * workspace, as Ctrl+Alt+N (one window on Android). Returns true when the key was used.
  */

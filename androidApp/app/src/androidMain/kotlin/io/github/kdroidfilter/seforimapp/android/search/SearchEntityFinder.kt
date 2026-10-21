@@ -11,7 +11,7 @@ import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.ConcurrentHashMap
 
-// Ports of desktop 0.6.1 features/search/domain: SearchKey.kt, SearchEntityFinder.kt and BookDetailsLoader.kt, plus
+// Ports of desktop 0.6.7 features/search/domain: SearchKey.kt, SearchEntityFinder.kt and BookDetailsLoader.kt, plus
 // features/author/AuthorScreen.kt's AUTHOR_ERAS and authorYears (shared by the knowledge panel and the author page).
 
 private val NIKUD = Regex("[֑-ׇ]")

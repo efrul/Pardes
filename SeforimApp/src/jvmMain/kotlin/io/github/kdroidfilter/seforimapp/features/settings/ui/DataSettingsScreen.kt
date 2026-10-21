@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.settings.data.DataSettingsViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.library.LibraryLocationCard
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
@@ -77,6 +78,18 @@ fun DataSettingsScreen() {
                     .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (viewModel.isDriveAvailable) {
+                val driveState by viewModel.driveState.collectAsState()
+                DriveSyncCard(
+                    state = driveState,
+                    onConnect = viewModel::connectDrive,
+                    onCancelConnect = viewModel::cancelDriveConnect,
+                    onDisconnect = viewModel::disconnectDrive,
+                    onBackup = viewModel::backupToDrive,
+                    onRestore = viewModel::restoreFromDrive,
+                )
+            }
+
             DataActionCard(
                 title = Res.string.data_export_title,
                 description = Res.string.data_export_description,
@@ -104,7 +117,16 @@ fun DataSettingsScreen() {
                         // Same rationale as the export picker: keep the Tao GTK event loop free.
                         val file =
                             withContext(Dispatchers.IO) {
-                                FileKit.openFilePicker(type = FileKitType.File(extensions = listOf("db")))
+                                FileKit.openFilePicker(
+                                    type =
+                                        FileKitType.File(
+                                            extensions =
+                                                listOf(
+                                                    DataSettingsViewModel.BACKUP_EXTENSION,
+                                                    DataSettingsViewModel.LEGACY_BACKUP_EXTENSION,
+                                                ),
+                                        ),
+                                )
                             }
                         file?.let { viewModel.importFromFile(File(it.path)) }
                     }
@@ -135,6 +157,8 @@ fun DataSettingsScreen() {
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+
+            LibraryLocationCard()
 
             ResetCard(
                 resetDone = state.resetDone,

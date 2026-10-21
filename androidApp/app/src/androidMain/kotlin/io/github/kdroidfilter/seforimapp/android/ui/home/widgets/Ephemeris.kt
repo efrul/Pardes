@@ -24,7 +24,7 @@ import kotlin.math.sin
 import kotlin.math.tan
 
 /*
- * The astronomy of the Earth, sky and solar-system widgets, verbatim from desktop 0.6.1 earthwidget where it is plain
+ * The astronomy of the Earth, sky and solar-system widgets, verbatim from desktop 0.6.7 earthwidget where it is plain
  * math: SolarPositionCalculator.kt (NOAA sun, Julian day), EarthEphemeris.kt (the Moon, the Sun's ecliptic
  * longitude), SkyScene.kt (sky directions, the star field's turn), EarthWidgetZmanimView.kt (the Hebrew day, the
  * moon's age, the Kiddush Levana window on the orbit) and SolarSystemWidgetView.kt (the year's events). Desktop draws

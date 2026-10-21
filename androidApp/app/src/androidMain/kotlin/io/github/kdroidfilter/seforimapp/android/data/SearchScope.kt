@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 /**
  * Where a search runs: the whole library, one author's books, or one book or TOC entry.
  *
- * Mirrors desktop 0.6.1 `navigation/src/commonMain/kotlin/io/github/kdroidfilter/seforim/tabs/SearchScope.kt`, with
- * [Author] from 0.6.5 1723de06 (the navigation module is not compiled into the Android app).
+ * Mirrors desktop 0.6.7 `navigation/src/commonMain/kotlin/io/github/kdroidfilter/seforim/tabs/SearchScope.kt`, whose
+ * only change since 0.6.1 is [Author] (0.6.5 1723de06). The navigation module is not compiled into the Android app.
  */
 @Serializable
 sealed interface SearchScope {

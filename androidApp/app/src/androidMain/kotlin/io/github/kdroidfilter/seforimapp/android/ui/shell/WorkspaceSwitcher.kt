@@ -62,11 +62,13 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import io.github.kdroidfilter.seforimapp.android.ui.workspaceName
 
 /*
- * Workspaces ("מרחבים"): desktop 0.6.1 core/presentation/components/DesktopSwitcher.kt. A tablet has desktop's
+ * Workspaces ("מרחבים"): desktop 0.6.7 core/presentation/components/DesktopSwitcher.kt. A tablet has desktop's
  * 110dp title-bar trigger (icon, name, ▾) with its dropdown; a phone shows the same trigger at the top of the open-tabs
  * page and the list in a bottom sheet. Rows: switch on tap, rename in place (8 letters at most), delete when there are
  * several, and "מרחב חדש" named after the next Hebrew numeral. Touch: the row actions are always visible.
- * Not ported: opening a workspace in a new window (one window on Android) and drag reordering.
+ * Not ported: opening a workspace in a new window (one window on Android), drag reordering, and the compact trigger
+ * (icon and ▾ only) that 0.6.5 ec91acdc uses when the tab strip, with its "עוד N" chip, needs the room: the tablet strip
+ * here scrolls instead (PARITY.md).
  */
 
 /** Desktop DesktopSwitcherTrigger. */

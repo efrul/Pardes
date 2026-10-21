@@ -25,7 +25,7 @@ data class ReadingEntry(val bookId: Long, val lineId: Long?, val title: String, 
 
 /**
  * The reader's link to the desktop history and favorites ([UserDataStore.history], [UserDataStore.favorites]), with
- * desktop's recording rules (BookContentViewModel, 0.6.1 lines 344-379): ONE history row per book opened in a tab,
+ * desktop's recording rules (BookContentViewModel, 0.6.7 lines 344-379): ONE history row per book opened in a tab,
  * written 2 s after the open with the TOC entry read then, titled "<book> - <toc>" (never "X - X"); never for a tab
  * restored with the session, a tab in the background, or the tablet's search preview.
  *

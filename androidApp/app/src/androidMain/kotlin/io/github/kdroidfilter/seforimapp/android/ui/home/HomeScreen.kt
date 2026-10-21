@@ -39,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
@@ -100,6 +103,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.library.LibraryViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.reader.PaneHeader
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderRailButton
 import io.github.kdroidfilter.seforimapp.android.ui.reader.SplitHandle
+import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalKeyShortcuts
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalTabSession
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.AccentColor
@@ -115,7 +119,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * The home page, desktop 0.6.1 features/bookcontent/ui/panels/bookcontent/views/HomeView.kt: the wallpaper under its
+ * The home page, desktop 0.6.7 features/bookcontent/ui/panels/bookcontent/views/HomeView.kt: the wallpaper under its
  * two blending layers, then the page: the catalog row (components/CatalogRow.kt, its dropdowns from catalog.pb as
  * core/catalog/CatalogAccess.kt shapes them), the logo, the search bar ([HomeSearchBar]) and the editable widget grid
  * (features/home/widgets): one column (two on a phone on its side) below 670 dp, desktop's 20-column grid above.
@@ -206,7 +210,7 @@ fun HomeScreen(
 }
 
 /**
- * A Home tab on a tablet, as desktop 0.6.1 core/presentation/window/WindowBody.kt lays one out: the start bar with its
+ * A Home tab on a tablet, as desktop 0.6.7 core/presentation/window/WindowBody.kt lays one out: the start bar with its
  * "ספרים" button (features/bookcontent/ui/components/VerticalBars.kt StartVerticalBar), the book tree
  * (panels/categorytree/CategoryTreePanel.kt: hidden from its header, resized by its divider) and the home card. The
  * tree's visibility is the tab's (desktop BookContentPersistedState.isBookTreeVisible), kept with the session; Ctrl+B
@@ -230,12 +234,22 @@ fun WideHome(
         treeVisible = !treeVisible
         appVm.setBookTreeVisible(tabId, treeVisible)
     }
+    val treeKey: (KeyEvent) -> Boolean = { e ->
+        val ctrl = e.isCtrlPressed || e.isMetaPressed
+        (e.type == KeyEventType.KeyDown && ctrl && !e.isShiftPressed && e.key == Key.B).also { if (it) toggleTree() }
+    }
+    // Ctrl+B works when nothing has the focus too, in the front tab: the keys no view used reach it (desktop 0.6.5
+    // f96e98f3, the window's readerShortcuts, which a Home tab sets as a book tab does)
+    val shortcuts = LocalKeyShortcuts.current
+    val currentTreeKey by rememberUpdatedState(treeKey)
+    DisposableEffect(shortcuts, front) {
+        val fallback: (android.view.KeyEvent) -> Boolean = { native -> currentTreeKey(KeyEvent(native)) }
+        if (shortcuts != null && front) shortcuts.fallback = fallback
+        onDispose { if (shortcuts?.fallback === fallback) shortcuts.fallback = null }
+    }
     // RTL row: the bar and the book list come first so they sit on the right, as on desktop
     Row(
-        Modifier.fillMaxSize().padding(6.dp).onPreviewKeyEvent { e ->
-            val ctrl = e.isCtrlPressed || e.isMetaPressed
-            (e.type == KeyEventType.KeyDown && ctrl && !e.isShiftPressed && e.key == Key.B).also { if (it) toggleTree() }
-        },
+        Modifier.fillMaxSize().padding(6.dp).onPreviewKeyEvent(treeKey),
     ) {
         Column(Modifier.fillMaxHeight().padding(end = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             ReaderRailButton(Icons.AutoMirrored.Outlined.LibraryBooks, "ספרים", selected = treeVisible, onClick = toggleTree)

@@ -42,7 +42,7 @@ import java.util.Locale
 private val maintenanceScope = MainScope()
 
 /**
- * Desktop 0.6.1 DataSettingsScreen + DataSettingsViewModel: "ייצוא הנתונים שלי", "ייבוא נתונים" and "איפוס האפליקציה".
+ * Desktop 0.6.7 DataSettingsScreen + DataSettingsViewModel: "ייצוא הנתונים שלי", "ייבוא נתונים" and "איפוס האפליקציה".
  * Backups are desktop's archive ([UserDataBackup]), so they move between the phone and the computer; a restore is
  * staged and applied when the app restarts. The Google Drive card is left out, as desktop does when it has no OAuth
  * client: desktop's Drive backup uses a desktop loopback OAuth client that an Android app cannot use.
@@ -96,7 +96,7 @@ internal fun DataSettings(wide: Boolean) {
     }
 
     SettingsColumn(wide) {
-        // Desktop 0.6.1 DbDeltaUpdateSection (incremental library updates).
+        // Desktop 0.6.7 DbDeltaUpdateSection (incremental library updates).
         DbDeltaUpdateSection()
         // Android: the phone or a memory card.
         LibraryLocationSection()

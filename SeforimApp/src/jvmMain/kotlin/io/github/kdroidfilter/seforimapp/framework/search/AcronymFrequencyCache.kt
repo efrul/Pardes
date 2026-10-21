@@ -1,6 +1,6 @@
 package io.github.kdroidfilter.seforimapp.framework.search
 
-import io.github.kdroidfilter.seforimapp.framework.database.getDatabasePath
+import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
 import io.github.kdroidfilter.seforimapp.logger.infoln
 import java.sql.Connection
 import java.sql.DriverManager
@@ -11,7 +11,11 @@ import java.sql.DriverManager
  *
  * Uses the book_acronym table from seforim.db - no separate database needed!
  */
-class AcronymFrequencyCache {
+class AcronymFrequencyCache(
+    private val databasePath: () -> String,
+) {
+    constructor(databasePathProvider: DatabasePathProvider) : this(databasePathProvider::get)
+
     private val connection: Connection by lazy {
         loadSeforimDb()
     }
@@ -60,7 +64,7 @@ class AcronymFrequencyCache {
         }
 
     private fun loadSeforimDb(): Connection {
-        val dbPath = getDatabasePath()
+        val dbPath = databasePath()
         infoln { "Loading acronym data from seforim.db: $dbPath" }
         return DriverManager.getConnection("jdbc:sqlite:$dbPath")
     }

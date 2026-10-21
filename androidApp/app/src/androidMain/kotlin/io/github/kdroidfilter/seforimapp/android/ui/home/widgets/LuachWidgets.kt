@@ -73,10 +73,10 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-// Port of desktop 0.6.1 features/home/widgets/luach/LuachWidgets.kt, with the 0.6.2 fix 411280b9 (TefilaWidget turns
-// to tomorrow at tzeit hakochavim): the luach widgets (limud, the next zman, the coming events, the day's tefila, the
-// molad), text on the calendar's panel, following the Home's day. Their lists show as many whole rows as fit. The
-// tools show the same cards on their pages.
+// Port of desktop 0.6.7 features/home/widgets/luach/LuachWidgets.kt, 0.6.1's with the 0.6.2 fix 411280b9 (TefilaWidget
+// turns to tomorrow at tzeit hakochavim), its only change since: the luach widgets (limud, the next zman, the coming
+// events, the day's tefila, the molad), text on the calendar's panel, following the Home's day. Their lists show as
+// many whole rows as fit. The tools show the same cards on their pages.
 
 // Every line the same height, and the title: the card's height is worked out from their number (heightAt)
 private val LIMUD_ROW_HEIGHT = 26.dp

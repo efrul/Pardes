@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforimapp.android.ui.ToolKind
 
 /**
- * The luach's month, Hebrew or civil; a tap on a day moves every widget to it. Port of desktop 0.6.1
+ * The luach's month, Hebrew or civil; a tap on a day moves every widget to it. Port of desktop 0.6.7
  * features/home/widgets/calendar/CalendarWidget.kt (its civil/Hebrew choice saved as home_widget.calendar.civil).
  */
 internal object CalendarWidget : HomeWidget {

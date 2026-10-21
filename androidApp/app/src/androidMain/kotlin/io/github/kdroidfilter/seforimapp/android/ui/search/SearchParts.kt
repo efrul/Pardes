@@ -29,7 +29,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import java.text.NumberFormat
 import java.util.Locale
 
-// Pieces shared by the results page, its preview and its knowledge panel: desktop 0.6.1 SearchResultScreen.kt's
+// Pieces shared by the results page, its preview and its knowledge panel: desktop 0.6.7 SearchResultScreen.kt's
 // card(), readingSecondary(), ResultLink and categoriesAndPlace, core/presentation/text HebrewSearch.kt's
 // diacritic-insensitive matching (find within the results) and Highlighting.kt's withBackground.
 

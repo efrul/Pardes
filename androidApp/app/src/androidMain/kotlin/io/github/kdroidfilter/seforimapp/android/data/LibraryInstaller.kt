@@ -92,7 +92,7 @@ enum class InstallPurpose { Onboarding, Update }
  */
 object DatabaseVersion {
     /**
-     * Desktop 0.6.1 MINIMUM_REQUIRED_VERSION. The 0.6.1 dao compiled into the app reads the author columns and tables
+     * Desktop 0.6.7 MINIMUM_REQUIRED_VERSION. The 0.6.7 dao compiled into the app reads the author columns and tables
      * these releases added: older ones fail every getBook().
      */
     const val MINIMUM_REQUIRED_VERSION = "20261011170830"
@@ -950,7 +950,7 @@ class LibraryInstaller private constructor(private val context: Context) {
         private const val BUFFER_SIZE = 1 shl 20
         private const val TEXT_RETRIES = 3
         private const val WAKE_LOCK_TIMEOUT_MS = 6L * 60 * 60 * 1000
-        // author_bio and book_edition: the 0.6.1 schema, for a database that comes without its release_info.txt
+        // author_bio and book_edition: the 0.6.7 schema, for a database that comes without its release_info.txt
         private const val REQUIRED_TABLES_QUERY =
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('book', 'line', 'category', 'author_bio', 'book_edition')"
         private const val REQUIRED_TABLE_COUNT = 5

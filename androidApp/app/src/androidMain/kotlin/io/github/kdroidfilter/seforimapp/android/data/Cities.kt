@@ -3,7 +3,7 @@ package io.github.kdroidfilter.seforimapp.android.data
 import java.util.TimeZone
 
 /*
- * Verbatim copy of desktop 0.6.1 features/zmanim/data/Cities.kt: the region lists of onboarding and settings and the
+ * Verbatim copy of desktop 0.6.7 features/zmanim/data/Cities.kt: the region lists of onboarding and settings and the
  * places the zmanim are computed for. Keep the names identical, they are the stored region values (and the keys of
  * [itimLabinaCandleLighting]), shared with desktop.
  */

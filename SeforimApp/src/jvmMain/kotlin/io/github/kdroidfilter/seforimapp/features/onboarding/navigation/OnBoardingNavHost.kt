@@ -15,6 +15,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.AnimatedHo
 import io.github.kdroidfilter.seforimapp.core.presentation.navigation.noAnimatedComposable
 import io.github.kdroidfilter.seforimapp.features.onboarding.diskspace.AvailableDiskSpaceScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.download.DownloadScreen
+import io.github.kdroidfilter.seforimapp.features.onboarding.existinglibrary.ExistingLibraryScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.extract.ExtractScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.finish.FinishScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.init.InitScreen
@@ -24,11 +25,12 @@ import io.github.kdroidfilter.seforimapp.features.onboarding.region.RegionConfig
 import io.github.kdroidfilter.seforimapp.features.onboarding.typeofinstall.TypeOfInstallationScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.UserProfileScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.version.VersionVerificationScreen
+import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 
 @Composable
 fun OnBoardingNavHost(navController: NavHostController) {
     Column(modifier = Modifier.fillMaxSize()) {
-        val progressBarState = ProgressBarState
+        val progressBarState = LocalAppGraph.current.onboardingProgressBarState
         val progress by progressBarState.progress.collectAsState()
         AnimatedHorizontalProgressBar(progress, Modifier.fillMaxWidth())
         NavHost(
@@ -41,6 +43,9 @@ fun OnBoardingNavHost(navController: NavHostController) {
             }
             noAnimatedComposable<OnBoardingDestination.LicenceScreen> {
                 LicenceScreen(navController)
+            }
+            noAnimatedComposable<OnBoardingDestination.ExistingLibraryScreen> {
+                ExistingLibraryScreen(navController)
             }
             noAnimatedComposable<OnBoardingDestination.AvailableDiskSpaceScreen> {
                 AvailableDiskSpaceScreen(navController)

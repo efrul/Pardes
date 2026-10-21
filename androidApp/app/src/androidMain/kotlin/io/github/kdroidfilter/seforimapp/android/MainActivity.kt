@@ -72,7 +72,7 @@ private sealed interface Startup {
 }
 
 /**
- * Desktop 0.6.1 main.kt: onboarding on first run; once it is done, the library check (DatabaseVersionManager) that
+ * Desktop 0.6.7 main.kt: onboarding on first run; once it is done, the library check (DatabaseVersionManager) that
  * sends a missing, outdated or unreadable library to the database update flow; then the saved session and the tabs.
  * Also the Android entry points: zayit:// links and launcher shortcuts (singleTask, so a running app gets them in
  * [onNewIntent]), the app update's notification, hardware-keyboard shortcuts, and saving the session when the app
@@ -307,6 +307,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = shortcuts.dispatch(event) || super.dispatchKeyEvent(event)
+
+    // The keys no view used: the front reader's book shortcuts (KeyShortcuts.fallback)
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = shortcuts.dispatchUnused(event) || super.onKeyDown(keyCode, event)
 
     override fun onProvideKeyboardShortcuts(data: MutableList<KeyboardShortcutGroup>, menu: Menu?, deviceId: Int) {
         super.onProvideKeyboardShortcuts(data, menu, deviceId)

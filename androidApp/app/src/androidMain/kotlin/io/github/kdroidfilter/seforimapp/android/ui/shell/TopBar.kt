@@ -232,7 +232,8 @@ private fun stripLabel(tab: Tab): String = if (tab.destination == Destination.Ho
 
 /**
  * Tablet title bar, like the desktop custom title bar (MainTitleBar + TabsView + TitleBarActionsButtonsView): the tab
- * strip (scrolling, the shown tab kept in view, "+" after the last tab), the workspace switcher, then home, find in
+ * strip (scrolling, the shown tab kept in view, "+" after the last tab; desktop 0.6.5's "עוד N" chip for the tabs that
+ * no longer fit, ec91acdc, is left out on purpose: PARITY.md), the workspace switcher, then home, find in
  * page, favorites, tab search & history, tools, theme and settings. A long press on a tab opens its menu, on "+" the
  * reopen-closed-tab item, and on any button its tooltip.
  */
@@ -321,6 +322,9 @@ private fun TabStrip(state: AppUiState, appVm: AppViewModel, modifier: Modifier)
                 onClick = { appVm.selectTab(i) },
                 onClose = { appVm.closeTab(i) },
                 menuItems = { tabMenuItems(context, appVm, i, vertical = false) },
+                // Pin, unpin and reopen slide a tab to its new place; a new tab grows in place (desktop 0.6.5
+                // a991be12, a009b0d4; 0.6.7 f8057ed1)
+                modifier = Modifier.animateItem(),
             )
         }
         item(key = "+") {
@@ -361,12 +365,19 @@ private val PinMarkWidth = PinMarkSize + PinMarkGap
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TabChip(tab: Tab, selected: Boolean, onClick: () -> Unit, onClose: () -> Unit, menuItems: () -> List<TabMenuItem>) {
+private fun TabChip(
+    tab: Tab,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onClose: () -> Unit,
+    menuItems: () -> List<TabMenuItem>,
+    modifier: Modifier = Modifier,
+) {
     val c = Zayit.colors
     var menu by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(8.dp)
     val label = stripLabel(tab)
-    Box {
+    Box(modifier) {
         Row(
             Modifier
                 .then(if (tab.pinned) Modifier.widthIn(min = 40.dp + PinMarkWidth, max = 96.dp + PinMarkWidth) else Modifier.widthIn(min = 96.dp, max = 220.dp))

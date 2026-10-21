@@ -52,7 +52,7 @@ suspend fun guardedWrite(what: String, block: suspend () -> Unit): Boolean = try
 }
 
 /**
- * The user database, `user_settings.db`, with desktop 0.6.1's schema (SeforimApp/src/commonMain/sqldelight, vendored in
+ * The user database, `user_settings.db`, with desktop 0.6.7's schema (SeforimApp/src/commonMain/sqldelight, vendored in
  * src/androidMain/sqldelight-user): notes and highlights here, the visit history in [history] and the favorites in
  * [favorites] (desktop AppCoreBindings: one shared connection for every user store). Constructing it opens the
  * database: do it off the main thread (MainActivity does).

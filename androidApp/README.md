@@ -10,10 +10,10 @@ Download page: https://efrul.github.io/Pardes/ (source in [site/](site/), deploy
 
 ## Build
 
-This is a standalone Gradle build. It compiles SeforimLibrary (core, dao, search) from `upstream/SeforimLibrary`, a submodule pinned to the commit desktop Zayit 0.6.1 was built with (381fbea), and reads `../htmlparser` and `../SeforimApp/src/commonMain/sqldelight` from the repository. The root `../SeforimLibrary` submodule is the older one the desktop fork builds with; Android doesn't use it.
+This is a standalone Gradle build. It compiles SeforimLibrary (core, dao, search, delta-updater, and generator-common's `PatchTables.kt`) from the repository's `../SeforimLibrary` submodule, at the commit desktop Zayit 0.6.7 builds with (7ddf045): desktop and Android build from the same checkout. From the rest of the repository it reads `../icons` (the search telescope) and `../LICENSE` (bundled as the app's licence text). Desktop's htmlparser and user-settings schema are vendored, as 0.6.7 has them, in `app/src/androidMain/htmlparser` and `app/src/androidMain/sqldelight-user`.
 
 ```bash
-git submodule update --init androidApp/upstream/SeforimLibrary   # once, after cloning
+git submodule update --init SeforimLibrary   # once, after cloning (from the repository's root)
 cd androidApp
 echo "sdk.dir=/path/to/android-sdk" > local.properties
 ./gradlew :app:assembleRelease    # R8-minified APK (~23 MB, mostly fonts and wallpapers), signed with the shared debug key
@@ -49,7 +49,7 @@ A library of 13 GB fits on a memory card (an SD card that Android mounts as port
 
 Pardes updates itself from within, as desktop Zayit does with its Nucleus updater (`app/.../update/`).
 
-- **Finding a new version:** at every start (Settings › כללי › "בדוק עדכונים בכל הפעלה", on by default) and on "בדוק עדכונים" in Settings › כללי. It reads the releases as the download site does: the GitHub API's list, or, when the API cannot be reached, the site's `releases.json`. The newest release that is not a pre-release, with a `pardes-*.apk` and its sha256 digest, is offered when its `versionName` (from the tag) is higher than the installed one. What is new comes from the site's `changelog.md` (this folder's CHANGELOG.md), the sections between the two versions.
+- **Finding a new version:** at every start (Settings › כללי › "בדוק עדכונים בכל הפעלה", on by default) and on "בדוק עדכונים" in Settings › כללי. It reads the GitHub API's 30 newest releases, or the site's `releases.json` when the API cannot be reached or that page holds no Android release (Pardes for desktop's releases share the list; the site itself reads every page). The newest release that is not a pre-release, with a `pardes-*.apk` and its sha256 digest, is offered when its `versionName` (from the tag) is higher than the installed one. What is new comes from the site's `changelog.md` (this folder's CHANGELOG.md), the sections between the two versions.
 - **Telling the user:** once per new version, a snackbar ("גרסה X של פרדס זמינה", "פרטים"). While the version is known, the title bar has desktop's badge: a button on a tablet, a dot on the phone's overflow menu with "עדכון זמין" as its first item. Both open the update dialog: the version, the size, what is new, and "הורד והתקן" / "מאוחר יותר". Settings › כללי has desktop's banner at the top of the app card.
 - **Downloading:** into the app's cache, with the library downloads' network code (it resumes after a dropped connection), in the foreground with a notification and a cancel action. Then the APK is checked: the sha256 that GitHub publishes for the asset, and that Android reads it as Pardes, of the offered version and not older, signed with the same certificate as the installed app. A file that fails is deleted and never installed.
 - **Installing:** Android's PackageInstaller. The first time, Pardes needs Android's permission to install apps: "פתח הגדרות" opens "התקנת אפליקציות לא מוכרות", where the user turns on "לאפשר מהמקור הזה", and the install goes on when the user comes back. Pardes then replaces itself, usually without a further question (it holds `UPDATE_PACKAGES_WITHOUT_USER_ACTION`); when Android does ask, its confirmation opens, or waits in a notification ("המשך בהתקנה" opens it again). The library, the settings and (with "שמור מצב בין הפעלות") the tabs stay. Android ends the app at the end of the install; the new version says "פרדס עודכן לגרסה X" in a notification and once in the app. On Android 11 two things differ: turning the permission on restarts Pardes (Android 11 ends an app whose install permission changes), and when the user comes back, the new process opens the update dialog again and installs the checked APK by itself; and Android asks to confirm every update, since `UPDATE_PACKAGES_WITHOUT_USER_ACTION` exists only from Android 12. Android 8 to 10 also ask to confirm every update, but keep Pardes running when the permission is turned on (checked on 8.0).
@@ -67,7 +67,7 @@ Pardes updates itself from within, as desktop Zayit does with its Nucleus update
 | `ui/shell/` | App frame: phone top bar or tablet tab strip, tabs, overlays, history and favourites screens |
 | `ui/home/` | Home: logo, search field, catalog row, zmanim cards |
 | `ui/reader/` | Book reader with the commentaries, targum, sources, notes and book-info panes; TOC and library drawer; long-press line actions |
-| `search/` | The desktop 0.6.1 Lucene search on the library's prebuilt indexes: Android variants of the four desktop classes that use JDBC, MMapDirectory or `Path.of`, the 0.6.1 app files the search needs (vendored from 0.6.1: snippet sources, author names, reference parsing), and `SearchService`, which opens them. Reference parsing, author names and `LuceneLookupSearchService` include the 0.6.2 fixes 2126c238 and 90552dbc |
+| `search/` | The desktop 0.6.7 Lucene search on the library's prebuilt indexes: Android variants of the four desktop classes that use JDBC, MMapDirectory or `Path.of`, the desktop app files the search needs (vendored from 0.6.7: snippet sources, author names, reference parsing), and `SearchService`, which opens them. Since 0.6.1 the vendored files and `LuceneLookupSearchService` changed only by the 0.6.2 fixes 2126c238 and 90552dbc, `AcronymFrequencyCache` only for desktop's CLI (58e8beb5), and the engine by SeforimLibrary c3190c4 (the found line's range in a hit) |
 | `ui/search/` | Full-text search screen (port of the desktop search results: paging, category/book tree with counts, base-books-only telescope) |
 | `ui/settings/`, `ui/tools/`, `ui/onboarding/` | The desktop settings window, tools menu and first-run flow |
 
@@ -78,17 +78,19 @@ Pardes updates itself from within, as desktop Zayit does with its Nucleus update
 
 ## Known differences from desktop
 
-The app follows desktop Zayit 0.6.1 screen by screen. [docs/PARITY.md](docs/PARITY.md) is the checklist of every difference found by comparing it with the real 0.6.1 sources. What still differs on purpose:
+The app follows desktop Zayit 0.6.7 screen by screen (0.6.1 until October 2026). [docs/PARITY.md](docs/PARITY.md) is the checklist of every difference found by comparing it with the real 0.6.1 sources, and records what each desktop release since then changed and what became of it here. What still differs on purpose:
 
 - **Name and authorship:** The app is Pardes, with its own icon, wherever desktop says Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept, and About links Pardes's own source. Desktop's About text (its author on Zayit, in his first person) and the Rashi Amiti font (licensed to the Zayit app only) are left out.
 - **Meaning-based (semantic) search:** desktop's comes from a private package. Android behaves like the desktop community build.
 - **Google Drive backup:** left out, because desktop uses a desktop-only OAuth client. Backup to a file works.
 - **Updating the app:** desktop's Nucleus updater can install a patch on close without asking. On Android the downloaded APK goes to Android's PackageInstaller; the first time the user must let Pardes install apps in Android's settings. Desktop always checks at start; Pardes has a setting to turn that off. Only published releases update themselves (development builds have another signing key).
 - **Smart siddur:** the full template siddur is a private desktop package. Android implements its portable parts.
+- **Verse quote links in the Talmud:** a private package of desktop's official builds (0.6.5), not included.
+- **Tabs that no longer fit (tablets):** desktop 0.6.5 gathers them under an "עוד N" chip; the tablet strip here scrolls, keeping the shown tab in view, and the phone lists its tabs.
 
 ## Licence and credits
 
-- **Zayit and SeforimLibrary:** by Elie (Elyahou) Gambache. Copyright (C) 2025 Elie Gambache, under the GNU AGPL v3 with an additional attribution term (§7b); see [../LICENSE](../LICENSE). Pardes is a modified version of that code (from desktop Zayit 0.6.1, adapted to Android in 2026). It is distributed under the same licence, keeps those notices, and its source is available under AGPL-3.0: this repository, and the complete source attached to every release.
+- **Zayit and SeforimLibrary:** by Elie (Elyahou) Gambache. Copyright (C) 2025 Elie Gambache, under the GNU AGPL v3 with an additional attribution term (§7b); see [../LICENSE](../LICENSE). Pardes is a modified version of that code (from desktop Zayit 0.6.7, adapted to Android in 2026). It is distributed under the same licence, keeps those notices, and its source is available under AGPL-3.0: this repository, and the complete source attached to every release.
 - **Attribution (§7b):** Powered by the technologies that drive Zayit — https://zayitapp.com/
-- **Not included:** the official desktop releases add proprietary modules (meaning-based search, the full smart siddur) that Pardes does not have.
+- **Not included:** the official desktop releases add proprietary modules (meaning-based search, the full smart siddur, the Talmud's verse quote links) that Pardes does not have.
 - **Library data:** the [SeforimLibrary releases](https://github.com/kdroidFilter/SeforimLibrary/releases), built from [Sefaria](https://www.sefaria.org.il/) and [Otzaria](https://github.com/Otzaria/otzaria-library) sources.

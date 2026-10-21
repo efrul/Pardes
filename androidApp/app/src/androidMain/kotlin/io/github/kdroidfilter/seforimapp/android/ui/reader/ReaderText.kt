@@ -25,7 +25,7 @@ import io.github.kdroidfilter.seforimapp.android.data.UserNote
 import kotlin.math.max
 import kotlin.math.min
 
-// Text helpers of the reader, ported from desktop 0.6.1 core/presentation/text: DiacriticsMode.kt, HebrewSearch.kt,
+// Text helpers of the reader, ported from desktop 0.6.7 core/presentation/text: DiacriticsMode.kt, HebrewSearch.kt,
 // Highlighting.kt, Notes.kt, and htmlparser's SkiaHtmlImageBuilder (here on BitmapFactory).
 
 /** Which Hebrew diacritics the reader displays; the diacritics button cycles through them (desktop DiacriticsMode). */

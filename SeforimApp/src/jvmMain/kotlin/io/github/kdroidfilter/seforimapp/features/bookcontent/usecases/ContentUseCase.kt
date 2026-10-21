@@ -5,7 +5,9 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.usecases
 import androidx.paging.Pager
 import androidx.paging.PagingData
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.features.bookcontent.quotelinks.installedQuoteLinks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentStateManager
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.PreviousPositions
 import io.github.kdroidfilter.seforimapp.logger.debugln
 import io.github.kdroidfilter.seforimapp.pagination.LinesPagingSource
 import io.github.kdroidfilter.seforimapp.pagination.PagingDefaults
@@ -21,6 +23,7 @@ import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
 class ContentUseCase(
     private val repository: LineSelectionRepository,
     private val stateManager: BookContentStateManager,
+    private val linesByIds: suspend (Collection<Long>) -> List<Line> = { ids -> ids.mapNotNull { repository.getLine(it) } },
 ) {
     /**
      * Construit un Pager pour les lignes du livre
@@ -28,13 +31,19 @@ class ContentUseCase(
     fun buildLinesPager(
         bookId: Long,
         initialLineId: Long? = null,
-    ): Flow<PagingData<Line>> =
-        Pager(
+    ): Flow<PagingData<Line>> {
+        // The verse quote links (official builds), for the books that have some only: any other book loads as without
+        val decorate: (suspend (List<Line>) -> List<Line>)? =
+            installedQuoteLinks
+                ?.takeIf { it.covers(bookId) }
+                ?.let { quoteLinks -> { lines -> quoteLinks.decorate(bookId, lines, linesByIds) } }
+        return Pager(
             config = PagingDefaults.LINES.config(placeholders = false),
             pagingSourceFactory = {
-                LinesPagingSource(repository, bookId, initialLineId)
+                LinesPagingSource(repository, bookId, initialLineId, decorate)
             },
         ).flow
+    }
 
     /**
      * Sélectionne une ligne.
@@ -289,15 +298,29 @@ class ContentUseCase(
      * Met à jour la position de scroll du contenu
      */
     fun updateContentScrollPosition(
+        bookId: Long,
         anchorId: Long,
         anchorIndex: Int,
         scrollIndex: Int,
         scrollOffset: Int,
     ) {
-        // Ignore scroll saves while a (re)load is in progress. During a same-tab book switch the
-        // outgoing book's LazyColumn emits a final scroll update; without this guard it overwrites
-        // the freshly-reset anchor with a line from the previous book, so the new book opens at the
-        // wrong position and stalls ~1.5s on the missing-anchor lookup in the restore effect.
+        // Reject saves coming from a list that no longer shows the selected book. During a
+        // same-tab book switch the outgoing book's LazyColumn emits a final scroll update on
+        // teardown; the event is handled asynchronously, so an isLoading check alone is racy —
+        // if it lands after the load completes it overwrites the freshly-reset anchor with a
+        // line from the previous book, and the new book's restore effect then stalls ~1.5s on
+        // a missing-anchor lookup (with the content hidden). Matching on bookId is
+        // deterministic regardless of when the event is processed.
+        val currentBookId =
+            stateManager.state.value.navigation.selectedBook
+                ?.id
+        if (currentBookId != bookId) {
+            debugln { "Dropping stale scroll save from book $bookId (selected book: $currentBookId)" }
+            return
+        }
+
+        // Also ignore saves while a (re)load is in progress (e.g. a same-book anchor jump
+        // rebuilding the pager): a transient emission would overwrite the target anchor.
         if (stateManager.state.value.isLoading) {
             return
         }
@@ -314,70 +337,53 @@ class ContentUseCase(
         }
     }
 
-    /**
-     * Toggle l'affichage des commentaires
-     */
+    /** Toggles the commentaries, which share the bottom dock (and its height) with the sources. */
     fun toggleCommentaries(): Boolean {
-        val currentState = stateManager.state.value
-        val isVisible = currentState.content.showCommentaries
-        val newPosition: Float
-
-        if (isVisible) {
-            // Cacher
-            val prev = currentState.layout.contentSplitState.positionPercentage
-            stateManager.updateLayout {
-                copy(
-                    previousPositions =
-                        previousPositions.copy(
-                            content = prev,
-                        ),
-                )
-            }
-            // Fully expand the main content when comments are hidden
-            newPosition = 1f
-            currentState.layout.contentSplitState.positionPercentage = newPosition
-        } else {
-            // Montrer
-            newPosition = currentState.layout.previousPositions.content
-            currentState.layout.contentSplitState.positionPercentage = newPosition
-        }
-
-        stateManager.updateContent {
-            copy(showCommentaries = !isVisible, showSources = if (!isVisible) false else showSources)
-        }
-
-        return !isVisible
+        val visible = stateManager.state.value.content
+        val shown =
+            toggleBottomPane(
+                isVisible = visible.showCommentaries,
+                otherVisible = visible.showSources,
+                previous = { content },
+                save = { copy(content = it) },
+            )
+        stateManager.updateContent { copy(showCommentaries = shown) }
+        return shown
     }
 
+    /** Toggles the sources, which share the bottom dock (and its height) with the commentaries. */
     fun toggleSources(): Boolean {
-        val currentState = stateManager.state.value
-        val isVisible = currentState.content.showSources
-        val newPosition: Float
-
-        if (isVisible) {
-            val prev = currentState.layout.contentSplitState.positionPercentage
-            stateManager.updateLayout {
-                copy(
-                    previousPositions =
-                        previousPositions.copy(
-                            sources = prev,
-                        ),
-                )
-            }
-            newPosition = 1f
-            currentState.layout.contentSplitState.positionPercentage = newPosition
-        } else {
-            newPosition = currentState.layout.previousPositions.sources
-            currentState.layout.contentSplitState.positionPercentage = newPosition
-        }
-
-        stateManager.updateContent {
-            copy(
-                showSources = !isVisible,
-                showCommentaries = if (!isVisible) false else showCommentaries,
+        val visible = stateManager.state.value.content
+        val shown =
+            toggleBottomPane(
+                isVisible = visible.showSources,
+                otherVisible = visible.showCommentaries,
+                previous = { sources },
+                save = { copy(sources = it) },
             )
-        }
+        stateManager.updateContent { copy(showSources = shown) }
+        return shown
+    }
 
+    /**
+     * The bottom dock's height is the layout's content split, shared by its panes: it collapses only when its
+     * last pane closes, and is restored to the opening pane's last height only when the dock was empty.
+     */
+    private fun toggleBottomPane(
+        isVisible: Boolean,
+        otherVisible: Boolean,
+        previous: PreviousPositions.() -> Float,
+        save: PreviousPositions.(Float) -> PreviousPositions,
+    ): Boolean {
+        val layout = stateManager.state.value.layout
+        val split = layout.contentSplitState
+        if (isVisible) {
+            val current = split.positionPercentage
+            stateManager.updateLayout { copy(previousPositions = previousPositions.save(current)) }
+            if (!otherVisible) split.positionPercentage = 1f
+        } else if (!otherVisible) {
+            split.positionPercentage = layout.previousPositions.previous()
+        }
         return !isVisible
     }
 

@@ -161,7 +161,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-// Desktop 0.6.1 strings (composeResources/values/strings.xml).
+// Desktop 0.6.7 strings (composeResources/values/strings.xml).
 private const val SEARCH_TEXT_ROW = "חיפוש במאגר: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_BOOK = "חיפוש בתוך %2\$s: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_AUTHOR = "חיפוש בספרי %2\$s: %1\$s"
@@ -275,11 +275,11 @@ private fun catBookRows(
 
 /**
  * The one smart search bar (references, books, authors, texts) with its suggestions: the home page's, reused by the
- * search results page. Port of desktop 0.6.1 HomeView.kt UnifiedSearchBar + SearchBar (+ SuggestionsPanel,
- * TocSuggestionsPanel, SuggestionRow, RowActionChip, SelectedBookChip) and texteffects/TypewriterPlaceholder.kt,
- * with the 0.6.2 fix 51463d23 in [catBookRows] (a title being typed opens the book before the text search) and the
- * 0.6.5 commits 1723de06 and 9e3d19a8 (once an author is picked, the text row searches all their books: one action,
- * no base books to choose, Ctrl+Enter as Enter).
+ * search results page. Port of desktop 0.6.7 HomeView.kt UnifiedSearchBar + SearchBar (+ SuggestionsPanel,
+ * TocSuggestionsPanel, SuggestionRow, RowActionChip, SelectedBookChip) and texteffects/TypewriterPlaceholder.kt:
+ * 0.6.1's with the 0.6.2 fix 51463d23 in [catBookRows] (a title being typed opens the book before the text search)
+ * and the 0.6.5 commits 1723de06 and 9e3d19a8 (once an author is picked, the text row searches all their books: one
+ * action, no base books to choose, Ctrl+Enter as Enter).
  *
  * Touch adaptation: a tap on a row is desktop's click (Enter); IME "Search" is Enter (it runs the highlighted row,
  * the first one by default); the text row always shows its "בספרי יסוד" / "בכל הספרים" buttons ("חיפוש" alone in an

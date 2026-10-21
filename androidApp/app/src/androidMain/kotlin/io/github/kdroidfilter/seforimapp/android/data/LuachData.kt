@@ -17,7 +17,7 @@ import java.time.LocalDate
 import java.util.Date
 
 /*
- * Port of desktop 0.6.1 features/home/widgets/luach/LuachData.kt (what the luach widgets show, after the KosherKotlin
+ * Port of desktop 0.6.7 features/home/widgets/luach/LuachData.kt (what the luach widgets show, after the KosherKotlin
  * demo's luach: plain data, computed from the day and the place), plus the library lookups of LuachWidgets.kt
  * (rememberOpenInLibrary's linesOf). Same library, same functions: the rows must read as desktop's do.
  */

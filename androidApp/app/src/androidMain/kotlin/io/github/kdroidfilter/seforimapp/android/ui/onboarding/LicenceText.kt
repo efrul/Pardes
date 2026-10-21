@@ -7,9 +7,9 @@ package io.github.kdroidfilter.seforimapp.android.ui.onboarding
 internal const val PARDES_LICENSE_URL = "https://github.com/efrul/Pardes/blob/HEAD/LICENSE"
 
 /**
- * Desktop `files/CONDITIONS.md` (Zayit 0.6.1), shown by the licence step and Settings › תנאים, under this app's name,
- * Pardes. The font and licence paragraphs are reworded: desktop's speak for the official releases ("הוענק לנו", "הגרסאות
- * הרשמיות כוללות"), and Rashi Amiti, licensed to the Zayit app only, is not in Pardes.
+ * Desktop `files/CONDITIONS.md` (Zayit 0.6.7, unchanged since 0.6.1), shown by the licence step and Settings › תנאים,
+ * under this app's name, Pardes. The font and licence paragraphs are reworded: desktop's speak for the official releases
+ * ("הוענק לנו", "הגרסאות הרשמיות כוללות"), and Rashi Amiti, licensed to the Zayit app only, is not in Pardes.
  */
 internal const val CONDITIONS_MARKDOWN = """
 פרדס עושה שימוש במאגרי נתונים שמקורם בפרויקטים **[Sefaria](https://www.sefaria.org.il/)** ו־**[Otzaria Library](https://github.com/Otzaria/otzaria-library)**, אשר הומרו ונערכו לפורמט SQL במאגר
@@ -35,7 +35,7 @@ internal const val CONDITIONS_MARKDOWN = """
 [**AGPL v3**]($PARDES_LICENSE_URL)
 עם תנאי ייחוס נוסף: ⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩
 
-פרדס נבנה מהקוד הפתוח של זית 0.6.1, ושונה ב־2026 כדי לפעול באנדרואיד. גם הוא מופץ תחת רישיון AGPL v3, ו[קוד המקור שלו](https://github.com/efrul/Pardes) זמין תחת אותו רישיון. הוא מסופק כמות שהוא, ללא כל אחריות.
+פרדס נבנה מהקוד הפתוח של זית 0.6.7, ושונה ב־2026 כדי לפעול באנדרואיד. גם הוא מופץ תחת רישיון AGPL v3, ו[קוד המקור שלו](https://github.com/efrul/Pardes) זמין תחת אותו רישיון. הוא מסופק כמות שהוא, ללא כל אחריות.
 
 נוסח הרישיון המלא, וגם הרישיונות של הספריות, הגופנים והנתונים שבפרדס, נמצאים בהגדרות › רישיונות.
 

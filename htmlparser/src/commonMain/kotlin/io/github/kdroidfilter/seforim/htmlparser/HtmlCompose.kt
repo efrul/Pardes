@@ -4,11 +4,14 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 
 /**
@@ -34,6 +37,33 @@ typealias HtmlImageContentBuilder = (element: ParsedHtmlElement, id: String) -> 
  */
 private val htmlParser = HtmlParser()
 
+/**
+ * A citation link is told by its color, underlined only under the pointer: Compose draws an underline at the font's
+ * underline position, which can't be lowered and crosses the vowels below the letters.
+ */
+private fun refLinkStyles(color: Color) =
+    TextLinkStyles(
+        style = SpanStyle(color = color),
+        hoveredStyle = SpanStyle(color = color, textDecoration = TextDecoration.Underline),
+    )
+
+/**
+ * The text [buildAnnotatedFromHtml] produces with its defaults (footnote markers hidden, their
+ * content shown, no images), without building any style: for matching text, not showing it.
+ */
+fun plainTextFromHtml(html: String): String =
+    buildString {
+        for (e in htmlParser.parse(html)) {
+            when {
+                e.isLineBreak -> append("\n")
+                e.isImage || e.text.isBlank() -> Unit
+                // A hidden marker leaves a space so its neighbours don't collapse
+                e.isFootnoteMarker -> if (isNotEmpty() && !endsWith(" ")) append(" ")
+                else -> append(e.text)
+            }
+        }
+    }
+
 fun buildAnnotatedFromHtml(
     html: String,
     baseTextSize: Float,
@@ -43,6 +73,7 @@ fun buildAnnotatedFromHtml(
     showFootnoteContent: Boolean = true,
     footnoteMarkerColor: Color = Color(0xFF1976D2),
     footnoteContentColor: Color = Color.Unspecified,
+    linkColor: Color = footnoteMarkerColor,
     inlineContent: MutableMap<String, InlineTextContent>? = null,
     imageContentBuilder: HtmlImageContentBuilder? = null,
 ): AnnotatedString {
@@ -60,6 +91,8 @@ fun buildAnnotatedFromHtml(
         )
     val defaultSize = baseTextSize
     val effectiveBoldScale = if (boldScale < 1f) 1f else boldScale
+
+    val linkStyles by lazy { refLinkStyles(linkColor) }
 
     return buildAnnotatedString {
         var imageIndex = 0
@@ -103,6 +136,13 @@ fun buildAnnotatedFromHtml(
             val start = length
             append(e.text)
             val end = length
+
+            // Citation link, opened through LocalUriHandler. The surrounding spaces stay outside the link.
+            e.href?.let { href ->
+                val linkStart = start + (e.text.length - e.text.trimStart().length)
+                val linkEnd = end - (e.text.length - e.text.trimEnd().length)
+                if (linkStart < linkEnd) addLink(LinkAnnotation.Url(href, linkStyles), linkStart, linkEnd)
+            }
 
             // Handle footnote marker styling (superscript, colored)
             if (e.isFootnoteMarker) {
