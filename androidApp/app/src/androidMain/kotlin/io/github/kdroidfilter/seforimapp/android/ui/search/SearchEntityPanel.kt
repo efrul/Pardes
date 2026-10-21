@@ -36,11 +36,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.AccentButton
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 
-// Desktop 0.6.1 strings.
-private const val SEARCH_PANEL_AUTHOR = "מחבר"
-private const val SEARCH_PANEL_PARTS = "חלקי הספר"
-private const val SEARCH_PANEL_SOURCE = "מקור ורישיון"
-private const val SEARCH_PANEL_AUTHOR_PAGE = "לדף המחבר"
+// Desktop 0.6.1 strings (the panel's titles are in SearchResults.kt, shared with the Android 4.4 edition).
 private const val LICENSE_PUBLIC_DOMAIN = "נחלת הכלל"
 private const val LICENSE_UNKNOWN = "רישיון לא ידוע"
 private const val OTZARIA_CREDIT = "התכנים שלפניכם נאספו, מוינו, סוננו ונערכו בעמל רב ובמסירות על ידי צוות פרויקט 'אוצריא' (otzaria.org)."

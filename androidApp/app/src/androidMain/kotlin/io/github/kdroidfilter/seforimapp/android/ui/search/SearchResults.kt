@@ -6,9 +6,11 @@ package io.github.kdroidfilter.seforimapp.android.ui.search
 import androidx.compose.runtime.Immutable
 import io.github.kdroidfilter.seforimapp.android.search.searchKey
 import io.github.kdroidfilter.seforimlibrary.core.models.SearchResult
+import java.text.NumberFormat
 import java.util.Locale
 
-// The results' view logic (moved from SearchScreen.kt, shared with the Android 4.4 edition).
+// The results' view logic and texts (moved from SearchScreen.kt, SearchParts.kt and SearchEntityPanel.kt, shared with the
+// Android 4.4 edition).
 
 // Desktop 0.6.1 strings.
 internal const val SEARCH_SEARCHING = "מחפש..."
@@ -38,7 +40,33 @@ internal const val SEARCH_BOOK_DETAILS = "פרטי הספר"
 // Android only: the engine failed (an I/O error, or Lucene unable to run on this device).
 internal const val SEARCH_FAILED = "החיפוש נכשל"
 
+// Android only: the library has no full-text index (SearchIndexMissing; it is never built on the device).
+internal const val SEARCH_INDEX_MISSING = "אינדקס החיפוש של הספרייה חסר"
+internal const val SEARCH_LIBRARY_FOLDER = "תיקיית הספרייה:"
+const val SEARCH_INDEX_MISSING_TEXT =
+    "החיפוש בטקסט המלא משתמש באותו אינדקס שהאפליקציה למחשב שומרת לצד מסד הנתונים: התיקיות seforim.db.lucene " +
+        "ו־seforim.db.lookup.lucene והקובץ lexical.db. האינדקס אינו נבנה על המכשיר. כדי לקבל אותו, העבירו את הקבצים מהמחשב " +
+        "לתיקיית הספרייה בעזרת סקריפט ההעברה (push-desktop-library), או התקינו את הספרייה מחדש (החבילה המלאה כוללת אותו): " +
+        "\"איפוס האפליקציה\" בהגדרות › ניהול נתונים מחזיר למסך ההתקנה, ומוחק גם את ההערות וההדגשות, לכן ייצאו אותן קודם."
+
+// The knowledge panel's (SearchEntityPanel.kt), desktop 0.6.1 strings.
+internal const val SEARCH_PANEL_AUTHOR = "מחבר"
+internal const val SEARCH_PANEL_PARTS = "חלקי הספר"
+internal const val SEARCH_PANEL_SOURCE = "מקור ורישיון"
+internal const val SEARCH_PANEL_AUTHOR_PAGE = "לדף המחבר"
+
 internal fun String.fill(vararg args: Any): String = String.format(Locale.ROOT, this, *args)
+
+/** Desktop SearchStatusLine count: grouped digits (NumberFormat.getIntegerInstance). */
+internal fun formatCount(n: Long): String = NumberFormat.getIntegerInstance(Locale.US).format(n)
+
+/** The result's categories (הלכה › ראשונים) and its place in the book (סימן קד), once its breadcrumb is known. */
+internal fun categoriesAndPlace(pieces: List<String>?, bookTitle: String): Pair<String, String?> {
+    val bookIndex = pieces?.indexOf(bookTitle) ?: -1
+    if (pieces == null || bookIndex < 0) return "" to null
+    val place = pieces.drop(bookIndex + 1).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null }
+    return pieces.take(bookIndex).joinToString(" › ") to place
+}
 
 /** One result of the flat list: a passage, and how many more its book has ([more], on the book's first result only). */
 @Immutable
