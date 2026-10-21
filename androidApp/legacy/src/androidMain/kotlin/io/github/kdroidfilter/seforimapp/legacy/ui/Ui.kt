@@ -125,6 +125,9 @@ object Fonts {
     /** The book text's font (Settings; the main app's default is Noto Serif Hebrew). */
     fun book(context: Context): Typeface = asset(context, PardesApp.of(context).prefs.bookFont.asset)
 
+    /** The main app's text for everything but the book (ZayitFonts.ui): Noto Serif Hebrew, whatever the book's font. */
+    fun ui(context: Context): Typeface = asset(context, "fonts/notoserifhebrew.ttf")
+
     /** Commentaries, as the main app: Frank Ruhl Libre. */
     fun commentary(context: Context): Typeface = asset(context, "fonts/frankruhllibre.ttf")
 
@@ -497,13 +500,14 @@ class LevelDots(context: Context, private val colors: Colors) : View(context) {
 }
 
 /**
- * Rows of children that wrap, each row centred (Compose's FlowRow, as the Home's catalog row): Android 4.4 has no
- * such layout of its own.
+ * Rows of children that wrap, each row centred (Compose's FlowRow, as the Home's catalog row), or from the start when
+ * not [centered] (the search's tabs and status line): Android 4.4 has no such layout of its own.
  */
-class FlowRow(context: Context, private val gapX: Int, private val gapY: Int) : ViewGroup(context) {
+class FlowRow(context: Context, private val gapX: Int, private val gapY: Int, private val centered: Boolean = true) : ViewGroup(context) {
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         var x = 0
+        var widest = 0
         var rowHeight = 0
         var height = 0
         for (i in 0 until childCount) {
@@ -516,10 +520,13 @@ class FlowRow(context: Context, private val gapX: Int, private val gapY: Int) : 
                 rowHeight = 0
             }
             x += (if (x > 0) gapX else 0) + child.measuredWidth
+            widest = maxOf(widest, x)
             rowHeight = maxOf(rowHeight, child.measuredHeight)
         }
         height += rowHeight
-        setMeasuredDimension(width, if (childCount == 0) 0 else height)
+        // Asked to wrap its children (the search's status beside its progress): as wide as its widest row
+        val measured = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.EXACTLY) width else minOf(width, widest)
+        setMeasuredDimension(measured, if (childCount == 0) 0 else height)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
@@ -529,7 +536,7 @@ class FlowRow(context: Context, private val gapX: Int, private val gapY: Int) : 
         var row = ArrayList<View>()
         var rowWidth = 0
         fun place() {
-            var x = (width - rowWidth) / 2
+            var x = if (centered) (width - rowWidth) / 2 else if (rtl) width - rowWidth else 0
             val rowHeight = row.maxOfOrNull { it.measuredHeight } ?: 0
             // Right to left: the first child at the right, as Compose's FlowRow lays it out.
             for (child in if (rtl) row.asReversed() else row) {

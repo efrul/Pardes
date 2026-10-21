@@ -11,9 +11,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.search.SearchViewModel
 import io.github.kdroidfilter.seforimapp.legacy.db.SqliteException
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
-import io.github.kdroidfilter.seforimlibrary.search.LineHit
 import io.github.kdroidfilter.seforimlibrary.search.LuceneTuning
-import io.github.kdroidfilter.seforimlibrary.search.SearchSession
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
@@ -57,8 +55,11 @@ import org.apache.lucene.store.NIOFSDirectory
  * 1,265 Lucene classes. It also runs a small search on each index, so that a class this Android lacks, a missing or
  * corrupt file shows up then rather than in the user's first search.
  *
- * The search screen uses [service] with the main app's view models ([searchViewModel], [searchBarViewModel]), and
- * [search], [suggestBooks] and [highlightRanges] directly.
+ * A lookup index that fails is closed alone: the full text stays searched without it ([culprit]).
+ *
+ * The search screen (SearchActivity) uses [screenService] with the main app's view models ([searchViewModel],
+ * [searchBarViewModel]), and the scan (ScanSearch) below [Level.Full], saying why ([textUnavailable]); the library tree
+ * finds books with [suggestBooks].
  */
 class LegacySearch(context: Context, private val library: Library, private val prefs: Prefs) {
     /** From the least to the most: compare them. */
@@ -152,7 +153,14 @@ class LegacySearch(context: Context, private val library: Library, private val p
      * The opening runs in this class's scope: a caller that goes away while it waits (a screen closed) only stops
      * waiting, and the open with its small search still finishes, so that no level stands without having been tried.
      */
-    suspend fun service(): SearchService? = scope.async { openService() }.await()
+    suspend fun service(): SearchService? = scope.async { openService()?.takeIf { _level.value != Level.Scan } }.await()
+
+    /**
+     * [service] for the search screen, at every level (null without a library): at [Level.Scan] it opens no index, and the
+     * main app's search bar on it suggests books from the database's titles and acronyms, as it does there without the
+     * lookup index. The same service for a library folder whatever its level, so the screen's view models keep it.
+     */
+    suspend fun screenService(): SearchService? = scope.async { openService() }.await()
 
     private suspend fun openService(): SearchService? = mutex.withLock {
         val dir = runCatching { library.open().file.parentFile }.getOrNull()
@@ -163,7 +171,7 @@ class LegacySearch(context: Context, private val library: Library, private val p
         val target = chooseLevel(dir)
         val current = opened
         if (current != null && current.dir == dir && target == _level.value) {
-            return@withLock current.service.takeIf { target != Level.Scan }
+            return@withLock current.service
         }
         // A new library folder, or another level (an index copied in or removed, a failure, retry): open again. The
         // level is set before the open service closes, so that a holder of it reopening it meanwhile (a keystroke's
@@ -174,7 +182,7 @@ class LegacySearch(context: Context, private val library: Library, private val p
         _level.value = target
         current?.service?.close()
         tryOpen(dir, service)
-        service.takeIf { _level.value != Level.Scan }
+        service
     }
 
     /** The level the folder's indexes allow on this phone, without loading Lucene. */
@@ -190,9 +198,14 @@ class LegacySearch(context: Context, private val library: Library, private val p
         }
     }
 
+    /** While a failed open is told apart ([culprit]): the one index SearchService may open, else null for both. */
+    @Volatile
+    private var only: String? = null
+
     /** What SearchService may open now: the full-text index at [Level.Full], the lookup index unless it failed. */
     private fun allows(index: String): Boolean {
         val dir = opened?.dir ?: return false
+        only?.let { if (it != index) return false }
         return when (index) {
             SearchService.TEXT_INDEX -> _level.value == Level.Full
             else -> _level.value != Level.Scan && LOOKUP !in recordedFailures(dir) && synchronized(sessionFailures) { LOOKUP !in sessionFailures }
@@ -204,21 +217,25 @@ class LegacySearch(context: Context, private val library: Library, private val p
         while (_level.value != Level.Scan) {
             val level = _level.value
             val start = SystemClock.elapsedRealtime()
-            var part = TEXT
-            try {
+            // The index a failure is that of; null while SearchService opens both at once (at Level.Full)
+            var part: String? = if (level == Level.Full) null else LOOKUP
+            val failed = try {
                 if (level == Level.Full) {
-                    lucene(TEXT, dir, opening = true) { service.engine()?.searchBooksByTitlePrefix(PROBE_QUERY, 1) }
+                    val engine = service.engine()
+                    part = TEXT
+                    engine?.searchBooksByTitlePrefix(PROBE_QUERY, 1)
                 }
                 part = LOOKUP
-                lucene(LOOKUP, dir, opening = true) { service.lookup()?.suggestBooks(PROBE_QUERY, 1) }
+                service.lookup()?.suggestBooks(PROBE_QUERY, 1)
                 Log.i(TAG, "search: $level, opened in ${SystemClock.elapsedRealtime() - start} ms (heap ${heapBytes shr 20} MB)")
                 return
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                // Recorded already when its verdict says so; whatever it was, that index stays closed for the session
-                synchronized(sessionFailures) { sessionFailures += part }
+                part?.also { fail(dir, it, t, opening = true) } ?: culprit(dir, service, t)
             }
+            // Recorded already when its verdict says so; whatever it was, that index stays closed for the session
+            synchronized(sessionFailures) { sessionFailures += failed }
             // The level first, then the close (see openService)
             _level.value = chooseLevel(dir)
             service.close()
@@ -227,16 +244,30 @@ class LegacySearch(context: Context, private val library: Library, private val p
     }
 
     /**
-     * Runs a call on one index ([TEXT] or [LOOKUP]), while it opens ([opening]) or for a search: what it throws closes
-     * that index as far as its [verdict] says, and is thrown on.
+     * Which index made the open of both at [Level.Full] fail with [error], its failure recorded as its [verdict] says.
+     * SearchService opens the two together, so the lookup index is opened alone to tell: a lookup index that fails is
+     * closed and the full text kept without it, where both closed with it would leave the scan.
      */
-    private inline fun <T> lucene(index: String, dir: File, opening: Boolean, block: () -> T): T = try {
-        block()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (t: Throwable) {
-        fail(dir, index, t, opening)
-        throw t
+    private suspend fun culprit(dir: File, service: SearchService, error: Throwable): String {
+        var index = TEXT
+        var cause = error
+        if (allows(SearchService.LOOKUP_INDEX)) {
+            service.close()
+            only = SearchService.LOOKUP_INDEX
+            try {
+                service.lookup()?.suggestBooks(PROBE_QUERY, 1)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                index = LOOKUP
+                cause = t
+            } finally {
+                only = null
+                service.close()
+            }
+        }
+        fail(dir, index, cause, opening = true)
+        return index
     }
 
     /** Closes [index] after [error] for as long as its [verdict] says; true when it is to close now. */
@@ -250,6 +281,7 @@ class LegacySearch(context: Context, private val library: Library, private val p
             }
             Verdict.Session -> {
                 Log.w(TAG, "search: the $index index failed, closed for this session", error)
+                if (index == TEXT) textFailure = describe(error)
                 synchronized(sessionFailures) { sessionFailures += index }
                 true
             }
@@ -258,6 +290,34 @@ class LegacySearch(context: Context, private val library: Library, private val p
                 true
             }
         }
+    }
+
+    /** What closed the full-text index for this session ([Verdict.Session]), as the search screen shows it. */
+    @Volatile
+    private var textFailure: String? = null
+
+    /** Why the search screen searches the text by the scan: the full-text index is not in the library, failed, or waits for a larger heap. */
+    sealed interface TextUnavailable {
+        data object Missing : TextUnavailable
+
+        /** [message]: what Lucene threw (its class and message), as the main app's "החיפוש נכשל" shows it. */
+        data class Failed(val message: String) : TextUnavailable
+
+        /** In the library, but this phone's heap is under [SMALL_HEAP_BYTES] (Prefs.searchIndexOnSmallHeap opens it anyway). */
+        data object SmallHeap : TextUnavailable
+    }
+
+    /** Why the text is not searched in the index now, or null at [Level.Full]. Reads the library folder: off the main thread. */
+    fun textUnavailable(): TextUnavailable? {
+        if (_level.value == Level.Full) return null
+        val dir = opened?.dir ?: runCatching { library.open().file.parentFile }.getOrNull() ?: return TextUnavailable.Missing
+        if (!SearchService.isIndex(File(dir, SearchService.TEXT_INDEX))) return TextUnavailable.Missing
+        if (TEXT in recordedFailures(dir)) {
+            return TextUnavailable.Failed(prefs.searchFailure?.split('|', limit = 4)?.getOrNull(3).orEmpty())
+        }
+        if (synchronized(sessionFailures) { TEXT in sessionFailures }) return TextUnavailable.Failed(textFailure.orEmpty())
+        if (heapBytes < SMALL_HEAP_BYTES && !prefs.searchIndexOnSmallHeap) return TextUnavailable.SmallHeap
+        return TextUnavailable.Missing
     }
 
     /**
@@ -272,6 +332,7 @@ class LegacySearch(context: Context, private val library: Library, private val p
     /** Forgets the recorded failures and opens the search again at the best level (the search screen's "נסה שוב"). */
     fun retry() {
         prefs.searchFailure = null
+        textFailure = null
         synchronized(sessionFailures) { sessionFailures.clear() }
         heapFailures.set(0)
         reopen()
@@ -286,6 +347,7 @@ class LegacySearch(context: Context, private val library: Library, private val p
         val current = opened
         opened = null
         _level.value = Level.Scan
+        textFailure = null
         synchronized(sessionFailures) { sessionFailures.clear() }
         current?.service?.close()
     }
@@ -295,56 +357,9 @@ class LegacySearch(context: Context, private val library: Library, private val p
         scope.launch { runCatching { service() } }
     }
 
-    /** A search on the full-text index: what it throws closes the index as its [verdict] says, and is thrown on. */
-    private suspend fun <T> textSearch(dir: File, block: suspend () -> T): T = try {
-        block()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (t: Throwable) {
-        if (fail(dir, TEXT, t, opening = false)) reopen()
-        throw t
-    }
+    // ------------------------------------------------------------------ for the screens
 
-    // ------------------------------------------------------------------ for the search screen
-
-    /** A search of the full-text index: its first page and number of hits, then [more]. Close it when done. */
-    class Results internal constructor(
-        val query: String,
-        val total: Long,
-        val hits: List<LineHit>,
-        val isLastPage: Boolean,
-        private val session: SearchSession,
-        private val next: suspend (SearchSession) -> List<LineHit>?,
-    ) : AutoCloseable {
-        /** The next page, or null after the last one. */
-        suspend fun more(): List<LineHit>? = next(session)
-
-        override fun close() = session.close()
-    }
-
-    /**
-     * Searches [query] in the base books or in all books, as the main app's first page (with snippets); null below
-     * [Level.Full] or for a query of nothing. Throws what the search threw, after recording it.
-     */
-    suspend fun search(query: String, baseBooksOnly: Boolean, pageSize: Int = PAGE_SIZE): Results? = withContext(Dispatchers.IO) {
-        val service = service() ?: return@withContext null
-        val dir = opened?.dir ?: return@withContext null
-        textSearch(dir) {
-            val engine = service.engine() ?: return@textSearch null
-            val session = engine.openSession(query, baseBookOnly = baseBooksOnly) ?: return@textSearch null
-            val page = try {
-                session.nextPage(pageSize)
-            } catch (t: Throwable) {
-                session.close()
-                throw t
-            }
-            Results(query, page?.totalHits ?: 0L, page?.hits.orEmpty(), page?.isLastPage ?: true, session) { s ->
-                withContext(Dispatchers.IO) { textSearch(dir) { s.nextPage(pageSize) }?.hits }
-            }
-        }
-    }
-
-    /** Books for what is typed, by the lookup index's ranking (the main app's); null without it. */
+    /** Books for what is typed, by the lookup index's ranking (the main app's); null without it (the library tree). */
     suspend fun suggestBooks(query: String, limit: Int): List<Book>? = withContext(Dispatchers.IO) {
         val lookup = service()?.lookup() ?: return@withContext null
         runCatching { lookup.suggestBooks(query, limit).map { it.toBook() } }
@@ -377,7 +392,7 @@ class LegacySearch(context: Context, private val library: Library, private val p
     private fun recordFailure(dir: File, index: String, error: Throwable) {
         Log.e(TAG, "search: the $index index failed, not opened again for this library and this build", error)
         val failed = recordedFailures(dir) + index
-        val message = (error.javaClass.name + ": " + error.message).replace('\n', ' ').take(MAX_MESSAGE)
+        val message = describe(error).replace('\n', ' ').take(MAX_MESSAGE)
         prefs.searchFailure = listOf(release(dir), build, failed.sorted().joinToString(","), message).joinToString("|")
     }
 
@@ -391,7 +406,6 @@ class LegacySearch(context: Context, private val library: Library, private val p
         private const val RELEASE_INFO = "release_info.txt"
         private const val MAX_MESSAGE = 300
         private const val PROBE_QUERY = "בראשית"
-        const val PAGE_SIZE = 25
 
         /** Below this heap, even with android:largeHeap, the full-text index stays closed (Level.Lookup). */
         const val SMALL_HEAP_BYTES = 40L shl 20
@@ -409,6 +423,8 @@ class LegacySearch(context: Context, private val library: Library, private val p
 
         /** The searches the heap may run out in before the full-text index closes for the session ([heapFailures]). */
         private const val HEAP_FAILURES = 3
+
+        private fun describe(t: Throwable): String = t.javaClass.name + ": " + t.message
 
         private fun ranOutOfHeap(t: Throwable) = generateSequence(t) { it.cause }.take(8).any { it is VirtualMachineError }
 

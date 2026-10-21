@@ -197,6 +197,8 @@ class TextActivity : BaseActivity() {
             Component("desugar_jdk_libs (Google, מ־OpenJDK)", "GNU GPL v2 עם חריגת Classpath", "licenses/desugar_jdk_libs-LICENSE.txt"),
             Component("Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),
             Component("Bootstrap Icons (The Bootstrap Authors)", "MIT", "licenses/Bootstrap-Icons-LICENSE.txt"),
+            // As the main app's credit (LicencesSettings iconCredits): the search's authors.
+            Component("Emoji One", "CC BY 4.0, creativecommons.org/licenses/by/4.0. אייקון היד הכותבת (Writing hand, Monotone).", null),
             Component("Noto Serif Hebrew", "SIL Open Font License 1.1", "licenses/OFL-Noto-Hebrew.txt"),
             Component("Frank Ruhl Libre", "SIL Open Font License 1.1", "licenses/OFL-Frank-Ruhl-Libre.txt"),
             // Its own notice (Fonts-NOTICE.txt): the GPL with the font exception, and the MIT text of its layout logic.
