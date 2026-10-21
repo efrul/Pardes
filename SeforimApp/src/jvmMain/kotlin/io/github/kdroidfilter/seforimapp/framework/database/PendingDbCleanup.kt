@@ -53,6 +53,7 @@ object PendingDbCleanup {
                 .getOrDefault(emptyList())
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
+                .filterNot { ForeignLibraries.isForeign(File(it).parentFile) }
         if (paths.isEmpty()) {
             runCatching { Files.deleteIfExists(marker.toPath()) }
             return

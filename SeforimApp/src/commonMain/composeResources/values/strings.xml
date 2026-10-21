@@ -500,6 +500,13 @@
     <string name="license_accept_checkbox">אני מאשר את תנאי הרישיון ושימוש</string>
     <string name="next_button">המשך</string>
 
+    <!-- Another app's library found on this machine, offered for use in place -->
+    <string name="onboarding_existing_library_title">נמצא מסד נתונים במחשב</string>
+    <string name="onboarding_existing_library_found">מסד הנתונים של %1$s כבר מותקן במחשב הזה (גרסה %2$s), בתיקייה:</string>
+    <string name="onboarding_existing_library_explain">אפשר להשתמש בו במקומו, בלי להוריד ובלי להעתיק דבר. ההערות, ההגדרות והלשוניות של כל אפליקציה נשארות נפרדות. האפליקציה הזו לא תמחק אותו לעולם: התקנה מחדש של מסד הנתונים תתקין אותו בתיקייה שלה, ואיפוס האפליקציה רק ינתק אותה ממנו.</string>
+    <string name="onboarding_existing_library_use">שימוש במסד הנתונים הקיים</string>
+    <string name="onboarding_existing_library_install_own">התקנת מסד נתונים נפרד</string>
+
     <!-- Installation chooser -->
     <string name="installation_title">בחרו את סוג ההתקנה</string>
     <!-- Online -->

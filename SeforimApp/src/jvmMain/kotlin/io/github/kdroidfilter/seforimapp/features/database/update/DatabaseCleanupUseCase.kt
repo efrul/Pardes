@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.database.update
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.onboarding.extract.BundleParts
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
+import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
 import io.github.kdroidfilter.seforimapp.framework.database.PendingDbCleanup
 import io.github.kdroidfilter.seforimapp.logger.debugln
 import io.github.kdroidfilter.seforimapp.logger.warnln
@@ -66,6 +67,8 @@ class DatabaseCleanupUseCase(
 
             try {
                 for (dir in dirs) {
+                    // Never another app's library used in place: the new one goes to our own folder, and that one stays
+                    if (ForeignLibraries.isForeign(dir)) continue
                     val files = dir.takeIf { it.exists() }?.listFiles() ?: continue
                     for (file in files) {
                         if (!isDatabaseArtifact(file)) continue

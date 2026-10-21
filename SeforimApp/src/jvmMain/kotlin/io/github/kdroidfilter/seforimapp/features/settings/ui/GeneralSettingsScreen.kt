@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import dev.nucleusframework.updater.UpdateLevel
 import dev.nucleusframework.updater.UpdaterConfig
 import dev.zacsweers.metrox.viewmodel.metroViewModel
+import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.presentation.components.AnimatedHorizontalProgressBar
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
@@ -53,6 +54,7 @@ import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import seforimapp.seforimapp.generated.resources.AppIcon
 import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.app_name
 import seforimapp.seforimapp.generated.resources.close_book_tree_on_new_book
 import seforimapp.seforimapp.generated.resources.close_book_tree_on_new_book_description
 import seforimapp.seforimapp.generated.resources.settings_info_app_version
@@ -188,7 +190,7 @@ private fun AppHeader(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = "זית",
+                    text = stringResource(Res.string.app_name),
                     fontSize = 22.sp,
                 )
                 Text(
@@ -225,7 +227,7 @@ private fun AppHeader(
             }
             IconButton(
                 onClick = {
-                    UrlOpener.open("https://github.com/kdroidFilter/Zayit")
+                    UrlOpener.open(BrandInfo.SOURCE_URL)
                 },
                 modifier = Modifier.size(32.dp),
             ) {

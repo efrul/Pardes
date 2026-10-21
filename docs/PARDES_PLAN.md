@@ -19,8 +19,8 @@ with "Decisions taken after the review", that section wins.
   library (Zayit's `database_path` preference, then Zayit's default folder) and, when it is recent enough, offers to
   point Pardes's own `database_path` at it, as efrul/zayit-move does for Zayit. Then:
   - Pardes never deletes a library in a folder it does not own: its reset and its full update must not run
-    `DatabaseCleanupUseCase` on Zayit's folder. A full update of a shared library is installed in place, in that
-    folder, or Pardes asks first.
+    `DatabaseCleanupUseCase` on Zayit's folder. A full update installs the new library in Pardes's own folder and
+    points Pardes there, leaving Zayit's untouched (as built).
   - Delta updates by either app are safe: the content hash check makes the second app see an up-to-date library.
   - Notes, settings and sessions stay separate (each app's own `settings/` folder).
 - **No OS URL scheme for now.** `protocols.clear()`; in-app `zayit://` links keep working.
@@ -269,7 +269,7 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
 - **`linux`**:
   - `debMaintainer` (287) is his e-mail now and must change (open question).
   - `startupWMClass = "pardes"`. The default is the main class for both apps, which merges their dock icons.
-  - A 512 px PNG `iconFile`; keep `menuGroup` Education.
+  - upstream's 1024 px PNG `iconFile`; keep `menuGroup` Education.
 - **`packageVersion` (286, 292)**: set from the desktop version (see Versioning).
 - **`appResourcesRootDir` (256)**: point it at an overlay with a Pardes `splash.png`.
 - **`protocol("זית","zayit")` (282)**: `protocols.clear()` (see Deep links).
@@ -311,7 +311,7 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
 - **Drawables:** `AppIcon.png` (window and settings icon), `zayit_transparent.png` (onboarding, `InitScreen.kt:52`), `zayit_new_logo.png` and `zayit_new_logo_text.png` (Home, `HomeView.kt:671-672`; render the word פרדס in Frank Ruhl Libre as Android does), and `zayit_logo_branch.png` (`HomeView.kt:711`; same 82x88 size, no olive branch).
 - **Packaging icons:** `desktopAppIcons/WindowsIcon.ico` and `LinuxIcon.png`.
 - **Splash:** `src/jvmMain/assets/common/splash.png`.
-- **Generation:** add a desktop mode to `.claude/skills/zayit-android/scripts/pardes-icon.py` that writes the `.ico` (16-256), the 512 px PNG, `AppIcon.png` and the logos.
+- **Generation:** add a desktop mode to `.claude/skills/zayit-android/scripts/pardes-icon.py` that writes the `.ico` (PNG entries 16-256), the 1024 px PNG, `AppIcon.png` and the logos.
 - Leave `art/` and `installer/` (the Rust NSIS splash, unused with MSI) as they are.
 
 **Other texts**
@@ -433,6 +433,37 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
    - packages `io.github.kdroidfilter.seforimapp.*`.
 4. **Commits stay separate:** upstream merge, then branding, then features. Merge upstream tags with `git merge vX.Y.Z`, never a rebase. Run the resource-override guard after every merge.
 5. **Don't edit upstream files without a reason.** `CONTRIBUTING.md`, `ci.yaml` and `dco.yaml` stay as upstream has them.
+
+## Phase 3b status (2026-10-21)
+
+Done: `branding/` (see `branding/README.md`, which lists every hook): the Pardes name, texts (strings, ABOUT.md,
+CONDITIONS.md), pictures and icons (`pardes-icon.py desktop .`), the data folder and preferences node apart from
+Zayit's, the updater following `desktop-*` releases (`PardesDesktopReleases`), no OS URL scheme, the offer to use an
+installed Zayit's library in place with the guard against deleting it, and the licence texts shipped in the install
+folder (`common/licenses`). Checked by running the app on Linux (Xvfb): welcome, licence, the Zayit-library offer,
+home and the settings header.
+
+Requirements the release workflow (Phase 3c) must meet for the updater (Nucleus `FileSelector`):
+- Windows NSIS assets keep `-nsis.` and an arch token in their names, as upstream's
+  `Zayit-<ver>-windows-<x64|arm64>-nsis.exe`: e.g. `Pardes-<ver>-windows-x64-nsis.exe`.
+- Linux assets carry an arch token (`amd64`/`x86_64`, `arm64`/`aarch64`).
+- Each release has Nucleus's `latest.yml` (Windows) and `latest-linux.yml`.
+- A Windows-x64-only quick build is published as a prerelease (or a draft), so installed apps never take it.
+- PR CI (`.github/workflows/ci.yaml`, upstream's): its Windows step globs `zayit-*-nsis.exe` and wraps it with Zayit's
+  splash and icon, and it builds a macOS DMG with Zayit's name and icon. Decide in 3c: build CI with
+  `-Pseforimapp.brand=zayit`, or adapt the steps. Its lint job also fails on upstream's own v0.6.7 ktlint error
+  (`core/e2e/E2eQuoteLinksScenario.kt` import order).
+
+Still open (from the reviews):
+- Updater: when api.github.com is blocked or rate-limited (60 calls an hour per IP, shared behind filtering proxies),
+  fall back to the site's `releases.json` (needs the desktop releases there).
+- A Zayit library used in place is forgotten if a cancelled full update clears `database_path`, or if Zayit moves its
+  library: relink it from `libraries-in-place.txt` at startup.
+- Licences: notices for the Oracle GraalVM runtime (GFTC) and OpenJDK class libraries in GraalVM builds; Skia's
+  third-party code (FreeType, HarfBuzz, ICU, libpng, zlib, libjpeg-turbo...), Filament's, Nucleus's Rust crates;
+  `earthwidget/.../moonmap.jpg` (source unknown), the olive-grove wallpaper (licence unknown), HebrewNumerals
+  (MIT in its POM, Apache-2.0 in its repository); map the file names Nucleus's notice cites; a desktop mode of
+  `scripts/font-notices.py` for `Fonts-NOTICE.txt`.
 
 ## Phase 4: Personal books (placeholder; the full design comes later)
 

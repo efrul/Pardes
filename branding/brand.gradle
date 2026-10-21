@@ -53,8 +53,29 @@ dist.windows.iconFile.set(new File(brandDir, 'desktopAppIcons/WindowsIcon.ico'))
 dist.windows.upgradeUuid = value('upgradeUuid')
 dist.windows.nsis.shortcutName = value('appName')
 
+// Texts upstream keeps elsewhere, copied next to the brand's licence texts (common/licenses) rather than duplicated:
+// the app's own licence (Nucleus packages no licenseFile), the learning schedules' notice and the sky's credits
+def licenceCopies = [
+    'Pardes-LICENSE.txt': rootProject.file('LICENSE'),
+    'Limud-NOTICE.txt'  : file('src/jvmMain/resources/limud/NOTICE.txt'),
+    'Sky-CREDITS.md'    : rootProject.file('earthwidget/src/commonMain/composeResources/files/CREDITS.md'),
+]
+licenceCopies.each { name, source ->
+    if (!source.isFile()) throw new GradleException("$source is gone: update the licences in branding/brand.gradle")
+}
+def licences = tasks.register('brandLicences', Sync) {
+    into(layout.buildDirectory.dir('brand/licences'))
+    licenceCopies.each { name, source ->
+        from(source) {
+            into('common/licenses')
+            rename(/.+/, name)
+        }
+    }
+}
+
 // The app's resources (strings, pictures, About and the terms) and its package-time assets (the splash), with the
-// brand's files laid over upstream's
+// brand's files laid over upstream's. assetsExtra holds the brand's own files, added to upstream's: the licence texts
+// of what the app bundles, shipped as plain files in the install folder (common/licenses) on every package
 def composeResources = tasks.register('brandComposeResources', BrandResources) {
     base.set(layout.projectDirectory.dir('src/commonMain/composeResources'))
     def brandFiles = new File(brandDir, 'composeResources')
@@ -67,6 +88,9 @@ def assets = tasks.register('brandAssets', BrandResources) {
     base.set(layout.projectDirectory.dir('src/jvmMain/assets'))
     def brandFiles = new File(brandDir, 'assets')
     if (brandFiles.isDirectory()) overlay.set(brandFiles)
+    def brandExtra = new File(brandDir, 'assetsExtra')
+    if (brandExtra.isDirectory()) extra.from(brandExtra)
+    extra.from(licences)
     outputDir.set(layout.buildDirectory.dir('brand/assets'))
 }
 dist.appResourcesRootDir.set(assets.flatMap { it.outputDir })

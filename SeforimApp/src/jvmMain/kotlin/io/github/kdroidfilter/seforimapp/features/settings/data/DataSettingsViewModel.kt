@@ -10,7 +10,9 @@ import io.github.kdroidfilter.seforimapp.backup.BackupManager
 import io.github.kdroidfilter.seforimapp.backup.LocalFileDestination
 import io.github.kdroidfilter.seforimapp.backup.drive.DriveSyncState
 import io.github.kdroidfilter.seforimapp.backup.drive.GoogleDriveSync
+import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.databasesDir
@@ -65,7 +67,7 @@ class DataSettingsViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isExporting = true, exportFailed = false, exportedFileName = null) }
             val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
-            val exportFile = File(exportDir, "zayit_backup_$timestamp.$BACKUP_EXTENSION")
+            val exportFile = File(exportDir, "${BrandInfo.BACKUP_FILE_PREFIX}$timestamp.$BACKUP_EXTENSION")
             try {
                 backupManager.backup(LocalFileDestination(exportFile))
                 _state.update { it.copy(isExporting = false, exportedFileName = exportFile.name) }
@@ -103,6 +105,8 @@ class DataSettingsViewModel(
             val dbDir = File(FileKit.databasesDir.path)
             // Read the custom DB path before clearing settings (clearAll() drops it).
             val customDbPath = runCatching { appSettings.getDatabasePath() }.getOrNull()
+            // Another app's library used in place is not ours to delete: clearAll() only forgets where it is.
+            val customDbIsForeign = customDbPath != null && ForeignLibraries.isForeign(File(customDbPath).parentFile)
 
             appSettings.clearAll()
 
@@ -117,7 +121,7 @@ class DataSettingsViewModel(
             }
 
             // Also clean a custom DB location, if the user pointed the books DB elsewhere.
-            if (!customDbPath.isNullOrBlank()) {
+            if (!customDbPath.isNullOrBlank() && !customDbIsForeign) {
                 val customDbFile = File(customDbPath)
                 val customBaseDir = customDbFile.parentFile
                 runCatching { if (customDbFile.exists()) customDbFile.delete() }

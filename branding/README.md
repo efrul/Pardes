@@ -19,9 +19,17 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
     `src/jvmMain/assets` (task `BrandResources` in buildSrc). A file replaces the file at the same path; the brand's
     `values/strings.xml` holds only the strings that change, each replacing upstream's string of that name. The build
     fails when upstream no longer has a file or a string the brand replaces.
-- `<brand>/kotlin` is compiled with the app: `Brand` holds the values the app reads at run time (the data folder's
-  id, the preferences node, ...). The app's code reads `Brand.*` where upstream has a literal; `zayit/kotlin` has
-  upstream's values, so `-Pseforimapp.brand=zayit` builds Zayit as released.
+  - adds `<brand>/assetsExtra` to the package-time assets: files upstream does not have, which must stay so (the build
+    fails if upstream adds one at the same path). `common/licenses` holds the licence texts of everything the app
+    bundles, shipped as plain files in the install folder and indexed in its `README.md`; `brandLicences` copies in
+    three texts upstream keeps elsewhere (`LICENSE`, `limud/NOTICE.txt`, the sky's `CREDITS.md`). A new desktop
+    dependency, font, icon set or data file needs its entry and text there.
+- `<brand>/kotlin` is compiled with the app: `Brand` (the data folder's id, the preferences node), `BrandInfo` (the
+  source link, the error report's signature, the backup file name, the Linux launcher id, the User-Agent),
+  `BrandUpdates` (where updates come from: Pardes's `desktop-*` releases, `PardesDesktopReleases`) and
+  `BrandLibraries` (an installed Zayit's library, which Pardes offers to use in place). The app's code reads these
+  where upstream has a literal; `zayit/kotlin` has upstream's values, so `-Pseforimapp.brand=zayit` builds Zayit as
+  released.
 
 ## The hooks in upstream files
 
@@ -33,6 +41,21 @@ Keep this list short and exact; every line here is a possible merge conflict.
 | `SeforimApp/.../main.kt` | `val appId = Brand.APP_ID` (FileKit's data folder) |
 | `SeforimApp/.../framework/di/modules/AppCoreBindings.kt` | `provideSettings()` returns `Brand.settings()` |
 | `SeforimApp/.../framework/backup/PendingUserDataRestore.kt` | imports preferences into `Brand.settings()` |
+| `SeforimApp/.../features/settings/ui/GeneralSettingsScreen.kt` | title `stringResource(Res.string.app_name)` (was "זית"); GitHub button `BrandInfo.SOURCE_URL` |
+| `SeforimApp/.../core/BookErrorReport.kt` | `append(BrandInfo.ERROR_REPORT_SIGNATURE)` |
+| `SeforimApp/.../features/settings/data/DataSettingsViewModel.kt` | export name `BrandInfo.BACKUP_FILE_PREFIX`; reset leaves a library used in place (`ForeignLibraries.isForeign`) |
+| `SeforimApp/.../core/presentation/components/AppLinuxQuicklist.kt` | `DESKTOP_FILE_ID = BrandInfo.LINUX_DESKTOP_FILE_ID` |
+| `SeforimApp/.../features/onboarding/download/HttpFileDownloader.kt` | `User-Agent` `BrandInfo.USER_AGENT` |
+| `SeforimApp/.../framework/update/AppUpdateService.kt` | `?: BrandUpdates.provider` before upstream's `GitHubProvider` (Zayit's is null) |
+| `SeforimApp/.../features/database/update/DatabaseCleanupUseCase.kt` | skips a folder `ForeignLibraries.isForeign` |
+| `SeforimApp/.../framework/database/PendingDbCleanup.kt` | drops pending deletions in a foreign folder |
+| `SeforimApp/.../features/onboarding/licence/LicenceScreen.kt` | offers `ExistingLibraryScreen` when `ForeignLibraries.find()` finds one |
+| `SeforimApp/.../features/onboarding/navigation/OnBoardingDestination.kt`, `OnBoardingNavHost.kt` | the `ExistingLibraryScreen` destination |
+| `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `onboarding_existing_library_*` strings (one block) |
+
+New files in upstream folders (no conflict, but generic code a Zayit merge must still compile with):
+`framework/database/ForeignLibraries.kt` (the only reader of `BrandLibraries`),
+`features/onboarding/existinglibrary/ExistingLibraryScreen.kt` and `jvmTest/.../ForeignLibrariesTest.kt`.
 
 Licence-restricted files are replaced in place, not overlaid, because they must not be in the repository at all:
 the Rashi Amiti font (removed, with its `FontCatalog` entry; `FontCatalogTest` counts 27 fonts) and the temple
@@ -45,5 +68,16 @@ photo). When a Zayit merge conflicts there, keep Pardes's side.
    never push upstream's `v*` tags).
 2. Keep removed what Pardes removed: Zayit's release, site and CLA workflows, FUNDING, dependabot, Rashi Amiti, the
    Shutterstock picture.
-3. Build: `BrandResources` fails if a replaced file or string moved upstream; update `<brand>/` accordingly.
+3. Build: `BrandResources` fails if a replaced file or string moved upstream; update `<brand>/` accordingly. It
+   does not check sizes: if upstream changes a replaced picture's size, change it in `desktop()` of
+   `.claude/skills/zayit-android/scripts/pardes-icon.py` and run `python3 .claude/skills/zayit-android/scripts/pardes-icon.py desktop .`,
+   which writes all the pictures (AppIcon, LinuxIcon, WindowsIcon.ico, zayit_transparent, zayit_logo_branch,
+   zayit_new_logo(_text), splash) at upstream's sizes.
 4. Check that `-Pseforimapp.brand=zayit` still compiles.
+
+## Texts
+
+- `composeResources/files/ABOUT.md` and `CONDITIONS.md`: in both, the §7b line ends with a space before the closing
+  direction mark (U+2069). Without it the autolinker puts the mark into the zayitapp.com link. Keep the line's words
+  unchanged.
+- Who made the app: the name and authorship rules of the `zayit-android` skill apply to every Pardes text.

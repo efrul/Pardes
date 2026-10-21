@@ -15,6 +15,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.AnimatedHo
 import io.github.kdroidfilter.seforimapp.core.presentation.navigation.noAnimatedComposable
 import io.github.kdroidfilter.seforimapp.features.onboarding.diskspace.AvailableDiskSpaceScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.download.DownloadScreen
+import io.github.kdroidfilter.seforimapp.features.onboarding.existinglibrary.ExistingLibraryScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.extract.ExtractScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.finish.FinishScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.init.InitScreen
@@ -42,6 +43,9 @@ fun OnBoardingNavHost(navController: NavHostController) {
             }
             noAnimatedComposable<OnBoardingDestination.LicenceScreen> {
                 LicenceScreen(navController)
+            }
+            noAnimatedComposable<OnBoardingDestination.ExistingLibraryScreen> {
+                ExistingLibraryScreen(navController)
             }
             noAnimatedComposable<OnBoardingDestination.AvailableDiskSpaceScreen> {
                 AvailableDiskSpaceScreen(navController)
