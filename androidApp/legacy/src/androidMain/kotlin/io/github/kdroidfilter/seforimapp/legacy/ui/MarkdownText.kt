@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
 import android.net.Uri
+import android.text.Layout
 import android.text.Selection
 import android.text.Spannable
 import android.text.SpannableStringBuilder
@@ -16,6 +17,7 @@ import android.text.style.URLSpan
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.View
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.PARDES_LICENSE_URL
@@ -53,29 +55,108 @@ object MarkdownText {
     }
 
     /**
-     * A text whose links a keypad goes through within the part of it on screen, the page scrolling between them:
-     * LinkMovementMethod takes the whole text for its view (the page scrolls, not the text), so ▲▼ would pick a link a
-     * screen away, out of sight, and skip the text in between. Such a step is undone and left to the page (its
-     * ScrollView), which scrolls by half a screen; the link is picked once it is in view.
+     * A text whose links a keypad goes through in their order with the page (its ScrollView) scrolling between them, as a
+     * reader expects. LinkMovementMethod takes the whole text for its view (the page scrolls, not the text), so its ▲▼
+     * would pick a link a screen away and skip the text in between. Here ▲▼ pick the next link (LinkMovementMethod's
+     * order) when it is in sight or within the half screen the page scrolls by, and bring it into view; a link further
+     * away is left alone and the page scrolls half a screen towards it.
+     *
+     * The selection is never left on a link out of sight while the text is focused, and a link picked is brought into
+     * view at once: the TextView brings its selection into view only before a frame (onPreDraw's bringPointIntoView), so
+     * a selection set and taken back sent the page back to the link it was leaving (a small screen never got past a link
+     * whose next was more than 1.5 screens away), and a selection moved between two lines out of sight, which redraws
+     * nothing on screen, brought nothing into view. With no link picked, or the one picked out of sight, the next is the
+     * first in sight (▼) or the last (▲); OK opens only a link in sight.
      */
     private class KeypadLinks(context: Context) : TextView(context) {
         private val visible = Rect()
 
         override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-            if (keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN) return super.onKeyDown(keyCode, event)
-            val spannable = text as? Spannable ?: return super.onKeyDown(keyCode, event)
-            val start = Selection.getSelectionStart(spannable)
-            val end = Selection.getSelectionEnd(spannable)
-            if (!super.onKeyDown(keyCode, event)) return false
-            val layout = layout ?: return true
-            val at = Selection.getSelectionStart(spannable)
-            if (at < 0 || !getLocalVisibleRect(visible)) return true
-            val line = layout.getLineForOffset(at)
-            val top = layout.getLineTop(line) + totalPaddingTop
-            val bottom = layout.getLineBottom(line) + totalPaddingTop
-            if (top >= visible.top && bottom <= visible.bottom) return true
-            if (start >= 0) Selection.setSelection(spannable, start, end) else Selection.removeSelection(spannable)
-            return false
+            val down = keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+            val ok = keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER
+            if (!down && keyCode != KeyEvent.KEYCODE_DPAD_UP && !ok) return super.onKeyDown(keyCode, event)
+            val spannable = text as? Spannable
+            val layout = layout
+            val page = page()
+            if (spannable == null || layout == null || page == null || !event.hasNoModifiers() || !getLocalVisibleRect(visible)) {
+                return super.onKeyDown(keyCode, event)
+            }
+            val a = Selection.getSelectionStart(spannable)
+            val b = Selection.getSelectionEnd(spannable)
+            val selStart = minOf(a, b)
+            val selEnd = maxOf(a, b)
+            val picked = selStart in 0 until selEnd && top(layout, selStart) >= visible.top && bottom(layout, selEnd) <= visible.bottom
+            if (ok) {
+                if (selStart >= 0 && !picked) Selection.removeSelection(spannable)
+                return super.onKeyDown(keyCode, event)
+            }
+            var next: ClickableSpan? = null
+            var nextAt = 0
+            for (link in spannable.getSpans(0, spannable.length, ClickableSpan::class.java)) {
+                val start = spannable.getSpanStart(link)
+                val end = spannable.getSpanEnd(link)
+                if (down) {
+                    val after = if (picked) start > selStart else top(layout, start) >= visible.top
+                    if (after && (next == null || start < nextAt)) {
+                        next = link
+                        nextAt = start
+                    }
+                } else {
+                    val before = if (picked) end < selEnd else bottom(layout, end) <= visible.bottom
+                    if (before && (next == null || end > nextAt)) {
+                        next = link
+                        nextAt = end
+                    }
+                }
+            }
+            val jump = page.maxScrollAmount
+            // No link that way: the page's own ▲▼ (it scrolls up to half a screen, or the focus moves on to what is under
+            // the text)
+            if (next == null) {
+                val room = scrollRoom(page, if (down) jump else -jump)
+                if (selStart >= 0 && !(picked && stays(layout, selStart, selEnd, room))) Selection.removeSelection(spannable)
+                return false
+            }
+            val start = spannable.getSpanStart(next)
+            val end = spannable.getSpanEnd(next)
+            val near = if (down) bottom(layout, end) <= visible.bottom + jump else top(layout, start) >= visible.top - jump
+            val step = if (near) 0 else scrollRoom(page, if (down) jump else -jump)
+            if (step == 0) {
+                // ▲ ends the selection at the link's start, so that its first line is the one brought into view
+                if (down) Selection.setSelection(spannable, start, end) else Selection.setSelection(spannable, end, start)
+                bringPointIntoView(if (down) end else start)
+                return true
+            }
+            page.smoothScrollBy(0, step)
+            if (selStart >= 0 && !(picked && stays(layout, selStart, selEnd, step))) Selection.removeSelection(spannable)
+            return true
+        }
+
+        /** Whether the selection [selStart]–[selEnd], in sight, stays in sight once the page has scrolled by [dy]. */
+        private fun stays(layout: Layout, selStart: Int, selEnd: Int, dy: Int): Boolean =
+            top(layout, selStart) >= visible.top + dy && bottom(layout, selEnd) <= visible.bottom + dy
+
+        /** The page this text scrolls in. */
+        private fun page(): ScrollView? {
+            var parent = parent
+            while (parent != null) {
+                if (parent is ScrollView) return parent
+                parent = parent.parent
+            }
+            return null
+        }
+
+        /** The top of [offset]'s line, in this view. */
+        private fun top(layout: Layout, offset: Int): Int = layout.getLineTop(layout.getLineForOffset(offset)) + totalPaddingTop
+
+        /** The bottom of the line of the character before [end] (a span's or a selection's end), in this view. */
+        private fun bottom(layout: Layout, end: Int): Int = layout.getLineBottom(layout.getLineForOffset(maxOf(0, end - 1))) + totalPaddingTop
+
+        /** [dy] as far as [page] can scroll that way (ScrollView.smoothScrollBy's own bounds). */
+        private fun scrollRoom(page: ScrollView, dy: Int): Int {
+            val child = page.getChildAt(0) ?: return 0
+            val max = maxOf(0, child.height - (page.height - page.paddingTop - page.paddingBottom))
+            return (page.scrollY + dy).coerceIn(0, max) - page.scrollY
         }
     }
 

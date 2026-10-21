@@ -30,7 +30,8 @@ import java.io.File
 /**
  * Settings as the main app's phone shows them (SettingsScreen): an Island with the list of pages, each with its icon on
  * the accent's tint, its title and a line about it, opening on its own screen: תצוגה, ספרייה, אודות, תנאים and
- * רישיונות (the pages this edition has of the main app's).
+ * רישיונות (the pages this edition has of the main app's). Its title bar is the main app's PhoneHeader: the way back and
+ * the title, no ⋮ menu.
  */
 class SettingsActivity : BaseActivity() {
     private lateinit var bar: TopBar
@@ -51,9 +52,7 @@ class SettingsActivity : BaseActivity() {
         bar = TopBar(this, colors).apply {
             leading(R.drawable.ic_back, "חזרה") { onBackPressedCompat() }
             title.text = "הגדרות"
-            overflow { shellMenu() }
         }
-        topBar = bar
         root.addView(bar, lp(MATCH, WRAP))
         frame = FrameLayout(this)
         root.addView(frame, lp(MATCH, 0, 1f))
@@ -70,7 +69,10 @@ class SettingsActivity : BaseActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() = onBackPressedCompat()
 
-    /** The ⋮ menu's theme changed what תצוגה names, not its colours (System is light before Android 10). */
+    /**
+     * The theme chosen changed, not its colours (System is light before Android 10), in תצוגה's chips or while Settings
+     * was behind another screen: the chips mark it again.
+     */
     override fun onThemeKept() {
         if (page == Page.Display) show(Page.Display)
     }

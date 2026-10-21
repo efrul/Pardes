@@ -41,6 +41,9 @@ abstract class BaseActivity : Activity() {
     protected var topBar: TopBar? = null
     private var darkAtCreate = false
 
+    /** The theme chosen that this screen shows: one that names it ([onThemeKept]) says it again when it changed behind. */
+    private var themeShown = ThemeMode.System
+
     /**
      * Hebrew for the framework's own texts and widgets too (the text field's handles, the keyboard's direction), and
      * right to left: Configuration.setLocale sets the layout direction (API 17).
@@ -53,6 +56,7 @@ abstract class BaseActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         darkAtCreate = prefs.dark
+        themeShown = prefs.themeMode
         colors = if (darkAtCreate) Palette.dark else Palette.light
         setTheme(if (darkAtCreate) R.style.Theme_Pardes_Dark else R.style.Theme_Pardes)
         super.onCreate(savedInstanceState)
@@ -106,6 +110,11 @@ abstract class BaseActivity : Activity() {
             recreate()
             return
         }
+        // Another theme in the same colours (System ↔ Light before Android 10): only its name changes.
+        if (prefs.themeMode != themeShown) {
+            themeShown = prefs.themeMode
+            onThemeKept()
+        }
         val held = heldLibrary
         if (held != null && held !== app.library.current) {
             rebuilding = true
@@ -150,9 +159,9 @@ abstract class BaseActivity : Activity() {
 
     /**
      * The main app's ⋮ of the title bar (TopBar), with the items this edition has, in its order: דף הבית, [find] (find
-     * in the page, there under 300dp on a screen that has it), מועדפים, היסטוריה, the theme in use, הגדרות. A screen
-     * leaves out the item that is itself (the Home its דף הבית, Settings its הגדרות). Not here: לשונית חדשה, כלים and
-     * עדכון זמין, as this edition has no tabs, tools nor update.
+     * in the page, there under 300dp on a screen that has it), מועדפים, היסטוריה, the theme in use, הגדרות. The Home
+     * leaves out its דף הבית; Settings has no ⋮ (the main app's PhoneHeader). Not here: לשונית חדשה, כלים and עדכון
+     * זמין, as this edition has no tabs, tools nor update.
      */
     protected fun shellMenu(find: MenuEntry? = null): List<MenuEntry> = buildList {
         val activity = this@BaseActivity
@@ -162,7 +171,7 @@ abstract class BaseActivity : Activity() {
         add(MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(activity, colors) { onPlacesChanged() } })
         val theme = prefs.themeMode
         add(MenuEntry(themeLabel(theme), themeIcon(theme)) { cycleTheme() })
-        if (activity !is SettingsActivity) add(MenuEntry("הגדרות", R.drawable.ic_settings) { startActivity(Intent(activity, SettingsActivity::class.java)) })
+        add(MenuEntry("הגדרות", R.drawable.ic_settings) { startActivity(Intent(activity, SettingsActivity::class.java)) })
     }
 
     /** The history or the favourites changed in their dialog, which leaves this screen resumed under it. */
@@ -189,7 +198,12 @@ abstract class BaseActivity : Activity() {
      * Android 10, so Dark → System does, System → Light does not there), the screens behind it as they come back.
      */
     protected fun applyTheme() {
-        if (prefs.dark != darkAtCreate) recreate() else onThemeKept()
+        if (prefs.dark != darkAtCreate) {
+            recreate()
+        } else {
+            themeShown = prefs.themeMode
+            onThemeKept()
+        }
     }
 
     /** The theme chosen changed, the colours did not ([applyTheme]): a screen that names the theme says it again. */

@@ -61,7 +61,10 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.bookShareLink
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.BookInfo
+import io.github.kdroidfilter.seforimapp.legacy.data.InstallingException
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
+import io.github.kdroidfilter.seforimapp.legacy.data.NoLibraryException
+import io.github.kdroidfilter.seforimapp.legacy.data.OutdatedLibraryException
 import io.github.kdroidfilter.seforimapp.legacy.data.Place
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
 import io.github.kdroidfilter.seforimapp.legacy.data.label
@@ -302,7 +305,16 @@ class BookActivity : BaseActivity() {
             }
             textCard.removeView(waiting)
             result.onFailure { e ->
-                toast(e.message ?: "לא ניתן לפתוח את הספר")
+                // A library that cannot be opened (none, an install running, a release too old for this app: a book of
+                // the ⋮ menu's history under the Home's update screen) in the words of the screens that open it, the
+                // book list's and the search's, not their English messages.
+                toast(
+                    when (e) {
+                        is NoLibraryException -> "עדיין אין ספרייה במכשיר"
+                        is InstallingException, is OutdatedLibraryException -> "לא ניתן לפתוח את הספרייה"
+                        else -> e.message ?: "לא ניתן לפתוח את הספר"
+                    },
+                )
                 finish()
             }.onSuccess { loaded ->
                 opened = loaded.library
