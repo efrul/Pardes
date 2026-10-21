@@ -26,15 +26,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
-import java.text.NumberFormat
-import java.util.Locale
 
 // Pieces shared by the results page, its preview and its knowledge panel: desktop 0.6.1 SearchResultScreen.kt's
-// card(), readingSecondary(), ResultLink and categoriesAndPlace, core/presentation/text HebrewSearch.kt's
+// card(), readingSecondary() and ResultLink, core/presentation/text HebrewSearch.kt's
 // diacritic-insensitive matching (find within the results) and Highlighting.kt's withBackground.
-
-/** Desktop SearchStatusLine count: grouped digits (NumberFormat.getIntegerInstance). */
-internal fun formatCount(n: Long): String = NumberFormat.getIntegerInstance(Locale.US).format(n)
 
 /** The page's panes (desktop card(), as the book's PaneCard): a small gap around, rounded, on the panel colour, no border. */
 @Composable
@@ -62,14 +57,6 @@ internal fun ResultLink(
     ) {
         Text(text, color = color, fontSize = fontSize, fontWeight = fontWeight, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
     }
-}
-
-/** The result's categories (הלכה › ראשונים) and its place in the book (סימן קד), once its breadcrumb is known. */
-internal fun categoriesAndPlace(pieces: List<String>?, bookTitle: String): Pair<String, String?> {
-    val bookIndex = pieces?.indexOf(bookTitle) ?: -1
-    if (pieces == null || bookIndex < 0) return "" to null
-    val place = pieces.drop(bookIndex + 1).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null }
-    return pieces.take(bookIndex).joinToString(" › ") to place
 }
 
 /** A copy of this text with a [color] background over each of [ranges]. */
@@ -144,18 +131,12 @@ internal fun AnnotatedString.highlightMatches(query: String?, color: Color): Ann
 fun SearchIndexMissing(libraryDir: String, modifier: Modifier = Modifier) {
     val c = Zayit.colors
     Column(modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("אינדקס החיפוש של הספרייה חסר", color = c.text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        Text(SEARCH_INDEX_MISSING, color = c.text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
         Text(SEARCH_INDEX_MISSING_TEXT, color = c.text, fontSize = 15.sp, lineHeight = 22.sp)
-        Text("תיקיית הספרייה:", color = c.textSecondary, fontSize = 13.sp)
+        Text(SEARCH_LIBRARY_FOLDER, color = c.textSecondary, fontSize = 13.sp)
         LibraryPathText(libraryDir)
     }
 }
-
-const val SEARCH_INDEX_MISSING_TEXT =
-    "החיפוש בטקסט המלא משתמש באותו אינדקס שהאפליקציה למחשב שומרת לצד מסד הנתונים: התיקיות seforim.db.lucene " +
-        "ו־seforim.db.lookup.lucene והקובץ lexical.db. האינדקס אינו נבנה על המכשיר. כדי לקבל אותו, העבירו את הקבצים מהמחשב " +
-        "לתיקיית הספרייה בעזרת סקריפט ההעברה (push-desktop-library), או התקינו את הספרייה מחדש (החבילה המלאה כוללת אותו): " +
-        "\"איפוס האפליקציה\" בהגדרות › ניהול נתונים מחזיר למסך ההתקנה, ומוחק גם את ההערות וההדגשות, לכן ייצאו אותן קודם."
 
 /** A file path: selectable, monospace, always left-to-right. */
 @Composable
