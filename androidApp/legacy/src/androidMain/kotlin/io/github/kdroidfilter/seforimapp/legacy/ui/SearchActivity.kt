@@ -436,6 +436,7 @@ class SearchActivity : BaseActivity() {
         bar = TopBar(this, colors).apply {
             leading(R.drawable.ic_back, "חזרה") { finish() }
             title.text = "חיפוש"
+            overflow { shellMenu() }
         }
         topBar = bar
         root.addView(bar, lp(MATCH, WRAP))

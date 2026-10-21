@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.ColorFilter
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.Rect
@@ -125,8 +126,18 @@ object Fonts {
     /** The book text's font (Settings; the main app's default is Noto Serif Hebrew). */
     fun book(context: Context): Typeface = asset(context, PardesApp.of(context).prefs.bookFont.asset)
 
-    /** The main app's text for everything but the book (ZayitFonts.ui): Noto Serif Hebrew, whatever the book's font. */
+    /**
+     * The main app's text for everything but the book (ZayitFonts.ui, merged into every one of its text styles): Noto
+     * Serif Hebrew, whatever the book's font. [label] sets it on every text of the screens.
+     */
     fun ui(context: Context): Typeface = asset(context, "fonts/notoserifhebrew.ttf")
+
+    /**
+     * [ui] in bold, for what measures a bold label's width. The bundled file has one weight (the variable font's
+     * regular instance on Android 4.4): Android draws it bolder, as Compose does in the main app.
+     */
+    fun uiBold(context: Context): Typeface = Typeface.create(ui(context), Typeface.BOLD)
+
 
     /** Commentaries, as the main app: Frank Ruhl Libre. */
     fun commentary(context: Context): Typeface = asset(context, "fonts/frankruhllibre.ttf")
@@ -155,7 +166,8 @@ fun Context.label(
     this.text = text
     setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
     setTextColor(color)
-    if (typeface != null || bold) setTypeface(typeface ?: Typeface.DEFAULT, if (bold) Typeface.BOLD else Typeface.NORMAL)
+    // The main app's UI font unless another is given (the logo, a book font's sample), bold made from it.
+    setTypeface(typeface ?: Fonts.ui(context), if (bold) Typeface.BOLD else Typeface.NORMAL)
     if (maxLines > 0) {
         this.maxLines = maxLines
         ellipsize = TextUtils.TruncateAt.END
@@ -358,9 +370,10 @@ class ItemsAdapter<T>(
 
 /**
  * A row of the main app's library tree (LibraryTree TreeRow): indented by its depth, a ‹ or ⌄ for a category, a
- * folder or book icon, the title. Also the rows of the table of contents, the books opened lately and the favourites.
+ * folder or book icon, the title in [titleLines] lines at most (the tree's one, the table of contents' two). Also the
+ * rows of the books opened lately and the favourites, and of the menus.
  */
-class TreeRow(context: Context, private val colors: Colors) : LinearLayout(context) {
+class TreeRow(context: Context, private val colors: Colors, titleLines: Int = 2) : LinearLayout(context) {
     private val arrow = ImageView(context)
     private val icon = ImageView(context)
     private val title: TextView
@@ -375,7 +388,7 @@ class TreeRow(context: Context, private val colors: Colors) : LinearLayout(conte
         icon.setColorFilter(colors.secondary, PorterDuff.Mode.SRC_IN)
         addView(icon, lp(context.dp(18), context.dp(18)).apply { marginEnd = context.dp(8) })
         val texts = LinearLayout(context).apply { orientation = VERTICAL }
-        title = context.label(sizeSp = 15f, color = colors.text, maxLines = 2)
+        title = context.label(sizeSp = 15f, color = colors.text, maxLines = titleLines)
         second = context.label(sizeSp = 12f, color = colors.secondary, maxLines = 1).apply { visibility = GONE }
         texts.addView(title)
         texts.addView(second)
@@ -407,7 +420,7 @@ class TreeRow(context: Context, private val colors: Colors) : LinearLayout(conte
             icon.setColorFilter(iconTint, PorterDuff.Mode.SRC_IN)
         }
         title.text = text
-        title.setTypeface(Typeface.DEFAULT, if (marked) Typeface.BOLD else Typeface.NORMAL)
+        title.setTypeface(Fonts.ui(context), if (marked) Typeface.BOLD else Typeface.NORMAL)
         second.text = secondLine
         second.visibility = if (secondLine.isNullOrEmpty()) GONE else VISIBLE
         return this
@@ -627,6 +640,100 @@ fun Context.toggleRow(title: String, description: String?, colors: Colors, check
         onChange(toggle.checked)
     }
     return row
+}
+
+/**
+ * The main app's checkbox (ZCheckRow's Material one): an 18dp rounded square, its border grey, filled with the accent
+ * and ticked in white when checked.
+ */
+class CheckMark(context: Context, private val colors: Colors) : View(context) {
+    var checked = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val rect = RectF()
+    private val tick = Path()
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) = setMeasuredDimension(context.dp(18), context.dp(18))
+
+    override fun onDraw(canvas: Canvas) {
+        val size = width.toFloat()
+        val stroke = context.dp(2).toFloat()
+        val r = context.dp(2).toFloat()
+        if (checked) {
+            paint.style = Paint.Style.FILL
+            paint.color = colors.accent
+            rect.set(0f, 0f, size, size)
+            canvas.drawRoundRect(rect, r, r, paint)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = stroke
+            paint.strokeCap = Paint.Cap.SQUARE
+            paint.color = 0xFFFFFFFF.toInt()
+            tick.reset()
+            tick.moveTo(size * 0.22f, size * 0.52f)
+            tick.lineTo(size * 0.42f, size * 0.72f)
+            tick.lineTo(size * 0.78f, size * 0.32f)
+            canvas.drawPath(tick, paint)
+        } else {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = stroke
+            paint.color = colors.secondary
+            rect.set(stroke / 2, stroke / 2, size - stroke / 2, size - stroke / 2)
+            canvas.drawRoundRect(rect, r, r, paint)
+        }
+    }
+}
+
+/**
+ * The main app's ZCheckRow: [CheckMark] and its text (15sp, two lines at most), the whole row a stop for a keypad whose
+ * OK toggles it.
+ */
+fun Context.checkRow(text: String, colors: Colors, checked: Boolean, onChange: (Boolean) -> Unit): LinearLayout {
+    val mark = CheckMark(this, colors).apply { this.checked = checked }
+    return LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(44)
+        setPadding(dp(12), dp(4), dp(12), dp(4))
+        background = states(colors, 0, dp(8).toFloat())
+        addView(mark, lp(WRAP, WRAP).apply { marginEnd = dp(12) })
+        addView(label(text, 15f, colors.text, maxLines = 2))
+        keyable(this) {
+            mark.checked = !mark.checked
+            onChange(mark.checked)
+        }
+    }
+}
+
+/**
+ * The main app's AccentButton: the accent, its text white and bold, rounded 10dp; disabled, the selected rows' grey
+ * with a border and its text faded ([setAccentEnabled]), and not a stop for a keypad.
+ */
+fun Context.accentButton(text: String, colors: Colors, onClick: () -> Unit): TextView = label(text, 16f, 0xFFFFFFFF.toInt(), bold = true).apply {
+    gravity = Gravity.CENTER
+    minHeight = dp(44)
+    setPadding(dp(22), dp(10), dp(22), dp(10))
+    keyable(this) { onClick() }
+    setAccentEnabled(colors, true)
+}
+
+fun TextView.setAccentEnabled(colors: Colors, enabled: Boolean) {
+    val r = context.dp(10).toFloat()
+    val stroke = maxOf(1, context.dp(1))
+    background = if (enabled) {
+        states(
+            roundRect(colors.accent, r, colors.accent, stroke),
+            roundRect(Palette.blend(colors.accent, 0xFF000000.toInt(), 0.15f), r, colors.accent, stroke),
+            roundRect(Palette.blend(colors.accent, 0xFF000000.toInt(), 0.15f), r, colors.text, maxOf(2, context.dp(2))),
+        )
+    } else {
+        roundRect(colors.selected, r, colors.border, stroke)
+    }
+    setTextColor(if (enabled) 0xFFFFFFFF.toInt() else colors.disabled)
+    isEnabled = enabled
+    isFocusable = enabled
 }
 
 /** A spinning progress indicator in the accent (Android 4.4's Holo one is blue). */

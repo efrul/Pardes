@@ -56,6 +56,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.reader.LineConnectionsSnapsh
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderLinks
 import io.github.kdroidfilter.seforimapp.android.ui.reader.findAllMatchesOriginal
 import io.github.kdroidfilter.seforimapp.android.ui.reader.nextActionLabel
+import io.github.kdroidfilter.seforimapp.android.ui.shell.ShellTexts
 import io.github.kdroidfilter.seforimapp.android.ui.shell.bookShareLink
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.legacy.R
@@ -529,7 +530,7 @@ class BookActivity : BaseActivity() {
         if (narrow()) add(MenuEntry(FIND_IN_PAGE, R.drawable.ic_find_in_page) { openFind() })
         overflowActions.forEach { a -> add(MenuEntry(a.menuLabel, a.icon) { a.perform() }) }
         add(MenuEntry("פרטי הספר", R.drawable.ic_info) { togglePane(Pane.Details) })
-        add(MenuEntry("רשימת הספרים", R.drawable.ic_library) { LibraryActivity.start(this@BookActivity, info.categoryId) })
+        add(MenuEntry(ShellTexts.BOOK_LIST, R.drawable.ic_library) { LibraryActivity.start(this@BookActivity, info.categoryId, info.id) })
         add(MenuEntry(placePathText(info), R.drawable.ic_book) { openToc() })
         add(MenuEntry("העתק קישור", R.drawable.ic_link) { copyLink(placeLine()) })
         add(MenuEntry("שתף", R.drawable.ic_share) { shareLink(placeLine()) })
@@ -541,21 +542,9 @@ class BookActivity : BaseActivity() {
         if (hasKeys()) add(MenuEntry("מקשי קיצור", R.drawable.ic_info) { showShortcuts() })
     }
 
-    /**
-     * The title bar's ⋮: the app's items, in the main app's order (TopBar): דף הבית, find under 300dp, מועדפים,
-     * היסטוריה, the theme, הגדרות. The book's are in עוד.
-     */
-    private fun appMenu(): List<MenuEntry> = buildList {
-        add(MenuEntry("דף הבית", R.drawable.ic_home) { goHome() })
-        if (narrow() && book != null) add(MenuEntry(FIND_IN_PAGE, R.drawable.ic_find_in_page) { openFind() })
-        add(MenuEntry("מועדפים", R.drawable.ic_star_border) { PlacesDialogs.favorites(this@BookActivity, colors) })
-        add(MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(this@BookActivity, colors) })
-        add(MenuEntry(if (prefs.dark) "ערכת נושא כהה" else "ערכת נושא בהירה", if (prefs.dark) R.drawable.ic_dark_mode else R.drawable.ic_light_mode) {
-            prefs.dark = !prefs.dark
-            recreate()
-        })
-        add(MenuEntry("הגדרות", R.drawable.ic_settings) { startActivity(Intent(this@BookActivity, SettingsActivity::class.java)) })
-    }
+    /** The title bar's ⋮: the app's items (BaseActivity.shellMenu), find among them under 300dp. The book's are in עוד. */
+    private fun appMenu(): List<MenuEntry> =
+        shellMenu(if (narrow() && book != null) MenuEntry(FIND_IN_PAGE, R.drawable.ic_find_in_page) { openFind() } else null)
 
     /** The place's path, as the main app's עוד names it: the categories › the book › its headings ("תורה › בראשית › פרק כו"). */
     private fun placePathText(info: BookInfo): String =
@@ -572,11 +561,6 @@ class BookActivity : BaseActivity() {
                 .putExtra(EXTRA_LINE, placeLine()),
             REQUEST_TOC,
         )
-    }
-
-    private fun goHome() {
-        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
-        finish()
     }
 
     /**
@@ -1413,7 +1397,7 @@ class BookActivity : BaseActivity() {
             val paint = android.text.TextPaint()
             val step = TAB_STEPS.firstOrNull { (size, padding, gap) ->
                 paint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, size, resources.displayMetrics)
-                paint.typeface = Typeface.DEFAULT_BOLD
+                paint.typeface = Fonts.uiBold(this@BookActivity)
                 val text = kinds.sumOf { paint.measureText(it.title).toDouble() }
                 text + dp(padding) * 2 * kinds.size + dp(gap) * (kinds.size - 1) <= room
             } ?: TAB_STEPS.last()

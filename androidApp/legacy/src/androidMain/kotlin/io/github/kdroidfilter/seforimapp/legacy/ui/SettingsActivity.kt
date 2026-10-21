@@ -1,9 +1,7 @@
 package io.github.kdroidfilter.seforimapp.legacy.ui
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.PorterDuff
-import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
@@ -15,10 +13,13 @@ import android.widget.ScrollView
 import android.widget.TextView
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
 import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
+import io.github.kdroidfilter.seforimapp.android.ui.settings.ABOUT_MD
+import io.github.kdroidfilter.seforimapp.android.ui.shell.ShellTexts
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.BookFont
 import io.github.kdroidfilter.seforimapp.legacy.data.LegacySearch
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
+import io.github.kdroidfilter.seforimapp.legacy.data.ThemeMode
 import io.github.kdroidfilter.seforimapp.legacy.data.label
 import io.github.kdroidfilter.seforimapp.legacy.db.NativeSqlite
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,7 @@ class SettingsActivity : BaseActivity() {
 
     private enum class Page(val title: String, val summary: String, val icon: Int) {
         Display("תצוגה", "ערכת נושא, תמונת רקע, גודל הטקסט, גופן וניקוד", R.drawable.ic_text_format),
-        Library("ספרייה", "מיקום הספרייה וגודלה, התקנה מקבצים ורשימת הספרים האחרונים", R.drawable.ic_library),
+        Library("ספרייה", "מיקום הספרייה וגודלה, התקנה מקבצים וניקוי ההיסטוריה", R.drawable.ic_library),
         About("אודות", "על פרדס ותודות", R.drawable.ic_info),
         Terms("תנאים", "מקורות, זכויות ורישיון", R.drawable.ic_book),
         Licences("רישיונות", "רישיון פרדס ורישיונות הספריות, הגופנים והנתונים", R.drawable.ic_copy),
@@ -50,6 +51,7 @@ class SettingsActivity : BaseActivity() {
         bar = TopBar(this, colors).apply {
             leading(R.drawable.ic_back, "חזרה") { onBackPressedCompat() }
             title.text = "הגדרות"
+            overflow { shellMenu() }
         }
         topBar = bar
         root.addView(bar, lp(MATCH, WRAP))
@@ -67,6 +69,11 @@ class SettingsActivity : BaseActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() = onBackPressedCompat()
+
+    /** The ⋮ menu's theme changed what תצוגה names, not its colours (System is light before Android 10). */
+    override fun onThemeKept() {
+        if (page == Page.Display) show(Page.Display)
+    }
 
     private fun onBackPressedCompat() {
         if (page != null) showList() else finish()
@@ -173,10 +180,12 @@ class SettingsActivity : BaseActivity() {
 
     private fun display() {
         val body = pageBody()
+        // The title bar menu's three themes, in its order (System: the phone's, light before Android 10).
         val theme = card(body, "ערכת נושא")
-        val themes = choiceChips(listOf("בהירה", "כהה"), if (prefs.dark) 1 else 0) { i ->
-            prefs.dark = i == 1
-            recreate()
+        val themeModes = listOf(ThemeMode.Light, ThemeMode.Dark, ThemeMode.System)
+        val themes = choiceChips(listOf("בהירה", "כהה", "מערכת"), themeModes.indexOf(prefs.themeMode)) { i ->
+            prefs.themeMode = themeModes[i]
+            applyTheme()
         }
         theme.addView(themes)
         val home = card(body)
@@ -224,7 +233,7 @@ class SettingsActivity : BaseActivity() {
         screen.addView(toggleRow("השאר את המסך דולק", "בזמן הקריאה בספר", colors, prefs.keepScreenOn) { prefs.keepScreenOn = it })
         update()
         // The theme chosen: also where a keypad is after picking one, which recreates the screen.
-        keypadFocus(themes.getChildAt(if (prefs.dark) 1 else 0))
+        keypadFocus(themes.getChildAt(themeModes.indexOf(prefs.themeMode)))
     }
 
     /** The ZChips of one choice among [labels], wrapping; [fontOf] draws each in its font (the book fonts). */
@@ -273,9 +282,12 @@ class SettingsActivity : BaseActivity() {
         actions.addView(link(InstallTexts.TITLE) {
             InstallActivity.start(this, replacing = app.library.current != null || app.library.findDatabase() != null)
         })
-        actions.addView(link("נקה את רשימת הספרים האחרונים") {
-            prefs.clearRecents()
-            toast("הרשימה נוקתה")
+        // The main app's question first (HistoryPage's ניקוי היסטוריה).
+        actions.addView(link(ShellTexts.CLEAR_HISTORY) {
+            PlacesDialogs.confirmClear(this, colors) {
+                prefs.clearRecents()
+                toast("ההיסטוריה נוקתה")
+            }
         })
         scope.launch { text.text = withContext(Dispatchers.IO) { libraryInfo() } }
         keypadFocus(search)
@@ -320,9 +332,9 @@ class SettingsActivity : BaseActivity() {
     // ------------------------------------------------------------------ אודות
 
     /**
-     * The main app's כללי header (AppHeaderCard: icon, name, version, the credit to Zayit), then its About page
-     * (AboutSettings ABOUT_MD: אודות פרדס and תודות) word for word, each link a row a keypad reaches under its
-     * paragraph, then what this edition is.
+     * The main app's כללי header (AppHeaderCard: icon, name, version, the credit to Zayit), then its About page as it
+     * renders it (AboutSettings: ABOUT_MD, אודות פרדס and תודות, its links in the text, a keypad's ▲▼ going through
+     * them), then what this edition is.
      */
     private fun about() {
         val body = pageBody()
@@ -340,42 +352,11 @@ class SettingsActivity : BaseActivity() {
         head.addView(titles, lp(0, WRAP, 1f))
         card.addView(head)
 
-        val about = card(body, "אודות פרדס")
-        about.addView(paragraph(ABOUT_PARDES))
-        about.addView(paragraph(ABOUT_SOURCE))
-        about.addView(link("קוד המקור של פרדס") { openUrl(SOURCE_URL) })
-        about.addView(paragraph(Bidi.compat(POWERED_BY)))
-
-        val thanks = card(body, "תודות")
-        thanks.addView(paragraph(THANKS_ZAYIT))
-        thanks.addView(links("זית" to "https://zayitapp.com/", "SeforimLibrary" to "https://github.com/kdroidFilter/SeforimLibrary"))
-        thanks.addView(paragraph(THANKS_SOURCES))
-        thanks.addView(links("Sefaria" to "https://www.sefaria.org.il/", "אוצריא" to "https://otzaria.org"))
-        thanks.addView(quote(OTZARIA_QUOTE))
-        thanks.addView(paragraph(THANKS_TOOLS))
-        thanks.addView(paragraph(ICON_CREDIT))
-        thanks.addView(links("CC BY 4.0" to "https://creativecommons.org/licenses/by/4.0/"))
+        card(body).addView(MarkdownText.view(this, colors, ABOUT_MD))
 
         val edition = card(body, "הגרסה הזו")
         edition.addView(paragraph(EDITION))
         keypadFocus(credit)
-    }
-
-    /** A paragraph's links ([label] → address), side by side from its start. */
-    private fun links(vararg targets: Pair<String, String>): View = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        targets.forEach { (text, url) -> addView(link(text) { openUrl(url) }, lp(WRAP, WRAP).apply { marginEnd = dp(12) }) }
-    }
-
-    /** A Markdown quote: a bar at its start, the text grey. */
-    private fun quote(text: CharSequence): View = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        setPadding(0, dp(8), 0, 0)
-        addView(View(this@SettingsActivity).apply { setBackgroundColor(colors.border) }, lp(dp(3), MATCH).apply { marginEnd = dp(10) })
-        addView(paragraph(text).apply {
-            setTextColor(colors.secondary)
-            setPadding(0, 0, 0, 0)
-        }, lp(0, WRAP, 1f))
     }
 
     private fun paragraph(text: CharSequence): TextView = label(text, 14f, colors.text).apply {
@@ -394,38 +375,13 @@ class SettingsActivity : BaseActivity() {
     private fun versionName(): String =
         runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: ""
 
-    private fun openUrl(url: String) {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-        } catch (_: ActivityNotFoundException) {
-            toast(url)
-        }
-    }
+    private fun openUrl(url: String) = MarkdownText.open(this, url)
 
     private companion object {
         const val STATE_PAGE = "page"
-        const val SOURCE_URL = "https://github.com/efrul/Pardes"
 
         /** Bereshit 1:1 with its niqqud and cantillation, to show the font, the size and the marks chosen. */
         const val SAMPLE = "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃"
-
-        // The main app's About (AboutSettings ABOUT_MD), word for word, its links' texts left in place; its thanks for
-        // Compose left out of THANKS_TOOLS, as this edition has none.
-        const val ABOUT_PARDES =
-            "פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו " +
-                "אחראי לו ואינו נותן לו תמיכה. פרדס נבנה מהקוד הפתוח של זית 0.6.1 (רישיון AGPL-3.0), ושונה כדי לפעול באנדרואיד."
-        const val ABOUT_SOURCE =
-            "גם פרדס מופץ תחת רישיון AGPL-3.0, וקוד המקור שלו זמין תחת אותו רישיון. המודולים הקנייניים של הגרסאות " +
-                "הרשמיות של זית (החיפוש הסמנטי והסידור החכם המלא) אינם כלולים בו."
-
-        /** Zayit's AGPL §7(b) attribution, word for word. */
-        const val POWERED_BY = "⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩"
-        const val THANKS_ZAYIT = "לאליהו גמבש, יוצר זית ו־SeforimLibrary, שעל הקוד הפתוח שלהם פרדס בנוי."
-        const val THANKS_SOURCES = "לפרויקטים Sefaria ואוצריא, שמהם מגיעים הספרים."
-        const val OTZARIA_QUOTE = "התכנים שלפניכם נאספו, מוינו, סוננו ונערכו בעמל רב ובמסירות על ידי צוות פרויקט 'אוצריא' (otzaria.org)."
-
-        const val THANKS_TOOLS = "לקרן Apache על Lucene, מנוע החיפוש, ול־JetBrains ול־Google על Kotlin."
-        const val ICON_CREDIT = "אייקון היד הכותבת: Emoji One, ברישיון CC BY 4.0."
 
         const val EDITION =
             "זוהי הגרסה של פרדס לאנדרואיד 4.4 עד 7.1, שבהם פרדס הרגיל (מאנדרואיד 8.0) אינו פועל. היא קוראת אותה ספרייה, " +

@@ -1,6 +1,8 @@
 package io.github.kdroidfilter.seforimapp.legacy.data
 
 import android.content.Context
+import android.content.res.Configuration
+import android.os.Build
 import io.github.kdroidfilter.seforimapp.android.ui.reader.DiacriticsMode
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,13 +26,36 @@ enum class BookFont(val label: String, val asset: String?) {
     System("גופן המערכת", null),
 }
 
+/**
+ * The theme, as the main app's (ThemeMode), its default the system's: the title bar's menu goes Light → Dark → System.
+ * Android has a dark theme of its own from 10 only: before, System is the light theme.
+ */
+enum class ThemeMode { System, Light, Dark }
+
 /** The settings, history and bookmarks of this edition (one preferences file; the main app's are not read). */
 class Prefs(context: Context) {
+    private val app = context.applicationContext
     private val sp = context.getSharedPreferences("pardes_legacy", Context.MODE_PRIVATE)
 
-    var dark: Boolean
-        get() = sp.getBoolean(KEY_DARK, false)
-        set(value) = sp.edit().putBoolean(KEY_DARK, value).apply()
+    /** The theme chosen; before there were three, a theme set dark or light stays as it was. */
+    var themeMode: ThemeMode
+        get() = sp.getString(KEY_THEME, null)?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } }
+            ?: when {
+                !sp.contains(KEY_DARK) -> ThemeMode.System
+                sp.getBoolean(KEY_DARK, false) -> ThemeMode.Dark
+                else -> ThemeMode.Light
+            }
+        set(value) = sp.edit().putString(KEY_THEME, value.name).remove(KEY_DARK).apply()
+
+    /** Whether the screens are dark: the theme chosen, or for System the phone's (Android 10 and later). */
+    val dark: Boolean
+        get() = when (themeMode) {
+            ThemeMode.Light -> false
+            ThemeMode.Dark -> true
+            ThemeMode.System ->
+                Build.VERSION.SDK_INT >= 29 &&
+                    (app.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
 
     /** The book text's size in sp. */
     var textSize: Int
@@ -48,6 +73,11 @@ class Prefs(context: Context) {
     var keepScreenOn: Boolean
         get() = sp.getBoolean(KEY_SCREEN_ON, true)
         set(value) = sp.edit().putBoolean(KEY_SCREEN_ON, value).apply()
+
+    /** The licence and terms accepted (the main app's onboarding licence step), once, before the first Home. */
+    var licenceAccepted: Boolean
+        get() = sp.getBoolean(KEY_LICENCE, false)
+        set(value) = sp.edit().putBoolean(KEY_LICENCE, value).apply()
 
     /** The Home's wallpaper (the main app's תמונת רקע); a phone Android counts as low on memory never shows it. */
     var wallpaper: Boolean
@@ -129,12 +159,15 @@ class Prefs(context: Context) {
         const val TEXT_SIZE_STEP = 2
         private const val MAX_RECENTS = 30
 
+        /** The theme before System was one: true for dark (read once, then replaced by [KEY_THEME]). */
         private const val KEY_DARK = "dark"
+        private const val KEY_THEME = "theme"
         private const val KEY_TEXT_SIZE = "text_size"
         private const val KEY_BOOK_FONT = "book_font"
         private const val KEY_DIACRITICS = "diacritics"
         private const val KEY_SCREEN_ON = "keep_screen_on"
         private const val KEY_WALLPAPER = "wallpaper"
+        private const val KEY_LICENCE = "licence_accepted"
         private const val KEY_COMMENTATORS = "commentators_"
         private const val KEY_LIBRARY_DIR = "library_dir"
         private const val KEY_SEARCH_FAILURE = "search_failure"

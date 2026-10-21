@@ -11,10 +11,12 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import io.github.kdroidfilter.seforimapp.android.ui.shell.ShellTexts
 import io.github.kdroidfilter.seforimapp.legacy.PardesApp
 import io.github.kdroidfilter.seforimapp.legacy.R
 import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
+import io.github.kdroidfilter.seforimapp.legacy.data.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -25,8 +27,9 @@ import java.util.Locale
 
 /**
  * What every screen shares: the theme of the settings (light or dark), a Hebrew right-to-left layout whatever the
- * phone's language (the main app's UI is Hebrew only), a keypad's Menu key opening the title bar's ⋮ menu, a
- * coroutine scope that ends with the screen, and a screen built again on its library when that was closed behind it.
+ * phone's language (the main app's UI is Hebrew only), the title bar's ⋮ menu of the main app and a keypad's Menu key
+ * opening it, a coroutine scope that ends with the screen, and a screen built again on its library when that was
+ * closed behind it.
  */
 abstract class BaseActivity : Activity() {
     protected val app: PardesApp get() = PardesApp.of(this)
@@ -145,6 +148,53 @@ abstract class BaseActivity : Activity() {
         super.onPause()
     }
 
+    /**
+     * The main app's ⋮ of the title bar (TopBar), with the items this edition has, in its order: דף הבית, [find] (find
+     * in the page, there under 300dp on a screen that has it), מועדפים, היסטוריה, the theme in use, הגדרות. A screen
+     * leaves out the item that is itself (the Home its דף הבית, Settings its הגדרות). Not here: לשונית חדשה, כלים and
+     * עדכון זמין, as this edition has no tabs, tools nor update.
+     */
+    protected fun shellMenu(find: MenuEntry? = null): List<MenuEntry> = buildList {
+        val activity = this@BaseActivity
+        if (activity !is MainActivity) add(MenuEntry("דף הבית", R.drawable.ic_home) { goHome() })
+        find?.let(::add)
+        add(MenuEntry("מועדפים", R.drawable.ic_star_border) { PlacesDialogs.favorites(activity, colors) { onPlacesChanged() } })
+        add(MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(activity, colors) { onPlacesChanged() } })
+        val theme = prefs.themeMode
+        add(MenuEntry(themeLabel(theme), themeIcon(theme)) { cycleTheme() })
+        if (activity !is SettingsActivity) add(MenuEntry("הגדרות", R.drawable.ic_settings) { startActivity(Intent(activity, SettingsActivity::class.java)) })
+    }
+
+    /** The history or the favourites changed in their dialog, which leaves this screen resumed under it. */
+    protected open fun onPlacesChanged() = Unit
+
+    /** The Home, the screens over it closed (the stack's way back to the main app's דף הבית). */
+    protected fun goHome() {
+        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
+        finish()
+    }
+
+    /** The menu's theme item: the main app's cycle, Light → Dark → System → Light. */
+    private fun cycleTheme() {
+        prefs.themeMode = when (prefs.themeMode) {
+            ThemeMode.Light -> ThemeMode.Dark
+            ThemeMode.Dark -> ThemeMode.System
+            ThemeMode.System -> ThemeMode.Light
+        }
+        applyTheme()
+    }
+
+    /**
+     * After the theme was chosen: the screen is built again in its colours when they change (System is light before
+     * Android 10, so Dark → System does, System → Light does not there), the screens behind it as they come back.
+     */
+    protected fun applyTheme() {
+        if (prefs.dark != darkAtCreate) recreate() else onThemeKept()
+    }
+
+    /** The theme chosen changed, the colours did not ([applyTheme]): a screen that names the theme says it again. */
+    protected open fun onThemeKept() = Unit
+
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         // A keypad phone's left soft key: the ⋮ menu of the title bar.
         if (keyCode == KeyEvent.KEYCODE_MENU && topBar?.showMenu() == true) return true
@@ -161,5 +211,18 @@ abstract class BaseActivity : Activity() {
     companion object {
         @Suppress("DEPRECATION")
         val HEBREW: Locale = Locale("iw", "IL")
+
+        /** The theme in use as the main app's menu names it, and its icon (TopBar themeLabel, themeIcon). */
+        fun themeLabel(mode: ThemeMode): String = when (mode) {
+            ThemeMode.System -> ShellTexts.THEME_SYSTEM
+            ThemeMode.Light -> ShellTexts.THEME_LIGHT
+            ThemeMode.Dark -> ShellTexts.THEME_DARK
+        }
+
+        fun themeIcon(mode: ThemeMode): Int = when (mode) {
+            ThemeMode.System -> R.drawable.ic_brightness_medium
+            ThemeMode.Light -> R.drawable.ic_light_mode
+            ThemeMode.Dark -> R.drawable.ic_dark_mode
+        }
     }
 }

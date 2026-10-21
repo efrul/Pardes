@@ -24,6 +24,7 @@ object Dialogs {
     /**
      * A dialog with [title], [content] and, at its foot, [buttons] (label → action; each closes the dialog first). A
      * keypad starts on button [focusButton] when it is given (a question's answer), else on the dialog's first stop.
+     * Button [dangerButton], when given, is in the error colour (the main app's "כן, נקה").
      */
     fun show(
         activity: Activity,
@@ -32,6 +33,7 @@ object Dialogs {
         content: View,
         buttons: List<Pair<String, () -> Unit>> = listOf("סגור" to {}),
         focusButton: Int = -1,
+        dangerButton: Int = -1,
     ): Dialog {
         val dialog = Dialog(activity)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -53,7 +55,7 @@ object Dialogs {
                 setPadding(0, activity.dp(6), 0, 0)
             }
             buttons.forEachIndexed { i, (label, action) ->
-                row.addView(activity.label(label, 15f, colors.accent, bold = true).apply {
+                row.addView(activity.label(label, 15f, if (i == dangerButton) colors.error else colors.accent, bold = true).apply {
                     if (i == focusButton) focus = this
                     gravity = Gravity.CENTER
                     minWidth = activity.dp(64)
