@@ -3,6 +3,7 @@ name: CI - Build Check
 on:
   pull_request:
     branches:
+      - dev
       - master
       - main
 
@@ -17,7 +18,20 @@ jobs:
           submodules: recursive
 
       - name: Setup Nucleus
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@789704a9b63c5b2a0ff4d6e1cd85711ab2e4286b
+        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@712f1e520c73fd68e1e7514b17700e577643802c
+
+      # The private packages (smart siddur, semantic search) are compiled when the token is there; fork and Dependabot PRs
+      # get no secrets and build the community edition (an empty variable would enable them and fail on resolution)
+      - name: Expose the private packages token
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.SEFORIM_SIDDUR_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "SEFORIM_SIDDUR_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "::notice::No SEFORIM_SIDDUR_TOKEN: building the community edition"
+          fi
 
       - name: Run ktlint
         run: ./gradlew ktlintCheck --no-daemon
@@ -53,7 +67,20 @@ jobs:
           submodules: recursive
 
       - name: Setup Nucleus
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@789704a9b63c5b2a0ff4d6e1cd85711ab2e4286b
+        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@712f1e520c73fd68e1e7514b17700e577643802c
+
+      # The private packages (smart siddur, semantic search) are compiled when the token is there; fork and Dependabot PRs
+      # get no secrets and build the community edition (an empty variable would enable them and fail on resolution)
+      - name: Expose the private packages token
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.SEFORIM_SIDDUR_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "SEFORIM_SIDDUR_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "::notice::No SEFORIM_SIDDUR_TOKEN: building the community edition"
+          fi
 
       - name: Run tests with coverage
         run: ./gradlew :SeforimApp:jvmTest :SeforimApp:koverXmlReport :SeforimApp:koverHtmlReport --no-daemon
@@ -94,7 +121,7 @@ jobs:
             graalvm: true
             rust_target: x86_64-pc-windows-msvc
 
-          # Windows ARM64 (JBR - no Liberica NIK)
+          # Windows ARM64 (JVM - no native-image toolchain)
           - os: windows-11-arm
             arch: arm64
             build_task: ":SeforimApp:createReleaseDistributable :SeforimApp:packageReleaseNsis"
@@ -115,14 +142,26 @@ jobs:
           submodules: recursive
 
       - name: Setup Nucleus
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@789704a9b63c5b2a0ff4d6e1cd85711ab2e4286b
-
-      - name: Setup GraalVM (Liberica NIK)
-        if: matrix.graalvm
-        uses: graalvm/setup-graalvm@v1
+        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@712f1e520c73fd68e1e7514b17700e577643802c
+        # The Nucleus plugin provisions the GraalVM toolchain itself (Oracle GraalVM per the
+        # graalvm { toolchain { } } DSL, Liberica NIK on Intel macs); this only sets up
+        # Xcode/MSVC and caches the toolchain.
         with:
-          java-version: '25'
-          distribution: 'liberica'
+          graalvm: ${{ matrix.graalvm }}
+          graalvm-distribution: oracle
+
+      # The private packages (smart siddur, semantic search) are compiled when the token is there; fork and Dependabot PRs
+      # get no secrets and build the community edition (an empty variable would enable them and fail on resolution)
+      - name: Expose the private packages token
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.SEFORIM_SIDDUR_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "SEFORIM_SIDDUR_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "::notice::No SEFORIM_SIDDUR_TOKEN: building the community edition"
+          fi
 
       # Build
       - name: Build

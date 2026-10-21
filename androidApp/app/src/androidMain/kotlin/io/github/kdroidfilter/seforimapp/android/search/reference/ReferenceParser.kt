@@ -1,5 +1,6 @@
-// Vendored from Zayit 0.6.1: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/reference/ReferenceParser.kt
-// (tag v0.6.1), with the 0.6.2 fix 2126c238 applied as is. Keep it identical; Android changes belong in a variant file.
+// Vendored from Zayit 0.6.7: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/reference/ReferenceParser.kt
+// (tag v0.6.7: 0.6.1's with the 0.6.2 fix 2126c238, its only change since). Keep it identical; Android changes belong
+// in a variant file.
 package io.github.kdroidfilter.seforimapp.features.search.domain.reference
 
 import com.kdroid.gematria.converter.toGematria

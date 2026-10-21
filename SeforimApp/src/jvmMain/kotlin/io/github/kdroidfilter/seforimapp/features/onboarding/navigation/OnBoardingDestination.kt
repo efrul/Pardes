@@ -11,6 +11,9 @@ sealed interface OnBoardingDestination {
     data object LicenceScreen : OnBoardingDestination
 
     @Serializable
+    data object ExistingLibraryScreen : OnBoardingDestination
+
+    @Serializable
     data object AvailableDiskSpaceScreen : OnBoardingDestination
 
     @Serializable

@@ -15,11 +15,11 @@
 - `settings.gradle.kts` sets up the repositories (Google, the GCS Maven mirror, Maven Central) and includes `:app` and `:lucene-android`.
 - `gradle/libs.versions.toml` is the Android build's own version catalog.
 - `app/build.gradle.kts` is a KMP `androidTarget` plus `com.android.application`:
-  - `commonMain` compiles SeforimLibrary `core` and `dao` **unchanged** from `androidApp/upstream/SeforimLibrary`. That is an Android-only git submodule pinned to `381fbea`, the commit desktop 0.6.1 was built with. The root `SeforimLibrary/` submodule is the fork's older copy for the desktop build. After cloning, run `git submodule update --init androidApp/upstream/SeforimLibrary`.
-  - `androidMain` adds the dao `androidMain` sources and `../htmlparser/src/commonMain/kotlin`.
+  - `commonMain` compiles SeforimLibrary `core` and `dao` **unchanged** from the repository's `SeforimLibrary/` submodule (`../SeforimLibrary` from `androidApp/`), at `7ddf045`, the commit desktop 0.6.7 builds with. Desktop and Android build from this one checkout, so they cannot drift apart. (Until 2026-10-20 Android had its own submodule, `androidApp/upstream/SeforimLibrary` at `381fbea`, desktop 0.6.1's; it is gone.) After cloning, run `git submodule update --init SeforimLibrary`.
+  - `androidMain` adds the dao `androidMain` sources, SeforimLibrary `search` and `delta-updater` (minus the files that have Android variants in `search/` and `delta/`), generator-common's `PatchTables.kt` (synced into the build folder), `../icons`, and the vendored htmlparser (`app/src/androidMain/htmlparser`).
   - SQLDelight generates two databases:
-    - `SeforimDb` from `upstream/SeforimLibrary/dao/src/commonMain/sqldelight` (the library).
-    - `UserSettingsDb` from `SeforimApp/src/commonMain/sqldelight` (notes and highlights, the same schema as desktop), plus `app/src/androidMain/sqldelight-user-legacy` (desktop's two UPSERTs as Android 8-10's SQLite can run them).
+    - `SeforimDb` from `../SeforimLibrary/dao/src/commonMain/sqldelight` (the library).
+    - `UserSettingsDb` from `app/src/androidMain/sqldelight-user` (desktop's `SeforimApp/src/commonMain/sqldelight`, vendored: notes, highlights, history, favorites and shnayim mikra; the same in 0.6.1 and 0.6.7), plus `app/src/androidMain/sqldelight-user-legacy` (desktop's two UPSERTs as Android 8-10's SQLite can run them).
   - The release build type uses R8 (`isMinifyEnabled`, `isShrinkResources`) with `proguard-rules.pro`, signed with the debug key.
 - `lucene-android/` holds lucene-core 10.5.2 patched for API 26 (see lucene-android.md).
 - `tools/` has developer and user scripts: `make_subset_db.sh` and `push-desktop-library.sh`/`.ps1`.
@@ -44,7 +44,7 @@ Rule: if desktop code needs a change to work on Android, make an Android copy un
 
 ## Source map
 
-Paths below are relative to `app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/`. Desktop paths are in the 0.6.1 checkout (desktop-reference.md); ported files name their desktop file in a KDoc.
+Paths below are relative to `app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/`. Desktop paths are as desktop 0.6.7 has them, which is this repository's own `SeforimApp/` since the merge of 2026-10-20 (desktop-reference.md); ported files name their desktop file in a KDoc or header.
 
 | Path | Role | Desktop counterpart |
 |---|---|---|
@@ -61,13 +61,13 @@ Paths below are relative to `app/src/androidMain/kotlin/io/github/kdroidfilter/s
 | `ui/settings/` | settings pages, `DbDeltaUpdateSection` | features/settings (+ dbupdate) |
 | `ui/database/DatabaseUpdateScreen.kt` | outdated / missing / broken library flow (delta first, else full install) | features/database |
 | `ui/onboarding/` | first-run flow | features/onboarding |
-| `ui/tools/` | title-bar tools, ported from 0.6.1 | features/zmanim, siddur, luach, earthwidget |
-| `search/` | Android variants of the 0.6.1 search module (`LuceneSearchEngine`, `MagicDictionaryIndex`, `LuceneLookupSearchService`, `AcronymFrequencyCache`), `SearchService` (lazy open, cooperative `countFacets`), vendored `RepositorySnippetSourceProvider`, `SearchEntityFinder`, `reference/` (typed references) | SeforimLibrary search, framework/search, features/search/domain |
+| `ui/tools/` | title-bar tools, ported from 0.6.1, with the 0.6.2 tefila fix 411280b9 (the rest of 0.6.7's changes there are desktop's 3D rendering) | features/zmanim, siddur, luach, earthwidget |
+| `search/` | Android variants of the search module (SeforimLibrary `7ddf045`, desktop 0.6.7: `LuceneSearchEngine`, `MagicDictionaryIndex`, `LuceneLookupSearchService`, `AcronymFrequencyCache`), `SearchService` (lazy open, cooperative `countFacets`), vendored `RepositorySnippetSourceProvider`, `SearchEntityFinder`, `reference/` (typed references) | SeforimLibrary search, framework/search, features/search/domain |
 | `delta/` | Android variants of SeforimLibrary `delta-updater` (patch download, in-transaction apply, Lucene/catalog update) + `LibraryDeltaService` | delta-updater, features/settings/dbupdate |
 | `update/` | `AppUpdater` (check at start and on request, APK download into the cache, sha256 + package/version/certificate checks, PackageInstaller session, waiting confirmation, "פרדס עודכן"), `AppReleases` (API list / releases.json / changelog.md), `AppPackages`, `AppUpdateService` (dataSync FGS, notifications 4121/4122, `AppUpdateInstallReceiver`, `AppUpdatedReceiver` for MY_PACKAGE_REPLACED); UI in `ui/settings/AppUpdateSection.kt` (banner, dialog) and the title bars' badge | framework/update (`AppUpdateService`), features/update |
 | `data/` | `LibraryStore`, `LibraryInstaller` + `LibraryInstallService`, `AppPrefs` (desktop keys), `UserDataStore` (desktop user_settings.db schema: notes, highlights, diacritics), `HistoryStore`, `FavoritesStore`, `SessionStore`, `ReadingHistory` (facade), `ZmanimEngine` + `Cities` + `CandleLighting` (desktop's), tool data | various |
 
-Shared sources compiled through `srcDir` (not copied): `upstream/SeforimLibrary` core, dao, search and delta-updater (with excludes for the Android variants). Vendored unchanged: the 0.6.1 htmlparser (`app/src/androidMain/htmlparser`) and user-settings schema (`app/src/androidMain/sqldelight-user`).
+Shared sources compiled through `srcDir` (not copied): `../SeforimLibrary` core, dao, search and delta-updater (with excludes for the Android variants), generator-common's `PatchTables.kt`, and `../icons`. Vendored: the htmlparser (`app/src/androidMain/htmlparser`: desktop 0.6.1's with the 0.6.5 fixes f443277d and 5e016dfa, the same as 0.6.7's and as `../htmlparser` since the merge) and the user-settings schema (`app/src/androidMain/sqldelight-user`, the same in 0.6.1 and 0.6.7).
 
 ## State and navigation
 
@@ -99,3 +99,4 @@ Shared sources compiled through `srcDir` (not copied): `upstream/SeforimLibrary`
 - Colours and sizes come from `Zayit.colors` / `Zayit.fonts`, never hard-coded, so dark mode and accents work.
 - Every screen must work at about 240dp (Jelly Star), 411dp (phone) and 1280dp (tablet). Check all three after layout changes.
 - New desktop behaviour: find the desktop code, port it, and say in a KDoc which desktop class it mirrors (as the existing files do).
+- Provenance: a header names the desktop version it matches, now 0.6.7 ("Port of desktop 0.6.7 features/…"). A desktop file changed since 0.6.1, the version the port was first matched against, is named with the upstream commits that changed it ("0.6.1's with the 0.6.2 fix 2126c238"); one named "0.6.7" alone is unchanged since 0.6.1. When desktop moves on, `git diff --stat v0.6.7 <new tag> -- <desktop paths>` shows which headers to recheck, and androidApp/docs/PARITY.md records each upstream change.

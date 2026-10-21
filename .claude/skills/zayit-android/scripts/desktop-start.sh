@@ -4,9 +4,12 @@
 # foreground); then use desktop-shot.sh. The desktop app needs its library (fetch-desktop-library.sh puts it in the
 # folder desktop reads) or it starts on its own first-run download flow.
 #
-#   desktop-start.sh [version]     default 0.6.1 (the version the Android port was matched against)
+#   desktop-start.sh [version]     default 0.6.7 (the version the Android port is matched against)
+#
+# The .deb is upstream's release asset zayit_<version>_amd64.deb. An installed zayit is kept whatever its version:
+# `apt-get remove -y zayit` first to replace an older one (an earlier session's 0.6.1, say).
 set -uo pipefail
-V="${1:-0.6.1}"
+V="${1:-0.6.7}"
 if ! command -v zayit >/dev/null; then
   d=$(mktemp -d); curl -fsSL -o "$d/zayit_${V}_amd64.deb" "https://github.com/kdroidFilter/Zayit/releases/download/v$V/zayit_${V}_amd64.deb"
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$d/zayit_${V}_amd64.deb" xvfb xdotool x11-utils imagemagick fonts-noto-core >/dev/null

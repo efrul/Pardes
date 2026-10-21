@@ -11,7 +11,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.ToolKind
 /**
  * A Home widget, placed by [HomeWidgetsGrid] on an area of a grid of [HOME_GRID_COLUMNS] columns, as on Android's home
  * screen. Widgets never talk to each other: they read and write the shared [HomeWidgetsState], so any of them can be
- * moved, resized or removed. Port of desktop 0.6.1 features/home/widgets/HomeWidget.kt; a tool's own window
+ * moved, resized or removed. Port of desktop 0.6.7 features/home/widgets/HomeWidget.kt; a tool's own window
  * (toolWindowSize) is the [tool] page here.
  */
 interface HomeWidget {

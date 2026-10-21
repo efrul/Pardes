@@ -9,7 +9,7 @@ import io.github.kdroidfilter.seforimapp.android.delta.queryWide
 import java.security.MessageDigest
 
 /**
- * Android variant of SeforimLibrary (381fbea) `generator/common/.../patch/LogicalContentHasher.kt`: the same logical
+ * Android variant of SeforimLibrary (7ddf045) `generator/common/.../patch/LogicalContentHasher.kt`: the same logical
  * sha256 of a seforim.db (each tracked table in primary-key order, every cell type-tagged), so it matches the
  * `fromContentHash` / `toContentHash` the producer wrote into the manifest. The byte stream is identical to the JDBC
  * one (sqlite-jdbc getObject: INTEGER → its decimal digits, REAL → Double.toString, TEXT → UTF-8, BLOB → raw bytes).

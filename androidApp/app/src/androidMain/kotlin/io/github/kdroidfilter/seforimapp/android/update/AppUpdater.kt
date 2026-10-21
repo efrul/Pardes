@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Desktop 0.6.1 `framework/update/AppUpdateService.kt`'s UpdateUiState, as the touch flow shows it: the version found
+ * Desktop 0.6.7 `framework/update/AppUpdateService.kt`'s UpdateUiState, as the touch flow shows it: the version found
  * ([release], with what is new in it), the download and its progress, the APK checked and waiting ([ready]), Android's
  * "install unknown apps" switch still off ([needsPermission]), and the install itself.
  */
@@ -95,7 +95,7 @@ data class AppUpdateState(
 }
 
 /**
- * Desktop 0.6.1 `framework/update/AppUpdateService.kt` (Nucleus: a check at startup, the title-bar badge, the dialog,
+ * Desktop 0.6.7 `framework/update/AppUpdateService.kt` (Nucleus: a check at startup, the title-bar badge, the dialog,
  * the settings banner's re-check), for an APK that Android installs: one process-wide object like
  * [DbDeltaUpdateService], so a download outlives the screen that started it and goes on in [AppUpdateService].
  *
@@ -311,11 +311,17 @@ class AppUpdater private constructor(private val app: ZayitApplication) {
         AppReleases.changesSince(changelog, installedVersion, release.version)
     }.getOrNull()
 
-    /** The GitHub API's list, else releases.json (as the site reads them); a development build's test feed instead. */
+    /**
+     * The GitHub API's list, else releases.json (as the site reads them); a development build's test feed instead. The
+     * API's page holds the newest releases of every kind, and Pardes for desktop's (desktop-*) can fill it: a page
+     * without one Android release falls back too, since releases.json lists only these.
+     */
     private fun releases(current: InstallToken): List<AppRelease> {
         testFeed?.let { return AppReleases.parse(it.readText()) }
         return runCatching { AppReleases.parse(getText(AppReleases.API_URL, ACCEPT_GITHUB_JSON, current, MAX_LIST_BYTES)) }
-            .getOrElse { AppReleases.parse(getText(AppReleases.SNAPSHOT_URL, ACCEPT_ANY, current, MAX_LIST_BYTES)) }
+            .getOrNull()
+            ?.takeIf { it.isNotEmpty() }
+            ?: AppReleases.parse(getText(AppReleases.SNAPSHOT_URL, ACCEPT_ANY, current, MAX_LIST_BYTES))
     }
 
     /**

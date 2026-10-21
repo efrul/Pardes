@@ -78,7 +78,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import kotlinx.coroutines.launch
 
 /*
- * The title bar's two lists: desktop 0.6.1 core/presentation/components/TabSearchPopup.kt (the clock: open tabs and the
+ * The title bar's two lists: desktop 0.6.7 core/presentation/components/TabSearchPopup.kt (the clock: open tabs and the
  * 12 latest history entries, searchable, with "הצג את כל ההיסטוריה") and FavoritesPopup.kt (the star). A tablet shows
  * them as desktop's 340dp popup under the button ([TitleBarPopup]); a phone as a bottom sheet ([ShellSheet]) from the
  * overflow menu.

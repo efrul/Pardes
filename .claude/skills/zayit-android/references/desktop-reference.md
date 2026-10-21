@@ -1,28 +1,26 @@
 # Using desktop Zayit as the reference
 
-The Android app must look and behave like **desktop Zayit 0.6.1**, which is the released version the port was matched against. One exception is authorship. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept. So a desktop/Android comparison differs there on purpose (SKILL.md › Authorship and name).
+The Android app must look and behave like **desktop Zayit 0.6.7**, the released version it is matched against since 2026-10-20 (the port was first matched against 0.6.1; androidApp/docs/PARITY.md records what changed between them). One exception is authorship. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept. So a desktop/Android comparison differs there on purpose (SKILL.md › Authorship and name).
 
 There are three ways to learn how desktop does something, best first:
 
-1. **Read the exact 0.6.1 source.** The fork's own `SeforimApp/` and `SeforimLibrary/` are from June 2026 and older than 0.6.1: tools, siddur, favourites, history, authors and the current search UI are missing or different there. The released code is public upstream, and the session's git proxy serves anonymous clones of public repos (no `add_repo` attach needed; call it once if unsure, it answers "read_available"):
+1. **Read the 0.6.7 source in this repository.** Upstream Zayit v0.6.7 was merged into it on 2026-10-20, so `SeforimApp/`, the desktop modules at the root (`htmlparser/`, `navigation/`, `luach/`, `earthwidget/`, `icons/`, …) and the `SeforimLibrary/` submodule (`7ddf045`, the commit v0.6.7 builds with) are desktop 0.6.7, apart from Pardes's own few edits (Rashi Amiti removed, for one; `git diff --stat v0.6.7 HEAD -- SeforimApp` lists them). Run `git submodule update --init SeforimLibrary` once after cloning.
+   - UI: `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/{features,core,framework}/**`.
+   - Strings: `SeforimApp/src/commonMain/composeResources/values/strings.xml` (Hebrew).
+   - Library, search engine and data: `SeforimLibrary/{core,dao,search}`. It uses Lucene 10.5.2, plus lucene-highlighter and lucene-queryparser.
+   - Upstream `master` moves on past v0.6.7. Match the version the user runs, and ask before following a newer one.
+2. **Upstream's tags**, for upstream's exact file and for what changed since the port's first base. `v0.6.1` and `v0.6.7` are fetched into this repository from https://github.com/kdroidFilter/zayit; their commits are already in its history, so a fresh clone fetches only the tags. The session's git proxy serves anonymous fetches of public repos (no `add_repo` attach needed; call it once if unsure, it answers "read_available"). Never push `v*` tags to origin (efrul/Pardes holds only `android-*` tags):
    ```bash
-   mkdir -p /home/user/kdroidfilter
-   GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kdroidFilter/zayit /home/user/kdroidfilter/zayit
-   git -C /home/user/kdroidfilter/zayit fetch --depth 1 origin tag v0.6.1
-   git -C /home/user/kdroidfilter/zayit worktree add /home/user/kdroidfilter/zayit-0.6.1 v0.6.1
-   # SeforimLibrary at the commit 0.6.1 was built with (git -C .../zayit-0.6.1 ls-tree HEAD SeforimLibrary):
-   GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/kdroidFilter/seforimlibrary /home/user/kdroidfilter/seforimlibrary
-   git -C /home/user/kdroidfilter/seforimlibrary fetch --depth 1 origin 381fbea2a0997a91a1100db20db9904839e78b96
-   git -C /home/user/kdroidfilter/seforimlibrary worktree add /home/user/kdroidfilter/seforimlibrary-0.6.1 381fbea2a0997a91a1100db20db9904839e78b96
+   git fetch --no-tags https://github.com/kdroidFilter/zayit tag v0.6.1 tag v0.6.7
+   git show v0.6.7:SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt
+   git diff --stat v0.6.1 v0.6.7 -- SeforimApp/src htmlparser navigation   # what desktop changed since 0.6.1
+   git log --oneline --no-merges v0.6.1..v0.6.7 -- <desktop file>           # and by which commits
+   git -C SeforimLibrary diff --stat 381fbea 7ddf045 -- core dao search delta-updater   # 0.6.1's library pin to 0.6.7's
    ```
-   - UI: `zayit-0.6.1/SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/{features,core,framework}/**`.
-   - Strings: `zayit-0.6.1/SeforimApp/src/commonMain/composeResources/values/strings.xml` (Hebrew).
-   - Library, search engine and data: `seforimlibrary-0.6.1/{core,dao,search}`. It uses Lucene 10.5.2, plus lucene-highlighter and lucene-queryparser.
-   - Upstream `master` moves on (v0.6.3 and later). Match the version the user runs, and ask before following a newer one.
-2. **The fork's sources** (`SeforimApp/`, `SeforimLibrary/` in this repo): only for what hasn't changed since June.
+   For a whole checkout of one of them: `GIT_LFS_SKIP_SMUDGE=1 git worktree add /home/user/zayit-0.6.7 v0.6.7` (its `SeforimLibrary/` stays empty; use the submodule above).
 3. **Run the released app** headless and screenshot it. This is the visual reference and the only way to see real data.
 
-## Running desktop 0.6.1 headless
+## Running desktop 0.6.7 headless
 
 ```bash
 S=.claude/skills/zayit-android/scripts
@@ -31,6 +29,7 @@ $S/desktop-shot.sh home        # -> /tmp/zayit-desktop-shots/home.png (set SHOTS
 $S/desktop-shot.sh settings 20 20 3   # click (20,20), wait 3 s, capture
 ```
 
+- **The version.** `desktop-start.sh` installs `zayit_<version>_amd64.deb` from the upstream release `v<version>` (0.6.7 unless given another) only when no `zayit` is installed, and keeps an installed one whatever its version: run `apt-get remove -y zayit` first to replace an older install.
 - **The library.** Desktop reads it from `~/.local/share/io.github.kdroidfilter.seforimapp/databases/`. If that folder is empty, desktop starts its own onboarding and downloads 5.5 GB. `fetch-desktop-library.sh` fills it with the same data, faster and with no stored archive.
 - **Input:**
   - `xdotool type --delay 100 "בראשית"` works with `LC_ALL=C.UTF-8`.
@@ -41,7 +40,7 @@ $S/desktop-shot.sh settings 20 20 3   # click (20,20), wait 3 s, capture
 
 ## Click map of the 1440×900 main window
 
-The window must be maximised to 0,0 (`desktop-start.sh` does this). Coordinates are approximate, so take a screenshot to confirm before a chain of clicks.
+The window must be maximised to 0,0 (`desktop-start.sh` does this). Coordinates are approximate (measured on 0.6.1), so take a screenshot to confirm before a chain of clicks.
 
 | Target | x, y |
 |---|---|
@@ -70,7 +69,7 @@ The window must be maximised to 0,0 (`desktop-start.sh` does this). Coordinates 
 | Search results | `features/search/**` (`SearchResultViewModel`, `SearchHomeViewModel`), `framework/search/**` | `ui/search/*`, `search/*` |
 | Settings window | `features/settings/**` | `ui/settings/*` |
 | Title bar (tabs, history, bookmarks, theme, tools) | `core/presentation/components/MainTitleBar.kt`, `core/presentation/tabs/**` | `ui/shell/*` |
-| Tools | `features/zmanim`, `features/siddur`, modules `luach`, `earthwidget` (in the 0.6.1 source, not in the fork) | `ui/tools/*`, `data/*` |
+| Tools | `features/zmanim`, `features/siddur`, modules `luach`, `earthwidget` (at the repository root) | `ui/tools/*`, `data/*` |
 
 If a path above has moved, `grep -rn "<Hebrew string>" SeforimApp/src` finds the screen through its strings. Search the string's key in `strings.xml` first, then its usages.
 

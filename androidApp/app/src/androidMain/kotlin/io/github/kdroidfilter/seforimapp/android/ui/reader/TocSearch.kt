@@ -3,7 +3,7 @@ package io.github.kdroidfilter.seforimapp.android.ui.reader
 import io.github.kdroidfilter.seforimlibrary.core.models.AltTocEntry
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 
-// Verbatim port of desktop 0.6.1 features/bookcontent/usecases/TocSearch.kt: the TOC pane's title search.
+// Verbatim port of desktop 0.6.7 features/bookcontent/usecases/TocSearch.kt: the TOC pane's title search.
 
 private val NON_WORD = Regex("[^\\p{L}\\p{N}]+")
 private val WORD = Regex("[\\p{L}\\p{N}]+")

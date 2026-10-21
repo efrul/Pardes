@@ -14,6 +14,7 @@ import dev.nucleusframework.launcher.linux.LinuxQuicklist
 import io.github.kdroidfilter.seforim.tabs.TabType
 import io.github.kdroidfilter.seforim.tabs.TabsEvents
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
+import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import org.jetbrains.compose.resources.stringResource
@@ -34,7 +35,7 @@ private const val DESKTOP_ID_BASE = 1000
 private const val TAB_ID_BASE = 2000
 
 private const val QUICKLIST_OBJECT_PATH = "/com/zayitapp/Menu"
-private const val DESKTOP_FILE_ID = "zayit.desktop"
+private const val DESKTOP_FILE_ID = BrandInfo.LINUX_DESKTOP_FILE_ID
 
 @Composable
 fun AppLinuxQuicklist(

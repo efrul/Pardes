@@ -9,7 +9,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 /**
- * Android variant of SeforimLibrary (381fbea) `delta-updater/.../CatalogUpdater.kt`: pulls the fresh `catalog.pb` out
+ * Android variant of SeforimLibrary (7ddf045) `delta-updater/.../CatalogUpdater.kt`: pulls the fresh `catalog.pb` out
  * of `patch.db.blobs` (android.database instead of JDBC) and swaps it in atomically: written to `catalog.pb.tmp`,
  * synced, then renamed over the target, so a crash leaves the old catalog. The app's CatalogAccess reloads it on its
  * own (its cache is keyed on the file's size and date).

@@ -1,6 +1,6 @@
 # Library location (מיקום הספרייה): plan
 
-Status: **planned, not implemented** (2026-10-15). Desktop 0.6.1 has no location UI: it has only the `SEFORIMAPP_DATABASE_PATH` variable and a hidden `database_path` pref. Its two strings `settings_db_path_label` ("נתיב מסד הנתונים:") and `settings_db_path_not_set` are unused. So this is an Android-only feature; record it in PARITY.md as such when it lands.
+Status: **planned, not implemented** (2026-10-15). Desktop 0.6.1 has no location UI, and neither has 0.6.7: it has only the `SEFORIMAPP_DATABASE_PATH` variable and a hidden `database_path` pref. Its two strings `settings_db_path_label` ("נתיב מסד הנתונים:") and `settings_db_path_not_set` are unused. So this is an Android-only feature; record it in PARITY.md as such when it lands.
 
 Paths below are relative to `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/`.
 

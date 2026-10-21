@@ -24,7 +24,7 @@ enum class Community(val label: String) {
 }
 
 /**
- * User preferences, mirroring desktop 0.6.1's `core/settings/AppSettings.kt`: the same keys, stored values
+ * User preferences, mirroring desktop 0.6.7's `core/settings/AppSettings.kt`: the same keys, stored values
  * (enum names, font codes, worldPlaces names) and defaults, so a desktop backup restores here and the other way
  * round ([exportPortablePreferences] / [importPortablePreferences]). Values written by older Android builds under
  * other keys are moved once ([migrate]).

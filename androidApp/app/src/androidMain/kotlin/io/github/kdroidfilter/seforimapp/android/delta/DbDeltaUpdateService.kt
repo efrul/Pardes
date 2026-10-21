@@ -54,7 +54,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 /**
- * Desktop 0.6.1 `features/settings/dbupdate/DbDeltaUpdateState.kt`, plus what the touch flow shows: the update found
+ * Desktop 0.6.7 `features/settings/dbupdate/DbDeltaUpdateState.kt`, plus what the touch flow shows: the update found
  * by a check ([offer], with its size, waiting for the user), the progress of the step, and whether it can be stopped.
  */
 data class DbDeltaUpdateState(
@@ -96,7 +96,7 @@ sealed interface DbDeltaUpdateEvents {
     data object ClearMessage : DbDeltaUpdateEvents
 }
 
-/** Desktop's section strings are English literals; these are their Hebrew, with 0.6.1 strings.xml wording where it has one. */
+/** Desktop's section strings are English literals; these are their Hebrew, with 0.6.7 strings.xml wording where it has one. */
 internal object DeltaStrings {
     const val title = "עדכונים מצטברים למסד הנתונים" // "Database delta updates"
     const val idle = "לחצו על הכפתור כדי לבדוק אם יש בשרת עדכון מצטבר למסד הנתונים." // "Idle. Press the button below…"
@@ -156,7 +156,7 @@ internal object DeltaStrings {
 }
 
 /**
- * Desktop 0.6.1 `framework/update/DbDeltaUpdateService.kt` (the app's facade over SeforimLibrary's DeltaUpdaterClient)
+ * Desktop 0.6.7 `framework/update/DbDeltaUpdateService.kt` (the app's facade over SeforimLibrary's DeltaUpdaterClient)
  * together with `features/settings/dbupdate/DbDeltaUpdateViewModel.kt` (the state the settings section renders), as one
  * process-wide object like [LibraryInstaller], so a run survives the screen and goes on in [LibraryDeltaService].
  *

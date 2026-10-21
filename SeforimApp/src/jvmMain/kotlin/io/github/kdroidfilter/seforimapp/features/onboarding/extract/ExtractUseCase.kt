@@ -2,9 +2,7 @@ package io.github.kdroidfilter.seforimapp.features.onboarding.extract
 
 import com.github.luben.zstd.ZstdInputStream
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.databasesDir
-import io.github.vinceglb.filekit.path
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -14,16 +12,22 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.FilterInputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.io.SequenceInputStream
+import java.security.DigestInputStream
+import java.security.MessageDigest
+import java.util.HexFormat
 
-class ExtractUseCase {
+class ExtractUseCase(
+    private val appSettings: AppSettings,
+) {
     suspend fun extractToDatabase(
         sourcePath: String,
         onProgress: (Float) -> Unit,
     ): String =
         withContext(Dispatchers.Default) {
-            val dbDirV = FileKit.databasesDir
-            val dbDir = File(dbDirV.path).apply { mkdirs() }
+            // The folder the user chose for the library (LibraryLocation), the app's own by default
+            val dbDir = LibraryLocation.installDir(appSettings).apply { mkdirs() }
             val source = File(sourcePath)
             require(source.exists()) { "Selected file not found" }
 
@@ -32,22 +36,20 @@ class ExtractUseCase {
                 withContext(Dispatchers.IO) {
                     val lower = source.name.lowercase()
                     when {
-                        lower.endsWith(".tar.zst.part01") || lower.endsWith(".tar.zst.part02") -> {
-                            val (p1, p2) = findSplitParts(source)
+                        BundleParts.isPart(source.name) -> {
+                            val bundle = BundleParts.resolve(source)
+                            val parts = bundle.parts
                             val result =
-                                extractTarZstFromPartsStreaming(listOf(p1, p2), dbDir) { mapped ->
+                                extractTarZstFromPartsStreaming(parts, dbDir, bundle.sha256) { mapped ->
                                     onProgress(mapped)
                                 }
                             // Only cleanup if parts live in our databases directory (downloaded by the app)
                             val canDelete =
                                 runCatching {
                                     val base = dbDir.canonicalFile
-                                    (p1.parentFile?.canonicalFile == base) && (p2.parentFile?.canonicalFile == base)
+                                    parts.all { it.parentFile?.canonicalFile == base }
                                 }.getOrDefault(false)
-                            if (canDelete) {
-                                runCatching { p1.delete() }
-                                runCatching { p2.delete() }
-                            }
+                            if (canDelete) BundleParts.bundleFiles(source).forEach { runCatching { it.delete() } }
                             result
                         }
                         lower.endsWith(".tar.zst") -> {
@@ -67,7 +69,7 @@ class ExtractUseCase {
                     }
                 }
             onProgress(1f)
-            AppSettings.setDatabasePath(dbFile.absolutePath)
+            appSettings.setDatabasePath(dbFile.absolutePath)
             runCatching { maybeCleanupSources(source, dbDir) }
             return@withContext dbFile.absolutePath
         }
@@ -188,12 +190,14 @@ class ExtractUseCase {
         return extractedDb ?: error("No .db file found in archive")
     }
 
+    /** Extracts the concatenated [parts]; when [expectedSha256] is known, the compressed stream must match it. */
     private fun extractTarZstFromPartsStreaming(
         parts: List<File>,
         destDir: File,
+        expectedSha256: String?,
         onUiProgress: (Float) -> Unit,
     ): File {
-        require(parts.size >= 2)
+        require(parts.isNotEmpty())
 
         // Counting wrapper to report compressed bytes consumed
         class CountingInputStream(
@@ -235,9 +239,11 @@ class ExtractUseCase {
 
         val ins = parts.map { BufferedInputStream(FileInputStream(it), 1 shl 20) }
         val seq = SequenceInputStream(ins.toEnumeration())
+        // Hashing the bytes already read for extraction costs no extra I/O
+        val digest = expectedSha256?.let { MessageDigest.getInstance("SHA-256") }
 
         var extractedDb: File? = null
-        CountingInputStream(seq).use { cis ->
+        CountingInputStream(digest?.let { DigestInputStream(seq, it) } ?: seq).use { cis ->
             ZstdInputStream(cis).use { zIn ->
                 TarArchiveInputStream(zIn).use { tar ->
                     while (true) {
@@ -267,6 +273,14 @@ class ExtractUseCase {
                         }
                         onUiProgress(mapProgress(cis.count))
                     }
+                    if (digest != null) {
+                        // The tar ends before the compressed stream does; hash the rest too
+                        cis.transferTo(OutputStream.nullOutputStream())
+                        if (!HexFormat.of().formatHex(digest.digest()).equals(expectedSha256, ignoreCase = true)) {
+                            extractedDb?.delete()
+                            error("The database bundle is corrupted (sha256 mismatch)")
+                        }
+                    }
                 }
             }
         }
@@ -283,16 +297,6 @@ class ExtractUseCase {
             override fun nextElement(): T = this@toEnumeration[index++]
         }
 
-    private fun findSplitParts(anyPart: File): Pair<File, File> {
-        val dir = anyPart.parentFile ?: error("Invalid parts path")
-        val base = anyPart.name.substringBeforeLast(".part")
-        val p1 = File(dir, "$base.part01")
-        val p2 = File(dir, "$base.part02")
-        require(p1.exists()) { "Missing part01" }
-        require(p2.exists()) { "Missing part02" }
-        return p1 to p2
-    }
-
     private fun maybeCleanupSources(
         source: File,
         dbDir: File,
@@ -300,10 +304,8 @@ class ExtractUseCase {
         if (source.parentFile?.canonicalFile == dbDir.canonicalFile) {
             if (source.name.endsWith(".tar.zst", true)) {
                 runCatching { source.delete() }
-            } else if (source.name.contains(".tar.zst.part")) {
-                val (p1, p2) = findSplitParts(source)
-                runCatching { p1.delete() }
-                runCatching { p2.delete() }
+            } else if (BundleParts.isPart(source.name)) {
+                BundleParts.bundleFiles(source).forEach { runCatching { it.delete() } }
             }
         }
     }

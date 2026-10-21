@@ -9,9 +9,9 @@ plugins {
     id("pardes.compose-vector-moves")
 }
 
-// SeforimLibrary as desktop Zayit 0.6.1 builds it: the Android-only submodule upstream/SeforimLibrary, pinned to
-// 381fbea. The root SeforimLibrary submodule stays on the older commit the desktop fork builds with.
-val seforimLibrary = rootDir.resolve("upstream/SeforimLibrary")
+// SeforimLibrary as desktop Zayit 0.6.7 builds it: the repository's SeforimLibrary submodule (7ddf045), the same
+// checkout the desktop app and the shared modules build with.
+val seforimLibrary = rootDir.resolve("../SeforimLibrary")
 // Other shared sources reused as-is from the desktop project.
 val desktopRoot = rootDir.resolve("..")
 
@@ -45,11 +45,12 @@ kotlin {
         }
         androidMain {
             kotlin.srcDir(seforimLibrary.resolve("dao/src/androidMain/kotlin"))
-            // htmlparser as desktop 0.6.1 has it (citation links, plainTextFromHtml), vendored: ../htmlparser is older.
+            // htmlparser as desktop 0.6.7 has it (citation links, plainTextFromHtml), vendored; ../htmlparser equals it
+            // since the merge of Zayit 0.6.7.
             kotlin.srcDir("src/androidMain/htmlparser")
             // Desktop full-text search (Lucene), as-is. The two files excluded below read SQLite through JDBC or
             // open the index with MMapDirectory and Path.of; their Android variants (same package and class names)
-            // are in src/androidMain/.../android/search, next to the 0.6.1 app files the search needs (vendored).
+            // are in src/androidMain/.../android/search, next to the 0.6.7 app files the search needs (vendored).
             kotlin.srcDir(seforimLibrary.resolve("search/src/jvmMain/kotlin"))
             kotlin.exclude(
                 "io/github/kdroidfilter/seforimlibrary/search/LuceneSearchEngine.kt",
@@ -121,8 +122,8 @@ android {
         // java.nio.file, java.time and MethodHandle.invoke.
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.4.1"
+        versionCode = 6
+        versionName = "0.5.0"
     }
 
     // libpardes_multiplex.so: SQLite's multiplex VFS as an extension of requery's SQLite (data/SplitDatabase.kt).
@@ -254,8 +255,9 @@ sqldelight {
         create("UserSettingsDb") {
             packageName.set("io.github.kdroidfilter.seforimapp.db")
             dialect("app.cash.sqldelight:sqlite-3-24-dialect:${libs.versions.sqlDelight.get()}")
-            // Desktop 0.6.1's user_settings.db schema (SeforimApp/src/commonMain/sqldelight at v0.6.1), vendored: notes,
-            // highlights, visit history, favorites and shnayim mikra, so a desktop file imported with --with-notes is read as is.
+            // Desktop 0.6.7's user_settings.db schema (SeforimApp/src/commonMain/sqldelight at v0.6.7, the same since
+            // v0.6.1), vendored: notes, highlights, visit history, favorites and shnayim mikra, so a desktop file
+            // imported with --with-notes is read as is.
             // sqldelight-user-legacy: the two UPSERTs as Android 8-10's SQLite can run them (no schema of its own).
             srcDirs.setFrom(file("src/androidMain/sqldelight-user"), file("src/androidMain/sqldelight-user-legacy"))
         }

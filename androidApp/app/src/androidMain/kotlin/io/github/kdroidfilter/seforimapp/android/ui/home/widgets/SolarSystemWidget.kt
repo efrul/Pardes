@@ -77,7 +77,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-// Desktop 0.6.1 features/home/widgets/solarsystem (SolarSystemWidget, SolarSystemOptions, SolarSystemWindow) and
+// Desktop 0.6.7 features/home/widgets/solarsystem (SolarSystemWidget, SolarSystemOptions, SolarSystemWindow) and
 // earthwidget SolarSystemWidgetView.kt, in 2D: desktop renders the Sun, the Earth and the Moon with Filament. Android
 // draws the same "מעגל השנה" flat: the Earth's orbit seen from a little above it, every holiday, fast and Rosh
 // Chodesh of the Hebrew year shown where the Earth really is on that day (its ecliptic longitude, as desktop's

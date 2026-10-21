@@ -15,7 +15,8 @@ class FontCatalogTest {
 
     @Test
     fun `FontCatalog has expected number of options`() {
-        assertEquals(28, FontCatalog.options.size)
+        // 27: Pardes does not ship Rashi Amiti, whose licence covers Zayit only
+        assertEquals(27, FontCatalog.options.size)
     }
 
     @Test

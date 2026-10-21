@@ -67,7 +67,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import kotlinx.coroutines.launch
 
-// Port of the widget part of desktop 0.6.1 features/home/widgets/measures/MeasuresWidget.kt: a length in one of the
+// Port of the widget part of desktop 0.6.7 features/home/widgets/measures/MeasuresWidget.kt: a length in one of the
 // Torah's measures converted into another, how long it is today and how long it takes to walk after the opinions
 // picked; each figure links to the line of the library it comes from.
 

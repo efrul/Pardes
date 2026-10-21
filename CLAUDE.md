@@ -100,6 +100,39 @@ The `SeforimLibrary` composite build provides the core functionality for Jewish 
 ### Pardes, the Android app (`androidApp/`)
 Pardes (פרדס, app id `io.github.efrul.pardes`) is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it. Until 2026-10-15 it was "זית לאנדרואיד"; at his request it has its own name and icon, so never call it Zayit/זית. Every text that says who made the app (in the app, README, docs and release images) must say so; see the name and authorship rules in the `zayit-android` skill. A separate Gradle build (Android 8.0+, minSdk 26) that reuses SeforimLibrary core/dao unchanged and redraws the desktop UI in Jetpack Compose. Build with `cd androidApp && ./gradlew :app:assembleRelease`. See `androidApp/README.md`, `androidApp/docs/DEVELOPMENT.md`, and the `zayit-android` skill (`.claude/skills/zayit-android/`) for the emulator, screenshot and desktop-comparison workflow. Never edit desktop sources for Android; keep Android changes under `androidApp/`.
 
+### Multi-Window & Virtual Desktops
+The app is multi-window (Chrome-style tabs + drag & drop between windows). A virtual
+desktop = a user-curated set of tabs in 1..n windows; several desktops can be open at
+once, each in its own window(s). `DesktopManager` owns desktops/windows; each
+`OpenWindow` carries a window-scoped `TabsViewModel` + `SearchHomeViewModel` and its
+`WindowState` (geometry persisted & restored). `TabDockManager` handles cross-window
+tab drag & drop. See `TAB_SYSTEM_README.md`.
+
+### Open Core: the Smart Siddur
+The smart siddur (סידור חכם) is proprietary, in the official builds only. Its logic and texts are the private
+`kdroidFilter/SeforimSiddur` repo, published to GitHub Packages as `io.github.kdroidfilter:seforim-siddur`
+(`libs.seforim.siddur`). Its screen is in `SeforimApp/addons/siddur/enabled`, which the build compiles only when it can read
+the package (`siddur.token` Gradle property, `SEFORIM_SIDDUR_TOKEN`, or a `gh` CLI with access and `read:packages`)
+or with `-Psiddur.local=true` (includes `../SeforimSiddur` as a composite build). Otherwise it compiles
+`addons/siddur/disabled`, where `installedSiddur` is null and the app hides the siddur. Core code reaches the siddur only
+through `SiddurFeature`/`installedSiddur`, never by importing `addons/siddur` code.
+
+The semantic search (own embedding model, dense KNN fused with lexical search by RRF) follows the same pattern: the
+private `io.github.kdroidfilter:seforim-semantic` package (module `semantic/` of the private `SeforimEmbedding` repo,
+read with the siddur's token by default, or `semantic.token`/`SEFORIM_SEMANTIC_TOKEN`/`gh`, or `-Psemantic.local=true`),
+whose jar carries the int8 model as a resource (never in the DB bundle). `addons/semantic/enabled` holds the
+`HybridSearchEngine`; `disabled` makes `installedSemanticSearch` null and the app uses `LuceneSearchEngine` alone. Core
+code reaches it only through `SemanticSearchFeature`/`installedSemanticSearch`. With the same token, SeforimLibrary's
+generator embeds the corpus into the index's vectors (`:searchindex:embedCorpus`, GPU via CUDA, no Python).
+
+The verse quote links of the Talmud (temporary, until the DB carries them) follow the same pattern: the private
+`io.github.kdroidfilter:seforim-quotelinks` package (repo `SeforimQuoteLinks`, read with the siddur's token by default,
+or `quotelinks.token`/`SEFORIM_QUOTELINKS_TOKEN`/`gh`, or `-Pquotelinks.local=true` to include `../SeforimQuoteLinks/jvm`) and `addons/quotelinks/enabled`, which `LinesPagingSource` calls on each page it loads, in
+the same trip off the UI thread; `disabled` makes `installedQuoteLinks` null. Core code reaches it only through
+`QuoteLinksFeature`/`installedQuoteLinks`; only the tractates in the package pay anything (a set lookup otherwise).
+
+Pardes builds only the community edition: the siddur, semantic search and quote links are Zayit's private packages, and their licence does not cover Pardes. Never set `siddur.token`, `SEFORIM_SIDDUR_TOKEN`, the semantic or quote-links tokens, or a `-P*.local` flag for a Pardes build, and never add those secrets to efrul/Pardes.
+
 ### Memory-Efficient Tab System
 See `TAB_SYSTEM_README.md` for complete details. Key points:
 - Each tab owns its own `SimpleTabViewModelOwner` (ViewModel lifecycle), which stays alive while the tab exists
@@ -124,10 +157,13 @@ See `TAB_SYSTEM_README.md` for complete details. Key points:
 - `icons`: Application icons and resources
 - `jewel`: Jetbrains Jewel desktop UI components
 - `logger`: Logging utilities
+- `luach`: The luach month (`LuachMonth`) and its date picker (`LuachPopup`, `LuachDateButton`), shared by the Calendar widget, the siddur, the Earth widget and the solar system's full window
 - `navigation`: Navigation helpers and utilities
 - `pagination`: Pagination support for large datasets
 - `texteffects`: Text rendering effects and styling
 - `network`: Network utilities and Ktor client setup
+- `backup`: Backup core, Android-BackupAgent/Transport style: `BackupSource` (what: the app's `UserDataBackup`, user DB + portable prefs), `BackupDestination` (where: `LocalFileDestination`, …), `BackupManager` (the only code linking both)
+- `backup-drive`: Google Drive `BackupDestination` + `GoogleDriveSync` (OAuth PKCE loopback, hidden `appDataFolder`, append-only with the 10 latest kept as IntelliJ settings sync, never restores without asking, on-quit + daily auto backup paused while a restore is pending)
 
 ## Key Technologies & Dependencies
 
@@ -179,18 +215,26 @@ See `TAB_SYSTEM_README.md` for complete details. Key points:
 - **Secrets**: Never commit to repository; use `local.properties` for machine-specific settings
 - **Logging**: Add `-Dorg.slf4j.simpleLogger.defaultLogLevel=debug` to JVM args for verbose logging
 
+### Git & Pull Requests
+- **DCO sign-off required**: every commit needs a `Signed-off-by:` trailer (`git commit -s`); the "Check DCO sign-off" CI job blocks PRs otherwise. Fix unsigned commits with `git rebase --signoff <base>` then `git push --force-with-lease`.
+- **CLA**: contributors sign `CLA.md` once (CLA Assistant bot on their first PR); the maintainer is allowlisted.
+- **PRs target `master`** (`gh pr create --base master`); releases are tagged from `master`.
+
 ## Development Tips
 
 ### Tab System Usage
 ```kotlin
-// Open new tab
-val tabsVm = LocalAppGraph.current.tabsViewModel
+// Open new tab in the current window (TabsViewModel is window-scoped, via LocalOpenWindow)
+val tabsVm = LocalOpenWindow.current.tabsViewModel
 scope.launch {
     tabsVm.openTab(TabsDestination.BookContent(bookId = "123", tabId = UUID.randomUUID().toString()))
 }
 
 // Replace current tab destination
 tabsVm.replaceCurrentTabDestination(TabsDestination.Home(currentTabId))
+
+// From a per-tab ViewModel (no composition): resolve the hosting window at call time
+desktopManager.tabsViewModelFor(tabId)?.openTab(destination)
 ```
 
 ### ViewModel Creation

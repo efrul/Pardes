@@ -10,7 +10,7 @@ import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadOnlyProperty
 
 /*
- * Desktop 0.6.1 core/settings/Setting.kt (Setting, SettingCodec, SettingsGroup), features/home/widgets/WidgetSettings.kt
+ * Desktop 0.6.7 core/settings/Setting.kt (Setting, SettingCodec, SettingsGroup), features/home/widgets/WidgetSettings.kt
  * and the Home part of AppSettings (home_widgets_layout, home_widget.<id>.<name>), on the app's SharedPreferences.
  * Every value is stored as the string desktop's Preferences store, so a settings backup carries them both ways
  * (AppPrefs.importPortablePreferences keeps these keys as strings).

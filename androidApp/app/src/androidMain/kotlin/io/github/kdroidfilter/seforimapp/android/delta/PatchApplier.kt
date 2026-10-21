@@ -5,7 +5,7 @@ import co.touchlab.kermit.Logger
 import java.nio.file.Path
 
 /**
- * Android variant of SeforimLibrary (381fbea) `generator/common/.../patch/PatchApplier.kt`: applies a `patch.db` onto
+ * Android variant of SeforimLibrary (7ddf045) `generator/common/.../patch/PatchApplier.kt`: applies a `patch.db` onto
  * the live `seforim.db` in one transaction, with the same steps, SQL and checks as desktop:
  *
  *  1. Snapshot pre-apply FK violation count.

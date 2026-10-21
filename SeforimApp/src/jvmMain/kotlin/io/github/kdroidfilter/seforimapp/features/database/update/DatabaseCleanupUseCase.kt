@@ -1,8 +1,11 @@
 package io.github.kdroidfilter.seforimapp.features.database.update
 
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.features.onboarding.extract.BundleParts
+import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
+import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.database.PendingDbCleanup
-import io.github.kdroidfilter.seforimapp.framework.database.resetDatabasePathCache
 import io.github.kdroidfilter.seforimapp.logger.debugln
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.vinceglb.filekit.FileKit
@@ -20,7 +23,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * before a fresh install.
  *
  * Deletion is authoritative: it targets the directory of the *actual* configured
- * database ([AppSettings.getDatabasePath]) as well as the default databases
+ * database ([appSettings.getDatabasePath]) as well as the default databases
  * directory, so a database installed by an older build in a non-default location is
  * still removed. NIO [Files.deleteIfExists] is used so a locked file — common on
  * Windows when an antivirus, the Windows Search indexer, or a leftover handle holds
@@ -29,7 +32,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * and recorded for a retry at the next launch via [PendingDbCleanup], so the caller
  * can refuse to start a multi-GB download that would otherwise fill the disk.
  */
-class DatabaseCleanupUseCase {
+class DatabaseCleanupUseCase(
+    private val databasePathProvider: DatabasePathProvider,
+    private val appSettings: AppSettings,
+) {
     sealed interface CleanupResult {
         /** Every known artifact was removed (or was already absent). */
         data class Success(
@@ -44,24 +50,29 @@ class DatabaseCleanupUseCase {
 
     suspend fun cleanupDatabaseFiles(): CleanupResult =
         withContext(Dispatchers.IO) {
-            val currentDbPath = AppSettings.getDatabasePath()
+            val currentDbPath = appSettings.getDatabasePath()
 
             // The old database is going away: forget the recorded path and the cached
             // resolution so the app re-resolves the freshly installed location later.
-            AppSettings.setDatabasePath(null)
-            resetDatabasePathCache()
+            appSettings.setDatabasePath(null)
+            databasePathProvider.reset()
 
             // Candidate directories: the real DB directory (may be non-default for
             // legacy installs) plus the current default databases directory.
             val dirs = LinkedHashSet<File>()
             currentDbPath?.let { File(it).parentFile?.let(dirs::add) }
             runCatching { File(FileKit.databasesDir.path) }.getOrNull()?.let(dirs::add)
+            dirs.add(LibraryLocation.installDir(appSettings))
 
             var freed = 0L
             val undeletable = mutableListOf<File>()
 
             try {
                 for (dir in dirs) {
+                    // Never another app's library used in place: the new one goes to our own folder, and that one stays
+                    if (ForeignLibraries.isForeign(dir)) continue
+                    // Nor a copy the user kept when moving the library: it is not the library being replaced
+                    if (LibraryLocation.isKeptCopy(dir)) continue
                     val files = dir.takeIf { it.exists() }?.listFiles() ?: continue
                     for (file in files) {
                         if (!isDatabaseArtifact(file)) continue
@@ -113,8 +124,8 @@ class DatabaseCleanupUseCase {
             // stale pending-cleanup marker
             // download / extraction leftovers
             name.endsWith(".tar.zst") ||
-            name.endsWith(".part01") ||
-            name.endsWith(".part02") ||
+            BundleParts.isPart(name) ||
+            BundleParts.isManifest(name) ||
             name.endsWith(".zst") ||
             name.endsWith(".tmp")
     }
