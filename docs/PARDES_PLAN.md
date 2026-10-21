@@ -374,33 +374,45 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
 
 ### Versioning
 
-- `buildSrc/.../Versioning.kt` falls back to the newest repository tag, which here is `android-0.4.1-6`. That breaks the MSI ProductVersion and the deb version.
-- The desktop version comes from its own file: `desktop/CHANGELOG.md` with `## <x.y.z> · <date>`. It must be numeric `x.y.z`.
-- The workflow exports `GITHUB_REF=refs/tags/v<ver>` before Gradle, so `buildSrc` stays unchanged.
+- `buildSrc/.../Versioning.kt` takes the version only from a `refs/tags/*` GITHUB_REF; otherwise it asks the tags API
+  for the newest tag, here `android-*` (and later `desktop-*`), which fails every package format's version check.
+- The desktop version comes from `desktop/CHANGELOG.md`, top section `## <x.y.z> · <date>`: digits only, x and y up to
+  255, z up to 65535 (NSIS), no `-` (rpm, pacman; and a `-` would turn pre-releases on in the installed app).
+- The runner resets GITHUB_REF for every step, even when written to `$GITHUB_ENV` (upstream's deploy.yaml relied on
+  that and it had no effect): the workflow sets `GITHUB_REF=refs/tags/v<ver>` in the same shell as Gradle.
 
-### Release workflow: `.github/workflows/desktop-release.yml` (new; never bring back deploy.yaml)
+### Release workflow: `.github/workflows/desktop-release.yml` (built; never bring back deploy.yaml)
 
-- **Trigger.** `workflow_dispatch` only, with inputs `prerelease` (bool) and `note` (string). `permissions: contents: write`, concurrency group `desktop-release`. Never on push or `v*` tags.
-- **Gate.** Read the version from `desktop/CHANGELOG.md` and fail without a section for it.
-  - `TAG=desktop-<ver>-<run_number>`, plus `-r<attempt>` on re-runs. It cannot collide with `android-*` or upstream `v*` tags.
-  - Export `GITHUB_REF=refs/tags/v<ver>`.
-- **Checkout.** `git submodule update --init SeforimLibrary` only; not `androidApp/upstream` or SeforimAcronymizer.
-- **Build matrix** (unsigned):
-  - `windows-latest`: `kdroidFilter/Nucleus/.github/actions/setup-nucleus@712f1e520c73fd68e1e7514b17700e577643802c` (GraalVM Oracle), then `.\gradlew.bat :SeforimApp:packageGraalvmMsi`. Output `SeforimApp/build/compose/binaries/main/graalvm-msi/*.msi`, renamed `pardes-desktop-<ver>-windows-x64.msi`.
-  - Linux amd64 (consider `ubuntu-22.04` for older glibc): `./gradlew :SeforimApp:packageGraalvmDeb`, from `graalvm-deb/*.deb`, renamed `pardes-desktop_<ver>_amd64.deb`.
-  - Optional: an arm64 deb on `ubuntu-24.04-arm`, and a Windows arm64 JVM MSI through `packageReleaseMsi`.
-  - Unset `GH_TOKEN` for the Gradle step, so the token fallback in `settings.gradle.kts` has nothing to try.
-- **Release job:**
-  - Nucleus `generate-update-yml@712f1e5…` writes `latest.yml` and `latest-linux.yml`.
-  - Build the AGPL complete source as `android-release.yml` does (about :180-187): `git archive` plus the SeforimLibrary submodule, giving `pardes-desktop-<tag>-source.tar.gz`.
-  - Then: `gh release create "$TAG" --target "$GITHUB_SHA" --latest=false [--prerelease] --title "פרדס למחשב <ver> (בנייה N) – מבוסס על זית" --notes-file notes.md`, and upload the installers, the yml files and the source tarball.
-  - Don't use Nucleus `publish-release`. It creates a Latest release titled with the bare tag and generated notes.
-  - `notes.md` holds the changelog section, the based-on and not-on-his-behalf text, Copyright (C) 2025 Elie Gambache, AGPL, the §7b line word for word, and https://github.com/efrul/Pardes. No porter name.
-  - `--latest=false` keeps the Android release as the repository's Latest. Android's updater (`K/update/AppReleases.kt`), `android-release.yml` and the site all filter `^android-` tags.
-- **Secrets:**
-  - Required: none beyond `GITHUB_TOKEN`.
-  - Optional: `PARDES_LINUX_GPG_PRIVATE_KEY`, `PARDES_LINUX_GPG_KEY_ID` and `PARDES_LINUX_GPG_PASSPHRASE`, which give signed debs and password-free updates (the same `gradle.properties` lines as upstream). Later, a Windows code-signing certificate, to avoid SmartScreen warnings.
-  - Never: `SEFORIM_SIDDUR_TOKEN` (and the semantic and quote-links tokens), `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, or Zayit's `LINUX_GPG_*`.
+- **Trigger.** `workflow_dispatch` only; inputs `quick` (Windows x64 only, a pre-release), `prerelease` (a full build
+  for testers) and `note`. Concurrency group `desktop-release`. The file must be on `main` before Run workflow shows.
+- **prepare.** The version gate above; a stable release whose version is not higher than the newest published
+  stable desktop release fails (installed apps would never take it), a pre-release only warns; the build matrix.
+- **build** (Zayit's runners, no macOS), each job uploading `release-assets-<windows|linux>-<arch>[-<pkg>]`:
+  - Windows x64 `windows-latest`, GraalVM, `:SeforimApp:packageGraalvmNsis` → `Pardes-<ver>-windows-x64-nsis.exe`.
+  - Windows arm64 `windows-11-arm`, JVM, `createReleaseDistributable packageReleaseNsis` →
+    `Pardes-<ver>-windows-arm64-nsis.exe`.
+  - Linux x64 `ubuntu-latest` and arm64 `ubuntu-24.04-arm`, GraalVM: `pardes_<ver>_<amd64|arm64>.deb`,
+    `pardes-<ver>-1.<x86_64|aarch64>.rpm`, `pardes-<ver>-1-<x86_64|aarch64>.pacman`.
+  - Each stage step takes exactly one `pardes*<ver>*` package from Nucleus's output folder.
+  - `setup-nucleus@712f1e5` (JDK 25, MSVC, Linux tools; the plugin fetches Oracle GraalVM). Only the SeforimLibrary
+    submodule. No GitHub token in Gradle steps (settings.gradle.kts would ask gh for Zayit's packages).
+  - Optional `PARDES_LINUX_GPG_PRIVATE_KEY` (armored), `PARDES_LINUX_GPG_KEY_ID`, `PARDES_LINUX_GPG_PASSPHRASE`: signed
+    deb/rpm with `<asset>.asc` and Nucleus's helper, whose updates install without a password. Never change the key
+    after the first signed release. The passphrase goes to Gradle as `-P`, not into gradle.properties.
+- **release.** Checks that exactly the expected packages are there; Nucleus `generate-update-yml@712f1e5` writes
+  `latest.yml` and `latest-linux.yml` (checked for the version); the AGPL source `pardes-<tag>-source.tar.gz` (git
+  archive + SeforimLibrary); tag `desktop-<ver>-<run>[-r<attempt>]`; one `gh release create --target $GITHUB_SHA
+  --latest=false [--prerelease]` with every file, so no app sees a feed before its packages. Notes: the changelog
+  section, the based-on/not-on-his-behalf paragraph, the proprietary modules not included, installation, how updates
+  install (a PATCH installs on close without asking), his copyright, AGPL and the §7b line. Not Nucleus
+  `publish-release` (it makes a Latest release titled with the bare tag).
+- **Not built:** upstream's Rust wrapper (`installer/`): Zayit's icon and splash, it launches `zayit.exe` after
+  installing and silently uninstalls an MSI-installed Zayit. The NSIS exe (one-click, per user, no admin) is the
+  download. A Pardes wrapper with a splash would be a copy under `branding/pardes/`, without that code.
+- **Asset contract** (Nucleus FileSelector, `PardesDesktopReleases`): Windows `-nsis.` plus one arch token; Linux an
+  arch token; `.pacman` never self-updates. The NSIS is `pardes-<ver>-win-<arch>-nsis.exe`, in
+  `%LOCALAPPDATA%\Programs\pardes`, uninstall GUID `af771c18-…` (from `com.app.pardes`): never change
+  `packageName`/`imageName`, or installs stop upgrading in place.
 
 ### Pardes texts outside the desktop app
 
@@ -464,6 +476,25 @@ Still open (from the reviews):
   `earthwidget/.../moonmap.jpg` (source unknown), the olive-grove wallpaper (licence unknown), HebrewNumerals
   (MIT in its POM, Apache-2.0 in its repository); map the file names Nucleus's notice cites; a desktop mode of
   `scripts/font-notices.py` for `Fonts-NOTICE.txt`.
+
+## Phase 3c status (2026-10-21)
+
+Done: `desktop-release.yml` and `desktop/CHANGELOG.md` (1.0.0), as described above, researched and then reviewed by
+five independent lenses with adversarial verification; its bash steps were run on mock packages with Nucleus's real
+generate-update-yml (`latest.yml`/`latest-linux.yml` read back by the shipped updater's own parser and selector). Not
+yet run on GitHub: the first run needs the branch on `main`. With it:
+- `AppUpdateService`: on Linux the update format comes from Nucleus `ExecutableRuntime` (it also reads the GraalVM
+  marker file); before, an RPM install picked the .deb. Upstream has the same bug.
+- The installers' copyright is his line (`brand.properties` `copyright`), not electron-builder's "Copyright © <year>
+  Pardes".
+- Android: the updater also falls back to `releases.json` when the API's 30 newest releases hold no Android one
+  (desktop releases share the list). Installed 0.4.x lack that: delete desktop test pre-releases once tested.
+
+Open:
+- `ci.yaml` (upstream's) fails every PR here on the version (the newest tag is `android-*`); after that it would build
+  Zayit's Rust wrapper and a macOS DMG named "זית". Decide: adapt it, or a Pardes CI.
+- A Windows code-signing certificate (SmartScreen warns on every download) and, if wanted, a Pardes splash wrapper.
+- The first real run: check the produced file names and the NSIS window in Hebrew.
 
 ## Library location on desktop (2026-10-21, from efrul/zayit-move)
 

@@ -34,12 +34,13 @@
 
 - האפליקציה נמצאת ב־[`androidApp/`](androidApp/). הוראות בנייה ב־[androidApp/README.md](androidApp/README.md), ומצב העבודה ב־[androidApp/docs/DEVELOPMENT.md](androidApp/docs/DEVELOPMENT.md).
 - GitHub Actions בונה את ה־APK ומפרסם אותו בעמוד הגרסאות כשמפעילים אותו ידנית (Actions › Android release › Run workflow). אתר ההורדה נמצא ב־[`androidApp/site/`](androidApp/site/) ומתעדכן בכל שינוי בו.
-- שאר הריפו הוא עותק של הקוד של זית למחשב מ־[kdroidFilter/Zayit](https://github.com/kdroidFilter/Zayit), כפי שהיה ביוני 2026 (לפני זית 0.6.1), עם תוספות קטנות של פרדס: הסקיל `.claude/skills/zayit-android/`, ה־workflows ‏`.github/workflows/android-*.yml` ופסקה על אנדרואיד ב־`CLAUDE.md`. ה־README המקורי שלו נמצא ב־[README-zayit-desktop.md](README-zayit-desktop.md), ובעברית ב־[README_HE-zayit-desktop.md](README_HE-zayit-desktop.md).
+- פרדס למחשב (ל־Windows וללינוקס) נבנה מהקוד של זית למחשב שבשאר הריפו, דרך [`branding/`](branding/README.md). GitHub Actions בונה אותו ומפרסם אותו בעמוד הגרסאות, בתגיות `desktop-*`, כשמפעילים אותו ידנית (Actions › Desktop release › Run workflow). מה חדש בכל גרסה: [desktop/CHANGELOG.md](desktop/CHANGELOG.md).
+- שאר הריפו הוא הקוד של זית למחשב מ־[kdroidFilter/Zayit](https://github.com/kdroidFilter/Zayit), ממוזג עד זית 0.6.7, עם התוספות של פרדס: `branding/`, `desktop/`, הסקיל `.claude/skills/zayit-android/`, ה־workflows ‏`.github/workflows/android-*.yml` ו־`desktop-release.yml`, ופסקה על אנדרואיד ב־`CLAUDE.md`. פרדס הסיר ממנו את ה־workflows של השחרורים והאתר של זית, את הגופן Rashi Amiti ואת תמונת המקדש של Shutterstock. ה־README המקורי שלו נמצא ב־[README-zayit-desktop.md](README-zayit-desktop.md), ובעברית ב־[README_HE-zayit-desktop.md](README_HE-zayit-desktop.md).
 
 ## רישיון וקרדיט
 
 - זית ו־SeforimLibrary מאת אליהו גמבש: <span dir="ltr">Copyright (C) 2025 Elie Gambache</span>, תחת GNU AGPL v3 עם תנאי ייחוס נוסף (§7ב). ראו [LICENSE](LICENSE).
-- פרדס נבנה מהקוד הפתוח של זית 0.6.7 ושונה ב־2026 כדי לפעול באנדרואיד. גם הוא מופץ תחת AGPL-3.0, והוא מסופק כמות שהוא, ללא כל אחריות. לכל גרסה בעמוד הגרסאות מצורף קוד המקור המלא שלה.
+- פרדס נבנה מהקוד הפתוח של זית 0.6.7 ושונה ב־2026 כדי לפעול באנדרואיד, וכיישום נפרד למחשב (פרדס למחשב, ל־Windows וללינוקס). גם הוא מופץ תחת AGPL-3.0, והוא מסופק כמות שהוא, ללא כל אחריות. לכל גרסה בעמוד הגרסאות מצורף קוד המקור המלא שלה.
 - <span dir="ltr">Powered by the technologies that drive Zayit — https://zayitapp.com/</span>
 - הספרים מגיעים מ־[Sefaria](https://www.sefaria.org.il/) ומ[אוצריא](https://github.com/Otzaria/otzaria-library), דרך [SeforimLibrary](https://github.com/kdroidFilter/SeforimLibrary).
 - זית, היישום המקורי של אליהו גמבש: [zayitapp.com](https://zayitapp.com/).

@@ -11,7 +11,8 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
 - `brand.gradle`, applied by the last line of `SeforimApp/build.gradle.kts`, picks the brand
   (`-Pseforimapp.brand=pardes`, the default, or `zayit`) and, for Pardes:
   - sets the packaging values of `nucleus.application` from `<brand>/brand.properties` (name, package and image name,
-    vendor, homepage, release repository, Linux maintainer and WM class, Windows upgrade id, icons);
+    vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, Windows upgrade id,
+    icons);
   - removes the OS URL scheme: `zayit://` belongs to Zayit, and two apps registering it would clash;
   - fails if one of Zayit's private add-ons (smart siddur, semantic search, quote links) would be compiled: their
     licence is for Zayit only;
@@ -46,7 +47,7 @@ Keep this list short and exact; every line here is a possible merge conflict.
 | `SeforimApp/.../features/settings/data/DataSettingsViewModel.kt` | export name `BrandInfo.BACKUP_FILE_PREFIX`; reset leaves a library used in place (`ForeignLibraries.isForeign`) |
 | `SeforimApp/.../core/presentation/components/AppLinuxQuicklist.kt` | `DESKTOP_FILE_ID = BrandInfo.LINUX_DESKTOP_FILE_ID` |
 | `SeforimApp/.../features/onboarding/download/HttpFileDownloader.kt` | `User-Agent` `BrandInfo.USER_AGENT` |
-| `SeforimApp/.../framework/update/AppUpdateService.kt` | `?: BrandUpdates.provider` before upstream's `GitHubProvider` (Zayit's is null) |
+| `SeforimApp/.../framework/update/AppUpdateService.kt` | `?: BrandUpdates.provider` before upstream's `GitHubProvider` (Zayit's is null); `Platform.Linux -> linuxPackageFormat()` (that function and its `ExecutableRuntime`/`ExecutableType` imports), so an RPM install takes the .rpm: a fix for both brands, to drop once upstream has one |
 | `SeforimApp/.../features/database/update/DatabaseCleanupUseCase.kt` | skips a folder `ForeignLibraries.isForeign` |
 | `SeforimApp/.../framework/database/PendingDbCleanup.kt` | drops pending deletions in a foreign folder |
 | `SeforimApp/.../features/onboarding/licence/LicenceScreen.kt` | offers `ExistingLibraryScreen` when `ForeignLibraries.find()` finds one |

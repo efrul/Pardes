@@ -5,7 +5,8 @@ name: Android release
 # Tag android-<versionName>-<run number> (e.g. android-0.2.0-7), APK pardes-<tag>.apk. Run numbers only grow, so tags
 # sort by version and then by build; a re-run of a run that already released gets -r<attempt> instead of colliding.
 # The desktop workflows inherited from Zayit (deploy.yaml, pages.yaml, update-download-count.yaml) were removed: they
-# would publish Zayit-branded installers or Zayit's own site from this repository.
+# would publish Zayit-branded installers or Zayit's own site from this repository. Pardes for desktop has its own,
+# desktop-release.yml (desktop-* tags, never Latest).
 # The APK is signed with Pardes's own key, kept only in the repository's secrets (PARDES_KEYSTORE_BASE64,
 # PARDES_KEYSTORE_PASSWORD, PARDES_KEY_ALIAS, PARDES_KEY_PASSWORD), never with the debug key in the repository, which
 # would let anyone sign an "update". No release without it: the APK's certificate must be RELEASE_CERT_SHA256.
