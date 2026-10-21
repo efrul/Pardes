@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.settings.data.DataSettingsViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.library.LibraryLocationCard
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
@@ -156,6 +157,8 @@ fun DataSettingsScreen() {
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+
+            LibraryLocationCard()
 
             ResetCard(
                 resetDone = state.resetDone,

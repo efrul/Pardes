@@ -20,4 +20,7 @@ object BrandInfo {
 
     /** The User-Agent of the library downloads. */
     const val USER_AGENT = "Pardes/1.0 (+https://github.com/efrul/Pardes)"
+
+    /** The folder a library gets inside a folder the user chooses for it (LibraryLocation.destination). */
+    const val LIBRARY_FOLDER_NAME = "Pardes library"
 }

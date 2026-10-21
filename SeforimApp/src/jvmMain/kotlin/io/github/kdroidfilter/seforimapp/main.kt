@@ -46,6 +46,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.window.DesktopTabs
 import io.github.kdroidfilter.seforimapp.core.presentation.window.MainAppWindow
 import io.github.kdroidfilter.seforimapp.earthwidget.LocalWidgetAntiAliasing
 import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
+import io.github.kdroidfilter.seforimapp.features.database.move.LibraryMoveWindow
 import io.github.kdroidfilter.seforimapp.features.database.update.DatabaseUpdateWindow
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindowsHost
 import io.github.kdroidfilter.seforimapp.features.onboarding.OnBoardingWindow
@@ -56,6 +57,7 @@ import io.github.kdroidfilter.seforimapp.features.siddur.installedSiddur
 import io.github.kdroidfilter.seforimapp.features.update.UpdateDialog
 import io.github.kdroidfilter.seforimapp.framework.backup.PendingUserDataRestore
 import io.github.kdroidfilter.seforimapp.framework.database.PendingDbCleanup
+import io.github.kdroidfilter.seforimapp.framework.database.PendingLibraryMove
 import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
@@ -221,8 +223,11 @@ fun main(args: Array<String>) {
             onDeepLink { uri -> pendingDeepLink.value = uri.toString() }
         }
 
+        // A library move asked for in the settings runs first, before anything opens the library
+        val pendingLibraryMove = remember { PendingLibraryMove.read() }
+
         // Create the application graph via Metro and expose via CompositionLocal
-        val appGraph = remember { createGraph<AppGraph>().also(::warmCatalog) }
+        val appGraph = remember { createGraph<AppGraph>().also { if (pendingLibraryMove == null) warmCatalog(it) } }
 
         // Daily Google Drive backup while the app runs (a no-op until an account is connected).
         LaunchedEffect(appGraph) { if (!E2e.enabled) appGraph.googleDriveSync.runAutoBackup() }
@@ -276,7 +281,9 @@ fun main(args: Array<String>) {
                     windowStyle = rememberJewelWindowStyle(),
                     titleBarStyle = rememberJewelTitleBarStyle(),
                 ) {
-                    if (showOnboarding) {
+                    if (pendingLibraryMove != null) {
+                        LibraryMoveWindow(pendingLibraryMove)
+                    } else if (showOnboarding) {
                         OnBoardingWindow()
                     } else if (showDatabaseUpdate) {
                         DatabaseUpdateWindow(

@@ -4,6 +4,7 @@ import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.onboarding.extract.BundleParts
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
 import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.database.PendingDbCleanup
 import io.github.kdroidfilter.seforimapp.logger.debugln
 import io.github.kdroidfilter.seforimapp.logger.warnln
@@ -61,6 +62,7 @@ class DatabaseCleanupUseCase(
             val dirs = LinkedHashSet<File>()
             currentDbPath?.let { File(it).parentFile?.let(dirs::add) }
             runCatching { File(FileKit.databasesDir.path) }.getOrNull()?.let(dirs::add)
+            dirs.add(LibraryLocation.installDir(appSettings))
 
             var freed = 0L
             val undeletable = mutableListOf<File>()
@@ -69,6 +71,8 @@ class DatabaseCleanupUseCase(
                 for (dir in dirs) {
                     // Never another app's library used in place: the new one goes to our own folder, and that one stays
                     if (ForeignLibraries.isForeign(dir)) continue
+                    // Nor a copy the user kept when moving the library: it is not the library being replaced
+                    if (LibraryLocation.isKeptCopy(dir)) continue
                     val files = dir.takeIf { it.exists() }?.listFiles() ?: continue
                     for (file in files) {
                         if (!isDatabaseArtifact(file)) continue

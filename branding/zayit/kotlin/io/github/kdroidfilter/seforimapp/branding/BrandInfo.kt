@@ -16,4 +16,7 @@ object BrandInfo {
 
     /** The User-Agent of the library downloads. */
     const val USER_AGENT = "SeforimApp/1.0 (+https://github.com/kdroidFilter/SeforimApp)"
+
+    /** The folder a library gets inside a folder the user chooses for it (LibraryLocation.destination). */
+    const val LIBRARY_FOLDER_NAME = "Zayit library"
 }
