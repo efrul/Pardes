@@ -56,6 +56,10 @@ Pardes updates itself from within, as desktop Zayit does with its Nucleus update
 - **Not while the library is busy:** an install ends the process. While the library is being installed, moved or updated, the download and the install are refused with a message (try again when it ends); a confirmation still waiting is withdrawn when such work starts, and the library work does not start while Android installs the update.
 - **Development builds** (signed with the debug key) cannot take a release over them, so they look for no update; Settings › כללי says so. For testing, a development build reads `files/app-update-test-feed.json` in its private storage (releases.json's shape) instead of GitHub, and `files/app-update-test-changelog.md` for what is new; the feed's APK URL may be a `file:` URL inside the app's files. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#testing-the-app-update) has the recipe.
 
+## Pardes for Android 4.4 to 7.1
+
+Phones that cannot run this app (Android 4.4 to 7.1, keypad phones among them) get their own edition, built from [legacy/](legacy/) by `./gradlew :legacy:assembleRelease`. It has the same application id and library folder, the same library and prebuilt search index, the same search engine and the same texts, on screens drawn with Android's own views and its own SQLite. Where both could install (Android 8.0 and later), this app installs over it. [legacy/README.md](legacy/README.md) describes it: why it is separate, how it differs, how to build and check it, the library on a phone or card, its search levels, and its Android 4.4 emulator.
+
 ## Structure
 
 `app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/`
