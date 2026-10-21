@@ -1,7 +1,8 @@
 # Pardes on Zayit 0.6.7: plan
 
 Written on 2026-10-20 from a read-only review of Zayit v0.6.1..v0.6.7, SeforimLibrary 381fbea..7ddf045 and this
-repository. Phase 1 is done (the merge commit `Merge Zayit v0.6.7 into Pardes`). Where the sections below disagree
+repository. Phase 1 is done (the merge commit `Merge Zayit v0.6.7 into Pardes`), and so is Phase 2 (Pardes for
+Android on 0.6.7, checked on the emulator with a test library on 2026-10-21; row 3, the "עוד N" chip, was dropped). Where the sections below disagree
 with "Decisions taken after the review", that section wins.
 
 ## Decisions taken after the review (2026-10-20)
