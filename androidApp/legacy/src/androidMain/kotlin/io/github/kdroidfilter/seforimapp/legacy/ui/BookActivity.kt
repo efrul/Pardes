@@ -269,8 +269,11 @@ class BookActivity : BaseActivity() {
         }
     }
 
+    override val heldLibrary: Library.Opened? get() = if (::opened.isInitialized) opened else null
+
     override fun onResume() {
         super.onResume()
+        if (rebuilding) return
         applySettings()
     }
 

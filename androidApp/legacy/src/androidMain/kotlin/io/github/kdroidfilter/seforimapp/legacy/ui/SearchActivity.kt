@@ -276,17 +276,38 @@ class SearchActivity : BaseActivity() {
                 finish()
                 return@launch
             }
-            opened = lib
-            resolver = ReferenceResolver(RepositoryReferenceSource(lib.repository))
-            search = TextSearch(lib)
+            bind(lib)
             roots = rootEntries
             if (runAtOnce && field.text.isNotBlank()) startTextSearch(field.text.toString().trim()) else suggest()
         }
     }
 
+    /** What the search reads [lib] through: its connection, the references' lookup and the scan. */
+    private fun bind(lib: Library.Opened) {
+        opened = lib
+        resolver = ReferenceResolver(RepositoryReferenceSource(lib.repository))
+        search = TextSearch(lib)
+    }
+
+    override val heldLibrary: Library.Opened? get() = if (::opened.isInitialized) opened else null
+
+    /**
+     * The query, its results and the book the search had reached are ids in the library: they stay, and the search
+     * goes on with the library opened again.
+     */
+    override fun onLibraryReopened(library: Library.Opened) {
+        bind(library)
+        goOn()
+    }
+
     override fun onResume() {
         super.onResume()
-        // Back from a book opened from here: the search goes on from the book it was in.
+        if (rebuilding) return
+        goOn()
+    }
+
+    /** Back from a book opened from here: the search goes on from the book it was in. */
+    private fun goOn() {
         if (paused) {
             paused = false
             launchSearch()

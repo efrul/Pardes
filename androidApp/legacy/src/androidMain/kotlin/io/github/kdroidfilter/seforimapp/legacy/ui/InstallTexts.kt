@@ -39,4 +39,10 @@ internal object InstallTexts {
     const val BACKGROUND = "ניתן לצאת מהיישום: ההתקנה תמשיך ברקע."
     const val INSTALLING = "התקנת הספרייה פועלת כעת."
     const val SHOW_INSTALL = "הצגת ההתקנה"
+
+    /** ביטול on the progress page asks first, as the main app's ניקוי היסטוריה does; its safe answer goes on. */
+    const val CANCEL_TITLE = "ביטול ההתקנה"
+    const val CANCEL_QUESTION = "האם אתה בטוח שברצונך לבטל את ההתקנה? מה שהותקן עד כה לא יישמר."
+    const val CANCEL_YES = "כן, בטל"
+    const val CANCEL_NO = "המשך בהתקנה"
 }

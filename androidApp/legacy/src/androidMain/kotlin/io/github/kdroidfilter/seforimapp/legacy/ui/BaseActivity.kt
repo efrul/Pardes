@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.legacy.ui
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -12,16 +13,20 @@ import android.view.WindowManager
 import android.widget.Toast
 import io.github.kdroidfilter.seforimapp.legacy.PardesApp
 import io.github.kdroidfilter.seforimapp.legacy.R
+import io.github.kdroidfilter.seforimapp.legacy.data.Library
 import io.github.kdroidfilter.seforimapp.legacy.data.Prefs
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
  * What every screen shares: the theme of the settings (light or dark), a Hebrew right-to-left layout whatever the
- * phone's language (the main app's UI is Hebrew only), a keypad's Menu key opening the title bar's ⋮ menu, and a
- * coroutine scope that ends with the screen.
+ * phone's language (the main app's UI is Hebrew only), a keypad's Menu key opening the title bar's ⋮ menu, a
+ * coroutine scope that ends with the screen, and a screen built again on its library when that was closed behind it.
  */
 abstract class BaseActivity : Activity() {
     protected val app: PardesApp get() = PardesApp.of(this)
@@ -71,10 +76,73 @@ abstract class BaseActivity : Activity() {
         super.setContentView(view)
     }
 
+    /**
+     * Set in onResume when the screen is about to be built again or to give way to the Home (the theme or its library
+     * changed while it was behind another screen): its own onResume then does nothing more.
+     */
+    protected var rebuilding = false
+        private set
+
+    /**
+     * The library this screen reads, once it has opened it; null for a screen that reads none. An install from files
+     * closes the library before it writes (LegacyInstaller.releaseLibrary), and one that fails or is cancelled leaves it
+     * closed: a screen left under the install screen would read through that closed connection (a book's blank lines).
+     */
+    protected open val heldLibrary: Library.Opened? get() = null
+
+    /** Between onResume and onPause. */
+    private var resumed = false
+
     override fun onResume() {
         super.onResume()
+        resumed = true
+        if (rebuilding) return
         // The theme was changed in Settings while this screen was behind it.
-        if (prefs.dark != darkAtCreate) recreate()
+        if (prefs.dark != darkAtCreate) {
+            rebuilding = true
+            recreate()
+            return
+        }
+        val held = heldLibrary
+        if (held != null && held !== app.library.current) {
+            rebuilding = true
+            reopenLibrary(held)
+        }
+    }
+
+    /**
+     * [held] was closed behind this screen: the library is opened again off the main thread, and the screen goes on with
+     * it ([onLibraryReopened]) when it is the same database. Otherwise (none left, another one, or an install running)
+     * the Home says what there is, as after Settings' "חפש את הספרייה מחדש".
+     */
+    private fun reopenLibrary(held: Library.Opened) {
+        scope.launch {
+            val library = withContext(Dispatchers.IO) { runCatching { app.library.open() }.getOrNull() }
+            if (isFinishing) return@launch
+            // Left meanwhile: the next onResume looks again.
+            if (!resumed) {
+                rebuilding = false
+                return@launch
+            }
+            if (library != null && library.file == held.file) {
+                rebuilding = false
+                onLibraryReopened(library)
+            } else {
+                startActivity(Intent(this@BaseActivity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra(MainActivity.EXTRA_RELOAD, true))
+                finish()
+            }
+        }
+    }
+
+    /**
+     * Goes on with [library], the database this screen read, opened again: by default the screen is built again, its
+     * place kept in its saved state; a screen whose state is only ids in the library takes it as it is.
+     */
+    protected open fun onLibraryReopened(library: Library.Opened) = recreate()
+
+    override fun onPause() {
+        resumed = false
+        super.onPause()
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
