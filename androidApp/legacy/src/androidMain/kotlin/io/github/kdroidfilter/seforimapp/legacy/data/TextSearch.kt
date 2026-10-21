@@ -5,7 +5,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
 /** A line the search found. */
-data class Hit(val bookId: Long, val bookTitle: String, val lineIndex: Int, val content: String)
+data class Hit(val bookId: Long, val bookTitle: String, val lineId: Long, val lineIndex: Int, val content: String)
 
 /**
  * The text search of this edition without the desktop's Lucene index: when the library has none, or the phone cannot
@@ -35,9 +35,9 @@ class TextSearch(private val opened: Library.Opened) {
             onBook(i, book)
             val hits = try {
                 opened.query(
-                    "SELECT lineIndex, content FROM line WHERE bookId = ? AND $test(content, ?) ORDER BY lineIndex LIMIT ?",
+                    "SELECT id, lineIndex, content FROM line WHERE bookId = ? AND $test(content, ?) ORDER BY lineIndex LIMIT ?",
                     { bindLong(0, book.id); bindString(1, query); bindLong(2, (limit - found).toLong()) },
-                ) { Hit(book.id, book.title, it.getLong(0)!!.toInt(), it.getString(1) ?: "") }
+                ) { Hit(book.id, book.title, it.getLong(0)!!, it.getLong(1)!!.toInt(), it.getString(2) ?: "") }
             } catch (e: SqliteException) {
                 if (e.interrupted) {
                     currentCoroutineContext().ensureActive()

@@ -352,6 +352,9 @@ class SettingsActivity : BaseActivity() {
         thanks.addView(paragraph(THANKS_SOURCES))
         thanks.addView(links("Sefaria" to "https://www.sefaria.org.il/", "אוצריא" to "https://otzaria.org"))
         thanks.addView(quote(OTZARIA_QUOTE))
+        thanks.addView(paragraph(THANKS_TOOLS))
+        thanks.addView(paragraph(ICON_CREDIT))
+        thanks.addView(links("CC BY 4.0" to "https://creativecommons.org/licenses/by/4.0/"))
 
         val edition = card(body, "הגרסה הזו")
         edition.addView(paragraph(EDITION))
@@ -406,9 +409,8 @@ class SettingsActivity : BaseActivity() {
         /** Bereshit 1:1 with its niqqud and cantillation, to show the font, the size and the marks chosen. */
         const val SAMPLE = "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃"
 
-        // The main app's About (AboutSettings ABOUT_MD), word for word, its links' texts left in place. Its thanks for
-        // Lucene and Compose and its Emoji One credit are left out: this edition has no Compose nor that icon, and its
-        // search does not use the Lucene it carries yet (רישיונות credits it).
+        // The main app's About (AboutSettings ABOUT_MD), word for word, its links' texts left in place; its thanks for
+        // Compose left out of THANKS_TOOLS, as this edition has none.
         const val ABOUT_PARDES =
             "פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו " +
                 "אחראי לו ואינו נותן לו תמיכה. פרדס נבנה מהקוד הפתוח של זית 0.6.1 (רישיון AGPL-3.0), ושונה כדי לפעול באנדרואיד."
@@ -422,11 +424,15 @@ class SettingsActivity : BaseActivity() {
         const val THANKS_SOURCES = "לפרויקטים Sefaria ואוצריא, שמהם מגיעים הספרים."
         const val OTZARIA_QUOTE = "התכנים שלפניכם נאספו, מוינו, סוננו ונערכו בעמל רב ובמסירות על ידי צוות פרויקט 'אוצריא' (otzaria.org)."
 
+        const val THANKS_TOOLS = "לקרן Apache על Lucene, מנוע החיפוש, ול־JetBrains ול־Google על Kotlin."
+        const val ICON_CREDIT = "אייקון היד הכותבת: Emoji One, ברישיון CC BY 4.0."
+
         const val EDITION =
             "זוהי הגרסה של פרדס לאנדרואיד 4.4 עד 7.1, שבהם פרדס הרגיל (מאנדרואיד 8.0) אינו פועל. היא קוראת אותה ספרייה, " +
                 "במסכים פשוטים יותר: עיון בספרייה, קריאה עם תוכן העניינים, המפרשים, התרגומים והמקורות, מועדפים וחיפוש. " +
-                "החיפוש בטקסט קורא את הספרים עצמם, כי מנוע החיפוש של זית (Lucene) דורש אנדרואיד 8.0: בספר או בקטגוריה הוא מהיר, " +
-                "ובכל הספרייה הוא נמשך כמה דקות. הכלים, ההערות והעדכונים של הספרייה ושל היישום נמצאים בפרדס הרגיל בלבד. " +
+                "החיפוש הוא של פרדס הרגיל, באינדקס החיפוש שבספרייה (Lucene). בספרייה בלי האינדקס, או בטלפון שאינו יכול " +
+                "לפתוח אותו, הטקסט נחפש בקריאת הספרים עצמם: בספר או בקטגוריה זה מהיר, ובכל הספרייה זה נמשך כמה דקות. " +
+                "הכלים, ההערות והעדכונים של הספרייה ושל היישום נמצאים בפרדס הרגיל בלבד. " +
                 "בטלפון עם מקשים, מקשי הספרות הם קיצורים בספר (בתפריט: מקשי קיצור)."
     }
 }
