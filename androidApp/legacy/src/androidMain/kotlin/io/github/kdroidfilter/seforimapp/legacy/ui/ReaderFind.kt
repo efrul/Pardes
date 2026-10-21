@@ -282,7 +282,9 @@ class ReaderFind(
             for (line in lines) {
                 ensureActive()
                 val text = plainTextFromHtml(line.content)
-                if (tests.all { it.containsMatchIn(text) }) found += line
+                // Only what BookFindMatches keeps: the texts of every line found, held until the book is read through,
+                // would grow with it (megabytes for a common word) on the small heaps the scan serves
+                if (tests.all { it.containsMatchIn(text) }) found += line.copy(content = "", heRef = null)
             }
             start += SCAN_CHUNK
         } while (lines.size == SCAN_CHUNK)
