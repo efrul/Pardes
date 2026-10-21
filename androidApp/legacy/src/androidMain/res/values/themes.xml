@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 4.4: Holo, without its action bar (the screens draw the main app's title bar, ui/Ui.kt), with the main
-     app's grounds and the gold accent where Holo has its blue: the text's selection and the fast scroller's thumb. -->
+     app's grounds and the gold accent where Holo has its blue: the text's selection, the fields' cursor and the fast
+     scroller's thumb. -->
 <resources>
     <style name="Theme.Pardes" parent="android:Theme.Holo.Light.NoActionBar">
         <item name="android:windowBackground">@color/ground_light</item>
@@ -8,6 +9,7 @@
         <item name="android:textColorHighlight">@color/gold_selection</item>
         <item name="android:fastScrollThumbDrawable">@drawable/fastscroll_thumb</item>
         <item name="android:fastScrollTrackDrawable">@android:color/transparent</item>
+        <item name="android:textCursorDrawable">@drawable/text_cursor</item>
     </style>
 
     <style name="Theme.Pardes.Dark" parent="android:Theme.Holo.NoActionBar">
@@ -16,6 +18,7 @@
         <item name="android:textColorHighlight">@color/gold_selection</item>
         <item name="android:fastScrollThumbDrawable">@drawable/fastscroll_thumb</item>
         <item name="android:fastScrollTrackDrawable">@android:color/transparent</item>
+        <item name="android:textCursorDrawable">@drawable/text_cursor_dark</item>
     </style>
 
     <color name="ground_light">#F2F3F5</color>

@@ -31,6 +31,9 @@ LEGACY_ALLOWED=(
   "21	method	android/view/Window	setStatusBarColor(I)V"
   "24	method	android/text/Html	fromHtml(Ljava/lang/String;I)Landroid/text/Spanned;"
   "26	method	android/widget/TextView	setJustificationMode(I)V"
+  # The reader's justified text (legacy ui/Justify.kt) on Android 6.0 to 7.1: lines broken one at a time, unhyphenated
+  "23	method	android/widget/TextView	setBreakStrategy(I)V"
+  "23	method	android/widget/TextView	setHyphenationFrequency(I)V"
   # The install from files (legacy ui/InstallActivity.kt, InstallService.kt): storage access asked for from API 23, a
   # notification channel from API 26
   "23	method	android/app/Activity	checkSelfPermission(Ljava/lang/String;)I"

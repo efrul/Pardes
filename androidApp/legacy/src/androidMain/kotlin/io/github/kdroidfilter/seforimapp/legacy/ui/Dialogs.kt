@@ -169,7 +169,7 @@ object Dialogs {
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val entry = entries[position]
             if (entry.action == null) return header(context, colors, entry.label, first = position == 0, reuse = convertView)
-            return (convertView as? TreeRow ?: TreeRow(context, colors)).bind(entry.label, iconRes = entry.icon, iconTint = colors.text)
+            return (convertView as? TreeRow ?: TreeRow(context, colors)).bind(entry.label, iconRes = entry.icon, iconTint = entry.tint ?: colors.text)
         }
 
         /** The height of the rows in [list] when it is [width] wide, its padding included: measured up to [max], no further. */

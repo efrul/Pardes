@@ -31,6 +31,8 @@ data class BookInfo(
     val hasSources: Boolean = false,
     val hasNekudot: Boolean = false,
     val hasTeamim: Boolean = false,
+    /** An alternative structure (פרשות, עליות, דפים): its headings stand above their lines. */
+    val hasAltStructures: Boolean = false,
 )
 
 class NoLibraryException : Exception("No library")
@@ -191,7 +193,7 @@ class Library(private val context: Context) {
             query(
                 """
                 SELECT id, title, categoryId, totalLines, heShortDesc,
-                    hasCommentaryConnection, hasTargumConnection, hasSourceConnection, hasNekudot, hasTeamim
+                    hasCommentaryConnection, hasTargumConnection, hasSourceConnection, hasNekudot, hasTeamim, hasAltStructures
                 FROM book WHERE id = ?
                 """.trimIndent(),
                 { bindLong(0, id) },
@@ -199,7 +201,7 @@ class Library(private val context: Context) {
                 BookInfo(
                     it.getLong(0)!!, it.getString(1)!!, it.getLong(2)!!, it.getLong(3)!!.toInt(), it.getString(4),
                     hasCommentaries = it.getLong(5) == 1L, hasTargum = it.getLong(6) == 1L, hasSources = it.getLong(7) == 1L,
-                    hasNekudot = it.getLong(8) == 1L, hasTeamim = it.getLong(9) == 1L,
+                    hasNekudot = it.getLong(8) == 1L, hasTeamim = it.getLong(9) == 1L, hasAltStructures = it.getLong(10) == 1L,
                 )
             }.firstOrNull()
 

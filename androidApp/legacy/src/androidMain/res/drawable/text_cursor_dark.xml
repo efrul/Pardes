@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The text fields' cursor below Android 5.0, in the dark theme's gold accent; from 5.0
+     Material draws it in colorControlActivated. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#D4A843" />
+    <size android:width="2dp" />
+</shape>
