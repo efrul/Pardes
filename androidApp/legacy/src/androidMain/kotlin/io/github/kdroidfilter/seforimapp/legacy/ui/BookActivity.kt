@@ -88,10 +88,10 @@ import kotlin.math.abs
  * while it is open; a book opened from a search result opens with it, holding the search's query.
  *
  * On a keypad (Android 4.4 phones with keys): ▲▼ go from line to line, and the pane follows; OK marks the line; ◀▶ turn
- * a page, ◀ forward as a Hebrew book's pages turn, or, with the pane open, go into it (its tabs, then ▼ its content and
- * the toolbar under it; ▲ at its top, or Back, come back to the text); * opens the find bar (OK or ▼ the next match, ▲
- * the one before, Back closes it); Menu opens עוד; Back closes the pane; the digits are shortcuts ([SHORTCUTS], listed
- * in עוד).
+ * a page, ◀ forward as a Hebrew book's pages turn, or, with the pane open, go into it (its tabs, then ▼ its content, where
+ * OK on a text with links lists them, and the toolbar under it; ▲ at its top, or Back, come back to the text); * opens
+ * the find bar (OK or ▼ the next match, ▲ the one before, Back closes it); Menu opens עוד; Back closes the pane; the
+ * digits are shortcuts ([SHORTCUTS], listed in עוד).
  */
 class BookActivity : BaseActivity() {
     private var bookId = 0L
@@ -137,10 +137,23 @@ class BookActivity : BaseActivity() {
     private var scrolling = false
 
     /**
-     * A fling is scrolling the text: the lines it brings in are drawn start-aligned until it stops (justifying a line
-     * measures it again and draws it word by word: frames took a fifth longer on the Android 4.4 AVD).
+     * The line the heading and the path were last worked out for (the main app's placeLineId), which עוד's link, share
+     * and favourite are about so that they name the place its path shows; -1 before the first.
      */
-    private var flinging = false
+    private var namedLine = -1
+
+    /**
+     * A fling, or the fast scroller's thumb, is moving the text: the lines it brings in are drawn start-aligned until it
+     * stops (justifying a line measures it again and draws it word by word: frames took a fifth longer on the Android 4.4
+     * AVD during a fling, and a thumb's drag brings in a screen of lines at each move).
+     */
+    private var skimming = false
+
+    /** A press is being handed to the text (its ACTION_DOWN): the scroll state it reports is the fast scroller's thumb. */
+    private var pressing = false
+
+    /** The fast scroller's thumb is being dragged (from its press to the text's rest). */
+    private var thumbDrag = false
 
     /** The marks the lines are drawn with, to see on coming back from Settings whether they changed. */
     private var marks = DiacriticsMode.All
@@ -182,7 +195,19 @@ class BookActivity : BaseActivity() {
 
         body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         textCard = FrameLayout(this).apply { background = island(colors) }
-        list = ListView(this).apply {
+        list = object : ListView(this) {
+            // A finger's drag reports its scroll state once it has moved; the fast scroller's thumb reports it in the press
+            // itself (FastScroller.beginDrag, on its ACTION_DOWN): told apart here.
+            override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+                if (ev.actionMasked != MotionEvent.ACTION_DOWN) return super.dispatchTouchEvent(ev)
+                pressing = true
+                try {
+                    return super.dispatchTouchEvent(ev)
+                } finally {
+                    pressing = false
+                }
+            }
+        }.apply {
             divider = null
             dividerHeight = 0
             cacheColorHint = colors.panel
@@ -201,6 +226,8 @@ class BookActivity : BaseActivity() {
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 // A keypad moved to another line: the pane, when open, follows it after a moment.
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    // The place follows a keypad's line (placeOnScreen), once it rests
+                    updatePlace()
                     // Also when it came back to the line marked: a follow still on its way would mark the line passed.
                     followJob?.cancel()
                     val stepped = position == noFollow
@@ -216,10 +243,14 @@ class BookActivity : BaseActivity() {
             }
             setOnScrollListener(object : AbsListView.OnScrollListener {
                 override fun onScrollStateChanged(view: AbsListView, scrollState: Int) {
-                    val flung = flinging
-                    flinging = scrollState == AbsListView.OnScrollListener.SCROLL_STATE_FLING
-                    // The lines a fling brought in, justified now that it has stopped
-                    if (flung && !flinging) justifyShown()
+                    val skimmed = skimming
+                    when (scrollState) {
+                        AbsListView.OnScrollListener.SCROLL_STATE_IDLE -> thumbDrag = false
+                        AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL -> if (pressing) thumbDrag = true
+                    }
+                    skimming = scrollState == AbsListView.OnScrollListener.SCROLL_STATE_FLING || thumbDrag
+                    // The lines a fling or the thumb brought in, justified now that it has stopped
+                    if (skimmed && !skimming) justifyShown()
                     scrolling = scrollState != AbsListView.OnScrollListener.SCROLL_STATE_IDLE
                     if (!scrolling) updatePlace()
                 }
@@ -519,7 +550,7 @@ class BookActivity : BaseActivity() {
         if (narrow() && book != null) add(MenuEntry(FIND_IN_PAGE, R.drawable.ic_find_in_page) { openFind() })
         add(MenuEntry("מועדפים", R.drawable.ic_star_border) { PlacesDialogs.favorites(this@BookActivity, colors) })
         add(MenuEntry("היסטוריה", R.drawable.ic_history) { PlacesDialogs.recents(this@BookActivity, colors) })
-        add(MenuEntry(if (prefs.dark) "ערכת נושא: כהה" else "ערכת נושא: בהירה", if (prefs.dark) R.drawable.ic_dark_mode else R.drawable.ic_light_mode) {
+        add(MenuEntry(if (prefs.dark) "ערכת נושא כהה" else "ערכת נושא בהירה", if (prefs.dark) R.drawable.ic_dark_mode else R.drawable.ic_light_mode) {
             prefs.dark = !prefs.dark
             recreate()
         })
@@ -548,8 +579,11 @@ class BookActivity : BaseActivity() {
         finish()
     }
 
-    /** The line the menu's actions are about: a keypad's place, else the one marked, else the first one shown. */
-    private fun placeLine(): Int = keypadLine().takeIf { it >= 0 } ?: if (selected >= 0) selected else topLine()
+    /**
+     * The line עוד's actions (the link, שתף, the favourite) and the table of contents are about: the one its path and the
+     * title bar's place name (the main app's placeLineId), the place on screen until that is known.
+     */
+    private fun placeLine(): Int = namedLine.takeIf { it in 0 until adapter.total } ?: placeOnScreen()
 
     /** The line a keypad's highlight is on (the text has focus, out of touch mode), else -1. */
     private fun keypadLine(): Int = if (!list.isInTouchMode && list.hasFocus()) list.selectedItemPosition else -1
@@ -644,16 +678,18 @@ class BookActivity : BaseActivity() {
             if (info.hasCommentaries) add(MenuEntry("מפרשים", R.drawable.ic_comment) { mark(index); showPane(Pane.Commentaries) })
             if (info.hasTargum) add(MenuEntry("תרגומים", R.drawable.ic_translate) { mark(index); showPane(Pane.Targum) })
             if (info.hasSources) add(MenuEntry("מקורות", R.drawable.ic_source) { mark(index); showPane(Pane.Sources) })
-            // Its links, which a keypad cannot tap: each by its text ("(דברים ו)")
-            adapter.renderedAt(index)?.let { text ->
-                text.getSpans(0, text.length, LineText.Link::class.java).forEach { link ->
-                    val label = text.subSequence(text.getSpanStart(link), text.getSpanEnd(link)).toString().trim()
-                    add(MenuEntry(label.ifEmpty { link.url }, R.drawable.ic_link) { openLink(link.url) })
-                }
-            }
+            // Its links, which a keypad cannot tap
+            adapter.renderedAt(index)?.let { addAll(linkEntries(it)) }
         }
         Dialogs.choices(this, colors, null, entries)
     }
+
+    /** The links of [text], each by its own text ("(דברים ו)"), to open from a keypad's menu. */
+    private fun linkEntries(text: Spanned): List<MenuEntry> =
+        text.getSpans(0, text.length, LineText.Link::class.java).sortedBy { text.getSpanStart(it) }.map { link ->
+            val label = text.subSequence(text.getSpanStart(link), text.getSpanEnd(link)).toString().trim()
+            MenuEntry(label.ifEmpty { link.url }, R.drawable.ic_link) { openLink(link.url) }
+        }
 
     /**
      * A link tapped (the main app's uriHandler): a citation (seforim://line/<id>) opens its line's book there, in a new
@@ -734,6 +770,8 @@ class BookActivity : BaseActivity() {
         f.close()
         showFindRoom(false)
         if (!list.isInTouchMode || bar?.hasFocus() == true) list.requestFocus()
+        // The match no longer names the place (placeOnScreen)
+        updatePlace()
     }
 
     private fun makeFindBar(): FindBar {
@@ -743,7 +781,7 @@ class BookActivity : BaseActivity() {
             }
 
             override fun onStep(forward: Boolean) {
-                find?.step(forward) { topLine() }
+                find?.step(forward) { firstShownLine() }
             }
 
             override fun onClose() = closeFind()
@@ -800,10 +838,10 @@ class BookActivity : BaseActivity() {
         adapter.load(match.lineIndex)
         revealJob = scope.launch {
             var jumped = false
-            repeat(REVEAL_TRIES) {
+            for (i in 0 until REVEAL_TRIES) {
                 delay(REVEAL_STEP_MS)
                 when (revealMatch(match, onlyIfHidden = !jumped)) {
-                    Reveal.Done -> return@launch
+                    Reveal.Done -> break
                     Reveal.Far, Reveal.Away -> if (!jumped) {
                         jumped = true
                         quietly(match.lineIndex)
@@ -812,6 +850,8 @@ class BookActivity : BaseActivity() {
                     Reveal.NotReady -> Unit
                 }
             }
+            // The title bar's place is the match's (placeOnScreen), also when it was readable where it was
+            updatePlace()
         }
     }
 
@@ -1005,15 +1045,15 @@ class BookActivity : BaseActivity() {
 
     /**
      * The title bar's second line: the book's category › the heading of the place shown (as the main app), and the
-     * headings above it for עוד's path.
+     * headings above it for עוד's path. [settle]: after a moment's pause (the main app's PLACE_SETTLE_MS), as a keypad
+     * held down passes many lines, each a read of the library; a line marked is named at once (its debounce of 0).
      */
-    private fun updatePlace() {
+    private fun updatePlace(settle: Boolean = true) {
         val info = book ?: return
         placeIndex = list.firstVisiblePosition
         placeJob?.cancel()
         placeJob = scope.launch {
-            // A moment's pause first: a keypad held down passes many lines, each a read of the library.
-            delay(PLACE_DELAY_MS)
+            if (settle) delay(PLACE_DELAY_MS)
             val index = placeOnScreen()
             val known = adapter.lineAt(index)?.id
             val path = withContext(Dispatchers.IO) {
@@ -1024,22 +1064,35 @@ class BookActivity : BaseActivity() {
                 }.getOrNull()
             } ?: emptyList()
             placePath = path
+            namedLine = index
             heading = path.lastOrNull()?.takeIf { it.isNotBlank() && it != info.title } ?: ""
             bar.setSubtitle(listOfNotNull(categoryTitle, heading.ifEmpty { null }).joinToString(" › "))
         }
     }
 
     /**
-     * The line the reader stands at (the main app's placeOnScreen): the line marked while some of it shows, else the
-     * find's match while it shows, else the first line mostly below the text's top (below the find bar while it is
-     * open).
+     * The line the reader stands at (the main app's placeOnScreen): a keypad's line, the one it is about (this
+     * edition's); else the line marked while some of it shows, else the find's match while it shows, else the first line
+     * mostly below the text's top (below the find bar while it is open).
      */
     private fun placeOnScreen(): Int {
         val top = list.paddingTop
         fun shows(index: Int): Boolean = rowAt(index)?.let { it.bottom > top && it.top < list.height } == true
+        val keypad = keypadLine()
+        if (keypad >= 0 && shows(keypad)) return keypad
         if (selected >= 0 && shows(selected)) return selected
         find?.current?.takeIf { find?.open == true && shows(it.lineIndex) }?.let { return it.lineIndex }
         return topLine()
+    }
+
+    /**
+     * The first line whose bottom is below the text's top edge (the main app's firstVisibleItemIndex under its content
+     * padding): where ▲ ▼ start before a match is reached, a line half under the find bar included.
+     */
+    private fun firstShownLine(): Int {
+        val top = list.paddingTop
+        for (i in 0 until list.childCount) if (list.getChildAt(i).bottom > top) return list.firstVisiblePosition + i
+        return list.firstVisiblePosition
     }
 
     /** The first line mostly below the text's top edge (below the find bar while it is open). */
@@ -1066,7 +1119,7 @@ class BookActivity : BaseActivity() {
 
     private val justifyNext: Runnable = object : Runnable {
         override fun run() {
-            if (flinging) return
+            if (skimming) return
             for (i in 0 until list.childCount) {
                 val row = list.getChildAt(i) as? LineView ?: continue
                 if (row.justify()) {
@@ -1087,6 +1140,8 @@ class BookActivity : BaseActivity() {
         followJob?.cancel()
         selected = index
         refreshBars()
+        // The line marked names the place while it shows (placeOnScreen), at once as the main app follows a tap
+        updatePlace(settle = false)
         available = null
         updateToolbar()
         val line = adapter.lineAt(index)
@@ -1827,18 +1882,36 @@ class BookActivity : BaseActivity() {
 
     /**
      * A text of the pane: [base], with the find's query lit in it as the bar has it, justified (Justify; the platform's
-     * from Android 8.0).
+     * from Android 8.0). A text with links is a keypad's stop too, with the focus's ground: OK lists its links, which a
+     * keypad cannot tap (as a line's long OK lists the line's).
      */
     private inner class PaneText(private val base: Spanned) : TextView(this@BookActivity) {
         private var shown: CharSequence = base
         private var gapsFor: Layout? = null
         private var gaps: Justify.Gaps? = null
         private var gapsWidth = -1
+        private val hasLinks = base.getSpans(0, base.length, LineText.Link::class.java).isNotEmpty()
 
         init {
             Justify.prepare(this)
             show(base)
+            if (hasLinks) {
+                // Not clickable: a tap keeps going to the link under it, or to nothing
+                isFocusable = true
+                background = states(colors, 0, dp(6).toFloat())
+            }
         }
+
+        override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
+            if (hasLinks && isConfirm(keyCode)) true else super.onKeyDown(keyCode, event)
+
+        override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+            if (!hasLinks || !isConfirm(keyCode)) return super.onKeyUp(keyCode, event)
+            if (!event.isCanceled) Dialogs.choices(this@BookActivity, colors, null, linkEntries(base))
+            return true
+        }
+
+        private fun isConfirm(keyCode: Int) = keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER
 
         fun light() {
             val query = find?.paneQuery.orEmpty()
@@ -2012,14 +2085,14 @@ class BookActivity : BaseActivity() {
 
         /**
          * The gaps that justify the line (Justify), on its text once laid out: worked out from this layout the first time
-         * and kept with the line for its width and look; not while a fling passes it ([flinging]: the lines it shows are
-         * justified when it stops). Laid out again with them (another width), it starts from its text. False when there
-         * was nothing to do.
+         * and kept with the line for its width and look; not while a fling or the fast scroller's thumb passes it
+         * ([skimming]: the lines it shows are justified when it stops). Laid out again with them (another width), it
+         * starts from its text. False when there was nothing to do.
          */
         fun justify(): Boolean {
             val r = rendered ?: return false
             val layout = layout ?: return false
-            if (Justify.byPlatform || layout === gapsFor || flinging) return false
+            if (Justify.byPlatform || layout === gapsFor || skimming) return false
             if (gapsFor != null) {
                 gapsFor = null
                 setText(shown, BufferType.SPANNABLE)
