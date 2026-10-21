@@ -29,8 +29,9 @@ data class AppRelease(
 
 /**
  * Where Pardes finds its newer versions, read as the download site does (androidApp/site/index.html): the GitHub API's
- * release list first, then, when that fails (60 calls an hour per IP, often shared behind filtering proxies, and some
- * filters block api.github.com), releases.json, which android-site.yml writes in the same shape at every deploy and
+ * release list first (its first page, 30 releases), then releases.json when that fails (60 calls an hour per IP, often
+ * shared behind filtering proxies, and some filters block api.github.com) or holds no Android release (Pardes for
+ * desktop's releases share the list). android-site.yml writes releases.json, Android releases only, at every deploy and
  * deploys again after every release. Both list the newest first; the newest version that is not a pre-release is
  * offered. A version is its versionName (the tag's), compared number by number: versionCode is raised by hand with it
  * and is not in the tag. What is new comes from the site's changelog.md (androidApp/CHANGELOG.md).
