@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.legacy.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.FrameLayout
@@ -15,6 +16,11 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.DesktopStrings
  * its AGPL link opening the licence in the app), the box "אני מאשר את תנאי הרישיון ושימוש" under them, centred, and
  * "המשך", which waits for it. Back leaves the app, as on the main app's first step. A link that started the app
  * (zayit://) is handed to the Home once the terms are accepted.
+ *
+ * There is one licence step and nothing under the Home it leads to: the Home (singleTask) finishes once it has started
+ * the step, so the launcher's icon or a link while the step is shown starts a Home over it, which brings this step
+ * back instead of a second one ([start]), and the Home comes on a task of its own ([accept]), so that Back from it
+ * leaves the app.
  */
 class LicenceActivity : BaseActivity() {
     private var accepted = false
@@ -22,6 +28,9 @@ class LicenceActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         accepted = savedInstanceState?.getBoolean(STATE_ACCEPTED) ?: false
+        // The latest link, which may have come through onNewIntent: Android starts a step again after ending the app with
+        // the intent that first started it
+        savedInstanceState?.getString(STATE_LINK)?.let { link -> intent = Intent(intent).setData(Uri.parse(link)) }
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(colors.panel)
@@ -60,24 +69,41 @@ class LicenceActivity : BaseActivity() {
         setContentView(root)
     }
 
+    /** The step brought back by the launcher's icon or a link ([start]): a link is kept for the Home, the box as it was. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.data != null) setIntent(intent)
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(STATE_ACCEPTED, accepted)
+        intent?.data?.let { outState.putString(STATE_LINK, it.toString()) }
     }
 
     private fun accept() {
         if (!accepted) return
         prefs.licenceAccepted = true
-        startActivity(Intent(this, MainActivity::class.java).setData(intent?.data))
+        startActivity(
+            Intent(this, MainActivity::class.java).setData(intent?.data)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+        )
         finish()
     }
 
     companion object {
         private const val STATE_ACCEPTED = "accepted"
+        private const val STATE_LINK = "link"
 
-        /** The licence step in [from]'s place, with the link that started it ([Intent.getData]), if any. */
+        /**
+         * The licence step in [from]'s place, with the link that started it ([Intent.getData]), if any: the one already
+         * shown when there is one, the screens over it closed.
+         */
         fun start(from: Context, intent: Intent?) {
-            from.startActivity(Intent(from, LicenceActivity::class.java).setData(intent?.data))
+            from.startActivity(
+                Intent(from, LicenceActivity::class.java).setData(intent?.data)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            )
         }
     }
 }
