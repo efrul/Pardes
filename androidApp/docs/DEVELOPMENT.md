@@ -4,7 +4,7 @@ This file records where the Android port stands and how it is worked on. It is f
 
 ## Goal and constraints
 
-- **Target:** Android 8.0 and later (minSdk 26; 33 up to 0.3.1, then 30), phones down to the 3" Unihertz Jelly Star, and tablets. Most testing is on Android 13 (the API 33 emulator and the Jelly Star); what differs on 8 to 12 is in [Android 8 to 12](#android-8-to-12).
+- **Target:** Android 8.0 and later (minSdk 26; 33 up to 0.3.1, then 30), phones down to the 3" Unihertz Jelly Star, and tablets. Most testing is on Android 13 (the API 33 emulator and the Jelly Star); what differs on 8 to 12 is in [Android 8 to 12](#android-8-to-12). Android 4.4 to 7.1 have an edition of their own ([Android 4.4 to 7.1](#android-44-to-71)).
 - **Parity with desktop Zayit 0.6.1:** the same screens, wording (except the authorship texts, see below), behaviour and data. Desktop is the reference whenever something is unclear. Four fixes from desktop 0.6.2 are ported on top of that base (see [PARITY.md](PARITY.md) › Later desktop releases); the rest of 0.6.2–0.6.4 is not.
 - **Own app, based on Zayit:** Pardes is not an app by Zayit's author. User-facing text says Pardes is based on Zayit by Elie (Elyahou) Gambache (AGPL-3.0), who did not make it, is not responsible for it and does not support it. His copyright, licence and §7b attribution notices are kept; the porter is not named, and this repository is linked only as Pardes's AGPL source (the כללי header, אודות, תנאים). Where desktop's wording says who made the app (the welcome step, the settings header, About, the terms), Android's differs on purpose.
 - **Offline, including search:** the app uses the desktop library and the desktop Lucene index. There is no server.
@@ -109,6 +109,15 @@ minSdk is 26 (Android 8.0, since 2026-10-18; 30 earlier that day, 33 up to 0.3.1
 - **APK.** `dex.useLegacyPackaging = false` keeps `classes.dex` stored (uncompressed) below minSdk 28, as it was.
 - **Transfer scripts** (`tools/push-desktop-library.sh`/`.ps1`): stock Android 8.x has no awk, so the phone's file sizes are summed on the computer and `/proc/mounts` is read there. Below Android 11 the phone's shared storage (sdcardfs) refuses `chmod` (EPERM, checked on the 8.0 emulator) and needs none, so there `chmod` is only tried.
 - **Copying the library from a computer.** Android 11's `adb shell` is not in the `ext_data_rw` group (Android 12 added it), so it cannot read or write `Android/data/<app>/`: the transfer scripts cannot copy into the app's folder there. They read the API level first and stop at once with a message saying so (unless adb runs as root and can list `Android/data`). On 11, install from the bundle files in the app instead ("התקנה לא-מקוונת"). Android 8 to 10 do not have that limit: their sdcardfs gives the shell `sdcard_rw` (checked with the scripts on the 8.0 and 9 emulators, without root), and the files it writes there belong to the app; the scripts' stop applies on Android 11 only.
+
+## Android 4.4 to 7.1
+
+Android 4.4 to 7.1 (API 19 to 25) are served by a second edition, `legacy/` ([legacy/README.md](../legacy/README.md)), not by lowering this app's minSdk. Compose and the AndroidX libraries need Android 6.0, Lucene 10 needs 8.0, and Android 4.4's SQLite cannot read the library.
+
+- **What it shares.** The edition compiles SeforimLibrary and 38 of this app's files unchanged, each marked "Also compiled into the Android 4.4 edition". A change to one of them must leave this app exactly as it was (same texts, results and threading, the same 7 Kotlin warnings), and must stay within API 19 there: `:legacy:lintDebug` checks the copies.
+- **Its Lucene jar.** lucene-android builds the edition's jar from the same sources (`jarApi19`, offered by `:lucene-android-api19`). `check-min-api.sh --legacy` and `check-release-dex.sh --legacy` gate it beside the API 26 gates.
+- **Checks.** When `:app` or lucene-android changes, also build `:legacy` (`lintDebug`, `assembleDebug`, `assembleRelease`).
+- **Testing it.** It is tested on the `pardes19` AVD (Android 4.4.2): see legacy/README.md › The Android 4.4 emulator, and the `zayit-android` skill's `references/legacy.md`.
 
 ## Decisions and why
 
