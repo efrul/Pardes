@@ -17,9 +17,12 @@ name: Desktop release
 #
 # Community edition only: no token of Zayit's private add-ons, no Sentry or Google Drive keys, and no GitHub token in a
 # Gradle step (settings.gradle.kts would ask gh for one); branding/brand.gradle stops a build that would compile them.
-# Optional secrets: PARDES_LINUX_GPG_PRIVATE_KEY, PARDES_LINUX_GPG_KEY_ID, PARDES_LINUX_GPG_PASSPHRASE sign the deb and
-# rpm, and their updates then install without a password. Once a signed release is out, never change that key:
-# installed packages verify updates against the key they were installed with.
+# Optional secrets: PARDES_LINUX_GPG_PRIVATE_KEY (the ASCII-armored private key), PARDES_LINUX_GPG_KEY_ID and
+# PARDES_LINUX_GPG_PASSPHRASE sign the deb and rpm, and their updates then install without a password. Once a signed
+# release is out, never change that key: installed packages verify updates against the key they were installed with.
+#
+# Every run, a quick one too, is a release of this repository, and Pardes for Android up to 0.4.x reads only its 30
+# newest releases: delete test pre-releases once tested (gh release delete <tag> -R efrul/Pardes --cleanup-tag -y).
 
 # Runs only by hand, never on a push: Actions › Desktop release › Run workflow (on main, the default branch).
 on:
@@ -92,7 +95,7 @@ jobs:
           PRERELEASE: ${{ inputs.prerelease || inputs.quick }}
         run: |
           latest="$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName -q '.[].tagName' \
-            | sed -n 's/^desktop-\([0-9]*\.[0-9]*\.[0-9]*\)-[0-9].*$/\1/p' | sort -V | tail -1 || true)"
+            | sed -n 's/^desktop-\([0-9]*\.[0-9]*\.[0-9]*\)-[0-9].*$/\1/p' | sort -V | tail -1)"
           highest="$(printf '%s\n%s\n' "$latest" "$VERSION" | sort -V | tail -1)"
           if [ -n "$latest" ] && { [ "$latest" = "$VERSION" ] || [ "$highest" != "$VERSION" ]; }; then
             message="$VERSION is not higher than the published $latest: installed apps would not offer this release"
@@ -152,13 +155,13 @@ jobs:
           graalvm-distribution: oracle
 
       # Gradle properties only: Nucleus reads no environment for signing. Skipped (unsigned packages, updates that ask
-      # for a password) without the key.
+      # for a password) without the key. The passphrase goes to Gradle on its command line (next step): written into
+      # gradle.properties, a backslash or a non-Latin-1 character in it would come out changed.
       - name: Linux signing key
         if: matrix.pkg == 'deb' || matrix.pkg == 'rpm'
         env:
           GPG_PRIVATE_KEY: ${{ secrets.PARDES_LINUX_GPG_PRIVATE_KEY }}
           GPG_KEY_ID: ${{ secrets.PARDES_LINUX_GPG_KEY_ID }}
-          GPG_PASSPHRASE: ${{ secrets.PARDES_LINUX_GPG_PASSPHRASE }}
         run: |
           if [ -z "$GPG_PRIVATE_KEY" ] || [ -z "$GPG_KEY_ID" ]; then
             echo "::notice::No PARDES_LINUX_GPG_* secrets: the ${{ matrix.pkg }} stays unsigned, and its updates ask for a password"
@@ -171,7 +174,6 @@ jobs:
             echo "compose.desktop.linux.sign=true"
             echo "compose.desktop.linux.signing.keyId=$GPG_KEY_ID"
             echo "compose.desktop.linux.signing.keyFile=$key_file"
-            echo "compose.desktop.linux.signing.passphrase=$GPG_PASSPHRASE"
             echo "compose.desktop.linux.signing.silentUpdate=true"
           } >> gradle.properties
           echo "LINUX_SIGNED=true" >> "$GITHUB_ENV"
@@ -181,6 +183,8 @@ jobs:
       # ask gh to read Zayit's private packages with it.
       - name: Build the Linux package
         if: runner.os == 'Linux'
+        env:
+          GPG_PASSPHRASE: ${{ secrets.PARDES_LINUX_GPG_PASSPHRASE }}
         run: |
           case "${{ matrix.pkg }}" in
             deb) task=packageGraalvmDeb ;;
@@ -188,9 +192,13 @@ jobs:
             pacman) task=packageGraalvmPacman ;;
             *) echo "Unknown package format ${{ matrix.pkg }}" >&2; exit 1 ;;
           esac
-          unset GH_TOKEN GITHUB_TOKEN
+          args=()
+          if [ "${LINUX_SIGNED:-}" = true ] && [ -n "$GPG_PASSPHRASE" ]; then
+            args+=("-Pcompose.desktop.linux.signing.passphrase=$GPG_PASSPHRASE")
+          fi
+          unset GH_TOKEN GITHUB_TOKEN GPG_PASSPHRASE
           export GITHUB_REF="refs/tags/v$VERSION"
-          ./gradlew --console=plain ":SeforimApp:$task"
+          ./gradlew --console=plain "${args[@]}" ":SeforimApp:$task"
 
       - name: Build the Windows installer
         if: runner.os == 'Windows'
@@ -271,10 +279,12 @@ jobs:
       - name: Check out SeforimLibrary
         run: git submodule update --init SeforimLibrary
 
+      # Each package in artifacts/<artifact name>/, as generate-update-yml reads them. A lone artifact (the quick build)
+      # is unpacked into the path itself, so it gets its own directory as path.
       - name: Download the packages
         uses: actions/download-artifact@v7
         with:
-          path: artifacts
+          path: ${{ inputs.quick && 'artifacts/release-assets-windows-amd64' || 'artifacts' }}
           pattern: release-assets-*
 
       # Every package that should be there, and nothing else: generate-update-yml lists every file it finds
@@ -353,11 +363,11 @@ jobs:
           if [ "$QUICK" = true ]; then
             kind=--prerelease
             title_suffix=", גרסת ניסיון ל־Windows x64"
-            pre="**גרסת ניסיון לבודקים, ל־Windows x64 בלבד.** פרדס למחשב המותקן לא מציע אותה כעדכון. מתקינים אותה ידנית מהקובץ שלמטה."
+            pre="**גרסת ניסיון לבודקים, ל־Windows x64 בלבד.** פרדס למחשב המותקן לא מציע אותה כעדכון. מתקינים אותה ידנית מהקובץ שלמטה. גם כשתצא הגרסה הרגילה של $VERSION, פרדס שהותקן מכאן לא יציע אותה, כי מספר הגרסה זהה: מתקינים אותה ידנית."
           elif [ "$PRERELEASE" = true ]; then
             kind=--prerelease
             title_suffix=", גרסת ניסיון"
-            pre="**גרסת ניסיון לבודקים.** פרדס למחשב המותקן לא מציע אותה כעדכון. מתקינים אותה ידנית מהקבצים שלמטה."
+            pre="**גרסת ניסיון לבודקים.** פרדס למחשב המותקן לא מציע אותה כעדכון. מתקינים אותה ידנית מהקבצים שלמטה. גם כשתצא הגרסה הרגילה של $VERSION, פרדס שהותקן מכאן לא יציע אותה, כי מספר הגרסה זהה: מתקינים אותה ידנית."
           else
             kind=""
             title_suffix=""
@@ -392,7 +402,7 @@ jobs:
           $windows
           $linux
           - פרדס למחשב מותקן לצד זית למחשב ולא במקומו, ולכל אחד ההערות, ההגדרות והלשוניות שלו.
-          - פרדס מתעדכן מתוכו: כשיוצאת גרסה חדשה הוא מודיע עליה, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. הספרייה וההגדרות נשמרות.
+          - פרדס מתעדכן מתוכו. על גרסה חדשה הוא מודיע, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. עדכון קטן, שבו משתנה רק המספר האחרון של הגרסה, יורד מעצמו ומותקן בלי לשאול כשסוגרים את פרדס (ב־Windows, ובלינוקס כשהחבילה חתומה). הספרייה וההגדרות נשמרות.
 
           ---
           Copyright (C) 2025 Elie Gambache. GNU AGPL v3 with an additional attribution term (§7b), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
