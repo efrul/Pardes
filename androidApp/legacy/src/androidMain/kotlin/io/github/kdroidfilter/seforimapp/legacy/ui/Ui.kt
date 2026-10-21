@@ -265,8 +265,11 @@ fun Context.iconButton(icon: Int, tint: Int, description: String, colors: Colors
         keyable(this, onClick)
     }
 
-/** A menu row: its label and what it does; with no action, a section's title (grey, not a stop for the keypad). */
-class MenuEntry(val label: String, val icon: Int? = null, val action: (() -> Unit)? = null)
+/**
+ * A menu row: its label and what it does; with no action, a section's title (grey, not a stop for the keypad). [tint]:
+ * the icon's colour when it is not the text's (the reader's starred place, in the accent).
+ */
+class MenuEntry(val label: String, val icon: Int? = null, val tint: Int? = null, val action: (() -> Unit)? = null)
 
 /**
  * The phone title bar of the main app (PhoneTopBar): an optional leading button on the right, the title in bold with
@@ -440,9 +443,9 @@ fun Context.chip(text: String, colors: Colors, selected: Boolean, icon: Int? = n
     }
 
 /**
- * A button of the reader's bottom toolbar (ReaderRailButton): a 24dp icon over its 11sp label, chosen on a rounded
- * selectedRow ground, faded when it has nothing to show for the line. The ניקוד button also shows, in the empty band
- * under its glyph, two dots lit for the layers shown (LevelDots).
+ * A button of the reader's bottom toolbar (ReaderRailButton): a 24dp icon over its 11sp label (two lines at most, 12sp
+ * apart), chosen on a rounded selectedRow ground, faded when it has nothing to show for the line. The ניקוד button also
+ * shows, in the empty band under its glyph, two dots lit for the layers shown (LevelDots).
  */
 class RailButton(context: Context, private val colors: Colors, icon: Int, label: String, onClick: () -> Unit) : LinearLayout(context) {
     private val image = ImageView(context)
@@ -452,15 +455,19 @@ class RailButton(context: Context, private val colors: Colors, icon: Int, label:
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        minimumHeight = context.dp(52)
-        setPadding(0, context.dp(5), 0, context.dp(5))
+        minimumHeight = context.dp(48)
+        setPadding(0, context.dp(6), 0, context.dp(6))
         image.setImageResource(icon)
         val box = FrameLayout(context)
         box.addView(image, FrameLayout.LayoutParams(context.dp(24), context.dp(24)))
         box.addView(dots, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
         dots.visibility = GONE
         addView(box, lp(context.dp(24), context.dp(24)))
-        text = context.label(label, 11f, colors.secondary, maxLines = 1).apply { gravity = Gravity.CENTER }
+        text = context.label(label, 11f, colors.secondary, maxLines = 2).apply {
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            lineHeightFactor(12f / 11f)
+        }
         addView(text, lp(WRAP, WRAP).apply { topMargin = context.dp(2) })
         contentDescription = label
         keyable(this) { onClick() }

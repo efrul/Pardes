@@ -59,7 +59,10 @@
             android:exported="true"
             android:targetActivity=".ui.MainActivity" />
         <activity android:name=".ui.LibraryActivity" />
-        <activity android:name=".ui.BookActivity" />
+        <!-- The find bar's keyboard shrinks the reader rather than covering the text (the main app's imePadding). -->
+        <activity
+            android:name=".ui.BookActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity android:name=".ui.TocActivity" />
         <activity
             android:name=".ui.SearchActivity"
