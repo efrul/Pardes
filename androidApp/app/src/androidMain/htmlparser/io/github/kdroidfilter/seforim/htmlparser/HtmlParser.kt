@@ -1,5 +1,7 @@
 // Vendored unchanged from desktop Zayit 0.6.1 htmlparser/src/commonMain (citation hrefs, plainTextFromHtml); the
 // fork's ../htmlparser predates them. Android only: the desktop build keeps compiling ../htmlparser.
+// Also compiled into the Android 4.4 edition (legacy/build.gradle.kts, sharedAppSources): no Compose, no AndroidX
+// lifecycle, and nothing above API 19 that is not behind an SDK_INT check (:legacy:lintDebug reports it).
 package io.github.kdroidfilter.seforim.htmlparser
 
 import org.jsoup.Jsoup

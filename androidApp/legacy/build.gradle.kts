@@ -115,6 +115,15 @@ val sharedAppSources by tasks.registering(Sync::class) {
         // error messages (installErrorMessage) come with DesktopStrings and OnboardingFormat above.
         include("io/github/kdroidfilter/seforimapp/android/data/LibraryInstallerBase.kt")
         include("io/github/kdroidfilter/seforimapp/android/data/DatabaseChunks.kt")
+        // The reader's find in the page: the matches in the whole book (Lucene's candidate lines, else the book read
+        // through), matched on the lines' text as desktop's htmlparser reads it (below).
+        include("io/github/kdroidfilter/seforimapp/android/ui/reader/BookFindMatches.kt")
+    }
+    // Desktop's htmlparser as the main app vendors it, without its Compose rendering (HtmlCompose.kt): the parser and
+    // the plain text of a line (plainTextFromHtml), which the find matches on.
+    from(mainApp.resolve("htmlparser")) {
+        include("io/github/kdroidfilter/seforim/htmlparser/HtmlParser.kt")
+        include("io/github/kdroidfilter/seforim/htmlparser/HtmlPlainText.kt")
     }
     into(layout.buildDirectory.dir("generated/sharedAppSources"))
 }
