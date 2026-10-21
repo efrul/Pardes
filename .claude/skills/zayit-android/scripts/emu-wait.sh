@@ -47,10 +47,13 @@ case "$mode" in
     echo "stable=$ok after ${t}s, user $($ADB shell am get-started-user-state 0 2>/dev/null | tr -d '\r'), storage $($ADB shell sm list-volumes 2>/dev/null | grep '^emulated;0' | cut -d' ' -f2)" ;;
   settle)
     max="${2:-300}"; t=0
-    a=$($ADB exec-out screencap | md5sum)
+    # Android 4.4 (pardes19) has no `adb exec-out`: two empty captures would read as settled, so take the raw
+    # frame through `adb shell` there (its terminal changes the bytes, but the same way each time).
+    cap() { if $ADB exec-out true >/dev/null 2>&1; then $ADB exec-out screencap | md5sum; else $ADB shell screencap | md5sum; fi; }
+    a=$(cap)
     while [ "$t" -lt "$max" ]; do
       sleep 6; t=$((t + 6))
-      b=$($ADB exec-out screencap | md5sum)
+      b=$(cap)
       if [ "$a" = "$b" ]; then echo "settled after ${t}s"; exit 0; fi
       a=$b
     done

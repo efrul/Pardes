@@ -45,6 +45,8 @@ $S/emulator-prep.sh                  # root, stay-on, no animations, no ANR dial
 
 **API 26 and 28.** AVDs `pardes26` and `pardes28` run `system-images;android-26;google_apis;x86_64` and `android-28` (google_apis, so `adb root` works): `AVD=pardes26 $S/emulator-start.sh`. Their `config.ini` sets `disk.dataPartition.path` to the AVD's own `userdata-qemu.img`, so the data survives restarts. Under TCG API 26 boots in under a minute. What differs there: `androidApp/docs/DEVELOPMENT.md` › Android 8 to 12.
 
+**Android 4.4.** AVD `pardes19` runs Pardes for Android 4.4 (`:legacy`). It starts with its own command and needs other adb habits (no `exec-out`, no `am start -p`, a card that often comes back empty): legacy.md › The pardes19 AVD.
+
 ## Putting a library on the emulator
 
 The app looks for `seforim.db` in `files/library/` under external storage first, then internal storage. With `adb root` the cleanest route is internal storage owned by the app:

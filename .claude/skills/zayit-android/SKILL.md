@@ -1,6 +1,6 @@
 ---
 name: zayit-android
-description: Working on Pardes (פרדס), the Android app based on Zayit, formerly the unofficial Android port "זית לאנדרואיד" (the `androidApp/` folder of this repo, Android 8.0+ / minSdk 26), which mirrors the desktop app's screens and reuses SeforimLibrary. Covers building the APK, setting up the SDK and a headless emulator in a cloud container, installing and screenshotting the app, getting a library onto a device, desktop/Android comparisons, offline Lucene search on Android, the desktop→phone transfer script, Jelly Star and tablet layouts, and RTL/Compose pitfalls already solved once. Use it for any task touching androidApp, an APK, adb, an emulator, an Android screenshot, a phone or tablet layout, "make it look like desktop", or Android search, even when the request doesn't say "Android" outright (e.g. "תצלם את המסך", "תתקין על האמולטור", "למה החיפוש לא עובד בטלפון", "Jelly Star").
+description: Working on Pardes (פרדס), the Android app based on Zayit, formerly the unofficial Android port "זית לאנדרואיד" (the `androidApp/` folder of this repo, Android 8.0+ / minSdk 26), which mirrors the desktop app's screens and reuses SeforimLibrary. Also Pardes for Android 4.4-7.1 (`androidApp/legacy`: views, keypad phones, the pardes19 AVD). Covers building the APK, setting up the SDK and a headless emulator in a cloud container, installing and screenshotting the app, getting a library onto a device, desktop/Android comparisons, offline Lucene search on Android, the desktop→phone transfer script, Jelly Star and tablet layouts, and RTL/Compose pitfalls already solved once. Use it for any task touching androidApp, an APK, adb, an emulator, an Android screenshot, a phone or tablet layout, "make it look like desktop", Android search, Android 4.4 or a keypad phone, even when the request doesn't say "Android" outright (e.g. "תצלם את המסך", "תתקין על האמולטור", "למה החיפוש לא עובד בטלפון", "Jelly Star").
 ---
 
 # Pardes, the Android app based on Zayit
@@ -16,6 +16,7 @@ Where things are:
 - [androidApp/README.md](../../../androidApp/README.md): build and library setup.
 - [androidApp/DESIGN.md](../../../androidApp/DESIGN.md): the screen-by-screen design mapping.
 - [androidApp/docs/DEVELOPMENT.md](../../../androidApp/docs/DEVELOPMENT.md): history and status of the port.
+- [androidApp/legacy/README.md](../../../androidApp/legacy/README.md): Pardes for Android 4.4 to 7.1 (below).
 - This skill: how to work on the app quickly and without repeating solved problems.
 
 ## Authorship and name (don't regress)
@@ -168,6 +169,17 @@ Rules:
 - Open indexes with `NIOFSDirectory`, never MMapDirectory.
 - Don't re-research whether Lucene can work; that is settled.
 - Read [references/lucene-android.md](references/lucene-android.md) before touching search, the patched jar or R8 rules for Lucene.
+
+## Pardes for Android 4.4 (`:legacy`)
+
+`androidApp/legacy` builds Pardes for Android 4.4 to 7.1 (minSdk 19), including keypad phones, beside the main app and with its application id and library folder. Read [references/legacy.md](references/legacy.md) before working on it (decisions, checks, the `pardes19` AVD, pitfalls solved), and [androidApp/legacy/README.md](../../../androidApp/legacy/README.md) for the whole picture.
+- **It copies the main app.**
+  - Its screens are Android views drawn after the main app's screens, with the main app's Hebrew texts word for word, except names.
+  - 38 of the main app's files are compiled in (`sharedAppSources`), each marked "Also compiled into the Android 4.4 edition".
+  - A change to one must leave the main app exactly as it was (same texts, results and threading, 7 Kotlin warnings) and stay within API 19 (`:legacy:lintDebug`).
+- **Search** is the main app's engine and view models on the release's prebuilt index, through `:lucene-android-api19` (`jarApi19`) and `desugar_jdk_libs_nio`. It runs at three levels (full index, lookup index with a C scan of the text, scan only), tuned for a 48 MB heap. Gate it with `lucene-android/check-min-api.sh --legacy` and `check-release-dex.sh --legacy <legacy-release.apk>`.
+- **Keypad phones are first-class:** every control is reachable with D-pad, OK, digits, Menu and Back, with a visible focus highlight, and nothing heavy runs on the main thread.
+- **Emulator:** `pardes19` (Android 4.4.2, Dalvik, x86). Its card is the phone's storage and often comes back empty after the emulator is killed; `adb exec-out` and `am start -p` do not exist there. Test release builds.
 
 ## Things that will bite you
 

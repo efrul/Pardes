@@ -16,6 +16,13 @@ want = sys.argv[1] if len(sys.argv) > 1 else "--list"
 idx = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 subprocess.run([ADB, "shell", "uiautomator", "dump", "/sdcard/ui.xml"], capture_output=True)
 xml = subprocess.run([ADB, "exec-out", "cat", "/sdcard/ui.xml"], capture_output=True).stdout.decode("utf-8", "replace")
+if not xml:
+    # Android 4.4 (the pardes19 AVD) has no `adb exec-out` ("error: closed"): pull the file instead.
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run([ADB, "pull", "/sdcard/ui.xml", os.path.join(tmp, "ui.xml")], capture_output=True)
+        if os.path.exists(os.path.join(tmp, "ui.xml")):
+            xml = open(os.path.join(tmp, "ui.xml"), encoding="utf-8", errors="replace").read()
 nodes = re.findall(r'<node [^>]*?text="([^"]*)"[^>]*?content-desc="([^"]*)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
 if want == "--list":
     for n in nodes:

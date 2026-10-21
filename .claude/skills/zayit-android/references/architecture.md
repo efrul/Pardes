@@ -12,7 +12,7 @@
 
 `androidApp/` is a separate Gradle build. It is **not** included from the root `settings.gradle.kts`, so the desktop build is unaffected.
 
-- `settings.gradle.kts` sets up the repositories (Google, the GCS Maven mirror, Maven Central) and includes `:app` and `:lucene-android`.
+- `settings.gradle.kts` sets up the repositories (Google, the GCS Maven mirror, Maven Central, JitPack for requery) and includes `:app`, `:lucene-android`, `:lucene-android-api19` (its minSdk 19 jar) and `:legacy` (Pardes for Android 4.4 to 7.1, legacy.md).
 - `gradle/libs.versions.toml` is the Android build's own version catalog.
 - `app/build.gradle.kts` is a KMP `androidTarget` plus `com.android.application`:
   - `commonMain` compiles SeforimLibrary `core` and `dao` **unchanged** from `androidApp/upstream/SeforimLibrary`. That is an Android-only git submodule pinned to `381fbea`, the commit desktop 0.6.1 was built with. The root `SeforimLibrary/` submodule is the fork's older copy for the desktop build. After cloning, run `git submodule update --init androidApp/upstream/SeforimLibrary`.
