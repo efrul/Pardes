@@ -4,4 +4,20 @@
      zayit-android skill. -->
 <resources>
     <string name="app_name">פרדס</string>
+
+    <!-- Onboarding: the app's name; the welcome says it is based on Zayit (Android's AndroidStrings.welcomeSubtitle) -->
+    <string name="onboarding_title_bar">מדריך ההגדרה של פרדס</string>
+    <string name="onboarding_init_welcome_title">ברוכים הבאים לפרדס!</string>
+    <string name="onboarding_init_welcome_subtitle">יישום חדש, מודרני ומהיר ללימוד התורה. פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. פרדס שואף לחולל מהפכה בלימוד טקסטים דיגיטליים באמצעות חוויה חלקה, אלגנטית וללא צורך בחיבור לאינטרנט.</string>
+    <string name="onboarding_extracting_did_you_know">הידעת? פרדס משתמש באלגוריתם הדחיסה המתקדם ביותר — לא ZIP ולא RAR, אלא ZST ברמת הדחיסה הגבוהה ביותר! דחיסה מרבית ומהירות חילוץ מרבית!</string>
+    <string name="onboarding_finish_ready_message">ברוכים הבאים לפרדס! אנו מאחלים לכם חוויית שימוש נעימה.</string>
+
+    <!-- Settings › כללי header (Android's AppHeaderCard): based on Zayit and not on his behalf, AGPL and the source,
+         the private modules left out, and the §7b line word for word (in LRI…PDI so that its "/" stays at its end) -->
+    <string name="settings_info_created_by">מבוסס על זית מאת אליהו גמבש ואינו מטעמו</string>
+    <string name="settings_info_license">פרדס אינו מטעם אליהו גמבש: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.\nהליבה של זית היא קוד פתוח תחת רישיון AGPL-3.0, וגם קוד המקור של פרדס זמין תחת רישיון זה: https://github.com/efrul/Pardes</string>
+    <string name="settings_info_license_usage">המודולים הקנייניים של הגרסאות הרשמיות של זית (הסידור החכם, החיפוש הסמנטי וקישורי הפסוקים המצוטטים בתלמוד) אינם כלולים בפרדס.\n⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩</string>
+
+    <!-- App update: Pardes for desktop has its own version line -->
+    <string name="update_dialog_message">גרסה %1$s של פרדס למחשב זמינה.</string>
 </resources>

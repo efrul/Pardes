@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.AccentMark
 import io.github.kdroidfilter.seforimapp.features.onboarding.navigation.OnBoardingDestination
 import io.github.kdroidfilter.seforimapp.features.onboarding.navigation.ProgressBarState
 import io.github.kdroidfilter.seforimapp.features.onboarding.ui.components.OnBoardingScaffold
+import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.theme.PreviewContainer
 import org.jetbrains.compose.resources.stringResource
@@ -55,6 +56,9 @@ fun LicenceScreen(
             if (dbExists && dbVersionCompatible) {
                 // DB exists and version is compatible - skip install flow and go to user info
                 navController.navigate(OnBoardingDestination.UserProfilScreen)
+            } else if (ForeignLibraries.find() != null) {
+                // Another app's library is on this machine - offer to use it in place
+                navController.navigate(OnBoardingDestination.ExistingLibraryScreen)
             } else {
                 // DB doesn't exist or version is incompatible - continue with installation flow
                 navController.navigate(OnBoardingDestination.AvailableDiskSpaceScreen)

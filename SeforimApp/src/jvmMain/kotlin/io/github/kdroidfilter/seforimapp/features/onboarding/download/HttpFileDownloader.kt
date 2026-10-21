@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.onboarding.download
 
+import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.network.HttpsConnectionFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -22,7 +23,7 @@ internal class HttpFileDownloader(
             HttpsConnectionFactory.openConnection(url) {
                 setRequestProperty("Accept", "application/octet-stream")
                 if (fromByte > 0) setRequestProperty("Range", "bytes=$fromByte-")
-                setRequestProperty("User-Agent", "SeforimApp/1.0 (+https://github.com/kdroidFilter/SeforimApp)")
+                setRequestProperty("User-Agent", BrandInfo.USER_AGENT)
                 connectTimeout = 30_000
                 readTimeout = 60_000
                 instanceFollowRedirects = true

@@ -11,6 +11,7 @@ import dev.nucleusframework.updater.UpdateLevel
 import dev.nucleusframework.updater.UpdateResult
 import dev.nucleusframework.updater.provider.GenericProvider
 import dev.nucleusframework.updater.provider.GitHubProvider
+import io.github.kdroidfilter.seforimapp.branding.BrandUpdates
 import io.github.kdroidfilter.seforimapp.logger.errorln
 import io.github.kdroidfilter.seforimapp.logger.infoln
 import io.github.santimattius.structured.annotations.StructuredScope
@@ -454,6 +455,7 @@ class AppUpdateService(
                             provider =
                                 config.feedUrl
                                     ?.let { GenericProvider(it) }
+                                    ?: BrandUpdates.provider
                                     ?: GitHubProvider(owner = GITHUB_OWNER, repo = GITHUB_REPO)
                             httpClient = NativeHttpClient.create()
                             channel = "latest"

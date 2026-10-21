@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.core
 
+import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
@@ -64,7 +65,7 @@ internal fun sefariaReportBody(
         appendLine("התיקון המוצע:")
         appendLine("[נא לכתוב כאן את הנוסח הנכון]")
         appendLine()
-        append("נשלח מתוך זית (https://zayitapp.com/)")
+        append(BrandInfo.ERROR_REPORT_SIGNATURE)
     }
 
 private fun mailto(
