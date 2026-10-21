@@ -52,6 +52,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.ui.components.ZIconButton
 import io.github.kdroidfilter.seforimapp.android.ui.reader.PaneSearchField
+import io.github.kdroidfilter.seforimapp.android.ui.shell.ShellTexts
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -297,7 +298,7 @@ fun LibraryTree(
         val result = filter
         when {
             searching && result == null -> Unit
-            searching && result!!.matchIds.isEmpty() -> Text("לא נמצאו ספרים", color = Zayit.colors.textSecondary, fontSize = 14.sp, modifier = Modifier.padding(16.dp))
+            searching && result!!.matchIds.isEmpty() -> Text(ShellTexts.NO_BOOKS_FOUND, color = Zayit.colors.textSecondary, fontSize = 14.sp, modifier = Modifier.padding(16.dp))
             searching -> TreeList(
                 nodes = result!!.nodes,
                 selectedBookId = activeId,

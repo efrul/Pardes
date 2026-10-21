@@ -192,9 +192,9 @@ private fun MenuItem(text: String, icon: ImageVector, onClick: () -> Unit) {
 
 /** Desktop light_theme / dark_theme / system_theme: the theme in use. */
 fun themeLabel(mode: ThemeMode) = when (mode) {
-    ThemeMode.System -> "ערכת נושא מערכת"
-    ThemeMode.Light -> "ערכת נושא בהירה"
-    ThemeMode.Dark -> "ערכת נושא כהה"
+    ThemeMode.System -> ShellTexts.THEME_SYSTEM
+    ThemeMode.Light -> ShellTexts.THEME_LIGHT
+    ThemeMode.Dark -> ShellTexts.THEME_DARK
 }
 
 /** Desktop switch_to_*_theme: what the button does next (Light → Dark → System → Light). */
