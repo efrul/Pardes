@@ -354,7 +354,7 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
 - **The problem.** `framework/update/AppUpdateService.kt:430-468` uses `GitHubProvider(owner="kdroidFilter", repo="Zayit")` and forces `executableType="nsis"` on Windows (448). PATCH updates download at startup and install silently on quit (`main.kt:300-307`, `367-371`). Unchanged, Pardes would download and run Zayit's installer.
 - Just pointing the provider at efrul/Pardes fails: `/releases/latest` there is the Android release, so `latest.yml` returns 404.
 - **Option A (recommended).** A Pardes-only `UpdateProvider` at `branding/pardes/kotlin/…/PardesDesktopReleases.kt`.
-  - It reads `api.github.com/repos/efrul/Pardes/releases?per_page=30`.
+  - It reads `api.github.com/repos/efrul/Pardes/releases?per_page=100` (one page).
   - It takes the newest non-draft, non-prerelease release whose tag matches `^desktop-(\d+\.\d+\.\d+)-\d+(-r\d+)?$`.
   - It returns that tag's `latest.yml` or `latest-linux.yml`.
   - Hooks, (b): the provider factory at 432-433, and `"msi"` at 448. Nucleus installs MSIs with `msiexec /i … /passive`.
@@ -417,9 +417,9 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
 ### Pardes texts outside the desktop app
 
 - **`README.md`**:
-  - `:3` and `:5` must cover both apps.
-  - `:37`: the desktop tree is kdroidFilter/Zayit merged up to v0.6.7 (7549ca72), plus Pardes branding, the shared module and personal books. Also list what Pardes removed.
-  - `:42`: base version 0.6.7.
+  - Done (3c): the title and the English line cover both apps; "הקוד" describes Pardes for desktop, the tree merged up
+    to 0.6.7, Pardes's additions and removals; the licence section names both apps. Add the shared module and personal
+    books when they land.
   - `:30`: "זית למחשב או פרדס למחשב", once the scripts support it.
 - **`CLAUDE.md:100-101`**: the heading "Pardes, the Android app" and the rule "keep Android changes under androidApp/" now conflict with the shared module and the desktop app. Reword both.
 - **`.claude/skills/zayit-android/SKILL.md`**: "This Android app" becomes Pardes on both platforms. Add a short desktop section, or a new skill, covering `branding/`, the hooks and the desktop release.
@@ -488,7 +488,7 @@ yet run on GitHub: the first run needs the branch on `main`. With it:
 - The installers' copyright is his line (`brand.properties` `copyright`), not electron-builder's "Copyright © <year>
   Pardes".
 - Android: the updater also falls back to `releases.json` when the API's 30 newest releases hold no Android one
-  (desktop releases share the list). Installed 0.4.x lack that: delete desktop test pre-releases once tested.
+  (desktop releases share the list). Installed 0.3.0 to 0.4.1 lack that: delete desktop test pre-releases once tested.
 
 Open:
 - `ci.yaml` (upstream's) fails every PR here on the version (the newest tag is `android-*`); after that it would build

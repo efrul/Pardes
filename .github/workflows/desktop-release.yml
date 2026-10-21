@@ -21,7 +21,7 @@ name: Desktop release
 # PARDES_LINUX_GPG_PASSPHRASE sign the deb and rpm, and their updates then install without a password. Once a signed
 # release is out, never change that key: installed packages verify updates against the key they were installed with.
 #
-# Every run, a quick one too, is a release of this repository, and Pardes for Android up to 0.4.x reads only its 30
+# Every run, a quick one too, is a release of this repository, and Pardes for Android 0.3.0 to 0.4.1 reads only its 30
 # newest releases: delete test pre-releases once tested (gh release delete <tag> -R efrul/Pardes --cleanup-tag -y).
 
 # Runs only by hand, never on a push: Actions › Desktop release › Run workflow (on main, the default branch).
@@ -381,7 +381,7 @@ jobs:
             windows+=" (במחשב ARM: \`Pardes-$VERSION-windows-arm64-nsis.exe\`) ופותחים אותו."
             # Signed packages carry the helper that installs their updates without a password
             if find artifacts -name '*.asc' | grep -q .; then password="בלי סיסמה"; else password="בבקשת סיסמה"; fi
-            linux="- **לינוקס** (x64 ו־ARM64): \`.deb\` לאובונטו, דביאן ודומיהן (\`sudo apt install ./pardes_${VERSION}_amd64.deb\`), \`.rpm\` לפדורה ודומיהן (\`sudo dnf install ./pardes-$VERSION-1.x86_64.rpm\`), ו־\`.pacman\` לארץ' (\`sudo pacman -U ./pardes-$VERSION-1-x86_64.pacman\`). התקנה מ־deb או rpm מתעדכנת מתוכה ($password), ומ־pacman מתקינים כל גרסה חדשה ידנית."
+            linux="- **לינוקס** (x64 ו־ARM64): \`.deb\` לאובונטו, דביאן ודומיהן (\`sudo apt install ./pardes_${VERSION}_amd64.deb\`), \`.rpm\` לפדורה ודומיהן (\`sudo dnf install ./pardes-$VERSION-1.x86_64.rpm\`), ו־\`.pacman\` לארץ' (\`sudo pacman -U ./pardes-$VERSION-1-x86_64.pacman\`). התקנה מ־deb או rpm מתעדכנת מתוכה ($password). התקנה מ־pacman לא מודיעה על גרסה חדשה: בודקים בעמוד הגרסאות ומתקינים אותה ידנית."
           fi
           windows+=" הוא מתקין לחשבון שלכם בלבד, בלי הרשאות מנהל, ופותח את פרדס בסיום. הקובץ אינו חתום, ולכן Windows עשוי להזהיר שהוא לא מוכר: לוחצים על **מידע נוסף**, ואז על הכפתור שמפעיל אותו בכל זאת."
           cat > notes.md <<EOF
@@ -391,7 +391,7 @@ jobs:
 
           פרדס למחשב הוא יישום ללימוד התורה ל־Windows וללינוקס, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס למחשב נבנה מהקוד הפתוח של זית 0.6.7 ושונה כדי לפעול כיישום נפרד בשם פרדס, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`), וגם ב־https://github.com/efrul/Pardes.
 
-          המודולים הקנייניים של הגרסאות הרשמיות של זית (הסידור החכם, החיפוש הסמנטי וקישורי הפסוקים המצוטטים בתלמוד) אינם קוד פתוח, ואינם כלולים בפרדס.
+          המודולים הקנייניים של הגרסאות הרשמיות של זית (הסידור החכם, החיפוש הסמנטי וקישורי הפסוקים המצוטטים בתלמוד) אינם קוד פתוח, ואינם כלולים בפרדס. גם הגיבוי ל־Google Drive של זית אינו זמין בפרדס; הייצוא והייבוא של גיבוי לקובץ נשארים.
 
           ### מה חדש בגרסה $VERSION
           $(cat "$RUNNER_TEMP/whatsnew.md")
@@ -402,7 +402,7 @@ jobs:
           $windows
           $linux
           - פרדס למחשב מותקן לצד זית למחשב ולא במקומו, ולכל אחד ההערות, ההגדרות והלשוניות שלו.
-          - פרדס מתעדכן מתוכו. על גרסה חדשה הוא מודיע, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. עדכון קטן, שבו משתנה רק המספר האחרון של הגרסה, יורד מעצמו ומותקן בלי לשאול כשסוגרים את פרדס (ב־Windows, ובלינוקס כשהחבילה חתומה). הספרייה וההגדרות נשמרות.
+          - פרדס שהותקן מ־Windows, deb או rpm מתעדכן מתוכו. על גרסה חדשה הוא מודיע, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. עדכון קטן, שבו משתנה רק המספר האחרון של הגרסה, יורד מעצמו כשפרדס נפתח; ב־Windows, ובלינוקס כשהחבילה חתומה, הוא גם מותקן בלי לשאול כשסוגרים את פרדס, ובשאר המקרים רק באישורכם. הספרייה וההגדרות נשמרות.
 
           ---
           Copyright (C) 2025 Elie Gambache. GNU AGPL v3 with an additional attribution term (§7b), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).

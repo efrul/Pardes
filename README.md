@@ -1,8 +1,8 @@
 <div dir="rtl">
 
-# פרדס: ספרייה תורנית לאנדרואיד
+# פרדס: ספרייה תורנית לאנדרואיד ולמחשב
 
-*Pardes is an Android app based on [Zayit](https://github.com/kdroidFilter/Zayit), the Jewish study library by Elie (Elyahou) Gambache, and not made on his behalf: he did not make it, is not responsible for it and does not support it, so please don't report its problems to him or to the Zayit project.*
+*Pardes is an Android and desktop (Windows, Linux) app based on [Zayit](https://github.com/kdroidFilter/Zayit), the Jewish study library by Elie (Elyahou) Gambache, and not made on his behalf: he did not make it, is not responsible for it and does not support it, so please don't report its problems to him or to the Zayit project.*
 
 **להורדה: [efrul.github.io/Pardes](https://efrul.github.io/Pardes/)** · [כל הגרסאות](https://github.com/efrul/Pardes/releases)
 
@@ -35,7 +35,7 @@
 - האפליקציה נמצאת ב־[`androidApp/`](androidApp/). הוראות בנייה ב־[androidApp/README.md](androidApp/README.md), ומצב העבודה ב־[androidApp/docs/DEVELOPMENT.md](androidApp/docs/DEVELOPMENT.md).
 - GitHub Actions בונה את ה־APK ומפרסם אותו בעמוד הגרסאות כשמפעילים אותו ידנית (Actions › Android release › Run workflow). אתר ההורדה נמצא ב־[`androidApp/site/`](androidApp/site/) ומתעדכן בכל שינוי בו.
 - פרדס למחשב (ל־Windows וללינוקס) נבנה מהקוד של זית למחשב שבשאר הריפו, דרך [`branding/`](branding/README.md). GitHub Actions בונה אותו ומפרסם אותו בעמוד הגרסאות, בתגיות `desktop-*`, כשמפעילים אותו ידנית (Actions › Desktop release › Run workflow). מה חדש בכל גרסה: [desktop/CHANGELOG.md](desktop/CHANGELOG.md).
-- שאר הריפו הוא הקוד של זית למחשב מ־[kdroidFilter/Zayit](https://github.com/kdroidFilter/Zayit), ממוזג עד זית 0.6.7, עם התוספות של פרדס: `branding/`, `desktop/`, הסקיל `.claude/skills/zayit-android/`, ה־workflows ‏`.github/workflows/android-*.yml` ו־`desktop-release.yml`, ופסקה על אנדרואיד ב־`CLAUDE.md`. פרדס הסיר ממנו את ה־workflows של השחרורים והאתר של זית, את הגופן Rashi Amiti ואת תמונת המקדש של Shutterstock. ה־README המקורי שלו נמצא ב־[README-zayit-desktop.md](README-zayit-desktop.md), ובעברית ב־[README_HE-zayit-desktop.md](README_HE-zayit-desktop.md).
+- שאר הריפו הוא הקוד של זית למחשב מ־[kdroidFilter/Zayit](https://github.com/kdroidFilter/Zayit), ממוזג עד זית 0.6.7, עם התוספות של פרדס: `branding/`, `desktop/`, הסקיל `.claude/skills/zayit-android/`, ה־workflows ‏`.github/workflows/android-*.yml` ו־`desktop-release.yml`, התוכנית `docs/PARDES_PLAN.md`, שתי פסקאות ב־`CLAUDE.md`, ושינויים ותוספות בקוד של היישום עצמו (הרשימה ב־[branding/README.md](branding/README.md)). פרדס הסיר ממנו את ה־workflows של השחרורים והאתר של זית, את הגופן Rashi Amiti ואת תמונת המקדש של Shutterstock. ה־README המקורי שלו נמצא ב־[README-zayit-desktop.md](README-zayit-desktop.md), ובעברית ב־[README_HE-zayit-desktop.md](README_HE-zayit-desktop.md).
 
 ## רישיון וקרדיט
 
