@@ -114,14 +114,15 @@ class ScanSearch(private val library: Library, private val prefs: Prefs) {
     private val arrived = ArrayList<SearchResult>()
 
     /**
-     * One run of the scan, as its thread tells it (under [arrived]'s lock): the book it is at, and whether it is in
-     * that book's query, the only time an interrupt stops the scan and not another query on the one connection.
+     * One run of the scan, as its thread tells it (under [arrived]'s lock): the book it is at, and whether that book's
+     * query holds the library's one connection, the only time an interrupt stops the scan and not another query on it.
      */
     private class Scan(val from: Int) {
         /** The book it is at: the ones before it are read, and their results handed over. */
         @Volatile
         var done = from
 
+        /** Set and cleared inside the driver's lock (TextSearch.run's inQuery): no other query can run meanwhile. */
         @Volatile
         var reading = false
 
@@ -307,14 +308,20 @@ class ScanSearch(private val library: Library, private val prefs: Prefs) {
                                 synchronized(arrived) {
                                     if (s.cancelled) throw CancellationException("stopped")
                                     s.done = s.from + i
-                                    s.reading = true
+                                }
+                            },
+                            inQuery = { reading ->
+                                synchronized(arrived) {
+                                    // Stopped while the book waited for the connection: not read at all
+                                    if (reading && s.cancelled) throw CancellationException("stopped")
+                                    s.reading = reading
                                 }
                             },
                             onHits = { found ->
-                                // Made into results here, off the main thread: the line's text with the words found bold
+                                // Made into results here, off the main thread and out of the connection (the screen's
+                                // queries run meanwhile): the line's text with the words found bold
                                 val results = found.map { toResult(it, pattern, marks) }
                                 synchronized(arrived) {
-                                    s.reading = false
                                     if (!s.cancelled) {
                                         arrived += results
                                         s.done++
@@ -323,7 +330,6 @@ class ScanSearch(private val library: Library, private val prefs: Prefs) {
                             },
                         )
                     }
-                    s.reading = false
                 }
                 scan = null
             }
@@ -352,20 +358,20 @@ class ScanSearch(private val library: Library, private val prefs: Prefs) {
 
     /**
      * Stops the scan where it is, keeping what it found. The book it is reading is stopped (sqlite3_interrupt) only
-     * while it is in that book's query: at any other time the interrupt would fail another query on the one
-     * connection, a result's place or the reader's lines.
+     * while its query holds the connection, checked under the lock that query's end takes: at any other time the
+     * interrupt would fail another query on the one connection, a result's place or the reader's lines.
      */
     private fun stopScan() {
         val s = scan
         scan = null
+        searchJob?.cancel()
         if (s != null) {
             synchronized(arrived) {
                 s.cancelled = true
                 nextBook = s.done
+                if (s.reading) engine?.cancel()
             }
         }
-        searchJob?.cancel()
-        if (s?.reading == true) engine?.cancel()
     }
 
     /** Gives the screen the results as they are now, and where the scan is; [scrollTo] moves its list. */

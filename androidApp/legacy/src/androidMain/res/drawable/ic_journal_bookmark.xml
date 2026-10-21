@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bootstrap Icons "journal-bookmark" by The Bootstrap Authors (MIT), the main app's icon for a place in the search
+     bar's suggestions (icons JournalBookmark), path for path; mirrored, as Compose mirrors it (autoMirror) in this
+     right-to-left app; white, the screens tint it (ui/Ui.kt). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+    <group
+        android:pivotX="8"
+        android:scaleX="-1">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M6,8V1h1v6.117L8.743,6.07a0.5,0.5 0,0 1,0.514 0L11,7.117V1h1v7a0.5,0.5 0,0 1,-0.757 0.429L9,7.083 6.757,8.43A0.5,0.5 0,0 1,6 8Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M3,0h10a2,2 0,0 1,2 2v12a2,2 0,0 1,-2 2H3a2,2 0,0 1,-2 -2v-1h1v1a1,1 0,0 0,1 1h10a1,1 0,0 0,1 -1V2a1,1 0,0 0,-1 -1H3a1,1 0,0 0,-1 1v1H1V2a2,2 0,0 1,2 -2Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M1,5v-0.5a0.5,0.5 0,0 1,1 0V5h0.5a0.5,0.5 0,0 1,0 1h-2a0.5,0.5 0,0 1,0 -1Z M1,8v-0.5a0.5,0.5 0,0 1,1 0V8h0.5a0.5,0.5 0,0 1,0 1h-2a0.5,0.5 0,0 1,0 -1Z M1,11v-0.5a0.5,0.5 0,0 1,1 0v0.5h0.5a0.5,0.5 0,0 1,0 1h-2a0.5,0.5 0,0 1,0 -1Z" />
+    </group>
+</vector>

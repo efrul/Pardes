@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "book_5" by Google (Apache License 2.0), the main app's icon for a book in the search bar's
+     suggestions (icons bookOpenTabs), path for path; mirrored, as Compose mirrors it (autoMirror) in this right-to-left
+     app; white, the screens tint it (ui/Ui.kt). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group
+        android:pivotX="480"
+        android:scaleX="-1">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M270,880q-45,0 -77.5,-30.5T160,774v-558q0,-38 23.5,-68t61.5,-38l395,-78v640l-379,76q-9,2 -15,9.5t-6,16.5q0,11 9,18.5t21,7.5h450v-640h80v720Z M360,647l200,-39v-478l-200,39Z M280,663v-478l-15,3q-11,2 -18,9.5t-7,18.5v457q5,-2 10.5,-3.5T261,667Z M240,191v482Z" />
+    </group>
+</vector>

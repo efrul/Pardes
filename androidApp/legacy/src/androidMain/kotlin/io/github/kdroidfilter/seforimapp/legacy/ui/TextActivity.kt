@@ -195,7 +195,7 @@ class TextActivity : BaseActivity() {
             Component("Zstandard (Meta Platforms, Inc. and affiliates)", "BSD", "licenses/Zstandard-LICENSE.txt"),
             Component("AndroidX Multidex (Google)", APACHE, "licenses/Apache-2.0.txt"),
             Component("desugar_jdk_libs (Google, מ־OpenJDK)", "GNU GPL v2 עם חריגת Classpath", "licenses/desugar_jdk_libs-LICENSE.txt"),
-            Component("Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),
+            Component("Material Symbols, Material Icons (Google)", APACHE, "licenses/Apache-2.0.txt"),
             Component("Bootstrap Icons (The Bootstrap Authors)", "MIT", "licenses/Bootstrap-Icons-LICENSE.txt"),
             // As the main app's credit (LicencesSettings iconCredits): the search's authors.
             Component("Emoji One", "CC BY 4.0, creativecommons.org/licenses/by/4.0. אייקון היד הכותבת (Writing hand, Monotone).", null),
