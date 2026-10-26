@@ -3,6 +3,10 @@ package io.github.kdroidfilter.seforimapp.features.home.widgets.temple
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,10 +38,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.kosherkotlin.ComplexZmanimCalendar
@@ -44,10 +59,15 @@ import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.HebrewMonth
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishDate
 import io.github.kdroidfilter.kosherkotlin.util.GeoLocation
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
+import io.github.kdroidfilter.seforimapp.core.settings.SettingCodec
 import io.github.kdroidfilter.seforimapp.features.home.widgets.CellSpan
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidget
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetCard
+import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetMenuItem
+import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetSettings
+import io.github.kdroidfilter.seforimapp.features.home.widgets.measures.Source
+import io.github.kdroidfilter.seforimapp.features.home.widgets.measures.rememberOpenSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -58,7 +78,13 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.InlineInformationBanner
+import org.jetbrains.jewel.ui.component.RadioButtonRow
 import org.jetbrains.jewel.ui.component.Text
+import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
+import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
@@ -69,16 +95,16 @@ import seforimapp.seforimapp.generated.resources.home_temple_subtitle
 import seforimapp.seforimapp.generated.resources.home_temple_title
 import seforimapp.seforimapp.generated.resources.home_temple_years
 import seforimapp.seforimapp.generated.resources.home_widget_name_temple
+import seforimapp.seforimapp.generated.resources.home_widgets_options
 import kotlin.time.Clock
 
 @Immutable
-private data class TempleCountdownData(
+internal data class TempleCountdownData(
     val years: Int,
     val months: Int,
     val days: Int,
 )
 
-private const val DESTRUCTION_YEAR = 3830
 private const val DESTRUCTION_DAY = 9
 private val DESTRUCTION_MONTH = HebrewMonth.AV
 
@@ -97,7 +123,7 @@ private val JERUSALEM =
         TimeZone.of("Asia/Jerusalem"),
     )
 
-private fun computeTempleCountdown(): TempleCountdownData {
+private fun computeTempleCountdown(count: TempleCount): TempleCountdownData {
     // After sunset in Jerusalem the Hebrew day rolls over — advance the Gregorian date by one day
     // so JewishDate resolves to the new Hebrew day instead of yesterday's.
     val calendar = ComplexZmanimCalendar(JERUSALEM)
@@ -106,12 +132,17 @@ private fun computeTempleCountdown(): TempleCountdownData {
     if (sunset != null && sunset <= Clock.System.now()) {
         date = date.plus(1, DateTimeUnit.DAY)
     }
-    val today = JewishDate(date)
+    return templeCountdownAt(JewishDate(date), count)
+}
 
+internal fun templeCountdownAt(
+    today: JewishDate,
+    count: TempleCount,
+): TempleCountdownData {
     // Most recent Av-9 anniversary that is strictly before today. Using `>=` (rather than `>`)
     // means the anniversary day itself is reported as "almost a full year" instead of "X years
     // and 0 days", keeping the display free of 0-day artifacts.
-    var years = (today.jewishYear - DESTRUCTION_YEAR).toInt()
+    var years = (today.jewishYear - count.destructionYear).toInt()
     var anniversary = JewishDate(today.jewishYear, DESTRUCTION_MONTH, DESTRUCTION_DAY)
     if (anniversary >= today) {
         years -= 1
@@ -153,7 +184,8 @@ private const val MIN_FRAME_MS = 20L
 /**
  * Plays the animated WebP frame by frame with Skia's [Codec]: only one decoded frame is alive at a time
  * (plus the one still on screen), instead of the whole animation in RAM. Decoded off the UI thread (up to 50 frames a
- * second of a large image), and held on its frame while its tab is hidden; stops when the card leaves composition.
+ * second of a large image), and held on its frame while its tab or its window is hidden; stops when the card leaves
+ * composition.
  */
 @Composable
 private fun AnimatedTempleBackground(modifier: Modifier = Modifier) {
@@ -164,6 +196,9 @@ private fun AnimatedTempleBackground(modifier: Modifier = Modifier) {
         try {
             withContext(Dispatchers.Default) { player.open() }
             while (true) {
+                // Waits for a frame first: none come while the window can't be seen (minimized, hidden, covered), so the
+                // animation stops decoding there instead of burning the battery behind other windows.
+                withFrameNanos { }
                 // Decoded off the UI thread; shown, and the old frames freed, back on it, between two frames drawn
                 // (a bitmap freed under the drawing would crash). Cancelled, the decoding finishes before the close.
                 val decoded = withContext(Dispatchers.Default) { player.decode() }
@@ -237,19 +272,143 @@ internal object TempleCountdownWidget : HomeWidget {
     override val minSpan = CellSpan(4, 3)
     override val maxSpan = CellSpan(12, 6)
 
+    override val settings get() = TempleSettings
+
+    // As measured with its text, so the window opens at its size and never leaves a gap
+    override val optionsSize = DpSize(520.dp, 541.dp)
+
+    @Composable
+    override fun menuItems(state: HomeWidgetsState) =
+        listOf(
+            WidgetMenuItem(stringResource(Res.string.home_widgets_options), icon = AllIconsKeys.General.Settings) {
+                state.optionsOpen = this
+            },
+        )
+
+    @Composable
+    override fun Options(state: HomeWidgetsState) = TempleOptions(state)
+
     @Composable
     override fun Content(
         state: HomeWidgetsState,
         modifier: Modifier,
-    ) = TempleDestructionCountdownCard(modifier)
+    ) = TempleDestructionCountdownCard(state, modifier)
+}
+
+/**
+ * How the years since the destruction are counted (מראה מקומות on סי' תקנט). Rashi and the Rambam agree the Temple fell
+ * on ט' באב ג'תתכ"ט of our count (Rav Mazuz, בינה לעתים): Rashi counts that very year as the first, the Rambam starts
+ * after it. Tosafot have it a year later, in ג'תת"ל.
+ */
+internal enum class TempleCount(
+    val label: String,
+    val destructionYear: Int,
+) {
+    // "נטפי חדא שתא ... לוספה לשנת חורבן על מנין שני דבתר חורבן": the year minus 68, Chazon Ovadia
+    RASHI("שיטת רש״י", 3828),
+
+    // "שתחלתה מתשרי שאחר החרבן": the year minus 69, the Gra (חו״מ סז, ח) and Rav Mazuz
+    RAMBAM("שיטת הרמב״ם", 3829),
+
+    // "אין זה כי אם תכ״א": 420 full years, so ג'תת"ל, the year minus 70; the Ritva and Rashi on ערכין too
+    TOSAFOT("שיטת התוספות", 3830),
+}
+
+internal object TempleSettings : WidgetSettings(TempleCountdownWidget.id) {
+    val count by setting(TempleCount.RASHI, SettingCodec({ it.name }, { name -> TempleCount.entries.find { it.name == name } }))
+}
+
+private const val COUNT_TITLE = "שיטת החשבון"
+
+// In our own words, after the מראי מקומות credited in its last paragraph (its text is theirs, all rights reserved).
+// Its paragraphs: what the counts turn on, then one per [TempleCount] in their order, then the credit.
+private const val TEMPLE_COUNT_TEXT = "files/temple_count.txt"
+
+/** Each count picked by its own explanation, its sources linked to their lines in a new tab. */
+@Composable
+private fun TempleOptions(state: HomeWidgetsState) {
+    val picked = state[TempleSettings.count]
+    val open = rememberOpenSource(state)
+    val paragraphs by produceState(emptyList<String>()) {
+        value =
+            Res
+                .readBytes(TEMPLE_COUNT_TEXT)
+                .decodeToString()
+                .trim()
+                // A Windows checkout (autocrlf) ships it with \r\n
+                .split(Regex("""\r?\n\r?\n"""))
+    }
+    if (paragraphs.size < TempleCount.entries.size + 2) return
+    val link = TextLinkStyles(SpanStyle(color = JewelTheme.globalColors.text.info, textDecoration = TextDecoration.Underline))
+    VerticallyScrollableContainer(Modifier.fillMaxSize()) {
+        // Longer than the window: scrolled, its bar beside the text
+        Column(Modifier.fillMaxWidth().padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            OptionsTitle(COUNT_TITLE)
+            InlineInformationBanner(modifier = Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(paragraphs.first(), fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Justify)
+                    Text(paragraphs.last(), fontSize = 11.sp, color = JewelTheme.globalColors.text.info)
+                }
+            }
+            TempleCount.entries.forEach { count ->
+                val now = templeCountdownAt(JewishDate(), count)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    RadioButtonRow(
+                        text = "${count.label} · ${now.years}",
+                        selected = count == picked,
+                        onClick = { state[TempleSettings.count] = count },
+                        modifier = Modifier.testTag("temple-option-${count.name}"),
+                    )
+                    // Its explanation under its label, past the radio button
+                    Text(
+                        withSourceLinks(paragraphs[count.ordinal + 1], link, open),
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        textAlign = TextAlign.Justify,
+                        color = JewelTheme.globalColors.text.info,
+                        modifier = Modifier.padding(start = 28.dp),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
-private fun TempleDestructionCountdownCard(modifier: Modifier = Modifier) {
-    val countdownData by produceState(initialValue = computeTempleCountdown()) {
+private fun OptionsTitle(text: String) {
+    Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+}
+
+// [shown](book title#line index): a link to that line of the library
+private val SOURCE_LINK = Regex("""\[([^\]]+)]\(([^#)]+)#(\d+)\)""")
+
+/** [text] with each [shown](book#line) as a link opening that line, the rest as is. */
+internal fun withSourceLinks(
+    text: String,
+    style: TextLinkStyles? = null,
+    open: (Source) -> Unit = {},
+) = buildAnnotatedString {
+    var at = 0
+    SOURCE_LINK.findAll(text).forEach { match ->
+        append(text.substring(at, match.range.first))
+        val (shown, book, line) = match.destructured
+        withLink(LinkAnnotation.Clickable(shown, style) { open(Source(shown, book, line.toInt())) }) { append(shown) }
+        at = match.range.last + 1
+    }
+    append(text.substring(at))
+}
+
+@Composable
+private fun TempleDestructionCountdownCard(
+    state: HomeWidgetsState,
+    modifier: Modifier = Modifier,
+) {
+    val count = state[TempleSettings.count]
+    val countdownData by produceState(initialValue = computeTempleCountdown(count), count) {
+        value = computeTempleCountdown(count)
         while (true) {
             delay(millisUntilNextJerusalemSunset(System.currentTimeMillis()))
-            value = computeTempleCountdown()
+            value = computeTempleCountdown(count)
         }
     }
 
@@ -312,7 +471,12 @@ private fun TempleDestructionCountdownCard(modifier: Modifier = Modifier) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+                // Its options at hand, as in its menu; lit in white over the fire, not Jewel's hover
+                SettingsButton(
+                    onClick = { state.optionsOpen = TempleCountdownWidget },
+                    modifier = Modifier.align(Alignment.CenterEnd),
                 )
             }
 
@@ -352,6 +516,32 @@ private fun TempleDestructionCountdownCard(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+@Composable
+private fun SettingsButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    Box(
+        modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (hovered) 0.18f else 0f))
+            .hoverable(hover)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interactionSource = hover, indication = null, onClick = onClick)
+            .testTag("temple-settings"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            key = AllIconsKeys.General.Settings,
+            contentDescription = stringResource(Res.string.home_widgets_options),
+            tint = Color.White.copy(alpha = if (hovered) 1f else 0.7f),
+        )
     }
 }
 
