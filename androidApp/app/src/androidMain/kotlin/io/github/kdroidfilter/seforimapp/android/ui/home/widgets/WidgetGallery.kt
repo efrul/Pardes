@@ -486,7 +486,14 @@ internal fun WidgetOptions(
             Spacer(Modifier.height(8.dp))
             HorizontalDivider(color = c.divider)
             Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+            // Flows: on a 240dp phone (Jelly Star) the two don't fit a line, and "סיום" squeezed beside the other broke a
+            // letter a line
+            FlowRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
                 io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton(HOME_WIDGETS_RESET, { state.resetSettings(widget) })
                 io.github.kdroidfilter.seforimapp.android.ui.components.AccentButton(HOME_WIDGETS_DONE, onClose)
             }
@@ -499,10 +506,11 @@ internal fun WidgetOptions(
     } else {
         Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             val shape = RoundedCornerShape(14.dp)
+            // Desktop's window size where it fits (a dialog opens from 600dp); a fraction after the cap took a tenth off
             body(
                 Modifier
                     .sizeIn(maxWidth = widget.optionsSize.width, maxHeight = widget.optionsSize.height)
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth()
                     .clip(shape)
                     .background(c.panel)
                     .border(1.dp, c.panelBorder, shape)
