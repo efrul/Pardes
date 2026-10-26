@@ -42,7 +42,7 @@ private const val FOUND_LINE_MARGIN = 40
  * The selected result in its book, to read without opening it: its place as a title, then the found line marked by a
  * bar, between the lines around it, faded; in the books' font and size, over the whole width as the book's text; the
  * search's words highlighted. A tap on the found line opens the result (as the list), on another line the book there.
- * Port of desktop 0.6.7 SearchResultScreen.kt PassagePreview (two-pane layout only): 0.6.1's with the 0.6.4 fix 25dde83d
+ * Port of desktop 0.6.10 SearchResultScreen.kt PassagePreview (two-pane layout only): 0.6.1's with the 0.6.4 fix 25dde83d
  * (the found line's bar drawn, not measured) and the 0.6.5 fixes 46a1ecb8 (links in the accent) and e3051846 (pinch
  * zoom, given by the caller's modifier). 0.6.3's 4fe26694 (the found line highlighted by meaning alone) needs the
  * semantic engine, which this app does not have: the lexical highlights stay on every line, as in community builds.

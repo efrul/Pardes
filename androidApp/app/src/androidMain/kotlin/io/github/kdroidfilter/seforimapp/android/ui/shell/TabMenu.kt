@@ -37,7 +37,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 class TabMenuItem(val label: String, val icon: ImageVector, val onClick: () -> Unit)
 
 /**
- * A tab's context menu, desktop 0.6.7 core/presentation/tabs/TabsView.kt TabActionsMenu (1456-1573: 0.6.1's menu,
+ * A tab's context menu, desktop 0.6.10 core/presentation/tabs/TabsView.kt TabActionsMenu (1456-1573: 0.6.1's menu,
  * moved there by ec91acdc) in its order and words: pin, "העבר ל<מרחב>" for each other workspace, copy link, close all,
  * close others, close right / left. Bulk closes skip pinned tabs. Android adds "שתף" (the link through the share sheet)
  * and, for a pinned tab that has no ×, "סגור לשונית".

@@ -30,8 +30,6 @@ import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BorderColor
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FindInPage
@@ -681,7 +679,8 @@ private fun BoxScope.SelectionBar(
                     contentAlignment = androidx.compose.ui.Alignment.Center,
                 ) {
                     if (color == Color.Transparent) {
-                        Icon(Icons.Outlined.Close, "הסר סימון", tint = c.textSecondary, modifier = Modifier.size(18.dp))
+                        // Desktop 0.6.8 c33a13ee: an eraser, not a cross
+                        Icon(Eraser, "הסר סימון", tint = c.textSecondary, modifier = Modifier.size(18.dp))
                     } else {
                         Box(Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).background(color))
                     }
@@ -689,7 +688,8 @@ private fun BoxScope.SelectionBar(
             }
         } else {
             BarButton(Icons.Outlined.ContentCopy, "העתקה") { act { spec.onAction(SelectionAction.Copy, it) } }
-            BarButton(Icons.Outlined.BorderColor, "סמן") { palette = true }
+            // Desktop's highlighter beside "highlight" (0.6.8 c33a13ee)
+            BarButton(Highlighter, "סמן") { palette = true }
             if (spec.main) BarButton(Icons.Outlined.EditNote, "הוסף הערה") { act { spec.onAction(SelectionAction.AddNote, it) } }
             BarButton(Icons.Outlined.MoreHoriz, "עוד") { act(onMore) }
         }
@@ -763,7 +763,7 @@ private fun SelectionSheet(text: String, spec: SelectionMenuSpec, onDismiss: () 
                                     spec.onHighlight(col, text)
                                 },
                                 contentAlignment = androidx.compose.ui.Alignment.Center,
-                            ) { if (clear) Icon(Icons.Outlined.Close, "הסר סימון", tint = c.textSecondary, modifier = Modifier.size(18.dp)) }
+                            ) { if (clear) Icon(Eraser, "הסר סימון", tint = c.textSecondary, modifier = Modifier.size(18.dp)) }
                         }
                     }
                     if (stacked) {

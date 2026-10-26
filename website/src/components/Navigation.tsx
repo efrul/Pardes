@@ -1,39 +1,46 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { press, settle } from '../motion';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe, Menu, X, Download, Github, Coffee } from 'lucide-react';
 import { LANGUAGE_STORAGE_KEY } from '../i18n';
+import { pagePath, parseRoute, type Lang } from '../seo';
+
+const MotionLink = motion.create(Link);
 
 export function Navigation() {
   const { t, i18n } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const pendingSection = useRef<string | null>(null);
 
-  const currentLang = i18n.language;
+  const { page } = parseRoute(useLocation().pathname);
+  const currentLang = i18n.language as Lang;
   const isRTL = currentLang === 'he';
 
-  const toggleLanguage = (lang: string) => {
-    i18n.changeLanguage(lang);
+  // Links rather than buttons: each language has its own URL, which crawlers follow; the path sets the language
+  const chooseLanguage = (lang: Lang) => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
-    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
-    document.documentElement.lang = lang;
     setIsLangOpen(false);
+    setIsMenuOpen(false);
   };
 
-  const navItems = [
-    { key: 'features', href: '#features' },
-    { key: 'search', href: '#search' },
-  ];
+  // The sections are on the landing page: from another page, the links go back to it
+  const sectionPrefix = page === 'home' ? '' : pagePath(currentLang, 'home');
+  const navItems = ['search', 'widgets', 'companions', 'features'].map((key) => ({ key, href: `${sectionPrefix}#${key}` }));
 
   return (
     <motion.nav
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl"
+      transition={settle}
+      className="nav-material fixed top-0 left-0 right-0 z-50"
       style={{
-        background: 'rgba(5, 5, 9, 0.85)',
+        // A translucent material the page scrolls under
+        background: 'rgba(5, 5, 9, 0.62)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
         borderBottom: '1px solid rgba(230, 210, 140, 0.1)',
       }}
     >
@@ -41,8 +48,8 @@ export function Navigation() {
         <div className="flex items-center justify-between">
           {/* Logo and Links */}
           <div className="flex items-center gap-4">
-            <motion.a
-              href="#"
+            <MotionLink
+              to={pagePath(currentLang, 'home')}
               className="flex items-center gap-3 text-xl font-bold"
               style={{ color: 'var(--text-main)' }}
               whileHover={{ scale: 1.02 }}
@@ -54,7 +61,7 @@ export function Navigation() {
                 style={{ border: '1px solid rgba(230, 210, 140, 0.2)' }}
               />
               <span>{isRTL ? 'זית' : 'Zayit'}</span>
-            </motion.a>
+            </MotionLink>
 
             {/* Source Code & Support - Desktop only */}
             <div className="hidden md:flex items-center gap-2">
@@ -132,19 +139,25 @@ export function Navigation() {
               <AnimatePresence>
                 {isLangOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    // Grows from its button and goes back into it, the same way
+                    initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                    transition={press}
                     className="absolute top-full mt-2 rounded-xl overflow-hidden shadow-xl"
                     style={{
+                      transformOrigin: isRTL ? 'top left' : 'top right',
                       background: 'rgba(16, 16, 24, 0.98)',
                       border: '1px solid rgba(230, 210, 140, 0.2)',
                       [isRTL ? 'left' : 'right']: 0,
                       minWidth: '140px',
                     }}
                   >
-                    <button
-                      onClick={() => toggleLanguage('en')}
+                    <Link
+                      to={pagePath('en', page)}
+                      hrefLang="en"
+                      lang="en"
+                      onClick={() => chooseLanguage('en')}
                       className="w-full px-4 py-3 text-sm text-left transition-colors flex items-center justify-between"
                       style={{
                         color: currentLang === 'en' ? 'var(--gold)' : 'var(--text-muted)',
@@ -154,9 +167,12 @@ export function Navigation() {
                     >
                       <span>English</span>
                       {currentLang === 'en' && <span>&#10003;</span>}
-                    </button>
-                    <button
-                      onClick={() => toggleLanguage('he')}
+                    </Link>
+                    <Link
+                      to={pagePath('he', page)}
+                      hrefLang="he"
+                      lang="he"
+                      onClick={() => chooseLanguage('he')}
                       className="w-full px-4 py-3 text-sm text-left transition-colors flex items-center justify-between"
                       style={{
                         color: currentLang === 'he' ? 'var(--gold)' : 'var(--text-muted)',
@@ -166,14 +182,14 @@ export function Navigation() {
                     >
                       <span>עברית</span>
                       {currentLang === 'he' && <span>&#10003;</span>}
-                    </button>
+                    </Link>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
             {/* CTA Button */}
-            <Link to="/download">
+            <Link to={pagePath(currentLang, 'download')} aria-current={page === 'download' ? 'page' : undefined}>
               <motion.span
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white"
                 style={{
@@ -203,12 +219,21 @@ export function Navigation() {
         </div>
 
         {/* Mobile Menu */}
-        <AnimatePresence>
+        <AnimatePresence
+          onExitComplete={() => {
+            const id = pendingSection.current;
+            pendingSection.current = null;
+            if (!id) return;
+            history.pushState(null, '', `#${id}`);
+            document.getElementById(id)?.scrollIntoView();
+          }}
+        >
           {isMenuOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
+              transition={settle}
               className="md:hidden overflow-hidden"
             >
               <div className="py-4 space-y-4">
@@ -218,15 +243,25 @@ export function Navigation() {
                     href={item.href}
                     className="block text-base font-medium py-2"
                     style={{ color: 'var(--text-muted)' }}
-                    onClick={() => setIsMenuOpen(false)}
+                    onClick={(e) => {
+                      // The menu's collapse cancels the anchor's smooth scroll: scroll once it has closed
+                      if (!sectionPrefix) {
+                        e.preventDefault();
+                        pendingSection.current = item.key;
+                      }
+                      setIsMenuOpen(false);
+                    }}
                   >
                     {t(`nav.${item.key}`)}
                   </a>
                 ))}
 
                 <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => toggleLanguage('en')}
+                  <Link
+                    to={pagePath('en', page)}
+                    hrefLang="en"
+                    lang="en"
+                    onClick={() => chooseLanguage('en')}
                     className="px-4 py-2 rounded-full text-sm font-medium"
                     style={{
                       color: 'var(--gold-soft)',
@@ -235,9 +270,12 @@ export function Navigation() {
                     }}
                   >
                     English
-                  </button>
-                  <button
-                    onClick={() => toggleLanguage('he')}
+                  </Link>
+                  <Link
+                    to={pagePath('he', page)}
+                    hrefLang="he"
+                    lang="he"
+                    onClick={() => chooseLanguage('he')}
                     className="px-4 py-2 rounded-full text-sm font-medium"
                     style={{
                       color: 'var(--gold-soft)',
@@ -246,11 +284,11 @@ export function Navigation() {
                     }}
                   >
                     עברית
-                  </button>
+                  </Link>
                 </div>
 
                 <Link
-                  to="/download"
+                  to={pagePath(currentLang, 'download')}
                   className="flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-semibold text-white"
                   style={{
                     background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%)',

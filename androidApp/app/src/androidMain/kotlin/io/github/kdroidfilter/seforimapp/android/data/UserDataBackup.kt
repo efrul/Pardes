@@ -13,7 +13,7 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 /**
- * The user's data as one archive, in desktop 0.6.7's format (`framework/backup/UserDataBackup.kt`), so a backup moves
+ * The user's data as one archive, in desktop 0.6.10's format (`framework/backup/UserDataBackup.kt`), so a backup moves
  * between the phone and the computer in both directions: a zip of `manifest.json` (format 1, creation time and the
  * portable preferences under desktop's keys, every value a string) and `user_settings.db` (the user database:
  * notes, highlights and the desktop tables that come along). A bare `.db` exported before the archive format is

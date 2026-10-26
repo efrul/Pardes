@@ -32,7 +32,7 @@ data class FavoriteFolder(val id: Long, val name: String)
  * user_settings.db (desktop's schema, so imported desktop favorites show up). Reads are on-demand SQL queries;
  * [revision] bumps on every write so UI can re-run its current query.
  *
- * Verbatim port of desktop 0.6.7 `core/favorites/FavoritesStore.kt`, plus [toggle] (the reader star's click,
+ * Verbatim port of desktop 0.6.10 `core/favorites/FavoritesStore.kt`, plus [toggle] (the reader star's click,
  * desktop BreadcrumbActionsView) for callers that only star and unstar.
  */
 class FavoritesStore(database: UserSettingsDb) {

@@ -8,7 +8,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 
-// Port of the data part of desktop 0.6.7 features/home/widgets/luach/ShnayimMikraWidget.kt: the week's parsha by
+// Port of the data part of desktop 0.6.10 features/home/widgets/luach/ShnayimMikraWidget.kt: the week's parsha by
 // aliyos (mikraWeek, the aliyos tables after hebcal-leyning, BSD-2, see res/raw/limud_notice.txt), verbatim.
 
 internal val ALIYOS = listOf("ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שביעי")

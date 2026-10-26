@@ -54,7 +54,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Desktop 0.6.7 `features/settings/dbupdate/DbDeltaUpdateSection.kt` in Settings › ניהול נתונים: the status text
+ * Desktop 0.6.10 `features/settings/dbupdate/DbDeltaUpdateSection.kt` in Settings › ניהול נתונים: the status text
  * (idle, checking, downloading, applying, done, error, up to date, too old), a progress bar while a phase runs, the
  * "check for updates" button (disabled while busy) and "dismiss" for a message. Desktop's English literals are in
  * Hebrew ([DeltaStrings]). For touch the check stops at the update it found, with its download size and the

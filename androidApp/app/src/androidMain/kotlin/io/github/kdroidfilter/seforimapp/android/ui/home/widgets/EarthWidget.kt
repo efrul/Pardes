@@ -68,7 +68,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-// Desktop 0.6.7 features/home/widgets/earth/EarthWidget.kt and earthwidget EarthWidgetZmanimView.kt, in 2D: desktop
+// Desktop 0.6.10 features/home/widgets/earth/EarthWidget.kt and earthwidget EarthWidgetZmanimView.kt, in 2D: desktop
 // renders the globe and the Moon with Filament (3D models and materials that have no Android build here). Android
 // draws the same scene flat: the globe lit by the Sun at the shared moment (an orthographic view of the world map,
 // computed off the UI thread), the Moon's orbit with the Hebrew days of the month (a tap on one picks that day), the

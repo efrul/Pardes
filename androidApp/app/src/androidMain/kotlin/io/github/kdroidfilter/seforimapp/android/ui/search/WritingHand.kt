@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
-// Copied from desktop 0.6.7 icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/WritingHand.kt (the
+// Copied from desktop 0.6.10 icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/WritingHand.kt (the
 // fork's icons module, compiled into this app, predates it).
 // "Writing hand" from Emoji One (Monotone) by Emoji One, CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 private const val WRITING_HAND_PATH =

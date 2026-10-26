@@ -172,7 +172,7 @@ data class ReaderUiState(
 }
 
 /**
- * The reader of one tab: desktop 0.6.7 BookContentViewModel with its use cases (ContentUseCase selection,
+ * The reader of one tab: desktop 0.6.10 BookContentViewModel with its use cases (ContentUseCase selection,
  * TocUseCase, AltTocUseCase, CommentariesUseCase selections, NotesUseCase visibility, CategoryDisplaySettingsUseCase),
  * and the book view's find-in-page (BookContentView). Lines are paged by index in chunks of [CHUNK].
  */

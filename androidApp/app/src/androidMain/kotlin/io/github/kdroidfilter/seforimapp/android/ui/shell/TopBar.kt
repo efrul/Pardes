@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.BrightnessMedium
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Construction
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FindInPage
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
@@ -97,6 +98,8 @@ data class TopBarActions(
     val onCycleTheme: () -> Unit,
     val onHistory: () -> Unit,
     val onFavorites: () -> Unit,
+    /** Desktop 0.6.10's notes menu (NotesMenuButton): a sheet on a phone. */
+    val onNotes: () -> Unit,
     /** Phone title bar swipe: the next (+1) or previous (-1) tab. */
     val onSwipeTab: (Int) -> Unit,
     /** Desktop's update badge (update/AppUpdater): set while a newer Pardes is known, opens the update dialog. */
@@ -158,13 +161,14 @@ fun PhoneTopBar(
                 // Desktop's update badge, folded into the overflow: a dot on its button, and its first item
                 if (actions.onAppUpdate != null) Box(Modifier.align(Alignment.TopEnd).padding(top = 9.dp, end = 9.dp).size(8.dp).clip(CircleShape).background(c.accent))
                 // Desktop's title bar order: the update badge, "+" at the end of the tabs, then home, find, favorites,
-                // history, tools, theme and settings
+                // notes, history, tools, theme and settings
                 ShellMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     actions.onAppUpdate?.let { open -> MenuItem("עדכון זמין", Icons.Outlined.SystemUpdate) { menu = false; open() } }
                     MenuItem("לשונית חדשה", Icons.Outlined.Add) { menu = false; actions.onNewTab() }
                     MenuItem("דף הבית", Icons.Outlined.Home) { menu = false; actions.onHome() }
                     if (findInMenu) MenuItem("חפש בתוך העמוד", Icons.Outlined.FindInPage) { menu = false; actions.onFind() }
                     MenuItem("מועדפים", Icons.Outlined.StarOutline) { menu = false; actions.onFavorites() }
+                    MenuItem("ההערות שלי", Icons.Outlined.EditNote) { menu = false; actions.onNotes() }
                     MenuItem("היסטוריה", Icons.Outlined.History) { menu = false; actions.onHistory() }
                     MenuItem("כלים", Icons.Outlined.Construction) { menu = false; actions.onTools() }
                     MenuItem(themeLabel(themeMode), themeIcon(themeMode)) { menu = false; actions.onCycleTheme() }
@@ -234,8 +238,8 @@ private fun stripLabel(tab: Tab): String = if (tab.destination == Destination.Ho
  * Tablet title bar, like the desktop custom title bar (MainTitleBar + TabsView + TitleBarActionsButtonsView): the tab
  * strip (scrolling, the shown tab kept in view, "+" after the last tab; desktop 0.6.5's "עוד N" chip for the tabs that
  * no longer fit, ec91acdc, is left out on purpose: PARITY.md), the workspace switcher, then home, find in
- * page, favorites, tab search & history, tools, theme and settings. A long press on a tab opens its menu, on "+" the
- * reopen-closed-tab item, and on any button its tooltip.
+ * page, favorites, notes (desktop 0.6.10's NotesMenuButton), tab search & history, tools, theme and settings. A long
+ * press on a tab opens its menu, on "+" the reopen-closed-tab item, and on any button its tooltip.
  */
 @Composable
 fun TabletTitleBar(
@@ -247,6 +251,9 @@ fun TabletTitleBar(
     onTabSearchVisible: (Boolean) -> Unit,
     favoritesVisible: Boolean,
     onFavoritesVisible: (Boolean) -> Unit,
+    notesVisible: Boolean,
+    onNotesVisible: (Boolean) -> Unit,
+    onNotesPage: () -> Unit,
 ) {
     val c = Zayit.colors
     val findEnabled = state.selectedTab.destination.hasFindInPage()
@@ -270,6 +277,14 @@ fun TabletTitleBar(
             TitleBarButton(Icons.Outlined.StarOutline, "מועדפים", "מועדפים  (Ctrl+Shift+O)", { onFavoritesVisible(!favoritesVisible) })
             if (favoritesVisible) {
                 TitleBarPopup(onDismiss = { onFavoritesVisible(false) }) { FavoritesMenuContent(appVm, tablet = true, onDismiss = { onFavoritesVisible(false) }) }
+            }
+        }
+        Box {
+            TitleBarButton(Icons.Outlined.EditNote, "ההערות שלי", "ההערות שלי", { onNotesVisible(!notesVisible) })
+            if (notesVisible) {
+                TitleBarPopup(onDismiss = { onNotesVisible(false) }) {
+                    NotesMenuContent(appVm, tablet = true, onShowAll = onNotesPage, onDismiss = { onNotesVisible(false) })
+                }
             }
         }
         Box {

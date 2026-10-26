@@ -1,6 +1,6 @@
 # Pardes (an Android app based on Zayit): design spec
 
-Goal: the Android app should feel like Zayit 0.6.7 on desktop (0.6.1 until October 2026), adapted to touch. It targets **minSdk 26** (Android 8.0). Screen sizes run from the Unihertz Jelly Star (≈240×427dp) through ordinary phones (≈360–412dp wide) to tablets (≥840dp wide). All reference screenshots were taken from the real desktop build 0.6.1; what 0.6.2 to 0.6.7 changed on screen (the author search scope, accent-coloured links, pinned tabs' pin mark, sliding tabs; the "עוד N" tab chip is left out here) is in [docs/PARITY.md](docs/PARITY.md).
+Goal: the Android app should feel like Zayit 0.6.10 on desktop (0.6.1 until October 2026), adapted to touch. It targets **minSdk 26** (Android 8.0). Screen sizes run from the Unihertz Jelly Star (≈240×427dp) through ordinary phones (≈360–412dp wide) to tablets (≥840dp wide). All reference screenshots were taken from the real desktop build 0.6.1; what 0.6.2 to 0.6.10 changed on screen (the author search scope, accent-coloured links, pinned tabs' pin mark, sliding tabs, the Temple counts and the notes menu; the "עוד N" tab chip is left out here) is in [docs/PARITY.md](docs/PARITY.md).
 
 ## 1. Visual language (copied from desktop "Islands" style)
 

@@ -58,7 +58,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-// Port of desktop 0.6.7 features/home/widgets/library/LibraryWidgets.kt: the app's own lists on the Home, the
+// Port of desktop 0.6.10 features/home/widgets/library/LibraryWidgets.kt: the app's own lists on the Home, the
 // history, the favorites and the user's notes, each opening its entry in a new tab. They follow their stores' writes,
 // and show as many whole rows as the card holds.
 

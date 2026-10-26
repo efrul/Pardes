@@ -13,6 +13,7 @@ import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishCalendar
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.AppPrefs
 import io.github.kdroidfilter.seforimapp.android.data.City
+import io.github.kdroidfilter.seforimapp.android.data.DEFAULT_TEMPLE_COUNT
 import io.github.kdroidfilter.seforimapp.android.data.JewishDay
 import io.github.kdroidfilter.seforimapp.android.data.Limud
 import io.github.kdroidfilter.seforimapp.android.data.LimudItem
@@ -20,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.android.data.LimudResources
 import io.github.kdroidfilter.seforimapp.android.data.LuachEvent
 import io.github.kdroidfilter.seforimapp.android.data.NextZman
 import io.github.kdroidfilter.seforimapp.android.data.ShabbatTimes
+import io.github.kdroidfilter.seforimapp.android.data.TempleCount
 import io.github.kdroidfilter.seforimapp.android.data.TempleCountdownData
 import io.github.kdroidfilter.seforimapp.android.data.ZmanRow
 import io.github.kdroidfilter.seforimapp.android.data.ZmanimDay
@@ -45,6 +47,9 @@ import java.util.Locale
 // Desktop's key for the Limud widget's choice (home_widget.<widget id>.<setting>, WidgetSettings): read here as a plain
 // preference, since touching ui/home's LimudSettings first from a receiver hits its init cycle with LimudWidget.
 private const val LIMUD_SHOWN_KEY = "home_widget.limud.shown"
+
+// The Temple card's count (TempleSettings.count), read the same way: the launcher widget counts as the Home card does
+internal const val TEMPLE_COUNT_KEY = "home_widget.temple_countdown.count"
 
 /**
  * What the widgets show at one place on one day: the date, the zmanim, the Shabbat, the coming events, the limudim.
@@ -99,6 +104,7 @@ internal class WidgetDay(val city: City, val opinion: ZmanimOpinion, val today: 
 internal object WidgetCache {
     private var day: WidgetDay? = null
     private var temple: TempleCountdownData? = null
+    private var templeCount: TempleCount? = null
     private var templeTurnsAt = Long.MIN_VALUE
 
     /** The day at the user's place at [now] (the civil day there), and the luach the user follows. */
@@ -109,20 +115,25 @@ internal object WidgetCache {
         return day?.takeIf { it.city == city && it.opinion == opinion && it.today == today } ?: WidgetDay(city, opinion, today).also { day = it }
     }
 
-    /** The count since the destruction at [now], and when it next turns (Jerusalem's sunset, a second after). */
-    fun temple(now: Long): Pair<TempleCountdownData, Long> {
+    /**
+     * The count since the destruction at [now], as [count] counts, and when it next turns (Jerusalem's sunset, a second
+     * after).
+     */
+    fun temple(now: Long, count: TempleCount): Pair<TempleCountdownData, Long> {
         val kept = temple
-        if (kept != null && now < templeTurnsAt) return kept to templeTurnsAt
-        val count = computeTempleCountdown()
+        if (kept != null && count == templeCount && now < templeTurnsAt) return kept to templeTurnsAt
+        val countdown = computeTempleCountdown(count)
         templeTurnsAt = now + millisUntilNextJerusalemSunset(now)
-        temple = count
-        return count to templeTurnsAt
+        temple = countdown
+        templeCount = count
+        return countdown to templeTurnsAt
     }
 
     /** The clock, the time zone or the locale changed: worked out again on the next redraw. */
     fun clear() {
         day = null
         temple = null
+        templeCount = null
         templeTurnsAt = Long.MIN_VALUE
     }
 }
@@ -164,11 +175,17 @@ internal class WidgetData(val app: ZayitApplication, nowMillis: Long, private va
     val shabbat: ShabbatTimes get() = day.shabbat
     val events: List<LuachEvent> get() = day.events
 
-    private val templeCount by lazy { WidgetCache.temple(now.time) }
-    val temple: TempleCountdownData get() = templeCount.first
+    private val templeCountdown by lazy { WidgetCache.temple(now.time, templeCount()) }
+    val temple: TempleCountdownData get() = templeCountdown.first
 
     /** Jerusalem's next sunset (a second after), where [temple] turns. */
-    val templeTurnsAt: Long get() = templeCount.second
+    val templeTurnsAt: Long get() = templeCountdown.second
+
+    /** WidgetSettings' codec for TempleSettings.count: the name; the default while the user never picked. */
+    private fun templeCount(): TempleCount {
+        val raw = app.getSharedPreferences(AppPrefs.PREFS_NAME, Context.MODE_PRIVATE).all[TEMPLE_COUNT_KEY]?.toString()
+        return TempleCount.entries.firstOrNull { it.name == raw } ?: DEFAULT_TEMPLE_COUNT
+    }
 
     /** The day's limudim the user ticked on the Home, each with its own [Limud] (two kinds share a tag: רמב״ם, תהילים). */
     val limudim: List<Pair<Limud, LimudItem>> by lazy { day.limudim(app, shownLimudim()) }

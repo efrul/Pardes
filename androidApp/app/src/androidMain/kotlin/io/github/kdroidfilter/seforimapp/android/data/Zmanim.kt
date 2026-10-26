@@ -50,7 +50,29 @@ internal data class TempleCountdownData(
     val days: Int,
 )
 
-private const val DESTRUCTION_YEAR = 3830
+/**
+ * How the years since the destruction are counted (מראה מקומות on סי' תקנט), verbatim desktop 0.6.10 TempleCount
+ * (0.6.8 99ce1813, aed6e965). Rashi and the Rambam agree the Temple fell on ט' באב ג'תתכ"ט of our count (Rav Mazuz,
+ * בינה לעתים): Rashi counts that very year as the first, the Rambam starts after it. Tosafot have it a year later, in
+ * ג'תת"ל.
+ */
+internal enum class TempleCount(
+    val label: String,
+    val destructionYear: Int,
+) {
+    // "נטפי חדא שתא ... לוספה לשנת חורבן על מנין שני דבתר חורבן": the year minus 68, Chazon Ovadia
+    RASHI("שיטת רש״י", 3828),
+
+    // "שתחלתה מתשרי שאחר החרבן": the year minus 69, the Gra (חו״מ סז, ח) and Rav Mazuz
+    RAMBAM("שיטת הרמב״ם", 3829),
+
+    // "אין זה כי אם תכ״א": 420 full years, so ג'תת"ל, the year minus 70; the Ritva and Rashi on ערכין too
+    TOSAFOT("שיטת התוספות", 3830),
+}
+
+/** Desktop TempleSettings.count's default, Rashi's count, for the Home card and the launcher widget alike. */
+internal val DEFAULT_TEMPLE_COUNT = TempleCount.RASHI
+
 private const val DESTRUCTION_DAY = 9
 private val DESTRUCTION_MONTH = HebrewMonth.AV
 
@@ -70,7 +92,7 @@ private val JERUSALEM =
     )
 
 /** Verbatim desktop computeTempleCountdown: the Hebrew day rolls over at Jerusalem sunset. */
-internal fun computeTempleCountdown(): TempleCountdownData {
+internal fun computeTempleCountdown(count: TempleCount): TempleCountdownData {
     // After sunset in Jerusalem the Hebrew day rolls over — advance the Gregorian date by one day
     // so JewishDate resolves to the new Hebrew day instead of yesterday's.
     val calendar = ComplexZmanimCalendar(JERUSALEM)
@@ -79,12 +101,18 @@ internal fun computeTempleCountdown(): TempleCountdownData {
     if (sunset != null && sunset <= Clock.System.now()) {
         date = date.plus(1, DateTimeUnit.DAY)
     }
-    val today = JewishDate(date)
+    return templeCountdownAt(JewishDate(date), count)
+}
 
+/** Verbatim desktop templeCountdownAt: the count since the destruction on [today], after [count]. */
+internal fun templeCountdownAt(
+    today: JewishDate,
+    count: TempleCount,
+): TempleCountdownData {
     // Most recent Av-9 anniversary that is strictly before today. Using `>=` (rather than `>`)
     // means the anniversary day itself is reported as "almost a full year" instead of "X years
     // and 0 days", keeping the display free of 0-day artifacts.
-    var years = (today.jewishYear - DESTRUCTION_YEAR).toInt()
+    var years = (today.jewishYear - count.destructionYear).toInt()
     var anniversary = JewishDate(today.jewishYear, DESTRUCTION_MONTH, DESTRUCTION_DAY)
     if (anniversary >= today) {
         years -= 1
