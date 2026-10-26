@@ -60,6 +60,8 @@ The whole app runs with `LayoutDirection.Rtl`.
   - Fix: `ModalNavigationDrawer` doesn't handle Back by itself, so add `BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }`.
 - **Tablet taskbar covered content.** The wide layout needs `windowInsetsPadding(WindowInsets.navigationBars)`.
 - **A heading that never updates.** A value derived from `LazyListState` or from lines loaded later needs `snapshotFlow { firstVisibleItemIndex to vm.lines.size }`. Reading it once at composition gives a stale value; history saved entries without the chapter because of this.
+- **A bottom sheet that opens low.** A phone's `ModalBottomSheet` kept the height of its first layout. The Temple count's options read `temple_count.txt` in `produceState` on IO, and returned before it was read, so the sheet opened almost empty and low, and the text, once read, went under the screen's edge (seen on Android 9). Lay a sheet's content out at its final size from the first frame (the scrolled column is `fillMaxSize()` whether or not the data is in) and fill it in when the data arrives; never return early before it.
+- **A link squeezed into a Row breaks in two.** A `Row` measures its children in order: a long status text took the width and the short link after it ("בדוק שוב") was left a sliver, wrapping word by word. Put the text (with its icon, as one item) and the link in a `FlowRow`, so the link moves to the next line whole.
 
 ## Android platform
 

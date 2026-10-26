@@ -166,31 +166,34 @@ private fun TempleOptions(state: HomeWidgetsState) {
                     .split(Regex("""\r?\n\r?\n"""))
             }
     }
-    if (paragraphs.size < TempleCount.entries.size + 2) return
     // Each count's years today, beside its name (desktop: on the civil day)
     val years = remember { TempleCount.entries.associateWith { templeCountdownAt(JewishDate(), it).years } }
     val link = TextLinkStyles(SpanStyle(color = c.textSecondary, textDecoration = TextDecoration.Underline))
-    // Longer than the sheet or the dialog: scrolled
+    // Longer than the sheet or the dialog: scrolled. Laid out whole from the start, the text filled in once read: a
+    // phone's sheet keeps the height of its first layout, and one measured without the text stayed low, the text
+    // below the screen's edge (seen on Android 9).
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(COUNT_TITLE, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = c.text)
-        InfoBanner(markAlignment = Alignment.Top) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(paragraphs.first(), fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Justify, color = c.text)
-                Text(paragraphs.last(), fontSize = 11.sp, lineHeight = 16.sp, color = c.textSecondary)
+        if (paragraphs.size >= TempleCount.entries.size + 2) {
+            Text(COUNT_TITLE, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = c.text)
+            InfoBanner(markAlignment = Alignment.Top) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(paragraphs.first(), fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Justify, color = c.text)
+                    Text(paragraphs.last(), fontSize = 11.sp, lineHeight = 16.sp, color = c.textSecondary)
+                }
             }
-        }
-        TempleCount.entries.forEach { count ->
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                ZRadioRow("${count.label} · ${years[count]}", count == picked, { state[TempleSettings.count] = count })
-                // Its explanation under its label, past the radio mark
-                Text(
-                    withSourceLinks(paragraphs[count.ordinal + 1], link, open),
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                    textAlign = TextAlign.Justify,
-                    color = c.textSecondary,
-                    modifier = Modifier.padding(start = 40.dp, end = 4.dp),
-                )
+            TempleCount.entries.forEach { count ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    ZRadioRow("${count.label} · ${years[count]}", count == picked, { state[TempleSettings.count] = count })
+                    // Its explanation under its label, past the radio mark
+                    Text(
+                        withSourceLinks(paragraphs[count.ordinal + 1], link, open),
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        textAlign = TextAlign.Justify,
+                        color = c.textSecondary,
+                        modifier = Modifier.padding(start = 40.dp, end = 4.dp),
+                    )
+                }
             }
         }
     }
