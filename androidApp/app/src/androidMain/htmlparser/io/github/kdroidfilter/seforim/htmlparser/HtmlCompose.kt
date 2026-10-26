@@ -1,4 +1,4 @@
-// Vendored from desktop Zayit 0.6.7 htmlparser/src/commonMain, identical but for this header: 0.6.1's (citation hrefs,
+// Vendored from desktop Zayit 0.6.10 htmlparser/src/commonMain, identical but for this header: 0.6.1's (citation hrefs,
 // plainTextFromHtml) with the 0.6.5 fixes f443277d and 5e016dfa (citation links in color, underlined only under a
 // pointer), its only changes since. Android only: the desktop build compiles ../htmlparser, now the same file.
 package io.github.kdroidfilter.seforim.htmlparser

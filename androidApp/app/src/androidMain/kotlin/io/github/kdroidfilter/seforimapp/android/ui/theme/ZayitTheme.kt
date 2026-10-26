@@ -206,7 +206,7 @@ object ZayitFonts {
 }
 
 /**
- * The fonts offered in Settings → גופנים: desktop 0.6.7's FontCatalog.options, same codes (stored in the settings and
+ * The fonts offered in Settings → גופנים: desktop 0.6.10's FontCatalog.options, same codes (stored in the settings and
  * in backups), same order and Hebrew labels (strings.xml font_*), same faces (FontCatalog.familyFor).
  *
  * Every family is bundled in res/font (SIL OFL, Apache 2.0, or GPL 2 with the Culmus font exception). Desktop's Rashi

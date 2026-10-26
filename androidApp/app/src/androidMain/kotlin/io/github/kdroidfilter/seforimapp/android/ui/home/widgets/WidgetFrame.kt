@@ -80,7 +80,7 @@ import androidx.compose.ui.unit.toSize
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 
-// Port of desktop 0.6.7 features/home/widgets/WidgetFrame.kt for touch: a long press opens the widget's menu (desktop's
+// Port of desktop 0.6.10 features/home/widgets/WidgetFrame.kt for touch: a long press opens the widget's menu (desktop's
 // right click), as a bottom sheet on a phone and a menu on a tablet's grid. In edit mode, on the grid, a "−" badge on
 // its corner removes it, a long press then a drag moves it, and a tap selects it for its resize frame, a handle on each
 // side and corner. The compact page of a phone (Android only) puts its controls around the widget instead, never over

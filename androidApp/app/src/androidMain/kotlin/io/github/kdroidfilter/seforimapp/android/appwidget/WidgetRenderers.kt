@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
 
 /*
  * The launcher widgets drawn as RemoteViews at one size (in dp). Each mirrors a widget of the Home, itself a port of
- * desktop 0.6.7's (features/home/widgets): the same wording, numbers and colours, laid out for the size the launcher
+ * desktop 0.6.10's (features/home/widgets): the same wording, numbers and colours, laid out for the size the launcher
  * gives, from one row of a small launcher to a tablet's. Rows are nested RemoteViews of equal weight; each column gets
  * as many as fit, padded with blank ones, so two columns stay level and spare room spreads evenly.
  *

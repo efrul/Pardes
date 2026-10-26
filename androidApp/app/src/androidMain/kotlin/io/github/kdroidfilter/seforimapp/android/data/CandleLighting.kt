@@ -1,6 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.data
 
-// Verbatim copy of desktop 0.6.7 features/zmanim/data/CandleLighting.kt.
+// Verbatim copy of desktop 0.6.10 features/zmanim/data/CandleLighting.kt.
 
 /**
  * How early a city lights Shabbat candles in the עתים לבינה luach: [minutes] before sunset, counted from the

@@ -169,7 +169,7 @@ data class ReaderNav(
 private const val TAG = "Zayit"
 
 /**
- * The reader of a book tab: desktop 0.6.7 features/bookcontent (BookContentScreen, ReaderPanes, VerticalBars,
+ * The reader of a book tab: desktop 0.6.10 features/bookcontent (BookContentScreen, ReaderPanes, VerticalBars,
  * BookContentView) on touch. A tablet (≥ 840dp) lays out desktop's panes together around the text: book tree, TOC
  * and notes on the start side, targum over book details on the end side, commentaries beside sources under the text,
  * the breadcrumb at the bottom, the rails on both edges, every divider draggable. A phone shows one pane at a time

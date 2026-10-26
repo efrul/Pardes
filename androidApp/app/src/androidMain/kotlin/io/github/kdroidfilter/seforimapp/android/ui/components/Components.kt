@@ -18,12 +18,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -219,6 +222,25 @@ fun ZCheckRow(text: String, checked: Boolean, onToggle: () -> Unit, modifier: Mo
     }
 }
 
+/** One choice of several, as [ZCheckRow] is one switch (desktop RadioButtonRow): its mark, then [text]. */
+@Composable
+fun ZRadioRow(text: String, selected: Boolean, onSelect: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Zayit.colors
+    Row(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = 44.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        // The row takes the tap: the mark alone has no target of its own
+        RadioButton(selected = selected, onClick = null, colors = RadioButtonDefaults.colors(selectedColor = c.accent, unselectedColor = c.textSecondary))
+        Text(text, fontSize = 15.sp, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 @Composable
 fun LoadingBox(
     modifier: Modifier = Modifier,
@@ -245,6 +267,20 @@ fun EmptyHint(text: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun InfoBanner(text: String, modifier: Modifier = Modifier, success: Boolean = false) {
+    InfoBanner(modifier, success) { Text(text, color = Zayit.colors.text, fontSize = 14.sp, lineHeight = 20.sp) }
+}
+
+/**
+ * [InfoBanner] around a body of its own (desktop's InlineInformationBanner with content): its mark beside [content],
+ * at the [markAlignment] of its height.
+ */
+@Composable
+fun InfoBanner(
+    modifier: Modifier = Modifier,
+    success: Boolean = false,
+    markAlignment: Alignment.Vertical = Alignment.CenterVertically,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val c = Zayit.colors
     Row(
         modifier
@@ -253,14 +289,14 @@ fun InfoBanner(text: String, modifier: Modifier = Modifier, success: Boolean = f
             .background(if (success) c.successTint else c.infoTint)
             .border(1.dp, (if (success) c.success else c.info).copy(alpha = 0.35f), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = markAlignment,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             Modifier.size(18.dp).clip(CircleShape).background(if (success) c.success else c.info),
             contentAlignment = Alignment.Center,
         ) { Text(if (success) "✓" else "i", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-        Text(text, color = c.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f), content = content)
     }
 }
 

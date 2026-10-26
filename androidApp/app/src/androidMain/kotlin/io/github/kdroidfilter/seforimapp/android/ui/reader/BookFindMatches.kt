@@ -11,7 +11,7 @@ import java.io.IOException
 
 /**
  * The matches of the find-in-page query in a book, in reading order: each matching line's index and id, and a prefix
- * sum of its match count. Verbatim port of desktop 0.6.7 features/bookcontent/usecases/BookFindMatches.kt.
+ * sum of its match count. Verbatim port of desktop 0.6.10 features/bookcontent/usecases/BookFindMatches.kt.
  */
 class BookFindMatches internal constructor(
     private val lineIndices: IntArray,

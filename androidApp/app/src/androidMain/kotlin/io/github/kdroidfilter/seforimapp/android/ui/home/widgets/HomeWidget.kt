@@ -6,12 +6,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforimapp.android.ui.ToolKind
 
 /**
  * A Home widget, placed by [HomeWidgetsGrid] on an area of a grid of [HOME_GRID_COLUMNS] columns, as on Android's home
  * screen. Widgets never talk to each other: they read and write the shared [HomeWidgetsState], so any of them can be
- * moved, resized or removed. Port of desktop 0.6.7 features/home/widgets/HomeWidget.kt; a tool's own window
+ * moved, resized or removed. Port of desktop 0.6.10 features/home/widgets/HomeWidget.kt; a tool's own window
  * (toolWindowSize) is the [tool] page here.
  */
 interface HomeWidget {
@@ -63,6 +65,9 @@ interface HomeWidget {
     /** Its settings page, for an item of its menu to open (see [HomeWidgetsState.optionsOpen]). */
     @Composable
     fun Options(state: HomeWidgetsState) {}
+
+    /** Its options window's largest size, as a dialog (desktop 0.6.8 optionsSize); a phone opens a sheet instead. */
+    val optionsSize: DpSize get() = DpSize(460.dp, 560.dp)
 }
 
 /** An item of a widget's own menu: [checked] shows a check mark, null a plain action. */

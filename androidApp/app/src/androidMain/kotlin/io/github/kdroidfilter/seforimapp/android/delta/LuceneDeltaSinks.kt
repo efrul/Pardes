@@ -30,7 +30,7 @@ import org.jsoup.safety.Safelist
 import java.io.File
 
 /**
- * Where a delta's line changes go into the full-text index (`seforim.db.lucene`): desktop 0.6.7
+ * Where a delta's line changes go into the full-text index (`seforim.db.lucene`): desktop 0.6.10
  * `framework/update/DbDeltaUpdateService.kt` defaultLuceneSinksProvider (one IndexWriter per delta, book metadata looked
  * up in the live seforim.db after the COMMIT and cached per book, delete-then-add per line id), with two changes:
  *

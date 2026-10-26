@@ -4,7 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
-// Port of desktop 0.6.7 features/home/widgets/HomeWidgetsLayout.kt, on [HomeWidgetStore] in place of AppSettings.
+// Port of desktop 0.6.10 features/home/widgets/HomeWidgetsLayout.kt, on [HomeWidgetStore] in place of AppSettings.
 
 /** Further down than any layout a user makes (every widget stacked at its tallest is under 50 rows). */
 private const val MAX_SAVED_ROW = 200

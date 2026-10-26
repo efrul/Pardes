@@ -1,9 +1,9 @@
 package io.github.kdroidfilter.seforimapp.android.update
 
 /**
- * Desktop 0.6.7 strings.xml's update_* texts (Nucleus updater: title-bar badge, dialog, the settings banner), with the
- * app named פרדס, and what Android adds around them: Android's own install confirmation, its "install unknown apps"
- * switch, the download in the background, and the checks the downloaded APK must pass.
+ * Desktop 0.6.10 strings.xml's update_* texts (Nucleus updater: title-bar badge, dialog, the settings banner and its
+ * quiet line), with the app named פרדס, and what Android adds around them: Android's own install confirmation, its
+ * "install unknown apps" switch, the download in the background, and the checks the downloaded APK must pass.
  */
 internal object AppUpdateStrings {
     const val available = "עדכון זמין" // update_titlebar_tooltip, update_dialog_title
