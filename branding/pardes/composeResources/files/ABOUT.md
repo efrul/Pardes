@@ -2,7 +2,7 @@
 
 פרדס למחשב הוא יישום ללימוד התורה, המבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.
 
-פרדס למחשב נבנה מהקוד הפתוח של זית 0.6.7, ושונה ב־2026 כדי לפעול כיישום נפרד בשם פרדס. זית ו־SeforimLibrary: ⁦Copyright (C) 2025 Elie Gambache⁩. הליבה של זית היא קוד פתוח, המופץ תחת רישיון [AGPL v3](https://github.com/efrul/Pardes/blob/HEAD/LICENSE) עם תנאי ייחוס נוסף:
+פרדס למחשב נבנה מהקוד הפתוח של זית 0.6.10, ושונה ב־2026 כדי לפעול כיישום נפרד בשם פרדס. זית ו־SeforimLibrary: ⁦Copyright (C) 2025 Elie Gambache⁩. הליבה של זית היא קוד פתוח, המופץ תחת רישיון [AGPL v3](https://github.com/efrul/Pardes/blob/HEAD/LICENSE) עם תנאי ייחוס נוסף:
 
 ⁦Powered by the technologies that drive Zayit — https://zayitapp.com/ ⁩
 

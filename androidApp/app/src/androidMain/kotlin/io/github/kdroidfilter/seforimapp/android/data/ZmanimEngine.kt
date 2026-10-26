@@ -18,7 +18,7 @@ import kotlin.math.abs
 import kotlin.time.Duration.Companion.minutes
 
 /*
- * The desktop 0.6.7 zmanim, ported verbatim on the same library (KosherKotlin 3.0.5):
+ * The desktop 0.6.10 zmanim, ported verbatim on the same library (KosherKotlin 3.0.5):
  * - earthwidget EarthWidgetZmanimView.kt: EarthWidgetLocation, ZmanimTimes, ZmanimOpinion, computeZmanimTimes,
  *   zmanimCalendar, ohrHaChaimSunset and the conversions;
  * - earthwidget KiddushLevanaData.kt: the kiddush levana opinions;

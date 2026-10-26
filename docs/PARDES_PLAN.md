@@ -5,6 +5,12 @@ repository. Phase 1 is done (the merge commit `Merge Zayit v0.6.7 into Pardes`),
 Android on 0.6.7, checked on the emulator with a test library on 2026-10-21; row 3, the "עוד N" chip, was dropped). Where the sections below disagree
 with "Decisions taken after the review", that section wins.
 
+Since 2026-10-26 the base is Zayit 0.6.10 (the merge commit `Merge Zayit v0.6.10 into Pardes`, by
+`branding/README.md` › Merging a Zayit release; SeforimLibrary is still `7ddf045`). What 0.6.8 to 0.6.10 changed, and
+what became of it in Pardes for Android, is in `androidApp/docs/PARITY.md` › 0.6.8 to 0.6.10. Neither Android 0.5.0
+nor a stable desktop 1.0.0 was released on 0.6.7 (desktop's one 1.0.0 is a Windows test pre-release), so both are now
+described as based on 0.6.10.
+
 ## Decisions taken after the review (2026-10-20)
 
 - **No pull request to Zayit**, but the code stays fit for Zayit: personal books follow Zayit's conventions so Zayit

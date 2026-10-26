@@ -65,7 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Port of the widget part of desktop 0.6.7 features/home/widgets/library/DictionaryWidget.kt: the library's
+// Port of the widget part of desktop 0.6.10 features/home/widgets/library/DictionaryWidget.kt: the library's
 // dictionaries in one card, a word looked up in one of them or in all, its entry read in the card, and opened in its
 // book from there. The tool page shows the same card full size.
 

@@ -9,7 +9,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 
-// Port of desktop 0.6.7 features/home/widgets/luach/LimudCycles.kt: verbatim but for the package and Math.ceilDiv.
+// Port of desktop 0.6.10 features/home/widgets/luach/LimudCycles.kt: verbatim but for the package and Math.ceilDiv.
 
 // The daily limudim, after hebcal-learning (its schedules in limud.pb, see LimudSchedules): each cycle
 // counted from its first day, or set by the Hebrew day of the year. Their places are spelled as the library's lines'

@@ -95,7 +95,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /*
- * The History and Favorites tab pages: ports of desktop 0.6.7 features/history/HistoryScreen.kt and
+ * The History and Favorites tab pages: ports of desktop 0.6.10 features/history/HistoryScreen.kt and
  * features/favorites/FavoritesScreen.kt, drawn with the primitives of core/presentation/components/ListPageComponents.kt
  * (centred 720dp column, cards, section headers, rows). Touch: the × that desktop shows on hover is always visible,
  * a long press stands for the right click, and the popups become dialogs.

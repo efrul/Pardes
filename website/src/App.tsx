@@ -1,7 +1,7 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { animate, motion, useInView, useMotionValue, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import {
   Search,
   BookOpen,
@@ -11,117 +11,138 @@ import {
   Heart,
   Download,
   Sparkles,
+  AppWindow,
+  Star,
+  Highlighter,
+  CloudUpload,
+  RefreshCw,
+  Keyboard,
+  LayoutGrid,
   Shield,
   BookMarked,
   Languages,
   Infinity as InfinityIcon,
   Library,
   WifiOff,
+  PlayCircle,
 } from 'lucide-react';
 import { Navigation } from './components/Navigation';
+import { SiteFooter } from './components/SiteFooter';
+import { useDownloadCount } from './hooks/useDownloadCount';
 import { ImageComparison } from './components/ImageComparison';
+import { VideoEmbed } from './components/VideoEmbed';
 import { CrystalParticlesGL } from './components/CrystalParticlesGL';
-import { useSEO } from './hooks/useSEO';
-import './i18n';
+import { pagePath, type Lang } from './seo';
+import { reveal, settle, press, RISE } from './motion';
 
-// Panels data for the slider
-const panelsData = [
-  {
-    titleKey: 'panels.commentaries',
-    descKey: 'panels.commentariesDesc',
-    lightImage: 'art/PIRUSHIM-LIGHT.png',
-    darkImage: 'art/PIRUSHIM-DARK.png',
-    altHe: 'פירושים',
-    altEn: 'Commentaries',
-  },
-  {
-    titleKey: 'panels.translations',
-    descKey: 'panels.translationsDesc',
-    lightImage: 'art/PIRUSHIM-TARGUMIM-LIGHT.png',
-    darkImage: 'art/PIRUSHIM-TARGUMIM-DARK.png',
-    altHe: 'פירושים ותרגומים',
-    altEn: 'Commentaries and Translations',
-  },
-  {
-    titleKey: 'panels.sources',
-    descKey: 'panels.sourcesDesc',
-    lightImage: 'art/MEKOR-LIGHT.png',
-    darkImage: 'art/MEKOR-DARK.png',
-    altHe: 'מקורות',
-    altEn: 'Sources',
-  },
+interface Slide {
+  titleKey: string;
+  descKey: string;
+  lightImage: string;
+  darkImage: string;
+}
+
+// Modular panels of the reader
+const panelsSlides: Slide[] = [
+  { titleKey: 'panels.commentaries', descKey: 'panels.commentariesDesc', lightImage: '/art/PIRUSHIM-LIGHT.png', darkImage: '/art/PIRUSHIM-DARK.png' },
+  { titleKey: 'panels.translations', descKey: 'panels.translationsDesc', lightImage: '/art/PIRUSHIM-TARGUMIM-LIGHT.png', darkImage: '/art/PIRUSHIM-TARGUMIM-DARK.png' },
+  { titleKey: 'panels.talmud', descKey: 'panels.talmudDesc', lightImage: '/art/TALMUD-LIGHT.png', darkImage: '/art/TALMUD-DARK.png' },
+  { titleKey: 'panels.sources', descKey: 'panels.sourcesDesc', lightImage: '/art/MEKOR-LIGHT.png', darkImage: '/art/MEKOR-DARK.png' },
+  { titleKey: 'panels.details', descKey: 'panels.detailsDesc', lightImage: '/art/BOOK-DETAILS-LIGHT.png', darkImage: '/art/BOOK-DETAILS-DARK.png' },
 ];
+
+// Study companions beyond the books
+const companionsSlides: Slide[] = [
+  { titleKey: 'companions.siddur', descKey: 'companions.siddurDesc', lightImage: '/art/SIDDUR-LIGHT.png', darkImage: '/art/SIDDUR-DARK.png' },
+  { titleKey: 'companions.shnayim', descKey: 'companions.shnayimDesc', lightImage: '/art/SHNAYIM-MIKRA-LIGHT.png', darkImage: '/art/SHNAYIM-MIKRA-DARK.png' },
+  { titleKey: 'companions.author', descKey: 'companions.authorDesc', lightImage: '/art/AUTHOR-LIGHT.png', darkImage: '/art/AUTHOR-DARK.png' },
+];
+
+// Floating particles of the hero, drawn once per page load (reduced for performance)
+const heroParticles = [...Array(20)].map((_, i) => ({
+  id: i,
+  size: Math.random() * 4 + 2,
+  x: Math.random() * 100,
+  y: 60 + Math.random() * 40,
+  opacity: Math.random() * 0.4 + 0.2,
+  duration: Math.random() * 15 + 10,
+  delay: Math.random() * 8,
+  yMove: -150 - Math.random() * 200,
+}));
 
 const SLIDE_DURATION = 10000; // 10 seconds
 
-// Apple-style Panels Slider Component
-function PanelsSlider({
+// Apple-style showcase slider: chips to pick a slide, auto-advance with a progress dot
+function ShowcaseSlider({
+  id,
+  titleKey,
+  descriptionKey,
+  slides,
+  alternate = false,
   t,
   isRTL,
-  cinematicEase
 }: {
+  id?: string;
+  titleKey: string;
+  descriptionKey: string;
+  slides: Slide[];
+  alternate?: boolean;
   t: (key: string) => string;
   isRTL: boolean;
-  cinematicEase: readonly [number, number, number, number];
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const sessionRef = useRef(0);
+  // Once the reader picks a slide, the slider is theirs: no more autoplay
+  const [autoplay, setAutoplay] = useState(true);
+  const [hovered, setHovered] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const inView = useInView(sectionRef, { amount: 0.3 });
+  const reduceMotion = useReducedMotion();
+  // Drawn by the compositor (scaleX), not by a React render per frame
+  const progress = useMotionValue(0);
 
-  // Progress timer and auto-advance
+  // Auto-advance, paused while off screen or hovered, resumed where it stopped
   useEffect(() => {
-    const sessionId = ++sessionRef.current;
-    const startTime = Date.now();
-
-    const animationFrame = () => {
-      // Stop if a new session started (user clicked)
-      if (sessionRef.current !== sessionId) return;
-
-      const elapsed = Date.now() - startTime;
-      const newProgress = Math.min(elapsed / SLIDE_DURATION, 1);
-      setProgress(newProgress);
-
-      if (newProgress < 1) {
-        requestAnimationFrame(animationFrame);
-      } else {
-        // Double-check session is still valid before advancing
-        if (sessionRef.current === sessionId) {
-          setCurrentIndex((prev) => (prev + 1) % panelsData.length);
-        }
-      }
-    };
-
-    const frameId = requestAnimationFrame(animationFrame);
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [currentIndex]);
+    if (!autoplay || !inView || hovered || reduceMotion) return;
+    const controls = animate(progress, 1, {
+      duration: ((1 - progress.get()) * SLIDE_DURATION) / 1000,
+      ease: 'linear',
+      onComplete: () => {
+        progress.set(0);
+        setCurrentIndex((prev) => (prev + 1) % slides.length);
+      },
+    });
+    return () => controls.stop();
+  }, [autoplay, inView, hovered, reduceMotion, currentIndex, slides.length, progress]);
 
   const goToSlide = useCallback((index: number) => {
-    sessionRef.current++; // Invalidate current session
-    setProgress(0);
+    setAutoplay(false);
+    progress.set(1);
     setCurrentIndex(index);
-  }, []);
+  }, [progress]);
 
   return (
     <section
+      ref={sectionRef}
+      id={id}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
       className="py-12 md:py-20 px-4 md:px-6 overflow-hidden"
-      style={{ background: 'var(--section-alt-bg)' }}
+      style={alternate ? { background: 'var(--section-alt-bg)' } : undefined}
     >
       <div className="max-w-6xl mx-auto">
         {/* Section Header */}
         <motion.div
           className="text-center mb-8 md:mb-12"
-          initial={{ opacity: 0, y: 60, filter: 'blur(15px)' }}
-          whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          initial={{ opacity: 0, y: RISE }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 2, ease: cinematicEase }}
+          transition={reveal()}
         >
           <h2
             className="text-3xl md:text-4xl font-bold mb-4"
             style={{ color: 'var(--text-main)' }}
           >
-            {t('panels.title')}
+            {t(titleKey)}
           </h2>
           <motion.p
             className="text-lg max-w-2xl mx-auto"
@@ -129,39 +150,55 @@ function PanelsSlider({
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 1.5, delay: 1.2 }}
+            transition={reveal(0.18)}
           >
-            {t('panels.description')}
+            {t(descriptionKey)}
           </motion.p>
         </motion.div>
 
-        {/* Slider Container - All slides in a row, translate to show current */}
+        {/* Chips: one per slide */}
+        <div className="flex justify-center flex-wrap gap-2 mb-6 md:mb-8">
+          {slides.map((slide, index) => {
+            const isActive = index === currentIndex;
+            return (
+              <motion.button
+                key={slide.titleKey}
+                onClick={() => goToSlide(index)}
+                aria-pressed={isActive}
+                className="px-4 py-1.5 rounded-full text-sm md:text-base font-medium cursor-pointer transition-colors"
+                style={{
+                  background: isActive ? 'linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%)' : 'rgba(230, 210, 140, 0.08)',
+                  color: isActive ? '#1a1608' : 'var(--text-muted)',
+                  border: `1px solid ${isActive ? 'transparent' : 'rgba(230, 210, 140, 0.2)'}`,
+                }}
+                whileHover={{ scale: 1.05, transition: press }}
+                whileTap={{ scale: 0.97, transition: press }}
+              >
+                {t(slide.titleKey)}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* All slides in a row, translated to the current one; in Hebrew the row runs right to left, as the chips */}
         <div className="overflow-hidden" dir="ltr">
           <motion.div
-            className="flex"
-            animate={{ x: `${-currentIndex * 100}%` }}
-            transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
+            className={isRTL ? 'flex flex-row-reverse' : 'flex'}
+            animate={{ x: `${(isRTL ? 1 : -1) * currentIndex * 100}%` }}
+            transition={settle}
           >
-            {panelsData.map((panel, index) => (
-              <div key={index} className="w-full flex-shrink-0">
-                <div className="text-center mb-4">
-                  <h3
-                    className="text-lg md:text-xl font-medium mb-1"
-                    style={{ color: 'var(--gold)' }}
-                  >
-                    {t(panel.titleKey)}
-                  </h3>
-                  <p
-                    className="text-sm md:text-base"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    {t(panel.descKey)}
-                  </p>
-                </div>
+            {slides.map((slide, index) => (
+              <div key={index} className="w-full flex-shrink-0 px-1" dir={isRTL ? 'rtl' : 'ltr'}>
+                <p
+                  className="text-center text-sm md:text-base mb-4 max-w-2xl mx-auto"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  {t(slide.descKey)}
+                </p>
                 <ImageComparison
-                  lightImage={panel.lightImage}
-                  darkImage={panel.darkImage}
-                  alt={isRTL ? panel.altHe : panel.altEn}
+                  lightImage={slide.lightImage}
+                  darkImage={slide.darkImage}
+                  alt={t(slide.titleKey)}
                 />
               </div>
             ))}
@@ -170,39 +207,32 @@ function PanelsSlider({
 
         {/* Apple-style Dot Indicators with Progress */}
         <div className="flex justify-center items-center gap-3 mt-8">
-          {panelsData.map((_, index) => {
+          {slides.map((_, index) => {
             const isActive = index === currentIndex;
             return (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
-                className="group relative focus:outline-none py-2 cursor-pointer"
-                aria-label={`Go to slide ${index + 1}`}
+                className="group relative py-2 px-1 cursor-pointer rounded-full focus-visible:outline focus-visible:outline-2"
+                style={{ outlineColor: 'var(--gold)' }}
+                aria-label={t(slides[index].titleKey)}
               >
-                {/* Background track */}
+                {/* Track, widened for the current slide */}
                 <motion.div
-                  className="rounded-full relative"
-                  style={{
-                    backgroundColor: isActive ? 'rgba(128, 128, 128, 0.3)' : 'rgba(128, 128, 128, 0.4)',
-                  }}
-                  animate={{
-                    width: isActive ? 40 : 8,
-                    height: 8,
-                  }}
-                  whileHover={{
-                    scale: 1.2,
-                    backgroundColor: isActive ? 'rgba(128, 128, 128, 0.4)' : 'rgba(128, 128, 128, 0.6)',
-                  }}
-                  transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+                  className="rounded-full relative overflow-hidden h-2"
+                  style={{ backgroundColor: 'rgba(128, 128, 128, 0.35)' }}
+                  animate={{ width: isActive ? 40 : 8 }}
+                  whileHover={{ backgroundColor: 'rgba(128, 128, 128, 0.6)', transition: press }}
+                  transition={settle}
                 >
                   {/* Gold progress fill */}
                   {isActive && (
                     <motion.div
-                      className="absolute top-0 h-full rounded-full"
+                      className="absolute inset-0 rounded-full"
                       style={{
                         backgroundColor: 'var(--gold)',
-                        width: `${progress * 100}%`,
-                        ...(isRTL ? { right: 0 } : { left: 0 }),
+                        scaleX: progress,
+                        transformOrigin: isRTL ? 'right' : 'left',
                       }}
                     />
                   )}
@@ -219,9 +249,8 @@ function PanelsSlider({
 function App() {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'he';
-
-  // Update SEO meta tags based on current language
-  useSEO();
+  // Reduced motion: no ambient particles (their loops would run for nothing)
+  const reduceMotion = useReducedMotion();
 
   // Scroll-based animation for hero image
   const heroRef = useRef<HTMLDivElement>(null);
@@ -233,48 +262,35 @@ function App() {
   const imageScale = useTransform(scrollYProgress, [0, 1], [1.15, 1]);
   const imageY = useTransform(scrollYProgress, [0, 1], [0, 50]);
 
-  // Fetch download count
-  const [downloadCount, setDownloadCount] = useState<number | null>(null);
-  useEffect(() => {
-    fetch('/download-count.json')
-      .then(res => res.json())
-      .then(data => setDownloadCount(data.count))
-      .catch(() => setDownloadCount(null));
-  }, []);
+  const downloadCount = useDownloadCount();
 
   const features = [
     { icon: Search, key: 'find' },
     { icon: BookOpen, key: 'explore' },
     { icon: BookMarked, key: 'inbook' },
     { icon: Languages, key: 'compare' },
-    { icon: Zap, key: 'sources' },
+    { icon: AppWindow, key: 'tabs' },
+    { icon: Star, key: 'bookmarks' },
+    { icon: Highlighter, key: 'notes' },
     { icon: Copy, key: 'copy' },
+    { icon: CloudUpload, key: 'backup' },
+    { icon: RefreshCw, key: 'updates' },
+    { icon: Keyboard, key: 'keyboard' },
     { icon: Sun, key: 'themes' },
   ];
+
+  const widgets = ['zmanim', 'luach', 'limud', 'molad', 'temple', 'solar', 'shnayim', 'dictionary', 'measures', 'history'];
 
   const searchFeatures = [
     t('search.feature1'),
     t('search.feature2'),
     t('search.feature3'),
     t('search.feature4'),
+    t('search.feature5'),
+    t('search.feature6'),
   ];
 
-  // Cinematic easing curve
-  const cinematicEase = [0.16, 1, 0.3, 1] as const;
 
-  // Memoized particles for cinematic effect (reduced for performance)
-  const particles = useMemo(() =>
-    [...Array(20)].map((_, i) => ({
-      id: i,
-      size: Math.random() * 4 + 2,
-      x: Math.random() * 100,
-      y: 60 + Math.random() * 40,
-      opacity: Math.random() * 0.4 + 0.2,
-      duration: Math.random() * 15 + 10,
-      delay: Math.random() * 8,
-      yMove: -150 - Math.random() * 200,
-    }))
-  , []);
 
 
   return (
@@ -286,7 +302,7 @@ function App() {
       }}
     >
       {/* Crystal Sparkle Particles Layer - WebGL with shaders for GPU acceleration */}
-      <CrystalParticlesGL count={50} />
+      {!reduceMotion && <CrystalParticlesGL count={50} />}
 
       <Navigation />
 
@@ -294,8 +310,8 @@ function App() {
       <section ref={heroRef} className="relative min-h-[60vh] md:min-h-screen w-full flex flex-col items-center justify-center overflow-hidden px-4 pt-16 md:pt-24 pb-2 md:pb-8">
 
         {/* Floating Particles (lightweight) */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {particles.map((p) => (
+        <div className="ambient-motion absolute inset-0 overflow-hidden pointer-events-none">
+          {heroParticles.map((p) => (
             <motion.div
               key={p.id}
               className="absolute rounded-full"
@@ -327,7 +343,7 @@ function App() {
           style={{ background: 'var(--bg-main)' }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
+          transition={reveal()}
         />
 
         {/* Hero Content with staggered children */}
@@ -339,72 +355,75 @@ function App() {
             hidden: {},
             visible: {
               transition: {
-                staggerChildren: 0.4,
-                delayChildren: 0.8,
+                staggerChildren: 0.08,
+                delayChildren: 0.1,
               },
             },
           }}
         >
-          {/* Title */}
-          <motion.h1
-            className="text-6xl md:text-[12rem] font-bold mb-1 md:mb-2"
-            style={{
-              color: 'var(--gold)',
-              textShadow: '0 0 60px rgba(230, 210, 140, 0.5), 0 0 120px rgba(230, 210, 140, 0.3)',
-            }}
-            variants={{
-              hidden: { opacity: 0, scale: 1.3, filter: 'blur(20px)' },
-              visible: {
-                opacity: 1,
-                scale: 1,
-                filter: 'blur(0px)',
-                transition: { duration: 1.2, ease: [0.16, 1, 0.3, 1] }
-              },
-            }}
-          >
-            {t('hero.title')}
-          </motion.h1>
+          {/* Brand and subtitle form one heading: what Zayit is, for readers and search engines alike */}
+          <h1 className="flex flex-col items-center">
+            <motion.span
+              className="block text-6xl md:text-[12rem] font-bold mb-1 md:mb-2"
+              style={{
+                color: 'var(--gold)',
+                textShadow: '0 0 60px rgba(230, 210, 140, 0.5), 0 0 120px rgba(230, 210, 140, 0.3)',
+              }}
+              variants={{
+                hidden: { opacity: 0, scale: 1.04 },
+                visible: {
+                  opacity: 1,
+                  scale: 1,
+                  transition: settle,
+                },
+              }}
+            >
+              {t('hero.title')}
+            </motion.span>{' '}
 
-          {/* Decorative line */}
-          <motion.div
-            className="h-[2px] mb-4 md:mb-8"
-            style={{ background: `linear-gradient(90deg, transparent, var(--gold), transparent)` }}
-            variants={{
-              hidden: { width: 0, opacity: 0 },
-              visible: {
-                width: 200,
-                opacity: 1,
-                transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
-              },
-            }}
-          />
+            {/* Decorative line */}
+            <motion.span
+              aria-hidden
+              className="block h-[2px] w-[200px] mb-4 md:mb-8"
+              style={{ background: `linear-gradient(90deg, transparent, var(--gold), transparent)` }}
+              variants={{
+                // scaleX rather than width: the compositor draws it, no layout per frame
+                hidden: { scaleX: 0, opacity: 0 },
+                visible: {
+                  scaleX: 1,
+                  opacity: 1,
+                  transition: settle,
+                },
+              }}
+            />
 
-          {/* Subtitle */}
-          <motion.p
-            className="text-lg md:text-3xl font-light mb-2 md:mb-4 max-w-3xl px-2"
-            style={{ color: 'var(--text-main)' }}
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: {
-                opacity: 1,
-                y: 0,
-                transition: { duration: 0.8, ease: 'easeOut' }
-              },
-            }}
-          >
-            {t('hero.subtitle')}
-          </motion.p>
+            {/* Subtitle */}
+            <motion.span
+              className="block text-lg md:text-3xl font-light mb-2 md:mb-4 max-w-3xl px-2"
+              style={{ color: 'var(--text-main)' }}
+              variants={{
+                hidden: { opacity: 0, y: RISE },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: settle,
+                },
+              }}
+            >
+              {t('hero.subtitle')}
+            </motion.span>
+          </h1>
 
           {/* Tagline */}
           <motion.p
             className="text-base md:text-xl tracking-[0.2em] md:tracking-[0.3em] uppercase mb-6 md:mb-12"
             style={{ color: 'var(--gold-muted)' }}
             variants={{
-              hidden: { opacity: 0, y: 10 },
+              hidden: { opacity: 0, y: RISE / 2 },
               visible: {
                 opacity: 1,
                 y: 0,
-                transition: { duration: 0.8, ease: 'easeOut' }
+                transition: settle,
               },
             }}
           >
@@ -415,30 +434,59 @@ function App() {
         {/* App Screenshot */}
         <motion.div
           className="relative z-20 w-full max-w-5xl mt-4 md:mt-8 px-4 md:px-0"
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 2.8, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={reveal(0.45)}
           style={{
             scale: imageScale,
             y: imageY,
           }}
         >
           <ImageComparison
-            lightImage="art/HOME-LIGHT.png"
-            darkImage="art/HOME-DARK.png"
-            alt=""
+            lightImage="/art/HOME-LIGHT.jpg"
+            darkImage="/art/HOME-DARK.jpg"
+            alt={t('seo.imageAlt')}
+            priority
           />
         </motion.div>
       </section>
 
 
-      {/* Vision Section - delayed to appear after hero */}
+      {/* Video Section - the presentation video in the page's language */}
+      <section id="video" className="py-10 md:py-20 px-4 md:px-6">
+        <motion.div
+          className="max-w-4xl mx-auto text-center"
+          initial={{ opacity: 0, y: RISE }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={reveal()}
+        >
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
+            style={{
+              background: 'rgba(230, 210, 140, 0.1)',
+              color: 'var(--gold)',
+            }}
+          >
+            <PlayCircle size={16} />
+            {t('video.badge')}
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold mb-8 md:mb-10" style={{ color: 'var(--text-main)' }}>
+            {t('video.title')}
+          </h2>
+          <VideoEmbed videoId={isRTL ? 'T7VU3K7EL5w' : 'e8ch0H9dlHs'} title={t('video.title')} />
+        </motion.div>
+      </section>
+
+
+      {/* Vision Section */}
       <section className="py-10 md:py-20 px-4 md:px-6">
         <motion.div
           className="max-w-4xl mx-auto text-center"
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.5, delay: 3.5, ease: cinematicEase }}
+          initial={{ opacity: 0, y: RISE }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={reveal()}
         >
           <motion.div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
@@ -446,9 +494,10 @@ function App() {
               background: 'rgba(230, 210, 140, 0.1)',
               color: 'var(--gold)',
             }}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.2, delay: 4.2, ease: cinematicEase }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={reveal(0.06)}
           >
             <Sparkles size={16} />
             {t('vision.title')}
@@ -457,9 +506,10 @@ function App() {
           <motion.p
             className="text-xl md:text-2xl leading-relaxed"
             style={{ color: 'var(--text-muted)' }}
-            initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 1.8, delay: 4.8, ease: cinematicEase }}
+            initial={{ opacity: 0, y: RISE }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={reveal(0.12)}
           >
             {t('vision.description')}
           </motion.p>
@@ -471,10 +521,10 @@ function App() {
       <section className="py-12 md:py-20 px-4 md:px-6" style={{ background: 'var(--section-alt-bg)' }}>
         <motion.div
           className="max-w-4xl mx-auto text-center"
-          initial={{ opacity: 0, scale: 0.85, filter: 'blur(15px)' }}
-          whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          initial={{ opacity: 0, scale: 0.96 }}
+          whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 2, ease: cinematicEase }}
+          transition={reveal()}
         >
           <motion.div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
@@ -482,10 +532,10 @@ function App() {
               background: 'rgba(230, 210, 140, 0.1)',
               color: 'var(--gold)',
             }}
-            initial={{ opacity: 0, y: -30 }}
+            initial={{ opacity: 0, y: RISE }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 1.5, delay: 0.8 }}
+            transition={reveal(0.12)}
           >
             <Shield size={16} />
             {t('spirit.title')}
@@ -494,10 +544,10 @@ function App() {
           <motion.p
             className="text-xl md:text-2xl leading-relaxed"
             style={{ color: 'var(--text-muted)' }}
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: RISE }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 2, delay: 1.5 }}
+            transition={reveal(0.22)}
           >
             {t('spirit.description')}
           </motion.p>
@@ -510,10 +560,10 @@ function App() {
         <div className="max-w-6xl mx-auto">
           <motion.div
             className="text-center mb-12"
-            initial={{ opacity: 0, x: -80, filter: 'blur(10px)' }}
-            whileInView={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, y: RISE }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 1.8, ease: cinematicEase }}
+            transition={reveal()}
           >
             <h2
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -527,40 +577,40 @@ function App() {
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 1.5, delay: 1 }}
+              transition={reveal(0.15)}
             >
               {t('interface.description')}
             </motion.p>
             <motion.p
               className="text-base font-medium"
               style={{ color: 'var(--gold)' }}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: RISE }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1.2, delay: 2 }}
+              transition={reveal(0.3)}
             >
               {t('interface.noLearning')}
             </motion.p>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, x: 150, scale: 0.9 }}
-            whileInView={{ opacity: 1, x: 0, scale: 1 }}
+            initial={{ opacity: 0, y: RISE, scale: 0.96 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 2.5, ease: cinematicEase }}
+            transition={reveal()}
           >
             <div className="text-center mb-4">
               <h3 className="text-lg md:text-xl font-medium mb-1" style={{ color: 'var(--gold)' }}>
-                {t('interface.bookSearch')}
+                {t('interface.navTitle')}
               </h3>
               <p className="text-sm md:text-base" style={{ color: 'var(--text-muted)' }}>
-                {t('interface.bookSearchDesc')}
+                {t('interface.navDesc')}
               </p>
             </div>
             <ImageComparison
-              lightImage="art/BOOK-SEARCH-LIGHT.png"
-              darkImage="art/BOOK-SEARCH-DARK.png"
-              alt={isRTL ? 'חיפוש ספרים' : 'Book Search'}
+              lightImage="/art/TOC-LIGHT.png"
+              darkImage="/art/TOC-DARK.png"
+              alt={t('interface.navTitle')}
             />
           </motion.div>
         </div>
@@ -568,7 +618,14 @@ function App() {
 
 
       {/* Modular Panels Section - Apple-style horizontal slider */}
-      <PanelsSlider t={t} isRTL={isRTL} cinematicEase={cinematicEase} />
+      <ShowcaseSlider
+        titleKey="panels.title"
+        descriptionKey="panels.description"
+        slides={panelsSlides}
+        alternate
+        t={t}
+        isRTL={isRTL}
+      />
 
 
       {/* Search Section - Slow dramatic reveal with suspense */}
@@ -576,10 +633,10 @@ function App() {
         <div className="max-w-6xl mx-auto">
           <motion.div
             className="text-center mb-12"
-            initial={{ opacity: 0, y: 80, filter: 'blur(20px)' }}
-            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, y: RISE }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 2.2, ease: cinematicEase }}
+            transition={reveal()}
           >
             <h2
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -593,17 +650,17 @@ function App() {
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 1.5, delay: 1.2 }}
+              transition={reveal(0.18)}
             >
               {t('search.description')}
             </motion.p>
             <motion.p
               className="text-sm font-medium"
               style={{ color: 'var(--gold-soft)' }}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: RISE }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1.2, delay: 2 }}
+              transition={reveal(0.3)}
             >
               {t('search.powered')}
             </motion.p>
@@ -614,10 +671,10 @@ function App() {
             {searchFeatures.map((feature, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -100 : 100, scale: 0.9 }}
-                whileInView={{ opacity: 1, x: 0, scale: 1 }}
+                initial={{ opacity: 0, y: RISE, scale: 0.96 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true, amount: 0.5 }}
-                transition={{ duration: 1.5, delay: index * 0.4, ease: cinematicEase }}
+                transition={reveal(index * 0.08)}
                 className="flex items-start gap-3 p-4 rounded-xl"
                 style={{
                   background: 'linear-gradient(135deg, rgba(18, 15, 10, 0.95) 0%, rgba(8, 6, 4, 0.98) 100%)',
@@ -632,7 +689,7 @@ function App() {
                   initial={{ scale: 0 }}
                   whileInView={{ scale: 1 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: index * 0.4 + 0.8 }}
+                  transition={reveal(index * 0.08)}
                 />
                 <p style={{ color: 'var(--text-muted)' }}>{feature}</p>
               </motion.div>
@@ -642,43 +699,115 @@ function App() {
           {/* Search Taglines */}
           <motion.div
             className="flex justify-center gap-8 mb-12 flex-wrap"
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 1.5 }}
+            transition={reveal()}
           >
             <span className="text-lg font-medium" style={{ color: 'var(--gold)' }}>
-              {t('search.simple')}
+              {t('search.byWords')}
             </span>
             <span style={{ color: 'var(--text-muted)' }}>|</span>
             <span className="text-lg font-medium" style={{ color: 'var(--gold)' }}>
-              {t('search.advanced')}
+              {t('search.byMeaning')}
             </span>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 100, rotateX: 15, scale: 0.85 }}
-            whileInView={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+            initial={{ opacity: 0, y: RISE, scale: 0.96 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, amount: 0.15 }}
-            transition={{ duration: 2.5, ease: cinematicEase }}
+            transition={reveal()}
             style={{ perspective: 1200 }}
           >
             <div className="text-center mb-4">
               <h3 className="text-lg md:text-xl font-medium mb-1" style={{ color: 'var(--gold)' }}>
-                {t('search.simpleTitle')}
+                {t('search.resultsTitle')}
               </h3>
               <p className="text-sm md:text-base" style={{ color: 'var(--text-muted)' }}>
-                {t('search.simpleDesc')}
+                {t('search.resultsDesc')}
               </p>
             </div>
             <ImageComparison
-              lightImage="art/DB-SEARCH-SIMPLE-LIGHT.png"
-              darkImage="art/DB-SEARCH-SIMPLE-DARK.png"
-              alt={isRTL ? 'חיפוש בבסיס הנתונים' : 'Database Search'}
+              lightImage="/art/SEARCH-LIGHT.png"
+              darkImage="/art/SEARCH-DARK.png"
+              alt={t('search.resultsTitle')}
             />
           </motion.div>
         </div>
       </section>
+
+
+      {/* Home Widgets Section */}
+      <section id="widgets" className="py-12 md:py-20 px-4 md:px-6 overflow-hidden" style={{ background: 'var(--section-alt-bg)' }}>
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            className="text-center mb-10"
+            initial={{ opacity: 0, y: RISE }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={reveal()}
+          >
+            <motion.div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
+              style={{ background: 'rgba(230, 210, 140, 0.1)', color: 'var(--gold)' }}
+            >
+              <LayoutGrid size={16} />
+              {t('widgets.badge')}
+            </motion.div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'var(--text-main)' }}>
+              {t('widgets.title')}
+            </h2>
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
+              {t('widgets.description')}
+            </p>
+          </motion.div>
+
+          <div className="flex justify-center flex-wrap gap-2 mb-10 max-w-4xl mx-auto">
+            {widgets.map((key, index) => (
+              <motion.span
+                key={key}
+                className="px-4 py-1.5 rounded-full text-sm md:text-base"
+                style={{
+                  background: 'rgba(230, 210, 140, 0.08)',
+                  border: '1px solid rgba(230, 210, 140, 0.2)',
+                  color: 'var(--text-muted)',
+                }}
+                initial={{ opacity: 0, y: RISE, scale: 0.96 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true }}
+                transition={reveal(index * 0.06)}
+              >
+                {t(`widgets.${key}`)}
+              </motion.span>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: RISE, scale: 0.96 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={reveal()}
+          >
+            <ImageComparison
+              lightImage="/art/WIDGETS-LIGHT.jpg"
+              darkImage="/art/WIDGETS-DARK.jpg"
+              alt={t('widgets.title')}
+            />
+          </motion.div>
+        </div>
+      </section>
+
+
+      {/* Study Companions - siddur, Shnayim Mikra, authors */}
+      <ShowcaseSlider
+        id="companions"
+        titleKey="companions.title"
+        descriptionKey="companions.description"
+        slides={companionsSlides}
+        t={t}
+        isRTL={isRTL}
+      />
 
 
       {/* Features Section - Slow dramatic card reveal */}
@@ -686,10 +815,10 @@ function App() {
         <div className="max-w-6xl mx-auto">
           <motion.div
             className="text-center mb-12 md:mb-16"
-            initial={{ opacity: 0, scale: 0.7, filter: 'blur(20px)' }}
-            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.8, ease: cinematicEase }}
+            transition={reveal()}
           >
             <h2
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -702,16 +831,16 @@ function App() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {features.map((feature, index) => {
               // Fast sequential reveal
-              const delay = index * 0.1;
+              const delay = (index % 3) * 0.06;
 
               return (
                 <motion.div
                   key={feature.key}
-                  initial={{ opacity: 0, scale: 0.6, y: 80, filter: 'blur(15px)' }}
-                  whileInView={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+                  initial={{ opacity: 0, scale: 0.96, y: RISE }}
+                  whileInView={{ opacity: 1, scale: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.6, delay, ease: cinematicEase }}
-                  whileHover={{ scale: 1.02, y: -5 }}
+                  transition={reveal(delay)}
+                  whileHover={{ y: -4, transition: press }}
                   className="p-6 rounded-2xl transition-colors"
                   style={{
                     background: 'linear-gradient(145deg, rgba(18, 15, 10, 0.95) 0%, rgba(8, 6, 4, 0.98) 100%)',
@@ -725,10 +854,10 @@ function App() {
                     style={{
                       background: 'linear-gradient(135deg, rgba(230, 210, 140, 0.15) 0%, rgba(230, 210, 140, 0.05) 100%)',
                     }}
-                    initial={{ rotate: -180, scale: 0 }}
-                    whileInView={{ rotate: 0, scale: 1 }}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: delay + 0.2, ease: cinematicEase }}
+                    transition={reveal(delay)}
                   >
                     <feature.icon size={24} style={{ color: 'var(--gold)' }} />
                   </motion.div>
@@ -738,7 +867,7 @@ function App() {
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: delay + 0.3 }}
+                    transition={reveal(delay)}
                   >
                     {t(`features.${feature.key}`)}
                   </motion.p>
@@ -755,10 +884,10 @@ function App() {
         <div className="max-w-5xl mx-auto">
           <motion.div
             className="text-center mb-12"
-            initial={{ opacity: 0, rotateX: 30, filter: 'blur(15px)' }}
-            whileInView={{ opacity: 1, rotateX: 0, filter: 'blur(0px)' }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.8, ease: cinematicEase }}
+            transition={reveal()}
           >
             <h2
               className="text-3xl md:text-4xl font-bold"
@@ -777,11 +906,11 @@ function App() {
             ].map((item, index) => (
               <motion.div
                 key={item.title}
-                initial={{ opacity: 0, rotateY: index % 2 === 0 ? -45 : 45, scale: 0.8, filter: 'blur(10px)' }}
-                whileInView={{ opacity: 1, rotateY: 0, scale: 1, filter: 'blur(0px)' }}
+                initial={{ opacity: 0, scale: 0.96 }}
+                whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.7, delay: index * 0.15, ease: cinematicEase }}
-                whileHover={{ scale: 1.02, y: -5 }}
+                transition={reveal(index * 0.06)}
+                whileHover={{ y: -4, transition: press }}
                 className="p-6 md:p-8 rounded-2xl text-center"
                 style={{
                   background: 'linear-gradient(145deg, rgba(18, 15, 10, 0.95) 0%, rgba(8, 6, 4, 0.98) 100%)',
@@ -795,20 +924,20 @@ function App() {
                   style={{
                     background: 'linear-gradient(135deg, rgba(230, 210, 140, 0.2) 0%, rgba(230, 210, 140, 0.05) 100%)',
                   }}
-                  initial={{ scale: 0, rotate: -180 }}
-                  whileInView={{ scale: 1, rotate: 0 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.15 + 0.2, ease: cinematicEase }}
+                  transition={reveal(index * 0.06)}
                 >
                   <item.icon size={32} style={{ color: 'var(--gold)' }} />
                 </motion.div>
                 <motion.h3
                   className="text-2xl md:text-3xl font-bold mb-4"
                   style={{ color: 'var(--gold)' }}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: RISE }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.15 + 0.3 }}
+                  transition={reveal(index * 0.06)}
                 >
                   {t(`promise.${item.title}`)}
                 </motion.h3>
@@ -818,7 +947,7 @@ function App() {
                   initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.15 + 0.4 }}
+                  transition={reveal(index * 0.06)}
                 >
                   {t(`promise.${item.desc}`)}
                 </motion.p>
@@ -838,16 +967,16 @@ function App() {
               background: 'rgba(230, 210, 140, 0.1)',
               color: 'var(--gold)',
             }}
-            initial={{ opacity: 0, y: -40, scale: 0.7 }}
+            initial={{ opacity: 0, y: RISE, scale: 0.96 }}
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.6, ease: cinematicEase }}
+            transition={reveal()}
           >
             <motion.span
-              initial={{ rotate: 0, scale: 0 }}
+              initial={{ scale: 0 }}
               whileInView={{ rotate: [0, -20, 20, -15, 15, 0], scale: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              transition={reveal(0.03)}
             >
               <Heart size={16} />
             </motion.span>
@@ -857,10 +986,10 @@ function App() {
           <motion.p
             className="text-xl md:text-2xl leading-relaxed"
             style={{ color: 'var(--text-muted)' }}
-            initial={{ opacity: 0, y: 60, filter: 'blur(20px)' }}
-            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, y: RISE }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.8, delay: 0.15, ease: cinematicEase }}
+            transition={reveal(0.02)}
           >
             {t('crafted.description')}
           </motion.p>
@@ -880,10 +1009,10 @@ function App() {
           <motion.h2
             className="text-4xl md:text-5xl font-bold mb-6"
             style={{ color: 'var(--text-main)' }}
-            initial={{ opacity: 0, scale: 2, filter: 'blur(30px)' }}
-            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, scale: 1.04 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.8, ease: cinematicEase }}
+            transition={reveal()}
           >
             {t('download.title')}
           </motion.h2>
@@ -891,10 +1020,10 @@ function App() {
           <motion.p
             className="text-xl mb-8"
             style={{ color: 'var(--text-muted)' }}
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: RISE }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3, ease: cinematicEase }}
+            transition={reveal(0.04)}
           >
             {t('download.description')}
           </motion.p>
@@ -903,36 +1032,31 @@ function App() {
             <motion.p
               className="text-2xl font-bold mb-8"
               style={{ color: 'var(--gold)' }}
-              initial={{ opacity: 0, scale: 0.3 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.5, ease: cinematicEase }}
+              transition={reveal(0.07)}
             >
-              +{downloadCount.toLocaleString()} {t('download.downloads')}
+              +{downloadCount.toLocaleString(i18n.language)} {t('download.downloads')}
             </motion.p>
           )}
 
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.8 }}
+            initial={{ opacity: 0, y: RISE, scale: 0.96 }}
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.6, ease: cinematicEase }}
+            transition={reveal(0.09)}
           >
-            <Link to="/download">
+            <Link to={pagePath(i18n.language as Lang, 'download')}>
               <motion.span
                 className="inline-flex items-center gap-3 px-8 md:px-10 py-4 md:py-5 rounded-full text-lg md:text-xl font-semibold text-white"
                 style={{
                   background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%)',
                   boxShadow: '0 15px 40px rgba(230, 210, 140, 0.3)',
                 }}
-                whileHover={{ scale: 1.05, boxShadow: '0 20px 50px rgba(230, 210, 140, 0.5)' }}
-                whileTap={{ scale: 0.98 }}
-                animate={{
-                  boxShadow: ['0 15px 40px rgba(230, 210, 140, 0.3)', '0 20px 60px rgba(230, 210, 140, 0.5)', '0 15px 40px rgba(230, 210, 140, 0.3)'],
-                }}
-                transition={{
-                  boxShadow: { duration: 3, repeat: Infinity, ease: 'easeInOut' }
-                }}
+                whileHover={{ scale: 1.03, boxShadow: '0 20px 50px rgba(230, 210, 140, 0.45)', transition: press }}
+                whileTap={{ scale: 0.97, transition: press }}
+                transition={press}
               >
                 <Download size={26} />
                 {t('download.cta')}
@@ -946,35 +1070,14 @@ function App() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.8 }}
+            transition={reveal(0.12)}
           >
             {t('download.platforms')}
           </motion.p>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6" style={{ borderTop: '1px solid var(--card-border)' }}>
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-            {t('footer.createdByPrefix')}{' '}
-            <a
-              href="https://eliegambache.kdroidfilter.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--gold)', textDecoration: 'none' }}
-              onMouseOver={e => (e.currentTarget.style.textDecoration = 'underline')}
-              onMouseOut={e => (e.currentTarget.style.textDecoration = 'none')}
-            >
-              {t('footer.createdByName')}
-            </a>{' '}
-            &#10084;
-          </p>
-          <p className="text-xs" style={{ color: 'var(--gold-muted)' }}>
-            {t('footer.license')}
-          </p>
-        </div>
-      </footer>
+      <SiteFooter page="home" />
     </div>
   );
 }

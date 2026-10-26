@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoBuf
 import kotlinx.serialization.protobuf.ProtoNumber
 
-// Port of desktop 0.6.7 features/home/widgets/luach/LimudSchedules.kt: the daily learning schedules of hebcal-learning
+// Port of desktop 0.6.10 features/home/widgets/luach/LimudSchedules.kt: the daily learning schedules of hebcal-learning
 // in one protobuf, limud.pb (res/raw here, with its BSD-2 notice limud_notice.txt). An empty string stands for none.
 
 @Serializable

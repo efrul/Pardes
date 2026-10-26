@@ -119,7 +119,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * The home page, desktop 0.6.7 features/bookcontent/ui/panels/bookcontent/views/HomeView.kt: the wallpaper under its
+ * The home page, desktop 0.6.10 features/bookcontent/ui/panels/bookcontent/views/HomeView.kt: the wallpaper under its
  * two blending layers, then the page: the catalog row (components/CatalogRow.kt, its dropdowns from catalog.pb as
  * core/catalog/CatalogAccess.kt shapes them), the logo, the search bar ([HomeSearchBar]) and the editable widget grid
  * (features/home/widgets): one column (two on a phone on its side) below 670 dp, desktop's 20-column grid above.
@@ -210,7 +210,7 @@ fun HomeScreen(
 }
 
 /**
- * A Home tab on a tablet, as desktop 0.6.7 core/presentation/window/WindowBody.kt lays one out: the start bar with its
+ * A Home tab on a tablet, as desktop 0.6.10 core/presentation/window/WindowBody.kt lays one out: the start bar with its
  * "ספרים" button (features/bookcontent/ui/components/VerticalBars.kt StartVerticalBar), the book tree
  * (panels/categorytree/CategoryTreePanel.kt: hidden from its header, resized by its divider) and the home card. The
  * tree's visibility is the tab's (desktop BookContentPersistedState.isBookTreeVisible), kept with the session; Ctrl+B

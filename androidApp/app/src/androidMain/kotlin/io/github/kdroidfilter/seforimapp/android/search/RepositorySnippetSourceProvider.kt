@@ -1,5 +1,5 @@
-// Vendored unchanged from Zayit 0.6.7: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/RepositorySnippetSourceProvider.kt
-// (tag v0.6.7, the same since v0.6.1). Keep it identical; Android changes belong in a variant file.
+// Vendored unchanged from Zayit 0.6.10: SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/RepositorySnippetSourceProvider.kt
+// (tag v0.6.10, the same since v0.6.1). Keep it identical; Android changes belong in a variant file.
 package io.github.kdroidfilter.seforimapp.framework.search
 
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository

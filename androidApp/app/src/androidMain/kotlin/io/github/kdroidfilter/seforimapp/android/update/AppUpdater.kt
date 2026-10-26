@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Desktop 0.6.7 `framework/update/AppUpdateService.kt`'s UpdateUiState, as the touch flow shows it: the version found
+ * Desktop 0.6.10 `framework/update/AppUpdateService.kt`'s UpdateUiState, as the touch flow shows it: the version found
  * ([release], with what is new in it), the download and its progress, the APK checked and waiting ([ready]), Android's
  * "install unknown apps" switch still off ([needsPermission]), and the install itself.
  */
@@ -95,7 +95,7 @@ data class AppUpdateState(
 }
 
 /**
- * Desktop 0.6.7 `framework/update/AppUpdateService.kt` (Nucleus: a check at startup, the title-bar badge, the dialog,
+ * Desktop 0.6.10 `framework/update/AppUpdateService.kt` (Nucleus: a check at startup, the title-bar badge, the dialog,
  * the settings banner's re-check), for an APK that Android installs: one process-wide object like
  * [DbDeltaUpdateService], so a download outlives the screen that started it and goes on in [AppUpdateService].
  *

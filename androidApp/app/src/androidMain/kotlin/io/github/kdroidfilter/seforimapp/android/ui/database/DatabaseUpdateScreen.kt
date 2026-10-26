@@ -122,7 +122,7 @@ private const val DOWNLOAD_START_STEP = 0.3f
 private const val DOWNLOAD_COMPLETE_STEP = 0.8f
 
 /**
- * Desktop 0.6.7 `features/database/update` (DatabaseUpdateWindow, DatabaseUpdateNavHost and its five screens) as a
+ * Desktop 0.6.10 `features/database/update` (DatabaseUpdateWindow, DatabaseUpdateNavHost and its five screens) as a
  * full-screen flow: version check → update options (local file or download) → online or offline install → completion,
  * which checks the new library again. The install itself is [LibraryInstaller], shared with the onboarding: it keeps
  * running in its foreground service when the user leaves, and the flow reopens on the right step.
@@ -131,7 +131,7 @@ private const val DOWNLOAD_COMPLETE_STEP = 0.8f
  * "נסה שוב", to try opening it again); [onExit] by Back on the first step, where desktop closes the window.
  *
  * When the release server has a delta from the installed release ([DbDeltaUpdateService], desktop's delta updater),
- * the options offer it first, with its size: a few MB instead of the 5.5 GB bundle. Desktop 0.6.7 has the updater but
+ * the options offer it first, with its size: a few MB instead of the 5.5 GB bundle. Desktop 0.6.10 has the updater but
  * does not show it in this window; its UpdateOptionsScreen keeps the two install options, as here.
  */
 @Composable

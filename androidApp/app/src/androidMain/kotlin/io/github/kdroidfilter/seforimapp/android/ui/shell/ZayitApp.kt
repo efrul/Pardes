@@ -95,6 +95,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.home.HomeScreen
 import io.github.kdroidfilter.seforimapp.android.ui.home.WideHome
 import io.github.kdroidfilter.seforimapp.android.ui.library.LibraryTree
 import io.github.kdroidfilter.seforimapp.android.ui.library.LibraryViewModel
+import io.github.kdroidfilter.seforimapp.android.ui.notes.NotesPage
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderNav
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderScreen
 import io.github.kdroidfilter.seforimapp.android.ui.reader.drawerWidthFor
@@ -130,7 +131,7 @@ sealed interface ShellEntry {
 }
 
 /**
- * The tabbed browser: desktop 0.6.7 main.kt + core/presentation/window/MainAppWindow.kt (title bar, shortcuts, window
+ * The tabbed browser: desktop 0.6.10 main.kt + core/presentation/window/MainAppWindow.kt (title bar, shortcuts, window
  * title) + core/presentation/tabs/TabsContent.kt (see [TabHost]) + core/deeplink/ContentDeepLinkHandler.kt.
  * A phone (< [WideBreakpoint]) gets a top bar, the current tab's screen, a library drawer and full-screen overlays;
  * a tablet gets desktop's title bar with the tab strip and side islands.
@@ -151,9 +152,12 @@ fun ZayitApp(
     val library: LibraryViewModel = viewModel(factory = LibraryViewModel.factory(app.libraryStore.repository()))
     val c = Zayit.colors
     val scope = rememberCoroutineScope()
-    // Desktop OpenWindow.tabSearchVisible (Ctrl+Shift+A) and the favorites popup; on a phone, bottom sheets.
+    // Desktop OpenWindow.tabSearchVisible (Ctrl+Shift+A), the favorites popup and the notes popup (0.6.10); on a phone,
+    // bottom sheets. The notes popup's footer opens the notes page.
     var tabSearchVisible by remember { mutableStateOf(false) }
     var favoritesVisible by remember { mutableStateOf(false) }
+    var notesVisible by remember { mutableStateOf(false) }
+    var notesPageVisible by remember { mutableStateOf(false) }
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
 
@@ -163,6 +167,8 @@ fun ZayitApp(
         val e = entry ?: return@LaunchedEffect
         tabSearchVisible = false
         favoritesVisible = false
+        notesVisible = false
+        notesPageVisible = false
         when (e) {
             ShellEntry.NewTab -> {
                 repeat(appVm.state.value.overlays.size) { appVm.pop() }
@@ -312,6 +318,7 @@ fun ZayitApp(
             onTools = { appVm.push(Overlay.Tools) },
             onHistory = { tabSearchVisible = true },
             onFavorites = { favoritesVisible = true },
+            onNotes = { notesVisible = true },
             onSwipeTab = appVm::selectRelative,
             onAppUpdate = if (updateBadge) updater::openDialog else null,
             onCycleTheme = {
@@ -343,6 +350,9 @@ fun ZayitApp(
                         onTabSearchVisible = { tabSearchVisible = it },
                         favoritesVisible = favoritesVisible,
                         onFavoritesVisible = { favoritesVisible = it },
+                        notesVisible = notesVisible,
+                        onNotesVisible = { notesVisible = it },
+                        onNotesPage = { notesPageVisible = true },
                     )
                 }
                 // Tablets: keep panels and rails above the taskbar / gesture area (phones pad their own bottom bars).
@@ -392,6 +402,17 @@ fun ZayitApp(
             }
             if (!wide && favoritesVisible) {
                 ShellSheet(onDismiss = { favoritesVisible = false }) { FavoritesMenuContent(appVm, tablet = false, onDismiss = { favoritesVisible = false }) }
+            }
+            if (!wide && notesVisible) {
+                ShellSheet(onDismiss = { notesVisible = false }) {
+                    NotesMenuContent(appVm, tablet = false, onShowAll = { notesPageVisible = true }, onDismiss = { notesVisible = false })
+                }
+            }
+            if (notesPageVisible) {
+                NotesPage(
+                    onOpen = { bookId, lineId, title -> appVm.openInNewTab(Destination.Book(bookId, lineId, title, openNotes = true), title) },
+                    onDismiss = { notesPageVisible = false },
+                )
             }
             if (updateDialog) AppUpdateDialog()
 

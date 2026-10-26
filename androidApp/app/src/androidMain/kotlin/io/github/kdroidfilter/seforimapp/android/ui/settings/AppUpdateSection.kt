@@ -9,9 +9,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -82,9 +88,10 @@ private fun rememberUpdateActions(state: AppUpdateState, updater: AppUpdater, co
 }
 
 /**
- * Desktop GeneralSettingsScreen's UpdateStatusBanner, at the top of the app header card: checking, a newer version (to
- * download and install, and what is new in it), the download, the APK checked and waiting, Android's "install unknown
- * apps" switch, up to date (with "בדוק שוב"), or why it failed. A development build says why it does not update itself.
+ * Desktop GeneralSettingsScreen's UpdateStatusBanner, at the top of the app header card, for the states that call for an
+ * action (desktop 0.6.8 971f7dd6): a newer version (to download and install, and what is new in it), the download, the
+ * APK checked and waiting, Android's "install unknown apps" switch, or why it failed. Up to date, checking and not yet
+ * checked are [AppUpdateStatusLine], under the version. A development build says why it does not update itself.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -103,6 +110,8 @@ internal fun AppUpdateBanner() {
         }
         return
     }
+    // Quiet: the line under the version says it
+    if (state.quiet) return
     UpdateStatus(state, updater, metered = rememberMetered(state))
     val actions = rememberUpdateActions(state, updater, context)
     // Wraps on a 240dp phone instead of squeezing the buttons.
@@ -113,6 +122,43 @@ internal fun AppUpdateBanner() {
         if (state.release != null && state.phase == null && !state.rejected) OutlineButton(AppUpdateStrings.whatsNew, updater::openDialog)
     }
     if (state.phase == AppUpdateState.Phase.Downloading) Text(AndroidStrings.backgroundHint, fontSize = 12.sp, color = c.textSecondary)
+}
+
+/** Up to date, checking, or not yet checked: nothing to do, so no banner (desktop 0.6.8 971f7dd6). */
+private val AppUpdateState.quiet: Boolean
+    get() = errorMessage == null && message == null && release == null && !needsPermission && (phase == null || phase == AppUpdateState.Phase.Checking)
+
+/**
+ * Desktop GeneralSettingsScreen's UpdateStatusLine (0.6.8 971f7dd6), under the version: checking, or up to date with
+ * "בדוק שוב", as one quiet line; not yet checked, the check alone. Nothing in the other states, which [AppUpdateBanner]
+ * shows, nor in a development build.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun AppUpdateStatusLine() {
+    val context = LocalContext.current
+    val updater = remember(context) { AppUpdater.get(context) }
+    val state by updater.state.collectAsState()
+    val c = Zayit.colors
+    if (!updater.canUpdate || !state.quiet) return
+    // Flows: beside the icon a phone's line is shorter than desktop's, and "בדוק שוב" squeezed into a Row broke in two
+    // (seen on Android 9); it goes under the status whole instead.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+        when {
+            state.phase == AppUpdateState.Phase.Checking -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                CircularProgressIndicator(Modifier.size(14.dp), color = c.accent, strokeWidth = 2.dp)
+                Text(AppUpdateStrings.checking, fontSize = 13.sp, color = c.textSecondary)
+            }
+            state.upToDate -> {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Outlined.CheckCircle, null, tint = c.success, modifier = Modifier.size(14.dp))
+                    Text(AppUpdateStrings.upToDate, fontSize = 13.sp, color = c.textSecondary)
+                }
+                LinkText(AppUpdateStrings.checkAgain, updater::check)
+            }
+            else -> LinkText(AppUpdateStrings.check, updater::check)
+        }
+    }
 }
 
 /**

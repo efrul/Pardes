@@ -9,7 +9,7 @@ plugins {
     id("pardes.compose-vector-moves")
 }
 
-// SeforimLibrary as desktop Zayit 0.6.7 builds it: the repository's SeforimLibrary submodule (7ddf045), the same
+// SeforimLibrary as desktop Zayit 0.6.10 builds it: the repository's SeforimLibrary submodule (7ddf045), the same
 // checkout the desktop app and the shared modules build with.
 val seforimLibrary = rootDir.resolve("../SeforimLibrary")
 // Other shared sources reused as-is from the desktop project.
@@ -45,12 +45,12 @@ kotlin {
         }
         androidMain {
             kotlin.srcDir(seforimLibrary.resolve("dao/src/androidMain/kotlin"))
-            // htmlparser as desktop 0.6.7 has it (citation links, plainTextFromHtml), vendored; ../htmlparser equals it
-            // since the merge of Zayit 0.6.7.
+            // htmlparser as desktop 0.6.10 has it (citation links, plainTextFromHtml), vendored; ../htmlparser equals it
+            // since the merge of Zayit 0.6.10.
             kotlin.srcDir("src/androidMain/htmlparser")
             // Desktop full-text search (Lucene), as-is. The two files excluded below read SQLite through JDBC or
             // open the index with MMapDirectory and Path.of; their Android variants (same package and class names)
-            // are in src/androidMain/.../android/search, next to the 0.6.7 app files the search needs (vendored).
+            // are in src/androidMain/.../android/search, next to the 0.6.10 app files the search needs (vendored).
             kotlin.srcDir(seforimLibrary.resolve("search/src/jvmMain/kotlin"))
             kotlin.exclude(
                 "io/github/kdroidfilter/seforimlibrary/search/LuceneSearchEngine.kt",
@@ -89,7 +89,7 @@ kotlin {
                 implementation(libs.sqlDelight.driver.android)
                 implementation(libs.jsoup)
                 implementation(libs.zmanim)
-                // Desktop 0.6.7's zmanim library: the עתים לבינה calculator and luach zmanim (data/ZmanimEngine.kt).
+                // Desktop 0.6.10's zmanim library: the עתים לבינה calculator and luach zmanim (data/ZmanimEngine.kt).
                 // It brings kotlin-stdlib 2.4.20, kotlinx-datetime 0.8.0 and kotlinx-serialization-json 1.11.0.
                 implementation(libs.kosherkotlin)
                 implementation(libs.hebrew.numerals)
@@ -224,6 +224,27 @@ abstract class LicenceAssets : DefaultTask() {
     }
 }
 
+/**
+ * Desktop's own texts the app reads as they are, copied into the APK's assets rather than kept twice: temple_count.txt,
+ * the Temple widget's counts explained (desktop composeResources/files, since 0.6.8).
+ */
+abstract class DesktopTextAssets : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val templeCount: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val dir = outputDir.get().asFile
+        dir.deleteRecursively()
+        dir.mkdirs()
+        templeCount.get().asFile.copyTo(dir.resolve("temple_count.txt"))
+    }
+}
+
 androidComponents {
     onVariants { variant ->
         val licenceAssets = tasks.register<LicenceAssets>("${variant.name}LicenceAssets") {
@@ -232,6 +253,10 @@ androidComponents {
             luceneNotice.set(rootDir.resolve("lucene-android/NOTICE.txt"))
         }
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::outputDir)
+        val desktopTexts = tasks.register<DesktopTextAssets>("${variant.name}DesktopTextAssets") {
+            templeCount.set(desktopRoot.resolve("SeforimApp/src/commonMain/composeResources/files/temple_count.txt"))
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(desktopTexts, DesktopTextAssets::outputDir)
     }
 }
 
@@ -256,7 +281,7 @@ sqldelight {
         create("UserSettingsDb") {
             packageName.set("io.github.kdroidfilter.seforimapp.db")
             dialect("app.cash.sqldelight:sqlite-3-24-dialect:${libs.versions.sqlDelight.get()}")
-            // Desktop 0.6.7's user_settings.db schema (SeforimApp/src/commonMain/sqldelight at v0.6.7, the same since
+            // Desktop 0.6.10's user_settings.db schema (SeforimApp/src/commonMain/sqldelight at v0.6.10, the same since
             // v0.6.1), vendored: notes, highlights, visit history, favorites and shnayim mikra, so a desktop file
             // imported with --with-notes is read as is.
             // sqldelight-user-legacy: the two UPSERTs as Android 8-10's SQLite can run them (no schema of its own).

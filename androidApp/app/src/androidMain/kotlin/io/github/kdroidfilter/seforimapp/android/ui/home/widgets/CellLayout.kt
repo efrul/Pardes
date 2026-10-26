@@ -6,7 +6,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
 
-// Verbatim port of desktop 0.6.7 features/home/widgets/CellLayout.kt.
+// Verbatim port of desktop 0.6.10 features/home/widgets/CellLayout.kt.
 // The Home grid, as Android's home screen (Launcher3's CellLayout): cells of a fixed grid, each widget on an area of
 // them that it keeps, holes and all; nothing ever resizes or moves on its own. The grid has HOME_GRID_COLUMNS columns
 // and as many rows as its widgets need.

@@ -89,7 +89,7 @@ They prove the patches did not break Lucene and that the fallbacks equal the JDK
 ## App wiring
 
 - **Dependency.** `app/build.gradle.kts` declares `implementation(project(":lucene-android"))`. There must be no transitive original `lucene-core`.
-- **Search code.** Desktop's `search` module is compiled from the repository's `SeforimLibrary` submodule (`../SeforimLibrary` from `androidApp/`, at `7ddf045`, desktop 0.6.7's). `search/` holds the Android variants, each rebased on its desktop file with a provenance header naming the version and the upstream commits since 0.6.1. A JVM harness gave byte-identical output to desktop 0.6.1 on the subset library; 0.6.7 changed the engine only by SeforimLibrary c3190c4 (the found line's range in `LineHit` and `rangeSnippet`), whose hunks the variant carries. The variants are:
+- **Search code.** Desktop's `search` module is compiled from the repository's `SeforimLibrary` submodule (`../SeforimLibrary` from `androidApp/`, at `7ddf045`, desktop 0.6.10's as 0.6.7's). `search/` holds the Android variants, each rebased on its desktop file with a provenance header naming the version and the upstream commits since 0.6.1. A JVM harness gave byte-identical output to desktop 0.6.1 on the subset library; 0.6.7 changed the engine only by SeforimLibrary c3190c4 (0.6.8 to 0.6.10 not at all) (the found line's range in `LineHit` and `rangeSnippet`), whose hunks the variant carries. The variants are:
   - `LuceneSearchEngine`
   - `LuceneLookupSearchService`
   - `MagicDictionaryIndex`, which reads `lexical.db` through Android SQLite instead of JDBC

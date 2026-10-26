@@ -81,7 +81,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-// Port of desktop 0.6.7 features/home/widgets/WidgetGallery.kt and WidgetOptionsDialog.kt for touch: the gallery panel
+// Port of desktop 0.6.10 features/home/widgets/WidgetGallery.kt and WidgetOptionsDialog.kt for touch: the gallery panel
 // over the bottom of the Home (a tap adds a widget in the first vacant area), the pencil that opens it, the undo bar,
 // and a widget's options (a bottom sheet on a phone, a dialog of desktop's size on a tablet). Android only: the compact
 // page opens the edit mode from a button in its flow (no pencil over its widgets), and on a short screen the gallery
@@ -486,7 +486,14 @@ internal fun WidgetOptions(
             Spacer(Modifier.height(8.dp))
             HorizontalDivider(color = c.divider)
             Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+            // Flows: on a 240dp phone (Jelly Star) the two don't fit a line, and "סיום" squeezed beside the other broke a
+            // letter a line
+            FlowRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
                 io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton(HOME_WIDGETS_RESET, { state.resetSettings(widget) })
                 io.github.kdroidfilter.seforimapp.android.ui.components.AccentButton(HOME_WIDGETS_DONE, onClose)
             }
@@ -499,10 +506,11 @@ internal fun WidgetOptions(
     } else {
         Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             val shape = RoundedCornerShape(14.dp)
+            // Desktop's window size where it fits (a dialog opens from 600dp); a fraction after the cap took a tenth off
             body(
                 Modifier
-                    .sizeIn(maxWidth = 460.dp, maxHeight = 560.dp)
-                    .fillMaxWidth(0.9f)
+                    .sizeIn(maxWidth = widget.optionsSize.width, maxHeight = widget.optionsSize.height)
+                    .fillMaxWidth()
                     .clip(shape)
                     .background(c.panel)
                     .border(1.dp, c.panelBorder, shape)

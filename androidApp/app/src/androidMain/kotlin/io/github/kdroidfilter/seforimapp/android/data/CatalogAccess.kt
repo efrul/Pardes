@@ -24,7 +24,7 @@ internal object CatalogIds {
 }
 
 /**
- * Port of desktop 0.6.7 core/catalog/CatalogAccess.kt: per-category titles and book lists of the home catalog
+ * Port of desktop 0.6.10 core/catalog/CatalogAccess.kt: per-category titles and book lists of the home catalog
  * dropdowns, from catalog.pb (PrecomputedCatalog), with desktop's display rules:
  *  - "תלמוד" prefix on Bavli/Yerushalmi category titles;
  *  - "מפרשים" filter inside Mishneh Torah and its direct children;
