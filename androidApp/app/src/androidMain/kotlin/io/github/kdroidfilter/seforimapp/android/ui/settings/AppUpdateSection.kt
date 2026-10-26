@@ -133,6 +133,7 @@ private val AppUpdateState.quiet: Boolean
  * "בדוק שוב", as one quiet line; not yet checked, the check alone. Nothing in the other states, which [AppUpdateBanner]
  * shows, nor in a development build.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AppUpdateStatusLine() {
     val context = LocalContext.current
@@ -140,15 +141,19 @@ internal fun AppUpdateStatusLine() {
     val state by updater.state.collectAsState()
     val c = Zayit.colors
     if (!updater.canUpdate || !state.quiet) return
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Flows: beside the icon a phone's line is shorter than desktop's, and "בדוק שוב" squeezed into a Row broke in two
+    // (seen on Android 9); it goes under the status whole instead.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
         when {
-            state.phase == AppUpdateState.Phase.Checking -> {
+            state.phase == AppUpdateState.Phase.Checking -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CircularProgressIndicator(Modifier.size(14.dp), color = c.accent, strokeWidth = 2.dp)
                 Text(AppUpdateStrings.checking, fontSize = 13.sp, color = c.textSecondary)
             }
             state.upToDate -> {
-                Icon(Icons.Outlined.CheckCircle, null, tint = c.success, modifier = Modifier.size(14.dp))
-                Text(AppUpdateStrings.upToDate, fontSize = 13.sp, color = c.textSecondary)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Outlined.CheckCircle, null, tint = c.success, modifier = Modifier.size(14.dp))
+                    Text(AppUpdateStrings.upToDate, fontSize = 13.sp, color = c.textSecondary)
+                }
                 LinkText(AppUpdateStrings.checkAgain, updater::check)
             }
             else -> LinkText(AppUpdateStrings.check, updater::check)
