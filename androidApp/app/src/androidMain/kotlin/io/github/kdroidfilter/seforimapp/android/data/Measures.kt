@@ -6,7 +6,7 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
-// Port of the data part of desktop 0.6.7 features/home/widgets/measures/MeasuresWidget.kt, verbatim: the Torah's
+// Port of the data part of desktop 0.6.10 features/home/widgets/measures/MeasuresWidget.kt, verbatim: the Torah's
 // lengths, the opinions of what they are today and how long a mil takes to walk, each with the line of the library it
 // comes from, and the number formatting.
 

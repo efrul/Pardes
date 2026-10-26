@@ -62,7 +62,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import io.github.kdroidfilter.seforimapp.android.ui.workspaceName
 
 /*
- * Workspaces ("מרחבים"): desktop 0.6.7 core/presentation/components/DesktopSwitcher.kt. A tablet has desktop's
+ * Workspaces ("מרחבים"): desktop 0.6.10 core/presentation/components/DesktopSwitcher.kt. A tablet has desktop's
  * 110dp title-bar trigger (icon, name, ▾) with its dropdown; a phone shows the same trigger at the top of the open-tabs
  * page and the list in a bottom sheet. Rows: switch on tap, rename in place (8 letters at most), delete when there are
  * several, and "מרחב חדש" named after the next Hebrew numeral. Touch: the row actions are always visible.

@@ -140,7 +140,7 @@ data class PreviewLine(val line: Line, val ranges: List<IntRange>)
 data class PassagePreview(val hit: SearchResult, val lines: List<PreviewLine>)
 
 /**
- * Port of desktop 0.6.7 features/search/SearchResultViewModel.kt on the same Lucene engine:
+ * Port of desktop 0.6.10 features/search/SearchResultViewModel.kt on the same Lucene engine:
  * - a search runs its first page and the facets together; nothing in the base books widens it to all of them, and
  *   says so; a book or TOC scope (the bar's) is searched whole, and so are an author's books (0.6.5 1723de06 and
  *   9e3d19a8: kept through the category tabs and "more from this book", and when they are left);

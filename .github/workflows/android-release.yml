@@ -54,7 +54,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7
 
-      # Android compiles SeforimLibrary from the repository's submodule, at the commit desktop Zayit 0.6.7 builds with
+      # Android compiles SeforimLibrary from the repository's submodule, at the commit desktop Zayit 0.6.10 builds with
       # (7ddf045). SeforimAcronymizer is the desktop's only.
       - name: Check out SeforimLibrary
         run: git submodule update --init SeforimLibrary
@@ -221,7 +221,7 @@ jobs:
 
           $NOTE
 
-          פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.7 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
+          פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.10 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
 
           ### מה חדש בגרסה $VERSION
           $(cat "$RUNNER_TEMP/whatsnew.md")

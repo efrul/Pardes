@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -73,15 +74,16 @@ import io.github.kdroidfilter.seforimapp.android.ui.AppUiState
 import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.Tab
+import io.github.kdroidfilter.seforimapp.android.ui.notes.rememberUserNotes
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import kotlinx.coroutines.launch
 
 /*
- * The title bar's two lists: desktop 0.6.7 core/presentation/components/TabSearchPopup.kt (the clock: open tabs and the
- * 12 latest history entries, searchable, with "הצג את כל ההיסטוריה") and FavoritesPopup.kt (the star). A tablet shows
- * them as desktop's 340dp popup under the button ([TitleBarPopup]); a phone as a bottom sheet ([ShellSheet]) from the
- * overflow menu.
+ * The title bar's lists: desktop 0.6.10 core/presentation/components/TabSearchPopup.kt (the clock: open tabs and the
+ * 12 latest history entries, searchable, with "הצג את כל ההיסטוריה"), FavoritesPopup.kt (the star) and NotesPopup.kt
+ * (the notes, since 0.6.10). A tablet shows them as desktop's 340dp popup under the button ([TitleBarPopup]); a phone
+ * as a bottom sheet ([ShellSheet]) from the overflow menu.
  */
 
 private const val POPUP_HISTORY_LIMIT = 12
@@ -280,6 +282,46 @@ fun ColumnScope.FavoritesMenuContent(appVm: AppViewModel, tablet: Boolean, onDis
     }
     PopupFooterRow("הצג את כל המועדפים", Icons.Outlined.StarOutline, if (tablet) "Ctrl+Shift+O" else null) {
         appVm.showPage(Destination.Favorites)
+        onDismiss()
+    }
+}
+
+/**
+ * The notes menu (desktop 0.6.10 NotesPopup, 219899c0 and 48a1ed1b), the favorites menu's counterpart: a search field,
+ * the notes grouped by book, the book of the latest note first, and a footer leading to the full notes page
+ * ([onShowAll]). A note opens its book on its line with the notes pane showing it, in a new tab.
+ */
+@Composable
+fun ColumnScope.NotesMenuContent(appVm: AppViewModel, tablet: Boolean, onShowAll: () -> Unit, onDismiss: () -> Unit) {
+    val userNotes = rememberUserNotes()
+    var query by remember { mutableStateOf("") }
+    // Books in the order of their latest note (the notes come newest first)
+    val byBook = remember(userNotes, query) { userNotes?.matching(query).orEmpty().groupBy { it.bookId }.toList() }
+    val focus = remember { FocusRequester() }
+    if (tablet) LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+
+    PageSearchField(query, { query = it }, "חיפוש בהערות", focus)
+    LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = if (tablet) 380.dp else 460.dp)) {
+        byBook.forEach { (bookId, notes) ->
+            val title = userNotes?.bookTitles?.get(bookId).orEmpty()
+            item(key = "book-$bookId") { PopupSectionHeader(title) }
+            items(notes, key = { "note-${it.bookId}-${it.id}" }) { note ->
+                PopupRow(note.note, Icons.Outlined.EditNote, onClick = {
+                    appVm.openInNewTab(Destination.Book(note.bookId, note.lineId, title, openNotes = true), title)
+                    onDismiss()
+                })
+            }
+        }
+        if (userNotes != null && byBook.isEmpty()) {
+            item(key = "empty") {
+                Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    Text("אין הערות", fontSize = 13.sp, color = Zayit.colors.textSecondary)
+                }
+            }
+        }
+    }
+    PopupFooterRow("הצג את כל ההערות", Icons.Outlined.EditNote, null) {
+        onShowAll()
         onDismiss()
     }
 }

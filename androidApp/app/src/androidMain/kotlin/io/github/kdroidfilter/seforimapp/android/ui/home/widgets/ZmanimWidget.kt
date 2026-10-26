@@ -46,7 +46,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Port of desktop 0.6.7 features/home/widgets/zmanim/ZmanimWidget.kt: the day's cards (moments half a slot, dual
+// Port of desktop 0.6.10 features/home/widgets/zmanim/ZmanimWidget.kt: the day's cards (moments half a slot, dual
 // cards one, mincha one and a half and only from 443 dp), five columns or four when a card would be under 99 dp, rows
 // shared out evenly, titles shortened when they don't fit, and a tap on a time points every widget at it. Android
 // adds one rule: under 300 dp (the Jelly Star) a row holds two slots, so the dual cards stay readable.

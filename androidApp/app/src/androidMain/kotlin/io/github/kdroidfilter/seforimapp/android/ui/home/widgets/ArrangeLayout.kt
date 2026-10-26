@@ -3,7 +3,7 @@ package io.github.kdroidfilter.seforimapp.android.ui.home.widgets
 import kotlin.math.abs
 import kotlin.random.Random
 
-// Verbatim port of desktop 0.6.7 features/home/widgets/ArrangeLayout.kt.
+// Verbatim port of desktop 0.6.10 features/home/widgets/ArrangeLayout.kt.
 // The Home's "arrange": the widgets laid out again, resized within their limits, so the grid has as few holes as can
 // be and is as short as can be. The layout is rows across the whole grid; a row is columns side by side, all of the
 // row's height, a column one widget or a few stacked at the same width. Over every way of dealing the widgets into

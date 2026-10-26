@@ -161,7 +161,7 @@ private val ShortHeight = 600.dp
 /** Desktop AppSettings.increaseTextSize / decreaseTextSize step. */
 private const val ZOOM_STEP = 2f
 
-// Desktop 0.6.7 strings.
+// Desktop 0.6.10 strings.
 private const val SEARCH_SEARCHING = "מחפש..."
 private const val SEARCH_NO_RESULTS = "לא נמצאו תוצאות"
 private const val SEARCH_MORE_FROM_BOOK = "עוד %1\$d תוצאות מ%2\$s"
@@ -192,7 +192,7 @@ private const val SEARCH_FAILED = "החיפוש נכשל"
 private fun String.fill(vararg args: Any): String = String.format(Locale.ROOT, this, *args)
 
 /**
- * The search results page, a port of desktop 0.6.7 features/search/SearchResultScreen.kt (and TabsContent's search tab
+ * The search results page, a port of desktop 0.6.10 features/search/SearchResultScreen.kt (and TabsContent's search tab
  * wiring): one card with the logo's branch beside the shared smart bar, the category tabs, the way back from one book,
  * the status line, then the results grouped by runs of a book with their "more" links. From [TwoPanesMinWidth] the
  * selected result is read beside the list (PassagePreview, the knowledge panel above it), as on desktop; narrower, a

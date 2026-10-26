@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * The desktop search on the installed library: the same prebuilt Lucene indexes and dictionary that the desktop app
- * keeps next to seforim.db (wired like the 0.6.7 AppCoreBindings provideSearchEngine and
+ * keeps next to seforim.db (wired like the 0.6.10 AppCoreBindings provideSearchEngine and
  * provideLuceneLookupSearchService, as the community build: lexical only, no semantic hybrid). Nothing is built on the
  * device; when the files are missing, [engine] and [lookup] return null and the UI explains how to get them.
  */

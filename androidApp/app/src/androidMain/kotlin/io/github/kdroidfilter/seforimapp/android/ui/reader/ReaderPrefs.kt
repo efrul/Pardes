@@ -6,13 +6,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * The reader's own persisted switches (desktop AppSettings.bookDetailsPaneFlow, on by default, and the commentaries
- * pane's isCommentatorsListVisible), apart from AppPrefs: one setting for every tab, as desktop.
+ * The reader's own persisted switches (desktop AppSettings.bookDetailsPaneFlow, off by default since 0.6.10 ff23a749,
+ * and the commentaries pane's isCommentatorsListVisible), apart from AppPrefs: one setting for every tab, as desktop.
  */
 class ReaderPrefs private constructor(context: Context) {
     private val sp = context.getSharedPreferences("zayit_reader", Context.MODE_PRIVATE)
 
-    private val _bookDetails = MutableStateFlow(sp.getBoolean(KEY_BOOK_DETAILS, true))
+    private val _bookDetails = MutableStateFlow(sp.getBoolean(KEY_BOOK_DETAILS, false))
 
     /** The tablet's book-details pane (desktop "פרטי הספר" end-rail toggle). */
     val bookDetails: StateFlow<Boolean> = _bookDetails.asStateFlow()

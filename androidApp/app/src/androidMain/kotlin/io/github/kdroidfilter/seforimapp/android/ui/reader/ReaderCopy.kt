@@ -7,7 +7,7 @@ import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import org.jsoup.Jsoup
 import java.net.URLEncoder
 
-// Ports of desktop 0.6.7 core/CopyWithSource.kt, core/BookErrorReport.kt and core/annotations/HighlightSelectionResolver.kt.
+// Ports of desktop 0.6.10 core/CopyWithSource.kt, core/BookErrorReport.kt and core/annotations/HighlightSelectionResolver.kt.
 
 private val WHITESPACE_REGEX = Regex("\\s+")
 private const val MIN_EDGE_OVERLAP = 8

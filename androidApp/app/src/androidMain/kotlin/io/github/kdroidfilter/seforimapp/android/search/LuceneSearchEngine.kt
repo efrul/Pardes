@@ -1,5 +1,5 @@
 // Android variant of the SeforimLibrary file search/src/jvmMain/.../LuceneSearchEngine.kt (submodule
-// SeforimLibrary at 7ddf045, desktop Zayit 0.6.7), which app/build.gradle.kts excludes. A diff against it stays small:
+// SeforimLibrary at 7ddf045, desktop Zayit 0.6.10), which app/build.gradle.kts excludes. A diff against it stays small:
 //  - the index is always opened with NIOFSDirectory: FSDirectory.open picks MMapDirectory, which needs
 //    java.lang.foreign (absent on Android);
 //  - lexical.db is only looked up next to the index: Path.of is API 34+, and the desktop system property,

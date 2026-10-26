@@ -226,7 +226,7 @@ private class ClosedTab(val tab: Tab, val state: TabState?)
 private class LinkReturn(val tabId: String, val overlays: List<Overlay>, val epoch: Int)
 
 /**
- * The tabbed browser shared by every screen. Mirrors desktop 0.6.7 (what changed here since 0.6.1, pinned tabs first
+ * The tabbed browser shared by every screen. Mirrors desktop 0.6.10 (what changed here since 0.6.1, pinned tabs first
  * (1d50541d) and the app's last tab giving way to a fresh Home tab (aa87fa66), was already so on Android):
  * - seforim/tabs/TabsViewModel.kt: open next to the opener, replace, close (a pinned tab on a second press), the bulk
  *   closes that skip pinned tabs, pin;

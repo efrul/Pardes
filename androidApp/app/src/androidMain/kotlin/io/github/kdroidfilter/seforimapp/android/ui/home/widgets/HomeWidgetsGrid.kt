@@ -79,7 +79,7 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /*
- * Port of desktop 0.6.7 features/home/widgets/HomeWidgetsGrid.kt. The grid itself (CellArea), its drag-over logic
+ * Port of desktop 0.6.10 features/home/widgets/HomeWidgetsGrid.kt. The grid itself (CellArea), its drag-over logic
  * (Launcher3's: drop outline, reorder alarm, the widgets in the way making room) and the resize frames are desktop's;
  * a touch moves a widget after a long press (in edit mode), and the lifted/leaving animations are left out. Below
  * COMPACT_GRID_WIDTH (every phone, 240 dp included) the widgets go one per row in reading order as on desktop, or two

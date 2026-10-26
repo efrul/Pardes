@@ -68,10 +68,45 @@ import java.util.Locale
 
 private fun noteDate(millis: Long): String = SimpleDateFormat("d.M.yyyy", Locale.US).format(Date(millis))
 
+/** The user's notes, the most recently written first, with the titles of their books (desktop 0.6.10 UserNotes). */
+internal data class UserNotes(
+    val notes: List<UserNote> = emptyList(),
+    val bookTitles: Map<Long, String> = emptyMap(),
+) {
+    /** The notes whose text, passage or book contains [query]; all of them for a blank one. */
+    fun matching(query: String): List<UserNote> {
+        val q = query.trim()
+        if (q.isEmpty()) return notes
+        return notes.filter { n -> n.note.contains(q, ignoreCase = true) || n.quote.contains(q, ignoreCase = true) || bookTitles[n.bookId].orEmpty().contains(q, ignoreCase = true) }
+    }
+}
+
 /**
- * "ההערות שלי", the user's notes of every book (desktop 0.6.7 features/notes/NotesScreen.kt): grouped by book, the
+ * All the user's notes, read again on every write, off the UI thread (desktop rememberUserNotes, shared since 0.6.10 by
+ * the notes page and the notes menu); null until first read.
+ */
+@Composable
+internal fun rememberUserNotes(): UserNotes? {
+    val app = LocalContext.current.applicationContext as ZayitApplication
+    val written by app.userData.revision.collectAsState()
+    val loaded by produceState<UserNotes?>(null, written) {
+        value = withContext(Dispatchers.IO) {
+            val notes = runCatching { app.userData.allNotes() }.getOrDefault(emptyList())
+            // The book's name is a nicety: a note still shows, and opens, without the books DB
+            val titles = notes.map { it.bookId }.distinct().associateWith { id ->
+                runCatching { app.libraryStore.repository().getBookCore(id)?.title }.getOrNull().orEmpty()
+            }
+            UserNotes(notes, titles)
+        }
+    }
+    return loaded
+}
+
+/**
+ * "ההערות שלי", the user's notes of every book (desktop 0.6.10 features/notes/NotesScreen.kt): grouped by book, the
  * book of the latest note first, searchable by note, passage or book ("חיפוש בהערות"); opening one opens its book on
- * its line with the notes pane showing it ([onOpen] gets book, line and title). A full-screen page over the tabs.
+ * its line with the notes pane showing it ([onOpen] gets book, line and title). A full-screen page over the tabs, and
+ * already scrolled as desktop's became in 0.6.10 (219899c0).
  */
 @Composable
 fun NotesPage(onOpen: (bookId: Long, lineId: Long, title: String) -> Unit, onDismiss: () -> Unit) {
@@ -96,26 +131,10 @@ fun NotesPage(onOpen: (bookId: Long, lineId: Long, title: String) -> Unit, onDis
 private fun NotesContent(onOpen: (Long, Long, String) -> Unit) {
     val app = LocalContext.current.applicationContext as ZayitApplication
     val scope = rememberCoroutineScope()
-    val written by app.userData.revision.collectAsState()
-    val loaded by produceState<Pair<List<UserNote>, Map<Long, String>>?>(null, written) {
-        value = withContext(Dispatchers.IO) {
-            val notes = runCatching { app.userData.allNotes() }.getOrDefault(emptyList())
-            val titles = notes.map { it.bookId }.distinct().associateWith { id ->
-                runCatching { app.libraryStore.repository().getBookCore(id)?.title }.getOrNull().orEmpty()
-            }
-            notes to titles
-        }
-    }
+    val loaded = rememberUserNotes()
     var query by rememberSaveable { mutableStateOf("") }
-    val (notes, titles) = loaded ?: (emptyList<UserNote>() to emptyMap())
-    val shown = remember(notes, titles, query) {
-        val q = query.trim()
-        if (q.isEmpty()) {
-            notes
-        } else {
-            notes.filter { n -> n.note.contains(q, ignoreCase = true) || n.quote.contains(q, ignoreCase = true) || titles[n.bookId].orEmpty().contains(q, ignoreCase = true) }
-        }
-    }
+    val titles = loaded?.bookTitles.orEmpty()
+    val shown = remember(loaded, query) { loaded?.matching(query).orEmpty() }
     BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.navigationBars), contentAlignment = Alignment.TopCenter) {
         val wide = maxWidth >= 840.dp
         LazyColumn(

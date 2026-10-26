@@ -57,7 +57,7 @@ import io.github.kdroidfilter.seforimapp.android.update.AppUpdateStrings
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 
 /*
- * The pages of desktop 0.6.7's settings window (features/settings/ui): GeneralSettingsScreen, DisplaySettingsScreen,
+ * The pages of desktop 0.6.10's settings window (features/settings/ui): GeneralSettingsScreen, DisplaySettingsScreen,
  * ProfileSettingsScreen and FontsSettingsScreen. DataSettings.kt and AboutSettings.kt hold the other three.
  */
 
@@ -112,8 +112,9 @@ internal fun GeneralSettings(wide: Boolean) {
 
 /**
  * Desktop AppHeader for Pardes: the update banner (desktop UpdateStatusBanner: [AppUpdateBanner], from Pardes' own
- * releases), icon, name and version, a credit link to Zayit instead of desktop's "נוצר על ידי", the disclaimer, the
- * licence lines with a link to this app's own source (AGPL §6) and the AGPL §7(b) attribution.
+ * releases), icon, name and version with the quiet update line under it ([AppUpdateStatusLine]), a credit link to Zayit
+ * instead of desktop's "נוצר על ידי", the disclaimer, the licence lines with a link to this app's own source (AGPL §6)
+ * and the AGPL §7(b) attribution.
  */
 @Composable
 private fun AppHeaderCard() {
@@ -129,6 +130,7 @@ private fun AppHeaderCard() {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("פרדס", fontSize = 22.sp, color = c.text)
                 Text("גרסה $version", fontSize = 13.sp, color = c.textSecondary)
+                AppUpdateStatusLine()
                 LinkText("מבוסס על זית מאת אליהו גמבש", { uri.openSafely("https://github.com/kdroidFilter/Zayit") })
             }
         }

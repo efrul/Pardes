@@ -36,7 +36,7 @@ enum class VisitKind { BOOK, SEARCH }
  * `visitedAt`/`visitCount`. Reads are on-demand SQL queries; [revision] bumps on every write so UI can re-run its
  * current query.
  *
- * Verbatim port of desktop 0.6.7 `core/history/HistoryStore.kt`: 0.6.1's with the 0.6.5 author scope (1723de06: the
+ * Verbatim port of desktop 0.6.10 `core/history/HistoryStore.kt`: 0.6.1's with the 0.6.5 author scope (1723de06: the
  * author's id is in the key only), its only change since.
  */
 class HistoryStore(database: UserSettingsDb) {

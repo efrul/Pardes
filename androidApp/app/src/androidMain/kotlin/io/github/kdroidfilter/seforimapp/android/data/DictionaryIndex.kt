@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
-// Port of the data part of desktop 0.6.7 features/home/widgets/library/DictionaryWidget.kt: the library's dictionaries,
+// Port of the data part of desktop 0.6.10 features/home/widgets/library/DictionaryWidget.kt: the library's dictionaries,
 // each parsed with its own rule, normalised and looked up as desktop does. Android adds a disk cache of the parsed
 // entries (v2), so a phone reads each dictionary book once per library, not once per launch.
 
