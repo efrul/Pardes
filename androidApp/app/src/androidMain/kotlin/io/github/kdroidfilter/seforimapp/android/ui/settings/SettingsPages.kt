@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -122,16 +123,26 @@ private fun AppHeaderCard() {
     val context = LocalContext.current
     val uri = LocalUriHandler.current
     val version = remember { appVersion(context) }
+    val texts: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("פרדס", fontSize = 22.sp, color = c.text)
+            Text("גרסה $version", fontSize = 13.sp, color = c.textSecondary)
+            AppUpdateStatusLine()
+            LinkText("מבוסס על זית מאת אליהו גמבש", { uri.openSafely("https://github.com/kdroidFilter/Zayit") })
+        }
+    }
     SettingsCard {
         AppUpdateBanner()
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Beside the icon a 240dp phone (Jelly Star) left them some 90dp, the update line a word a line: there they go
+        // under it
+        if (LocalConfiguration.current.screenWidthDp < 300) {
             AppIcon()
-            HSpacer(16.dp)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("פרדס", fontSize = 22.sp, color = c.text)
-                Text("גרסה $version", fontSize = 13.sp, color = c.textSecondary)
-                AppUpdateStatusLine()
-                LinkText("מבוסס על זית מאת אליהו גמבש", { uri.openSafely("https://github.com/kdroidFilter/Zayit") })
+            texts()
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppIcon()
+                HSpacer(16.dp)
+                texts()
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
