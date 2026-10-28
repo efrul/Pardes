@@ -45,8 +45,14 @@ Powered by the technologies that drive Zayit — https://zayitapp.com/
 - **Sentry Java SDK**. Copyright (c) 2019 Sentry. MIT: [Sentry-LICENSE.txt](Sentry-LICENSE.txt).
 - **KosherKotlin**. kdroidFilter, Sternbach-Software, after KosherJava by Eliyahu Hershfeld. GNU LGPL v2.1: [LGPL-2.1.txt](LGPL-2.1.txt).
 - **HebrewNumerals**. kdroidFilter. Apache License 2.0: [Apache-2.0.txt](Apache-2.0.txt).
+- **ONNX Runtime**, הרצת המודל של החיפוש הסמנטי. Copyright (c) Microsoft Corporation. MIT: [ONNX-Runtime-LICENSE.txt](ONNX-Runtime-LICENSE.txt). הרכיבים של אחרים שהוא כולל: [ONNX-Runtime-ThirdPartyNotices.txt](ONNX-Runtime-ThirdPartyNotices.txt).
+- **JSON-java** (org.json). Sean Leary. נחלת הכלל.
 
 הספריות שברישיון LGPL אפשר להחליף: קוד המקור המלא של פרדס מאפשר לבנות אותו מחדש עם גרסה משונה שלהן.
+
+### המודל של החיפוש הסמנטי
+
+- **neodictabert-bilingual-embed** של דיקטה, המרכז הישראלי לניתוח טקסטים: https://huggingface.co/dicta-il/neodictabert-bilingual-embed. CC BY 4.0: https://creativecommons.org/licenses/by/4.0/. פרדס המיר אותו ל־ONNX (עם ה־pooling בגרף) וכימת אותו ל־int8, ובגרסאות שאומנו על הספרייה גם המשיך לאמן אותו על הקישורים שבה. דיקטה אינם קשורים לפרדס ואינם נותנים לו תמיכה.
 
 ### אייקונים
 
