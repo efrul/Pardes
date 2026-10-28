@@ -161,7 +161,7 @@ private val ShortHeight = 600.dp
 /** Desktop AppSettings.increaseTextSize / decreaseTextSize step. */
 private const val ZOOM_STEP = 2f
 
-// Desktop 0.6.10 strings.
+// Desktop 0.6.11 strings.
 private const val SEARCH_SEARCHING = "מחפש..."
 private const val SEARCH_NO_RESULTS = "לא נמצאו תוצאות"
 private const val SEARCH_MORE_FROM_BOOK = "עוד %1\$d תוצאות מ%2\$s"
@@ -192,7 +192,7 @@ private const val SEARCH_FAILED = "החיפוש נכשל"
 private fun String.fill(vararg args: Any): String = String.format(Locale.ROOT, this, *args)
 
 /**
- * The search results page, a port of desktop 0.6.10 features/search/SearchResultScreen.kt (and TabsContent's search tab
+ * The search results page, a port of desktop 0.6.11 features/search/SearchResultScreen.kt (and TabsContent's search tab
  * wiring): one card with the logo's branch beside the shared smart bar, the category tabs, the way back from one book,
  * the status line, then the results grouped by runs of a book with their "more" links. From [TwoPanesMinWidth] the
  * selected result is read beside the list (PassagePreview, the knowledge panel above it), as on desktop; narrower, a
@@ -515,7 +515,8 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
                         listItems.isEmpty() && !entityCard -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(if (state.isLoading) SEARCH_SEARCHING else SEARCH_NO_RESULTS, fontSize = (textSize * 0.875f).sp, color = c.text)
                         }
-                        else -> LazyColumn(
+                        // The list follows the reading text's zoom, as the passage beside it (desktop 0.6.11)
+                        else -> CompositionLocalProvider(LocalResultTextScale provides textSize / AppPrefs.DEFAULT_TEXT_SIZE) { LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize().padding(start = 8.dp, end = if (wide) 16.dp else 8.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -559,7 +560,7 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
                             }
                             // The next page's spinner (lazy loading only)
                             if (state.isLoadingMore) item(key = "more") { LoadingBox(Modifier.fillMaxWidth().height(64.dp)) }
-                        }
+                        } }
                     }
                     // Loader over the shown results while a filter (category tab, one book) applies
                     if (state.isFiltering) {
@@ -745,33 +746,48 @@ private fun SearchStatusLine(
     }
 }
 
+/** The results' top categories as tabs (desktop CategoryTabs), the most frequent first. */
+@Composable
+private fun CategoryTabs(categories: List<SearchTreeCategory>, selectedIds: Set<Long>, compact: Boolean, wide: Boolean, onShowOnly: (Long?) -> Unit) {
+    val sorted = remember(categories) { categories.sortedByDescending { it.count }.map { it.category.id to it.category.title } }
+    val selected = sorted.firstOrNull { it.first in selectedIds }?.first
+    FilterTabs(sorted, selected, compact, wide, onShowOnly)
+}
+
 /**
- * The results' top categories as tabs, as Google's "All · Images · News": "הכל", the five most frequent, the rest
- * behind "עוד". One at a time. On a narrow phone, all of them on one scrolling line. Desktop CategoryTabs.
+ * Tabs that filter a result list (desktop 0.6.11 FilterTabs), as Google's "All · Images · News": "הכל", then the first
+ * five of [tabs] (id to title, most frequent first), the rest behind an "עוד" link. One at a time. On a narrow phone
+ * ([compact]), all of them on one scrolling line. Shared by the results and the reader's places panes.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CategoryTabs(categories: List<SearchTreeCategory>, selectedIds: Set<Long>, compact: Boolean, wide: Boolean, onShowOnly: (Long?) -> Unit) {
-    val sorted = remember(categories) { categories.sortedByDescending { it.count } }
-    val selected = sorted.firstOrNull { it.category.id in selectedIds }?.category?.id
-    var showAll by remember(categories) { mutableStateOf(false) }
+internal fun FilterTabs(tabs: List<Pair<Long, String>>, selected: Long?, compact: Boolean, wide: Boolean, onSelect: (Long?) -> Unit, modifier: Modifier = Modifier) {
+    var showAll by remember(tabs) { mutableStateOf(false) }
     if (compact) {
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            item { CategoryTab(SEARCH_TAB_ALL, selected == null, wide) { onShowOnly(null) } }
-            items(sorted, key = { it.category.id }) { node -> CategoryTab(node.category.title, selected == node.category.id, wide) { onShowOnly(node.category.id) } }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.fillMaxWidth()) {
+            item { FilterTab(SEARCH_TAB_ALL, selected == null, wide) { onSelect(null) } }
+            items(tabs, key = { it.first }) { (id, title) -> FilterTab(title, selected == id, wide) { onSelect(id) } }
         }
         return
     }
-    val shown = if (showAll) sorted else sorted.take(TOP_TABS) + sorted.drop(TOP_TABS).filter { it.category.id == selected }
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-        CategoryTab(SEARCH_TAB_ALL, selected == null, wide) { onShowOnly(null) }
-        shown.forEach { node -> CategoryTab(node.category.title, selected == node.category.id, wide) { onShowOnly(node.category.id) } }
-        if (sorted.size > TOP_TABS) CategoryTab(if (showAll) SEARCH_TABS_LESS else SEARCH_TABS_MORE, false, wide) { showAll = !showAll }
+    val shown = if (showAll) tabs else tabs.take(TOP_TABS) + tabs.drop(TOP_TABS).filter { it.first == selected }
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        FilterTab(SEARCH_TAB_ALL, selected == null, wide) { onSelect(null) }
+        shown.forEach { (id, title) -> FilterTab(title, selected == id, wide) { onSelect(id) } }
+        // Not a tab: a link, in the accent as the other links of the results
+        if (tabs.size > TOP_TABS) {
+            ResultLink(if (showAll) SEARCH_TABS_LESS else SEARCH_TABS_MORE, Zayit.colors.accent, 13.sp, minHeight = if (wide) 28.dp else 34.dp) { showAll = !showAll }
+        }
     }
 }
 
 @Composable
-private fun CategoryTab(label: String, selected: Boolean, wide: Boolean, onClick: () -> Unit) {
+private fun FilterTab(label: String, selected: Boolean, wide: Boolean, onClick: () -> Unit) {
     val c = Zayit.colors
     val shape = RoundedCornerShape(50)
     Box(
@@ -835,68 +851,19 @@ private fun ResultView(
     onMoreInBook: () -> Unit,
 ) {
     val hit = item.hit
-    val c = Zayit.colors
-    val ink = c.text
-    val grey = readingSecondary()
-    val accent = c.accent
     val currentOnRequestBreadcrumb by rememberUpdatedState(onRequestBreadcrumb)
     LaunchedEffect(hit.lineId) { if (pieces == null) currentOnRequestBreadcrumb(hit) }
     val place = remember(pieces, hit.bookTitle) { categoriesAndPlace(pieces, hit.bookTitle).second }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (selected) accent.copy(alpha = 0.10f) else Color.Transparent)
-            .drawBehind {
-                // The selected row's bar, on its start side
-                if (selected) {
-                    val bar = 3.dp.toPx()
-                    val x = if (layoutDirection == LayoutDirection.Rtl) size.width - bar else 0f
-                    drawRect(accent, topLeft = Offset(x, 0f), size = Size(bar, size.height))
-                }
-            }
-            // A double-tap handler holds every single tap back for the double-tap timeout: two panes only, where a
-            // tap selects; on a phone a tap opens at once
-            .combinedClickable(onDoubleClick = if (twoPanes) ({ onOpen(hit) }) else null, onClick = { onClick(hit) }),
-    ) {
-        Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(hit.bookTitle, color = ink, fontSize = if (wide) 14.sp else 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (place != null) {
-                    Text("· $place", color = grey, fontSize = if (wide) 12.sp else 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                }
-            }
-            Snippet(hit, findQuery, wide, compact)
-            if (item.more > 0) {
-                ResultLink(SEARCH_MORE_FROM_BOOK.fill(item.more, hit.bookTitle), accent, if (wide) 11.sp else 13.sp, minHeight = if (wide) 0.dp else 36.dp, onClick = onMoreInBook)
-            }
+    // A double-tap handler holds every single tap back for the double-tap timeout: two panes only, where a tap
+    // selects; on a phone a tap opens at once
+    ResultRow(selected = selected, onClick = { onClick(hit) }, onDoubleClick = if (twoPanes) ({ onOpen(hit) }) else null) {
+        ResultTitle(hit.bookTitle, place, wide)
+        // Two lines of the passage (three on a narrow phone)
+        SnippetText(hit.snippet, findQuery, wide, maxLines = if (compact) 3 else 2)
+        if (item.more > 0) {
+            ResultLink(SEARCH_MORE_FROM_BOOK.fill(item.more, hit.bookTitle), Zayit.colors.accent, resultSp(if (wide) 11f else 13f), minHeight = if (wide) 0.dp else 36.dp, onClick = onMoreInBook)
         }
-        Box(Modifier.fillMaxWidth().padding(start = 8.dp).height(1.dp).background(c.panelBorder.copy(alpha = 0.5f)))
     }
-}
-
-/** A passage: two lines of grey text (three on a narrow phone), the matched words bold in the text's colour. */
-@Composable
-private fun Snippet(hit: SearchResult, findQuery: String, wide: Boolean, compact: Boolean) {
-    val c = Zayit.colors
-    val ink = c.text
-    val size = if (wide) 13f else 14f
-    val findHighlight = c.accent.copy(alpha = 0.12f)
-    val display = remember(hit.snippet, size, ink, wide, findQuery, findHighlight) {
-        // A phone shows fewer words a line: the text before the first hit is shortened so the hit is in view
-        val html = if (wide) hit.snippet else compactSnippet(hit.snippet)
-        buildAnnotatedFromHtml(html, size, boldColor = ink).highlightMatches(findQuery, findHighlight)
-    }
-    Text(
-        text = display,
-        color = readingSecondary(),
-        fontSize = size.sp,
-        fontFamily = ZayitFonts.ui,
-        lineHeight = (size * 1.65f).sp,
-        maxLines = if (compact) 3 else 2,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(vertical = 2.dp),
-    )
 }
 
 /**
