@@ -1,0 +1,102 @@
+name: Semantic Model
+
+# The open semantic model (semantic-model/): exports dicta-il/neodictabert-bilingual-embed to the app's int8 ONNX
+# model, and optionally measures it on the library (lexical vs dense vs hybrid) on CPU. Manual only; the results are
+# private artifacts, never a release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: 'Also run the benchmark on the library (~2 h on a CPU runner)'
+        type: boolean
+        default: true
+      queries:
+        description: 'Benchmark queries per task'
+        type: string
+        default: '300'
+      release:
+        description: 'SeforimLibrary release tag (empty: the latest)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semantic-model
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+    working-directory: semantic-model
+
+jobs:
+  model:
+    name: Export and benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        # The library database is 8 GB; the runner's preinstalled toolchains are not needed here
+        working-directory: .
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: semantic-model/requirements.txt
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Export the ONNX model
+        run: python export_onnx.py --out build/model
+
+      - name: Upload the model
+        uses: actions/upload-artifact@v4
+        with:
+          name: pardes-model
+          path: semantic-model/build/model
+          retention-days: 30
+
+      - name: Fetch the library
+        if: inputs.benchmark
+        run: python fetch_library.py --out build/library ${{ inputs.release && format('--release {0}', inputs.release) || '' }}
+
+      - name: Build the benchmark
+        if: inputs.benchmark
+        run: python build_eval_set.py --db build/library/seforim.db --out build/eval --queries "${{ inputs.queries }}"
+
+      - name: Embed the benchmark corpus
+        if: inputs.benchmark
+        run: python embed_corpus.py --corpus build/eval/corpus.jsonl --backend onnx --model build/model --out build/eval/vectors
+
+      - name: Evaluate
+        if: inputs.benchmark
+        run: |
+          python evaluate.py --eval build/eval --vectors build/eval/vectors --model build/model --out build/eval/report
+          python evaluate.py --eval build/eval --vectors build/eval/vectors --model build/model --prefix "" --out build/eval/report-no-prefix
+          {
+            echo "## With the query prefix"; cat build/eval/report/report.md
+            echo "## Without it"; cat build/eval/report-no-prefix/report.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the benchmark
+        if: inputs.benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-benchmark
+          path: |
+            semantic-model/build/eval/report
+            semantic-model/build/eval/report-no-prefix
+            semantic-model/build/eval/queries.jsonl
+          retention-days: 30
