@@ -51,7 +51,6 @@ import seforimapp.seforimapp.generated.resources.semantic_pack_dismiss
 import seforimapp.seforimapp.generated.resources.semantic_pack_download
 import seforimapp.seforimapp.generated.resources.semantic_pack_downloading
 import seforimapp.seforimapp.generated.resources.semantic_pack_import
-import seforimapp.seforimapp.generated.resources.semantic_pack_import_hint
 import seforimapp.seforimapp.generated.resources.semantic_pack_installed
 import seforimapp.seforimapp.generated.resources.semantic_pack_installed_unnumbered
 import seforimapp.seforimapp.generated.resources.semantic_pack_no_index
@@ -216,9 +215,6 @@ private fun PackSection(
                     }
                 }
             }
-        }
-        if (!state.busy && work != SemanticPackViewModel.Work.Ready) {
-            Text(text = stringResource(Res.string.semantic_pack_import_hint), fontSize = 12.sp, color = JewelTheme.globalColors.text.info)
         }
     }
 }
