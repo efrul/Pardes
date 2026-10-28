@@ -1,0 +1,33 @@
+--- a/LuceneSearchEngine.kt
++++ b/LuceneSearchEngine.kt
+@@ -92,7 +92,11 @@
+                     slices(leaves, docsPerSlice, Int.MAX_VALUE, true)
+             }
+         }
+-        return searcher.apply { queryCachingPolicy = StableFiltersCachingPolicy }
++        return searcher.apply {
++            queryCachingPolicy = StableFiltersCachingPolicy
++            // Harness only (semantic-model/search-order): BM25's k1 and b from Bm25Knob
++            similarity = Bm25Knob.Delegate
++        }
+     }
+ }
+ 
+@@ -727,7 +731,7 @@
+                 logger.d { "[DEBUG] Added mustAllTokensQuery as FILTER" }
+             }
+             if (phraseQuery != null && analyzedStd.size >= 2) {
+-                if (near == 0) require(phraseQuery, BooleanClause.Occur.MUST) else builder.add(phraseQuery, BooleanClause.Occur.SHOULD)
++                if (near == 0 || Bm25Knob.requireNear) require(phraseQuery, BooleanClause.Occur.MUST) else builder.add(phraseQuery, BooleanClause.Occur.SHOULD)
+                 logger.d { "[DEBUG] Added phraseQuery, near=$near" }
+             }
+             builder.add(rankedQuery, BooleanClause.Occur.SHOULD)
+@@ -789,7 +793,7 @@
+             val baseScore = meta.sd.score
+ 
+             // Calculate boost: lower orderIndex = higher boost (only for base books)
+-            val boostedScore = if (meta.isBaseBook) {
++            val boostedScore = if (meta.isBaseBook && Bm25Knob.orderBoost) {
+                 // Formula: boost = baseScore * (1 + (120 - orderIndex) / 60)
+                 // orderIndex 1 gets ~3x boost, orderIndex 50 gets ~2.2x boost, orderIndex 100+ gets ~1.3x boost
+                 val boostFactor = 1.0f + (120 - meta.orderIndex).coerceAtLeast(0) / 60.0f

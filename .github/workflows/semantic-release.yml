@@ -1,0 +1,129 @@
+name: Semantic pack release
+
+# Publishes a pack of the semantic search (חיפוש לפי משמעות) as a release of this repository: the query model
+# (pardes-model/) and the vector index of the whole library (pardes.vec.lucene/), packed by semantic-model/package_pack.py
+# and kept in a private Kaggle dataset. docs/SEMANTIC_PLAN.md says why. The app installs a pack itself (Settings › ניהול
+# נתונים › חיפוש לפי משמעות, SeforimApp/.../features/search/semantic/pack/): it finds the newest semantic-* release for
+# its library in the API's release list (or in the site's semantic.json, android-site.yml, which runs again after this),
+# downloads the bundle, or imports these files from the user's computer.
+#
+# The release holds the pack as the app installs it, in SeforimLibrary's bundle format (pardes-semantic.tar.zst, or its
+# .partNN files under GitHub's 2 GiB per asset, and pardes-semantic.tar.zst.manifest.json with each file's size and
+# sha256), and two zips to install by hand. Its tag, semantic-<pack>-<library release>, comes from the manifest. Every
+# release is --latest=false, so the Android release stays the repository's Latest; Pardes for Android 0.3.0 to 0.4.1
+# reads only the 30 newest releases, so keep few packs (gh release delete <tag> -R efrul/Pardes --cleanup-tag -y).
+#
+# Secret: KAGGLE_API_TOKEN, an API token of the Kaggle account that owns the dataset (kaggle.com › Settings › API).
+# Runs only by hand: Actions › Semantic pack release › Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'The Kaggle dataset holding the pack (owner/name)'
+        required: true
+        default: 'pardes-semantic-pack-2'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download the pack from Kaggle
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          DATASET: ${{ inputs.dataset }}
+        run: |
+          set -euo pipefail
+          test -n "$KAGGLE_API_TOKEN" || { echo "::error::The secret KAGGLE_API_TOKEN is not set"; exit 1; }
+          python3 -m venv "$RUNNER_TEMP/kaggle"
+          "$RUNNER_TEMP/kaggle/bin/pip" install --quiet "kaggle>=2"
+          kaggle() { "$RUNNER_TEMP/kaggle/bin/kaggle" "$@"; }
+          mkdir pack
+          # A private dataset has no whole-dataset download: file by file
+          kaggle datasets files "$DATASET" --csv | tail -n +2 | cut -d, -f1 > files.txt
+          while read -r f; do
+            kaggle datasets download "$DATASET" -f "$f" -p pack -q
+            # Kaggle may hand a file back zipped
+            if [ ! -f "pack/$f" ] && [ -f "pack/$f.zip" ]; then unzip -q "pack/$f.zip" -d pack && rm "pack/$f.zip"; fi
+            test -f "pack/$f"
+          done < files.txt
+          ls -l pack
+
+      - name: Check the pack against its manifest
+        run: |
+          set -euo pipefail
+          m=pack/pardes-semantic.tar.zst.manifest.json
+          jq -e '.formatVersion == 1 and (.parts | length) > 0 and .pack and .library and .model' "$m" > /dev/null
+          jq -r '.parts[] | "\(.sha256)  pack/\(.file)"' "$m" | sha256sum --check --strict -
+          jq -r '.parts[] | "\(.size) pack/\(.file)"' "$m" | while read -r size f; do test "$(stat -c %s "$f")" = "$size"; done
+          test "$(jq -r '.parts[].file' "$m" | sed 's#^#pack/#' | xargs cat | sha256sum | cut -d' ' -f1)" = "$(jq -r .sha256 "$m")"
+          {
+            echo "PACK=$(jq -r .pack "$m")"
+            echo "LIBRARY=$(jq -r .library "$m")"
+            echo "MODEL=$(jq -r .model "$m")"
+            echo "DIMENSION=$(jq -r .dimension "$m")"
+            echo "LINES=$(jq -r .lines "$m")"
+            echo "TAG=semantic-$(jq -r .pack "$m")-$(jq -r .library "$m")"
+          } >> "$GITHUB_ENV"
+
+      - name: Zip the two folders for installing by hand
+        run: |
+          set -euo pipefail
+          command -v zstd > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q zstd; }
+          mkdir unpacked
+          jq -r '.parts[].file' pack/pardes-semantic.tar.zst.manifest.json | sed 's#^#pack/#' | xargs cat | zstd -dc |
+            tar -x -C unpacked
+          # What the pack holds, which the app reads to name it once installed (SemanticPack.INFO_NAME)
+          jq '{pack, model, dimension, library, lines}' pack/pardes-semantic.tar.zst.manifest.json > unpacked/pardes-model/pardes-pack.json
+          (cd unpacked && zip -q -r -9 ../pardes-model.zip pardes-model && zip -q -r -9 ../pardes.vec.lucene.zip pardes.vec.lucene)
+          rm -rf unpacked
+          for f in pack/* pardes-model.zip pardes.vec.lucene.zip; do
+            test "$(stat -c %s "$f")" -lt 2147483648 || { echo "::error::$f is larger than GitHub's 2 GiB per asset"; exit 1; }
+          done
+          ls -l pack pardes-model.zip pardes.vec.lucene.zip
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::$TAG is already released"; exit 1
+          fi
+          lines="$(echo "$LINES" | sed -E ':a;s/^([0-9]+)([0-9]{3})/\1,\2/;ta')"
+          cat > notes.md <<EOF
+          החיפוש לפי משמעות של פרדס למחשב: המודל לשאילתות ואינדקס הווקטורים של כל הספרייה (חבילה $PACK).
+
+          **מה יש כאן**
+          - \`pardes-model\`: המודל לשאילתות, נגזר מ־[neodictabert-bilingual-embed](https://huggingface.co/dicta-il/neodictabert-bilingual-embed) של דיקטה, מאומן לספרייה. ONNX int8, ‏$DIMENSION ממדים (\`$MODEL\`).
+          - \`pardes.vec.lucene\`: אינדקס הווקטורים של הספרייה כולה, $lines שורות, לספרייה מגרסת SeforimLibrary ‏\`$LIBRARY\`.
+
+          **התקנה מתוך פרדס למחשב**
+          בהגדרות › ניהול נתונים › חיפוש לפי משמעות לוחצים **הורדה והתקנה**. פרדס מוריד את החבילה שמתאימה לספרייה המותקנת, בודק אותה, והיא נכנסת לשימוש בהפעלה הבאה.
+
+          **בלי חיבור ל־GitHub מתוך פרדס**
+          מורידים בדפדפן את \`pardes-model.zip\` ואת \`pardes.vec.lucene.zip\` לאותה תיקייה (או את קובצי \`pardes-semantic.tar.zst\` עם ה־\`manifest.json\` שלהם), ובוחרים אחד מהם ב**ייבוא מקבצים…** שבאותו מסך.
+
+          **התקנה ידנית**
+          1. סוגרים את פרדס.
+          2. מוחקים מתיקיית הספרייה את התיקיות הישנות \`pardes-model\` ו־\`pardes.vec.lucene\`, אם יש. מחליפים את שתיהן יחד: מודל ואינדקס מחבילות שונות לא עובדים זה עם זה.
+          3. פורסים את שני קובצי ה־zip לתיקיית הספרייה, ליד \`seforim.db\`. הגדרות › ניהול נתונים › מיקום הספרייה מראה איפה היא.
+          4. פותחים את פרדס.
+
+          **רישיון**
+          המודל נגזר מ־neodictabert-bilingual-embed של דיקטה: המרכז הישראלי לניתוח טקסטים, ומופץ לפי [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). מי שמעביר אותו הלאה מעביר גם את \`pardes-model/NOTICE.md\`. דיקטה אינה ממליצה על פרדס.
+
+          פרדס מבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. המודל והאינדקס הם של פרדס, ואינם באים מחבילת החיפוש הסמנטי של זית.
+          EOF
+          gh release create "$TAG" pack/* pardes-model.zip pardes.vec.lucene.zip \
+            -R "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "חיפוש לפי משמעות $PACK (לספרייה $LIBRARY)" \
+            --notes-file notes.md \
+            --latest=false
+          echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"

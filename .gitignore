@@ -18,3 +18,22 @@ Pods/
 .claude/*
 # Project skills are shared with every Claude Code session on this repo.
 !.claude/skills/
+
+# Local binary databases, models, and indexes
+*.onnx
+*.i8
+*.db
+*.db-wal
+*.db-shm
+*.lucene
+*.luceneindex
+*.lookup.lucene
+*.lookupindex
+model/
+standalone_semantic/
+staging/
+
+# Python (semantic-model)
+__pycache__/
+*.pyc
+.venv/

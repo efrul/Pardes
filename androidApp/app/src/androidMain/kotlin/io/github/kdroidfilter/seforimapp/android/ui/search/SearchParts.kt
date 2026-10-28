@@ -2,18 +2,28 @@ package io.github.kdroidfilter.seforimapp.android.ui.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -22,16 +32,20 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import java.text.NumberFormat
 import java.util.Locale
 
-// Pieces shared by the results page, its preview and its knowledge panel: desktop 0.6.10 SearchResultScreen.kt's
-// card(), readingSecondary(), ResultLink and categoriesAndPlace, core/presentation/text HebrewSearch.kt's
-// diacritic-insensitive matching (find within the results) and Highlighting.kt's withBackground.
+// Pieces shared by the results page, its preview and its knowledge panel, and by the reader's places panes: desktop
+// 0.6.11 SearchResultScreen.kt's card(), readingSecondary(), ResultLink, ResultRow, ResultTitle, SnippetText,
+// LocalResultTextScale and categoriesAndPlace, core/presentation/text HebrewSearch.kt's diacritic-insensitive matching
+// (find within the results) and Highlighting.kt's withBackground.
 
 /** Desktop SearchStatusLine count: grouped digits (NumberFormat.getIntegerInstance). */
 internal fun formatCount(n: Long): String = NumberFormat.getIntegerInstance(Locale.US).format(n)
@@ -62,6 +76,90 @@ internal fun ResultLink(
     ) {
         Text(text, color = color, fontSize = fontSize, fontWeight = fontWeight, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/**
+ * How much a result list's results are scaled: the reading text's size over its default, so that they follow the zoom
+ * as the panes' texts do (desktop 0.6.11 LocalResultTextScale). Only the results: the tabs and the status above them
+ * keep their size. 1 where nothing provides it.
+ */
+internal val LocalResultTextScale = compositionLocalOf { 1f }
+
+/** [size] sp, scaled with the result list it is in ([LocalResultTextScale]). */
+@Composable
+internal fun resultSp(size: Float): TextUnit = (size * LocalResultTextScale.current).sp
+
+/**
+ * A row of a result list (desktop 0.6.11 ResultRow): the selected row's tint and its bar on its start side, a divider
+ * under it. Shared by the search results and the places that refer to a line. [onDoubleClick] only where a tap selects
+ * (two panes): a double-tap handler holds every single tap back for the double-tap timeout.
+ */
+@Composable
+internal fun ResultRow(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onDoubleClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val c = Zayit.colors
+    val accent = c.accent
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (selected) accent.copy(alpha = 0.10f) else Color.Transparent)
+            .drawBehind {
+                // The selected row's bar, on its start side
+                if (selected) {
+                    val bar = 3.dp.toPx()
+                    val x = if (layoutDirection == LayoutDirection.Rtl) size.width - bar else 0f
+                    drawRect(accent, topLeft = Offset(x, 0f), size = Size(bar, size.height))
+                }
+            }
+            .combinedClickable(onDoubleClick = onDoubleClick, onClick = onClick),
+    ) {
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), content = content)
+        Box(Modifier.fillMaxWidth().padding(start = 8.dp).height(1.dp).background(c.panelBorder.copy(alpha = 0.5f)))
+    }
+}
+
+/** A result's book as its bold title, the passage's place beside it in grey (desktop ResultTitle); on a phone one size up. */
+@Composable
+internal fun ResultTitle(title: String, place: String?, wide: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(title, color = Zayit.colors.text, fontSize = resultSp(if (wide) 14f else 15f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (place != null) {
+            Text("· $place", color = readingSecondary(), fontSize = resultSp(if (wide) 12f else 13f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        }
+    }
+}
+
+/**
+ * A passage ([snippet], HTML; desktop SnippetText): [maxLines] lines of grey text, the matched words (`<b>`) bold in the
+ * text's colour, [findQuery] lit. A phone shows fewer words a line: the text before the first bold run is shortened so
+ * that it is in view ([compactSnippet]).
+ */
+@Composable
+internal fun SnippetText(snippet: String, findQuery: String, wide: Boolean, maxLines: Int) {
+    val c = Zayit.colors
+    val ink = c.text
+    val size = (if (wide) 13f else 14f) * LocalResultTextScale.current
+    val findHighlight = c.accent.copy(alpha = 0.12f)
+    val display = remember(snippet, size, ink, wide, findQuery, findHighlight) {
+        val html = if (wide) snippet else compactSnippet(snippet)
+        buildAnnotatedFromHtml(html, size, boldColor = ink).highlightMatches(findQuery, findHighlight)
+    }
+    Text(
+        text = display,
+        color = readingSecondary(),
+        fontSize = size.sp,
+        fontFamily = ZayitFonts.ui,
+        lineHeight = (size * 1.65f).sp,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(vertical = 2.dp),
+    )
 }
 
 /** The result's categories (הלכה › ראשונים) and its place in the book (סימן קד), once its breadcrumb is known. */

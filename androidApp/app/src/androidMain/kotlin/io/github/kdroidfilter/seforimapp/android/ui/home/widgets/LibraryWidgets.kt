@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -52,6 +51,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalAppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.shell.destination
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.icons.NotebookPen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -209,7 +209,7 @@ internal object NotesWidget : HomeWidget {
             notes.forEach { (note, bookTitle) ->
                 HoverBox(onClick = { open(note.bookId, note.lineId, bookTitle) }, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Outlined.EditNote, null, tint = c.accent, modifier = Modifier.padding(top = 1.dp).size(16.dp))
+                        Icon(NotebookPen, null, tint = c.accent, modifier = Modifier.padding(top = 1.dp).size(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text(note.note, fontSize = 13.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(

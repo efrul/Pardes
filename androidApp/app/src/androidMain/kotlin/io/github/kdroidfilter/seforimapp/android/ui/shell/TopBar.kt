@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.BrightnessMedium
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Construction
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FindInPage
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
@@ -85,6 +84,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.ZIconButton
 import io.github.kdroidfilter.seforimapp.android.ui.hasFindInPage
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ThemeMode
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.icons.NotebookPen
 import kotlin.math.abs
 
 /** What the title bars' buttons do. */
@@ -168,7 +168,7 @@ fun PhoneTopBar(
                     MenuItem("דף הבית", Icons.Outlined.Home) { menu = false; actions.onHome() }
                     if (findInMenu) MenuItem("חפש בתוך העמוד", Icons.Outlined.FindInPage) { menu = false; actions.onFind() }
                     MenuItem("מועדפים", Icons.Outlined.StarOutline) { menu = false; actions.onFavorites() }
-                    MenuItem("ההערות שלי", Icons.Outlined.EditNote) { menu = false; actions.onNotes() }
+                    MenuItem("ההערות שלי", NotebookPen) { menu = false; actions.onNotes() }
                     MenuItem("היסטוריה", Icons.Outlined.History) { menu = false; actions.onHistory() }
                     MenuItem("כלים", Icons.Outlined.Construction) { menu = false; actions.onTools() }
                     MenuItem(themeLabel(themeMode), themeIcon(themeMode)) { menu = false; actions.onCycleTheme() }
@@ -280,7 +280,7 @@ fun TabletTitleBar(
             }
         }
         Box {
-            TitleBarButton(Icons.Outlined.EditNote, "ההערות שלי", "ההערות שלי", { onNotesVisible(!notesVisible) })
+            TitleBarButton(NotebookPen, "ההערות שלי", "ההערות שלי", { onNotesVisible(!notesVisible) })
             if (notesVisible) {
                 TitleBarPopup(onDismiss = { onNotesVisible(false) }) {
                     NotesMenuContent(appVm, tablet = true, onShowAll = onNotesPage, onDismiss = { onNotesVisible(false) })

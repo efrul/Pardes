@@ -1,5 +1,5 @@
 // Android variant of the SeforimLibrary file search/src/jvmMain/.../LuceneSearchEngine.kt (submodule
-// SeforimLibrary at 7ddf045, desktop Zayit 0.6.10), which app/build.gradle.kts excludes. A diff against it stays small:
+// SeforimLibrary at 4f07145, desktop Zayit 0.6.11), which app/build.gradle.kts excludes. A diff against it stays small:
 //  - the index is always opened with NIOFSDirectory: FSDirectory.open picks MMapDirectory, which needs
 //    java.lang.foreign (absent on Android);
 //  - lexical.db is only looked up next to the index: Path.of is API 34+, and the desktop system property,
@@ -7,7 +7,8 @@
 //  - the searcher pool has at most 4 threads (heat and battery on 8-core phones);
 //  - computeFacetsCancellable: facets stop cooperatively, never by Thread.interrupt (see there);
 //  - close() also closes lexical.db (MagicDictionaryIndex.close);
-//  - Lucene's clause limit is raised to MAX_QUERY_CLAUSES: a pasted verse rewrites past the default 1024 leaf clauses.
+//  - Lucene's clause limit is raised to MAX_QUERY_CLAUSES (16,384), not to upstream's 4,096: a pasted verse rewrote past
+//    the default 1024 leaf clauses before 4f07145 gave a long query's words fewer forms each.
 package io.github.kdroidfilter.seforimlibrary.search
 
 import co.touchlab.kermit.Logger
@@ -61,6 +62,11 @@ import kotlin.coroutines.cancellation.CancellationException
 private val logger = Logger.withTag("LuceneSearchEngine")
 // Hard cap on how many synonym/expansion terms we allow per token
 private const val MAX_SYNONYM_TERMS_PER_TOKEN: Int = 32
+
+// The forms of all a query's tokens together, per clause that lists them (the presence filter and each phrase query):
+// a long query gets fewer forms per token, or it overflows Lucene's 1024-clause limit (TooManyNestedClauses)
+private const val SYNONYM_TERMS_BUDGET: Int = 160
+private const val MIN_SYNONYM_TERMS_PER_TOKEN: Int = 4
 // Global cap for boost queries built from dictionary expansions
 private const val MAX_SYNONYM_BOOST_TERMS: Int = 256
 // Constants for snippet source building (must match indexer)
@@ -931,7 +937,7 @@ class LuceneSearchEngine(
         val outer = BooleanQuery.Builder()
         for (t in tokens) {
             val expansions = expansionsByToken[t] ?: emptyList()
-            val synonymTerms = buildLimitedTermsForToken(t, expansions)
+            val synonymTerms = buildLimitedTermsForToken(t, expansions, synonymTermsPerToken(tokens.size))
             val ngram = if (near > 0) buildNgramPresenceForToken(t) else null
             val clause = BooleanQuery.Builder().apply {
                 add(TermQuery(Term("text", t)), BooleanClause.Occur.SHOULD)
@@ -1147,9 +1153,14 @@ class LuceneSearchEngine(
         return b.build()
     }
 
+    /** How many forms each of [tokenCount] tokens may bring: all of them up to five tokens, fewer beyond. */
+    private fun synonymTermsPerToken(tokenCount: Int): Int =
+        (SYNONYM_TERMS_BUDGET / tokenCount.coerceAtLeast(1)).coerceIn(MIN_SYNONYM_TERMS_PER_TOKEN, MAX_SYNONYM_TERMS_PER_TOKEN)
+
     private fun buildLimitedTermsForToken(
         token: String,
-        expansions: List<MagicDictionaryIndex.Expansion>
+        expansions: List<MagicDictionaryIndex.Expansion>,
+        cap: Int = MAX_SYNONYM_TERMS_PER_TOKEN,
     ): List<String> {
         if (expansions.isEmpty()) return listOf(token)
 
@@ -1164,7 +1175,7 @@ class LuceneSearchEngine(
         otherTerms.forEach { ordered += it }
 
         val totalSize = ordered.size
-        val limited = ordered.take(MAX_SYNONYM_TERMS_PER_TOKEN)
+        val limited = ordered.take(cap)
         if (totalSize > limited.size) {
             logger.d {
                 "[DEBUG] Capped synonym terms for token '$token' from $totalSize to ${limited.size}"
@@ -1180,7 +1191,7 @@ class LuceneSearchEngine(
         if (tokens.isEmpty()) return emptyList()
         return tokens.map { token ->
             val expansions = expansionsByToken[token] ?: emptyList()
-            buildLimitedTermsForToken(token, expansions)
+            buildLimitedTermsForToken(token, expansions, synonymTermsPerToken(tokens.size))
         }
     }
 
