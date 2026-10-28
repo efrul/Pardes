@@ -31,6 +31,9 @@ jobs:
             const failures = [];
 
             for (const c of commits) {
+              // A merge carries no sign-off of its own (GitHub's "Merge pull request" commits in Zayit's history,
+              // merged here as released): the commits it brings are checked
+              if (c.parents.length > 1) continue;
               const message = c.commit.message || "";
               if (!signOffRegex.test(message)) {
                 failures.push(`${c.sha.substring(0, 7)} — ${message.split("\n")[0]}`);
