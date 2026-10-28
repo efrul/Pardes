@@ -10,6 +10,7 @@ import dev.nucleusframework.application.aotTraining
 import dev.nucleusframework.application.nucleusApplication
 import dev.nucleusframework.core.runtime.NucleusApp
 import dev.nucleusframework.energymanager.EnergyManager
+import dev.nucleusframework.launcher.windows.WindowsJumpListManager
 import dev.nucleusframework.window.NucleusDecoratedWindowTheme
 import dev.nucleusframework.window.jewel.rememberJewelTitleBarStyle
 import dev.nucleusframework.window.jewel.rememberJewelWindowStyle
@@ -192,7 +193,14 @@ fun main(args: Array<String>) {
     // when nothing is in flight; never throws (failures are logged).
 //    DbDeltaRecoveryBootstrap.runOnce()
 
+    // Probes the GPU (and RAM) before the Home asks whether it can show its 3D widgets
+    PlatformInfo.warmUp()
+
     val appId = Brand.APP_ID
+
+    // Before any window: ties the taskbar button (and the icon pinned from it) to the AUMID the
+    // jump list is stored under, so the list keeps showing while the app is closed.
+    if (PlatformInfo.isWindows && WindowsJumpListManager.isAvailable) WindowsJumpListManager.setProcessAppId()
 
     nucleusApplication(
         args,
@@ -343,6 +351,7 @@ fun main(args: Array<String>) {
                                 AppJumpList(
                                     desktopManager = desktopManager,
                                     tabsViewModel = focusedWindow.tabsViewModel,
+                                    isRestoringSession = appGraph.sessionManager.isRestoringSession,
                                     pendingDeepLink = pendingDeepLink,
                                     onClearDeepLink = { pendingDeepLink.value = null },
                                 )
