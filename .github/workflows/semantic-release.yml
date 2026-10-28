@@ -10,8 +10,9 @@ name: Semantic pack release
 # The release holds the pack as the app installs it, in SeforimLibrary's bundle format (pardes-semantic.tar.zst, or its
 # .partNN files under GitHub's 2 GiB per asset, and pardes-semantic.tar.zst.manifest.json with each file's size and
 # sha256), and two zips to install by hand. Its tag, semantic-<pack>-<library release>, comes from the manifest. Every
-# release is --latest=false, so the Android release stays the repository's Latest; Pardes for Android 0.3.0 to 0.4.1
-# reads only the 30 newest releases, so keep few packs (gh release delete <tag> -R efrul/Pardes --cleanup-tag -y).
+# release is --latest=false and then the Android release is made the Latest again (gh's publishing ignores the flag), so
+# the repository's Latest stays the Android one. Pardes for Android 0.3.0 to 0.4.1 reads only the 30 newest releases,
+# so keep few packs (gh release delete <tag> -R efrul/Pardes --cleanup-tag -y).
 #
 # Secret: KAGGLE_API_TOKEN, an API token of the Kaggle account that owns the dataset (kaggle.com › Settings › API).
 # Runs only by hand: Actions › Semantic pack release › Run workflow.
@@ -126,4 +127,11 @@ jobs:
             --title "חיפוש לפי משמעות $PACK (לספרייה $LIBRARY)" \
             --notes-file notes.md \
             --latest=false
+          # With files, gh creates a draft, uploads them and then publishes it, and the publishing makes it the Latest
+          # whatever --latest said (semantic-2's release did): the newest Android release is made the Latest again
+          android="$(gh release list -R "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("android-"))][0] // empty')"
+          if [ -n "$android" ]; then gh release edit "$android" -R "$GITHUB_REPOSITORY" --latest; fi
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" != "$TAG" \
+            || { echo "::error::$TAG is the repository's Latest release: make the Android release the Latest by hand"; exit 1; }
           echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
