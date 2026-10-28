@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
-import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.components.FindInPageBar
 import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberAppTextZoom
 import io.github.kdroidfilter.seforimapp.core.presentation.components.syncFindField
@@ -892,17 +891,7 @@ private fun PassagePreview(
                             }
                         // The search's own highlighting (SearchEngine.highlights): by meaning, the passage closest in
                         // meaning in the found line alone; else the query's words in every line
-                        val ranges by produceState(
-                            if (byMeaning) emptyList() else searchEngine.highlightRanges(annotated.text, query),
-                            annotated,
-                            query,
-                            found,
-                        ) {
-                            if (found) {
-                                runSuspendCatching { searchEngine.highlights(listOf(annotated.text), query).single().ranges }
-                                    .onSuccess { value = it }
-                            }
-                        }
+                        val ranges = rememberPreviewHighlights(searchEngine, annotated.text, query, found, byMeaning)
                         val text = remember(annotated, ranges, highlight) { annotated.withBackground(ranges, highlight) }
                         val lineHover = remember { MutableInteractionSource() }
                         val lineHovered by lineHover.collectIsHoveredAsState()

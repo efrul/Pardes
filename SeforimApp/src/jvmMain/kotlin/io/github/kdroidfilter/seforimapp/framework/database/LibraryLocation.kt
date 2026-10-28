@@ -26,7 +26,11 @@ import java.nio.file.StandardCopyOption
  * at startup, before anything opens the library ([PendingLibraryMove]).
  */
 object LibraryLocation {
-    /** What a library is made of (what the install unpacks). */
+    /**
+     * What a library is made of (what the install unpacks), and the open semantic search's model and vector index,
+     * which the app looks for next to it (IndependentSemanticSearch): a move that left them behind would turn the
+     * semantic search off without a word.
+     */
     val NAMES =
         listOf(
             "seforim.db",
@@ -36,6 +40,8 @@ object LibraryLocation {
             "catalog.pb",
             "release_info.txt",
             "subset_info.txt",
+            "pardes-model",
+            "pardes.vec.lucene",
         )
 
     /** What the app leaves next to the library while it is open. A WAL with content belongs to the database. */

@@ -2872,6 +2872,18 @@
             "glob": "ai/onnxruntime/native/linux-x64/libonnxruntime_providers_shared.so"
         },
         {
+            "glob": "ai/onnxruntime/native/win-x64/onnxruntime.dll"
+        },
+        {
+            "glob": "ai/onnxruntime/native/win-x64/onnxruntime4j_jni.dll"
+        },
+        {
+            "glob": "ai/onnxruntime/native/linux-aarch64/libonnxruntime.so"
+        },
+        {
+            "glob": "ai/onnxruntime/native/linux-aarch64/libonnxruntime4j_jni.so"
+        },
+        {
             "glob": "libcudart.so"
         },
         {
