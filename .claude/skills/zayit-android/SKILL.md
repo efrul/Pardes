@@ -126,7 +126,7 @@ Also delete stale `-wal`/`-shm` files next to a pushed DB.
 
 ## Matching desktop
 
-- **Source of truth is the 0.6.11 code**, the version the port matches since 2026-10-28 (0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20, 0.6.1 before; androidApp/docs/PARITY.md says what changed). This repository has desktop 0.6.10: upstream v0.6.10 was merged into `SeforimApp/` and the desktop modules, and 0.6.11's own desktop commits were not, so the files 0.6.11 changed are read from upstream's tag `v0.6.11`. The `SeforimLibrary/` submodule is at `4f07145`, the commit v0.6.11 builds with (and the one Android compiles; the 0.6.10 desktop here builds with it too). The tags `v0.6.1`, `v0.6.7`, `v0.6.10` and `v0.6.11`, fetched from https://github.com/kdroidFilter/zayit, give upstream's exact files and what changed since 0.6.1 (commands in desktop-reference.md).
+- **Source of truth is the 0.6.11 code**, the version the port matches since 2026-10-28 (0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20, 0.6.1 before; androidApp/docs/PARITY.md says what changed). It is in this repository: upstream v0.6.11 was merged into `SeforimApp/` and the desktop modules on 2026-10-28, and the `SeforimLibrary/` submodule is at `4f07145`, the commit v0.6.11 builds with (and the one Android compiles). The tags `v0.6.1`, `v0.6.7`, `v0.6.10` and `v0.6.11`, fetched from https://github.com/kdroidFilter/zayit, give upstream's exact files and what changed since 0.6.1 (commands in desktop-reference.md).
   - Desktop UI: `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/**`.
   - Strings: `SeforimApp/src/commonMain/composeResources/values*/strings.xml`. Hebrew is the default `values/`.
   - Library and search logic: `SeforimLibrary/**`.

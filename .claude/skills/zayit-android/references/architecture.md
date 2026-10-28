@@ -44,7 +44,7 @@ Rule: if desktop code needs a change to work on Android, make an Android copy un
 
 ## Source map
 
-Paths below are relative to `app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/`. Desktop paths are as desktop 0.6.11 has them: this repository's own `SeforimApp/` (desktop 0.6.10, merged on 2026-10-26), and upstream's tag `v0.6.11` for the files 0.6.11 changed (desktop-reference.md); ported files name their desktop file in a KDoc or header.
+Paths below are relative to `app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/`. Desktop paths are as desktop 0.6.11 has them, which is this repository's own `SeforimApp/` since the merge of 2026-10-28 (desktop-reference.md); ported files name their desktop file in a KDoc or header.
 
 | Path | Role | Desktop counterpart |
 |---|---|---|

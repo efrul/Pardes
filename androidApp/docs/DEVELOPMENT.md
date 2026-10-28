@@ -46,7 +46,7 @@ Dark theme.
 ## How the work is done
 
 1. **Find the desktop behaviour in code.**
-   - UI: `SeforimApp/src/jvmMain/.../features`. The repository's `SeforimApp/` is desktop 0.6.10 (merged on 2026-10-26, 0.6.7 on 2026-10-20), and the files 0.6.11 changed are read from upstream's tag `v0.6.11`; the tags `v0.6.1`, `v0.6.7`, `v0.6.10` and `v0.6.11` (fetched from https://github.com/kdroidFilter/zayit) show upstream's exact files and what changed in between.
+   - UI: `SeforimApp/src/jvmMain/.../features`. Since the merge of 2026-10-28 the repository's `SeforimApp/` is desktop 0.6.11 (0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20); the tags `v0.6.1`, `v0.6.7`, `v0.6.10` and `v0.6.11` (fetched from https://github.com/kdroidFilter/zayit) show upstream's exact files and what changed in between.
    - Strings: `SeforimApp/src/commonMain/composeResources/values/strings.xml`.
    - What a screen looks like: run the released 0.6.11 headless and screenshot it (the skill's `desktop-start.sh`).
 2. **Port it** under `app/src/androidMain/kotlin/.../android/`, and say in a KDoc which desktop class each file mirrors.
