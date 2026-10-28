@@ -8,15 +8,17 @@ import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import java.nio.file.Path
 
 /**
- * Fuses [lexical] with dense semantic search in the official builds ([installedSemanticSearch], open core), whose
- * vectors live in the same Lucene index at [indexPath]; returns [lexical] as is in a community build. Shared by the
- * app's search engine and `zayit cli`, so both search the same way.
+ * Fuses [lucene] with dense semantic search in the official builds ([installedSemanticSearch], open core), whose
+ * vectors live in the same Lucene index at [indexPath]; returns [lucene] alone in a community build. Either way a query
+ * too large for Lucene is searched as an exact quote ([LongQuerySearchEngine]). Shared by the app's search engine and
+ * `zayit cli`, so both search the same way.
  */
 fun withSemanticSearch(
-    lexical: LuceneSearchEngine,
+    lucene: LuceneSearchEngine,
     indexPath: Path,
     repository: SeforimRepository,
 ): SearchEngine {
+    val lexical = LongQuerySearchEngine(lucene)
     val semantic = installedSemanticSearch ?: return lexical
     return semantic.hybrid(lexical, indexPath) { lineId, query ->
         repository.getLine(lineId)?.let { line ->

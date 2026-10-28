@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FindInPage
@@ -109,6 +108,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.tools.ToolScreen
 import io.github.kdroidfilter.seforimapp.android.ui.tools.ToolsScreen
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdateStrings
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
+import io.github.kdroidfilter.seforimapp.icons.Library as LibraryIcon
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -460,7 +460,7 @@ private fun TabContent(
             // Desktop keeps "רשימת הספרים" beside the home page; on a phone it is a drawer.
             LibraryDrawer(library, onOpenBook = { nav.openBook(it, null) }, onOpenBookInNewTab = { nav.openBookInNewTab(it, null) }) { openDrawer ->
                 Column(Modifier.fillMaxSize()) {
-                    phoneTopBar("פרדס", null, { ZIconButton(Icons.AutoMirrored.Outlined.LibraryBooks, "רשימת הספרים", openDrawer) }, null)
+                    phoneTopBar("פרדס", null, { ZIconButton(LibraryIcon, "רשימת הספרים", openDrawer) }, null)
                     HomeScreen(onOpenBook = { nav.openBook(it, null) }, onSearch = { q -> appVm.openInCurrentTab(Destination.Search(q), q) }, wide = false, onOpenBookAt = { b, l -> nav.openBook(b, l) })
                 }
             }

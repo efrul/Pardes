@@ -43,11 +43,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Comment
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FindInPage
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
@@ -144,8 +142,10 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.copyLink
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.shell.shareLink
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.icons.Library as LibraryIcon
+import io.github.kdroidfilter.seforimapp.icons.Library_books
+import io.github.kdroidfilter.seforimapp.icons.NotebookPen
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
-import io.github.kdroidfilter.seforimlibrary.core.models.ConnectionType
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.core.text.HebrewTextUtils
 import io.github.kdroidfilter.seforimlibrary.dao.repository.CommentaryWithText
@@ -169,9 +169,10 @@ data class ReaderNav(
 private const val TAG = "Zayit"
 
 /**
- * The reader of a book tab: desktop 0.6.10 features/bookcontent (BookContentScreen, ReaderPanes, VerticalBars,
+ * The reader of a book tab: desktop 0.6.11 features/bookcontent (BookContentScreen, ReaderPanes, VerticalBars,
  * BookContentView) on touch. A tablet (≥ 840dp) lays out desktop's panes together around the text: book tree, TOC
- * and notes on the start side, targum over book details on the end side, commentaries beside sources under the text,
+ * and notes on the start side; on the end side the places that refer to the line, the targumim and the book details,
+ * columns side by side in the rail's order; the sources beside the commentaries under the text,
  * the breadcrumb at the bottom, the rails on both edges, every divider draggable. A phone shows one pane at a time
  * under the text with a drag handle, a drawer for the TOC and the book tree, and a bottom toolbar. Outside a tab (the
  * tablet search preview, [LocalTabSession] null) it records nothing and reports nothing.
@@ -582,6 +583,7 @@ private fun bookShortcut(
         ctrl && e.key == Key.B -> if (e.isShiftPressed) onToc() else onTree()
         ctrl && e.key == Key.K -> onPane(
             when {
+                e.isAltPressed && e.isShiftPressed -> ReaderPane.References
                 e.isAltPressed -> ReaderPane.Sources
                 e.isShiftPressed -> ReaderPane.Targum
                 else -> ReaderPane.Commentaries
@@ -635,16 +637,32 @@ private fun MultiSelectChip(count: Int, modifier: Modifier, onDone: () -> Unit) 
 }
 
 /** What the selected line links to, for the rails and the toolbar (desktop LineResourceAvailability). */
-private class Availability(val targum: Boolean, val commentaries: Boolean, val sources: Boolean)
+private class Availability(val targum: Boolean, val commentaries: Boolean, val sources: Boolean, val references: Boolean)
+
+/** The book has places that refer to its lines: ein mishpat and masoret hashas have no flag of their own, OTHER covers them. */
+private val Book.hasReferencesPane: Boolean get() = hasReferenceConnection || hasOtherConnection
 
 @Composable
 private fun availability(vm: ReaderViewModel, state: ReaderUiState): Availability {
     val snap = state.primaryLineId?.let { vm.connections[it] }
+    val book = state.book
+    // The places panes' own queries, on their lines (a heading's whole section), so that a button is enabled exactly
+    // when its pane has something to show (desktop 0.6.11)
+    val lineIds = remember(state.selectedLineIds, state.primaryLineId) { vm.placesLineIds(state) }
+    val sources by produceState<Boolean?>(null, lineIds, book?.hasSourceConnection) {
+        value = null
+        if (book?.hasSourceConnection == true) value = vm.hasPlaces(LinePlaces.Sources, lineIds)
+    }
+    val references by produceState<Boolean?>(null, lineIds, book?.hasReferencesPane) {
+        value = null
+        if (book?.hasReferencesPane == true) value = vm.hasPlaces(LinePlaces.References, lineIds)
+    }
     // Unknown (not loaded yet) counts as available, as desktop's null
     return Availability(
         targum = snap == null || snap.targumSources.isNotEmpty() || ReaderPane.Targum in state.panes,
         commentaries = snap == null || snap.hasCommentaries || ReaderPane.Commentaries in state.panes,
-        sources = snap == null || snap.sources.isNotEmpty() || ReaderPane.Sources in state.panes,
+        sources = sources != false || ReaderPane.Sources in state.panes,
+        references = references != false || ReaderPane.References in state.panes,
     )
 }
 
@@ -674,12 +692,15 @@ private fun WideReader(
     var treeW by rememberSaveable { mutableFloatStateOf(250f) }
     var tocW by rememberSaveable { mutableFloatStateOf(220f) }
     var notesW by rememberSaveable { mutableFloatStateOf(300f) }
-    var endW by rememberSaveable { mutableFloatStateOf(300f) }
+    var targumW by rememberSaveable { mutableFloatStateOf(300f) }
+    var detailsW by rememberSaveable { mutableFloatStateOf(280f) }
+    var referencesW by rememberSaveable { mutableFloatStateOf(400f) }
     var bottomH by rememberSaveable { mutableFloatStateOf(0.42f) }
     var sourcesShare by rememberSaveable { mutableFloatStateOf(0.34f) }
     val showTargum = ReaderPane.Targum in state.panes
     val showComments = ReaderPane.Commentaries in state.panes
     val showSources = ReaderPane.Sources in state.panes
+    val showReferences = ReaderPane.References in state.panes
     val showNotes = ReaderPane.Notes in state.panes
     val showDetails = bookDetails && book != null
     // The side panes give way so the text keeps at least 42% of the room between the rails (an 840dp tablet with the
@@ -688,15 +709,16 @@ private fun WideReader(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val room = maxWidth.value - 12f - 2 * ((if (compactRails) 48f else 64f) + 6f)
         val side = (if (state.showTree) treeW + 8f else 0f) + (if (state.showToc && book != null) tocW + 8f else 0f) +
-            (if (showNotes && book != null) notesW + 8f else 0f) + (if (showTargum || showDetails) endW + 8f else 0f)
+            (if (showNotes && book != null) notesW + 8f else 0f) + (if (showReferences) referencesW + 8f else 0f) +
+            (if (showTargum) targumW + 8f else 0f) + (if (showDetails) detailsW + 8f else 0f)
         val fit = if (side > 0f && room - side < room * 0.42f) ((room * 0.58f) / side).coerceIn(0.3f, 1f) else 1f
         Row(Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 6.dp)) {
             // Start rail (right): books, contents; notes at the bottom (desktop StartVerticalBar)
             Column(Modifier.fillMaxHeight().padding(end = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ReaderRailButton(Icons.AutoMirrored.Outlined.LibraryBooks, "ספרים", selected = state.showTree) { vm.toggleTree() }
+                ReaderRailButton(LibraryIcon, "ספרים", selected = state.showTree) { vm.toggleTree() }
                 if (book != null) ReaderRailButton(Icons.AutoMirrored.Outlined.FormatListBulleted, "תוכן עניינים", selected = state.showToc) { vm.toggleToc() }
                 Spacer(Modifier.weight(1f))
-                if (book != null) ReaderRailButton(Icons.Outlined.EditNote, "הערות", selected = showNotes) { vm.togglePane(ReaderPane.Notes) }
+                if (book != null) ReaderRailButton(NotebookPen, "הערות", selected = showNotes) { vm.togglePane(ReaderPane.Notes) }
             }
             if (state.showTree) {
                 Island(Modifier.width((treeW * fit).dp).fillMaxHeight()) {
@@ -726,7 +748,7 @@ private fun WideReader(
                 Island(Modifier.width((notesW * fit).dp).fillMaxHeight()) {
                     NotesPane(vm, state, Modifier.fillMaxSize()) {
                         PaneHeader("הערות", { vm.closePane(ReaderPane.Notes) }) {
-                            ZIconButton(Icons.Outlined.EditNote, "הצג את כל ההערות", onNotesPage, tint = Zayit.colors.textSecondary)
+                            ZIconButton(NotebookPen, "הצג את כל ההערות", onNotesPage, tint = Zayit.colors.textSecondary)
                         }
                     }
                 }
@@ -737,21 +759,25 @@ private fun WideReader(
                 Column(Modifier.fillMaxSize()) {
                     Row(Modifier.weight(1f).fillMaxWidth()) {
                         Island(Modifier.weight(1f).fillMaxHeight()) { text(Modifier.fillMaxSize()) }
-                        if (showTargum || showDetails) {
-                            SplitHandle(vertical = false) { d -> endW = (endW + d / fit).coerceIn(200f, 520f) }
-                            Column(Modifier.width((endW * fit).dp).fillMaxHeight()) {
-                                if (showTargum) {
-                                    Island(Modifier.weight(1f).fillMaxWidth()) {
-                                        LinksPane(vm, state, ConnectionType.TARGUM, textSize, actions, Modifier.fillMaxSize()) { PaneHeader("תרגומים", { vm.closePane(ReaderPane.Targum) }) }
-                                    }
-                                }
-                                if (showTargum && showDetails) Spacer(Modifier.height(6.dp))
-                                if (showDetails) {
-                                    Island(Modifier.weight(1f).fillMaxWidth()) {
-                                        PaneHeader("פרטי הספר", { prefs.setBookDetails(false) })
-                                        BookDetailsPane(vm, onOpenPart = { onOpenBookAt(vm.bookId, it) }, onOpenAuthor = onOpenAuthor)
-                                    }
-                                }
+                        // Beside the text the panes are columns side by side, in the order of the rail's buttons: the
+                        // first beside the rail, the last beside the text (desktop 0.6.11 LineLayeredSides)
+                        if (showReferences) {
+                            SplitHandle(vertical = false) { d -> referencesW = (referencesW + d / fit).coerceIn(240f, 640f) }
+                            Island(Modifier.width((referencesW * fit).dp).fillMaxHeight()) {
+                                LinePlacesPane(LinePlaces.References, vm, state, textSize, wide = true, actions, Modifier.fillMaxSize()) { PaneHeader(REFERENCES, { vm.closePane(ReaderPane.References) }) }
+                            }
+                        }
+                        if (showTargum) {
+                            SplitHandle(vertical = false) { d -> targumW = (targumW + d / fit).coerceIn(200f, 520f) }
+                            Island(Modifier.width((targumW * fit).dp).fillMaxHeight()) {
+                                LinksPane(vm, state, textSize, actions, Modifier.fillMaxSize()) { PaneHeader("תרגומים", { vm.closePane(ReaderPane.Targum) }) }
+                            }
+                        }
+                        if (showDetails) {
+                            SplitHandle(vertical = false) { d -> detailsW = (detailsW + d / fit).coerceIn(200f, 520f) }
+                            Island(Modifier.width((detailsW * fit).dp).fillMaxHeight()) {
+                                PaneHeader("פרטי הספר", { prefs.setBookDetails(false) })
+                                BookDetailsPane(vm, onOpenPart = { onOpenBookAt(vm.bookId, it) }, onOpenAuthor = onOpenAuthor)
                             }
                         }
                     }
@@ -759,18 +785,20 @@ private fun WideReader(
                         SplitHandle(vertical = true) { d -> bottomH = (bottomH - d / total.value).coerceIn(0.18f, 0.8f) }
                         BoxWithConstraints(Modifier.fillMaxWidth().height(total * bottomH)) {
                             val width = maxWidth
+                            // The sources at the row's start, the commentaries after them (desktop 0.6.11 orders)
                             Row(Modifier.fillMaxSize()) {
+                                if (showSources) {
+                                    Island(if (showComments) Modifier.width(width * sourcesShare).fillMaxHeight() else Modifier.weight(1f).fillMaxHeight()) {
+                                        LinePlacesPane(LinePlaces.Sources, vm, state, textSize, wide = true, actions, Modifier.fillMaxSize()) { PaneHeader("מקורות", { vm.closePane(ReaderPane.Sources) }) }
+                                    }
+                                }
+                                // The handle is on the sources' end side (left in Hebrew): dragged left, they grow
+                                if (showComments && showSources) SplitHandle(vertical = false) { d -> sourcesShare = (sourcesShare - d / width.value).coerceIn(0.2f, 0.7f) }
                                 if (showComments) {
                                     Island(Modifier.weight(1f).fillMaxHeight()) {
                                         CommentariesPane(vm, state, textSize, wide = true, actions, Modifier.fillMaxSize()) { extra ->
                                             PaneHeader("מפרשים", { vm.closePane(ReaderPane.Commentaries) }) { extra() }
                                         }
-                                    }
-                                }
-                                if (showComments && showSources) SplitHandle(vertical = false) { d -> sourcesShare = (sourcesShare + d / width.value).coerceIn(0.2f, 0.7f) }
-                                if (showSources) {
-                                    Island(if (showComments) Modifier.width(width * sourcesShare).fillMaxHeight() else Modifier.weight(1f).fillMaxHeight()) {
-                                        LinksPane(vm, state, ConnectionType.SOURCE, textSize, actions, Modifier.fillMaxSize()) { PaneHeader("מקורות", { vm.closePane(ReaderPane.Sources) }) }
                                     }
                                 }
                             }
@@ -805,9 +833,14 @@ private fun WideReader(
                             if (avail.targum) vm.togglePane(ReaderPane.Targum) else Toast.makeText(context, "אין תרגומים זמינים לשורה זו", Toast.LENGTH_SHORT).show()
                         }
                     }
+                    if (book.hasReferencesPane) {
+                        ReaderRailButton(Library_books, REFERENCES, selected = showReferences, dimmed = !avail.references, description = SHOW_REFERENCES_TOOLTIP) {
+                            if (avail.references) vm.togglePane(ReaderPane.References) else Toast.makeText(context, NO_REFERENCES_FOR_LINE, Toast.LENGTH_SHORT).show()
+                        }
+                    }
                     if (book.hasSourceConnection) {
                         ReaderRailButton(Icons.Outlined.Source, "מקור", selected = showSources, dimmed = !avail.sources) {
-                            if (avail.sources) vm.togglePane(ReaderPane.Sources) else Toast.makeText(context, "אין מקורות זמינים לשורה זו", Toast.LENGTH_SHORT).show()
+                            if (avail.sources) vm.togglePane(ReaderPane.Sources) else Toast.makeText(context, NO_SOURCES_FOR_LINE, Toast.LENGTH_SHORT).show()
                         }
                     }
                     if (book.hasCommentaryConnection) {
@@ -1135,6 +1168,7 @@ private fun PhoneBody(
                     val kinds = buildList {
                         if (book.hasCommentaryConnection) add(ReaderPane.Commentaries)
                         if (book.hasTargumConnection) add(ReaderPane.Targum)
+                        if (book.hasReferencesPane) add(ReaderPane.References)
                         if (book.hasSourceConnection) add(ReaderPane.Sources)
                         add(ReaderPane.Notes)
                         add(ReaderPane.BookInfo)
@@ -1142,8 +1176,9 @@ private fun PhoneBody(
                     val tabs: @Composable () -> Unit = { PhonePaneTabs(shown, kinds, vm::showPane, vm::closePhonePane, dragModifier) }
                     when (shown) {
                         ReaderPane.Commentaries -> CommentariesPane(vm, state, textSize, wide = false, actions, Modifier.fillMaxSize()) { tabs() }
-                        ReaderPane.Targum -> LinksPane(vm, state, ConnectionType.TARGUM, textSize, actions, Modifier.fillMaxSize(), tabs)
-                        ReaderPane.Sources -> LinksPane(vm, state, ConnectionType.SOURCE, textSize, actions, Modifier.fillMaxSize(), tabs)
+                        ReaderPane.Targum -> LinksPane(vm, state, textSize, actions, Modifier.fillMaxSize(), tabs)
+                        ReaderPane.References -> LinePlacesPane(LinePlaces.References, vm, state, textSize, wide = false, actions, Modifier.fillMaxSize(), tabs)
+                        ReaderPane.Sources -> LinePlacesPane(LinePlaces.Sources, vm, state, textSize, wide = false, actions, Modifier.fillMaxSize(), tabs)
                         ReaderPane.Notes -> NotesPane(vm, state, Modifier.fillMaxSize(), tabs)
                         ReaderPane.BookInfo -> Column(Modifier.fillMaxSize()) {
                             tabs()
@@ -1226,7 +1261,8 @@ private fun PhoneToolbar(
             add(ToolbarAction(Icons.Outlined.Home, "בית", "דף הבית", onClick = onHome))
             if (book?.hasCommentaryConnection == true) add(ToolbarAction(Icons.AutoMirrored.Outlined.Comment, "מפרשים", "מפרשים", state.phonePane == ReaderPane.Commentaries, !avail.commentaries) { pane(ReaderPane.Commentaries, avail.commentaries, "אין מפרשים זמינים לפסקה זו") })
             if (book?.hasTargumConnection == true) add(ToolbarAction(Icons.Outlined.Translate, "תרגומים", "תרגומים", state.phonePane == ReaderPane.Targum, !avail.targum) { pane(ReaderPane.Targum, avail.targum, "אין תרגומים זמינים לשורה זו") })
-            if (book?.hasSourceConnection == true) add(ToolbarAction(Icons.Outlined.Source, "מקור", "מקור", state.phonePane == ReaderPane.Sources, !avail.sources) { pane(ReaderPane.Sources, avail.sources, "אין מקורות זמינים לשורה זו") })
+            if (book?.hasReferencesPane == true) add(ToolbarAction(Library_books, REFERENCES, REFERENCES, state.phonePane == ReaderPane.References, !avail.references) { pane(ReaderPane.References, avail.references, NO_REFERENCES_FOR_LINE) })
+            if (book?.hasSourceConnection == true) add(ToolbarAction(Icons.Outlined.Source, "מקור", "מקור", state.phonePane == ReaderPane.Sources, !avail.sources) { pane(ReaderPane.Sources, avail.sources, NO_SOURCES_FOR_LINE) })
             if (book != null && (book.hasNekudot || book.hasTeamim)) {
                 // With teamim there are three states: the dots tell how much is shown (desktop VerticalBars LevelIndicator)
                 add(ToolbarAction(Icons.Outlined.TextFormat, "ניקוד", state.diacritics.nextActionLabel(book.hasTeamim), state.diacritics != DiacriticsMode.None, levels = if (book.hasTeamim) state.diacritics.shownLevel else null, onClick = vm::cycleDiacritics))
@@ -1263,9 +1299,9 @@ private fun PhoneToolbar(
                         }
                         if (onFind != null) item("חפש בתוך העמוד", Icons.Outlined.FindInPage, onClick = onFind)()
                         overflow.forEach { a -> item(a.menuLabel, a.icon, onClick = a.onClick)() }
-                        item("הערות", Icons.Outlined.EditNote) { vm.togglePhonePane(ReaderPane.Notes) }()
+                        item("הערות", NotebookPen) { vm.togglePhonePane(ReaderPane.Notes) }()
                         item("פרטי הספר", Icons.Outlined.Info) { vm.togglePhonePane(ReaderPane.BookInfo) }()
-                        item("רשימת הספרים", Icons.AutoMirrored.Outlined.LibraryBooks, onClick = onBooks)()
+                        item("רשימת הספרים", LibraryIcon, onClick = onBooks)()
                         item("בחירה מרובה", Icons.Outlined.SelectAll) { vm.setMultiSelect(!state.multiSelect) }()
                         if (book != null && placeTitle != null) {
                             val path = crumbPath(state).joinToString(" › ") { it.title }
@@ -1286,7 +1322,7 @@ private fun PhoneToolbar(
                                 }()
                             }
                         }
-                        item("ההערות שלי", Icons.Outlined.EditNote, onClick = onNotesPage)()
+                        item("ההערות שלי", NotebookPen, onClick = onNotesPage)()
                     }
                 }
             }

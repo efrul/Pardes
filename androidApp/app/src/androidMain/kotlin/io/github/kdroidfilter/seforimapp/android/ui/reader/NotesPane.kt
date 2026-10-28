@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,6 +59,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.InfoBanner
 import io.github.kdroidfilter.seforimapp.android.ui.components.ZIconButton
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
+import io.github.kdroidfilter.seforimapp.icons.NotebookPen
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -113,7 +113,7 @@ fun NotesPane(vm: ReaderViewModel, state: ReaderUiState, modifier: Modifier = Mo
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (notes.isEmpty() && effective == null) {
                 Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.EditNote, null, tint = Zayit.colors.textSecondary.copy(alpha = 0.55f), modifier = Modifier.size(28.dp))
+                    Icon(NotebookPen, null, tint = Zayit.colors.textSecondary.copy(alpha = 0.55f), modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(10.dp))
                     Text("אין הערות על השורות שנבחרו. בחר טקסט ולחץ \"הוסף הערה\".", textAlign = TextAlign.Center, color = Zayit.colors.textSecondary, fontSize = 14.sp)
                 }

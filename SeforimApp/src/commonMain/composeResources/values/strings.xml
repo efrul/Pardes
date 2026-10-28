@@ -209,6 +209,41 @@
     <string name="library_move_stopped">ההעברה נעצרה. הספרייה נשארה במקומה.</string>
     <string name="library_move_interrupted">היישום נסגר באמצע ההעברה הקודמת. היא בוטלה, והספרייה נשארה במקומה.</string>
     <string name="library_move_open_app">פתיחת היישום</string>
+    <!-- Settings > Data: Pardes's semantic search, its pack beside the library (SemanticPackCard) -->
+    <string name="semantic_pack_title">חיפוש לפי משמעות</string>
+    <string name="semantic_pack_description">מוצא גם שורות שאומרות את מה שחיפשתם במילים אחרות. המודל שלו נשמר בתיקיית הספרייה.</string>
+    <string name="semantic_pack_installed">מותקנת חבילה %1$s, עם %2$s שורות.</string>
+    <string name="semantic_pack_installed_unnumbered">מותקן, עם %1$s שורות.</string>
+    <string name="semantic_pack_not_installed">לא מותקן: החיפוש מוצא רק את המילים שחיפשתם.</string>
+    <string name="semantic_pack_no_model">בתיקיית הספרייה יש אינדקס בלי המודל שלו (pardes-model), ולכן החיפוש לפי משמעות כבוי.</string>
+    <string name="semantic_pack_no_index">בתיקיית הספרייה יש מודל בלי האינדקס שלו (pardes.vec.lucene), למשל אחרי עדכון מלא של הספרייה. לכן החיפוש לפי משמעות כבוי.</string>
+    <string name="semantic_pack_other_model">המודל והאינדקס שבתיקיית הספרייה הם מחבילות שונות, ולכן החיפוש לפי משמעות כבוי.</string>
+    <string name="semantic_pack_other_library">האינדקס שבתיקיית הספרייה נבנה לספרייה מ־%1$s, והספרייה המותקנת היא מ־%2$s. לכן החיפוש לפי משמעות כבוי.</string>
+    <string name="semantic_pack_unreadable">אי אפשר לקרוא את החבילה שבתיקיית הספרייה (%1$s), ולכן החיפוש לפי משמעות כבוי.</string>
+    <string name="semantic_pack_checking">בודק אם יש חבילה לספרייה…</string>
+    <string name="semantic_pack_available">חבילה %1$s זמינה להורדה (%2$s).</string>
+    <string name="semantic_pack_up_to_date">זו החבילה האחרונה לספרייה הזו.</string>
+    <string name="semantic_pack_none_yet">אין עדיין חבילה לספרייה מ־%1$s.</string>
+    <string name="semantic_pack_unreachable">אי אפשר לבדוק כרגע אם יש חבילה, כי אין חיבור ל־GitHub. אפשר להוריד אותה בדפדפן מדף ההורדות ולייבא אותה.</string>
+    <string name="semantic_pack_unknown_library">לא ידוע מאיזו גרסה הספרייה המותקנת, ולכן אי אפשר לבחור לה חבילה. אפשר לייבא חבילה מקבצים.</string>
+    <string name="semantic_pack_no_library">צריך להתקין קודם את הספרייה.</string>
+    <string name="semantic_pack_download">הורדה והתקנה</string>
+    <string name="semantic_pack_update">עדכון לחבילה %1$s</string>
+    <string name="semantic_pack_import">ייבוא מקבצים…</string>
+    <string name="semantic_pack_releases_page">לדף ההורדות</string>
+    <string name="semantic_pack_cancel">ביטול</string>
+    <string name="semantic_pack_dismiss">סגירה</string>
+    <string name="semantic_pack_downloading">מוריד: %1$s מתוך %2$s</string>
+    <string name="semantic_pack_unpacking">פורס ובודק את החבילה…</string>
+    <string name="semantic_pack_ready">החבילה מוכנה, והיא תיכנס לשימוש בהפעלה הבאה של היישום.</string>
+    <string name="semantic_pack_restart">הפעלה מחדש עכשיו</string>
+    <string name="semantic_pack_start_failed">בהפעלה הקודמת התקנת החבילה לא הושלמה (%1$s), ומה שהיה מותקן נשאר. אפשר לנסות שוב.</string>
+    <string name="semantic_problem_not_a_pack">הקובץ %1$s אינו קובץ של חבילה לחיפוש לפי משמעות. בוחרים את pardes-model.zip או את pardes-semantic.tar.zst.manifest.json שהורדו מדף ההורדות.</string>
+    <string name="semantic_problem_missing">חסר הקובץ %1$s.</string>
+    <string name="semantic_problem_corrupted">הקובץ %1$s פגום או חלקי. אפשר להוריד אותו שוב.</string>
+    <string name="semantic_problem_unusable">אי אפשר להשתמש בחבילה הזו (%1$s).</string>
+    <string name="semantic_problem_other_library">החבילה נבנתה לספרייה מ־%1$s, והספרייה המותקנת היא מ־%2$s.</string>
+    <string name="semantic_problem_failed">ההתקנה נכשלה (%1$s).</string>
     <string name="add_tab">הוסף לשונית</string>
     <string name="home">דף הבית</string>
     <string name="close_tab">סגור לשונית</string>
@@ -304,8 +339,6 @@
     <string name="write_note">כתוב הערה</string>
     <string name="show_targumim_tooltip">הצג תרגומים</string>
     <string name="show_targumim">תרגומים</string>
-    <string name="show_links_tooltip">הצג קישורים על שורה זאת</string>
-    <string name="show_links">קישורים</string>
 
     <!-- Book Content Screen - Main Content -->
     <string name="search_placeholder">חפש</string>
@@ -321,6 +354,16 @@
     <string name="select_at_least_one_commentator">אנא בחר לפחות מפרש אחד מהרשימה</string>
     <string name="select_line_for_sources">בחר שורה כדי לצפות במקורות</string>
     <string name="no_sources_for_line">אין מקורות זמינים לשורה זו</string>
+    <string name="references">מראי מקומות</string>
+    <string name="show_references">מראי מקומות</string>
+    <string name="show_references_tooltip">הצג את הספרים שמזכירים שורה זו</string>
+    <string name="select_line_for_references">בחר שורה כדי לראות אילו ספרים מזכירים אותה</string>
+    <string name="no_references_for_line">אין מראי מקומות לשורה זו</string>
+    <string name="references_summary">%1$d ספרים · %2$d מקומות</string>
+    <string name="references_more_from_book">עוד %1$d מקומות מ%2$s</string>
+    <string name="references_one_more_from_book">עוד מקום אחד מ%1$s</string>
+    <string name="references_ein_mishpat">עין משפט</string>
+    <string name="references_mesorat_hashas">מסורת הש״ס</string>
     <string name="no_commentators_available">אין מפרשים זמינים</string>
 
     <!-- Line Links View (special links strings) -->
@@ -332,7 +375,6 @@
     <string name="not_available_in_book">לא זמין בספר זה</string>
     <string name="targum_not_available_in_book">אין תרגומים זמינים בספר זה</string>
     <string name="commentaries_not_available_in_book">אין מפרשים זמינים בספר זה</string>
-    <string name="links_not_available_in_book">אין קישורים זמינים בספר זה</string>
     <string name="please_select_a_book">אנא בחר ספר</string>
 
     <!-- Home Page View -->

@@ -10,6 +10,7 @@ import dev.nucleusframework.application.aotTraining
 import dev.nucleusframework.application.nucleusApplication
 import dev.nucleusframework.core.runtime.NucleusApp
 import dev.nucleusframework.energymanager.EnergyManager
+import dev.nucleusframework.launcher.windows.WindowsJumpListManager
 import dev.nucleusframework.window.NucleusDecoratedWindowTheme
 import dev.nucleusframework.window.jewel.rememberJewelTitleBarStyle
 import dev.nucleusframework.window.jewel.rememberJewelWindowStyle
@@ -51,6 +52,7 @@ import io.github.kdroidfilter.seforimapp.features.database.move.LibraryMoveWindo
 import io.github.kdroidfilter.seforimapp.features.database.update.DatabaseUpdateWindow
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindowsHost
 import io.github.kdroidfilter.seforimapp.features.onboarding.OnBoardingWindow
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
@@ -67,6 +69,7 @@ import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchServ
 import io.github.kdroidfilter.seforimapp.framework.search.withSemanticSearch
 import io.github.kdroidfilter.seforimapp.logger.infoln
 import io.github.kdroidfilter.seforimapp.logger.isDevEnv
+import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.cli.CliHost
 import io.github.kdroidfilter.seforimlibrary.cli.LookupBookOutput
 import io.github.kdroidfilter.seforimlibrary.cli.LookupOutput
@@ -81,6 +84,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 import seforimapp.seforimapp.generated.resources.*
@@ -192,7 +196,14 @@ fun main(args: Array<String>) {
     // when nothing is in flight; never throws (failures are logged).
 //    DbDeltaRecoveryBootstrap.runOnce()
 
+    // Probes the GPU (and RAM) before the Home asks whether it can show its 3D widgets
+    PlatformInfo.warmUp()
+
     val appId = Brand.APP_ID
+
+    // Before any window: ties the taskbar button (and the icon pinned from it) to the AUMID the
+    // jump list is stored under, so the list keeps showing while the app is closed.
+    if (PlatformInfo.isWindows && WindowsJumpListManager.isAvailable) WindowsJumpListManager.setProcessAppId()
 
     nucleusApplication(
         args,
@@ -223,6 +234,10 @@ fun main(args: Array<String>) {
         LaunchedEffect(Unit) {
             onDeepLink { uri -> pendingDeepLink.value = uri.toString() }
         }
+
+        // A semantic pack unpacked in the settings goes in place of the old one, before the search opens it (and
+        // before a library move, which then carries it)
+        remember { PendingSemanticPack.runOnce() }
 
         // A library move asked for in the settings runs first, before anything opens the library
         val pendingLibraryMove = remember { PendingLibraryMove.read() }
@@ -343,6 +358,7 @@ fun main(args: Array<String>) {
                                 AppJumpList(
                                     desktopManager = desktopManager,
                                     tabsViewModel = focusedWindow.tabsViewModel,
+                                    isRestoringSession = appGraph.sessionManager.isRestoringSession,
                                     pendingDeepLink = pendingDeepLink,
                                     onClearDeepLink = { pendingDeepLink.value = null },
                                 )
@@ -377,6 +393,13 @@ fun main(args: Array<String>) {
                         // here; MINOR/MAJOR surface the title-bar icon + UpdateDialog.
                         LaunchedEffect(Unit) {
                             appGraph.appUpdateService.checkOnStartup()
+                        }
+
+                        // The search warmed in the background once the library is open (not while it is installed,
+                        // updated or moved: its files must stay free), so the first search finds the model, the
+                        // vector graph and the indexes' pages loaded
+                        LaunchedEffect(Unit) {
+                            if (!E2e.enabled) warmSearch(appGraph)
                         }
 
                         // Debounced session autosave: any tab/window change persists ~2s later, so a
@@ -502,4 +525,15 @@ private fun warmCatalog(graph: AppGraph) {
         graph.catalogCache.getCatalog()
         graph.catalogAccess.warm()
     }, "catalog-warmup").apply { isDaemon = true }.start()
+}
+
+private fun warmSearch(graph: AppGraph) {
+    Thread({
+        runCatching { runBlocking { graph.searchEngine.warmUp() } }
+            .onFailure { warnln(it) { "Search warm-up failed" } }
+    }, "search-warmup")
+        .apply {
+            isDaemon = true
+            priority = Thread.MIN_PRIORITY
+        }.start()
 }

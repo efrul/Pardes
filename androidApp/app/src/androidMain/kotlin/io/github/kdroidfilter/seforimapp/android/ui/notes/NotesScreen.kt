@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -59,6 +58,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.PhoneHeader
 import io.github.kdroidfilter.seforimapp.android.ui.shell.WindowBackScope
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
+import io.github.kdroidfilter.seforimapp.icons.NotebookPen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -145,7 +145,7 @@ private fun NotesContent(onOpen: (Long, Long, String) -> Unit) {
             if (loaded != null && shown.isEmpty()) {
                 item {
                     Column(Modifier.fillMaxWidth().padding(vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Outlined.EditNote, null, tint = Zayit.colors.textSecondary, modifier = Modifier.size(40.dp))
+                        Icon(NotebookPen, null, tint = Zayit.colors.textSecondary, modifier = Modifier.size(40.dp))
                         Text("אין הערות", color = Zayit.colors.textSecondary, fontSize = 15.sp, textAlign = TextAlign.Center)
                     }
                 }
@@ -184,7 +184,7 @@ private fun BookNotesCard(title: String, notes: List<UserNote>, onOpen: (UserNot
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Icon(Icons.Outlined.EditNote, null, tint = c.accent, modifier = Modifier.size(17.dp))
+                        Icon(NotebookPen, null, tint = c.accent, modifier = Modifier.size(17.dp))
                         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
                             Text(note.note, fontSize = 15.sp, color = c.text, fontFamily = ZayitFonts.ui, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             val subtitle = listOf(note.quote, noteDate(note.updatedAt)).filter { it.isNotBlank() }.joinToString(" · ")

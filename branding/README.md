@@ -11,8 +11,8 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
 - `brand.gradle`, applied by the last line of `SeforimApp/build.gradle.kts`, picks the brand
   (`-Pseforimapp.brand=pardes`, the default, or `zayit`) and, for Pardes:
   - sets the packaging values of `nucleus.application` from `<brand>/brand.properties` (name, package and image name,
-    vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, Windows upgrade id,
-    icons);
+    vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, the Linux launcher
+    entry's English and Hebrew name and comment, Windows upgrade id, icons);
   - removes the OS URL scheme: `zayit://` belongs to Zayit, and two apps registering it would clash;
   - fails if one of Zayit's private add-ons (smart siddur, semantic search, quote links) would be compiled: their
     licence is for Zayit only;
@@ -77,6 +77,22 @@ location (install anywhere, move between drives, kept copies; `framework/databas
 | `SeforimApp/.../features/settings/data/DataSettingsViewModel.kt` | the reset deletes kept copies |
 | `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `library_*` strings (one block) |
 | `branding/<brand>/kotlin/.../BrandInfo.kt` | `LIBRARY_FOLDER_NAME` |
+
+Pardes's own semantic search (`features/search/semantic/`, its packs in `features/search/semantic/pack/` and
+`features/settings/semantic/`, `framework/search/LongQuerySearchEngine.kt`, `features/search/PreviewHighlights.kt`, their
+tests and fixtures under `jvmTest/`; `SEMANTIC_SEARCH.md`, `docs/SEMANTIC_PLAN.md`):
+
+| File | Hook |
+|---|---|
+| `SeforimApp/addons/semantic/disabled/.../InstalledSemanticSearch.kt` | hands the search to `HybridSearchEngine` (upstream's is null: words only) |
+| `SeforimApp/build.gradle.kts` | ONNX Runtime 1.17.1 and JSON-java in `jvmMain`; the `buildVectorIndex` task |
+| `SeforimApp/.../framework/search/SemanticSearchEngine.kt` | the lexical engine wrapped in `LongQuerySearchEngine` |
+| `SeforimApp/.../features/search/SearchResultScreen.kt` | the preview's highlights, `rememberPreviewHighlights(...)` |
+| `SeforimApp/.../main.kt` | `PendingSemanticPack.runOnce()` before the library move and the graph; `warmSearch(appGraph)` once the library is open |
+| `SeforimApp/.../features/settings/ui/DataSettingsScreen.kt` | `SemanticPackCard()` |
+| `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `semantic_pack_*` and `semantic_problem_*` strings (one block) |
+| `SeforimApp/.../framework/database/LibraryLocation.kt` | `NAMES`: `pardes-model` and `pardes.vec.lucene` move with the library; `LEFTOVERS`: a pack's download and staging folders |
+| `SeforimApp/src/graalvm/reachability-metadata.json` | ONNX Runtime's libraries for `win-x64` and `linux-aarch64` |
 
 Licence-restricted files are replaced in place, not overlaid, because they must not be in the repository at all:
 the Rashi Amiti font (removed, with its `FontCatalog` entry; `FontCatalogTest` counts 27 fonts) and the temple

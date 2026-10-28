@@ -575,27 +575,28 @@ private fun PhoneCommentaries(
 }
 
 /**
- * Targumim or sources of the selected line (desktop LineTargumView): a section per book in SQL order, its header
- * opening that book at its first link in a new tab, the links read a page at a time.
+ * Targumim of the selected line (desktop LineTargumView): a section per book in SQL order, its header opening that
+ * book at its first link in a new tab, the links read a page at a time. The sources are a places pane since desktop
+ * 0.6.11 ([LinePlacesPane]).
  */
 @Composable
-fun LinksPane(vm: ReaderViewModel, state: ReaderUiState, type: ConnectionType, textSize: Float, actions: PaneActions, modifier: Modifier = Modifier, header: @Composable () -> Unit = {}) {
+fun LinksPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float, actions: PaneActions, modifier: Modifier = Modifier, header: @Composable () -> Unit = {}) {
     val selection = state.linkSelection
     val snapshot by produceState<LineConnectionsSnapshot?>(null, selection, vm.connections[state.primaryLineId]) {
         value = selection?.let { vm.connectionsOf(it) }
     }
-    val sources = (if (type == ConnectionType.SOURCE) snapshot?.sources else snapshot?.targumSources).orEmpty()
+    val sources = snapshot?.targumSources.orEmpty()
     val pane = paneTextSize(textSize)
-    val font = if (type == ConnectionType.SOURCE) Zayit.fonts.source else Zayit.fonts.targum
+    val font = Zayit.fonts.targum
     Column(modifier) {
         header()
         when {
-            selection == null -> EmptyHint(if (type == ConnectionType.SOURCE) "בחר שורה כדי לצפות במקורות" else "בחר שורה כדי לצפות בתרגומים שלה", Modifier.fillMaxSize())
+            selection == null -> EmptyHint("בחר שורה כדי לצפות בתרגומים שלה", Modifier.fillMaxSize())
             snapshot == null -> LoadingBox(Modifier.fillMaxSize())
-            sources.isEmpty() -> EmptyHint(if (type == ConnectionType.SOURCE) "אין מקורות זמינים לשורה זו" else "אין תרגומים זמינים לשורה זו", Modifier.fillMaxSize())
+            sources.isEmpty() -> EmptyHint("אין תרגומים זמינים לשורה זו", Modifier.fillMaxSize())
             else -> {
                 val sections = sources.entries.map { (name, id) ->
-                    name to remember(selection, id, type) { PagedLinks { o, l -> vm.linksPage(selection, type, id, o, l) } }
+                    name to remember(selection, id) { PagedLinks { o, l -> vm.linksPage(selection, ConnectionType.TARGUM, id, o, l) } }
                 }
                 val ids = sources.values.toList()
                 // One effect per section: a sibling added or dropped no longer cancels a surviving section's first page
