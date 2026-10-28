@@ -9,7 +9,7 @@ plugins {
     id("pardes.compose-vector-moves")
 }
 
-// SeforimLibrary as desktop Zayit 0.6.10 builds it: the repository's SeforimLibrary submodule (7ddf045), the same
+// SeforimLibrary as desktop Zayit 0.6.11 builds it: the repository's SeforimLibrary submodule (4f07145), the same
 // checkout the desktop app and the shared modules build with.
 val seforimLibrary = rootDir.resolve("../SeforimLibrary")
 // Other shared sources reused as-is from the desktop project.

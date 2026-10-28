@@ -11,6 +11,11 @@ what became of it in Pardes for Android, is in `androidApp/docs/PARITY.md` › 0
 nor a stable desktop 1.0.0 was released on 0.6.7 (desktop's one 1.0.0 is a Windows test pre-release), so both are now
 described as based on 0.6.10.
 
+Since 2026-10-28 Pardes for Android is on Zayit 0.6.11 (`androidApp/docs/PARITY.md` › 0.6.11): the places that refer
+to a line and the sources as search results, on the library's new dao queries, and the long-query budget in its own
+`LuceneSearchEngine` variant. SeforimLibrary is at `4f07145`, the commit v0.6.11 pins; the desktop code here stays
+0.6.10 and builds with it unchanged. Android's unreleased 0.5.0 is described as based on 0.6.11.
+
 ## Decisions taken after the review (2026-10-20)
 
 - **No pull request to Zayit**, but the code stays fit for Zayit: personal books follow Zayit's conventions so Zayit
