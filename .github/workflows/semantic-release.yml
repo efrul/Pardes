@@ -14,14 +14,15 @@ name: Semantic pack release
 # the repository's Latest stays the Android one. Pardes for Android 0.3.0 to 0.4.1 reads only the 30 newest releases,
 # so keep few packs (gh release delete <tag> -R efrul/Pardes --cleanup-tag -y).
 #
-# Secret: KAGGLE_API_TOKEN, an API token of the Kaggle account that owns the dataset (kaggle.com › Settings › API).
+# Secret: KAGGLE_API_TOKEN, an API token of the Kaggle account that owns the dataset (kaggle.com › Settings › API). The
+# dataset is named without its owner, the token's account, whose name is never written here nor shown in the log.
 # Runs only by hand: Actions › Semantic pack release › Run workflow.
 
 on:
   workflow_dispatch:
     inputs:
       dataset:
-        description: 'The Kaggle dataset holding the pack (owner/name)'
+        description: 'The Kaggle dataset holding the pack, without its owner (the account of KAGGLE_API_TOKEN)'
         required: true
         default: 'pardes-semantic-pack-2'
 
@@ -41,9 +42,14 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$KAGGLE_API_TOKEN" || { echo "::error::The secret KAGGLE_API_TOKEN is not set"; exit 1; }
+          case "$DATASET" in */*) echo "::error::Name the dataset without its owner: this log is public"; exit 1 ;; esac
           python3 -m venv "$RUNNER_TEMP/kaggle"
           "$RUNNER_TEMP/kaggle/bin/pip" install --quiet "kaggle>=2"
           kaggle() { "$RUNNER_TEMP/kaggle/bin/kaggle" "$@"; }
+          # Kaggle takes the owner from the token, and prints it with every file ("Dataset URL: …"): masked from here on
+          owner="$("$RUNNER_TEMP/kaggle/bin/python" -c 'from kaggle import api; print(api.get_config_value("username") or "")' | tail -n 1)"
+          test -n "$owner" || { echo "::error::KAGGLE_API_TOKEN is not a valid Kaggle API token"; exit 1; }
+          echo "::add-mask::$owner"
           mkdir pack
           # A private dataset has no whole-dataset download: file by file
           kaggle datasets files "$DATASET" --csv | tail -n +2 | cut -d, -f1 > files.txt

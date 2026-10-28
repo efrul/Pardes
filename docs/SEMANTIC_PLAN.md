@@ -48,7 +48,7 @@
   - שמורה במאגר נתונים פרטי ב־Kaggle: `pardes-semantic-pack-2`.
 - **[`semantic-model/package_pack.py`](../semantic-model/package_pack.py)**: אורז חבילה כזו ובודק אותה.
 - **[`.github/workflows/semantic-release.yml`](../.github/workflows/semantic-release.yml)**, כאן. הוא:
-  - מוריד את החבילה מ־Kaggle;
+  - מוריד את החבילה מ־Kaggle, מהחשבון של הטוקן. שם החשבון לא נכתב במאגר הזה, ובלוג הוא מוסתר;
   - בודק אותה מול ה־manifest;
   - בונה `pardes-model.zip` ו־`pardes.vec.lucene.zip` להתקנה ידנית, ובראשון גם `pardes-model/pardes-pack.json`: מה שה־manifest אומר על החבילה;
   - יוצר Release עם `--latest=false`. אחריו `android-site.yml` רץ שוב וכותב באתר את `semantic.json`, רשימת החבילות.

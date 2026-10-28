@@ -65,6 +65,9 @@ the same benchmark, and on the real searches with `push pool` (`semantic-model/e
 chosen one with its `--hybrid-dense-weight`.
 
 Kaggle pitfalls already met:
+- The Kaggle account's name never goes into this public repository, its workflows or their logs (it was scrubbed from
+  the history on 2026-10-28): name datasets and kernels without their owner (`pardes-semantic-pack-2`, `<user>/…` in
+  commands). `semantic-release.yml` takes the owner from the token and masks it, since Kaggle prints it with every file.
 - The library is 5,725,672 lines of 3 words or more: its float32 vectors are 8.8 GB; `push int8` makes them 2.2 GB
   before any download. Tokenizing them takes ~40 min on 4 CPUs, twice in `embed_corpus.py` (lengths, then batches).
 - A **private** dataset has no whole-dataset download ("Data not available. This dataset may need its archive
