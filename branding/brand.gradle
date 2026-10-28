@@ -50,6 +50,14 @@ dist.protocols.clear()
 dist.linux.debMaintainer = value('debMaintainer')
 dist.linux.startupWMClass = value('startupWMClass')
 dist.linux.iconFile.set(new File(brandDir, 'desktopAppIcons/LinuxIcon.png'))
+// The launcher entry of every Linux package: an English Name and Comment, which Latin-layout launchers find, with the
+// Hebrew ones as localized variants (upstream's map, linux { appImage { desktopEntries } }, names Zayit)
+dist.linux.appImage.desktopEntries = [
+    'Name'       : value('linuxName'),
+    'Name[he]'   : value('appName'),
+    'Comment'    : value('linuxComment'),
+    'Comment[he]': value('description'),
+]
 dist.windows.iconFile.set(new File(brandDir, 'desktopAppIcons/WindowsIcon.ico'))
 dist.windows.upgradeUuid = value('upgradeUuid')
 dist.windows.nsis.shortcutName = value('appName')
