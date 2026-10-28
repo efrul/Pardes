@@ -19,6 +19,7 @@ import io.github.kdroidfilter.seforimlibrary.core.models.ConnectionType
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import io.github.kdroidfilter.seforimlibrary.dao.repository.CommentaryWithText
+import io.github.kdroidfilter.seforimlibrary.dao.repository.LineReference
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
@@ -41,6 +42,8 @@ import kotlin.math.min
 enum class ReaderPane(val title: String) {
     Commentaries("מפרשים"),
     Targum("תרגומים"),
+    // The places that refer to the line (desktop 0.6.11 ReaderPane.References)
+    References(REFERENCES),
     Sources("מקורות"),
     Notes("הערות"),
     BookInfo("פרטי הספר"),
@@ -172,7 +175,7 @@ data class ReaderUiState(
 }
 
 /**
- * The reader of one tab: desktop 0.6.10 BookContentViewModel with its use cases (ContentUseCase selection,
+ * The reader of one tab: desktop 0.6.11 BookContentViewModel with its use cases (ContentUseCase selection,
  * TocUseCase, AltTocUseCase, CommentariesUseCase selections, NotesUseCase visibility, CategoryDisplaySettingsUseCase),
  * and the book view's find-in-page (BookContentView). Lines are paged by index in chunks of [CHUNK].
  */
@@ -202,6 +205,12 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
     val connections = mutableStateMapOf<Long, LineConnectionsSnapshot>()
     private val lineConnections = LineConnections(repository) { _state.value.book?.title.orEmpty() }
     private val inFlight = HashSet<Long>()
+
+    // The places panes' links, by kind and lines (LRU): the rail's button asks for them first, then the pane
+    private val placeLinksCache = object : LinkedHashMap<Pair<LinePlaces, List<Long>>, List<LineReference>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<LinePlaces, List<Long>>, List<LineReference>>?): Boolean =
+            size > MAX_PLACE_LINKS_CACHED
+    }
 
     private val _charCounts = MutableStateFlow<IntArray?>(null)
 
@@ -643,6 +652,42 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         null
     }
 
+    // ---- The places panes (desktop 0.6.11 LinePlacesView) ----
+
+    /** The lines the places panes list the places of: every selected line (a heading's section, a multi-selection), else the primary line. */
+    fun placesLineIds(s: ReaderUiState): List<Long> = placesLineIds(s.selectedLineIds, s.primaryLineId)
+
+    /** The [kind] links of [lineIds]: the pane's own query, which also tells the rail's button whether it has any. */
+    private suspend fun placeLinks(kind: LinePlaces, lineIds: List<Long>): List<LineReference> {
+        val key = kind to lineIds
+        synchronized(placeLinksCache) { placeLinksCache[key] }?.let { return it }
+        val links = linePlaceLinks(kind, repository, lineIds)
+        synchronized(placeLinksCache) { placeLinksCache[key] = links }
+        return links
+    }
+
+    /** The [kind] places of [lineIds], grouped for their pane; none when the library read fails. */
+    suspend fun linePlaces(kind: LinePlaces, lineIds: List<Long>): LineReferences = try {
+        val links = placeLinks(kind, lineIds)
+        if (links.isEmpty()) LineReferences.Empty else loadLinePlaces(kind, repository, linesOf(repository, lineIds), links)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        // A library read that fails (a truncated or corrupt seforim.db): the pane shows none instead of closing the app
+        Log.w(TAG, "$kind of $lineIds failed", e)
+        LineReferences.Empty
+    }
+
+    /** Whether [lineIds] have [kind] places; null when unknown (a failed read), which counts as yes, as desktop's null. */
+    suspend fun hasPlaces(kind: LinePlaces, lineIds: List<Long>): Boolean? = try {
+        if (lineIds.isEmpty()) null else placeLinks(kind, lineIds).isNotEmpty()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "$kind of $lineIds failed", e)
+        null
+    }
+
     // ---- Panes ----
 
     /** A rail or toolbar toggle (desktop ToggleCommentaries / ToggleTargum / ToggleSources / ToggleNotes). */
@@ -1017,6 +1062,7 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         private const val TAG = "Zayit"
         private const val MAX_SECTION = 128
         private const val MAX_COMMENT_WINDOW = 256
+        private const val MAX_PLACE_LINKS_CACHED = 16
         private const val FIND_DEBOUNCE_MS = 150L
         private const val FIND_WAIT_MS = 30_000
 

@@ -31,7 +31,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FindInPage
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.MoreHoriz
@@ -103,6 +102,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.WindowBackScope
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
+import io.github.kdroidfilter.seforimapp.icons.NotebookPen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -121,7 +121,7 @@ enum class SelectionAction(val label: String, val icon: ImageVector, val mainOnl
     CopyLink("העתק קישור לקטע זה", Icons.Outlined.Link, mainOnly = true),
     SearchDatabase("חפש במאגר", Icons.Outlined.Search),
     FindInPage("חפש בעמוד", Icons.Outlined.FindInPage),
-    AddNote("הוסף הערה", Icons.Outlined.EditNote, mainOnly = true),
+    AddNote("הוסף הערה", NotebookPen, mainOnly = true),
     ReportError("דווח על טעות", Icons.Outlined.ReportProblem, mainOnly = true),
 
     /** Panes: the commentary's own place, in a new tab (desktop Ctrl+click on a commentary). */
@@ -690,7 +690,7 @@ private fun BoxScope.SelectionBar(
             BarButton(Icons.Outlined.ContentCopy, "העתקה") { act { spec.onAction(SelectionAction.Copy, it) } }
             // Desktop's highlighter beside "highlight" (0.6.8 c33a13ee)
             BarButton(Highlighter, "סמן") { palette = true }
-            if (spec.main) BarButton(Icons.Outlined.EditNote, "הוסף הערה") { act { spec.onAction(SelectionAction.AddNote, it) } }
+            if (spec.main) BarButton(NotebookPen, "הוסף הערה") { act { spec.onAction(SelectionAction.AddNote, it) } }
             BarButton(Icons.Outlined.MoreHoriz, "עוד") { act(onMore) }
         }
     }

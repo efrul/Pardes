@@ -5,29 +5,29 @@ This file records where the Android port stands and how it is worked on. It is f
 ## Goal and constraints
 
 - **Target:** Android 8.0 and later (minSdk 26; 33 up to 0.3.1, then 30), phones down to the 3" Unihertz Jelly Star, and tablets. Most testing is on Android 13 (the API 33 emulator and the Jelly Star); what differs on 8 to 12 is in [Android 8 to 12](#android-8-to-12).
-- **Parity with desktop Zayit 0.6.10:** the same screens, wording (except the authorship texts, see below), behaviour and data. Desktop is the reference whenever something is unclear. The base was 0.6.1 until 2026-10-20, then 0.6.7 until 2026-10-26; [PARITY.md](PARITY.md) › Later desktop releases records each change of 0.6.2 to 0.6.10 as ported, already present, not applicable or a deliberate difference.
+- **Parity with desktop Zayit 0.6.11:** the same screens, wording (except the authorship texts, see below), behaviour and data. Desktop is the reference whenever something is unclear. The base was 0.6.1 until 2026-10-20, then 0.6.7 until 2026-10-26 and 0.6.10 until 2026-10-28; [PARITY.md](PARITY.md) › Later desktop releases records each change of 0.6.2 to 0.6.11 as ported, already present, not applicable or a deliberate difference.
 - **Own app, based on Zayit:** Pardes is not an app by Zayit's author. User-facing text says Pardes is based on Zayit by Elie (Elyahou) Gambache (AGPL-3.0), who did not make it, is not responsible for it and does not support it. His copyright, licence and §7b attribution notices are kept; the porter is not named, and this repository is linked only as Pardes's AGPL source (the כללי header, אודות, תנאים). Where desktop's wording says who made the app (the welcome step, the settings header, About, the terms), Android's differs on purpose.
 - **Offline, including search:** the app uses the desktop library and the desktop Lucene index. There is no server.
 - **Shared code:** desktop code is reused unchanged where it compiles, and desktop sources are never edited for Android.
 
 ## Status
 
-The app was rebuilt against the real desktop 0.6.1 sources in four waves on 2026-10-13, brought to desktop 0.6.7 on 2026-10-20 and to 0.6.10 on 2026-10-26; [PARITY.md](PARITY.md) tracks every gap.
+The app was rebuilt against the real desktop 0.6.1 sources in four waves on 2026-10-13, brought to desktop 0.6.7 on 2026-10-20, to 0.6.10 on 2026-10-26 and to 0.6.11 on 2026-10-28; [PARITY.md](PARITY.md) tracks every gap.
 
 | Area | State |
 |---|---|
-| Engine and data | SeforimLibrary `7ddf045`, desktop 0.6.10's (the repository's `SeforimLibrary` submodule, shared with the desktop build). Lucene search byte-identical to desktop 0.6.1 on a test library, plus 0.6.7's found-line range (c3190c4). Desktop zmanim engine and city table. Incremental (delta) library updates. |
+| Engine and data | SeforimLibrary `4f07145`, desktop 0.6.11's (the repository's `SeforimLibrary` submodule, shared with the desktop build). Lucene search byte-identical to desktop 0.6.1 on a test library, plus 0.6.7's found-line range (c3190c4) and 0.6.11's forms budget for long queries (0749fbd). Desktop zmanim engine and city table. Incremental (delta) library updates. |
 | Shell | Per-tab state, session restore, workspaces, pinned and reopenable tabs, history and favourites in desktop's `user_settings.db`, deep links, keyboard shortcuts. |
 | Home and tools | Desktop widget grid, plus the tools ported from 0.6.1 (0.6.7 to 0.6.10 changed only desktop's 3D rendering there; the 0.6.2 tefila fix and 0.6.8's Temple counts are ported). |
 | Search | 0.6.10 smart bar, typed references, in-book search, author scope, category tabs, grouping by book, knowledge panel, author page, tablet preview (0.6.1's, with the 0.6.2 search fixes 2126c238, 90552dbc and 51463d23 and the 0.6.5 author scope 1723de06 and 9e3d19a8). |
-| Reader | Find in page over the whole book, range selection, highlights and notes, commentaries as desktop, alt TOC, diacritics per category, shnayim mikra mode. |
+| Reader | Find in page over the whole book, range selection, highlights and notes, commentaries as desktop, the places that refer to a line (מראי מקומות) and its sources as search results (0.6.11), alt TOC, diacritics per category, shnayim mikra mode. |
 | Settings and onboarding | Desktop keys and pages, database update flow, desktop fonts, desktop-compatible backup. The app updates itself from its GitHub releases (badge, dialog, Settings › כללי banner). |
 | Devices | Built for 240dp phones (Jelly Star), normal phones and tablets (desktop layout from 840dp, search split from 1000dp). |
 | Testing | Waves 1–4 compiled, R8-built and gated against API 33. The waves after the first Lucene build still need a full emulator and device pass. |
 
 ## Parity checklist
 
-[PARITY.md](PARITY.md) lists every known difference from desktop, found by comparing it with the real 0.6.1 sources, and what each desktop release since changed (up to 0.6.10). It is the to-do list for this port. Tick items as they land.
+[PARITY.md](PARITY.md) lists every known difference from desktop, found by comparing it with the real 0.6.1 sources, and what each desktop release since changed (up to 0.6.11). It is the to-do list for this port. Tick items as they land.
 
 ## Screenshots
 
@@ -46,9 +46,9 @@ Dark theme.
 ## How the work is done
 
 1. **Find the desktop behaviour in code.**
-   - UI: `SeforimApp/src/jvmMain/.../features`. Since the merge of 2026-10-26 the repository's `SeforimApp/` is desktop 0.6.10 (0.6.7 from 2026-10-20); the tags `v0.6.1`, `v0.6.7` and `v0.6.10` (fetched from https://github.com/kdroidFilter/zayit) show upstream's exact files and what changed in between.
+   - UI: `SeforimApp/src/jvmMain/.../features`. Since the merge of 2026-10-28 the repository's `SeforimApp/` is desktop 0.6.11 (0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20); the tags `v0.6.1`, `v0.6.7`, `v0.6.10` and `v0.6.11` (fetched from https://github.com/kdroidFilter/zayit) show upstream's exact files and what changed in between.
    - Strings: `SeforimApp/src/commonMain/composeResources/values/strings.xml`.
-   - What a screen looks like: run the released 0.6.10 headless and screenshot it (the skill's `desktop-start.sh`).
+   - What a screen looks like: run the released 0.6.11 headless and screenshot it (the skill's `desktop-start.sh`).
 2. **Port it** under `app/src/androidMain/kotlin/.../android/`, and say in a KDoc which desktop class each file mirrors.
 3. **Build** `./gradlew :app:assembleRelease` and install it on the API-33 emulator, and on the older ones (API 26, 28 and 30) when the change touches a platform API ([Android 8 to 12](#android-8-to-12)).
 4. **Screenshot** at phone, Jelly Star (`wm size 480x854`, density 320) and tablet (`wm size 1920x1200`, density 240: 1280dp) sizes. Compare side by side with desktop and fix the differences.

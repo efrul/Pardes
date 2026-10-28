@@ -131,7 +131,7 @@ or `quotelinks.token`/`SEFORIM_QUOTELINKS_TOKEN`/`gh`, or `-Pquotelinks.local=tr
 the same trip off the UI thread; `disabled` makes `installedQuoteLinks` null. Core code reaches it only through
 `QuoteLinksFeature`/`installedQuoteLinks`; only the tractates in the package pay anything (a set lookup otherwise).
 
-Pardes builds only the community edition: the siddur, semantic search and quote links are Zayit's private packages, and their licence does not cover Pardes. Never set `siddur.token`, `SEFORIM_SIDDUR_TOKEN`, the semantic or quote-links tokens, or a `-P*.local` flag for a Pardes build, and never add those secrets to efrul/Pardes.
+Pardes builds only the community edition: the siddur, semantic search and quote links are Zayit's private packages, and their licence does not cover Pardes. Never set `siddur.token`, `SEFORIM_SIDDUR_TOKEN`, the semantic or quote-links tokens, or a `-P*.local` flag for a Pardes build, and never add those secrets to efrul/Pardes. Pardes's own semantic search is not Zayit's package and needs no token: Dicta's open model, fine-tuned and distilled here (`features/search/semantic/`, `semantic-model/`, `SEMANTIC_SEARCH.md`), which `addons/semantic/disabled` hands the search to. Its model and vector index come as a pack, released here with `semantic-*` tags (`docs/SEMANTIC_PLAN.md`), never in the installer; the app downloads or imports one from Settings › ניהול נתונים (`features/search/semantic/pack/`).
 
 ### Memory-Efficient Tab System
 See `TAB_SYSTEM_README.md` for complete details. Key points:
@@ -218,6 +218,7 @@ See `TAB_SYSTEM_README.md` for complete details. Key points:
 ### Git & Pull Requests
 - **DCO sign-off required**: every commit needs a `Signed-off-by:` trailer (`git commit -s`); the "Check DCO sign-off" CI job blocks PRs otherwise. Fix unsigned commits with `git rebase --signoff <base>` then `git push --force-with-lease`.
 - **CLA**: contributors sign `CLA.md` once (CLA Assistant bot on their first PR); the maintainer is allowlisted.
+- **Authorship in efrul/Pardes**: commit as `efrul <342689225+efrul@users.noreply.github.com>`, author and committer, with `-s`; never as Claude or a local identity. The repository's contributors are efrul and Zayit's own, from its history.
 - **PRs target `master`** (`gh pr create --base master`); releases are tagged from `master`.
 
 ## Development Tips

@@ -62,6 +62,22 @@ class LibraryLocationTest {
     }
 
     @Test
+    fun `the semantic search's model and vector index go with the library, moved or copied`() {
+        val from = libraryIn(LibraryLocation.defaultDir()).withSemanticSearch()
+        val moved = LibraryLocation.destination(File(root, "D"))
+        LibraryLocation.move(from, moved, keep = false, appSettings, progress = { _, _ -> }, stopped = { false })
+        assertTrue(File(moved, "pardes-model/model.int8.onnx").isFile)
+        assertTrue(File(moved, "pardes.vec.lucene/segments_1").isFile)
+        assertFalse(File(from, "pardes-model").exists())
+
+        val copied = LibraryLocation.destination(File(root, "E"))
+        LibraryLocation.move(moved, copied, keep = true, appSettings, progress = { _, _ -> }, stopped = { false })
+        assertEquals("model", File(copied, "pardes-model/model.int8.onnx").readText())
+        assertEquals("vectors", File(copied, "pardes.vec.lucene/segments_1").readText())
+        assertTrue(File(moved, "pardes.vec.lucene/segments_1").isFile)
+    }
+
+    @Test
     fun `a kept copy can be switched back to, and deleted once not in use`() {
         val from = libraryIn(LibraryLocation.defaultDir())
         val to = LibraryLocation.destination(File(root, "D"))
@@ -154,6 +170,14 @@ class LibraryLocationTest {
             File(this, "release_info.txt").writeText(VERSION)
             File(this, "seforim.db.lucene").mkdirs()
             File(this, "seforim.db.lucene/segments_1").writeText("index")
+        }
+
+    private fun File.withSemanticSearch(): File =
+        apply {
+            File(this, "pardes-model").mkdirs()
+            File(this, "pardes-model/model.int8.onnx").writeText("model")
+            File(this, "pardes.vec.lucene").mkdirs()
+            File(this, "pardes.vec.lucene/segments_1").writeText("vectors")
         }
 
     private companion object {

@@ -11,6 +11,13 @@ what became of it in Pardes for Android, is in `androidApp/docs/PARITY.md` › 0
 nor a stable desktop 1.0.0 was released on 0.6.7 (desktop's one 1.0.0 is a Windows test pre-release), so both are now
 described as based on 0.6.10.
 
+Since 2026-10-28 the base is Zayit 0.6.11 (the merge commit `Merge Zayit v0.6.11 into Pardes`), with SeforimLibrary at
+`4f07145`, the commit v0.6.11 pins: two new link queries (`getReferencesForLines`, `getSourcesForLines`) and the
+long-query fix of the search; no schema change and the same minimum library version. Pardes for Android was ported to
+0.6.11 the same day, before the merge (`androidApp/docs/PARITY.md` › 0.6.11): the places that refer to a line and the
+sources as search results, on the new dao queries, and the long-query budget in its own `LuceneSearchEngine` variant.
+Neither Android 0.5.0 nor a stable desktop 1.0.0 was released on 0.6.10, so both are described as based on 0.6.11.
+
 ## Decisions taken after the review (2026-10-20)
 
 - **No pull request to Zayit**, but the code stays fit for Zayit: personal books follow Zayit's conventions so Zayit

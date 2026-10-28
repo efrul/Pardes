@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -110,6 +109,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.tools.ToolPanelHost
 import io.github.kdroidfilter.seforimapp.android.ui.tools.opensAsPanel
+import io.github.kdroidfilter.seforimapp.icons.Library as LibraryIcon
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.Dispatchers
@@ -252,7 +252,7 @@ fun WideHome(
         Modifier.fillMaxSize().padding(6.dp).onPreviewKeyEvent(treeKey),
     ) {
         Column(Modifier.fillMaxHeight().padding(end = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            ReaderRailButton(Icons.AutoMirrored.Outlined.LibraryBooks, "ספרים", selected = treeVisible, onClick = toggleTree)
+            ReaderRailButton(LibraryIcon, "ספרים", selected = treeVisible, onClick = toggleTree)
         }
         if (treeVisible) {
             Island(Modifier.width(treeW.dp).fillMaxHeight()) {
