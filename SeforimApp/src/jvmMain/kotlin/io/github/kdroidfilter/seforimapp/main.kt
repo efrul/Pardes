@@ -52,6 +52,7 @@ import io.github.kdroidfilter.seforimapp.features.database.move.LibraryMoveWindo
 import io.github.kdroidfilter.seforimapp.features.database.update.DatabaseUpdateWindow
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindowsHost
 import io.github.kdroidfilter.seforimapp.features.onboarding.OnBoardingWindow
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
@@ -233,6 +234,10 @@ fun main(args: Array<String>) {
         LaunchedEffect(Unit) {
             onDeepLink { uri -> pendingDeepLink.value = uri.toString() }
         }
+
+        // A semantic pack unpacked in the settings goes in place of the old one, before the search opens it (and
+        // before a library move, which then carries it)
+        remember { PendingSemanticPack.runOnce() }
 
         // A library move asked for in the settings runs first, before anything opens the library
         val pendingLibraryMove = remember { PendingLibraryMove.read() }
