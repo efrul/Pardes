@@ -304,8 +304,6 @@
     <string name="write_note">כתוב הערה</string>
     <string name="show_targumim_tooltip">הצג תרגומים</string>
     <string name="show_targumim">תרגומים</string>
-    <string name="show_links_tooltip">הצג קישורים על שורה זאת</string>
-    <string name="show_links">קישורים</string>
 
     <!-- Book Content Screen - Main Content -->
     <string name="search_placeholder">חפש</string>
@@ -321,6 +319,16 @@
     <string name="select_at_least_one_commentator">אנא בחר לפחות מפרש אחד מהרשימה</string>
     <string name="select_line_for_sources">בחר שורה כדי לצפות במקורות</string>
     <string name="no_sources_for_line">אין מקורות זמינים לשורה זו</string>
+    <string name="references">מראי מקומות</string>
+    <string name="show_references">מראי מקומות</string>
+    <string name="show_references_tooltip">הצג את הספרים שמזכירים שורה זו</string>
+    <string name="select_line_for_references">בחר שורה כדי לראות אילו ספרים מזכירים אותה</string>
+    <string name="no_references_for_line">אין מראי מקומות לשורה זו</string>
+    <string name="references_summary">%1$d ספרים · %2$d מקומות</string>
+    <string name="references_more_from_book">עוד %1$d מקומות מ%2$s</string>
+    <string name="references_one_more_from_book">עוד מקום אחד מ%1$s</string>
+    <string name="references_ein_mishpat">עין משפט</string>
+    <string name="references_mesorat_hashas">מסורת הש״ס</string>
     <string name="no_commentators_available">אין מפרשים זמינים</string>
 
     <!-- Line Links View (special links strings) -->
@@ -332,7 +340,6 @@
     <string name="not_available_in_book">לא זמין בספר זה</string>
     <string name="targum_not_available_in_book">אין תרגומים זמינים בספר זה</string>
     <string name="commentaries_not_available_in_book">אין מפרשים זמינים בספר זה</string>
-    <string name="links_not_available_in_book">אין קישורים זמינים בספר זה</string>
     <string name="please_select_a_book">אנא בחר ספר</string>
 
     <!-- Home Page View -->
