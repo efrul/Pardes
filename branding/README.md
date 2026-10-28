@@ -11,8 +11,8 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
 - `brand.gradle`, applied by the last line of `SeforimApp/build.gradle.kts`, picks the brand
   (`-Pseforimapp.brand=pardes`, the default, or `zayit`) and, for Pardes:
   - sets the packaging values of `nucleus.application` from `<brand>/brand.properties` (name, package and image name,
-    vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, Windows upgrade id,
-    icons);
+    vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, the Linux launcher
+    entry's English and Hebrew name and comment, Windows upgrade id, icons);
   - removes the OS URL scheme: `zayit://` belongs to Zayit, and two apps registering it would clash;
   - fails if one of Zayit's private add-ons (smart siddur, semantic search, quote links) would be compiled: their
     licence is for Zayit only;
