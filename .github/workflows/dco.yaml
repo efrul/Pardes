@@ -4,6 +4,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# The commits of the PR are read with the job's token, which this repository's defaults leave without
+# pull-requests access (the check failed with 403 "Resource not accessible by integration")
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   dco-check:
     name: Check DCO sign-off
