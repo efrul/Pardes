@@ -13,7 +13,8 @@ name: Desktop release
 # as deb, rpm and pacman (GraalVM). The NSIS exe is the download: upstream's Rust wrapper (installer/) is Zayit's own,
 # launches zayit.exe and uninstalls an MSI-installed Zayit, so it is not built here. Asset names are a contract with
 # the updater (Nucleus FileSelector): Windows keeps "-nsis." and an arch token, Linux an arch token; latest.yml and
-# latest-linux.yml list them. Every release is --latest=false, so the Android release stays the repository's Latest.
+# latest-linux.yml list them. Every release is --latest=false and the Android release is then made the Latest again
+# (gh's publishing of a release with files ignores the flag), so the Android release stays the repository's Latest.
 #
 # Community edition only: no token of Zayit's private add-ons, no Sentry or Google Drive keys, and no GitHub token in a
 # Gradle step (settings.gradle.kts would ask gh for one); branding/brand.gradle stops a build that would compile them.
@@ -418,4 +419,12 @@ jobs:
             --notes-file notes.md \
             --latest=false \
             ${kind:+"$kind"}
+          # With files, gh creates a draft, uploads them and then publishes it, and the publishing makes a full release
+          # the Latest whatever --latest said (as semantic-2's release was): the newest Android release is made the
+          # Latest again
+          android="$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("android-"))][0] // empty')"
+          if [ -n "$android" ]; then gh release edit "$android" --latest; fi
+          test "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)" != "$TAG" \
+            || { echo "::error::$TAG is the repository's Latest release: make the Android release the Latest by hand"; exit 1; }
           echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
