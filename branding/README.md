@@ -78,6 +78,19 @@ location (install anywhere, move between drives, kept copies; `framework/databas
 | `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `library_*` strings (one block) |
 | `branding/<brand>/kotlin/.../BrandInfo.kt` | `LIBRARY_FOLDER_NAME` |
 
+Pardes's own semantic search (`features/search/semantic/`, `framework/search/LongQuerySearchEngine.kt`,
+`features/search/PreviewHighlights.kt`, their tests and fixtures under `jvmTest/`; `SEMANTIC_SEARCH.md`):
+
+| File | Hook |
+|---|---|
+| `SeforimApp/addons/semantic/disabled/.../InstalledSemanticSearch.kt` | hands the search to `HybridSearchEngine` (upstream's is null: words only) |
+| `SeforimApp/build.gradle.kts` | ONNX Runtime 1.17.1 and JSON-java in `jvmMain`; the `buildVectorIndex` task |
+| `SeforimApp/.../framework/search/SemanticSearchEngine.kt` | the lexical engine wrapped in `LongQuerySearchEngine` |
+| `SeforimApp/.../features/search/SearchResultScreen.kt` | the preview's highlights, `rememberPreviewHighlights(...)` |
+| `SeforimApp/.../main.kt` | `warmSearch(appGraph)` once the library is open |
+| `SeforimApp/.../framework/database/LibraryLocation.kt` | `NAMES`: `pardes-model` and `pardes.vec.lucene` move with the library |
+| `SeforimApp/src/graalvm/reachability-metadata.json` | ONNX Runtime's libraries for `win-x64` and `linux-aarch64` |
+
 Licence-restricted files are replaced in place, not overlaid, because they must not be in the repository at all:
 the Rashi Amiti font (removed, with its `FontCatalog` entry; `FontCatalogTest` counts 27 fonts) and the temple
 picture (`files/temple_jerusalem_in_fire.webp`, a public-domain painting by David Roberts instead of a Shutterstock
