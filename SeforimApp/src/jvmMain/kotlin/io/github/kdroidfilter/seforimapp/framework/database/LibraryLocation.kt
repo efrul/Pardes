@@ -44,8 +44,19 @@ object LibraryLocation {
             "pardes.vec.lucene",
         )
 
-    /** What the app leaves next to the library while it is open. A WAL with content belongs to the database. */
-    private val LEFTOVERS = listOf("seforim.db-wal", "seforim.db-shm", "seforim.db-journal", "delta-cache")
+    /**
+     * What the app leaves next to the library while it is open (and a semantic pack being downloaded or waiting for the
+     * next start, SemanticPackInstaller's). A WAL with content belongs to the database.
+     */
+    private val LEFTOVERS =
+        listOf(
+            "seforim.db-wal",
+            "seforim.db-shm",
+            "seforim.db-journal",
+            "delta-cache",
+            ".pardes-semantic-download",
+            ".pardes-semantic-staged",
+        )
     private const val WAL_NAME = "seforim.db-wal"
 
     /** The folders that hold a kept copy of the library, one per line, in the app's own databases folder. */

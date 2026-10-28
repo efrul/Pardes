@@ -25,6 +25,7 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.settings.data.DataSettingsViewModel
 import io.github.kdroidfilter.seforimapp.features.settings.library.LibraryLocationCard
+import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackCard
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
@@ -159,6 +160,8 @@ fun DataSettingsScreen() {
             }
 
             LibraryLocationCard()
+
+            SemanticPackCard()
 
             ResetCard(
                 resetDone = state.resetDone,
