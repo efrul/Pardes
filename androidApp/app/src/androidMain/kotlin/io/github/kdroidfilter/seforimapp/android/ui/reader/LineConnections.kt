@@ -19,17 +19,19 @@ data class CommentatorItem(val name: String, val bookId: Long)
 
 data class CommentatorGroup(val label: String, val commentators: List<CommentatorItem>)
 
-/** What a line links to: its commentators by group, its targumim and its sources (name → book id, in SQL order). */
+/**
+ * What a line links to: its commentators by group and its targumim (name → book id, in SQL order). Its sources are the
+ * places pane's (LinePlaces.Sources), as desktop 0.6.11's.
+ */
 data class LineConnectionsSnapshot(
     val commentatorGroups: List<CommentatorGroup> = emptyList(),
     val targumSources: Map<String, Long> = emptyMap(),
-    val sources: Map<String, Long> = emptyMap(),
 ) {
     val hasCommentaries: Boolean get() = commentatorGroups.any { it.commentators.isNotEmpty() }
 }
 
 /**
- * The connections of the book's lines, as desktop 0.6.10 CommentariesUseCase computes them (computeLineConnections,
+ * The connections of the book's lines, as desktop 0.6.11 CommentariesUseCase computes them (computeLineConnections,
  * resolveBaseLineResolution, filterTargumConnections, buildLineConnectionsSnapshot, buildSourceMap): a heading line
  * stands for up to 128 lines of its TOC section (its targum then only the default one), commentators are grouped and
  * ranked by [CommentatorGrouping] under their sanitized names. Cached per line (LRU of 512).
@@ -71,7 +73,7 @@ class LineConnections(private val repository: SeforimRepository, private val cur
         val resolutions = missing.associateWith { resolve(it, tocLines, headings) }
         val allBaseIds = resolutions.values.flatMap { it.baseLineIds }.distinct()
         if (allBaseIds.isEmpty()) return store(missing.associateWith { LineConnectionsSnapshot() })
-        val all = allBaseIds.chunked(MAX_IDS_PER_QUERY).flatMap { repository.getCommentarySummariesForLines(it, includeSources = true) }
+        val all = allBaseIds.chunked(MAX_IDS_PER_QUERY).flatMap { repository.getCommentarySummariesForLines(it) }
         if (all.isEmpty()) return store(missing.associateWith { LineConnectionsSnapshot() })
         val bySource = all.groupBy { it.link.sourceLineId }
         val title = currentBookTitle().trim()
@@ -102,7 +104,7 @@ class LineConnections(private val repository: SeforimRepository, private val cur
             if (i >= 0) groups[i] = groups[i].copy(commentators = groups[i].commentators + fresh) else groups += group.copy(commentators = fresh)
         }
         fun merge(pick: (LineConnectionsSnapshot) -> Map<String, Long>) = LinkedHashMap<String, Long>().also { m -> snaps.forEach { s -> pick(s).forEach { (k, v) -> m.putIfAbsent(k, v) } } }
-        return LineConnectionsSnapshot(groups, merge { it.targumSources }, merge { it.sources })
+        return LineConnectionsSnapshot(groups, merge { it.targumSources })
     }
 
     /** The base lines a selected line stands for: its section's (max 128 around it) when it heads one. */
@@ -142,7 +144,6 @@ class LineConnections(private val repository: SeforimRepository, private val cur
         return LineConnectionsSnapshot(
             commentatorGroups = groups,
             targumSources = sourceMap(connections.filter { it.link.connectionType == ConnectionType.TARGUM }, title),
-            sources = sourceMap(connections.filter { it.link.connectionType == ConnectionType.SOURCE }, title),
         )
     }
 
