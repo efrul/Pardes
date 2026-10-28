@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -77,6 +76,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.Tab
 import io.github.kdroidfilter.seforimapp.android.ui.notes.rememberUserNotes
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
+import io.github.kdroidfilter.seforimapp.icons.NotebookPen
 import kotlinx.coroutines.launch
 
 /*
@@ -306,7 +306,7 @@ fun ColumnScope.NotesMenuContent(appVm: AppViewModel, tablet: Boolean, onShowAll
             val title = userNotes?.bookTitles?.get(bookId).orEmpty()
             item(key = "book-$bookId") { PopupSectionHeader(title) }
             items(notes, key = { "note-${it.bookId}-${it.id}" }) { note ->
-                PopupRow(note.note, Icons.Outlined.EditNote, onClick = {
+                PopupRow(note.note, NotebookPen, onClick = {
                     appVm.openInNewTab(Destination.Book(note.bookId, note.lineId, title, openNotes = true), title)
                     onDismiss()
                 })
@@ -320,7 +320,7 @@ fun ColumnScope.NotesMenuContent(appVm: AppViewModel, tablet: Boolean, onShowAll
             }
         }
     }
-    PopupFooterRow("הצג את כל ההערות", Icons.Outlined.EditNote, null) {
+    PopupFooterRow("הצג את כל ההערות", NotebookPen, null) {
         onShowAll()
         onDismiss()
     }
