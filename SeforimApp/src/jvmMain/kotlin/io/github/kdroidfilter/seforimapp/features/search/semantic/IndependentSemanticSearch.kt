@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
 import io.github.kdroidfilter.seforimapp.logger.infoln
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import org.apache.lucene.document.IntPoint
@@ -222,6 +223,19 @@ class IndependentSemanticSearch(
             return null
         }
 
+        private fun otherLibrary(
+            info: VectorIndexBuilder.Info,
+            indexDir: Path,
+        ): Boolean {
+            val library =
+                indexDir
+                    .resolveSibling("release_info.txt")
+                    .takeIf(Files::isRegularFile)
+                    ?.let { runCatching { Files.readString(it).trim() }.getOrNull() }
+                    ?.ifEmpty { null }
+            return info.dbRelease != null && library != null && !SemanticPack.sameLibrary(info.dbRelease, library)
+        }
+
         /** The vector index of the open model, next to the full-text index [indexDir]. */
         fun openVectorIndexDir(indexDir: Path): Path = indexDir.resolveSibling(VectorIndexBuilder.DIR_NAME)
 
@@ -266,6 +280,12 @@ class IndependentSemanticSearch(
                             "[IndependentSemanticSearch] $vectorDir was embedded with ${info.model} " +
                                 "(${info.dimension} dims), the model is ${spec.id} (${spec.dimension}): not used"
                         }
+                        null
+                    }
+                    // Vectors of another library release (release_info.txt, which the library's delta updates keep):
+                    // their line ids may name other lines
+                    otherLibrary(info, indexDir) -> {
+                        warnln { "[IndependentSemanticSearch] $vectorDir was embedded on the library ${info.dbRelease}: not used" }
                         null
                     }
                     else -> {
