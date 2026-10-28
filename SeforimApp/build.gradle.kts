@@ -193,6 +193,8 @@ kotlin {
             implementation(libs.zstd.jni)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.lucene.core)
+            implementation("com.microsoft.onnxruntime:onnxruntime:1.17.1")
+            implementation("org.json:json:20240303")
             implementation(libs.reorderable)
             implementation(libs.kotlinx.collections.immutable)
 
@@ -404,6 +406,23 @@ kover {
 dependencies {
     // Generates availableHomeWidgets from every HomeWidget object (see :widgetprocessor).
     add("kspJvm", project(":widgetprocessor"))
+}
+
+// The open semantic model's vector index (pardes.vec.lucene) from semantic-model/embed_corpus.py's vectors:
+// ./gradlew :SeforimApp:buildVectorIndex -Pvectors=<dir> -Pdb=<seforim.db> -Pout=<pardes.vec.lucene>
+tasks.register<JavaExec>("buildVectorIndex") {
+    group = "application"
+    description = "Build the open semantic model's vector index (pardes.vec.lucene) from embedded vectors."
+    val main = kotlin.jvm().compilations.getByName("main")
+    classpath = files(main.output.allOutputs, main.runtimeDependencyFiles ?: files())
+    mainClass.set("io.github.kdroidfilter.seforimapp.features.search.semantic.VectorIndexBuilder")
+    args(
+        listOf("vectors", "db", "out", "model", "release").flatMap { key ->
+            (project.findProperty(key) as String?)?.let { listOf("--$key", it) }.orEmpty()
+        },
+    )
+    // The line -> book table of 7M lines and Lucene's 1 GB indexing buffer
+    jvmArgs("-Xmx6g", "--add-modules=jdk.incubator.vector")
 }
 
 // Pardes for desktop: its name, ids, icons and texts over the Zayit values above (branding/README.md)
