@@ -1,9 +1,9 @@
-# Parity with desktop Zayit 0.6.10
+# Parity with desktop Zayit 0.6.11
 
-The base is desktop Zayit 0.6.10 (upstream `kdroidFilter/Zayit` tag `v0.6.10`, SeforimLibrary `7ddf045`) since 2026-10-26; it was 0.6.7 from 2026-10-20, and 0.6.1 before. The lists below started as a gap list from comparing the real 0.6.1 sources (tag `v0.6.1` and SeforimLibrary `381fbea`) with this Android app, area by area, on 2026-10-13: 119 gaps, plus 12 from a completeness review. What each later desktop release changed, and what became of it here, is under "Later desktop releases".
+The base is desktop Zayit 0.6.11 (upstream `kdroidFilter/Zayit` tag `v0.6.11`, SeforimLibrary `4f07145`) since 2026-10-28; it was 0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20, and 0.6.1 before. The lists below started as a gap list from comparing the real 0.6.1 sources (tag `v0.6.1` and SeforimLibrary `381fbea`) with this Android app, area by area, on 2026-10-13: 119 gaps, plus 12 from a completeness review. What each later desktop release changed, and what became of it here, is under "Later desktop releases".
 
 - **Severity:** **H** = a missing or broken feature the user will notice; **M** = a noticeable difference; **L** = polish.
-- **Tick an item when it lands.** Before porting anything, read the desktop code it names, as 0.6.10 has it (`git diff v0.6.1 v0.6.10 -- <path>` shows what changed since the audit). The full findings, with desktop and Android file:line references and fix plans, were produced by the audit workflow; re-run a focused audit for an area rather than trusting stale line numbers.
+- **Tick an item when it lands.** Before porting anything, read the desktop code it names, as 0.6.11 has it (`git diff v0.6.1 v0.6.11 -- <path>` shows what changed since the audit). The full findings, with desktop and Android file:line references and fix plans, were produced by the audit workflow; re-run a focused audit for an area rather than trusting stale line numbers.
 - **Not portable from public sources:**
   - semantic (meaning-based) search: a private, token-gated package; Android behaves like the desktop community build;
   - Google Drive backup: a desktop loopback OAuth client;
@@ -11,9 +11,9 @@ The base is desktop Zayit 0.6.10 (upstream `kdroidFilter/Zayit` tag `v0.6.10`, S
   - the Talmud's verse quote links (0.6.5): a private package too, in the official builds only.
 - **Different on purpose: authorship.** Desktop's welcome ("שנבנה באהבה על ידי אברך ומפתח חרדי"), settings header ("נוצר על ידי אליהו גמבש"), About and terms describe desktop Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept. Not a gap.
 
-## Later desktop releases (0.6.2 to 0.6.10)
+## Later desktop releases (0.6.2 to 0.6.11)
 
-The base was desktop 0.6.1 (SeforimLibrary `381fbea`, in an Android-only submodule) until 2026-10-20, then 0.6.7, and since 2026-10-26 it is 0.6.10: Android compiles the repository's own SeforimLibrary submodule at `7ddf045`, the commit desktop 0.6.6 to 0.6.10 build with, and `androidApp/upstream/SeforimLibrary` is gone. Upstream's release commits, for `git log` between them (the `v0.6.1`, `v0.6.7` and `v0.6.10` tags are the ones to fetch): 0.6.2 `41988a7d`, 0.6.3 `56bb1c3a` (SeforimLibrary `2265fcb`), 0.6.4 `b6331c88`, 0.6.5 `c13ffdde`, 0.6.6 `fb78498d` (SeforimLibrary `7ddf045`), 0.6.7 `7549ca72`, 0.6.8 `971f7dd6`, 0.6.9 `de3696ca`, 0.6.10 `02ccd881`. No release since 0.6.1 raised the minimum library version (`20261011170830`).
+The base was desktop 0.6.1 (SeforimLibrary `381fbea`, in an Android-only submodule) until 2026-10-20, then 0.6.7, 0.6.10 from 2026-10-26, and since 2026-10-28 it is 0.6.11: Android compiles the repository's own SeforimLibrary submodule at `4f07145`, the commit desktop 0.6.11 builds with (0.6.6 to 0.6.10 built with `7ddf045`), and `androidApp/upstream/SeforimLibrary` is gone. Upstream's release commits, for `git log` between them (the `v0.6.1`, `v0.6.7` and `v0.6.10` tags are the ones to fetch): 0.6.2 `41988a7d`, 0.6.3 `56bb1c3a` (SeforimLibrary `2265fcb`), 0.6.4 `b6331c88`, 0.6.5 `c13ffdde`, 0.6.6 `fb78498d` (SeforimLibrary `7ddf045`), 0.6.7 `7549ca72`, 0.6.8 `971f7dd6`, 0.6.9 `de3696ca`, 0.6.10 `02ccd881`, 0.6.11 `44febc5b` (SeforimLibrary `4f07145`). No release since 0.6.1 raised the minimum library version (`20261011170830`).
 
 ### 0.6.2 to 0.6.4
 
@@ -114,6 +114,21 @@ The move to 0.6.10 (2026-10-26), from `git diff v0.6.7 v0.6.10` upstream. Sefori
 The modified-version notices (Settings › אודות and תנאים, onboarding, the README, the site and the release notes) now name Zayit 0.6.10. File headers that name a desktop file name it as 0.6.10 has it: the desktop files the port follows are unchanged since 0.6.7, or changed only as this section records.
 
 Tested on an Android 9 emulator at phone, Jelly Star (240dp) and tablet sizes. Besides the two phone fixes above, the 240dp phone needed two more: the widgets' options footer flows (`WidgetOptions`: "סיום" squeezed beside "שחזור ברירת המחדל" broke a letter a line, in every widget's options), and under 300dp the settings header puts the icon above the name and version (`AppHeaderCard`: beside it, the update line took a word a line).
+
+### 0.6.11
+
+The move to 0.6.11 (2026-10-28), from `git diff v0.6.10 v0.6.11` upstream and `git diff 7ddf045 4f07145` in SeforimLibrary. The library gains two link queries (`getReferencesForLines`, `getSourcesForLines` in `LinkQueries.sq`) and the long-query fix of the search; no schema change and the same minimum library version, so the library, the deltas, the Lucene index and the user `.sq` files stay as they are:
+
+| Upstream commit | Release | Change | Here |
+|---|---|---|---|
+| `540b80d3` | 0.6.11 | A מראי מקומות pane: the places that refer to the line (REFERENCE and מסורת הש״ס both ways, עין משפט forward) as the search's results: a book at a time, its first passage cut around its quote of the line, "עוד N מקומות", tabs by kind and by category, a tap opens the book there. The מקור pane is drawn by the same view, and its paging and the line snapshot's sources (the inverse links) go. A heading stands for its section, a multi-selection for its lines, as for the commentaries; the rail's buttons are enabled by the panes' own queries. Beside the text the panes are columns side by side in the rail's order, and under the text the sources come first | **Ported**: `ui/reader/LineReferences.kt` (as desktop's, the lines read 400 at a time for SQLite below 3.32) and `LinePlacesPane.kt`, `ReaderPane.References`. Tablet: its rail button between תרגומים and מקור (desktop's `Library_books` icon), the pane beside the text, with תרגומים and פרטי הספר now columns beside it, and מקורות at the start of the row under the text. Phone: its pane tab and toolbar action. `LineConnections` reads forward links only, `LinksPane` shows the targumim only. The rail and the pane share one query (`ReaderViewModel.placeLinks`, an LRU of 16) |
+| `540b80d3` | 0.6.11 | The search page's result row, title, snippet and filter tabs shared with that pane; the results follow the text zoom (`LocalResultTextScale`); "עוד" beside the tabs a link, not a tab | **Ported**: `ResultRow`, `ResultTitle`, `SnippetText`, `LocalResultTextScale` and `resultSp` in `ui/search/SearchParts.kt`, `FilterTabs` in `SearchScreen.kt` |
+| `715aef21` | 0.6.11 | Ctrl+Alt+Shift+K opens the references pane | **Ported**: `bookShortcut` |
+| SeforimLibrary `0749fbd` | 0.6.11 | Long queries: the dictionary forms of a query's words share a budget (all of them up to five words, fewer beyond), and Lucene's clause limit is raised to 4,096 | **Ported**: the budget in `search/LuceneSearchEngine.kt`. The clause limit stays Android's own 16,384 |
+| `72f2de21` | 0.6.11 | The Earth and solar system widgets turned off on a GPU unfit for 3D, where Filament crashed (Windows), and Nucleus `3.0.0-dev-202610272317` | **Not applicable**: those widgets are drawn with Compose here, without Filament |
+| `8ed3c123`, `b19ba7c4`, `c31d5391` | 0.6.11 | The Windows jump list kept while the app is closed; the Linux launcher entry's English name; the commented-out links button removed | **Not applicable** |
+
+Also from this move: the notes glyph is desktop's `NotebookPen` (Lucide's notebook-pen: 0.6.10's title-bar notes menu, the rails, the notes page and widget), and the book tree's button desktop's `Library`, in place of Material's EditNote and LibraryBooks, which looked like the references' `Library_books`.
 
 Fixes land in waves:
 1. 0.6.1 engine, zmanim, places and network trust.

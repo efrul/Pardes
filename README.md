@@ -40,7 +40,7 @@
 ## רישיון וקרדיט
 
 - זית ו־SeforimLibrary מאת אליהו גמבש: <span dir="ltr">Copyright (C) 2025 Elie Gambache</span>, תחת GNU AGPL v3 עם תנאי ייחוס נוסף (§7ב). ראו [LICENSE](LICENSE).
-- פרדס נבנה מהקוד הפתוח של זית 0.6.10 ושונה ב־2026 כדי לפעול באנדרואיד, וכיישום נפרד למחשב (פרדס למחשב, ל־Windows וללינוקס). גם הוא מופץ תחת AGPL-3.0, והוא מסופק כמות שהוא, ללא כל אחריות. לכל גרסה בעמוד הגרסאות מצורף קוד המקור המלא שלה.
+- פרדס נבנה מהקוד הפתוח של זית ושונה ב־2026 כדי לפעול באנדרואיד (מזית 0.6.11), וכיישום נפרד למחשב (פרדס למחשב, ל־Windows וללינוקס, מזית 0.6.10). גם הוא מופץ תחת AGPL-3.0, והוא מסופק כמות שהוא, ללא כל אחריות. לכל גרסה בעמוד הגרסאות מצורף קוד המקור המלא שלה.
 - <span dir="ltr">Powered by the technologies that drive Zayit — https://zayitapp.com/</span>
 - הספרים מגיעים מ־[Sefaria](https://www.sefaria.org.il/) ומ[אוצריא](https://github.com/Otzaria/otzaria-library), דרך [SeforimLibrary](https://github.com/kdroidFilter/SeforimLibrary).
 - זית, היישום המקורי של אליהו גמבש: [zayitapp.com](https://zayitapp.com/).
