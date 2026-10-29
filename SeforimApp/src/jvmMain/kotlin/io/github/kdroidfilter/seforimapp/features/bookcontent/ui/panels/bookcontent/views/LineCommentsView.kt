@@ -35,6 +35,7 @@ import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -66,6 +67,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedP
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorItem
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.Providers
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.EnhancedHorizontalSplitPane
@@ -89,6 +91,7 @@ import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.*
+import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import seforimapp.seforimapp.generated.resources.*
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -130,6 +133,8 @@ fun LineCommentsView(
     val providers = uiState.providers
     val primarySelectedLineId = contentState.primarySelectedLineId
     val selectedCommentatorIds = contentState.selectedCommentatorIds
+    // Shown in panes of their own, not in this one's grid
+    val detachedCommentators = contentState.detachedCommentators
     val commentatorsListScrollIndex = contentState.commentatorsListScrollIndex
     val commentatorsListScrollOffset = contentState.commentatorsListScrollOffset
     val columnScroll =
@@ -197,6 +202,7 @@ fun LineCommentsView(
                             isCommentatorsListVisible = isCommentatorsListVisible,
                             compact = compact,
                             diacritics = diacritics,
+                            detachedCommentators = detachedCommentators,
                         )
                     }
 
@@ -217,11 +223,181 @@ fun LineCommentsView(
                             prefetchedGroups = prefetched,
                             diacritics = diacritics,
                             selectedPassage = contentState.selectedPassage,
+                            detachedCommentators = detachedCommentators,
                         )
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * One commentator split off the commentaries pane, in a pane of its own (DetachedCommentators): its column of
+ * the commentaries pane, on the selected line(s), under a header named after it that is also the pane's grip.
+ * Hiding the pane gives the commentator back to the commentaries pane.
+ */
+@Composable
+fun DetachedCommentatorView(
+    uiState: BookContentState,
+    onEvent: (BookContentEvent) -> Unit,
+    commentator: String,
+    diacritics: DiacriticsMode,
+    lineConnections: Map<Long, LineConnectionsSnapshot> = emptyMap(),
+) {
+    val appSettings = LocalAppGraph.current.appSettings
+    val contentState = uiState.content
+    val selectedLine = contentState.primaryLine
+    val selectedLineIds = contentState.selectedLineIds.toImmutableList()
+    val isManualMultiSelection = selectedLineIds.size > 1 && !contentState.isTocEntrySelection
+    val providers = uiState.providers
+    val columnScroll =
+        CommentariesColumnScroll(
+            pageIndex = contentState.commentariesPageIndex,
+            fallbackScrollIndex = contentState.commentariesScrollIndex,
+            fallbackScrollOffset = contentState.commentariesScrollOffset,
+            indexByCommentator = contentState.commentariesColumnScrollIndexByCommentator,
+            offsetByCommentator = contentState.commentariesColumnScrollOffsetByCommentator,
+        )
+    val textSizes = rememberAnimatedTextSettings()
+    val findQuery by appSettings.findQueryFlow(uiState.tabId).collectAsState("")
+    val showFind by appSettings.findBarOpenFlow(uiState.tabId).collectAsState()
+    val activeQuery = if (showFind) findQuery else ""
+    val paneInteractionSource = remember { MutableInteractionSource() }
+    val reattach = { onEvent(BookContentEvent.ReattachCommentator(commentator)) }
+
+    Column(modifier = Modifier.fillMaxSize().hoverable(paneInteractionSource)) {
+        PaneHeader(
+            label = commentator,
+            interactionSource = paneInteractionSource,
+            onHide = reattach,
+            actions = {
+                ReattachCommentatorButton(text = stringResource(Res.string.commentator_reattach), onClick = reattach)
+            },
+        )
+        Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+            when {
+                selectedLine == null -> CenteredMessage(stringResource(Res.string.select_line_for_commentaries))
+                providers == null -> Unit
+                isManualMultiSelection -> {
+                    val groups by produceState<List<CommentatorGroup>>(emptyList(), selectedLineIds) {
+                        value = providers.getCommentatorGroupsForLines(selectedLineIds)
+                    }
+                    DetachedCommentatorColumn(
+                        commentator = commentator,
+                        groups = groups,
+                        selection = LineSelection.Multi(selectedLineIds),
+                        providers = providers,
+                        columnScroll = columnScroll,
+                        onEvent = onEvent,
+                        textSizes = textSizes,
+                        findQueryText = activeQuery,
+                        diacritics = diacritics,
+                    )
+                }
+                else -> {
+                    val groups =
+                        rememberCommentarySelectionData(
+                            lineId = selectedLine.id,
+                            getCommentatorGroupsForLine = providers.getCommentatorGroupsForLine,
+                            prefetchedGroups = lineConnections[selectedLine.id]?.commentatorGroups,
+                        ).groups
+                    DetachedCommentatorColumn(
+                        commentator = commentator,
+                        groups = groups,
+                        selection = LineSelection.Single(selectedLine.id),
+                        providers = providers,
+                        columnScroll = columnScroll,
+                        onEvent = onEvent,
+                        textSizes = textSizes,
+                        findQueryText = activeQuery,
+                        diacritics = diacritics,
+                        selectedPassage = contentState.selectedPassage,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** [commentator]'s column on [selection], as in the commentaries pane's grid; a message when it has nothing there. */
+@Composable
+private fun DetachedCommentatorColumn(
+    commentator: String,
+    groups: List<CommentatorGroup>,
+    selection: LineSelection,
+    providers: Providers,
+    columnScroll: CommentariesColumnScroll,
+    onEvent: (BookContentEvent) -> Unit,
+    textSizes: AnimatedTextSizes,
+    findQueryText: String,
+    diacritics: DiacriticsMode,
+    // The passage selected in the text: its commentaries stand out here too, as in the commentaries pane
+    selectedPassage: SelectedPassage? = null,
+) {
+    val commentatorId =
+        remember(groups, commentator) {
+            groups.firstNotNullOfOrNull { group -> group.commentators.firstOrNull { it.name == commentator }?.bookId }
+        }
+    if (commentatorId == null) {
+        CenteredMessage(stringResource(Res.string.commentator_not_on_line, commentator), fontSize = textSizes.commentTextSize)
+        return
+    }
+    val names = remember(commentator) { listOf(commentator).toImmutableList() }
+    val titleToIdMap = remember(commentator, commentatorId) { mapOf(commentator to commentatorId) }
+    val config =
+        rememberCommentariesLayoutConfig(
+            selectedCommentators = names,
+            titleToIdMap = titleToIdMap,
+            selection = selection,
+            textSizes = textSizes,
+            findQueryText = findQueryText,
+            diacritics = diacritics,
+            selectedPassage = selectedPassage,
+            onEvent = onEvent,
+        )
+    val pagerFlow = remember(selection, commentatorId) { providers.buildCommentariesPagerFor(selection, commentatorId) }
+    val initialIndex = columnScroll.indexByCommentator[commentatorId] ?: columnScroll.fallbackScrollIndex
+    val initialOffset = columnScroll.offsetByCommentator[commentatorId] ?: columnScroll.fallbackScrollOffset
+    val listState =
+        remember(selection, commentatorId) {
+            LazyListState(
+                firstVisibleItemIndex = initialIndex.coerceAtLeast(0),
+                firstVisibleItemScrollOffset = initialOffset.coerceAtLeast(0),
+            )
+        }
+    var restored by remember(selection, commentatorId) { mutableStateOf(false) }
+    CommentariesPagedList(
+        pagerFlow = pagerFlow,
+        listState = listState,
+        initialIndex = initialIndex,
+        initialOffset = initialOffset,
+        shouldRestore = !restored,
+        onRestore = { restored = true },
+        onScrollSettle = { i, o ->
+            onEvent(BookContentEvent.CommentaryColumnScrolled(commentatorId, i, o, persist = true))
+        },
+        config = config,
+        selection = selection,
+        commentatorId = commentatorId,
+        getCharCountsForLine = providers.getCommentaryCharCountsForLine,
+        getCharCountsForLines = providers.getCommentaryCharCountsForLines,
+    )
+}
+
+/** The button that gives a split-off commentator back to the commentaries pane. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ReattachCommentatorButton(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Tooltip({ Text(text) }) {
+        IconActionButton(
+            key = AllIconsKeys.Actions.SplitVertically,
+            onClick = onClick,
+            contentDescription = text,
+        )
     }
 }
 
@@ -243,6 +419,7 @@ private fun CommentariesContent(
     diacritics: DiacriticsMode,
     // The passage selected in the text on this line: its commentaries stay, the others fade
     selectedPassage: SelectedPassage?,
+    detachedCommentators: List<String>,
 ) {
     val commentatorSelection =
         rememberCommentarySelectionData(
@@ -288,12 +465,14 @@ private fun CommentariesContent(
                 onScroll = { index, offset ->
                     onEvent(BookContentEvent.CommentatorsListScrolled(index, offset))
                 },
-                onSelectionChange = { name, checked ->
+                detachedCommentators = detachedCommentators,
+                onReattach = { name -> onEvent(BookContentEvent.ReattachCommentator(name)) },
+                onSelectionChange = { names, checked ->
                     selectedCommentators.value =
                         if (checked) {
-                            selectedCommentators.value + name
+                            selectedCommentators.value + names
                         } else {
-                            selectedCommentators.value - name
+                            selectedCommentators.value - names.toSet()
                         }
                 },
             )
@@ -302,8 +481,10 @@ private fun CommentariesContent(
             // Ensure selected commentators are always displayed in a stable order,
             // independent of the order in which they were selected.
             val selectedInDisplayOrder =
-                remember(commentatorsInDisplayOrder, selectedCommentators.value) {
-                    commentatorsInDisplayOrder.filter { it in selectedCommentators.value }.toImmutableList()
+                remember(commentatorsInDisplayOrder, selectedCommentators.value, detachedCommentators) {
+                    commentatorsInDisplayOrder
+                        .filter { it in selectedCommentators.value && it !in detachedCommentators }
+                        .toImmutableList()
                 }
             CommentariesDisplay(
                 selectedCommentators = selectedInDisplayOrder,
@@ -316,6 +497,8 @@ private fun CommentariesContent(
                 findQueryText = findQueryText,
                 diacritics = diacritics,
                 selectedPassage = selectedPassage,
+                allInOwnPanes = selectedCommentators.value.any { it in detachedCommentators },
+                canDetach = DetachedCommentators.canDetach(detachedCommentators),
             )
         },
     )
@@ -341,6 +524,7 @@ private fun MultiLineCommentariesContent(
     isCommentatorsListVisible: Boolean,
     compact: Boolean,
     diacritics: DiacriticsMode,
+    detachedCommentators: List<String>,
 ) {
     val primaryLineId = primarySelectedLineId ?: selectedLineIds.firstOrNull() ?: return
 
@@ -386,20 +570,24 @@ private fun MultiLineCommentariesContent(
                 onScroll = { index, offset ->
                     onEvent(BookContentEvent.CommentatorsListScrolled(index, offset))
                 },
-                onSelectionChange = { name, checked ->
+                detachedCommentators = detachedCommentators,
+                onReattach = { name -> onEvent(BookContentEvent.ReattachCommentator(name)) },
+                onSelectionChange = { names, checked ->
                     selectedCommentators.value =
                         if (checked) {
-                            selectedCommentators.value + name
+                            selectedCommentators.value + names
                         } else {
-                            selectedCommentators.value - name
+                            selectedCommentators.value - names.toSet()
                         }
                 },
             )
         },
         texts = {
             val selectedInDisplayOrder =
-                remember(commentatorsInDisplayOrder, selectedCommentators.value) {
-                    commentatorsInDisplayOrder.filter { it in selectedCommentators.value }.toImmutableList()
+                remember(commentatorsInDisplayOrder, selectedCommentators.value, detachedCommentators) {
+                    commentatorsInDisplayOrder
+                        .filter { it in selectedCommentators.value && it !in detachedCommentators }
+                        .toImmutableList()
                 }
             CommentariesDisplay(
                 selectedCommentators = selectedInDisplayOrder,
@@ -411,6 +599,8 @@ private fun MultiLineCommentariesContent(
                 textSizes = textSizes,
                 findQueryText = findQueryText,
                 diacritics = diacritics,
+                allInOwnPanes = selectedCommentators.value.any { it in detachedCommentators },
+                canDetach = DetachedCommentators.canDetach(detachedCommentators),
             )
         },
     )
@@ -465,9 +655,14 @@ private fun CommentatorsList(
     initialScrollIndex: Int,
     initialScrollOffset: Int,
     onScroll: (Int, Int) -> Unit,
-    onSelectionChange: (String, Boolean) -> Unit,
+    // In panes of their own: their row gives them back to this pane
+    detachedCommentators: List<String>,
+    onReattach: (String) -> Unit,
+    // Checks or unchecks these commentators: one, a group's or all of them
+    onSelectionChange: (Collection<String>, Boolean) -> Unit,
 ) {
     val currentOnScroll by rememberUpdatedState(onScroll)
+    val allNames = remember(groups) { groups.flatMap { group -> group.commentators.map(CommentatorItem::name) } }
     Box(modifier = Modifier.fillMaxSize()) {
         val listState =
             rememberLazyListState(
@@ -491,6 +686,21 @@ private fun CommentatorsList(
                     modifier = Modifier.fillMaxHeight(),
                 ) {
                     val showGroupHeaders = groups.size > 1
+                    // All of them at once, rather than one by one
+                    if (allNames.size > 1) {
+                        item(key = "select-all") {
+                            CommentatorsCheckAllRow(
+                                text = stringResource(Res.string.commentators_select_all),
+                                names = allNames,
+                                selectedCommentators = selectedCommentators,
+                                onSelectionChange = onSelectionChange,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        item(key = "select-all-divider") {
+                            HorizontalDivider()
+                        }
+                    }
                     groups.forEachIndexed { groupIndex, group ->
                         if (group.commentators.isEmpty()) return@forEachIndexed
 
@@ -502,8 +712,13 @@ private fun CommentatorsList(
 
                         if (showGroupHeaders && group.label.isNotBlank()) {
                             item(key = "header-$groupIndex-${group.label}") {
-                                CommentatorGroupHeader(
-                                    label = group.label,
+                                // The group's checkbox checks or unchecks all its commentators
+                                CommentatorsCheckAllRow(
+                                    text = group.label,
+                                    names = group.commentators.map(CommentatorItem::name),
+                                    selectedCommentators = selectedCommentators,
+                                    onSelectionChange = onSelectionChange,
+                                    fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         }
@@ -518,17 +733,25 @@ private fun CommentatorsList(
                                 remember(selectedCommentators, commentator) {
                                     commentator in selectedCommentators
                                 }
-                            CheckboxRow(
-                                text = commentator,
-                                checked = isSelected,
-                                onCheckedChange = { checked ->
-                                    onSelectionChange(commentator, checked)
-                                },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 8.dp),
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CheckboxRow(
+                                    text = commentator,
+                                    checked = isSelected,
+                                    onCheckedChange = { checked ->
+                                        onSelectionChange(listOf(commentator), checked)
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .padding(horizontal = 8.dp),
+                                )
+                                if (commentator in detachedCommentators) {
+                                    ReattachCommentatorButton(
+                                        text = stringResource(Res.string.commentator_detached_hint),
+                                        onClick = { onReattach(commentator) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -548,11 +771,17 @@ private fun CommentariesDisplay(
     textSizes: AnimatedTextSizes,
     findQueryText: String,
     diacritics: DiacriticsMode,
+    // Some selected commentators are in panes of their own: none left here means they all are
+    allInOwnPanes: Boolean,
+    canDetach: Boolean,
     selectedPassage: SelectedPassage? = null,
 ) {
     if (selectedCommentators.isEmpty()) {
         CenteredMessage(
-            message = stringResource(Res.string.select_at_least_one_commentator),
+            message =
+                stringResource(
+                    if (allInOwnPanes) Res.string.commentators_all_detached else Res.string.select_at_least_one_commentator,
+                ),
             fontSize = textSizes.commentTextSize,
         )
         return
@@ -568,6 +797,7 @@ private fun CommentariesDisplay(
             diacritics = diacritics,
             selectedPassage = selectedPassage,
             onEvent = onEvent,
+            canDetach = canDetach,
         )
 
     CommentatorsGrid(
@@ -1151,21 +1381,41 @@ private fun rememberCommentarySelectionData(
     }
 }
 
+/**
+ * A checkbox over several commentators (a group's, or all): checked when all are, half when some are. A click
+ * checks them all, or unchecks them all when all are checked.
+ */
 @Composable
-private fun CommentatorGroupHeader(label: String) {
-    Box(
+private fun CommentatorsCheckAllRow(
+    text: String,
+    names: List<String>,
+    selectedCommentators: Set<String>,
+    onSelectionChange: (Collection<String>, Boolean) -> Unit,
+    fontWeight: FontWeight,
+) {
+    val state = commentatorsCheckState(names, selectedCommentators)
+    TriStateCheckboxRow(
+        text = text,
+        state = state,
+        onClick = { onSelectionChange(names, state != ToggleableState.On) },
+        textStyle = JewelTheme.defaultTextStyle.copy(fontWeight = fontWeight, fontSize = 13.sp),
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp, horizontal = 8.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text(
-            text = label,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp,
-            textAlign = TextAlign.Start,
-        )
+                .padding(vertical = 2.dp, horizontal = 8.dp),
+    )
+}
+
+/** On when all of [names] are selected, Off when none is, Indeterminate otherwise. */
+internal fun commentatorsCheckState(
+    names: Collection<String>,
+    selected: Set<String>,
+): ToggleableState {
+    val count = names.count { it in selected }
+    return when {
+        names.isEmpty() || count == 0 -> ToggleableState.Off
+        count == names.size -> ToggleableState.On
+        else -> ToggleableState.Indeterminate
     }
 }
 
@@ -1297,6 +1547,8 @@ internal data class CommentariesLayoutConfig(
     val highlightQuery: String,
     val diacritics: DiacriticsMode,
     val maxCommentatorsPerPage: Int,
+    // Gives a commentator a pane of its own; null when every such pane is taken, or in such a pane
+    val onDetachCommentator: ((String) -> Unit)? = null,
 )
 
 @Composable
@@ -1309,6 +1561,7 @@ private fun rememberCommentariesLayoutConfig(
     diacritics: DiacriticsMode,
     selectedPassage: SelectedPassage?,
     onEvent: (BookContentEvent) -> Unit,
+    canDetach: Boolean = false,
 ): CommentariesLayoutConfig {
     val appSettings = LocalAppGraph.current.appSettings
     val windowInfo = LocalWindowInfo.current
@@ -1328,6 +1581,7 @@ private fun rememberCommentariesLayoutConfig(
         diacritics,
         maxCommentatorsPerPage,
         selectedPassage,
+        canDetach,
     ) {
         CommentariesLayoutConfig(
             selectedPassage = selectedPassage,
@@ -1358,6 +1612,12 @@ private fun rememberCommentariesLayoutConfig(
             highlightQuery = findQueryText,
             diacritics = diacritics,
             maxCommentatorsPerPage = maxCommentatorsPerPage,
+            onDetachCommentator =
+                if (canDetach) {
+                    { name -> onEvent(BookContentEvent.DetachCommentator(name)) }
+                } else {
+                    null
+                },
         )
     }
 }

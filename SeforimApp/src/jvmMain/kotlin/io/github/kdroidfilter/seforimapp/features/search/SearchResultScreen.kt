@@ -435,8 +435,13 @@ private fun SearchResultContentMvi(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 SearchStatusLine(
-                                    // In one book, where it searched: no base/all books choice there
-                                    scope = if (oneBook) state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle else null,
+                                    // In one book or one category, where it searched: no base/all books choice there
+                                    scope =
+                                        if (oneBook) {
+                                            state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle
+                                        } else {
+                                            state.scopeLabel
+                                        },
                                     total = totalResults,
                                     isLoading = showProgress,
                                     globalExtended = state.globalExtended,

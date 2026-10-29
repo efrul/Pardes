@@ -21,4 +21,21 @@ class HistoryStoreTest {
                 store.query("", limit = 10).map { it.searchScope },
             )
         }
+
+    @Test
+    fun `a search in a category, or in several books and categories, reopens there`() =
+        runBlocking {
+            val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create)
+            val store = HistoryStore(UserSettingsDb(driver))
+            val several = SearchScope.Multi(bookIds = listOf(12L, 34L), categoryIds = listOf(1142L))
+            val label = "ברכות, שבת, רש״י › תורה"
+            store.recordSearchVisit("אור", several, globalExtended = false, scopeLabel = label, timestamp = 2)
+            store.recordSearchVisit("אור", SearchScope.Category(12L), globalExtended = false, scopeLabel = "תלמוד", timestamp = 1)
+            val categoryOnly = SearchScope.Multi(emptyList(), listOf(7L))
+            store.recordSearchVisit("אור", categoryOnly, globalExtended = true, scopeLabel = null, timestamp = 0)
+            assertEquals(
+                listOf(several, SearchScope.Category(12L), categoryOnly),
+                store.query("", limit = 10).map { it.searchScope },
+            )
+        }
 }
