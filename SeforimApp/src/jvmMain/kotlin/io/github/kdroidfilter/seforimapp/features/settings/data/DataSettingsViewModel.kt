@@ -45,6 +45,7 @@ class DataSettingsViewModel(
 
     val isDriveAvailable: Boolean = driveSync.isAvailable
     val driveState: StateFlow<DriveSyncState> = driveSync.state
+    val isErrorReportingAvailable: Boolean = crashReporting.isAvailable
     val errorReporting: StateFlow<Boolean> = appSettings.errorReportingFlow
 
     fun setErrorReporting(enabled: Boolean) = crashReporting.setEnabled(enabled)

@@ -18,6 +18,14 @@ long-query fix of the search; no schema change and the same minimum library vers
 sources as search results, on the new dao queries, and the long-query budget in its own `LuceneSearchEngine` variant.
 Neither Android 0.5.0 nor a stable desktop 1.0.0 was released on 0.6.10, so both are described as based on 0.6.11.
 
+Since 2026-10-29 the base is Zayit 0.6.12 (`Merge Zayit v0.6.12 into Pardes`), on the same SeforimLibrary (`4f07145`).
+It brings the passages of a line that commentaries explain (the Tur first, then every base book whose anchors resolve,
+from 186 tables bundled under `SeforimApp/src/jvmMain/resources/comment-anchors`), the search's preview always beside
+the results in a resizable split, the error reports' and the update check's switches with a privacy section in the
+terms, and Zayit's Microsoft Store package, which Pardes leaves out (`branding/brand.gradle`). Pardes sends no error
+reports, so its build hides that switch (`CrashReporting.isAvailable`). Android 0.7.0 and desktop 1.0.4 are its first
+versions on 0.6.12 (`androidApp/docs/PARITY.md` › 0.6.12).
+
 ## Decisions taken after the review (2026-10-20)
 
 - **No pull request to Zayit**, but the code stays fit for Zayit: personal books follow Zayit's conventions so Zayit

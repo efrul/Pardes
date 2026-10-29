@@ -170,13 +170,16 @@ fun DataSettingsScreen() {
                 onReset = { viewModel.resetApp() },
             )
 
-            val errorReporting by viewModel.errorReporting.collectAsState()
-            SettingCard(
-                title = Res.string.settings_error_reporting,
-                description = Res.string.settings_error_reporting_description,
-                checked = errorReporting,
-                onCheckedChange = viewModel::setErrorReporting,
-            )
+            // A build without a DSN sends no reports: no switch for them
+            if (viewModel.isErrorReportingAvailable) {
+                val errorReporting by viewModel.errorReporting.collectAsState()
+                SettingCard(
+                    title = Res.string.settings_error_reporting,
+                    description = Res.string.settings_error_reporting_description,
+                    checked = errorReporting,
+                    onCheckedChange = viewModel::setErrorReporting,
+                )
+            }
         }
     }
 }
