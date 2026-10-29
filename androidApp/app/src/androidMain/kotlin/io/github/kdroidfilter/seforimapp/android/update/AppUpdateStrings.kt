@@ -74,7 +74,8 @@ internal object AppUpdateStrings {
     const val downloadingTitle = "מוריד את העדכון לפרדס"
     const val failedTitle = "עדכון פרדס נכשל"
     const val channel = "עדכון האפליקציה"
-    const val autoCheckTitle = "בדוק עדכונים בכל הפעלה"
+    // Desktop 0.6.12 settings_auto_update_check
+    const val autoCheckTitle = "בדיקת עדכונים אוטומטית בהפעלה"
     const val autoCheckDescription =
         "כאשר אפשרות זו מופעלת, פרדס בודק בכל הפעלה אם יצאה גרסה חדשה (בקשה קטנה לרשימת הגרסאות של פרדס ב-GitHub), " +
             "ומודיע על כך בסרגל העליון. ההורדה וההתקנה רק באישורכם."

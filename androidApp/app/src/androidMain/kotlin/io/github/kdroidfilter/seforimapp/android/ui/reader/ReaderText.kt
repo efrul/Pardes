@@ -264,21 +264,28 @@ fun DrawScope.drawNoteUnderlines(layout: TextLayoutResult, ranges: List<IntRange
     if (ranges.isEmpty()) return
     val stroke = density
     val dash = PathEffect.dashPathEffect(floatArrayOf(2f * stroke, 3f * stroke), 0f)
-    val length = layout.layoutInput.text.length
     for (range in ranges) {
-        val startOffset = range.first
-        val endOffset = range.last + 1
-        if (endOffset <= startOffset || startOffset >= length) continue
-        val firstLine = layout.getLineForOffset(startOffset)
-        val lastLine = layout.getLineForOffset((endOffset - 1).coerceIn(startOffset, length - 1))
-        for (line in firstLine..lastLine) {
-            val segStart = if (line == firstLine) startOffset else layout.getLineStart(line)
-            val segEnd = if (line == lastLine) endOffset.coerceAtMost(length) else layout.getLineEnd(line, visibleEnd = true)
-            val x1 = layout.getHorizontalPosition(segStart, usePrimaryDirection = true)
-            val x2 = layout.getHorizontalPosition(segEnd, usePrimaryDirection = true)
+        layout.forEachRowSpan(range.first, range.last + 1) { line, _, _, x1, x2 ->
             val y = layout.getLineBottom(line) - stroke
             drawLine(color, Offset(min(x1, x2), y), Offset(max(x1, x2), y), strokeWidth = stroke, pathEffect = dash)
         }
+    }
+}
+
+/**
+ * Calls [action] for each visual row the range [start] until [end] covers, as laid out (wrapped, RTL): the row, the
+ * part of the range on it ([from] until [to]) and its horizontal positions at [from] and [to], in either order
+ * (desktop 0.6.12 forEachRowSpan, Notes.kt; the range is kept inside the text, as drawNoteUnderlines did).
+ */
+inline fun TextLayoutResult.forEachRowSpan(start: Int, end: Int, action: (row: Int, from: Int, to: Int, xFrom: Float, xTo: Float) -> Unit) {
+    val length = layoutInput.text.length
+    if (end <= start || start >= length) return
+    val firstRow = getLineForOffset(start)
+    val lastRow = getLineForOffset((end - 1).coerceIn(start, length - 1))
+    for (row in firstRow..lastRow) {
+        val from = if (row == firstRow) start else getLineStart(row)
+        val to = if (row == lastRow) end.coerceAtMost(length) else getLineEnd(row, visibleEnd = true)
+        action(row, from, to, getHorizontalPosition(from, usePrimaryDirection = true), getHorizontalPosition(to, usePrimaryDirection = true))
     }
 }
 

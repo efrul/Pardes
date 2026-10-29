@@ -15,7 +15,10 @@ class HomeWidgetsLayoutTest {
 
     @Test
     fun `no saved layout is the default one`() {
-        assertEquals(homeWidgets, decodeLayout(null))
+        assertEquals(defaultLayout(), decodeLayout(null))
+        // The 3D widgets only where the machine can run them, whichever machine runs the test
+        assertEquals(homeWidgets, defaultLayout(lowEnd = false))
+        assertEquals(lowEndHomeWidgets, defaultLayout(lowEnd = true))
     }
 
     @Test

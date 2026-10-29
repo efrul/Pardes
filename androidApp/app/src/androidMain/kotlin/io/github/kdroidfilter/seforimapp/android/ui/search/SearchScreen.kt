@@ -118,6 +118,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.pinchTextZoom
 import io.github.kdroidfilter.seforimapp.android.ui.reader.PaneHeader
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderPrefs
 import io.github.kdroidfilter.seforimapp.android.ui.reader.ReaderRailButton
+import io.github.kdroidfilter.seforimapp.android.ui.reader.SplitHandle
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalAppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalTabSession
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
@@ -130,6 +131,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -137,17 +139,20 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Below this the list takes the whole width and a tap opens a result (desktop TWO_PANES_MIN_WIDTH). */
-private val TwoPanesMinWidth = 1000.dp
 private val ListMinWidth = 380.dp
-private val ListMaxWidth = 580.dp
 private val TocPaneWidth = 260.dp
 
 /** Desktop ReaderPane.BookDetails' docked extent. */
 private val DetailsPaneWidth = 280.dp
 
-/** In two panes the passage keeps at least this much beside the list: the side panes give way first. */
-private val PreviewMinWidth = 400.dp
+/** In two panes the passage keeps at least this much beside the list: the side panes give way first (desktop 0.6.12). */
+private val PreviewMinWidth = 300.dp
+
+/** The handle between the list and the passage (ReaderScreen's SplitHandle). */
+private val SplitHandleWidth = 8.dp
+
+/** A drag writes the split once it rests (desktop SPLIT_SAVE_DELAY_MS). */
+private const val SPLIT_SAVE_DELAY_MS = 300L
 private val LogoHeight = 44.dp
 private const val LOGO_RATIO = 1f
 private const val TOP_TABS = 5
@@ -194,9 +199,10 @@ private fun String.fill(vararg args: Any): String = String.format(Locale.ROOT, t
 /**
  * The search results page, a port of desktop 0.6.11 features/search/SearchResultScreen.kt (and TabsContent's search tab
  * wiring): one card with the logo's branch beside the shared smart bar, the category tabs, the way back from one book,
- * the status line, then the results grouped by runs of a book with their "more" links. From [TwoPanesMinWidth] the
- * selected result is read beside the list (PassagePreview, the knowledge panel above it), as on desktop; narrower, a
- * tap opens it. A result opens in a new tab at its line, with the query in the reader's find; on a phone Back
+ * the status line, then the results grouped by runs of a book with their "more" links. On a tablet the selected result
+ * is always read beside the list (PassagePreview, the knowledge panel above it), the list's share of the width resized
+ * by the handle between them and kept for every search tab (desktop 0.6.12); on a phone a tap opens it. A result
+ * opens in a new tab at its line, with the query in the reader's find; on a phone Back
  * comes back here (the shell returns to the opener), at the same place. The title bar's find (Ctrl+F) finds within the
  * results. Tablets add the window's end rail (zoom, book details) and the selected result's book-details pane, as the
  * desktop search tab in its book shell; on a small screen the header slides away as the results scroll.
@@ -222,6 +228,11 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
     // One book-details setting for every tab, the reader's (desktop AppSettings.bookDetailsPaneFlow)
     val readerPrefs = remember(app) { ReaderPrefs.get(app) }
     val bookDetailsPref by readerPrefs.bookDetails.collectAsState()
+    // The list's share of the width beside the passage, resized as a docked pane and kept for every search tab
+    var listSplit by remember { mutableFloatStateOf(app.prefs.searchListSplit.value) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { listSplit }.drop(1).debounce(SPLIT_SAVE_DELAY_MS).collect(app.prefs::setSearchListSplit)
+    }
     val c = Zayit.colors
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
@@ -314,21 +325,22 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
     }
 
     BoxWithConstraints(modifier.fillMaxSize().then(if (wide) Modifier else Modifier.windowInsetsPadding(WindowInsets.navigationBars))) {
-        // Wide windows read the selected passage beside the list, as a mail client. Measured on the whole page, rail
-        // and side panes included: desktop measures what its docks leave, which on a 1280dp tablet with the book
-        // details open would drop the passage
-        val twoPanes = maxWidth >= TwoPanesMinWidth
         val compact = maxWidth < NarrowWidth
         val showToc = wide && state.tocTree != null
         val showDetails = wide && bookDetailsPref
         // Tablets: the end rail at the far side, as desktop's window bar beside its search tab
         val railWidth = if (!wide) 0.dp else if (compactRails) 48.dp + 8.dp else 64.dp + 8.dp
         val room = maxWidth - railWidth
+        // A tablet reads the selected passage beside the list, as a mail client, always (desktop 0.6.12): a phone has
+        // not the room for both
+        val twoPanes = wide && room >= ListMinWidth + SplitHandleWidth + PreviewMinWidth
         val sides = (if (showToc) TocPaneWidth else 0.dp) + (if (showDetails) DetailsPaneWidth else 0.dp)
         // The side panes give way so the list, and beside it the passage, keep their room (as the reader's text does)
-        val mainMin = if (twoPanes) ListMinWidth + PreviewMinWidth else ListMinWidth
+        val mainMin = if (twoPanes) ListMinWidth + SplitHandleWidth + PreviewMinWidth else ListMinWidth
         val fit = if (sides > 0.dp && room - sides < mainMin) ((room - mainMin) / sides).coerceIn(0.6f, 1f) else 1f
-        val listWidth = ((room - sides * fit) * 0.34f).coerceIn(ListMinWidth, ListMaxWidth)
+        // The list and the passage share what the side panes leave, each at least its minimum
+        val main = room - sides * fit - SplitHandleWidth
+        val listWidth = (main * listSplit).coerceIn(ListMinWidth, maxOf(ListMinWidth, main - PreviewMinWidth))
         // The selection lives in the ViewModel, as the preview it drives; computed only in two panes
         val preview: PassagePreview? = if (twoPanes) vm.preview.collectAsState().value else null
         val selectedLineId = preview?.hit?.lineId
@@ -571,6 +583,11 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
                 }
             }
             if (twoPanes) {
+                // On the list's end side (left in Hebrew): dragged left, it grows
+                SplitHandle(vertical = false) { d ->
+                    val share = listWidth.value / main.value
+                    listSplit = (share - d / main.value).coerceIn(ListMinWidth / main, maxOf(ListMinWidth, main - PreviewMinWidth) / main)
+                }
                 Column(Modifier.weight(1f).fillMaxHeight()) {
                     panelEntity?.let { EntityPanel(it, ::openBookAt, openAuthor, Modifier.fillMaxWidth()) }
                     // Until the first result's passage is loaded, the pane says so

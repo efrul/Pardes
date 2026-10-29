@@ -12,6 +12,7 @@ import io.github.kdroidfilter.seforimapp.backup.drive.DriveSyncState
 import io.github.kdroidfilter.seforimapp.backup.drive.GoogleDriveSync
 import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.framework.crashreporting.CrashReporting
 import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
 import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
@@ -37,12 +38,17 @@ class DataSettingsViewModel(
     private val appSettings: AppSettings,
     private val backupManager: BackupManager,
     private val driveSync: GoogleDriveSync,
+    private val crashReporting: CrashReporting,
 ) : ViewModel() {
     private val _state = MutableStateFlow(DataSettingsState())
     val state: StateFlow<DataSettingsState> = _state.asStateFlow()
 
     val isDriveAvailable: Boolean = driveSync.isAvailable
     val driveState: StateFlow<DriveSyncState> = driveSync.state
+    val isErrorReportingAvailable: Boolean = crashReporting.isAvailable
+    val errorReporting: StateFlow<Boolean> = appSettings.errorReportingFlow
+
+    fun setErrorReporting(enabled: Boolean) = crashReporting.setEnabled(enabled)
 
     fun connectDrive() = driveSync.connect()
 
