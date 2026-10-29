@@ -1,12 +1,13 @@
-# The download site of Pardes, the Android app based on Zayit, and of Pardes for desktop (androidApp/site), on GitHub Pages, with the desktop-to-phone
-# transfer scripts next to it (and push-desktop-library-windows.zip, the .ps1 with its .cmd launcher) so the page can
-# offer them as downloads, and androidApp/CHANGELOG.md as changelog.md for its changelog. The APK, the version and the
-# download count come from the releases that android-release.yml publishes. The page asks the GitHub API for them on
-# every visit, so the count is current; releases.json, written here at every deploy (and the deploy runs again after
-# every successful release), is what it shows when that call fails: 60 calls per hour per IP, often shared behind
-# filtering proxies, and some filters block api.github.com.
-# downloads.json is the same for the page's other downloads: Pardes for desktop's newest installers (desktop-release.yml),
-# the semantic search's zips and the library's files (SeforimLibrary's latest release).
+# The site of Pardes, the Android app based on Zayit, and of Pardes for desktop (androidApp/site: index, guide,
+# downloads and changelog pages), on GitHub Pages, with the desktop-to-phone transfer scripts next to it (and
+# push-desktop-library-windows.zip, the .ps1 with its .cmd launcher) so the pages can offer them as downloads, and the
+# two changelogs: androidApp/CHANGELOG.md as changelog.md and desktop/CHANGELOG.md as changelog-desktop.md.
+# The pages read the versions and the files from releases.json and downloads.json, written here at every deploy (and
+# the deploy runs again after every successful release), not from the GitHub API: 60 calls per hour per IP, often
+# shared behind filtering proxies, and some filters block api.github.com. Only the downloads page also asks the API,
+# for the current download count and the library's newest files, and keeps the snapshots' when it can't.
+# releases.json: every release with a Pardes APK. downloads.json: Pardes for desktop's newest installers
+# (desktop-release.yml), the semantic search's zips and the library's files (SeforimLibrary's latest release).
 # The app reads releases.json and changelog.md too, the same way, to update itself (androidApp/.../update/AppReleases.kt),
 # and Pardes for desktop reads semantic.json, the semantic packs (semantic-release.yml), when it can't reach the API
 # (SeforimApp/.../features/search/semantic/pack/SemanticPackReleases.kt): keep their shapes.
@@ -21,6 +22,7 @@ on:
       - 'androidApp/tools/push-desktop-library.sh'
       - 'androidApp/tools/push-desktop-library.cmd'
       - 'androidApp/CHANGELOG.md'
+      - 'desktop/CHANGELOG.md'
       - '.github/workflows/android-site.yml'
   workflow_run:
     workflows: [Android release, Semantic pack release, Desktop release]
@@ -52,6 +54,7 @@ jobs:
           cp -r androidApp/site/. _site/
           cp androidApp/tools/push-desktop-library.ps1 androidApp/tools/push-desktop-library.sh _site/tools/
           cp androidApp/CHANGELOG.md _site/changelog.md
+          cp desktop/CHANGELOG.md _site/changelog-desktop.md
           # Windows: the .ps1 with its double-click launcher, in one download.
           (cd androidApp/tools && zip -q -X "$GITHUB_WORKSPACE/_site/tools/push-desktop-library-windows.zip" push-desktop-library.cmd push-desktop-library.ps1)
           touch _site/.nojekyll
