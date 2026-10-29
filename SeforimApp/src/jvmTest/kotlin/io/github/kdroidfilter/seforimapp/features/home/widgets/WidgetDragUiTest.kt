@@ -38,11 +38,14 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.solarsystem.Solar
 import io.github.kdroidfilter.seforimapp.features.home.widgets.temple.TempleCountdownWidget
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.testAppGraph
 import io.github.kdroidfilter.seforimapp.testAppSettings
 import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 import kotlin.math.abs
 import kotlin.random.Random
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -62,6 +65,18 @@ class WidgetDragUiTest {
     private val pitch = CellPitch(1000.dp)
 
     private fun saved() = layout.current()
+
+    // The Earth is the widget these tests hold: shown whatever the machine's GPU (a CI runner's is a software one, where
+    // the app turns the 3D widgets off)
+    @BeforeTest
+    fun showThe3dWidgets() {
+        PlatformInfo.lowEndForTests = false
+    }
+
+    @AfterTest
+    fun detectTheMachineAgain() {
+        PlatformInfo.lowEndForTests = null
+    }
 
     private fun List<WidgetPlacement>.cellOf(widget: HomeWidget) = first { it.widget.id == widget.id }.cell
 

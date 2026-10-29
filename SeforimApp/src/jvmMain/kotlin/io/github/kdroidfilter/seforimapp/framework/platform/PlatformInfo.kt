@@ -35,7 +35,16 @@ object PlatformInfo {
      * (a software rasterizer, or one below Direct3D 11 / GL ES 3, where Filament crashes or blacks out the window,
      * #728). Lazy, and warmed off the UI thread at startup ([warmUp]): the GPU probe loads the driver.
      */
-    val isLowEnd: Boolean by lazy {
+    val isLowEnd: Boolean get() = lowEndForTests ?: detectedLowEnd
+
+    /**
+     * What [isLowEnd] says in a test, whose widgets must not depend on the machine's GPU (a CI runner's is a software
+     * one); null, the machine's answer, in the app.
+     */
+    @Volatile
+    internal var lowEndForTests: Boolean? = null
+
+    private val detectedLowEnd: Boolean by lazy {
         val totalMemory = runCatching { SystemInfo.memoryInfo()?.totalMemory }.getOrNull()
         val renderTier = runCatching { SystemInfo.renderTier() }.getOrDefault(RenderTier.UNKNOWN)
         (totalMemory != null && totalMemory < LOW_END_MEMORY_BYTES) ||
@@ -45,7 +54,7 @@ object PlatformInfo {
 
     /** Computes [isLowEnd] on a thread of its own, so the Home's first composition doesn't wait for the GPU probe. */
     fun warmUp() {
-        Thread({ isLowEnd }, "platform-info-warmup").apply { isDaemon = true }.start()
+        Thread({ detectedLowEnd }, "platform-info-warmup").apply { isDaemon = true }.start()
     }
 
     private const val LOW_END_MEMORY_BYTES = 6L * 1024 * 1024 * 1024
