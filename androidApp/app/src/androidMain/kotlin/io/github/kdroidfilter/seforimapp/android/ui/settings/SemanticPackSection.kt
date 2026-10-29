@@ -32,7 +32,6 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PackProblem
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackReleases
-import io.github.kdroidfilter.seforimapp.features.settings.semantic.libraryDate
 
 /**
  * Port of Pardes desktop's features/settings/semantic/SemanticPackCard, in Settings › ניהול נתונים after the library's
@@ -133,7 +132,6 @@ private fun installedText(installed: InstalledPack): String =
         InstalledPack.NoModel -> SemanticPackStrings.noModel
         InstalledPack.NoIndex -> SemanticPackStrings.noIndex
         InstalledPack.OtherModel -> SemanticPackStrings.otherModel
-        is InstalledPack.OtherLibrary -> SemanticPackStrings.otherLibrary.format(libraryDate(installed.pack), libraryDate(installed.installed))
         is InstalledPack.Unreadable -> SemanticPackStrings.unreadable.format(installed.message)
     }
 
@@ -149,9 +147,8 @@ private fun availableText(
             } else {
                 SemanticPackStrings.available.format(available.pack.pack, formatBytes(available.pack.bundleBytes))
             }
-        is Available.NoneYet -> SemanticPackStrings.noneYet.format(libraryDate(available.library))
+        Available.NoneYet -> SemanticPackStrings.noneYet
         Available.Unreachable -> SemanticPackStrings.unreachable
-        Available.UnknownLibrary -> SemanticPackStrings.unknownLibrary
     }
 
 /** Why the pack was not installed, for the user. */
@@ -161,7 +158,6 @@ private fun problemText(problem: Throwable): String =
         is PackProblem.Missing -> SemanticPackStrings.problemMissing.format(isolatedName(problem.name))
         is PackProblem.Corrupted -> SemanticPackStrings.problemCorrupted.format(isolatedName(problem.name))
         is PackProblem.Unusable -> SemanticPackStrings.problemUnusable.format(problem.reason)
-        is PackProblem.OtherLibrary -> SemanticPackStrings.problemOtherLibrary.format(libraryDate(problem.pack), libraryDate(problem.installed))
         is PackProblem.NoSpace ->
             SemanticPackStrings.problemNoSpace.format(isolatedName(problem.dir), formatBytes(problem.needed), formatBytes(problem.free))
         else -> SemanticPackStrings.problemFailed.format(problem.message ?: problem.toString())

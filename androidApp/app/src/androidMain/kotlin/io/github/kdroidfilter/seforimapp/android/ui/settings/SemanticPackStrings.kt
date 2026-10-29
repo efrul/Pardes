@@ -16,15 +16,13 @@ internal object SemanticPackStrings {
     const val noIndex =
         "בתיקיית הספרייה יש מודל בלי האינדקס שלו (pardes.vec.lucene), למשל אחרי עדכון מלא של הספרייה. לכן החיפוש לפי משמעות כבוי."
     const val otherModel = "המודל והאינדקס שבתיקיית הספרייה הם מחבילות שונות, ולכן החיפוש לפי משמעות כבוי."
-    const val otherLibrary = "האינדקס שבתיקיית הספרייה נבנה לספרייה מ־%1\$s, והספרייה המותקנת היא מ־%2\$s. לכן החיפוש לפי משמעות כבוי."
     const val unreadable = "אי אפשר לקרוא את החבילה שבתיקיית הספרייה (%1\$s), ולכן החיפוש לפי משמעות כבוי."
-    const val checking = "בודק אם יש חבילה לספרייה…"
+    const val checking = "בודק אם יש חבילה…"
     const val available = "חבילה %1\$s זמינה להורדה (%2\$s)."
-    const val upToDate = "זו החבילה האחרונה לספרייה הזו."
-    const val noneYet = "אין עדיין חבילה לספרייה מ־%1\$s."
+    const val upToDate = "זו החבילה האחרונה."
+    const val noneYet = "אין עדיין חבילה להורדה."
     const val unreachable =
         "אי אפשר לבדוק כרגע אם יש חבילה, כי אין חיבור ל־GitHub. אפשר להוריד אותה בדפדפן מדף ההורדות ולייבא אותה."
-    const val unknownLibrary = "לא ידוע מאיזו גרסה הספרייה המותקנת, ולכן אי אפשר לבחור לה חבילה. אפשר לייבא חבילה מקבצים."
     const val noLibrary = "צריך להתקין קודם את הספרייה."
     const val download = "הורדה והתקנה"
     const val update = "עדכון לחבילה %1\$s"
@@ -39,7 +37,6 @@ internal object SemanticPackStrings {
     const val startFailed = "בהפעלה הקודמת התקנת החבילה לא הושלמה (%1\$s), ומה שהיה מותקן נשאר. אפשר לנסות שוב."
     const val problemCorrupted = "הקובץ %1\$s פגום או חלקי. אפשר להוריד אותו שוב."
     const val problemUnusable = "אי אפשר להשתמש בחבילה הזו (%1\$s)."
-    const val problemOtherLibrary = "החבילה נבנתה לספרייה מ־%1\$s, והספרייה המותקנת היא מ־%2\$s."
     const val problemFailed = "ההתקנה נכשלה (%1\$s)."
     // desktop's library_problem_no_space
     const val problemNoSpace = "אין מספיק מקום ב־%1\$s: צריך %2\$s, פנויים %3\$s."

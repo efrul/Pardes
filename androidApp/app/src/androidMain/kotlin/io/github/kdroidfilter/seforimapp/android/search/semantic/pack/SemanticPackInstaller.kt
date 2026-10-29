@@ -65,12 +65,6 @@ sealed class PackProblem(
         val reason: String,
     ) : PackProblem(reason)
 
-    /** The index was embedded on the library release [pack], the library is [installed]: its line ids are another's. */
-    class OtherLibrary(
-        val pack: String,
-        val installed: String,
-    ) : PackProblem("A pack of the library $pack, the library is $installed")
-
     /** Not enough room beside the library. */
     class NoSpace(
         val dir: String,
@@ -82,9 +76,9 @@ sealed class PackProblem(
 /**
  * Installs a semantic pack beside the library at [libraryDir], in two steps. Here, while the app runs, the pack is
  * downloaded ([online]) or taken from files the user picked ([resolve]), unpacked into [stagingDir], beside the library
- * on its volume ([stage]), and checked: the model reads, the index is the model's and of the library installed. At the
- * next start, before anything opens the search, [PendingSemanticPack] puts the two folders in place of the old ones:
- * the search keeps its model and index open while the app runs.
+ * on its volume ([stage]), and checked: the model reads, and the index is the model's. At the next start, before
+ * anything opens the search, [PendingSemanticPack] puts the two folders in place of the old ones: the search keeps its
+ * model and index open while the app runs.
  */
 // Android: internal, as the app's download helpers it reads with (InstallToken, ResumingHttpInputStream) are
 internal class SemanticPackInstaller(
@@ -219,11 +213,8 @@ internal class SemanticPackInstaller(
             }
         }
 
-    /** Schedules the [staged] pack for the next start ([PendingSemanticPack]), which puts it in place. */
-    fun schedule(
-        staged: Staged,
-        markerDir: File,
-    ) = PendingSemanticPack.schedule(PendingSemanticPack.Request(libraryDir, staged.library), markerDir)
+    /** Schedules the pack [stage] left in [stagingDir] for the next start ([PendingSemanticPack]), which puts it in place. */
+    fun schedule(markerDir: File) = PendingSemanticPack.schedule(PendingSemanticPack.Request(libraryDir), markerDir)
 
     fun discardStaged() {
         stagingDir.deleteRecursively()
@@ -397,7 +388,7 @@ internal class SemanticPackInstaller(
         return if (file.isFile) PackInfo.parseOrNull(file.readText()) else null
     }
 
-    /** The staged folders checked as IndependentSemanticSearch opens them, and against the library installed. */
+    /** The staged folders checked as IndependentSemanticSearch opens them. */
     private fun verify(
         info: PackInfo?,
         job: Job,
@@ -421,12 +412,8 @@ internal class SemanticPackInstaller(
             throw PackProblem.Unusable("The index is of ${index.model} (${index.dimension}), the model is ${spec.id} (${spec.dimension})")
         }
         if (info != null && info.model != spec.id) throw PackProblem.Unusable("The manifest names ${info.model}, the model is ${spec.id}")
-        val installed = InstalledPack.libraryVersion(libraryDir)
-        val packLibraries = listOfNotNull(info?.library, index.dbRelease)
-        if (installed != null) {
-            packLibraries.firstOrNull { !SemanticPack.sameLibrary(it, installed) }?.let { throw PackProblem.OtherLibrary(it, installed) }
-        }
-        return Staged(info, spec.id, index.lines, packLibraries.firstOrNull())
+        // Not checked against the library installed: a pack works on every library release (SemanticPackReleases.newest)
+        return Staged(info, spec.id, index.lines, info?.library ?: index.dbRelease)
     }
 
     private fun downloadText(url: String): String {

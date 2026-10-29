@@ -27,11 +27,11 @@ import java.io.IOException
 
 /**
  * Port of Pardes desktop's features/settings/semantic/SemanticPackViewModel: Pardes's semantic search in Settings ›
- * ניהול נתונים, the pack beside the library ([InstalledPack]), the newest pack for the library installed
- * ([SemanticPackReleases]), and installing one, downloaded or from files the user picked ([SemanticPackInstaller]); it
- * goes in at the next start ([PendingSemanticPack]). Android: one per process rather than per screen, as
- * [LibraryInstaller] is, so that a download of 2 GB goes on when the screen is left, with [SemanticPackService] keeping
- * the process in the foreground meanwhile.
+ * ניהול נתונים, the pack beside the library ([InstalledPack]), the newest pack ([SemanticPackReleases.newest]), and
+ * installing one, downloaded or from files the user picked ([SemanticPackInstaller]); it goes in at the next start
+ * ([PendingSemanticPack]). Android: one per process rather than per screen, as [LibraryInstaller] is, so that a
+ * download of 2 GB goes on when the screen is left, with [SemanticPackService] keeping the process in the foreground
+ * meanwhile.
  */
 class SemanticPackManager private constructor(private val app: ZayitApplication) {
     sealed interface Available {
@@ -41,16 +41,11 @@ class SemanticPackManager private constructor(private val app: ZayitApplication)
             val pack: SemanticPackReleases.Available,
         ) : Available
 
-        /** No pack for this library release yet. */
-        data class NoneYet(
-            val library: String,
-        ) : Available
+        /** No pack released yet. */
+        data object NoneYet : Available
 
         /** Neither the GitHub API nor the site's list could be read. */
         data object Unreachable : Available
-
-        /** A library without its release (release_info.txt): no pack can be chosen for it. */
-        data object UnknownLibrary : Available
     }
 
     sealed interface Work {
@@ -108,23 +103,20 @@ class SemanticPackManager private constructor(private val app: ZayitApplication)
             val dir = store.libraryDir
             val hasLibrary = LibraryStore.hasDatabase(dir)
             _state.update { it.copy(hasLibrary = hasLibrary, installed = InstalledPack.read(dir)) }
-            val library = InstalledPack.libraryVersion(dir)
+            // Without a library the card asks for it, and offers no pack
+            if (!hasLibrary) return@launch
             val available =
-                when {
-                    !hasLibrary || library == null -> Available.UnknownLibrary
-                    else ->
-                        runSuspendCatching { releases.newestFor(library) }
-                            .map { pack -> pack?.let { Available.Pack(it) } ?: Available.NoneYet(library) }
-                            .getOrElse {
-                                Log.w(TAG, "No pack list: ${it.message}")
-                                Available.Unreachable
-                            }
-                }
+                runSuspendCatching { releases.newest(InstalledPack.libraryVersion(dir)) }
+                    .map { pack -> pack?.let { Available.Pack(it) } ?: Available.NoneYet }
+                    .getOrElse {
+                        Log.w(TAG, "No pack list: ${it.message}")
+                        Available.Unreachable
+                    }
             _state.update { it.copy(available = available) }
         }
     }
 
-    /** Downloads the newest pack for the library and unpacks it, ready for the next start. */
+    /** Downloads the newest pack and unpacks it, ready for the next start. */
     fun install() {
         val pack = (_state.value.available as? Available.Pack)?.pack ?: return
         launchInstall(Work.Downloading(0, pack.bundleBytes)) { installer ->
@@ -183,8 +175,8 @@ class SemanticPackManager private constructor(private val app: ZayitApplication)
         source: SemanticPackInstaller.Source,
         progress: (read: Long, total: Long) -> Work,
     ) {
-        val staged = installer.stage(source, markerDir) { read, total -> _state.update { it.copy(work = progress(read, total)) } }
-        installer.schedule(staged, markerDir)
+        installer.stage(source, markerDir) { read, total -> _state.update { it.copy(work = progress(read, total)) } }
+        installer.schedule(markerDir)
         _state.update { it.copy(work = Work.Ready) }
     }
 

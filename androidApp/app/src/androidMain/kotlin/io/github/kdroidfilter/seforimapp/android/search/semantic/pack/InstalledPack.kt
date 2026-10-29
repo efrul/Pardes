@@ -1,6 +1,6 @@
 // Android variant of Pardes desktop's SeforimApp/src/jvmMain/.../features/search/semantic/pack/InstalledPack.kt, same
-// package and names. One change, marked "Android:": the library's release is read from its release_info.txt here
-// (desktop's LibraryLocation.version, which reads the same file).
+// package and names. One addition, marked "Android:": libraryVersion, the library's release from its release_info.txt
+// (desktop's LibraryLocation.version, which reads the same file), which the settings ask the newest pack for.
 package io.github.kdroidfilter.seforimapp.features.search.semantic.pack
 
 import io.github.kdroidfilter.seforimapp.features.search.semantic.OpenModelSpec
@@ -28,11 +28,6 @@ sealed interface InstalledPack {
 
     data object OtherModel : NotUsed
 
-    data class OtherLibrary(
-        val pack: String,
-        val installed: String,
-    ) : NotUsed
-
     data class Unreadable(
         val message: String,
     ) : NotUsed
@@ -45,11 +40,8 @@ sealed interface InstalledPack {
             return runCatching {
                 val spec = OpenModelSpec.read(modelDir.toPath()) ?: return NoModel
                 val index = VectorIndexBuilder.readInfo(indexDir.toPath()) ?: return NoIndex
-                val library = libraryVersion(libraryDir)
                 when {
                     index.model != spec.id || index.dimension != spec.dimension -> OtherModel
-                    index.dbRelease != null && library != null && !SemanticPack.sameLibrary(index.dbRelease, library) ->
-                        OtherLibrary(index.dbRelease, library)
                     else -> {
                         val info =
                             File(modelDir, SemanticPack.INFO_NAME)
