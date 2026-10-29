@@ -82,7 +82,7 @@ class SemanticPackCardUiTest {
     fun `a pack in use has no instructions and does not open at start`() =
         runDesktopComposeUiTest(width = 520, height = 700) {
             show { SemanticPackCardContent(State(installed = inUse, available = Available.Pack(pack)), actions()) }
-            onNodeWithText("זו החבילה האחרונה.").assertExists()
+            onNodeWithText("זו הגרסה האחרונה של הקבצים.").assertExists()
             onAllNodesWithText("עם אינטרנט:", substring = true).assertCountEquals(0)
             onAllNodesWithText("לפתוח את המסך הזה בכל הפעלה", substring = true).assertCountEquals(0)
         }
@@ -91,7 +91,7 @@ class SemanticPackCardUiTest {
     fun `a pack ready for the restart is not offered again`() =
         runDesktopComposeUiTest(width = 520, height = 700) {
             show { SemanticPackCardContent(State(available = Available.Pack(pack), work = Work.Ready), actions()) }
-            onNodeWithText("החבילה מוכנה", substring = true).assertExists()
+            onNodeWithText("הקבצים מוכנים", substring = true).assertExists()
             onAllNodesWithText("זמינה להורדה", substring = true).assertCountEquals(0)
             onAllNodesWithText("עם אינטרנט:", substring = true).assertCountEquals(0)
         }
