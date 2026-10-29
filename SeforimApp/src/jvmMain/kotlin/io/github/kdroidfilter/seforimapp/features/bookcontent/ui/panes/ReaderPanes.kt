@@ -18,8 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -47,6 +49,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LayoutState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.SplitDefaults
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.LocalPaneSatellite
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.CommentsPane
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.DetachedCommentatorPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.ReferencesPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.SourcesPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.TargumPane
@@ -73,6 +76,7 @@ import org.jetbrains.jewel.foundation.theme.JewelTheme
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.book_list
 import seforimapp.seforimapp.generated.resources.commentaries
+import seforimapp.seforimapp.generated.resources.commentator_pane
 import seforimapp.seforimapp.generated.resources.links
 import seforimapp.seforimapp.generated.resources.notes_pane
 import seforimapp.seforimapp.generated.resources.references
@@ -99,6 +103,8 @@ enum class ReaderPane(
     val toggle: BookContentEvent,
     val navigation: Boolean,
     val fixed: Boolean = false,
+    // The slot of the split-off commentator this pane shows (DetachedCommentators), -1 for the other panes
+    val commentatorSlot: Int = -1,
 ) {
     Tree(
         "tree",
@@ -162,6 +168,41 @@ enum class ReaderPane(
         toggle = BookContentEvent.ToggleReferences,
         navigation = false,
     ),
+
+    // Commentators split off the commentaries pane, each in a pane of its own: beside the text by default, after
+    // the links, from where they move as any line pane. Closing one gives its commentator back to the commentaries.
+    Commentator1(
+        "commentator-1",
+        Res.string.commentator_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 3, extent = 320.dp),
+        toggle = BookContentEvent.CloseCommentatorPane(0),
+        navigation = false,
+        commentatorSlot = 0,
+    ),
+    Commentator2(
+        "commentator-2",
+        Res.string.commentator_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 4, extent = 320.dp),
+        toggle = BookContentEvent.CloseCommentatorPane(1),
+        navigation = false,
+        commentatorSlot = 1,
+    ),
+    Commentator3(
+        "commentator-3",
+        Res.string.commentator_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 5, extent = 320.dp),
+        toggle = BookContentEvent.CloseCommentatorPane(2),
+        navigation = false,
+        commentatorSlot = 2,
+    ),
+    Commentator4(
+        "commentator-4",
+        Res.string.commentator_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 6, extent = 320.dp),
+        toggle = BookContentEvent.CloseCommentatorPane(3),
+        navigation = false,
+        commentatorSlot = 3,
+    ),
     ;
 
     /** This pane's satellite id in the dock of window [groupId]: every window has its own docks. */
@@ -171,6 +212,11 @@ enum class ReaderPane(
         session: DesktopSession,
         groupId: String,
     ): SatelliteWorkspace = session.panesOf(groupId, navigation)
+
+    companion object {
+        /** The pane of the split-off commentators' [slot], null past the last. */
+        fun forCommentatorSlot(slot: Int): ReaderPane? = entries.firstOrNull { it.commentatorSlot == slot }
+    }
 }
 
 /** The navigation column is the start side of the window, as the split panes had it. */
@@ -198,12 +244,15 @@ fun WindowPanes(window: OpenWindow) {
     val session = window.session
     val groupId = window.groupId
     PaneSync(window, session, groupId)
+    val detached = selectedTabDetachedCommentators(session, groupId)
     for (pane in ReaderPane.entries) {
         key(pane) {
+            // A split-off commentator's pane is called by its commentator's name
+            val title = detached.getOrNull(pane.commentatorSlot)?.takeIf { it.isNotEmpty() } ?: stringResource(pane.title)
             Satellite(
                 workspace = pane.workspaceIn(session, groupId),
                 id = pane.idIn(groupId),
-                title = stringResource(pane.title),
+                title = title,
                 initialPlacement = pane.home,
                 initiallyOpen = false,
                 dockSides = if (pane.navigation) NavigationDockSides else LineDockSides,
@@ -426,6 +475,26 @@ private fun selectedTabDemand(
     }
 }
 
+/** The commentators the selected tab shows in panes of their own, by slot; read apart so a scroll recomposes nothing. */
+@Composable
+private fun selectedTabDetachedCommentators(
+    session: DesktopSession,
+    groupId: String,
+): List<String> {
+    val item = session.group(groupId)?.selectedId?.let(session::item) ?: return emptyList()
+    val tabId = item.destination.tabId
+    return key(tabId) {
+        when (val destination = item.destination) {
+            is TabsDestination.Home, is TabsDestination.BookContent, is TabsDestination.Search -> {
+                val uiState = tabBookViewModel(session.ownerOf(tabId), destination).uiState.collectAsState()
+                val detached by remember(uiState) { derivedStateOf { uiState.value.content.detachedCommentators } }
+                detached
+            }
+            else -> emptyList()
+        }
+    }
+}
+
 private fun saveLater(
     @StructuredScope scope: CoroutineScope,
     save: () -> Unit,
@@ -529,7 +598,13 @@ private fun writeBack(
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage = ratio
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage = ratio
         // Never planned (see plannedExtents): their size is the dock's own
-        ReaderPane.BookDetails, ReaderPane.References -> Unit
+        ReaderPane.BookDetails,
+        ReaderPane.References,
+        ReaderPane.Commentator1,
+        ReaderPane.Commentator2,
+        ReaderPane.Commentator3,
+        ReaderPane.Commentator4,
+        -> Unit
     }
 }
 
@@ -541,7 +616,13 @@ private fun ReaderPane.position(layout: LayoutState): Float =
         ReaderPane.Notes -> layout.notesSplitState.positionPercentage
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage
-        ReaderPane.BookDetails, ReaderPane.References -> 0f
+        ReaderPane.BookDetails,
+        ReaderPane.References,
+        ReaderPane.Commentator1,
+        ReaderPane.Commentator2,
+        ReaderPane.Commentator3,
+        ReaderPane.Commentator4,
+        -> 0f
     }
 
 /** The first pane's minimum of this pane's split (the text, for the line panes), in dp. */
@@ -576,6 +657,10 @@ private fun desiredPanes(
             if (uiState.content.showCommentaries) add(ReaderPane.Comments)
             if (uiState.content.showSources) add(ReaderPane.Sources)
             if (uiState.content.showReferences) add(ReaderPane.References)
+            // Each split-off commentator in its slot's pane, whether the commentaries pane is open or not
+            uiState.content.detachedCommentators.forEachIndexed { slot, name ->
+                if (name.isNotEmpty()) ReaderPane.forCommentatorSlot(slot)?.let(::add)
+            }
         }
     }
 
@@ -666,6 +751,12 @@ private fun BookPaneBody(
                     ReaderPane.Comments -> CommentsPane(uiState, onEvent, connections, diacritics, modifier)
                     else -> SourcesPane(uiState, onEvent, diacritics, modifier)
                 }
+            }
+            ReaderPane.Commentator1, ReaderPane.Commentator2, ReaderPane.Commentator3, ReaderPane.Commentator4 -> {
+                val book = uiState.navigation.selectedBook ?: return@BookTextMenus
+                val name = uiState.content.detachedCommentators.getOrNull(pane.commentatorSlot)
+                if (name.isNullOrEmpty()) return@BookTextMenus
+                DetachedCommentatorPane(uiState, onEvent, name, tabUi.connections(book.id), diacritics, modifier)
             }
         }
     }
