@@ -54,6 +54,7 @@ The user can pick other accents (Blue, Teal, Green, Gold), as in the desktop set
    - Lines: verse markers "(א)", heading levels from HTML, and the selected line marked with a 3dp accent bar on the right (RTL start).
    - Paged loading, with pinch zoom.
    - Breadcrumb (תנ״ך › תורה › בראשית › פרק א) under the text on tablet, and in the top-bar subtitle on phone.
+   - Phone only: a tap on the line already selected slides the top bar and the bottom toolbar away, leaving the screen to the text; the next tap on it, or Back, brings them back. The tap waits a double tap's time, so a double tap still selects a word.
 5. **Commentaries / targum / sources / notes:** see table 2.
    - Commentators are grouped as on desktop (ראשונים על התנ״ך…).
    - The defaults come from `default_commentator`.
