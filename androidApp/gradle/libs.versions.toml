@@ -19,6 +19,12 @@ hebrew-numerals = "0.2.6"
 # Same versions as the desktop app (zstd-jni is added as its Android AAR in app/build.gradle.kts).
 zstd-jni = "1.5.7-10"
 commons-compress = "1.28.0"
+# Pardes's semantic search (search/semantic). Desktop runs its model on ONNX Runtime 1.17.1; 1.22.0 is the first whose
+# two Android libraries are both 16 KB aligned: 1.20 and 1.21 align libonnxruntime.so but not their JNI library,
+# libonnxruntime4j_jni.so (4 KB), and 1.17 to 1.19 neither, which the devices with 16 KB pages refuse. Same Java API.
+onnxruntime = "1.22.0"
+# Unit tests of the semantic port on the JVM: Android's org.json is a stub there.
+json = "20250517"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -29,6 +35,7 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 sqlDelight-driver-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqlDelight" }
+sqlDelight-driver-sqlite = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqlDelight" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
@@ -52,6 +59,11 @@ requery-sqlite = { module = "com.github.requery:sqlite-android", version = "3.49
 # Android's SQLite behind SQLDelight's driver (its runtime dependency, at the version it brings), named for LibraryStore.
 androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version = "2.6.2" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
+json = { module = "org.json:json", version.ref = "json" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+androidx-test-runner = { module = "androidx.test:runner", version = "1.7.0" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version = "1.3.0" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

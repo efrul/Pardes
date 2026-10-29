@@ -138,6 +138,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.guardedWrite
+import io.github.kdroidfilter.seforimapp.android.search.SemanticSearchSupport
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.components.Island
 import io.github.kdroidfilter.seforimapp.android.ui.components.ZIconButton
@@ -388,13 +389,19 @@ fun ReaderScreen(
         ) {
             if (state.multiSelect) MultiSelectChip(state.selectedLineIds.size, Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) { vm.setMultiSelect(false) }
             if (state.find.open) {
+                val compactFind = !wide && LocalConfiguration.current.screenWidthDp < 300
+                // Pardes desktop's smart-mode toggle, with its semantic search; under 300dp (Jelly Star) the field
+                // keeps its room, and the bar is smart while it holds the search's query
+                val findToggle = SemanticSearchSupport.supported && !compactFind
+                LaunchedEffect(findToggle) { vm.setFindToggle(findToggle) }
                 FindBar(
                     find = state.find,
                     onQuery = vm::setFindQuery,
                     onPrevious = { vm.navigateFind(false, vm.lines[listState.firstVisibleItemIndex]?.lineIndex ?: listState.firstVisibleItemIndex) },
                     onNext = { vm.navigateFind(true, vm.lines[listState.firstVisibleItemIndex]?.lineIndex ?: listState.firstVisibleItemIndex) },
                     onClose = vm::closeFind,
-                    compact = !wide && LocalConfiguration.current.screenWidthDp < 300,
+                    onToggleSmart = if (findToggle) vm::toggleFindSmart else null,
+                    compact = compactFind,
                     // Phone: the bar spans the text, on a band of the card's colour, so the text scrolls under a clean
                     // edge rather than showing slivers of a line around the bar (the text makes room for the band)
                     modifier = if (wide) Modifier.align(Alignment.TopEnd).padding(10.dp).widthIn(max = 420.dp) else Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Zayit.colors.panel).padding(6.dp),

@@ -41,10 +41,18 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytesPerSec
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.locationIcon
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.rememberWithNotificationPermission
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+
+/**
+ * The bytes of the library in [dir] with the semantic pack beside it, which a move takes along (desktop's
+ * LibraryLocation.size, over its NAMES).
+ */
+private fun locationBytes(dir: File): Long =
+    LibraryStore.libraryBytes(dir) + SemanticPack.FOLDERS.sumOf { name -> File(dir, name).walkTopDown().filter { it.isFile }.sumOf { it.length() } }
 
 /** Another library found in a place that is not the one in use (copied there from a computer, or left behind). */
 private data class OtherLibrary(val location: LibraryLocation, val bytes: Long, val version: String?)
@@ -80,9 +88,9 @@ internal fun LibraryLocationSection() {
             val current = store.currentLocation()
             val moves = if (current == null) emptyList() else store.locations.filter { it.key != current.key }.mapNotNull(mover::plan)
             val others = store.locations.filter { it.key != current?.key && LibraryStore.hasDatabase(it.dir) }.map { loc ->
-                OtherLibrary(loc, LibraryStore.libraryBytes(loc.dir), runCatching { File(loc.dir, LibraryStore.RELEASE_INFO_NAME).readText().trim() }.getOrNull())
+                OtherLibrary(loc, locationBytes(loc.dir), runCatching { File(loc.dir, LibraryStore.RELEASE_INFO_NAME).readText().trim() }.getOrNull())
             }
-            LocationInfo(current, if (current != null) store.installedBytes() else 0L, moves, mover.blockedReason(), others)
+            LocationInfo(current, if (current != null) locationBytes(store.libraryDir) else 0L, moves, mover.blockedReason(), others)
         }
     }
     var confirmKey by rememberSaveable { mutableStateOf<String?>(null) }

@@ -47,6 +47,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.shellKeyboardShortcuts
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitTheme
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -264,6 +265,9 @@ class MainActivity : ComponentActivity() {
         // Android: a library kept on a memory card that is not in the device is asked for, not reinstalled.
         app.libraryStore.missingCard()?.let { return Startup.CardMissing(it, mediaSeen) }
         runCatching { app.libraryStore.rememberCurrentLocation() }
+        // Desktop main.kt: a semantic pack unpacked in the settings goes in place of the old one before the search opens
+        // it, once a process (its library on a card that is out waits for the card)
+        if (app.semanticPackSwapPending.compareAndSet(true, false)) PendingSemanticPack.runOnce(app.filesDir)
         // Desktop computeStartupState: no library → Missing, release_info.txt missing or too old → Outdated; then the
         // installer's check (as before) for a database without its tables, and opening it.
         val reason = runCatching { databaseUpdateReason(app) }.getOrDefault(DatabaseUpdateReason.Broken)
