@@ -126,13 +126,13 @@ Also delete stale `-wal`/`-shm` files next to a pushed DB.
 
 ## Matching desktop
 
-- **Source of truth is the 0.6.11 code**, the version the port matches since 2026-10-28 (0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20, 0.6.1 before; androidApp/docs/PARITY.md says what changed). It is in this repository: upstream v0.6.11 was merged into `SeforimApp/` and the desktop modules on 2026-10-28, and the `SeforimLibrary/` submodule is at `4f07145`, the commit v0.6.11 builds with (and the one Android compiles). The tags `v0.6.1`, `v0.6.7`, `v0.6.10` and `v0.6.11`, fetched from https://github.com/kdroidFilter/zayit, give upstream's exact files and what changed since 0.6.1 (commands in desktop-reference.md).
+- **Source of truth is the 0.6.12 code**, the version the port matches since 2026-10-29 (0.6.11 from 2026-10-28, 0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20, 0.6.1 before; androidApp/docs/PARITY.md says what changed). It is in this repository: upstream v0.6.12 was merged into `SeforimApp/` and the desktop modules on 2026-10-29, and the `SeforimLibrary/` submodule is at `4f07145`, the commit v0.6.11 and v0.6.12 build with (and the one Android compiles). The tags `v0.6.1`, `v0.6.7`, `v0.6.10`, `v0.6.11` and `v0.6.12`, fetched from https://github.com/kdroidFilter/zayit, give upstream's exact files and what changed since 0.6.1 (commands in desktop-reference.md).
   - Desktop UI: `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/**`.
   - Strings: `SeforimApp/src/commonMain/composeResources/values*/strings.xml`. Hebrew is the default `values/`.
   - Library and search logic: `SeforimLibrary/**`.
   - Port logic rather than approximating it. Commentator grouping, catalog ids and zmanim were all wrong until ported verbatim.
 - **Seeing desktop:**
-  - `scripts/desktop-start.sh` (run in the background) installs the released `.deb` (0.6.11, the version this port matches) and runs it on Xvfb :99 at 1440x900.
+  - `scripts/desktop-start.sh` (run in the background) installs the released `.deb` (0.6.12, the version this port matches) and runs it on Xvfb :99 at 1440x900.
   - `scripts/desktop-shot.sh <name> [x y]` clicks and captures.
   - Pair the shots with Android ones using `scripts/contact-sheet.py out.png desktop.png android.png`.
 - [references/desktop-reference.md](references/desktop-reference.md) maps each desktop screen to its source file and its Android counterpart, and gives click coordinates for the desktop window.

@@ -9,7 +9,7 @@ plugins {
     id("pardes.compose-vector-moves")
 }
 
-// SeforimLibrary as desktop Zayit 0.6.11 builds it: the repository's SeforimLibrary submodule (4f07145), the same
+// SeforimLibrary as desktop Zayit 0.6.12 builds it: the repository's SeforimLibrary submodule (4f07145, 0.6.11's too), the same
 // checkout the desktop app and the shared modules build with.
 val seforimLibrary = rootDir.resolve("../SeforimLibrary")
 // Other shared sources reused as-is from the desktop project.
@@ -194,8 +194,8 @@ android {
         // java.nio.file, java.time and MethodHandle.invoke.
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.6.1"
+        versionCode = 9
+        versionName = "0.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
