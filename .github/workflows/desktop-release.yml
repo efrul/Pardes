@@ -27,6 +27,12 @@ name: Desktop release
 #
 # Every run, a quick one too, is a release of this repository, and Pardes for Android 0.3.0 to 0.4.1 reads only its 30
 # newest releases: delete test pre-releases once tested (gh release delete <tag> -R efrul/Pardes --cleanup-tag -y).
+#
+# When GitHub has no macOS arm64 runner for the release ("not acquired by Runner ... capacity constraints"), a run with
+# without_mac_arm64 publishes the others without it and without latest-mac.yml: installed Macs keep their version, as an
+# Apple Silicon Mac would otherwise update to the Intel build and stay on it. A later run with add_mac_arm64 set to that
+# release's tag builds only the Apple Silicon Mac, from the release's commit, and adds it to the release with the
+# latest-mac.yml of both Macs (the Intel zip's hashes from the release's own file) and the notes' full Mac line.
 
 # Runs only by hand, never on a push: Actions › Desktop release › Run workflow (on main, the default branch).
 on:
@@ -42,6 +48,14 @@ on:
         default: false
       note:
         description: 'Optional paragraph at the top of the release notes (e.g. what was tested)'
+        type: string
+        default: ''
+      without_mac_arm64:
+        description: 'Without the Apple Silicon Mac (no GitHub runner for it): no latest-mac.yml until add_mac_arm64'
+        type: boolean
+        default: false
+      add_mac_arm64:
+        description: 'Only the Apple Silicon Mac, added to this release (its desktop-<x.y.z>-<run> tag) out without it'
         type: string
         default: ''
 
@@ -65,6 +79,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       matrix: ${{ steps.matrix.outputs.matrix }}
       prerelease: ${{ steps.matrix.outputs.prerelease }}
+      ref: ${{ steps.ref.outputs.ref }}
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -74,7 +89,16 @@ jobs:
       # (Windows). A '-' would also turn pre-releases on in the installed app.
       - name: Version from desktop/CHANGELOG.md
         id: version
+        env:
+          ADD: ${{ inputs.add_mac_arm64 }}
         run: |
+          # The Apple Silicon Mac of a release out without it: that release's version
+          if [ -n "$ADD" ]; then
+            [[ "$ADD" =~ ^desktop-([0-9]+\.[0-9]+\.[0-9]+)-[0-9] ]] || { echo "$ADD is not a desktop release's tag" >&2; exit 1; }
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "Pardes for desktop ${BASH_REMATCH[1]}: the Apple Silicon Mac, added to $ADD" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           version="$(awk '/^## / { print $2; exit }' desktop/CHANGELOG.md)"
           if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] \
             || (( BASH_REMATCH[1] > 255 || BASH_REMATCH[2] > 255 || BASH_REMATCH[3] > 65535 )); then
@@ -90,8 +114,23 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Pardes for desktop $version" >> "$GITHUB_STEP_SUMMARY"
 
+      # The commit the packages are built from: the release's own when adding to it
+      - name: The commit to build
+        id: ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ADD: ${{ inputs.add_mac_arm64 }}
+        run: |
+          if [ -z "$ADD" ]; then echo "ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"; exit 0; fi
+          assets="$(gh release view "$ADD" --json assets --jq '.assets[].name')"
+          grep -q -- '-macos-x64\.zip$' <<< "$assets" || { echo "$ADD has no Intel Mac zip to list beside the Apple Silicon one" >&2; exit 1; }
+          ! grep -q -- '-macos-arm64\.' <<< "$assets" || { echo "$ADD already has the Apple Silicon Mac" >&2; exit 1; }
+          echo "ref=$(gh api "repos/$GH_REPO/commits/$ADD" --jq .sha)" >> "$GITHUB_OUTPUT"
+
       # Installed apps take only a higher x.y.z: a stable release that is not higher would reach none of them
       - name: Newer than the published version
+        if: inputs.add_mac_arm64 == ''
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -115,9 +154,19 @@ jobs:
         env:
           QUICK: ${{ inputs.quick }}
           PRERELEASE_INPUT: ${{ inputs.prerelease }}
+          ADD: ${{ inputs.add_mac_arm64 }}
+          NO_ARM64: ${{ inputs.without_mac_arm64 }}
         run: |
+          if [ -n "$ADD" ] && { [ "$QUICK" = true ] || [ "$PRERELEASE_INPUT" = true ] || [ "$NO_ARM64" = true ]; }; then
+            echo "add_mac_arm64 goes alone: quick, prerelease and without_mac_arm64 were the choices of the run that made the release" >&2; exit 1
+          fi
+          [ "$NO_ARM64" != true ] || [ "$QUICK" != true ] || { echo "A quick build has no Mac to leave out" >&2; exit 1; }
           windows_x64='{"asset":"release-assets-windows-amd64","os":"windows-latest","graalvm":true,"arch":"x64"}'
-          if [ "$QUICK" = true ]; then
+          mac_arm64='{"asset":"release-assets-macos-arm64","os":"macos-26","graalvm":true,"arch":"arm64"}'
+          if [ -n "$ADD" ]; then
+            entries="$mac_arm64"
+            prerelease=false
+          elif [ "$QUICK" = true ]; then
             entries="$windows_x64"
             prerelease=true
           else
@@ -127,7 +176,7 @@ jobs:
               entries+=",{\"asset\":\"release-assets-linux-amd64-$pkg\",\"os\":\"ubuntu-latest\",\"graalvm\":true,\"pkg\":\"$pkg\",\"deb_arch\":\"amd64\",\"rpm_arch\":\"x86_64\"}"
               entries+=",{\"asset\":\"release-assets-linux-arm64-$pkg\",\"os\":\"ubuntu-24.04-arm\",\"graalvm\":true,\"pkg\":\"$pkg\",\"deb_arch\":\"arm64\",\"rpm_arch\":\"aarch64\"}"
             done
-            entries+=',{"asset":"release-assets-macos-arm64","os":"macos-26","graalvm":true,"arch":"arm64"}'
+            [ "$NO_ARM64" = true ] || entries+=",$mac_arm64"
             entries+=',{"asset":"release-assets-macos-x64","os":"macos-26-intel","graalvm":true,"arch":"x64"}'
             prerelease="$PRERELEASE_INPUT"
           fi
@@ -149,6 +198,8 @@ jobs:
       # Not recursive: SeforimAcronymizer and SeforimLibrary's own submodules are not part of the app.
       - name: Check out
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
 
       - name: Check out SeforimLibrary
         run: git submodule update --init SeforimLibrary
@@ -310,6 +361,8 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
       QUICK: ${{ inputs.quick }}
+      ADD: ${{ inputs.add_mac_arm64 }}
+      NO_ARM64: ${{ inputs.without_mac_arm64 }}
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -317,19 +370,33 @@ jobs:
       - name: Check out SeforimLibrary
         run: git submodule update --init SeforimLibrary
 
-      # Each package in artifacts/<artifact name>/, as generate-update-yml reads them. A lone artifact (the quick build)
-      # is unpacked into the path itself, so it gets its own directory as path.
+      # Each package in artifacts/<artifact name>/, as generate-update-yml reads them. A lone artifact (the quick build,
+      # the Apple Silicon Mac added to a release) is unpacked into the path itself, so it gets its own directory as path.
       - name: Download the packages
         uses: actions/download-artifact@v7
         with:
-          path: ${{ inputs.quick && 'artifacts/release-assets-windows-amd64' || 'artifacts' }}
+          path: ${{ inputs.quick && 'artifacts/release-assets-windows-amd64' || inputs.add_mac_arm64 != '' && 'artifacts/release-assets-macos-arm64' || 'artifacts' }}
           pattern: release-assets-*
+
+      # Adding the Apple Silicon Mac: the Intel Mac's files as the release has them, for latest-mac.yml's hashes
+      - name: The Intel Mac's files from the release
+        if: inputs.add_mac_arm64 != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release download "$ADD" -p "Pardes-$VERSION-macos-x64.*" -D artifacts/release-assets-macos-x64
 
       # Every package that should be there, and nothing else: generate-update-yml lists every file it finds
       - name: Check the packages
         run: |
           expected=("release-assets-windows-amd64/Pardes-$VERSION-windows-x64-nsis.exe")
-          if [ "$QUICK" != true ]; then
+          if [ -n "$ADD" ]; then
+            expected=()
+            for arch in arm64 x64; do
+              expected+=("release-assets-macos-$arch/Pardes-$VERSION-macos-$arch.dmg")
+              expected+=("release-assets-macos-$arch/Pardes-$VERSION-macos-$arch.zip")
+            done
+          elif [ "$QUICK" != true ]; then
             expected+=("release-assets-windows-arm64/Pardes-$VERSION-windows-arm64-nsis.exe")
             for arch in amd64:x86_64 arm64:aarch64; do
               deb="${arch%%:*}" rpm="${arch##*:}"
@@ -338,6 +405,7 @@ jobs:
               expected+=("release-assets-linux-$deb-pacman/pardes-$VERSION-1-$rpm.pacman")
             done
             for arch in arm64 x64; do
+              [ "$arch" = arm64 ] && [ "$NO_ARM64" = true ] && continue
               expected+=("release-assets-macos-$arch/Pardes-$VERSION-macos-$arch.dmg")
               expected+=("release-assets-macos-$arch/Pardes-$VERSION-macos-$arch.zip")
             done
@@ -359,10 +427,19 @@ jobs:
           version: ${{ needs.prepare.outputs.version }}
           channel: latest
 
+      # Without the Apple Silicon Mac, no latest-mac.yml: it would list only the Intel zip, which an Apple Silicon Mac
+      # would then update to (Nucleus's FileSelector takes another arch's file when its own is missing) and stay on
       - name: Check the update feeds
         run: |
           feeds=(latest.yml)
-          [ "$QUICK" = true ] || feeds+=(latest-linux.yml latest-mac.yml)
+          if [ -n "$ADD" ]; then
+            feeds=(latest-mac.yml)
+          elif [ "$NO_ARM64" = true ]; then
+            rm -f artifacts/update-yml/latest-mac.yml
+            feeds+=(latest-linux.yml)
+          elif [ "$QUICK" != true ]; then
+            feeds+=(latest-linux.yml latest-mac.yml)
+          fi
           for feed in "${feeds[@]}"; do
             file="artifacts/update-yml/$feed"
             [ -s "$file" ] || { echo "No $feed" >&2; exit 1; }
@@ -371,6 +448,7 @@ jobs:
           done
 
       - name: Name the release
+        if: inputs.add_mac_arm64 == ''
         id: name
         env:
           GH_TOKEN: ${{ github.token }}
@@ -394,7 +472,23 @@ jobs:
             echo "src=$src"
           } >> "$GITHUB_OUTPUT"
 
+      # The notes' Mac line, for the release and for the Apple Silicon Mac added to it later (GITHUB_ENV keeps no
+      # function: a file sourced by both steps)
+      - name: The notes' Mac line
+        run: |
+          cat > "$RUNNER_TEMP/mac-line.sh" <<'SH'
+          mac_line() {
+            local open="פותחים אותו וגוררים את פרדס לתיקיית היישומים. היישום אינו חתום אצל Apple, ולכן בפתיחה הראשונה macOS לא פותח אותו: פותחים את **הגדרות המערכת › פרטיות ואבטחה**, ולוחצים שם על **לפתוח בכל זאת** (Open Anyway) ליד ההודעה על פרדס. אם macOS אומר שהיישום פגום, מריצים במסוף (Terminal) \`xattr -dr com.apple.quarantine /Applications/פרדס.app\` ופותחים אותו שוב."
+            if [ "$NO_ARM64" = true ]; then
+              echo "- **מק** (Intel): מורידים את \`Pardes-$VERSION-macos-x64.dmg\`, $open הגרסה למעבדי Apple Silicon תתווסף לכאן בקרוב, ועד אז פרדס שמותקן במק לא מציע את הגרסה הזו כעדכון."
+            else
+              echo "- **מק** (Apple Silicon ו־Intel): מורידים את \`Pardes-$VERSION-macos-arm64.dmg\` (במק עם מעבד Intel: \`Pardes-$VERSION-macos-x64.dmg\`), $open"
+            fi
+          }
+          SH
+
       - name: Publish the release
+        if: inputs.add_mac_arm64 == ''
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -402,6 +496,7 @@ jobs:
           SRC: ${{ steps.name.outputs.src }}
           NOTE: ${{ inputs.note }}
         run: |
+          . "$RUNNER_TEMP/mac-line.sh"
           if [ "$QUICK" = true ]; then
             kind=--prerelease
             title_suffix=", גרסת ניסיון ל־Windows x64"
@@ -424,7 +519,7 @@ jobs:
             windows+=" (במחשב ARM: \`Pardes-$VERSION-windows-arm64-nsis.exe\`) ופותחים אותו."
             # Signed packages carry the helper that installs their updates without a password
             if find artifacts -name '*.asc' | grep -q .; then password="בלי סיסמה"; else password="בבקשת סיסמה"; fi
-            mac="- **מק** (Apple Silicon ו־Intel): מורידים את \`Pardes-$VERSION-macos-arm64.dmg\` (במק עם מעבד Intel: \`Pardes-$VERSION-macos-x64.dmg\`), פותחים אותו וגוררים את פרדס לתיקיית היישומים. היישום אינו חתום אצל Apple, ולכן בפתיחה הראשונה macOS לא פותח אותו: פותחים את **הגדרות המערכת › פרטיות ואבטחה**, ולוחצים שם על **לפתוח בכל זאת** (Open Anyway) ליד ההודעה על פרדס. אם macOS אומר שהיישום פגום, מריצים במסוף (Terminal) \`xattr -dr com.apple.quarantine /Applications/פרדס.app\` ופותחים אותו שוב."
+            mac="$(mac_line)"
             linux="- **לינוקס** (x64 ו־ARM64): \`.deb\` לאובונטו, דביאן ודומיהן (\`sudo apt install ./pardes_${VERSION}_amd64.deb\`), \`.rpm\` לפדורה ודומיהן (\`sudo dnf install ./pardes-$VERSION-1.x86_64.rpm\`), ו־\`.pacman\` לארץ' (\`sudo pacman -U ./pardes-$VERSION-1-x86_64.pacman\`). התקנה מ־deb או rpm מתעדכנת מתוכה ($password). התקנה מ־pacman לא מודיעה על גרסה חדשה: בודקים בעמוד הגרסאות ומתקינים אותה ידנית."
           fi
           windows+=" הוא מתקין לחשבון שלכם בלבד, בלי הרשאות מנהל, ופותח את פרדס בסיום. הקובץ אינו חתום, ולכן Windows עשוי להזהיר שהוא לא מוכר: לוחצים על **מידע נוסף**, ואז על הכפתור שמפעיל אותו בכל זאת."
@@ -472,3 +567,31 @@ jobs:
           test "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)" != "$TAG" \
             || { echo "::error::$TAG is the repository's Latest release: make the Android release the Latest by hand"; exit 1; }
           echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
+
+      # Its files and latest-mac.yml, and the notes' Mac line for both Macs; the release stays as it was otherwise
+      - name: Add the Apple Silicon Mac to the release
+        if: inputs.add_mac_arm64 != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          . "$RUNNER_TEMP/mac-line.sh"
+          gh release upload "$ADD" artifacts/release-assets-macos-arm64/* artifacts/update-yml/latest-mac.yml
+          gh release view "$ADD" --json body --jq .body > body.md
+          python3 - body.md "$(mac_line)" <<'PY'
+          import sys
+          path, line = sys.argv[1], sys.argv[2]
+          lines = open(path, encoding="utf-8").read().split("\n")
+          mac = [i for i, l in enumerate(lines) if l.startswith("- **מק**")]
+          if len(mac) != 1:
+              sys.exit(f"{len(mac)} Mac lines in the notes, not one")
+          lines[mac[0]] = line
+          open(path, "w", encoding="utf-8").write("\n".join(lines))
+          PY
+          gh release edit "$ADD" --notes-file body.md --latest=false
+          android="$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("android-"))][0] // empty')"
+          if [ -n "$android" ] && [ "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)" != "$android" ]; then
+            gh release edit "$android" --latest
+          fi
+          echo "The Apple Silicon Mac added to [$ADD]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$ADD)" >> "$GITHUB_STEP_SUMMARY"
