@@ -58,6 +58,17 @@ class ListSelection {
     var generation by mutableIntStateOf(0)
         private set
 
+    /** Counts the presses on the area: a tap's action can wait to see that no other press follows it (a double tap). */
+    var presses = 0
+        internal set
+
+    /**
+     * The press being let go is a tap that left the selection alone: it ended none, and is no second or third tap in a
+     * row (those select a word, the whole text). The tap of the line under it may then do more than select the line.
+     */
+    var plainTap = false
+        internal set
+
     val hasSelection: Boolean
         get() {
             val s = start ?: return false
