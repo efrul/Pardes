@@ -226,7 +226,7 @@ jobs:
           ### מה חדש בגרסה $VERSION
           $(cat "$RUNNER_TEMP/whatsnew.md")
 
-          כל הגרסאות ב[יומן השינויים]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/androidApp/CHANGELOG.md) ובאתר ההורדה, https://efrul.github.io/Pardes/#changelog
+          כל הגרסאות ב[יומן השינויים]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/androidApp/CHANGELOG.md) ובאתר, https://efrul.github.io/Pardes/changelog.html#android
 
           ### התקנה
           - דרוש Android 8.0 ומעלה. עדכון מצטבר של הספרייה דורש Android 11 ומעלה, והווידג'טים למסך הבית של הטלפון Android 12 ומעלה.
