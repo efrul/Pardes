@@ -198,7 +198,7 @@ data class SearchPersistedState(
     val filterCategoryId: Long = 0L,
     val filterBookId: Long = 0L,
     val filterTocId: Long = 0L,
-    // Unused, as filterCategoryId
+    // The category whose books are searched, whole (none with a book or TOC scope but the one narrowed from)
     val fetchCategoryId: Long = 0L,
     val fetchBookId: Long = 0L,
     val fetchTocId: Long = 0L,
@@ -228,12 +228,20 @@ data class SearchPersistedState(
             return when {
                 tocId != null && bookId != null -> SearchScope.Toc(bookId = bookId, tocId = tocId)
                 bookId != null -> SearchScope.Book(bookId)
-                fetchAuthorId > 0 -> SearchScope.Author(fetchAuthorId)
-                else -> SearchScope.Global
+                else -> wideScope
             }
         }
 
-    /** Runs the search in [scope]: both its fetch scope and its view filter (a legacy category: everywhere). */
+    /** The author's or category's books the search runs in, else everywhere: where a search narrowed to a book goes back to. */
+    val wideScope: SearchScope
+        get() =
+            when {
+                fetchAuthorId > 0 -> SearchScope.Author(fetchAuthorId)
+                fetchCategoryId > 0 -> SearchScope.Category(fetchCategoryId)
+                else -> SearchScope.Global
+            }
+
+    /** Runs the search in [scope]: both its fetch scope and its view filter. */
     fun withScope(scope: SearchScope): SearchPersistedState {
         val bookId =
             when (scope) {
@@ -245,7 +253,8 @@ data class SearchPersistedState(
         return copy(
             datasetScope =
                 when (scope) {
-                    SearchScope.Global, is SearchScope.Category -> "global"
+                    SearchScope.Global -> "global"
+                    is SearchScope.Category -> "category"
                     is SearchScope.Book -> "book"
                     is SearchScope.Toc -> "toc"
                     is SearchScope.Author -> "author"
@@ -253,7 +262,7 @@ data class SearchPersistedState(
             filterCategoryId = 0L,
             filterBookId = bookId,
             filterTocId = tocId,
-            fetchCategoryId = 0L,
+            fetchCategoryId = (scope as? SearchScope.Category)?.categoryId ?: 0L,
             fetchBookId = bookId,
             fetchTocId = tocId,
             fetchAuthorId = (scope as? SearchScope.Author)?.authorId ?: 0L,

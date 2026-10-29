@@ -91,6 +91,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.decodeLayout
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ResolvedReference
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
@@ -154,11 +155,17 @@ private sealed interface CatBookRow {
     data class Book(
         val suggestion: BookSuggestion,
     ) : CatBookRow
+
+    // A category to search in, whole
+    data class Category(
+        val hit: CategoryHit,
+    ) : CatBookRow
 }
 
 /**
- * The book-stage rows in order: the references, then the books and authors named exactly as typed
- * (`חולין` opens Chullin on Enter; `שוע` puts the שולחן ערוך parts first), the text search, then the other authors and books.
+ * The book-stage rows in order: the references, then the books, categories and authors named exactly as typed
+ * (`חולין` opens Chullin on Enter; `שוע` puts the שולחן ערוך parts first; `תלמוד` searches the Talmud), the
+ * text search, then the other authors, categories and books.
  * A title being typed past its first word (`בבא ק`) is no text search: with no book named exactly,
  * the first book whose title it begins comes before the text search too.
  */
@@ -168,8 +175,10 @@ private fun catBookRows(
     textSearch: Boolean,
     authors: List<AuthorHit>,
     books: List<BookSuggestion>,
+    categories: List<CategoryHit> = emptyList(),
 ): ImmutableList<CatBookRow> {
     val key = query.searchKey()
+    val (exactCategories, otherCategories) = categories.partition { it.title.searchKey() == key }
     val (exactAuthors, otherAuthors) =
         authors.partition { author ->
             listOfNotNull(author.name, AuthorNames.display(author.name), author.alias).any { it.searchKey() == key }
@@ -187,9 +196,11 @@ private fun catBookRows(
     return buildList {
         jumps.mapTo(this) { CatBookRow.Jump(it) }
         exactBooks.mapTo(this) { CatBookRow.Book(it) }
+        exactCategories.mapTo(this) { CatBookRow.Category(it) }
         exactAuthors.mapTo(this) { CatBookRow.Author(it) }
         if (textSearch) add(CatBookRow.TextSearch)
         otherAuthors.mapTo(this) { CatBookRow.Author(it) }
+        otherCategories.mapTo(this) { CatBookRow.Category(it) }
         otherBooks.filter { it !== typedTitle }.mapTo(this) { CatBookRow.Book(it) }
     }.toImmutableList()
 }
@@ -222,6 +233,8 @@ data class HomeSearchCallbacks(
     val onOpenJump: (ResolvedReference) -> Unit = {},
     val onPickAuthor: (AuthorHit) -> Unit = {},
     val onClearAuthor: () -> Unit = {},
+    val onPickCategory: (CategoryHit) -> Unit = {},
+    val onClearCategory: () -> Unit = {},
     val onOpenBook: (BookModel) -> Unit = {},
     val onOpenAuthor: (AuthorHit) -> Unit = {},
 )
@@ -550,6 +563,7 @@ internal fun UnifiedSearchBar(
         textSearchEnabled = searchUi.selectedScopeToc == null,
         textSearchInBook = searchUi.selectedScopeBook?.title,
         textSearchInAuthor = searchUi.selectedScopeAuthor?.name?.let(AuthorNames::display),
+        textSearchInCategory = searchUi.selectedScopeCategory?.label,
         onTextSearch = ::searchText,
         // Before a book is picked: go-to rows, the text search and books; after: its TOC
         suggestionsVisible = if (!isTocInTopBar) searchUi.suggestionsVisible else false,
@@ -566,6 +580,15 @@ internal fun UnifiedSearchBar(
             referenceSearchState.edit { replace(0, length, "") }
         },
         onClearAuthor = { searchCallbacks.onClearAuthor() },
+        categorySuggestions =
+            if (!isTocInTopBar) searchUi.categorySuggestions.toImmutableList() else persistentListOf(),
+        selectedCategory = searchUi.selectedScopeCategory?.label,
+        onPickCategory = { category ->
+            searchCallbacks.onPickCategory(category)
+            skipNextReferenceQuery = true
+            referenceSearchState.edit { replace(0, length, "") }
+        },
+        onClearCategory = { searchCallbacks.onClearCategory() },
         onOpenBook = { opened -> searchCallbacks.onOpenBook(opened.book) },
         onOpenAuthor = { author -> searchCallbacks.onOpenAuthor(author) },
         tocSuggestionsVisible = isTocInTopBar && searchUi.tocSuggestionsVisible,
@@ -865,6 +888,18 @@ private fun SuggestionsPanel(
                                 highlighted = focused,
                                 actions = listOf(open, searchInside),
                             )
+
+                        is CatBookRow.Category -> {
+                            val searchCategory =
+                                RowAction(KEY_ENTER, stringResource(Res.string.row_action_search_category)) { onRow(row, true) }
+                            SuggestionRow(
+                                parts = row.hit.path,
+                                onClick = searchCategory.onClick,
+                                kind = SuggestionKind.CATEGORY,
+                                highlighted = focused,
+                                actions = listOf(searchCategory),
+                            )
+                        }
                     }
                 }
             }
@@ -991,10 +1026,12 @@ private fun textSearchLabel(
     query: String,
     inBook: String?,
     inAuthor: String? = null,
+    inCategory: String? = null,
 ): String =
     when {
         inBook != null -> stringResource(Res.string.search_text_row_in_book, query, inBook)
         inAuthor != null -> stringResource(Res.string.search_text_row_in_author, query, inAuthor)
+        inCategory != null -> stringResource(Res.string.search_text_row_in_category, query, inCategory)
         else -> stringResource(Res.string.search_text_row, query)
     }
 
@@ -1093,7 +1130,7 @@ private fun String.withBold(part: String?): AnnotatedString {
 }
 
 /** What a suggestion row leads to, shown by its icon. */
-private enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK }
+private enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK, CATEGORY }
 
 @Composable
 private fun SuggestionIcon(kind: SuggestionKind) {
@@ -1107,6 +1144,7 @@ private fun SuggestionIcon(kind: SuggestionKind) {
         SuggestionKind.TEXT_SEARCH -> Icon(AllIconsKeys.Actions.Find, null, iconModifier, tint = tint)
         SuggestionKind.AUTHOR ->
             Image(rememberVectorPainter(WritingHand), null, iconModifier, colorFilter = ColorFilter.tint(tint))
+        SuggestionKind.CATEGORY -> Icon(AllIconsKeys.Nodes.Folder, null, iconModifier, tint = tint)
     }
 }
 
@@ -1240,6 +1278,12 @@ private fun SearchBar(
     onOpenAuthor: (AuthorHit) -> Unit = {},
     selectedAuthor: String? = null,
     onClearAuthor: () -> Unit = {},
+    // Categories the text may name; once one is picked, a chip shows it and the text is searched in all its books
+    categorySuggestions: ImmutableList<CategoryHit> = persistentListOf(),
+    onPickCategory: (CategoryHit) -> Unit = {},
+    selectedCategory: String? = null,
+    onClearCategory: () -> Unit = {},
+    textSearchInCategory: String? = null,
     // The "search this text" row: offered while text is typed, Ctrl+Enter runs it from anywhere
     textSearchEnabled: Boolean = false,
     textSearchInBook: String? = null,
@@ -1322,13 +1366,14 @@ private fun SearchBar(
     // Rows of the book-stage list, in display order
     val query = state.text.toString().trim()
     val catBookRows =
-        remember(query, jumpSuggestions, textSearchEnabled, authorSuggestions, bookSuggestions) {
+        remember(query, jumpSuggestions, textSearchEnabled, authorSuggestions, bookSuggestions, categorySuggestions) {
             catBookRows(
                 query,
                 jumpSuggestions,
                 textSearchEnabled && query.isNotEmpty(),
                 authorSuggestions,
                 bookSuggestions,
+                categorySuggestions,
             )
         }
     val totalCatBook = catBookRows.size
@@ -1369,6 +1414,7 @@ private fun SearchBar(
         bookSuggestions,
         jumpSuggestions,
         authorSuggestions,
+        categorySuggestions,
         textRow,
         tocSuggestions,
         isTocMode,
@@ -1424,6 +1470,11 @@ private fun SearchBar(
             onPickAuthor(author)
         }
 
+        fun handlePickCategory(category: CategoryHit) {
+            onPickCategory(category)
+            dismissPopup()
+        }
+
         fun handleOpenAuthor(author: AuthorHit) {
             onOpenAuthor(author)
             dismissPopup()
@@ -1454,6 +1505,8 @@ private fun SearchBar(
                 CatBookRow.TextSearch -> handleTextSearch()
                 is CatBookRow.Author -> if (open) handleOpenAuthor(row.hit) else handlePickAuthor(row.hit)
                 is CatBookRow.Book -> if (open) handleOpenBook(row.suggestion) else handlePickBook(row.suggestion)
+                // A category has nothing to open: both keys search in it
+                is CatBookRow.Category -> handlePickCategory(row.hit)
             }
         }
 
@@ -1518,6 +1571,24 @@ private fun SearchBar(
                                 }
                             }
 
+                            ev.key == Key.Backspace && !isTocMode && selectedCategory != null -> {
+                                when (ev.type) {
+                                    KeyEventType.KeyDown -> {
+                                        backspaceStartedEmpty = state.text.isEmpty()
+                                        false
+                                    }
+
+                                    KeyEventType.KeyUp -> {
+                                        val shouldClear = backspaceStartedEmpty && state.text.isEmpty()
+                                        backspaceStartedEmpty = false
+                                        if (shouldClear) onClearCategory()
+                                        shouldClear
+                                    }
+
+                                    else -> false
+                                }
+                            }
+
                             ev.key == Key.Backspace && isTocMode -> {
                                 when (ev.type) {
                                     KeyEventType.KeyDown -> {
@@ -1547,8 +1618,8 @@ private fun SearchBar(
                                 ev.isCtrlPressed &&
                                 (ev.key == Key.Enter || ev.key == Key.NumPadEnter) &&
                                 ev.type == KeyEventType.KeyUp -> {
-                                // An author's books are all searched already: Ctrl+Enter is Enter there
-                                handleTextSearch(extended = textSearchInAuthor == null)
+                                // An author's or category's books are all searched already: Ctrl+Enter is Enter there
+                                handleTextSearch(extended = textSearchInAuthor == null && textSearchInCategory == null)
                                 true
                             }
 
@@ -1711,6 +1782,14 @@ private fun SearchBar(
                                 effectiveFocusRequester.requestFocus()
                             },
                         )
+                    } else if (selectedCategory != null) {
+                        SelectedBookChip(
+                            title = selectedCategory,
+                            onClear = {
+                                onClearCategory()
+                                effectiveFocusRequester.requestFocus()
+                            },
+                        )
                     }
                 }
             },
@@ -1783,13 +1862,18 @@ private fun SearchBar(
                         SuggestionsPanel(
                             rows = catBookRows,
                             onRow = { row, open -> runCatBookRow(row, open) },
-                            // An author's books are all searched: no base books to choose
-                            onTextSearchAll = if (textSearchInAuthor == null) ({ handleTextSearch(extended = true) }) else null,
+                            // An author's or category's books are all searched: no base books to choose
+                            onTextSearchAll =
+                                if (textSearchInAuthor == null && textSearchInCategory == null) {
+                                    { handleTextSearch(extended = true) }
+                                } else {
+                                    null
+                                },
                             textSearchLabel =
                                 if (textSearchEnabled &&
                                     state.text.isNotBlank()
                                 ) {
-                                    textSearchLabel(state.text.toString().trim(), null, textSearchInAuthor)
+                                    textSearchLabel(state.text.toString().trim(), null, textSearchInAuthor, textSearchInCategory)
                                 } else {
                                     null
                                 },

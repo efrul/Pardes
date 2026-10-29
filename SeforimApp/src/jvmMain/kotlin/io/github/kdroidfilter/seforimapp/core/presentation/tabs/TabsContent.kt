@@ -426,6 +426,8 @@ private fun rememberHomeSearchCallbacks(
                 scope.launch { searchHomeViewModel.openAuthor(author, tabId) }
             },
             onClearAuthor = searchHomeViewModel::onClearAuthor,
+            onPickCategory = searchHomeViewModel::onPickCategory,
+            onClearCategory = searchHomeViewModel::onClearCategory,
             onOpenJump = { jump ->
                 val tabId = latestCurrentTabId() ?: return@HomeSearchCallbacks
                 scope.launch { searchHomeViewModel.openJump(jump, tabId) }
