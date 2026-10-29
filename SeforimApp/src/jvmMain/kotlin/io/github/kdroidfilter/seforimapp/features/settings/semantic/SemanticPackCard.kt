@@ -23,7 +23,6 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.formatBytes
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PackProblem
-import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackReleases
 import io.github.kdroidfilter.seforimapp.features.settings.library.isolatedPath
 import io.github.vinceglb.filekit.FileKit
@@ -58,14 +57,12 @@ import seforimapp.seforimapp.generated.resources.semantic_pack_no_library
 import seforimapp.seforimapp.generated.resources.semantic_pack_no_model
 import seforimapp.seforimapp.generated.resources.semantic_pack_none_yet
 import seforimapp.seforimapp.generated.resources.semantic_pack_not_installed
-import seforimapp.seforimapp.generated.resources.semantic_pack_other_library
 import seforimapp.seforimapp.generated.resources.semantic_pack_other_model
 import seforimapp.seforimapp.generated.resources.semantic_pack_ready
 import seforimapp.seforimapp.generated.resources.semantic_pack_releases_page
 import seforimapp.seforimapp.generated.resources.semantic_pack_restart
 import seforimapp.seforimapp.generated.resources.semantic_pack_start_failed
 import seforimapp.seforimapp.generated.resources.semantic_pack_title
-import seforimapp.seforimapp.generated.resources.semantic_pack_unknown_library
 import seforimapp.seforimapp.generated.resources.semantic_pack_unpacking
 import seforimapp.seforimapp.generated.resources.semantic_pack_unreachable
 import seforimapp.seforimapp.generated.resources.semantic_pack_unreadable
@@ -75,7 +72,6 @@ import seforimapp.seforimapp.generated.resources.semantic_problem_corrupted
 import seforimapp.seforimapp.generated.resources.semantic_problem_failed
 import seforimapp.seforimapp.generated.resources.semantic_problem_missing
 import seforimapp.seforimapp.generated.resources.semantic_problem_not_a_pack
-import seforimapp.seforimapp.generated.resources.semantic_problem_other_library
 import seforimapp.seforimapp.generated.resources.semantic_problem_unusable
 import java.io.File
 
@@ -243,8 +239,6 @@ private fun installedText(installed: InstalledPack): String =
         InstalledPack.NoModel -> stringResource(Res.string.semantic_pack_no_model)
         InstalledPack.NoIndex -> stringResource(Res.string.semantic_pack_no_index)
         InstalledPack.OtherModel -> stringResource(Res.string.semantic_pack_other_model)
-        is InstalledPack.OtherLibrary ->
-            stringResource(Res.string.semantic_pack_other_library, libraryDate(installed.pack), libraryDate(installed.installed))
         is InstalledPack.Unreadable -> stringResource(Res.string.semantic_pack_unreadable, installed.message)
     }
 
@@ -261,9 +255,8 @@ private fun availableText(
             } else {
                 stringResource(Res.string.semantic_pack_available, available.pack.pack, formatBytes(available.pack.bundleBytes))
             }
-        is SemanticPackViewModel.Available.NoneYet -> stringResource(Res.string.semantic_pack_none_yet, libraryDate(available.library))
+        SemanticPackViewModel.Available.NoneYet -> stringResource(Res.string.semantic_pack_none_yet)
         SemanticPackViewModel.Available.Unreachable -> stringResource(Res.string.semantic_pack_unreachable)
-        SemanticPackViewModel.Available.UnknownLibrary -> stringResource(Res.string.semantic_pack_unknown_library)
     }
 
 /** Why the pack was not installed, for the user. */
@@ -274,8 +267,6 @@ private fun problemText(problem: Throwable): String =
         is PackProblem.Missing -> stringResource(Res.string.semantic_problem_missing, isolatedPath(problem.name))
         is PackProblem.Corrupted -> stringResource(Res.string.semantic_problem_corrupted, isolatedPath(problem.name))
         is PackProblem.Unusable -> stringResource(Res.string.semantic_problem_unusable, problem.reason)
-        is PackProblem.OtherLibrary ->
-            stringResource(Res.string.semantic_problem_other_library, libraryDate(problem.pack), libraryDate(problem.installed))
         is PackProblem.NoSpace ->
             stringResource(
                 Res.string.library_problem_no_space,
@@ -285,10 +276,3 @@ private fun problemText(problem: Throwable): String =
             )
         else -> stringResource(Res.string.semantic_problem_failed, problem.message ?: problem.toString())
     }
-
-/** A library release (`20261012193827`, `v3-20261012193827`) as its date, 12.10.2026; as written when it is not one. */
-internal fun libraryDate(release: String): String {
-    val key = SemanticPack.libraryKey(release)
-    if (key.length < 8 || !key.take(8).all(Char::isDigit)) return release
-    return "${key.substring(6, 8)}.${key.substring(4, 6)}.${key.substring(0, 4)}"
-}

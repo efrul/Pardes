@@ -1,6 +1,5 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic.pack
 
-import io.github.kdroidfilter.seforimapp.features.settings.semantic.libraryDate
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import kotlin.test.Test
@@ -10,7 +9,7 @@ import kotlin.test.assertNull
 
 class SemanticPackReleasesTest {
     @Test
-    fun `the newest published pack of the installed library is chosen`() {
+    fun `the newest published pack is chosen, whatever library release it was built on`() {
         val releases =
             listOf(
                 release("semantic-3-v3-20261012193827", draft = true),
@@ -25,10 +24,25 @@ class SemanticPackReleasesTest {
 
         val chosen = SemanticPackReleases.select(releases, "20261012193827")
 
-        assertEquals("semantic-2-v3-20261012193827", chosen?.tag)
-        assertEquals(2, chosen?.pack)
+        assertEquals("semantic-5-v4-20261201000000", chosen?.tag)
+        assertEquals(5, chosen?.pack)
         assertEquals(PART_BYTES * 2, chosen?.bundleBytes)
-        assertNull(SemanticPackReleases.select(releases, "20250101000000"))
+        assertEquals(chosen, SemanticPackReleases.select(releases, null))
+        assertNull(SemanticPackReleases.select(releases.filter { it.tag.startsWith("android") }, "20261012193827"))
+    }
+
+    @Test
+    fun `of a pack's builds, the installed library's is chosen, else the newest library's`() {
+        val releases =
+            listOf(
+                release("semantic-5-v4-20261201000000"),
+                release("semantic-5-v3-20261012193827"),
+                release("semantic-5-v2-20261011223929"),
+            )
+
+        assertEquals("semantic-5-v3-20261012193827", SemanticPackReleases.select(releases, "20261012193827")?.tag)
+        assertEquals("semantic-5-v4-20261201000000", SemanticPackReleases.select(releases, "20251116085948")?.tag)
+        assertEquals("semantic-5-v4-20261201000000", SemanticPackReleases.select(releases, null)?.tag)
     }
 
     @Test
@@ -57,8 +71,6 @@ class SemanticPackReleasesTest {
         assertNull(SemanticPack.parseTag("desktop-1.0.0-3"))
         assertEquals(true, SemanticPack.sameLibrary("v3-20261012193827", "20261012193827\n"))
         assertEquals(false, SemanticPack.sameLibrary("v3-20261012193827", "20261111000000"))
-        assertEquals("12.10.2026", libraryDate("v3-20261012193827"))
-        assertEquals("test", libraryDate("test"))
     }
 
     private fun release(
