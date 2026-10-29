@@ -16,7 +16,7 @@ This is a standalone Gradle build. It compiles SeforimLibrary (core, dao, search
 git submodule update --init SeforimLibrary   # once, after cloning (from the repository's root)
 cd androidApp
 echo "sdk.dir=/path/to/android-sdk" > local.properties
-./gradlew :app:assembleRelease    # R8-minified APK (~23 MB, mostly fonts and wallpapers), signed with the shared debug key
+./gradlew :app:assembleRelease    # R8-minified APK (~64 MB: ONNX Runtime for the semantic search, 38 MB, then fonts and wallpapers), signed with the shared debug key
 ./gradlew :app:assembleDebug      # unminified, debuggable
 ```
 
