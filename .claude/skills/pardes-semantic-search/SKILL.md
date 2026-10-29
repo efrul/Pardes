@@ -49,7 +49,9 @@ model for Pardes; the app loads the legacy model only when `SEFORIM_MODEL_DIR` p
   questions): `Cands.kt` and `ExactCands.kt` record it in `errors`; `Eval.kt` stops there.
 - Publishing a pack: `package_pack.py` (SeforimLibrary's bundle format, so the app's `BundleManifest` and
   `ExtractUseCase` read it), upload its folder as a private Kaggle dataset, then the owner runs efrul/Pardes's
-  `semantic-release.yml` (secret `KAGGLE_API_TOKEN`). A cloud session cannot create releases itself ("not permitted
+  `semantic-release.yml` (secret `KAGGLE_API_TOKEN`). Its title and notes are `release_notes.py`'s, which the user reads:
+  "קובצי החיפוש לפי משמעות" and "גרסה N", never "חבילה"; after changing them, `semantic-notes.yml` writes them again on a
+  pack already released. A cloud session cannot create releases itself ("not permitted
   for this session type"). Releases there are always `--latest=false` (the Android release is the Latest), and few:
   Android 0.3.0 to 0.4.1 reads only the 30 newest. The app installs a pack itself (Settings › ניהול נתונים, code in
   `features/search/semantic/pack/`): the newest `semantic-<pack>-<library>` release (of its builds, the installed

@@ -1,0 +1,48 @@
+name: Semantic pack notes
+
+# Writes the title and notes of a semantic pack's release again, from semantic-model/release_notes.py (as
+# semantic-release.yml publishes a new pack with them) and the manifest the release holds: after the template changes,
+# for a pack already released. Its files stay as they are, and the repository's Latest stays the Android release.
+# Runs only by hand: Actions › Semantic pack notes › Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The pack release (semantic-<pack>-<library release>)'
+        required: true
+        default: 'semantic-2-v3-20261012193827'
+
+permissions:
+  contents: read
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: semantic-model/release_notes.py
+          sparse-checkout-cone-mode: false
+
+      - name: Write the title and notes again
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          case "$TAG" in semantic-*) ;; *) echo "::error::$TAG is not a semantic pack's release"; exit 1 ;; esac
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p 'pardes-semantic.tar.zst.manifest.json' -D "$RUNNER_TEMP"
+          manifest="$RUNNER_TEMP/pardes-semantic.tar.zst.manifest.json"
+          python3 semantic-model/release_notes.py "$manifest" > notes.md
+          gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --latest=false \
+            --title "$(python3 semantic-model/release_notes.py --title "$manifest")" --notes-file notes.md
+          # As in semantic-release.yml: the newest Android release stays the Latest
+          android="$(gh release list -R "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("android-"))][0] // empty')"
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          if [ -n "$android" ] && [ "$latest" != "$android" ]; then gh release edit "$android" -R "$GITHUB_REPOSITORY" --latest; fi
+          echo "Title and notes written again for [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
