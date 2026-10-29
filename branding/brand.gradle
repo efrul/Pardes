@@ -46,6 +46,8 @@ dist.publish.github.owner = value('publishOwner')
 dist.publish.github.repo = value('publishRepo')
 // No OS URL scheme: zayit:// belongs to Zayit, and two apps registering it would clash
 dist.protocols.clear()
+// No Microsoft Store package: upstream's appx { } is Zayit's own Store listing (KdroidFilter.Zayit, named זית)
+dist.targetFormats = dist.targetFormats.findAll { it.name() != 'AppX' } as Set
 
 dist.linux.debMaintainer = value('debMaintainer')
 dist.linux.startupWMClass = value('startupWMClass')

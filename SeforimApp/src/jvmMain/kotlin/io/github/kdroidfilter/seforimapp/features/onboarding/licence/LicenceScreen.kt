@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.AccentMark
 import io.github.kdroidfilter.seforimapp.features.onboarding.navigation.OnBoardingDestination
 import io.github.kdroidfilter.seforimapp.features.onboarding.navigation.ProgressBarState
 import io.github.kdroidfilter.seforimapp.features.onboarding.ui.components.OnBoardingScaffold
+import io.github.kdroidfilter.seforimapp.features.settings.ConditionsText
 import io.github.kdroidfilter.seforimapp.framework.database.ForeignLibraries
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.theme.PreviewContainer
@@ -84,9 +85,10 @@ private fun LicenceView(
         },
     ) {
         AccentMarkdownView(
-            resourcePath = "files/CONDITIONS.md",
+            resourcePath = ConditionsText.PATH,
             modifier = Modifier.fillMaxWidth(),
             includeH3 = false,
+            transform = ConditionsText::forThisInstall,
             extraItems = {
                 item {
                     Spacer(Modifier.height(8.dp))
