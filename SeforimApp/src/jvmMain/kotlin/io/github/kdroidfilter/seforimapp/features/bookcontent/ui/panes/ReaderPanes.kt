@@ -169,8 +169,10 @@ enum class ReaderPane(
         navigation = false,
     ),
 
-    // Commentators split off the commentaries pane, each in a pane of its own: beside the text by default, after
-    // the links, from where they move as any line pane. Closing one gives its commentator back to the commentaries.
+    // Commentators split off the commentaries pane, each in a pane of its own, from where they move as any line pane.
+    // Spread around the text by default, so that the text keeps its width: the first on its left (after the links),
+    // the second on its right, the next two in the row under it, after the commentaries. Closing one gives its
+    // commentator back to the commentaries.
     Commentator1(
         "commentator-1",
         Res.string.commentator_pane,
@@ -182,7 +184,7 @@ enum class ReaderPane(
     Commentator2(
         "commentator-2",
         Res.string.commentator_pane,
-        SatellitePlacement.Docked(DockSide.Left, order = 4, extent = 320.dp),
+        SatellitePlacement.Docked(DockSide.Right, order = 0, extent = 320.dp),
         toggle = BookContentEvent.CloseCommentatorPane(1),
         navigation = false,
         commentatorSlot = 1,
@@ -190,7 +192,7 @@ enum class ReaderPane(
     Commentator3(
         "commentator-3",
         Res.string.commentator_pane,
-        SatellitePlacement.Docked(DockSide.Left, order = 5, extent = 320.dp),
+        SatellitePlacement.Docked(DockSide.Bottom, order = 2, extent = 220.dp),
         toggle = BookContentEvent.CloseCommentatorPane(2),
         navigation = false,
         commentatorSlot = 2,
@@ -198,7 +200,7 @@ enum class ReaderPane(
     Commentator4(
         "commentator-4",
         Res.string.commentator_pane,
-        SatellitePlacement.Docked(DockSide.Left, order = 6, extent = 320.dp),
+        SatellitePlacement.Docked(DockSide.Bottom, order = 3, extent = 220.dp),
         toggle = BookContentEvent.CloseCommentatorPane(3),
         navigation = false,
         commentatorSlot = 3,
