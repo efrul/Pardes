@@ -578,8 +578,12 @@ internal fun UnifiedSearchBar(
 
     // Clears what was typed to find a book or category added, in both fields, and comes back to the bar
     fun clearAfterAdding() {
-        skipNextReferenceQuery = true
-        referenceSearchState.edit { replace(0, length, "") }
+        // Skips the change of a field cleared, only when it has one: an empty field has none, and the skip waiting
+        // for it dropped the next text typed (a second book added from a book's TOC, whose field the bar's is not)
+        if (referenceSearchState.text.isNotEmpty()) {
+            skipNextReferenceQuery = true
+            referenceSearchState.edit { replace(0, length, "") }
+        }
         skipNextTocQuery = true
         tocSearchState.edit { replace(0, length, "") }
         skipNextTocQuery = false
