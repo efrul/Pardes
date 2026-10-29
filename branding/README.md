@@ -98,6 +98,15 @@ tests and fixtures under `jvmTest/`; `SEMANTIC_SEARCH.md`, `docs/SEMANTIC_PLAN.m
 | `SeforimApp/.../framework/database/LibraryLocation.kt` | `NAMES`: `pardes-model` and `pardes.vec.lucene` move with the library; `LEFTOVERS`: a pack's download and staging folders |
 | `SeforimApp/src/graalvm/reachability-metadata.json` | ONNX Runtime's libraries for `win-x64`, `linux-aarch64`, `osx-aarch64` and `osx-x64` |
 
+Fixes of upstream code and tests, written for Zayit as well, to drop once upstream has its own (CI runs the tests since
+`Versioning` stopped failing on Pardes's tags):
+
+| File | Hook |
+|---|---|
+| `SeforimApp/.../framework/platform/PlatformInfo.kt` | `lowEndForTests`, which `isLowEnd` answers first: a test sets it so its widgets don't depend on the machine's GPU (a CI runner's is a software one, where the 3D widgets are off) |
+| `SeforimApp/.../features/home/widgets/luach/LuachData.kt` | `nextZmanim` over the day after too (`-1L..2L`): from the evening the next zman's card listed some fifteen of its twenty, half empty (Android's port the same) |
+| `SeforimApp/src/jvmTest/.../home/widgets/HomeWidgetsLayoutTest.kt`, `WidgetDragUiTest.kt` | the default layout checked on either machine; the drag tests set `lowEndForTests = false` |
+
 Licence-restricted files are replaced in place, not overlaid, because they must not be in the repository at all:
 the Rashi Amiti font (removed, with its `FontCatalog` entry; `FontCatalogTest` counts 27 fonts) and the temple
 picture (`files/temple_jerusalem_in_fire.webp`, a public-domain painting by David Roberts instead of a Shutterstock
