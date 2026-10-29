@@ -1,6 +1,5 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic.pack
 
-import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.logger.infoln
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.vinceglb.filekit.FileKit
@@ -19,8 +18,8 @@ import java.nio.file.StandardCopyOption
  * index of two packs don't work together. A start stopped halfway goes on at the next one, the request still there.
  *
  * The request is kept in the app's own databases folder, as [io.github.kdroidfilter.seforimapp.framework.database.PendingLibraryMove]'s:
- * the library's folder, and the library release the pack was checked against. A library replaced since (another
- * release, or none there) drops the pack.
+ * the library's folder. A library gone from it since drops the pack; another release of the library keeps it, since a
+ * pack works on every release ([SemanticPackReleases.newest]).
  */
 object PendingSemanticPack {
     private const val MARKER_NAME = "pending-semantic-pack.txt"
@@ -29,7 +28,6 @@ object PendingSemanticPack {
 
     data class Request(
         val libraryDir: File,
-        val library: String?,
     )
 
     sealed interface Outcome {
@@ -48,14 +46,15 @@ object PendingSemanticPack {
         request: Request,
         markerDir: File = defaultMarkerDir(),
     ) {
-        File(markerDir, MARKER_NAME).writeText(listOf(request.libraryDir.absolutePath, request.library.orEmpty()).joinToString("\n"))
+        File(markerDir, MARKER_NAME).writeText(request.libraryDir.absolutePath)
     }
 
+    // The folder is the first line: Pardes 1.0.0 wrote the library's release on a second one
     fun read(markerDir: File = defaultMarkerDir()): Request? =
         runCatching {
             val lines = File(markerDir, MARKER_NAME).takeIf { it.isFile }?.readLines() ?: return null
             val dir = lines.firstOrNull()?.trim()?.ifEmpty { null } ?: return null.also { clear(markerDir) }
-            Request(File(dir), lines.getOrNull(1)?.trim()?.ifEmpty { null })
+            Request(File(dir))
         }.onFailure { warnln { "[PendingSemanticPack] Unreadable request: ${it.message}" } }.getOrNull()
 
     fun clear(markerDir: File = defaultMarkerDir()) {
@@ -91,14 +90,11 @@ object PendingSemanticPack {
     ): Outcome {
         val lib = request.libraryDir
         val staged = SemanticPackInstaller.stagingDirOf(lib)
-        val installed = LibraryLocation.version(lib)
         // Each folder staged, or already in place: moved in by a start that was stopped before it ended
         val complete = SemanticPack.FOLDERS.all { isNew(File(staged, it)) || isNew(File(lib, it)) }
         val dropped =
             when {
                 !File(lib, "seforim.db").isFile -> "no library in $lib"
-                request.library != null && installed != null && !SemanticPack.sameLibrary(request.library, installed) ->
-                    "a pack of the library ${request.library}, the library is now $installed"
                 !complete -> "no complete pack in $staged"
                 else -> null
             }

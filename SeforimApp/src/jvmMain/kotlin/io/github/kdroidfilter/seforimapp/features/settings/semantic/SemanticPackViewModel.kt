@@ -43,16 +43,11 @@ class SemanticPackViewModel(
             val pack: SemanticPackReleases.Available,
         ) : Available
 
-        /** No pack for this library release yet. */
-        data class NoneYet(
-            val library: String,
-        ) : Available
+        /** No pack released yet. */
+        data object NoneYet : Available
 
         /** Neither the GitHub API nor the site's list could be read. */
         data object Unreachable : Available
-
-        /** A library without its release (release_info.txt): no pack can be chosen for it. */
-        data object UnknownLibrary : Available
     }
 
     sealed interface Work {
@@ -104,18 +99,15 @@ class SemanticPackViewModel(
             val dir = LibraryLocation.currentDir(appSettings)
             val hasLibrary = LibraryLocation.exists(dir)
             _state.update { it.copy(hasLibrary = hasLibrary, installed = InstalledPack.read(dir)) }
-            val library = LibraryLocation.version(dir)
+            // Without a library the card asks for it, and offers no pack
+            if (!hasLibrary) return@launch
             val available =
-                when {
-                    !hasLibrary || library == null -> Available.UnknownLibrary
-                    else ->
-                        runSuspendCatching { releases.newestFor(library) }
-                            .map { pack -> pack?.let { Available.Pack(it) } ?: Available.NoneYet(library) }
-                            .getOrElse {
-                                warnln { "[SemanticPackViewModel] No pack list: ${it.message}" }
-                                Available.Unreachable
-                            }
-                }
+                runSuspendCatching { releases.newest(LibraryLocation.version(dir)) }
+                    .map { pack -> pack?.let { Available.Pack(it) } ?: Available.NoneYet }
+                    .getOrElse {
+                        warnln { "[SemanticPackViewModel] No pack list: ${it.message}" }
+                        Available.Unreachable
+                    }
             _state.update { it.copy(available = available) }
         }
     }
@@ -175,8 +167,8 @@ class SemanticPackViewModel(
         source: SemanticPackInstaller.Source,
     ) {
         _state.update { it.copy(work = Work.Unpacking(0f), startFailure = null) }
-        val staged = installer.stage(source) { progress -> _state.update { it.copy(work = Work.Unpacking(progress)) } }
-        installer.schedule(staged)
+        installer.stage(source) { progress -> _state.update { it.copy(work = Work.Unpacking(progress)) } }
+        installer.schedule()
         _state.update { it.copy(work = Work.Ready) }
     }
 }

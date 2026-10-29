@@ -136,17 +136,19 @@ class SemanticPackInstallerTest {
     }
 
     @Test
-    fun `a pack of another library release is refused`() {
+    fun `a pack built on another library release is staged`() {
+        // SeforimLibrary keeps a line's id from release to release: the pack works on this library too
         PackFixtures.library(library, release = "20261111000000")
         val downloads = PackFixtures.bundle(source, File(root, "downloads"))
 
-        val problem =
-            assertFailsWith<PackProblem.OtherLibrary> {
-                runBlocking { installer.stage(installer.resolve(File(downloads, SemanticPack.MANIFEST_NAME))) }
-            }
-        assertEquals(PackFixtures.LIBRARY_TAG, problem.pack)
-        assertEquals("20261111000000", problem.installed)
-        assertFalse(installer.stagingDir.exists())
+        val staged = runBlocking { installer.stage(installer.resolve(File(downloads, SemanticPack.MANIFEST_NAME))) }
+
+        assertEquals(PackFixtures.LIBRARY_TAG, staged.library)
+        // The pack as the bundle has it, with what its manifest says about it
+        assertEquals(
+            PackFixtures.contents(source).keys + "${SemanticPack.MODEL_DIR}/${SemanticPack.INFO_NAME}",
+            PackFixtures.contents(installer.stagingDir).keys - marks(),
+        )
     }
 
     @Test
@@ -183,11 +185,11 @@ class SemanticPackInstallerTest {
     @Test
     fun `staging schedules the pack for the next start`() {
         val downloads = PackFixtures.bundle(source, File(root, "downloads"))
-        val staged = runBlocking { installer.stage(installer.resolve(File(downloads, SemanticPack.MANIFEST_NAME))) }
+        runBlocking { installer.stage(installer.resolve(File(downloads, SemanticPack.MANIFEST_NAME))) }
 
-        installer.schedule(staged)
+        installer.schedule()
 
-        assertEquals(PendingSemanticPack.Request(library, PackFixtures.LIBRARY_TAG), PendingSemanticPack.read())
+        assertEquals(PendingSemanticPack.Request(library), PendingSemanticPack.read())
         // Staging again drops what was scheduled: its folder is the one being filled
         runBlocking { installer.stage(installer.resolve(File(downloads, SemanticPack.MANIFEST_NAME))) }
         assertEquals(null, PendingSemanticPack.read())
@@ -204,8 +206,9 @@ class SemanticPackInstallerTest {
             .writeText(PackInfo(2, PackFixtures.MODEL, PackFixtures.DIMENSION, PackFixtures.LIBRARY_TAG, 2).toJson())
         assertEquals(2, (InstalledPack.read(library) as InstalledPack.InUse).pack)
 
+        // Another release of the library keeps the pack in use: its lines keep their ids
         PackFixtures.library(library, release = "20261111000000")
-        assertEquals(InstalledPack.OtherLibrary(PackFixtures.LIBRARY, "20261111000000"), InstalledPack.read(library))
+        assertEquals(2, (InstalledPack.read(library) as InstalledPack.InUse).pack)
 
         File(library, SemanticPack.INDEX_DIR).deleteRecursively()
         assertEquals(InstalledPack.NoIndex, InstalledPack.read(library))
