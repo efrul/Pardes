@@ -5,7 +5,7 @@ The base is desktop Zayit 0.6.11 (upstream `kdroidFilter/Zayit` tag `v0.6.11`, S
 - **Severity:** **H** = a missing or broken feature the user will notice; **M** = a noticeable difference; **L** = polish.
 - **Tick an item when it lands.** Before porting anything, read the desktop code it names, as 0.6.11 has it (`git diff v0.6.1 v0.6.11 -- <path>` shows what changed since the audit). The full findings, with desktop and Android file:line references and fix plans, were produced by the audit workflow; re-run a focused audit for an area rather than trusting stale line numbers.
 - **Not portable from public sources:**
-  - semantic (meaning-based) search: a private, token-gated package; Android behaves like the desktop community build;
+  - Zayit's semantic (meaning-based) search: a private, token-gated package. Pardes's own, on Dicta's open model, is ported from Pardes desktop (see "Pardes desktop's semantic search" below);
   - Google Drive backup: a desktop loopback OAuth client;
   - the full template siddur: a private package;
   - the Talmud's verse quote links (0.6.5): a private package too, in the official builds only.
@@ -76,7 +76,7 @@ The move to 0.6.7 (2026-10-20), with what 0.6.3 to 0.6.5 had left for it. From `
 | SeforimLibrary `c3190c4` (in `2265fcb`) | 0.6.3 | The search API: `rangeSnippet` takes the found line's range in the text, and `LineHit` carries it (`lineStart`, `lineEnd`), so the preview and snippets mark only the found line | **Ported**: the two upstream hunks in `search/LuceneSearchEngine.kt` (Android variant) |
 | SeforimLibrary `7ddf045` | 0.6.6 | `zayit cli` tooling | **Not applicable**: no CLI here |
 | SeforimLibrary `9bcac65`, `772151b`, `7c8f42f`, `651113a` | 0.6.3 | Generator and blacklist fixes; for the generator, the dao gains two link queries (`LinkQueries.sq` `changes`, `selectLineKeyById`) and their repository calls | **Already present**: library data, which arrives with library release v3. The new dao queries compile and stay unused here. core, `Database.sq`, delta-updater and generator-common are unchanged since `381fbea`, so installed libraries, deltas and the Lucene index stay as they are |
-| `4fe26694` | 0.6.3 | The found line highlighted by meaning, without the query's words | **Not applicable**: `highlightsByMeaning` needs the semantic engine. The lexical engine says no, and desktop then highlights the query's words in every line, as here |
+| `4fe26694` | 0.6.3 | The found line highlighted by meaning, without the query's words | **Ported with Pardes's semantic search** (2026-10-28): the results' snippets, the preview and the reader's smart find highlight by `SearchEngine.highlights`; without the pack the engine says no and the query's words are highlighted, as before |
 | `25dde83d` | 0.6.4 | The preview's found-line bar drawn, not measured (`IntrinsicSize.Min` overflowed at a collapsed pane's zero width) | **Ported**: `Modifier.drawBehind` on the RTL side, `padding(start = 17.dp)` (`ui/search/PassagePreview.kt`) |
 | `a991be12`, `a009b0d4` | 0.6.5 | Tabs slide to their new place on pin, unpin, reorder and reopen | **Ported** with Compose's `Modifier.animateItem()`, on the tablet strip (`ui/shell/TopBar.kt`) and the phone's tab list (`ui/shell/ZayitApp.kt`) |
 | `6ba92fb7`, `ce6e2b0c` | 0.6.5 | Desktop's own slide: drag releases spared, the hit area moving with the tab, the farther-travelling tab drawn on top | **Not applicable**: `animateItem` places the items itself, and the strip here has no tab drag |
@@ -142,6 +142,22 @@ Fixes land in waves:
 3. Search and reader.
 4. Final sweep.
 
+## Pardes desktop's semantic search
+
+Pardes desktop's own semantic search (חיפוש לפי משמעות, `SEMANTIC_SEARCH.md` and `docs/SEMANTIC_PLAN.md` at the repository's root): Dicta's open model, fine-tuned and distilled in `semantic-model/`, int8 ONNX, and a Lucene HNSW index of the library's lines, fused with the search by words (RRF). Ported on 2026-10-28 with the same model and the same pack (release `semantic-2-v3-20261012193827`), not approximated: desktop's files that compile on Android are built unchanged (`syncDesktopSemantic`), the others are Android variants with desktop's package and class names in `search/semantic/`, each with a header listing its changes ("Android:"). Desktop's unit tests of the fusion, the precedence by level, the passages, the swap at start and the choice of the pack run on the port unchanged (`syncDesktopSemanticTests`, 44 tests), and the tokenizer's parity runs on a device (`HfTokenizerParityTest`).
+
+| Desktop | Here |
+|---|---|
+| `HybridSearchEngine`: RRF with the model's dense weight, the lexical leaders that hold a quote, the precedence of the earlier level, refined snippets, highlights by meaning, smart find, the fallback to the words alone | **Ported** (`search/semantic/HybridSearchEngine.kt`): the book levels and the lines a dense hit needs are read through the app's own SqlDriver (`BookLevels.kt`, `LibraryLines`), as every other read of `seforim.db` here; the logger is `android.util.Log` |
+| `IndependentSemanticSearch`, `OnnxEmbeddingProvider`, `OpenModelSpec`, `HfTokenizer`, `VectorIndexBuilder` (its reading side) | **Ported**: `NIOFSDirectory` (never MMap); ICU's regex has no `UNICODE_CHARACTER_CLASS`, so the tokenizer spells out Oniguruma's `\w`, `\s` and `\d`; org.json's `keys()` instead of `keySet()` and the API 26 forms of `Files`, `Optional` and the hex digits; the model is found beside the index only (no `PARDES_MODEL_DIR`, no legacy model) |
+| ONNX Runtime 1.17.1 | **1.20.0**, the first whose Android libraries are aligned to 16 KB pages, arm64-v8a and x86_64 only; R8 keeps `ai.onnxruntime.**` (JNI by name) |
+| `withSemanticSearch` (AppCoreBindings): the engine wrapped where the addon is installed | **Ported** (`search/SearchService.kt`): on a 64-bit device (`SemanticSearchSupport`); a 32-bit one keeps the lexical engine, and Settings shows no semantic section there |
+| The pack: `SemanticPackReleases`, `SemanticPackInstaller`, `PendingSemanticPack`, `InstalledPack` | **Ported** (`search/semantic/pack/`). Deliberate differences: a download streams into the staging folder as it unpacks (as the library's download does here), so nothing of 2 GB is kept in between and a stopped download starts over; the swap's request is in the app's private files; the swap runs at the first start of the shell (`MainActivity`), before the search opens |
+| Settings › ניהול נתונים › SemanticPackCard and its view model | **Ported** (`ui/settings/SemanticPackSection.kt`, `search/SemanticPackManager.kt`), with desktop's strings. Android: the download or import goes on in a foreground service with a notification (`SemanticPackService`), as the library's; "ייבוא מקבצים…" takes the files picked together (the system's picker shows no folder): the two zips, or the manifest with its parts. Unzipped folders are not offered there: the transfer scripts copy those |
+| The find bar's smart mode (`find_smart_mode`, BookContentView `semanticFind`, LineItem `smartRanges`) | **Ported**: the toggle (desktop's magic-button icon) on a 64-bit device, the book's 60 lines closest to the query by meaning, each lit with `highlights`. Under 300dp (Jelly Star) the toggle is left out for the field's room, and the bar is smart while it holds the search's query, as before; without the pack the smart mode finds the lines the search finds by words (Android's, see "Search") |
+| `warmUp` at start (the model and the vector graph loaded in the background) | **Not done**: the model loads when the first search asks for it, so the 166 MB model costs no memory to whoever does not search |
+| The transfer of a library from desktop | `tools/push-desktop-library.sh`/`.ps1` copy `pardes-model/` and `pardes.vec.lucene/` with it when desktop has both, and the library's moves to and from a memory card take them along (`LibraryMover`); a full library install deletes the vector index, as desktop's does, and keeps the model |
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)
@@ -155,7 +171,7 @@ Fixes land in waves:
 - [x] **M** Reader find-in-page and search-term highlighting do not use the engine (only visible lines, raw substrings, no count or next/previous)
 - [x] **M** No incremental library (delta) updates: every schema bump means a full ~8 GB download (wave 4: `android/delta/`, Settings › ניהול נתונים and the database update flow; in-place transactional apply without desktop's 8 GB backup copy, Lucene lines written like the generator's index writer)
 - [x] **M** User settings DB comes from the old schema; history and favorites do not match desktop's user_settings.db
-- [x] **L** ~~Semantic (meaning-based) search~~: cannot be built from public sources. Android behaves like the desktop community build (no meaning search).
+- [x] **L** ~~Semantic (meaning-based) search~~: Zayit's cannot be built from public sources. Since 2026-10-28 Android has Pardes desktop's own (see "Pardes desktop's semantic search"), and without its pack behaves like the desktop community build.
 
 ## Search
 

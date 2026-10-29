@@ -269,7 +269,7 @@ android {
         dex.useLegacyPackaging = false
         // ONNX Runtime (the semantic search's model) for the 64-bit ABIs only: its 32-bit libraries would add some 30 MB
         // to every download for phones old enough to be 32-bit, which seldom have the memory for the model or the room
-        // for the pack's 2.7 GB beside the library (SemanticSearchSupport hides the search there).
+        // for the pack's 2.8 GB beside the library (SemanticSearchSupport hides the search there).
         jniLibs.excludes += setOf("lib/armeabi-v7a/libonnxruntime*.so", "lib/x86/libonnxruntime*.so")
     }
 }

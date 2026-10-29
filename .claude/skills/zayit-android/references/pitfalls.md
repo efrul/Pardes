@@ -147,6 +147,7 @@ The whole app runs with `LayoutDirection.Rtl`.
   - 3 cores (`-cores 3`).
   - 3 GB RAM.
   - Disable the Google apps (`emulator-prep.sh`). Boot went from 843 s to 289 s.
+  - When system_server still restarts every 4-6 min with the user at BOOTING (logcat `WATCHDOG KILLING SYSTEM PROCESS: Blocked in handler on main thread`, the main thread waiting on the ActivityManagerService lock), start the emulator with `CORES=1 emulator-start.sh`. Under TCG all the vCPUs run on one host thread (qemu at 100% of one CPU), so three of them only wait on one another's locks: on 2026-10-29, three vCPUs on a 4-CPU container looped for an hour even with every Google app disabled, and one vCPU booted in 450 s and stayed up.
   - Disable them again after a test that needed one: with the Pixel launcher (home-screen widgets) and Gboard enabled, every boot went into a `Lost network stack` loop, system_server restarting every ~6 min with the user stuck at BOOTING. `pm disable-user --user 0 com.google.android.apps.nexuslauncher com.google.android.inputmethod.latin` ended it; the placed widgets come back when the launcher is enabled again.
 - **Foreground `sleep` is blocked** by the harness. Wait with the Monitor tool and an until-loop (`emu-wait.sh`).
 - **`adb input text` can't type Hebrew.** Use `emu-type.sh` (ADBKeyBoard) or deep links (`zayit://search?q=`).
