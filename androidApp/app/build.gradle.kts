@@ -267,10 +267,13 @@ android {
         // each installed app downloads as its update does not change for that, and Android 9 and later keep reading
         // the dex in place from it.
         dex.useLegacyPackaging = false
-        // ONNX Runtime (the semantic search's model) for the 64-bit ABIs only: its 32-bit libraries would add some 30 MB
+        // ONNX Runtime (the semantic search's model) for the 64-bit ABIs only: its 32-bit libraries would add some 14 MB
         // to every download for phones old enough to be 32-bit, which seldom have the memory for the model or the room
         // for the pack's 2.8 GB beside the library (SemanticSearchSupport hides the search there).
         jniLibs.excludes += setOf("lib/armeabi-v7a/libonnxruntime*.so", "lib/x86/libonnxruntime*.so")
+        // Native libraries stored compressed, and extracted by Android when it installs the app: every download and
+        // update is some 30 MB smaller (ONNX Runtime's libraries are 40 MB), for about the same room on the phone.
+        jniLibs.useLegacyPackaging = true
     }
 }
 

@@ -63,7 +63,8 @@ search and `androidApp/docs/PARITY.md` › Pardes desktop's semantic search; the
 Desktop's files that compile there are built unchanged (`syncDesktopSemantic`), the rest are Android variants in
 `androidApp/.../android/search/semantic/` with desktop's packages and names, each with a header of its changes: after a
 change here, port it there too (the header says what differs), and run the Android unit tests, which are desktop's.
-- ONNX Runtime is 1.20.0 there (16 KB-aligned libraries), 64-bit only; the model must stay loadable by it.
+- ONNX Runtime is 1.22.0 there, the first whose JNI library is 16 KB-aligned too (1.20 and 1.21 align only
+  `libonnxruntime.so`), 64-bit only; the model must stay loadable by it.
 - Android's regex is ICU: no `Pattern.UNICODE_CHARACTER_CLASS` (it throws). The Android `HfTokenizer` spells out
   Oniguruma's `\w`, `\s` and `\d`; a new tokenizer pattern class needs the same there, and `HfTokenizerParityTest` runs
   on a device (`androidInstrumentedTest`) with this repository's fixtures.
