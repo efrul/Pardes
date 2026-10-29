@@ -3,8 +3,8 @@ name: Semantic pack release
 # Publishes a pack of the semantic search (חיפוש לפי משמעות) as a release of this repository: the query model
 # (pardes-model/) and the vector index of the whole library (pardes.vec.lucene/), packed by semantic-model/package_pack.py
 # and kept in a private Kaggle dataset. docs/SEMANTIC_PLAN.md says why. The app installs a pack itself (Settings › ניהול
-# נתונים › חיפוש לפי משמעות, SeforimApp/.../features/search/semantic/pack/): it finds the newest semantic-* release for
-# its library in the API's release list (or in the site's semantic.json, android-site.yml, which runs again after this),
+# נתונים › חיפוש לפי משמעות, SeforimApp/.../features/search/semantic/pack/): it finds the newest semantic-* release (any
+# library release: a line keeps its id from one to the next) in the API's release list (or in the site's semantic.json, android-site.yml, which runs again after this),
 # downloads the bundle, or imports these files from the user's computer.
 #
 # The release holds the pack as the app installs it, in SeforimLibrary's bundle format (pardes-semantic.tar.zst, or its
@@ -111,7 +111,7 @@ jobs:
           - \`pardes.vec.lucene\`: אינדקס הווקטורים של הספרייה כולה, $lines שורות, לספרייה מגרסת SeforimLibrary ‏\`$LIBRARY\`.
 
           **התקנה מתוך פרדס למחשב**
-          בהגדרות › ניהול נתונים › חיפוש לפי משמעות לוחצים **הורדה והתקנה**. פרדס מוריד את החבילה שמתאימה לספרייה המותקנת, בודק אותה, והיא נכנסת לשימוש בהפעלה הבאה.
+          בהגדרות › ניהול נתונים › חיפוש לפי משמעות לוחצים **הורדה והתקנה**. פרדס מוריד את החבילה, בודק אותה, והיא נכנסת לשימוש בהפעלה הבאה.
 
           **בלי חיבור ל־GitHub מתוך פרדס**
           מורידים בדפדפן את \`pardes-model.zip\` ואת \`pardes.vec.lucene.zip\` לאותה תיקייה (או את קובצי \`pardes-semantic.tar.zst\` עם ה־\`manifest.json\` שלהם), ובוחרים אחד מהם ב**ייבוא מקבצים…** שבאותו מסך.
