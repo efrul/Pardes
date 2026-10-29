@@ -1084,21 +1084,27 @@ footer p { max-width: 52rem; }
   }
 
   // Pardes for desktop: the newest release of desktop-release.yml (desktop-<version>-<run>, not a pre-release) and its
-  // installers by platform, as it names them; ARM64 Linux's are on the release's page.
+  // installers by platform, as it names them; ARM64 Linux's are on the release's page. A platform the newest release
+  // has no installer for yet (it was out without the Apple Silicon Mac) gets the newest release's that has one.
   var DESKTOP = [
     ['desk-win', /-windows-x64-nsis\.exe$/i], ['desk-win-arm', /-windows-arm64-nsis\.exe$/i],
     ['desk-mac', /-macos-arm64\.dmg$/i], ['desk-mac-intel', /-macos-x64\.dmg$/i],
     ['desk-deb', /_amd64\.deb$/i], ['desk-rpm', /\.x86_64\.rpm$/i], ['desk-pacman', /-x86_64\.pacman$/i]
   ];
   function showDesktop(list) {
-    var rel = list.filter(function (r) {
+    var rels = list.filter(function (r) {
       return !r.draft && !r.prerelease && /^desktop-\d/.test(r.tag_name || '') &&
         (r.assets || []).some(function (a) { return /\.exe$/i.test(a.name); });
-    })[0];
+    });
+    var rel = rels[0];
     if (!rel) return;
     var ver = (/^desktop-(\d+(?:\.\d+)*)-/.exec(rel.tag_name) || [])[1] || rel.tag_name;
     DESKTOP.forEach(function (d) {
-      var a = (rel.assets || []).filter(function (x) { return d[1].test(x.name); })[0];
+      var a = null;
+      rels.some(function (r) {
+        a = (r.assets || []).filter(function (x) { return d[1].test(x.name); })[0];
+        return a;
+      });
       if (!a) return;
       $(d[0]).href = a.browser_download_url;
       if ($(d[0] + '-file')) {
