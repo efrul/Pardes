@@ -3,8 +3,12 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcon
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -16,11 +20,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -28,16 +32,23 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,8 +58,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.IconActionButton
 import org.jetbrains.jewel.ui.component.Text
+import org.jetbrains.jewel.ui.component.Tooltip
+import org.jetbrains.jewel.ui.icons.AllIconsKeys
+import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.commentator_detach
+import kotlin.math.abs
 
 // Grid capacity thresholds at the reference commentary font size ([REFERENCE_TEXT_SIZE]).
 // At runtime the effective minimums scale with the user's chosen font size so the grid
@@ -266,13 +284,21 @@ internal fun CommentatorsGridScaffold(
             }
         }
 
-        Row(modifier = Modifier.fillMaxSize()) {
-            VerticalPager(
+        // The pages side by side, their dots in a row above them. The pager's own gestures stay off, so a
+        // commentator's vertical scroll never turns a page: a sideways swipe does (pageSwipe).
+        val multiPage = pages.size > 1
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (multiPage) {
+                HorizontalPagerIndicator(pagerState = pagerState, pages = pages)
+            }
+            HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .then(if (multiPage) Modifier.pageSwipe(pagerState) else Modifier),
                 beyondViewportPageCount = 1,
-                // Navigation is driven solely by indicator clicks to avoid swallowing the
-                // LazyColumn scrolls rendered inside each commentator cell.
                 userScrollEnabled = false,
             ) { pageIdx ->
                 CommentatorPageGrid(
@@ -283,12 +309,111 @@ internal fun CommentatorsGridScaffold(
                     column = column,
                 )
             }
-            if (pages.size > 1) {
-                VerticalPagerIndicator(pagerState = pagerState, pageCount = pages.size)
-            }
         }
     }
 }
+
+/**
+ * Turns the commentators' pages by a sideways swipe: a mouse drag (outside the texts, where a drag
+ * selects), a touchpad's sideways swipe, a tilt wheel or Shift + wheel. One page per gesture.
+ */
+@Composable
+private fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
+    val scope = rememberCoroutineScope()
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    var dragStartPage by remember { mutableIntStateOf(0) }
+    var dragging by remember { mutableStateOf(false) }
+    val dragState =
+        rememberDraggableState { delta ->
+            // The delta comes reversed in RTL (reverseDirection): negative moves on to the next page
+            pagerState.dispatchRawDelta(-delta)
+        }
+    // A page change cut short (the selection changed again meanwhile) leaves the pager between two pages, and its
+    // own gestures, which would snap it, are off: snap it to the nearest page once it rests.
+    LaunchedEffect(pagerState) {
+        snapshotFlow { !dragging && !pagerState.isScrollInProgress && abs(pagerState.currentPageOffsetFraction) > SNAP_EPSILON }
+            .collect { offPage -> if (offPage) scope.launch { pagerState.animateScrollToPage(pagerState.currentPage) } }
+    }
+    return this
+        .pointerInput(pagerState, isRtl) {
+            // Initial pass: ahead of the columns, which would take Shift + wheel as their own scroll.
+            awaitPointerEventScope {
+                var accumulated = 0f
+                var lastScrollAt = 0L
+                var turned = false
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.type != PointerEventType.Scroll) continue
+                    val change = event.changes.firstOrNull() ?: continue
+                    val delta = change.scrollDelta
+                    val sideways =
+                        when {
+                            abs(delta.x) > abs(delta.y) -> delta.x
+                            event.keyboardModifiers.isShiftPressed && delta.y != 0f -> delta.y
+                            else -> continue
+                        }
+                    change.consume()
+                    val now = change.uptimeMillis
+                    // A pause ends the gesture: the next swipe may turn another page
+                    if (now - lastScrollAt > SWIPE_GESTURE_GAP_MS) {
+                        accumulated = 0f
+                        turned = false
+                    }
+                    lastScrollAt = now
+                    if (turned) continue
+                    accumulated += sideways
+                    if (abs(accumulated) >= SWIPE_SCROLL_THRESHOLD) {
+                        turned = true
+                        // Scrolling right shows what is on the right: the next page in LTR, the previous in RTL
+                        val forward = (accumulated > 0) != isRtl
+                        val target = pagerState.currentPage + if (forward) 1 else -1
+                        if (target in 0 until pagerState.pageCount) {
+                            scope.launch { pagerState.animateScrollToPage(target) }
+                        }
+                    }
+                }
+            }
+        }.draggable(
+            state = dragState,
+            orientation = Orientation.Horizontal,
+            reverseDirection = isRtl,
+            onDragStarted = {
+                dragging = true
+                dragStartPage = pagerState.currentPage
+            },
+            onDragStopped = { velocity ->
+                val moved = pagerState.currentPage + pagerState.currentPageOffsetFraction - dragStartPage
+                val target =
+                    when {
+                        velocity < -SWIPE_FLING_VELOCITY || moved > SWIPE_PAGE_FRACTION -> dragStartPage + 1
+                        velocity > SWIPE_FLING_VELOCITY || moved < -SWIPE_PAGE_FRACTION -> dragStartPage - 1
+                        else -> dragStartPage
+                    }.coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
+                scope.launch {
+                    try {
+                        pagerState.animateScrollToPage(target)
+                    } finally {
+                        dragging = false
+                    }
+                }
+            },
+        )
+}
+
+// Wheel units of sideways scroll that turn a page (a tilt-wheel notch or Shift + wheel notch is 1)
+private const val SWIPE_SCROLL_THRESHOLD = 1f
+
+// Sideways scroll events closer than this belong to one gesture
+private const val SWIPE_GESTURE_GAP_MS = 250L
+
+// A drag let go faster than this (px/s) turns the page whatever its length
+private const val SWIPE_FLING_VELOCITY = 400f
+
+// Else a drag turns it once it has moved this fraction of a page
+private const val SWIPE_PAGE_FRACTION = 0.2f
+
+// A pager further than this fraction from a page is between two
+private const val SNAP_EPSILON = 0.001f
 
 /**
  * Lays out the commentators of a single pager page. The grid is rebalanced so that
@@ -321,6 +446,7 @@ private fun CommentatorPageGrid(
                             commentTextSize = config.textSizes.commentTextSize,
                             isRecentlyAdded = name == recentlyAdded,
                             onTitleClick = { config.onOpenCommentatorBook(id) },
+                            onDetach = config.onDetachCommentator?.let { detach -> { detach(name) } },
                             modifier = Modifier.weight(1f).fillMaxHeight().padding(horizontal = 4.dp),
                         ) {
                             column(id)
@@ -338,6 +464,7 @@ private fun CommentatorCell(
     commentTextSize: Float,
     isRecentlyAdded: Boolean,
     onTitleClick: () -> Unit,
+    onDetach: (() -> Unit)?,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -347,15 +474,21 @@ private fun CommentatorCell(
             commentTextSize = commentTextSize,
             isRecentlyAdded = isRecentlyAdded,
             onClick = onTitleClick,
+            onDetach = onDetach,
         )
         content()
     }
 }
 
+/**
+ * The pages' dots, in a row above them: in RTL the first page's dot is on the right, as its page. A dot's
+ * tooltip names its commentators; the wheel over the row turns the pages too.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun VerticalPagerIndicator(
+private fun HorizontalPagerIndicator(
     pagerState: PagerState,
-    pageCount: Int,
+    pages: List<List<String>>,
 ) {
     val activeColor = JewelTheme.globalColors.text.normal
     // A muted-but-readable dot: the border color is nearly invisible in light mode, so use a
@@ -364,47 +497,73 @@ private fun VerticalPagerIndicator(
         JewelTheme.globalColors.text.normal
             .copy(alpha = 0.4f)
     val scope = rememberCoroutineScope()
-    Column(
-        modifier = Modifier.fillMaxHeight().width(20.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        repeat(pageCount) { i ->
-            val isActive = pagerState.currentPage == i
-            // Clickable hit-box padded outwards so the dot itself stays small while the
-            // click target remains comfortable.
-            Box(
-                modifier =
-                    Modifier
-                        .padding(vertical = 2.dp)
-                        .size(20.dp)
-                        .clickable {
-                            if (!isActive) {
-                                scope.launch { pagerState.animateScrollToPage(i) }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(20.dp)
+                .pointerInput(pagerState) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type != PointerEventType.Scroll) continue
+                            val change = event.changes.firstOrNull() ?: continue
+                            val delta = change.scrollDelta.y
+                            if (delta == 0f) continue
+                            change.consume()
+                            // Wheel down: the next page
+                            val target = pagerState.currentPage + if (delta > 0) 1 else -1
+                            if (target in 0 until pagerState.pageCount && !pagerState.isScrollInProgress) {
+                                scope.launch { pagerState.animateScrollToPage(target) }
                             }
-                        },
-                contentAlignment = Alignment.Center,
-            ) {
+                        }
+                    }
+                },
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        pages.forEachIndexed { i, names ->
+            val isActive = pagerState.currentPage == i
+            Tooltip({ Text(names.joinToString(" · ")) }) {
+                // Clickable hit-box padded outwards so the dot itself stays small while the
+                // click target remains comfortable.
                 Box(
                     modifier =
                         Modifier
-                            .size(if (isActive) 10.dp else 7.dp)
-                            .background(
-                                color = if (isActive) activeColor else inactiveColor,
-                                shape = CircleShape,
-                            ),
-                )
+                            .padding(horizontal = 2.dp)
+                            .size(20.dp)
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .clickable {
+                                if (!isActive) {
+                                    scope.launch { pagerState.animateScrollToPage(i) }
+                                }
+                            },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(if (isActive) 10.dp else 7.dp)
+                                .background(
+                                    color = if (isActive) activeColor else inactiveColor,
+                                    shape = CircleShape,
+                                ),
+                    )
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun CommentatorHeader(
     commentator: String,
     commentTextSize: Float,
     isRecentlyAdded: Boolean = false,
     onClick: () -> Unit = {},
+    // Gives the commentator a pane of its own: a button at the header's end, shown on hover
+    onDetach: (() -> Unit)? = null,
 ) {
     // Progressive underline: the stroke grows from the reading-side edge (LTR → left to
     // right, RTL → right to left) while fading in, holds briefly, then fades out.
@@ -464,5 +623,15 @@ internal fun CommentatorHeader(
                     )
                 },
         )
+        if (onDetach != null && isHovered) {
+            val detachText = stringResource(Res.string.commentator_detach)
+            Tooltip({ Text(detachText) }, modifier = Modifier.align(Alignment.CenterEnd)) {
+                IconActionButton(
+                    key = AllIconsKeys.Actions.SplitVertically,
+                    onClick = onDetach,
+                    contentDescription = detachText,
+                )
+            }
+        }
     }
 }

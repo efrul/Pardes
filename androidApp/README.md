@@ -6,7 +6,7 @@ Pardes is an Android 8.0+ (minSdk 26) app based on [Zayit](https://github.com/kd
 
 The images are in [docs/release/](docs/release/).
 
-Download page: https://efrul.github.io/Pardes/ (source in [site/](site/), deployed to GitHub Pages by `.github/workflows/android-site.yml` on every push that changes it). On every visit it asks the GitHub API for the newest release, its version and the downloads of every release's APK (when the API cannot be reached, it shows `releases.json`, written at each deploy); it shows [CHANGELOG.md](CHANGELOG.md) as its changelog and also offers the transfer scripts.
+Site: https://efrul.github.io/Pardes/ (source in [site/](site/), deployed to GitHub Pages by `.github/workflows/android-site.yml` on every push that changes it). Four pages for Android and desktop: the home page, a guide (installing, and the ways to bring in the library), every download, and the changelogs ([CHANGELOG.md](CHANGELOG.md) and [desktop/CHANGELOG.md](../desktop/CHANGELOG.md)). They read the versions and files from `releases.json` and `downloads.json`, written at each deploy; only the downloads page also asks the GitHub API, for the current download count. It also offers the transfer scripts.
 
 ## Build
 

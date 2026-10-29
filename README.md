@@ -27,7 +27,7 @@
 2. מאשרים התקנה ממקור לא מוכר.
 3. בפתיחה הראשונה מכניסים את הספרייה, באחת משלוש דרכים:
    - הורדה בטלפון: כ־5.5 ג״ב, וכ־14.1 ג״ב פנויים.
-   - העברה ממחשב שזית למחשב מותקן בו עם ספרייה עדכנית (מ־11 באוקטובר 2026 ואילך), בכבל USB: ב־Windows מורידים מ[אתר ההורדה](https://efrul.github.io/Pardes/#lib-computer) את `push-desktop-library-windows.zip`, מחלצים אותו לתיקייה (לחיצה ימנית › חלץ הכול) ולוחצים פעמיים על `push-desktop-library.cmd` שבתיקייה שנוצרה; בלינוקס ובמק [`push-desktop-library.sh`](androidApp/tools/push-desktop-library.sh). דרוש adb (Android SDK Platform-Tools).
+   - העברה ממחשב שזית למחשב מותקן בו עם ספרייה עדכנית (מ־11 באוקטובר 2026 ואילך), בכבל USB: ב־Windows מורידים מ[אתר ההורדה](https://efrul.github.io/Pardes/guide.html#lib-computer) את `push-desktop-library-windows.zip`, מחלצים אותו לתיקייה (לחיצה ימנית › חלץ הכול) ולוחצים פעמיים על `push-desktop-library.cmd` שבתיקייה שנוצרה; בלינוקס ובמק [`push-desktop-library.sh`](androidApp/tools/push-desktop-library.sh). דרוש adb (Android SDK Platform-Tools).
    - התקנה מקבצי ההפצה של [SeforimLibrary](https://github.com/kdroidFilter/SeforimLibrary/releases/latest): בוחרים יחד את כל החלקים `seforim_bundle.tar.zst.part01`, `part02` וכן הלאה.
 
 ## הקוד
