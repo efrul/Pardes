@@ -1,7 +1,8 @@
 // Android variant of Pardes desktop's SeforimApp/src/jvmTest/.../features/search/semantic/HfTokenizerParityTest.kt: the
 // same cases and checks, on a device, so on Android's own regex (ICU) and normalizer, where the queries are tokenized.
 // The fixtures are desktop's (app/build.gradle.kts copies them into the test's assets): read as assets, as the test APK
-// has no file path for its resources (desktop finds them with Path.of, API 34 here).
+// has no file path for its resources (desktop finds them with Path.of, API 34 here). AGP unzips a .gz asset as it
+// packages it and drops the extension, so each is opened under its own name, else gzipped.
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,6 +12,7 @@ import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.io.InputStream
 import java.util.zip.GZIPInputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -23,15 +25,19 @@ import kotlin.test.assertTrue
 class HfTokenizerParityTest {
     private val assets = InstrumentationRegistry.getInstrumentation().context.assets
 
-    // HfTokenizer reads a file, as the app reads the pack's: the gzipped asset copied out as it is
+    // A fixture as the APK holds it: unzipped by AGP, or still gzipped
+    private fun fixture(name: String): InputStream =
+        runCatching { assets.open("semantic/$name") }.getOrNull() ?: GZIPInputStream(assets.open("semantic/$name.gz"))
+
+    // HfTokenizer reads a file, as the app reads the pack's: the asset copied out
     private val tokenizer: HfTokenizer =
-        File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "parity-tokenizer.json.gz").let { file ->
-            assets.open("semantic/tokenizer.json.gz").use { input -> file.outputStream().use { input.copyTo(it) } }
+        File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "parity-tokenizer.json").let { file ->
+            fixture("tokenizer.json").use { input -> file.outputStream().use { input.copyTo(it) } }
             HfTokenizer.fromFile(file.toPath()).also { file.delete() }
         }
 
     private val cases: List<JSONObject> =
-        GZIPInputStream(assets.open("semantic/parity.jsonl.gz")).bufferedReader().useLines { lines ->
+        fixture("parity.jsonl").bufferedReader().useLines { lines ->
             lines.filter { it.isNotBlank() }.map(::JSONObject).toList()
         }
 
