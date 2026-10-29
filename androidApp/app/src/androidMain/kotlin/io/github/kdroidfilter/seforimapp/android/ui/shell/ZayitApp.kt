@@ -314,7 +314,7 @@ fun ZayitApp(
             onFind = { appVm.requestFind() },
             onTabs = { appVm.push(Overlay.Tabs) },
             onNewTab = appVm::newHomeTab,
-            onSettings = { appVm.push(Overlay.Settings) },
+            onSettings = { appVm.push(Overlay.Settings()) },
             onTools = { appVm.push(Overlay.Tools) },
             onHistory = { tabSearchVisible = true },
             onFavorites = { favoritesVisible = true },
@@ -388,7 +388,7 @@ fun ZayitApp(
                 Box(Modifier.fillMaxSize().background(c.ground)) {
                     overlayStates.SaveableStateProvider(overlayKeys.last()) {
                         when (overlay) {
-                            Overlay.Settings -> SettingsScreen(onBack = { appVm.pop() }, wide = wide)
+                            is Overlay.Settings -> SettingsScreen(onBack = { appVm.pop() }, wide = wide, initialPage = overlay.page)
                             Overlay.Tools -> ToolsScreen(onBack = { appVm.pop() }, onOpen = { appVm.push(Overlay.Tool(it)) })
                             is Overlay.Tool -> ToolScreen(overlay.tool, onBack = { appVm.pop() })
                             Overlay.Tabs -> TabsOverview(state, appVm)
