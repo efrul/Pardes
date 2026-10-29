@@ -137,11 +137,29 @@ suspend fun findInBook(
 }
 
 /**
- * Desktop's smart find on a search result (BookContentView semanticFind + [BookFindMatches.ofLines]), with the
- * lexical engine, as Android has no embedding add-on: the lines of [bookId] the search for [query] finds, one match
- * each, lit with the search's own highlighting ([SearchEngine.highlightRanges]), all their spans at once. A literal
- * find would miss what the search highlights: the words apart ("תהו ... ובהו"), other spellings ("תוהו ובוהו") and
- * inflections. Only the lines that highlighting lights count, so the counter and ▲ ▼ go over exactly what is lit.
+ * Desktop's smart find (BookContentView semanticFind + [BookFindMatches.ofLines]): where the search finds by meaning
+ * (Pardes's semantic pack installed, [SearchEngine.highlightsByMeaning]), the [SMART_FIND_LIMIT] lines of [bookId] it
+ * ranks first, the query's words fused with the lines closest in meaning, one match each, as Pardes desktop's; each
+ * is lit with [SearchEngine.highlights]. Elsewhere the lines the search finds by its words ([findSearchMatchesInBook]).
+ */
+suspend fun findSmartMatchesInBook(
+    searchEngine: SearchEngine,
+    loadLines: suspend (List<Long>) -> List<Line>,
+    bookId: Long,
+    query: String,
+): BookFindMatches {
+    if (!searchEngine.highlightsByMeaning(query)) return findSearchMatchesInBook(searchEngine, loadLines, bookId, query)
+    val ids = withContext(Dispatchers.Default) { searchEngine.semanticFind(query, bookId, SMART_FIND_LIMIT) }
+    return BookFindMatches.ofLines(loadLines(ids))
+}
+
+/**
+ * Desktop's smart find on a search result (BookContentView semanticFind + [BookFindMatches.ofLines]) with the
+ * lexical engine alone, as desktop's community build has no meaning search: the lines of [bookId] the search for
+ * [query] finds, one match each, lit with the search's own highlighting ([SearchEngine.highlightRanges]), all their
+ * spans at once. A literal find would miss what the search highlights: the words apart ("תהו ... ובהו"), other
+ * spellings ("תוהו ובוהו") and inflections. Only the lines that highlighting lights count, so the counter and ▲ ▼ go
+ * over exactly what is lit.
  */
 suspend fun findSearchMatchesInBook(
     searchEngine: SearchEngine,
@@ -182,3 +200,6 @@ private const val FIND_CHUNK = 500
 
 // The search screen's proximity (desktop ExecuteSearchUseCase.DEFAULT_NEAR): the lines it listed for this book
 private const val SEARCH_NEAR = 5
+
+// Desktop BookContentView's: the lines closest in meaning fetched for a query in the book
+private const val SMART_FIND_LIMIT = 60

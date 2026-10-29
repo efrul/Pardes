@@ -17,7 +17,9 @@ Copies the library of desktop Zayit to Pardes (an Android app based on Zayit) ov
   -DryRun          print the adb commands instead of running them
 
 Copies seforim.db, the search indexes seforim.db.lucene\ and seforim.db.lookup.lucene\, lexical.db, catalog.pb and
-release_info.txt (~12.2 GB) into /sdcard/Android/data/<app>/files/library/. Needs USB debugging on the phone, the app
+release_info.txt (~12.2 GB) into /sdcard/Android/data/<app>/files/library/, and the semantic search's pack when the
+desktop library has it (pardes-model\ and pardes.vec.lucene\, ~2.7 GB, both or neither: without them the phone's pack
+is left as it is, and the app checks that it belongs to the library). Needs USB debugging on the phone, the app
 installed, and Zayit closed on the computer. No root. Without root, `adb push` cannot write into another app's folder
 (its fchown fails there), and adb on Windows reads its standard input as text, so a stream through `adb shell -T`
 stops at the first 0x1A byte. So each file is pushed to /data/local/tmp/zayit-push and copied into place by the
@@ -47,6 +49,10 @@ $Stage = '/data/local/tmp/zayit-push'
 $Staging = $false
 # Indexes and small files first, the database last: the app treats the library as installed once seforim.db is there.
 $Items = 'seforim.db.lookup.lucene', 'seforim.db.lucene', 'lexical.db', 'catalog.pb', 'release_info.txt', 'seforim.db'
+# Pardes's semantic pack (SEMANTIC_SEARCH.md): its two folders always go together, before the database. What a pack
+# downloaded in the app left for its next start is dropped when one is copied.
+$Pack = 'pardes-model', 'pardes.vec.lucene'
+$PackStaged = '.pardes-semantic-staged'
 function Say($he, $en) { Write-Host "==> $en"; Write-Host "    $he" }
 function Die($he, $en) {
     Write-Host "ERROR: $en" -ForegroundColor Red; Write-Host "       $he" -ForegroundColor Red
@@ -89,7 +95,11 @@ foreach ($d in 'seforim.db.lucene', 'seforim.db.lookup.lucene') {
     if (-not (Test-Path -LiteralPath (Join-Path $Source $d))) { Say "חסר $d`: החיפוש לא יעבוד בטלפון" "warning: $d missing, search will not work on the phone" }
 }
 if ($WithNotes -and -not (Test-Path -LiteralPath $NotesDb)) { Die "לא נמצא קובץ ההערות $NotesDb" "no notes database at $NotesDb" }
-$Present = @($Items | Where-Object { Test-Path -LiteralPath (Join-Path $Source $_) })
+$PackHere = @($Pack | Where-Object { Test-Path -LiteralPath (Join-Path $Source $_) -PathType Container })
+$HasPack = $PackHere.Count -eq $Pack.Count
+if ($PackHere.Count -and -not $HasPack) { Say 'בתיקייה יש רק אחת משתי התיקיות של החיפוש לפי משמעות, ולכן החבילה לא תועתק' "warning: only one of the semantic pack's two folders ($Pack) is in $Source`: the pack is not copied" }
+# The semantic pack before the database, as the indexes
+$Present = @($Items | Where-Object { Test-Path -LiteralPath (Join-Path $Source $_) } | ForEach-Object { if ($_ -eq 'seforim.db' -and $HasPack) { $Pack }; $_ })
 $TotalKb = [long](($Present | ForEach-Object { SizeOf (Join-Path $Source $_) } | Measure-Object -Sum).Sum / 1024)
 # Each file passes through the staging folder on the phone, a large one in pieces: the largest piece needs room twice.
 $LargestKb = [long]([Math]::Min(($Present | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $Source $_) -Recurse -File -Force } | Measure-Object Length -Maximum).Maximum, $ChunkBytes) / 1024)
@@ -179,6 +189,12 @@ if ($SdCard -or $CardUuid) {
 }
 $SplitDb = ($SdCard -or $CardUuid) -and ($Split -or ($Fs -eq 'vfat' -and (Get-Item -LiteralPath $Db).Length -gt 4294967295))
 if ($SplitDb) { Say 'הכרטיס מפורמט ב-FAT32: seforim.db יועתק בחלקים' 'FAT32 card: seforim.db is copied in chunks (seforim.db, seforim.db001...)' }
+# FAT32 takes no file of 4 GiB or more, and only the database is split: the pack's files must each be smaller
+# (pack 2's largest, its vectors, is 2.2 GB).
+if (($SdCard -or $CardUuid) -and $Fs -eq 'vfat' -and $HasPack) {
+    $big = $Pack | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $Source $_) -Recurse -File -Force } | Where-Object { $_.Length -gt 4294967295 } | Select-Object -First 1
+    if ($big) { Die "בחבילה של החיפוש לפי משמעות יש קובץ של 4 ג״ב או יותר ($($big.FullName)), וכרטיס FAT32 אינו יכול להכיל אותו" "the semantic pack has a file of 4 GB or more ($($big.FullName)), which a FAT32 card cannot hold" }
+}
 
 # --- the app's folder exists only once it has run
 $probe = @('shell', "[ -d $Files ] && echo yes")
@@ -197,7 +213,9 @@ if (-not (Run @('shell', "mkdir -p $Lib; chmod 777 $Lib 2>/dev/null; rm -f $Lib/
 $null = Run @('shell', "rm -rf $Stage")
 $df = Ask "Filesystem 1K-blocks Used Available Use% Mounted on`n/dev/fuse 0 0 52428800 0% /storage/emulated" @('shell', 'df', '-k', $Files)
 $AvailKb = [long](((($df -split "`n")[1]).Trim() -split '\s+')[3])
-$du = Ask '0' @('shell', "cd $Lib && du -sk $Items $($Items | ForEach-Object { "$Incoming$_" }) seforim.db[0-9][0-9][0-9] $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true")
+# The phone's pack is replaced, so counts as free, only when one is copied
+$OldPack = if ($HasPack) { "$Pack $($Pack | ForEach-Object { "$Incoming$_" }) $PackStaged" } else { '' }
+$du = Ask '0' @('shell', "cd $Lib && du -sk $Items $($Items | ForEach-Object { "$Incoming$_" }) $OldPack seforim.db[0-9][0-9][0-9] $($Incoming)seforim.db[0-9][0-9][0-9] 2>/dev/null; true")
 $OldKb = [long](($du -split "`n" | Where-Object { $_ -match '^\d+' } | ForEach-Object { [long](($_ -split '\s+')[0]) } | Measure-Object -Sum).Sum)
 $OnCard = $SdCard -or $CardUuid
 $NeedKb = $TotalKb + 512 * 1024
@@ -295,6 +313,8 @@ try {
     foreach ($i in @('seforim.db', 'seforim.db-wal', 'seforim.db-shm', 'seforim.db-journal', 'release_info.txt', 'local_update_version.txt', 'seforim.db.applying', 'seforim.db.applying.tmp', 'delta-cache') + @($Items | Where-Object { $Present -notcontains $_ })) { ClearItem $i }
     # A split database's chunks (seforim.db001...), whatever their number
     $null = Run @('shell', "cd $Lib && rm -f seforim.db[0-9][0-9][0-9] $($Incoming)seforim.db[0-9][0-9][0-9]")
+    # A pack the app staged for its next start would replace the one copied now
+    if ($HasPack) { ClearItem $PackStaged }
     foreach ($i in $Present) {
         Say "מעתיק $i" "copying $i"
         ClearItem $i; ClearItem "$i$Part"; ClearItem "$Incoming$i"  # the old copy goes first, so its space is free for the new one
@@ -332,7 +352,7 @@ try {
         # One library: the app would keep using the one it chose before, in the phone's storage.
         if ((Ask '' @('shell', "[ -f $PhoneLib/seforim.db ] && echo yes")) -eq 'yes') {
             Say 'מסיר את הספרייה שבזיכרון הטלפון: פרדס ישתמש בזו שבכרטיס' "removing the library in the phone's storage: Pardes uses the card's"
-            $names = "seforim.db seforim.db-wal seforim.db-shm seforim.db-journal $Items local_update_version.txt seforim.db.applying delta-cache"
+            $names = "seforim.db seforim.db-wal seforim.db-shm seforim.db-journal $Items $Pack $PackStaged local_update_version.txt seforim.db.applying delta-cache"
             $null = Run @('shell', "cd $PhoneLib && rm -rf $names seforim.db[0-9][0-9][0-9] 2>/dev/null; for i in $names; do [ ! -e `$i ] || mv `$i .zayit-old-`$i-$Stamp; done; true")
         }
     } elseif (Ask '' @('shell', "ls /storage/*/Android/data/$Pkg/files/library/seforim.db 2>/dev/null | grep -v emulated; true")) {

@@ -220,6 +220,15 @@ class LibraryStore(private val context: Context) {
     }
 
     /**
+     * The library's own connection (the repository's, opened if need be), for reads the repository has no query for: the
+     * semantic search's book levels and lines (HybridSearchEngine, BookLevels.kt).
+     */
+    fun driver(): SqlDriver {
+        repository()
+        return checkNotNull(driver) { "The library is closed" }
+    }
+
+    /**
      * Every book's id, title, category and place, by category in the order of its list (getBooksByCategory's): the
      * catalog of a library without catalog.pb in one query. That one reads whole rows, notes included (4.25 MB for one
      * book, 37 MB in all), and four more tables per book: 40,000 queries for the 7,900 books.

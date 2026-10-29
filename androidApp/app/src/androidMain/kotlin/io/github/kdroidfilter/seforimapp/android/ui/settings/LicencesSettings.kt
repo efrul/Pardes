@@ -97,6 +97,15 @@ private val libraryCredits = listOf(
     ),
     Credit("jsoup", "Copyright (c) 2009-2025 Jonathan Hedley", listOf(bundled("MIT (jsoup)", "jsoup-LICENSE.txt"))),
     Credit(
+        "ONNX Runtime 1.20.0",
+        "Copyright (c) Microsoft Corporation",
+        listOf(
+            bundled("MIT (ONNX Runtime)", "ONNX-Runtime-LICENSE.txt"),
+            bundled("ThirdPartyNotices (ONNX Runtime)", "ONNX-Runtime-ThirdPartyNotices.txt"),
+        ),
+        "הרצת המודל של החיפוש לפי משמעות, במכשירי 64 ביט. הרכיבים של אחרים שהוא כולל רשומים ב־ThirdPartyNotices.",
+    ),
+    Credit(
         "requery sqlite-android, SQLite",
         "Copyright (C) 2017-2025 requery.io; The Android Open Source Project. SQLite and its multiplex VFS: public domain",
         listOf(Docs.apache),
@@ -155,6 +164,21 @@ private val fontCredits = listOf(
     Credit("Tinos", "Digitized data copyright (c) 2010-2012 Google Corporation.", listOf(Docs.apache)),
 )
 
+private val modelCredits = listOf(
+    Credit(
+        "neodictabert-bilingual-embed",
+        "Dicta: The Israel Center for Text Analysis",
+        listOf(
+            LicenceDoc("CC BY 4.0", url = "https://creativecommons.org/licenses/by/4.0/"),
+            LicenceDoc("המודל", url = "https://huggingface.co/dicta-il/neodictabert-bilingual-embed"),
+            bundled("NOTICE (המודל של פרדס)", "Pardes-model-NOTICE.md"),
+        ),
+        "המודל של החיפוש לפי משמעות, של דיקטה: המרכז הישראלי לניתוח טקסטים. הוא אינו בקובץ ההתקנה, ומגיע עם החבילה של " +
+            "החיפוש לפי משמעות (הגדרות › ניהול נתונים). פרדס המיר אותו ל־ONNX (עם ה־pooling בגרף) וכימת אותו ל־int8, " +
+            "ובגרסאות שאומנו על הספרייה גם המשיך לאמן אותו על הקישורים שבה. דיקטה אינם קשורים לפרדס ואינם נותנים לו תמיכה.",
+    ),
+)
+
 private val dataCredits = listOf(
     Credit(
         "HYG Database v4.1",
@@ -206,6 +230,7 @@ internal fun LicencesSettings(wide: Boolean) {
             DocLinks(listOf(Docs.pardes, LicenceDoc("קוד המקור", url = "https://github.com/efrul/Pardes")), onDoc)
         }
         CreditsCard("ספריות", libraryCredits, onDoc, LIBRARIES_NOTE)
+        CreditsCard("המודל של החיפוש לפי משמעות", modelCredits, onDoc)
         CreditsCard("אייקונים", iconCredits, onDoc)
         CreditsCard("גופנים", fontCredits, onDoc)
         CreditsCard("נתונים ותמונות", dataCredits, onDoc, DATA_NOTE)
