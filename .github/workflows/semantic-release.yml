@@ -104,23 +104,23 @@ jobs:
           fi
           lines="$(echo "$LINES" | sed -E ':a;s/^([0-9]+)([0-9]{3})/\1,\2/;ta')"
           cat > notes.md <<EOF
-          החיפוש לפי משמעות של פרדס למחשב: המודל לשאילתות ואינדקס הווקטורים של כל הספרייה (חבילה $PACK).
+          הקבצים של החיפוש לפי משמעות בפרדס, גרסה $PACK: המודל ואינדקס הווקטורים של כל הספרייה. מורידים אותם פעם אחת, בנפרד מהיישום ומהספרייה, והם מתאימים לכל גרסה של הספרייה. לפרדס למחשב ולפרדס לאנדרואיד 0.6.0 ומעלה.
 
-          **מה יש כאן**
-          - \`pardes-model\`: המודל לשאילתות, נגזר מ־[neodictabert-bilingual-embed](https://huggingface.co/dicta-il/neodictabert-bilingual-embed) של דיקטה, מאומן לספרייה. ONNX int8, ‏$DIMENSION ממדים (\`$MODEL\`).
-          - \`pardes.vec.lucene\`: אינדקס הווקטורים של הספרייה כולה, $lines שורות, לספרייה מגרסת SeforimLibrary ‏\`$LIBRARY\`.
-
-          **התקנה מתוך פרדס למחשב**
-          בהגדרות › ניהול נתונים › חיפוש לפי משמעות לוחצים **הורדה והתקנה**. פרדס מוריד את החבילה, בודק אותה, והיא נכנסת לשימוש בהפעלה הבאה.
+          **התקנה מתוך פרדס**
+          בהגדרות › ניהול נתונים › חיפוש לפי משמעות לוחצים **הורדה והתקנה**. פרדס מוריד את הקבצים, בודק אותם, והחיפוש לפי משמעות פועל מההפעלה הבאה.
 
           **בלי חיבור ל־GitHub מתוך פרדס**
-          מורידים בדפדפן את \`pardes-model.zip\` ואת \`pardes.vec.lucene.zip\` לאותה תיקייה (או את קובצי \`pardes-semantic.tar.zst\` עם ה־\`manifest.json\` שלהם), ובוחרים אחד מהם ב**ייבוא מקבצים…** שבאותו מסך.
+          מורידים בדפדפן, גם במחשב אחר, רק את שני קובצי ה־zip: \`pardes-model.zip\` ו־\`pardes.vec.lucene.zip\`. באותו מסך לוחצים **ייבוא מקבצים…** ובוחרים אחד מהם. שאר הקבצים כאן הם בשביל ההורדה מתוך פרדס.
 
           **התקנה ידנית**
           1. סוגרים את פרדס.
           2. מוחקים מתיקיית הספרייה את התיקיות הישנות \`pardes-model\` ו־\`pardes.vec.lucene\`, אם יש. מחליפים את שתיהן יחד: מודל ואינדקס מחבילות שונות לא עובדים זה עם זה.
           3. פורסים את שני קובצי ה־zip לתיקיית הספרייה, ליד \`seforim.db\`. הגדרות › ניהול נתונים › מיקום הספרייה מראה איפה היא.
           4. פותחים את פרדס.
+
+          **מה יש כאן**
+          - \`pardes-model\`: המודל לשאילתות, נגזר מ־[neodictabert-bilingual-embed](https://huggingface.co/dicta-il/neodictabert-bilingual-embed) של דיקטה, מאומן לספרייה. ONNX int8, ‏$DIMENSION ממדים (\`$MODEL\`).
+          - \`pardes.vec.lucene\`: אינדקס הווקטורים של הספרייה כולה, $lines שורות. נבנה על הספרייה מגרסת SeforimLibrary ‏\`$LIBRARY\`, ומתאים גם לגרסאות האחרות שלה.
 
           **רישיון**
           המודל נגזר מ־neodictabert-bilingual-embed של דיקטה: המרכז הישראלי לניתוח טקסטים, ומופץ לפי [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). מי שמעביר אותו הלאה מעביר גם את \`pardes-model/NOTICE.md\`. דיקטה אינה ממליצה על פרדס.
@@ -130,7 +130,7 @@ jobs:
           gh release create "$TAG" pack/* pardes-model.zip pardes.vec.lucene.zip \
             -R "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "חיפוש לפי משמעות $PACK (לספרייה $LIBRARY)" \
+            --title "קובצי החיפוש לפי משמעות, גרסה $PACK" \
             --notes-file notes.md \
             --latest=false
           # With files, gh creates a draft, uploads them and then publishes it, and the publishing makes it the Latest
