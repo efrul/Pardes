@@ -5,7 +5,6 @@ import java.net.HttpURLConnection
 import java.net.URI
 
 object Versioning {
-    @Suppress("UNUSED_PARAMETER")
     fun resolveVersion(project: Project): String {
         val fromEnv = resolveFromGitHubRef()
         if (!fromEnv.isNullOrBlank()) {
@@ -15,6 +14,13 @@ object Versioning {
         val fromGitHub = resolveFromGitHubApi()
         if (!fromGitHub.isNullOrBlank()) {
             return fromGitHub
+        }
+
+        // A local build: the latest release tag (v<version>) of the checkout, as the release it would be. Other tags
+        // (a fork's android-*, desktop-* or semantic-* ones) are not versions
+        val fromGitTag = resolveFromGitTag(project)
+        if (!fromGitTag.isNullOrBlank()) {
+            return fromGitTag
         }
 
         return "1.0.0"
@@ -28,6 +34,18 @@ object Versioning {
         val tag = ref.removePrefix("refs/tags/")
         return tag.removePrefix("v")
     }
+
+    private fun resolveFromGitTag(project: Project): String? =
+        project.providers
+            .exec {
+                commandLine("git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
+                workingDir = project.rootDir
+                isIgnoreExitValue = true
+            }.standardOutput.asText
+            .get()
+            .trim()
+            .removePrefix("v")
+            .takeIf { it.isNotEmpty() }
 
     private fun resolveFromGitHubApi(): String? {
         val repository = System.getenv("GITHUB_REPOSITORY") ?: return null
