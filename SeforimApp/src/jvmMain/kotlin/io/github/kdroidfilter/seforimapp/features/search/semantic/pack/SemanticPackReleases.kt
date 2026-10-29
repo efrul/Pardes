@@ -55,8 +55,13 @@ class SemanticPackReleases(
             get() = assets.values.filter { SemanticPack.isBundleFile(it.name) && it.name != SemanticPack.MANIFEST_NAME }.sumOf { it.size }
     }
 
-    /** The newest pack for the library release [library] (release_info.txt), or null when there is none yet. */
-    suspend fun newestFor(library: String): Available? = select(list(), library)
+    /**
+     * The newest pack, or null when none is out yet: the highest number, and of that pack's builds, the one made on the
+     * library release [library] (release_info.txt) when there is one, else the one on the newest library. A pack works
+     * on every library release: SeforimLibrary keeps a line's id from release to release (its DELTA_UPDATE_WORKFLOW.md),
+     * so an index built on another release lacks only the lines changed in between.
+     */
+    suspend fun newest(library: String?): Available? = select(list(), library)
 
     /** The releases of the repository, newest first; throws IOException when neither list can be read. */
     suspend fun list(): List<Release> =
@@ -74,10 +79,10 @@ class SemanticPackReleases(
 
         private val json = Json { ignoreUnknownKeys = true }
 
-        /** Of [releases], the published pack of [library] with the highest number that has its manifest. */
+        /** Of [releases], the published pack with its manifest that [newest] takes for the library [library]. */
         fun select(
             releases: List<Release>,
-            library: String,
+            library: String?,
         ): Available? =
             releases
                 .asSequence()
@@ -86,8 +91,14 @@ class SemanticPackReleases(
                     SemanticPack.parseTag(release.tag)?.let { tag ->
                         Available(release.tag, tag.pack, tag.library, release.page, release.assets.associateBy { it.name })
                     }
-                }.filter { SemanticPack.sameLibrary(it.library, library) && SemanticPack.MANIFEST_NAME in it.assets }
-                .maxByOrNull { it.pack }
+                }.filter { SemanticPack.MANIFEST_NAME in it.assets }
+                .maxWithOrNull(
+                    compareBy<Available>(
+                        { it.pack },
+                        { library != null && SemanticPack.sameLibrary(it.library, library) },
+                        { SemanticPack.libraryKey(it.library) },
+                    ),
+                )
 
         private suspend fun get(url: String): String =
             withContext(Dispatchers.IO) {
