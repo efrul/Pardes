@@ -114,6 +114,8 @@ data class BookContentPersistedState(
     val previousTargumSplitPosition: Float = 0.8f,
     // Appended last: the session is ProtoBuf, numbered by declaration order
     val showReferences: Boolean = false,
+    // The commentators shown in panes of their own, by slot ("" for a free one)
+    val detachedCommentators: List<String> = emptyList(),
 )
 
 // -- Virtual desktops persistence models --
@@ -196,7 +198,7 @@ data class SearchPersistedState(
     val filterCategoryId: Long = 0L,
     val filterBookId: Long = 0L,
     val filterTocId: Long = 0L,
-    // Unused, as filterCategoryId
+    // The category whose books are searched, whole (none with a book or TOC scope but the one narrowed from)
     val fetchCategoryId: Long = 0L,
     val fetchBookId: Long = 0L,
     val fetchTocId: Long = 0L,
@@ -217,6 +219,9 @@ data class SearchPersistedState(
     val draftQuery: String = "",
     // The author whose books are searched (none with a book or TOC scope)
     val fetchAuthorId: Long = 0L,
+    // Several books and categories searched together (SearchScope.Multi)
+    val fetchBookIds: List<Long> = emptyList(),
+    val fetchCategoryIds: List<Long> = emptyList(),
 ) {
     /** The scope the search runs in: its fetch scope, else its view filter. */
     val scope: SearchScope
@@ -226,12 +231,24 @@ data class SearchPersistedState(
             return when {
                 tocId != null && bookId != null -> SearchScope.Toc(bookId = bookId, tocId = tocId)
                 bookId != null -> SearchScope.Book(bookId)
-                fetchAuthorId > 0 -> SearchScope.Author(fetchAuthorId)
-                else -> SearchScope.Global
+                else -> wideScope
             }
         }
 
-    /** Runs the search in [scope]: both its fetch scope and its view filter (a legacy category: everywhere). */
+    /**
+     * The author's, category's, or several books' and categories' books the search runs in, else everywhere: where a
+     * search narrowed to a book goes back to.
+     */
+    val wideScope: SearchScope
+        get() =
+            when {
+                fetchAuthorId > 0 -> SearchScope.Author(fetchAuthorId)
+                fetchBookIds.isNotEmpty() || fetchCategoryIds.isNotEmpty() -> SearchScope.Multi(fetchBookIds, fetchCategoryIds)
+                fetchCategoryId > 0 -> SearchScope.Category(fetchCategoryId)
+                else -> SearchScope.Global
+            }
+
+    /** Runs the search in [scope]: both its fetch scope and its view filter. */
     fun withScope(scope: SearchScope): SearchPersistedState {
         val bookId =
             when (scope) {
@@ -243,18 +260,22 @@ data class SearchPersistedState(
         return copy(
             datasetScope =
                 when (scope) {
-                    SearchScope.Global, is SearchScope.Category -> "global"
+                    SearchScope.Global -> "global"
+                    is SearchScope.Category -> "category"
                     is SearchScope.Book -> "book"
                     is SearchScope.Toc -> "toc"
                     is SearchScope.Author -> "author"
+                    is SearchScope.Multi -> "multi"
                 },
             filterCategoryId = 0L,
             filterBookId = bookId,
             filterTocId = tocId,
-            fetchCategoryId = 0L,
+            fetchCategoryId = (scope as? SearchScope.Category)?.categoryId ?: 0L,
             fetchBookId = bookId,
             fetchTocId = tocId,
             fetchAuthorId = (scope as? SearchScope.Author)?.authorId ?: 0L,
+            fetchBookIds = (scope as? SearchScope.Multi)?.bookIds.orEmpty(),
+            fetchCategoryIds = (scope as? SearchScope.Multi)?.categoryIds.orEmpty(),
         )
     }
 }

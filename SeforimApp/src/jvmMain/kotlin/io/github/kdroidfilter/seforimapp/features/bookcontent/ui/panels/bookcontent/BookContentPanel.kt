@@ -295,6 +295,27 @@ fun CommentsPane(
     }
 }
 
+/** One commentator split off the commentaries pane ([name], DetachedCommentators), in a pane of its own. */
+@Composable
+fun DetachedCommentatorPane(
+    uiState: BookContentState,
+    onEvent: (BookContentEvent) -> Unit,
+    name: String,
+    lineConnections: Map<Long, LineConnectionsSnapshot>,
+    diacritics: DiacriticsMode,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier) {
+        DetachedCommentatorView(
+            uiState = uiState,
+            onEvent = onEvent,
+            commentator = name,
+            lineConnections = lineConnections,
+            diacritics = diacritics,
+        )
+    }
+}
+
 @Composable
 fun SourcesPane(
     uiState: BookContentState,

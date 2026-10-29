@@ -160,14 +160,38 @@ class SessionModelsTest {
     }
 
     @Test
-    fun `a search saved scoped to a category runs everywhere`() {
-        val saved = SearchPersistedState(datasetScope = "category", filterCategoryId = 7L, fetchCategoryId = 7L)
-        assertEquals(SearchScope.Global, saved.scope)
-        val again = saved.withScope(saved.scope)
-        assertEquals(0L, again.filterCategoryId)
-        assertEquals(0L, again.fetchCategoryId)
-        assertEquals("global", again.datasetScope)
-        assertEquals(SearchScope.Global, SearchPersistedState().withScope(SearchScope.Category(7L)).scope)
+    fun `a search scoped to a category keeps it, and a book scope drops it`() {
+        val category = SearchPersistedState().withScope(SearchScope.Category(7L))
+        assertEquals("category", category.datasetScope)
+        assertEquals(0L, category.filterCategoryId)
+        val restored = ProtoBuf.decodeFromByteArray<SearchPersistedState>(ProtoBuf.encodeToByteArray(category))
+        assertEquals(SearchScope.Category(7L), restored.scope)
+        assertEquals(SearchScope.Book(3L), category.withScope(SearchScope.Book(3L)).scope)
+        assertEquals(SearchScope.Global, category.withScope(SearchScope.Global).scope)
+    }
+
+    @Test
+    fun `a search in several books and categories keeps them, and goes back to them from one of its books`() {
+        val several = SearchScope.Multi(bookIds = listOf(3L, 4L), categoryIds = listOf(7L))
+        val state = SearchPersistedState().withScope(several)
+        assertEquals("multi", state.datasetScope)
+        val restored = ProtoBuf.decodeFromByteArray<SearchPersistedState>(ProtoBuf.encodeToByteArray(state))
+        assertEquals(several, restored.scope)
+        // As filterByBookId narrows it: the books and categories stay, to go back to
+        val narrowed =
+            state.withScope(SearchScope.Book(3L)).copy(fetchBookIds = state.fetchBookIds, fetchCategoryIds = state.fetchCategoryIds)
+        assertEquals(SearchScope.Book(3L), narrowed.scope)
+        assertEquals(several, narrowed.wideScope)
+        assertEquals(SearchScope.Global, state.withScope(SearchScope.Global).scope)
+    }
+
+    @Test
+    fun `a search narrowed to one book goes back to its category's or author's books`() {
+        val narrowed = SearchPersistedState().withScope(SearchScope.Book(3L)).copy(fetchCategoryId = 7L)
+        assertEquals(SearchScope.Book(3L), narrowed.scope)
+        assertEquals(SearchScope.Category(7L), narrowed.wideScope)
+        assertEquals(SearchScope.Author(150L), narrowed.copy(fetchAuthorId = 150L).wideScope)
+        assertEquals(SearchScope.Global, SearchPersistedState().wideScope)
     }
 
     @Test
