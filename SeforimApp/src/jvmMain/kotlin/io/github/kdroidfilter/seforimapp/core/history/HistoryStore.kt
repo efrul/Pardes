@@ -167,7 +167,8 @@ class HistoryStore(
     ): String {
         val scopeKey =
             when (scope) {
-                SearchScope.Global, is SearchScope.Category -> "g"
+                SearchScope.Global -> "g"
+                is SearchScope.Category -> "c${scope.categoryId}"
                 is SearchScope.Book -> "b${scope.bookId}"
                 is SearchScope.Toc -> "t${scope.tocId}"
                 is SearchScope.Author -> "$AUTHOR_KEY${scope.authorId}"

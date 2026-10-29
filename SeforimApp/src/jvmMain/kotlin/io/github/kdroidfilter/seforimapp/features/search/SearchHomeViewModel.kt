@@ -9,6 +9,8 @@ import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.deeplink.parseZayitDeepLink
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
+import io.github.kdroidfilter.seforimapp.features.search.domain.CategorySuggestions
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceResolver
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.RepositoryReferenceSource
@@ -19,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimapp.framework.session.SearchPersistedState
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedStateStore
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
+import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.Dispatchers
@@ -104,6 +107,10 @@ data class SearchHomeUiState(
     val authorSuggestions: List<AuthorHit> = emptyList(),
     /** The author picked: the books listed are then theirs. */
     val selectedScopeAuthor: AuthorHit? = null,
+    /** Categories the typed text names (`תלמוד`, `רש"י על התורה`), to search in whole. */
+    val categorySuggestions: List<CategoryHit> = emptyList(),
+    /** The category picked: the text is searched in all its books. */
+    val selectedScopeCategory: CategoryHit? = null,
     val tocSuggestionsVisible: Boolean = false,
     val isTocLoading: Boolean = false,
     val tocSuggestions: List<TocSuggestionDto> = emptyList(),
@@ -147,6 +154,13 @@ class SearchHomeViewModel(
 
     // The author a restored results tab searched in, while their name loads for the chip
     private var restoringAuthorId: Long? = null
+
+    // The category a restored results tab searched in, while its path loads for the chip
+    private var restoringCategoryId: Long? = null
+
+    // The library's categories with their paths, loaded once for the bar's suggestions
+    private var categories: List<CategoryHit>? = null
+    private val categoriesMutex = Mutex()
 
     private val referenceQuery = MutableStateFlow("")
     private val tocQuery = MutableStateFlow("")
@@ -225,7 +239,18 @@ class SearchHomeViewModel(
                 .distinctUntilChanged()
                 .collectLatest { qRaw ->
                     val q = qRaw.trim()
-                    if (_uiState.value.selectedScopeAuthor != null) {
+                    if (_uiState.value.selectedScopeCategory != null) {
+                        // Only the text search, in the category picked
+                        _uiState.value =
+                            _uiState.value.copy(
+                                isReferenceLoading = false,
+                                bookSuggestions = emptyList(),
+                                jumpSuggestions = emptyList(),
+                                authorSuggestions = emptyList(),
+                                categorySuggestions = emptyList(),
+                                suggestionsVisible = q.isNotBlank(),
+                            )
+                    } else if (_uiState.value.selectedScopeAuthor != null) {
                         _uiState.value =
                             _uiState.value.copy(
                                 isReferenceLoading = false,
@@ -239,6 +264,7 @@ class SearchHomeViewModel(
                                 bookSuggestions = emptyList(),
                                 jumpSuggestions = emptyList(),
                                 authorSuggestions = emptyList(),
+                                categorySuggestions = emptyList(),
                                 suggestionsVisible = false,
                             )
                     } else {
@@ -279,17 +305,28 @@ class SearchHomeViewModel(
                                             runSuspendCatching { referenceResolver.resolve(q) }.getOrDefault(emptyList())
                                         }
 
-                                    Suggestions(booksDeferred.await(), jumpsDeferred.await(), authorsDeferred.await())
+                                    val categoriesDeferred =
+                                        async(Dispatchers.IO) {
+                                            CategorySuggestions.match(q, allCategories(), limit = MAX_CATEGORY_SUGGESTIONS)
+                                        }
+
+                                    Suggestions(
+                                        booksDeferred.await(),
+                                        jumpsDeferred.await(),
+                                        authorsDeferred.await(),
+                                        categoriesDeferred.await(),
+                                    )
                                 }
                             }
 
-                        val (bookSuggestions, jumpSuggestions, authorSuggestions) = result
+                        val (bookSuggestions, jumpSuggestions, authorSuggestions, categorySuggestions) = result
                         _uiState.value =
                             _uiState.value.copy(
                                 isReferenceLoading = false,
                                 bookSuggestions = bookSuggestions,
                                 jumpSuggestions = jumpSuggestions,
                                 authorSuggestions = authorSuggestions,
+                                categorySuggestions = categorySuggestions,
                                 suggestionsVisible = true,
                             )
                     }
@@ -395,9 +432,11 @@ class SearchHomeViewModel(
         showSuggestions: Boolean,
     ) {
         restoringAuthorId = null
+        restoringCategoryId = null
         _uiState.value =
             _uiState.value.copy(
                 selectedScopeAuthor = author,
+                selectedScopeCategory = null,
                 selectedScopeBook = null,
                 selectedScopeToc = null,
                 authorSuggestions = emptyList(),
@@ -424,6 +463,55 @@ class SearchHomeViewModel(
         }
     }
 
+    /** Searches in all the books of [category] and its subcategories. */
+    fun onPickCategory(category: CategoryHit) {
+        restoringAuthorId = null
+        restoringCategoryId = null
+        authorBooks = emptyList()
+        _uiState.value =
+            _uiState.value.copy(
+                selectedScopeCategory = category,
+                selectedScopeAuthor = null,
+                selectedScopeBook = null,
+                selectedScopeToc = null,
+                categorySuggestions = emptyList(),
+                authorSuggestions = emptyList(),
+                jumpSuggestions = emptyList(),
+                bookSuggestions = emptyList(),
+                isReferenceLoading = false,
+                suggestionsVisible = false,
+            )
+    }
+
+    fun onClearCategory() {
+        restoringCategoryId = null
+        _uiState.value = _uiState.value.copy(selectedScopeCategory = null, suggestionsVisible = false)
+    }
+
+    // The library's categories with their paths, for the suggestions: once, from the database
+    private suspend fun allCategories(): List<CategoryHit> =
+        categoriesMutex.withLock {
+            categories ?: runSuspendCatching { loadCategories() }.getOrDefault(emptyList()).also { loaded ->
+                if (loaded.isNotEmpty()) categories = loaded
+            }
+        }
+
+    private suspend fun loadCategories(): List<CategoryHit> {
+        val result = ArrayList<CategoryHit>()
+
+        suspend fun walk(
+            category: Category,
+            parentPath: List<String>,
+        ) {
+            currentCoroutineContext().ensureActive()
+            val path = parentPath + category.title
+            result += CategoryHit(category.id, path)
+            repository.getCategoryChildren(category.id).forEach { walk(it, path) }
+        }
+        repository.getRootCategories().forEach { walk(it, emptyList()) }
+        return result
+    }
+
     fun onClearAuthor() {
         restoringAuthorId = null
         authorBooks = emptyList()
@@ -436,11 +524,13 @@ class SearchHomeViewModel(
         showSuggestions: Boolean = true,
     ) {
         restoringAuthorId = null
+        restoringCategoryId = null
         authorBooks = emptyList()
         // Update synchronously first
         _uiState.value =
             _uiState.value.copy(
                 selectedScopeAuthor = null,
+                selectedScopeCategory = null,
                 selectedScopeBook = book,
                 selectedScopeToc = null,
                 bookPickedByUser = showSuggestions,
@@ -558,6 +648,10 @@ class SearchHomeViewModel(
                     showAuthorScope(scope.authorId)
                     return
                 }
+                is SearchScope.Category -> {
+                    showCategoryScope(scope.categoryId)
+                    return
+                }
                 else -> return
             }
         viewModelScope.launch {
@@ -580,7 +674,21 @@ class SearchHomeViewModel(
         }
     }
 
-    /** Where the bar searches: its picked TOC entry, book or author, else everywhere. */
+    private fun showCategoryScope(categoryId: Long) {
+        if (_uiState.value.selectedScopeCategory?.id == categoryId) return
+        // The bar searches in its books at once, before its path is loaded for the chip
+        restoringCategoryId = categoryId
+        viewModelScope.launch {
+            val path = buildCategoryPathTitlesCached(categoryId)
+            // Another scope picked meanwhile
+            if (restoringCategoryId != categoryId) return@launch
+            restoringCategoryId = null
+            if (path.isEmpty()) return@launch
+            _uiState.value = _uiState.value.copy(selectedScopeCategory = CategoryHit(categoryId, path))
+        }
+    }
+
+    /** Where the bar searches: its picked TOC entry, book, author or category, else everywhere. */
     fun barScope(): SearchScope {
         val selected = _uiState.value
         return when {
@@ -590,7 +698,11 @@ class SearchHomeViewModel(
             selected.selectedScopeToc != null -> SearchScope.Book(selected.selectedScopeToc.bookId)
             selected.selectedScopeBook != null -> SearchScope.Book(selected.selectedScopeBook.id)
             selected.selectedScopeAuthor != null -> SearchScope.Author(selected.selectedScopeAuthor.id)
-            else -> restoringAuthorId?.let(SearchScope::Author) ?: SearchScope.Global
+            selected.selectedScopeCategory != null -> SearchScope.Category(selected.selectedScopeCategory.id)
+            else ->
+                restoringAuthorId?.let(SearchScope::Author)
+                    ?: restoringCategoryId?.let(SearchScope::Category)
+                    ?: SearchScope.Global
         }
     }
 
@@ -816,6 +928,8 @@ private val ALT_TOC_LABELS =
 
 private const val MAX_AUTHOR_SUGGESTIONS = 4
 
+private const val MAX_CATEGORY_SUGGESTIONS = 4
+
 // Typed text against a title, both without nikud or quotes (שו"ת / שו״ת)
 private fun BookSuggestionDto.titleContains(typed: String): Boolean =
     typed.isBlank() || ReferenceParser.normalizeName(book.title).contains(ReferenceParser.normalizeName(typed))
@@ -824,4 +938,5 @@ private data class Suggestions(
     val books: List<BookSuggestionDto>,
     val jumps: List<ResolvedReference>,
     val authors: List<AuthorHit>,
+    val categories: List<CategoryHit>,
 )

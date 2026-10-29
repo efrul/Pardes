@@ -403,6 +403,7 @@
     <string name="author_not_found">המחבר לא נמצא</string>
     <string name="search_text_row_in_book">חיפוש בתוך %2$s: %1$s</string>
     <string name="search_text_row_in_author">חיפוש בספרי %2$s: %1$s</string>
+    <string name="search_text_row_in_category">חיפוש בכל ספרי %2$s: %1$s</string>
     <string name="search_by_category_or_book">חפש לפי קטגוריה או ספר</string>
     <string name="remove_selected_book">הסר ספר שנבחר</string>
 
@@ -419,6 +420,7 @@
     <string name="search_in_book_placeholder">מה לחפש בספר זה? פרק, סימן או כל מילה</string>
     <string name="row_action_open">פתיחה</string>
     <string name="row_action_search_inside">חיפוש בתוך</string>
+    <string name="row_action_search_category">חיפוש בקטגוריה</string>
     <string name="row_action_search">חיפוש</string>
     <string name="row_action_search_base">בספרי יסוד</string>
     <string name="row_action_search_all">בכל הספרים</string>
