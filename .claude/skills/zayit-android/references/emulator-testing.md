@@ -200,3 +200,10 @@ On Android 11 (API 30) two steps differ: turning the permission on ends the app,
 - **ANR:** `$ADB shell ls /data/anr/`, then pull the latest trace and look at the `main` thread. Typical cause: DB or file I/O on the main thread.
 - **Release-only crash with an obfuscated trace:** the mapping is at `androidApp/app/build/outputs/mapping/release/mapping.txt`. Decode with `retrace` from the build-tools/cmdline-tools. Usually it is a missing keep rule (pitfalls.md › Build and R8).
 - **App data reset:** `$ADB shell pm clear io.github.efrul.pardes` wipes prefs and internal storage, including an internal library. External `files/` is wiped too.
+
+## Network for the app (downloads, release lists)
+
+The container reaches the internet only through the agent proxy, which the emulator's apps do not know about. `scripts/emu-network.sh` sets it as Android's global proxy and installs its CA as a user CA (Pardes trusts user CAs, as for a filtering proxy). Then the app reads GitHub's release lists and downloads through it.
+- After a restart Wi-Fi may stay down (`dumpsys connectivity` says "Active default network: none", `ip addr` shows only `lo` with an address): `adb shell cmd wifi connect-network AndroidWifi open`.
+- Under TCG the emulator's network is slow, and slower while the app draws: the semantic pack (2 GB) downloaded at about 30 KB/s with its settings card and progress bar on screen, and at 0.6–1 MB/s with the app in the background (HOME), about an hour; the container itself downloads the same file at 8.7 MB/s. Leave the screen alone during a long download.
+- Android 13 shows no notification of an app without POST_NOTIFICATIONS (`dumpsys notification` gives it `importance=NONE`): grant it, or follow a download by its folder's size.
