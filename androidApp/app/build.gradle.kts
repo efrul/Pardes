@@ -60,6 +60,7 @@ val syncDesktopSemanticTests by tasks.registering(Sync::class) {
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleasesTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PackFixtures.kt",
+            "io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackPromptTest.kt",
         )
     }
     into(layout.buildDirectory.dir("generated/desktopSemanticTests"))
@@ -193,8 +194,8 @@ android {
         // java.nio.file, java.time and MethodHandle.invoke.
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.6.0"
+        versionCode = 8
+        versionName = "0.6.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

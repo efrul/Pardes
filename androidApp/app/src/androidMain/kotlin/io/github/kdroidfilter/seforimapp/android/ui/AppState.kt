@@ -136,7 +136,8 @@ data class TabState(
 
 /** Full-screen routes that sit above the tabbed browser (the desktop opens these as windows). */
 sealed interface Overlay {
-    data object Settings : Overlay
+    /** [page]: the SettingsPage's name it opens on (desktop SettingsWindowEvents.OnOpenTo), else the pages' list. */
+    data class Settings(val page: String? = null) : Overlay
 
     data object Tools : Overlay
 

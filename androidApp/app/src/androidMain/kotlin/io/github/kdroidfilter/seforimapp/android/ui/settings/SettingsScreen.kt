@@ -83,19 +83,23 @@ enum class SettingsPage(val title: String, val summary: String, val icon: ImageV
  * right, page on the left, "סגור" at the bottom).
  */
 @Composable
-fun SettingsScreen(onBack: () -> Unit, wide: Boolean) {
-    var pageName by rememberSaveable { mutableStateOf<String?>(null) }
+fun SettingsScreen(onBack: () -> Unit, wide: Boolean, initialPage: String? = null) {
+    // [initialPage]: the page it opens on (SemanticPackPrompt's ניהול נתונים), else the list of pages
+    var pageName by rememberSaveable { mutableStateOf(initialPage) }
     val page = pageName?.let { n -> SettingsPage.entries.firstOrNull { it.name == n } }
     if (wide) {
         WideSettings(page ?: SettingsPage.General, onPage = { pageName = it.name }, onBack = onBack)
     } else {
-        BackHandler(enabled = page != null) { pageName = null }
+        // Back from the page the settings opened on closes them, as one click closes desktop's window: the list is
+        // only for a page opened from it
+        val toList = page != null && pageName != initialPage
+        BackHandler(enabled = toList) { pageName = null }
         Column(Modifier.fillMaxSize().background(Zayit.colors.ground)) {
             if (page == null) {
                 PhoneHeader("הגדרות", onBack)
                 PageList(onOpen = { pageName = it.name })
             } else {
-                PhoneHeader(page.title, onBack = { pageName = null })
+                PhoneHeader(page.title, onBack = if (toList) ({ pageName = null }) else onBack)
                 Box(Modifier.weight(1f).fillMaxWidth()) { PageContent(page, wide = false) }
             }
         }
