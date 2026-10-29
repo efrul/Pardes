@@ -24,8 +24,8 @@ Neither Android 0.5.0 nor a stable desktop 1.0.0 was released on 0.6.10, so both
   could adopt them as they are, and Pardes branding stays in one place so upstream merges stay easy.
 - **Windows installer: an NSIS `.exe` like Zayit's** (not MSI), with Pardes's own id. Drop the MSI items below
   (`upgradeUuid`, `msi { }`, `packageGraalvmMsi`, `"msi"` in the updater); keep NSIS as upstream has it.
-- **Platforms: exactly Zayit's, without macOS.** Windows x64 (GraalVM) and arm64 (JVM); Linux x64 and arm64 as deb,
-  rpm and pacman. The release workflow takes an input to build Windows x64 only, for quick tests.
+- **Platforms: exactly Zayit's.** Windows x64 (GraalVM) and arm64 (JVM); Linux x64 and arm64 as deb, rpm and pacman;
+  macOS Apple Silicon and Intel as dmg and zip (GraalVM), from desktop 1.0.2 (2026-10-29; until then without macOS). The release workflow takes an input to build Windows x64 only, for quick tests.
 - **Updater: option A**, a Pardes provider that follows the `desktop-*` releases of efrul/Pardes.
 - **Version: Pardes for desktop has its own line**, starting at 1.0.0, described as based on Zayit 0.6.7.
 - **An installed Zayit's library is used in place, never copied.** On first run, Pardes for desktop looks for Zayit's
@@ -286,7 +286,7 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
 - **`packageVersion` (286, 292)**: set from the desktop version (see Versioning).
 - **`appResourcesRootDir` (256)**: point it at an overlay with a Pardes `splash.png`.
 - **`protocol("זית","zayit")` (282)**: `protocols.clear()` (see Deep links).
-- **macOS block (312-317)**: untouched and not built.
+- **macOS block (312-317)**: `branding/brand.gradle` sets Pardes's icon (`MacosIcon.icns`), bundle id (`io.github.efrul.pardes`) and app name (פרדס.app), from 1.0.2.
 - **Sentry (35-40, 352-354)**: off without a DSN or token. Optionally set the plugin's telemetry to false under the Pardes preset.
 
 **Data isolation**
@@ -400,7 +400,9 @@ Classes: (a) = overlay or script, no edit to an upstream file; (b) = one-line ho
   for testers) and `note`. Concurrency group `desktop-release`. The file must be on `main` before Run workflow shows.
 - **prepare.** The version gate above; a stable release whose version is not higher than the newest published
   stable desktop release fails (installed apps would never take it), a pre-release only warns; the build matrix.
-- **build** (Zayit's runners, no macOS), each job uploading `release-assets-<windows|linux>-<arch>[-<pkg>]`:
+- **build** (Zayit's runners), each job uploading `release-assets-<windows|linux|macos>-<arch>[-<pkg>]`:
+  - macOS `macos-26` (arm64) and `macos-26-intel` (x64), GraalVM, `packageGraalvmDmg packageGraalvmZip` →
+    `Pardes-<ver>-macos-<arm64|x64>.dmg` and `.zip` (the zip with its blockmap; latest-mac.yml lists the zip), from 1.0.2.
   - Windows x64 `windows-latest`, GraalVM, `:SeforimApp:packageGraalvmNsis` → `Pardes-<ver>-windows-x64-nsis.exe`.
   - Windows arm64 `windows-11-arm`, JVM, `createReleaseDistributable packageReleaseNsis` →
     `Pardes-<ver>-windows-arm64-nsis.exe`.

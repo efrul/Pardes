@@ -17,6 +17,8 @@ a rerun writes the same files:
 - composeResources/drawable/AppIcon.png, 1024 px (window, taskbar and settings icon) and desktopAppIcons/LinuxIcon.png,
   1024 px (the package's icon): the icon as site/img/icon.svg draws it, the 72dp visible part rounded at 16.
 - desktopAppIcons/WindowsIcon.ico: the same at 16, 20, 24, 32, 40, 48, 64, 128 and 256 px (PNG entries, as upstream's).
+- desktopAppIcons/MacosIcon.icns: the same at 32, 64, 128, 256, 512 and 1024 px (PNG entries; upstream's has one 1024 px
+  image, its whole square drawn as this icon's is).
 - composeResources/drawable/zayit_transparent.png, 645x746 (the onboarding's welcome): the icon, 560 px, on a
   transparent ground, shown 132dp high as Android's onboarding shows it.
 - composeResources/drawable/zayit_logo_branch.png, 82x88 (beside the search results bar): the icon, 82 px.
@@ -401,6 +403,9 @@ def desktop():
     os.makedirs(os.path.dirname(ico), exist_ok=True)
     images = [icon(s) for s in sizes]
     images[-1].save(ico, format="ICO", sizes=[(s, s) for s in sizes], append_images=images[:-1])
+    # macOS: the sizes an icns holds, each drawn at its own size (Pillow writes them as its PNG entries)
+    icns = os.path.join(brand, "desktopAppIcons/MacosIcon.icns")
+    icon(1024).save(icns, format="ICNS", append_images=[icon(s) for s in [32, 64, 128, 256, 512]])
 
     # Onboarding (InitScreen, 176dp high): the icon 132dp high, as Android's onboarding shows it
     cv = Canvas(645, 746)

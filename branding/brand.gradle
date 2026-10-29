@@ -61,6 +61,10 @@ dist.linux.appImage.desktopEntries = [
 dist.windows.iconFile.set(new File(brandDir, 'desktopAppIcons/WindowsIcon.ico'))
 dist.windows.upgradeUuid = value('upgradeUuid')
 dist.windows.nsis.shortcutName = value('appName')
+// macOS: upstream's macOS { } is Zayit's bundle id, icon and app name (זית.app)
+dist.macOS.iconFile.set(new File(brandDir, 'desktopAppIcons/MacosIcon.icns'))
+dist.macOS.bundleID = value('macBundleId')
+dist.macOS.packageName = value('appName')
 
 // Texts upstream keeps elsewhere, copied next to the brand's licence texts (common/licenses) rather than duplicated:
 // the app's own licence (Nucleus packages no licenseFile), the learning schedules' notice and the sky's credits
