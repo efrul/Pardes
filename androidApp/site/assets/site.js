@@ -8,7 +8,7 @@
 // snapshots say when it can't.
 //
 // A value goes where an element names it: data-text="apk.version" takes the text, data-href="apk.url" the link.
-// An element with data-need="apk.sha" is shown once that value is known.
+// An element with data-need="apk.pre" is shown once that value is known.
 (function () {
   'use strict';
   var REPO = 'efrul/Pardes';
@@ -116,13 +116,11 @@
     return latest;
   }
   function showAndroid(a, asOf) {
-    var sha = (a.apk.digest || '').replace(/^sha256:/, '');
     set('apk.url', a.apk.browser_download_url);
     set('apk.name', a.apk.name);
     set('apk.version', a.version || a.rel.tag_name);
     set('apk.size', mb(a.apk.size));
     set('apk.date', both(new Date(a.rel.published_at)));
-    set('apk.sha', sha);
     set('apk.total', a.total.toLocaleString('he-IL'));
     set('apk.asof', asOf ? 'נכון ל־' + civil(new Date(asOf)) : 'נכון לעכשיו');
     if (a.rel.prerelease) set('apk.pre', 'גרסת ניסיון');
@@ -375,7 +373,7 @@
     chooseLog(wanted === 'desktop' || wanted === 'android' ? wanted : os === 'android' ? 'android' : 'desktop');
   }
 
-  // ── Copy buttons: data-copy names the element to copy; a command's button copies the command beside it.
+  // ── Copy buttons: a command's button copies the command beside it.
   function selectText(el) {
     var r = document.createRange();
     r.selectNodeContents(el);
@@ -392,7 +390,6 @@
     if (navigator.clipboard) navigator.clipboard.writeText(el.textContent).then(done, function () { selectText(el); });
     else selectText(el);
   }
-  each('[data-copy]', function (b) { b.addEventListener('click', function () { copyFrom(b, $(b.getAttribute('data-copy'))); }); });
   each('.cmd .copy', function (b) { b.addEventListener('click', function () { copyFrom(b, b.parentNode.querySelector('pre')); }); });
 
   // ── A tool's screenshot opens at full size; without <dialog> the link opens the picture itself.
