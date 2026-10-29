@@ -27,6 +27,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.AccentButton
 import io.github.kdroidfilter.seforimapp.android.ui.components.InfoBanner
 import io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.formatBytes
+import io.github.kdroidfilter.seforimapp.android.ui.onboarding.rememberWithNotificationPermission
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PackProblem
@@ -52,6 +53,9 @@ internal fun SemanticPackSection() {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) manager.import(uris)
     }
+    // Android: both go on in a foreground service with a notification, as the library's moves and updates do
+    val install = rememberWithNotificationPermission { manager.install() }
+    val pickFiles = rememberWithNotificationPermission { importLauncher.launch(arrayOf("*/*")) }
     val uriHandler = LocalUriHandler.current
     val c = Zayit.colors
     SettingsCard(title = SemanticPackStrings.title) {
@@ -95,9 +99,9 @@ internal fun SemanticPackSection() {
                     offered(state.available, state.installed)?.let { pack ->
                         val label =
                             if (state.installed is InstalledPack.InUse) SemanticPackStrings.update.format(pack.pack) else SemanticPackStrings.download
-                        AccentButton(label, manager::install)
+                        AccentButton(label, install)
                     }
-                    OutlineButton(SemanticPackStrings.import, { importLauncher.launch(arrayOf("*/*")) })
+                    OutlineButton(SemanticPackStrings.import, pickFiles)
                     if (state.available is Available.Unreachable) {
                         OutlineButton(SemanticPackStrings.releasesPage, { uriHandler.openSafely(SemanticPackReleases.RELEASES_PAGE) })
                     }
