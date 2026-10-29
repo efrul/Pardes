@@ -158,6 +158,13 @@ data class ReaderUiState(
             return if (selectedLineIds.size > 1 && !isTocEntrySelection) LinkSelection.Multi(selectedLineIds.toList()) else LinkSelection.Single(primary)
         }
 
+    /**
+     * A tap on [lineId] would leave the selection as it is: the line is the one selected, or the heading whose section
+     * is (a tap on another line, on a multi-selection or in multi-select mode changes it).
+     */
+    fun tapKeepsSelection(lineId: Long): Boolean =
+        !multiSelect && primaryLineId == lineId && (selectedLineIds.size == 1 || isTocEntrySelection)
+
     /** The desktop TOC skips a lone root wrapping the book (its title): its children are the first level. */
     val tocDisplayRoots: List<TocEntry>
         get() = tocRoots.singleOrNull()?.takeIf { it.hasChildren }?.let { tocChildren[it.id] } ?: tocRoots
