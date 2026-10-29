@@ -19,9 +19,10 @@ hebrew-numerals = "0.2.6"
 # Same versions as the desktop app (zstd-jni is added as its Android AAR in app/build.gradle.kts).
 zstd-jni = "1.5.7-10"
 commons-compress = "1.28.0"
-# Pardes's semantic search (search/semantic). Desktop runs its model on ONNX Runtime 1.17.1; 1.20.0 is the first whose
-# Android libraries are 16 KB aligned (1.17 to 1.19 do not load on the devices with 16 KB pages). Same Java API.
-onnxruntime = "1.20.0"
+# Pardes's semantic search (search/semantic). Desktop runs its model on ONNX Runtime 1.17.1; 1.22.0 is the first whose
+# two Android libraries are both 16 KB aligned: 1.20 and 1.21 align libonnxruntime.so but not their JNI library,
+# libonnxruntime4j_jni.so (4 KB), and 1.17 to 1.19 neither, which the devices with 16 KB pages refuse. Same Java API.
+onnxruntime = "1.22.0"
 # Unit tests of the semantic port on the JVM: Android's org.json is a stub there.
 json = "20250517"
 

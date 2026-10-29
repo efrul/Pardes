@@ -97,7 +97,7 @@ private val libraryCredits = listOf(
     ),
     Credit("jsoup", "Copyright (c) 2009-2025 Jonathan Hedley", listOf(bundled("MIT (jsoup)", "jsoup-LICENSE.txt"))),
     Credit(
-        "ONNX Runtime 1.20.0",
+        "ONNX Runtime 1.22.0",
         "Copyright (c) Microsoft Corporation",
         listOf(
             bundled("MIT (ONNX Runtime)", "ONNX-Runtime-LICENSE.txt"),
