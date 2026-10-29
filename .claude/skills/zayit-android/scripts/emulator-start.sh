@@ -19,6 +19,10 @@ accel="-accel off"
 [ -e /dev/kvm ] && accel="-accel on"
 cpus=$(nproc)
 cores=$(( cpus > 4 ? 4 : (cpus > 1 ? cpus - 1 : 1) ))
+# CORES overrides it. Under TCG every vCPU runs on one host thread (`emulator -help-cores`: only useful with
+# acceleration), and a 4-CPU container's 3 vCPUs once left system_server killed by its watchdog every 4-6 min:
+# CORES=1 then booted in 450 s and stayed up (references/pitfalls.md, TCG instability).
+cores="${CORES:-$cores}"
 
 exec "$ANDROID_HOME/emulator/emulator" -avd "$AVD" -no-window -no-audio -no-boot-anim $accel \
   -gpu "${GPU:-swiftshader_indirect}" -no-snapshot-save -memory 3072 -cores "$cores" > "$LOG" 2>&1

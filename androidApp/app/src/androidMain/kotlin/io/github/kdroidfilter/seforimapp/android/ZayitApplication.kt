@@ -13,6 +13,7 @@ import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.android.data.ReadingHistory
 import io.github.kdroidfilter.seforimapp.android.data.UserDataStore
 import io.github.kdroidfilter.seforimapp.android.search.SearchService
+import io.github.kdroidfilter.seforimapp.android.search.SemanticSearchSupport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,6 +52,12 @@ class ZayitApplication : Application() {
     /** Settings asked for the library update flow (an update from files, or a full download) over the running app. */
     val manualLibraryUpdate = MutableStateFlow(false)
 
+    /**
+     * A semantic pack staged in the settings goes in at the first start of a process that finds the library (MainActivity),
+     * before the search opens: never under a search that holds the model and the index open.
+     */
+    val semanticPackSwapPending = AtomicBoolean(true)
+
     private var startedActivities = 0
 
     /** An activity of the app is on screen. */
@@ -58,6 +65,7 @@ class ZayitApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        SemanticSearchSupport.init(this)
         libraryStore = LibraryStore(this)
         prefs = AppPrefs(this)
         registerActivityLifecycleCallbacks(ForegroundTracker())

@@ -46,7 +46,8 @@ private val maintenanceScope = MainScope()
  * Backups are desktop's archive ([UserDataBackup]), so they move between the phone and the computer; a restore is
  * staged and applied when the app restarts. The Google Drive card is left out, as desktop does when it has no OAuth
  * client: desktop's Drive backup uses a desktop loopback OAuth client that an Android app cannot use.
- * On top: desktop's DbDeltaUpdateSection (incremental library updates, [DbDeltaUpdateSection]).
+ * On top: desktop's DbDeltaUpdateSection (incremental library updates, [DbDeltaUpdateSection]), the library's place
+ * (Android only) and Pardes desktop's semantic pack card ([SemanticPackSection]).
  */
 @Composable
 internal fun DataSettings(wide: Boolean) {
@@ -100,6 +101,8 @@ internal fun DataSettings(wide: Boolean) {
         DbDeltaUpdateSection()
         // Android: the phone or a memory card.
         LibraryLocationSection()
+        // Pardes desktop's SemanticPackCard, after the library's location as there (hidden where the model cannot run).
+        SemanticPackSection()
         SettingsCard {
             ActionRow("ייצוא הנתונים שלי", "שמירת גיבוי של ההערות, ההדגשות וההגדרות.") {
                 OutlineButton(

@@ -458,7 +458,7 @@ footer p { max-width: 52rem; }
     <div class="pitch">
       <p class="eyebrow">לאנדרואיד 8.0 ומעלה</p>
       <h1 id="title"><span class="mark">פרדס</span><span class="tag">ארון ספרים תורני בטלפון ובטאבלט</span></h1>
-      <p class="lead">אלפי ספרים, מהתנ״ך והגמרא ועד ההלכה, החסידות והשו״ת, עם המפרשים, התרגומים והקישורים שביניהם. החיפוש עובר על כל הספרייה בתוך הטלפון, גם בלי חיבור לרשת. יש בו גם זמני היום, לוח עברי, מעגל השנה ווידג'טים למסך הבית.</p>
+      <p class="lead">אלפי ספרים, מהתנ״ך והגמרא ועד ההלכה, החסידות והשו״ת, עם המפרשים, התרגומים והקישורים שביניהם. החיפוש עובר על כל הספרייה בתוך הטלפון, גם בלי חיבור לרשת, ועם חבילה שמורידים בנפרד גם לפי משמעות. יש בו גם זמני היום, לוח עברי, מעגל השנה ווידג'טים למסך הבית.</p>
     </div>
 
       <div class="get" role="region" aria-label="הורדת פרדס">
@@ -499,6 +499,7 @@ footer p { max-width: 52rem; }
 
     <div class="tablist" role="tablist" aria-label="מסכים" hidden>
       <button type="button" role="tab" id="t-search" aria-controls="p-search">חיפוש</button>
+      <button type="button" role="tab" id="t-meaning" aria-controls="p-meaning">לפי משמעות</button>
       <button type="button" role="tab" id="t-read" aria-controls="p-read">קריאה</button>
       <button type="button" role="tab" id="t-times" aria-controls="p-times">זמנים</button>
       <button type="button" role="tab" id="t-year" aria-controls="p-year">מעגל השנה</button>
@@ -515,6 +516,19 @@ footer p { max-width: 52rem; }
           <p>זה מנוע החיפוש של זית למחשב, על אותו אינדקס, ולכן גם התוצאות אותן תוצאות.</p>
         </div>
         <div class="devices"><div class="device"><img src="img/app/search.webp" width="540" height="1200" loading="lazy" alt="תוצאות חיפוש של ׳תהו ובהו׳, מקובצות לפי ספר"></div></div>
+      </div>
+
+      <div class="panel" id="p-meaning" role="tabpanel" aria-labelledby="t-meaning" tabindex="0">
+        <div class="text">
+          <h3>חיפוש לפי משמעות <span class="chip">מגרסה 0.6.0</span></h3>
+          <p>פרדס מוצא גם שורות שאומרות את מה שחיפשתם במילים אחרות. ל"לאהוב את החבר כמו את עצמך" החיפוש לפי המילים לא מוצא כלום בספרי היסוד, והחיפוש לפי משמעות מביא ראשון את "ואהבת לרעך כמוך". השורות האלה משתלבות בתוצאות של החיפוש הרגיל, ובכל שורה מודגש הקטע הקרוב ביותר למה שחיפשתם.</p>
+          <p>בתוך ספר, הכפתור <b>חיפוש חכם לפי משמעות</b> שבשורת החיפוש מוצא בספר את 60 השורות הקרובות ביותר במשמעות למה שהקלדתם.</p>
+          <p>זה המודל הפתוח של דיקטה, שאומן על הקישורים שבספרייה, כמו בפרדס למחשב. הוא רץ בתוך הטלפון, בלי רשת, ומגיע בחבילה שמורידים בנפרד. <a href="#lib-meaning">איך מתקינים אותה</a></p>
+        </div>
+        <div class="devices pair">
+          <div class="device"><img src="img/app/meaning.webp" width="540" height="1200" loading="lazy" alt="תוצאות החיפוש ׳לאהוב את החבר כמו את עצמך׳: ראשון ׳ואהבת לרעך כמוך׳, ובכל שורה מודגש הקטע הקרוב במשמעות"></div>
+          <div class="device"><img src="img/app/smart-find.webp" width="540" height="1200" loading="lazy" alt="חיפוש חכם לפי משמעות בתוך ויקרא: השורות הקרובות במשמעות מודגשות"></div>
+        </div>
       </div>
 
       <div class="panel" id="p-read" role="tabpanel" aria-labelledby="t-read" tabindex="0">
@@ -720,7 +734,7 @@ footer p { max-width: 52rem; }
           <h3>העברה בכבל, בסקריפט ו־adb</h3>
           <p class="when">כשזית למחשב מותקן במחשב, גם בלינוקס ובמק. בלי הורדה, עם ניפוי באגים ב־USB.</p>
         </header>
-        <p>הסקריפט מעתיק את הספרייה שמותקנת במחשב ישר לתיקייה של פרדס בטלפון ומכין אותה לפתיחה, בלי root.</p>
+        <p>הסקריפט מעתיק את הספרייה שמותקנת במחשב ישר לתיקייה של פרדס בטלפון ומכין אותה לפתיחה, בלי root. כשבמחשב מותקנת גם <a href="#lib-meaning">חבילת החיפוש לפי משמעות</a> של פרדס למחשב, הוא מעתיק גם אותה.</p>
 
         <div class="tool">
           <div class="tool-bar">
@@ -771,7 +785,7 @@ footer p { max-width: 52rem; }
         </dl>
         <p>ב־Windows מוסיפים אפשרות כך: בתיקייה שחולצה כותבים <code>cmd</code> בשורת הכתובת של סייר הקבצים ומקישים Enter, ובחלון שנפתח מריצים, למשל:</p>
         <div class="cmd"><pre dir="ltr">push-desktop-library.cmd -SdCard</pre><button class="copy" type="button">העתקה</button></div>
-        <p class="need">בטלפון צריך כ־15.7 ג״ב פנויים בהעברה מ־Windows, או כ־13.6 ג״ב מלינוקס ומק. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך (התאריך בקובץ <code>release_info.txt</code> שליד <code>seforim.db</code>); ספרייה ישנה יותר פרדס יבקש לעדכן.</p>
+        <p class="need">בטלפון צריך כ־15.7 ג״ב פנויים בהעברה מ־Windows, או כ־13.6 ג״ב מלינוקס ומק, ועוד כ־2.8 ג״ב לחבילת החיפוש לפי משמעות, אם היא מועתקת. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך (התאריך בקובץ <code>release_info.txt</code> שליד <code>seforim.db</code>); ספרייה ישנה יותר פרדס יבקש לעדכן.</p>
       </article>
 
       <article class="route" id="lib-files">
@@ -797,7 +811,7 @@ footer p { max-width: 52rem; }
     <div class="extras">
       <section class="extra" id="lib-card" aria-labelledby="card-title">
         <h3 id="card-title">בכרטיס זיכרון <span class="chip">מגרסה 0.3.0</span></h3>
-        <p>כשיש בטלפון כרטיס SD, מדריך ההגדרה מראה כמה מקום פנוי בטלפון ובכרטיס ומציע לשמור את הספרייה באחד מהם. ספרייה מותקנת עוברת ביניהם ב<b>הגדרות › ניהול נתונים › מיקום הספרייה</b>. כשמוציאים את הכרטיס, פרדס מבקש להחזיר אותו, ונפתח מעצמו כשהוא חוזר.</p>
+        <p>כשיש בטלפון כרטיס SD, מדריך ההגדרה מראה כמה מקום פנוי בטלפון ובכרטיס ומציע לשמור את הספרייה באחד מהם. ספרייה מותקנת עוברת ביניהם ב<b>הגדרות › ניהול נתונים › מיקום הספרייה</b>, ואיתה חבילת החיפוש לפי משמעות, אם היא מותקנת. כשמוציאים את הכרטיס, פרדס מבקש להחזיר אותו, ונפתח מעצמו כשהוא חוזר.</p>
         <p>אפשר גם להעתיק ישר לכרטיס מהמחשב: בסקריפט, עם <code>--sdcard</code> או <code>-SdCard</code>, או בכלי <a href="#lib-export">הספרייה של זית לטלפון</a> כשהכרטיס בקורא כרטיסים במחשב. בכרטיס שכבר היה בטלפון הכלי מציע את התיקייה של פרדס, וכשהכרטיס חוזר לטלפון פרדס מוצא שם את הקבצים: במדריך ההגדרה, אחרי <b>התחלת התקנה לא-מקוונת</b>, לוחצים <b>שימוש בקבצים שנמצאו</b>. בפרדס שכבר יש בו ספרייה, אותו כפתור נמצא ב<b>הגדרות › ניהול נתונים</b>.</p>
         <p class="need">בכרטיס צריך כ־14.1 ג״ב להורדה, כ־13.6 ג״ב להעברה בסקריפט, או מקום לקובץ ועוד כ־14.1 ג״ב (הקובץ נמחק בסוף ההתקנה). ב־Windows הסקריפט צריך גם כ־2.2 ג״ב פנויים בטלפון. כרטיס FAT32 (כך אנדרואיד מפרמט כרטיסים של 32 ג״ב ומטה) מקבל את מסד הנתונים בחלקים, ובינתיים מתעדכן רק בעדכון מלא. כרטיס שפורמט ל־exFAT במחשב מקבל גם עדכון מצטבר.</p>
       </section>
@@ -805,6 +819,12 @@ footer p { max-width: 52rem; }
         <h3 id="update-title">עדכון הספרייה בלי אינטרנט <span class="chip">מגרסה 0.3.0</span></h3>
         <p>ב<b>הגדרות › ניהול נתונים</b> בוחרים <b>עדכון מקבצים</b> או <b>עדכון מתיקייה</b>, ובוחרים את שני הקבצים של עדכון מצטבר מ<a href="https://github.com/kdroidFilter/SeforimLibrary/releases">עמוד ההפצות של SeforimLibrary</a> (<code>patch-v….db.zst</code> וקובץ ה־<code>.manifest.json</code> שלו), או את כל קובצי ה־<code>.part</code> של מאגר מלא.</p>
         <p>בעדכון מלא הספרייה הקיימת נשארת עד שהחדשה נבדקה, כשיש מקום לשתיהן.</p>
+      </section>
+      <section class="extra" id="lib-meaning" aria-labelledby="meaning-title">
+        <h3 id="meaning-title">חבילת החיפוש לפי משמעות <span class="chip">מגרסה 0.6.0</span></h3>
+        <p>את החיפוש לפי משמעות מוסיפים לספרייה בחבילה: המודל והאינדקס שלו. היא עובדת בכל גרסה של הספרייה. ב<b>הגדרות › ניהול נתונים › חיפוש לפי משמעות</b> לוחצים <b>הורדה והתקנה</b>, ופרדס מוריד את החבילה האחרונה מ־GitHub, כ־2 ג״ב. ההורדה נמשכת גם כשיוצאים מההגדרות, עם התראה שמראה את ההתקדמות, והחבילה נכנסת לשימוש בהפעלה הבאה של פרדס, או מיד ב<b>הפעלה מחדש עכשיו</b>.</p>
+        <p>כשהטלפון לא מגיע ל־GitHub, מורידים בדפדפן את <code>pardes-model.zip</code> ואת <code>pardes.vec.lucene.zip</code> (<a href="#downloads">בהורדות</a>), ובאותו מסך לוחצים <b>ייבוא מקבצים…</b> ובוחרים את שניהם יחד. <a href="#lib-computer">הסקריפט שמעביר את הספרייה בכבל</a> מעתיק גם את החבילה, כשהיא מותקנת בפרדס למחשב.</p>
+        <p class="need">צריך מכשיר של 64 ביט, וכ־3.3 ג״ב פנויים ליד הספרייה, ובייבוא גם מקום לקבצים. כשהמודל בשימוש הוא תופס כ־240 מ״ב מהזיכרון, ולכן במכשיר ש־Android מסמן כדל זיכרון (Android Go) ההגדרה לא מופיעה. בלי החבילה החיפוש מוצא את המילים, כמו תמיד. התקנה מלאה של ספרייה חדשה מוחקת את האינדקס, ואחריה מתקינים שוב את החבילה.</p>
       </section>
     </div>
   </section>
@@ -820,6 +840,11 @@ footer p { max-width: 52rem; }
         <div class="dl-what"><strong>פרדס לאנדרואיד</strong><span>קובץ ההתקנה, לאנדרואיד 8.0 ומעלה</span></div>
         <div class="dl-file"><span class="ltr" id="row-apk-file">pardes-android-….apk</span><span id="row-apk-size">…</span></div>
         <div class="dl-go"><a class="btn" id="row-apk" href="https://github.com/efrul/Pardes/releases">הורדה</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>חבילת החיפוש לפי משמעות</strong><span>המודל והאינדקס שלו, לייבוא בפרדס 0.6.0 ומעלה (<a href="#lib-meaning">איך</a>)</span></div>
+        <div class="dl-file"><span class="ltr">pardes-model.zip · pardes.vec.lucene.zip</span><span id="row-pack-size">כ־2 ג״ב יחד</span></div>
+        <div class="dl-go" id="row-pack"><a class="btn btn-line" href="https://github.com/efrul/Pardes/releases?q=semantic&amp;expanded=true">עמוד החבילות</a></div>
       </li>
       <li class="dl-row">
         <div class="dl-what"><strong>הספרייה של זית לטלפון</strong><span>אורז את הספרייה של זית למחשב לקובץ לטלפון</span></div>
@@ -875,6 +900,7 @@ footer p { max-width: 52rem; }
     <p><strong>פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו:</strong> הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.</p>
     <p>זית ו־SeforimLibrary: <span class="ltr">Copyright (C) 2025 Elie Gambache</span>. הליבה של זית היא קוד פתוח, המופץ תחת <a href="https://github.com/kdroidFilter/Zayit/blob/master/LICENSE">רישיון AGPL v3</a> עם תנאי ייחוס נוסף: <span class="ltr">Powered by the technologies that drive Zayit — <a href="https://zayitapp.com/">https://zayitapp.com/</a></span></p>
     <p>פרדס נבנה מהקוד הפתוח של זית 0.6.11 ושונה ב־2026 כדי לפעול באנדרואיד. גם הוא מופץ תחת רישיון AGPL-3.0, ו<a href="https://github.com/efrul/Pardes">קוד המקור שלו</a> זמין תחת אותו רישיון; לכל גרסה מצורף גם קוד המקור המלא שלה. הוא מסופק כמות שהוא, ללא כל אחריות.</p>
+    <p>המודל של החיפוש לפי משמעות נגזר מ־<a href="https://huggingface.co/dicta-il/neodictabert-bilingual-embed">neodictabert-bilingual-embed</a> של דיקטה: המרכז הישראלי לניתוח טקסטים, ומופץ לפי <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. פרדס המשיך לאמן אותו על הטקסטים של הספרייה ועל הקישורים שבה, זיקק אותו למודל קטן יותר, המיר אותו ל־ONNX וכימת אותו ל־int8. דיקטה אינם תומכים בפרדס או בשינויים האלה, והמודל ניתן כמו שהוא, בלי אחריות. בטלפון מריץ אותו ONNX Runtime של Microsoft, ברישיון MIT.</p>
     <p>כל גרסה של פרדס נחתמת באותו מפתח, ולכן מותקנת מעל הקודמת. כדאי להוריד אותו רק מכאן או מ<a href="https://github.com/efrul/Pardes/releases">עמוד הגרסאות</a>, ולהשוות את טביעת ה־SHA-256 שליד כפתור ההורדה. הספרים מגיעים מ־Sefaria ומאוצריא, דרך SeforimLibrary. את זית, היישום המקורי של אליהו גמבש, אפשר למצוא ב־<a href="https://zayitapp.com/">zayitapp.com</a>.</p>
   </div>
 </footer>
@@ -927,6 +953,7 @@ footer p { max-width: 52rem; }
   // A changelog date (YYYY-MM-DD) is a day, not an instant: noon local time, so no time zone moves it.
   function day(ymd) { var p = ymd.split('-'); return new Date(+p[0], p[1] - 1, +p[2], 12); }
   function mb(bytes) { return (bytes / 1048576).toLocaleString('he-IL', { maximumFractionDigits: 1 }) + ' מ״ב'; }
+  function gb(bytes) { return (bytes / 1073741824).toLocaleString('he-IL', { maximumFractionDigits: 1 }) + ' ג״ב'; }
 
   // android-<versionName>-<run number>[-r<attempt>], as android-release.yml tags a release
   function versionOf(tag) { var m = /^android-(\d+(?:\.\d+)*)-(\d+)/.exec(tag || ''); return m ? m[1] : null; }
@@ -984,6 +1011,29 @@ footer p { max-width: 52rem; }
     $('row-apk-size').textContent = mb(apk.size) + ' · גרסה ' + (ver || rel.tag_name);
     shown = { latest: ver, released: released };
     markVersions();
+  }
+
+  // The newest semantic pack (semantic-<pack>-<library>, as semantic-release.yml tags it) with its two zips, for the
+  // import: the highest number, and of its builds the newest library's, as the app picks one for no library in
+  // particular (SemanticPackReleases.newest: a pack works on every library release). The row links the zips directly
+  // once the API has listed the releases, and stays on the releases page otherwise (releases.json keeps only the
+  // releases with an APK).
+  function showPack(list) {
+    var best = null;
+    list.forEach(function (r) {
+      var m = /^semantic-(\d+)-(.+)$/.exec(r.tag_name || '');
+      if (r.draft || r.prerelease || !m) return;
+      var zips = ['pardes-model.zip', 'pardes.vec.lucene.zip'].map(function (name) {
+        return (r.assets || []).filter(function (a) { return a.name === name; })[0];
+      });
+      if (!zips[0] || !zips[1]) return;
+      var pack = +m[1], key = m[2].replace(/^.*-/, '').replace(/^v/, ''); // SemanticPack.libraryKey
+      if (!best || pack > best.pack || (pack === best.pack && key > best.key)) best = { pack: pack, key: key, zips: zips };
+    });
+    if (!best) return;
+    $('row-pack-size').textContent = gb(best.zips[0].size + best.zips[1].size) + ' יחד · חבילה ' + best.pack;
+    $('row-pack').innerHTML = '<a class="btn btn-line" href="' + esc(best.zips[0].browser_download_url) + '">המודל</a>' +
+      '<a class="btn btn-line" href="' + esc(best.zips[1].browser_download_url) + '">האינדקס</a>';
   }
 
   function fallback(text) {
@@ -1049,7 +1099,7 @@ footer p { max-width: 52rem; }
     })
     .catch(function () { return false; });
   fromApi()
-    .then(function (list) { live = true; show(list, null); })
+    .then(function (list) { live = true; show(list, null); showPack(list); })
     .catch(function () {
       snapshot.then(function (ok) {
         if (!ok) fallback('פרטי הגרסה לא נטענו. הכפתור מוביל לעמוד הגרסאות ב־GitHub, ושם הקובץ האחרון.');

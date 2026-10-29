@@ -24,6 +24,53 @@ val syncPatchTables by tasks.registering(Sync::class) {
     into(layout.buildDirectory.dir("generated/deltaPatchTables"))
 }
 
+// Pardes desktop's semantic search files that compile on Android unchanged (SeforimApp/src/jvmMain, as-is): the query
+// cleaner, the passages, the precedence of the earlier level, the embedding interface, the pack's names and manifest
+// fields, and the helpers they use (runSuspendCatching, the bundle's part names and manifest). Their Android variants
+// (same packages and class names) are in src/androidMain/.../android/search/semantic, each with a header naming its
+// changes.
+val desktopApp = rootDir.resolve("../SeforimApp/src/jvmMain/kotlin")
+val syncDesktopSemantic by tasks.registering(Sync::class) {
+    from(desktopApp) {
+        include(
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/OpenModelCleaner.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/Passages.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/LevelPrecedence.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/EmbeddingProvider.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPack.kt",
+            "io/github/kdroidfilter/seforimapp/core/coroutines/CoroutineUtils.kt",
+            "io/github/kdroidfilter/seforimapp/features/onboarding/extract/BundleParts.kt",
+            "io/github/kdroidfilter/seforimapp/features/onboarding/extract/BundleManifest.kt",
+        )
+    }
+    into(layout.buildDirectory.dir("generated/desktopSemantic"))
+}
+
+// Desktop's semantic tests that run on the port unchanged (SeforimApp/src/jvmTest): the fusion's leaders and quotes, the
+// precedence by level, the passages, the fallback to words alone, the swap of a staged pack at the next start, and the
+// choice of the pack among the releases.
+val desktopTests = rootDir.resolve("../SeforimApp/src/jvmTest/kotlin")
+val syncDesktopSemanticTests by tasks.registering(Sync::class) {
+    from(desktopTests) {
+        include(
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineKeepLeadersTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineFallbackTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/LevelPrecedenceTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/PassagesTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleasesTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PackFixtures.kt",
+        )
+    }
+    into(layout.buildDirectory.dir("generated/desktopSemanticTests"))
+}
+
+// Desktop's tokenizer parity fixtures (semantic-model/make_parity_fixtures.py), read by the on-device parity test.
+val syncParityFixtures by tasks.registering(Sync::class) {
+    from(rootDir.resolve("../SeforimApp/src/jvmTest/resources")) { include("semantic/*.gz") }
+    into(layout.buildDirectory.dir("generated/parityFixtures"))
+}
+
 kotlin {
     androidTarget {
         compilerOptions {
@@ -71,6 +118,8 @@ kotlin {
             )
             // generator-common's table list (PatchTables.kt), as-is: the rest of that module is the producer side.
             kotlin.srcDir(syncPatchTables)
+            // Pardes desktop's semantic search files that need no Android variant (see syncDesktopSemantic).
+            kotlin.srcDir(syncDesktopSemantic)
             // Desktop icons (the search telescope).
             kotlin.srcDir(desktopRoot.resolve("icons/src/commonMain/kotlin"))
             dependencies {
@@ -104,6 +153,27 @@ kotlin {
                 // library, with the wide cursor windows Android's SQLite cannot have there.
                 implementation(libs.requery.sqlite)
                 implementation(libs.androidx.sqlite.framework)
+                // Pardes's semantic search: the model's runtime (its 32-bit libraries are left out below).
+                implementation(libs.onnxruntime.android)
+            }
+        }
+        // JVM unit tests: desktop's semantic tests on the port (syncDesktopSemanticTests). org.json and Lucene run for
+        // real there; Android's own classes are stubs (android.util.Log answers nothing, see unitTests below).
+        val androidUnitTest by getting {
+            kotlin.srcDir(syncDesktopSemanticTests)
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.json)
+                // The library's database in desktop's tests (JDBC), read by the port through a SqlDriver
+                implementation(libs.sqlDelight.driver.sqlite)
+            }
+        }
+        // On a device: the tokenizer parity on Android's ICU regex and normalizer, and the pack's reference searches.
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.ext.junit)
             }
         }
     }
@@ -123,9 +193,14 @@ android {
         // java.nio.file, java.time and MethodHandle.invoke.
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.5.0"
+        versionCode = 7
+        versionName = "0.6.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    // The desktop tests run on the JVM with Android's classes as stubs: android.util.Log (the port's logging) answers
+    // nothing instead of throwing.
+    testOptions.unitTests.isReturnDefaultValues = true
 
     // libpardes_multiplex.so: SQLite's multiplex VFS as an extension of requery's SQLite (data/SplitDatabase.kt).
     ndkVersion = "27.3.13750724"
@@ -142,6 +217,8 @@ android {
     sourceSets["main"].resources.srcDirs(seforimLibrary.resolve("search/src/jvmMain/resources"))
     // licenses/: the third-party licence texts of Settings › רישיונות (the copied ones are added by licenceAssets below).
     sourceSets["main"].assets.srcDirs("src/androidMain/assets")
+    // semantic/: desktop's tokenizer parity fixtures, for the on-device HfTokenizerParityTest (syncParityFixtures).
+    sourceSets["androidTest"].assets.srcDirs(layout.buildDirectory.dir("generated/parityFixtures"))
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -190,12 +267,24 @@ android {
         // each installed app downloads as its update does not change for that, and Android 9 and later keep reading
         // the dex in place from it.
         dex.useLegacyPackaging = false
+        // ONNX Runtime (the semantic search's model) for the 64-bit ABIs only: its 32-bit libraries would add some 14 MB
+        // to every download for phones old enough to be 32-bit, which seldom have the memory for the model or the room
+        // for the pack's 2.8 GB beside the library (SemanticSearchSupport hides the search there).
+        jniLibs.excludes += setOf("lib/armeabi-v7a/libonnxruntime*.so", "lib/x86/libonnxruntime*.so")
+        // Native libraries stored compressed, and extracted by Android when it installs the app: every download and
+        // update is some 30 MB smaller (ONNX Runtime's libraries are 40 MB), for about the same room on the phone.
+        jniLibs.useLegacyPackaging = true
     }
 }
 
+// The parity fixtures are generated assets of the instrumented test: copied before they are merged.
+tasks.matching { it.name.endsWith("AndroidTestAssets") }.configureEach { dependsOn(syncParityFixtures) }
+
 /**
  * The licence texts copied into the APK's assets/licenses rather than kept twice in the repository: the repository's
- * LICENSE (AGPL-3.0 with Zayit's §7b terms, word for word) and Lucene's LICENSE.txt and NOTICE.txt (lucene-android).
+ * LICENSE (AGPL-3.0 with Zayit's §7b terms, word for word), Lucene's LICENSE.txt and NOTICE.txt (lucene-android), and
+ * the semantic search model's notice (semantic-model/NOTICE.md: Dicta's model under CC BY 4.0, which every copy of the
+ * model carries too, as pardes-model/NOTICE.md).
  */
 abstract class LicenceAssets : DefaultTask() {
     @get:InputFile
@@ -210,6 +299,10 @@ abstract class LicenceAssets : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val luceneNotice: RegularFileProperty
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val modelNotice: RegularFileProperty
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -221,6 +314,7 @@ abstract class LicenceAssets : DefaultTask() {
         appLicence.get().asFile.copyTo(dir.resolve("Pardes-LICENSE.txt"))
         luceneLicence.get().asFile.copyTo(dir.resolve("Lucene-LICENSE.txt"))
         luceneNotice.get().asFile.copyTo(dir.resolve("Lucene-NOTICE.txt"))
+        modelNotice.get().asFile.copyTo(dir.resolve("Pardes-model-NOTICE.md"))
     }
 }
 
@@ -251,6 +345,7 @@ androidComponents {
             appLicence.set(desktopRoot.resolve("LICENSE"))
             luceneLicence.set(rootDir.resolve("lucene-android/LICENSE.txt"))
             luceneNotice.set(rootDir.resolve("lucene-android/NOTICE.txt"))
+            modelNotice.set(desktopRoot.resolve("semantic-model/NOTICE.md"))
         }
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::outputDir)
         val desktopTexts = tasks.register<DesktopTextAssets>("${variant.name}DesktopTextAssets") {

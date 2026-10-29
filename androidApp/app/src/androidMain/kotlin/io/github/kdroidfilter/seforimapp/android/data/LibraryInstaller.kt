@@ -11,6 +11,9 @@ import com.github.luben.zstd.ZstdInputStream
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.releaseReadGrants
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
+import io.github.kdroidfilter.seforimapp.features.search.semantic.VectorIndexBuilder
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackInstaller
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -728,8 +731,8 @@ class LibraryInstaller private constructor(private val context: Context) {
         if (oldDb.exists() && !oldDb.delete()) throw IOException("Cannot delete ${oldDb.name}")
         SplitDatabase.deleteOverflow(dir, LibraryStore.DB_NAME)
         // What else belonged to it: its write-ahead log must never meet the new database, nor its delta work or the
-        // version a delta from files had reached.
-        deleteInLibraryDirs(DB_SIDECARS.map { LibraryStore.DB_NAME + it } + DELTA_ITEMS + LibraryStore.LOCAL_VERSION_NAME, listOf(dir))
+        // version a delta from files had reached, nor its semantic index (the model stays, LIBRARY_NAMES).
+        deleteInLibraryDirs(DB_SIDECARS.map { LibraryStore.DB_NAME + it } + DELTA_ITEMS + LibraryStore.LOCAL_VERSION_NAME + SEMANTIC_INDEX, listOf(dir))
         // LIBRARY_ITEMS ends with the database: the library only counts as installed once everything else is in place. A
         // file is renamed over the old one (atomic); a folder (an index) replaces the old folder.
         for (name in LibraryStore.LIBRARY_ITEMS) {
@@ -753,7 +756,8 @@ class LibraryInstaller private constructor(private val context: Context) {
         runCatching {
             val chosen = store.preferredKey
             val otherCards = store.locations.filter { it.removable && it.key != chosen }.map { it.dir }
-            deleteInLibraryDirs(LIBRARY_NAMES, libraryDirs().filter { it != dir && it !in otherCards })
+            // Its semantic pack too, model and all: the search looks for it beside the library only
+            deleteInLibraryDirs(LIBRARY_NAMES + SemanticPack.FOLDERS + SemanticPackInstaller.STAGING_DIR_NAME, libraryDirs().filter { it != dir && it !in otherCards })
         }
         // Bundle files that sat in the app's own folders are not needed any more (desktop deletes its parts too).
         cleanup.forEach { runCatching { it.delete() } }
@@ -930,8 +934,15 @@ class LibraryInstaller private constructor(private val context: Context) {
         /** The delta updater's work folder and its unfinished-delta marker (desktop DatabaseCleanupUseCase: delta-cache). */
         private val DELTA_ITEMS = listOf("delta-cache", LibraryStore.DB_NAME + ".applying")
 
-        /** Everything a library consists of in its folder: its items, the database's side files and the delta work. */
-        private val LIBRARY_NAMES = LibraryStore.LIBRARY_ITEMS + DB_SIDECARS.map { LibraryStore.DB_NAME + it } + DELTA_ITEMS
+        /**
+         * The semantic search's vector index, which belongs to one library release: a full install deletes it with the
+         * other indexes, as desktop's DatabaseCleanupUseCase deletes every *.lucene, and leaves the model; Settings then
+         * offer the pack of the new library (SEMANTIC_SEARCH.md).
+         */
+        private const val SEMANTIC_INDEX = VectorIndexBuilder.DIR_NAME
+
+        /** Everything a library consists of in its folder: its items, the database's side files, the delta work, its semantic index. */
+        private val LIBRARY_NAMES = LibraryStore.LIBRARY_ITEMS + DB_SIDECARS.map { LibraryStore.DB_NAME + it } + DELTA_ITEMS + SEMANTIC_INDEX
 
         /** A file an offline install takes: bundle parts, their manifest, a .tar.zst, a (.zst) database, release_info.txt. */
         fun isInstallFileName(name: String): Boolean =

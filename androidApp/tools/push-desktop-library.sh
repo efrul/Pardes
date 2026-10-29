@@ -17,7 +17,9 @@
 #   --dry-run      print the adb commands instead of running them
 #
 # Copies seforim.db, the search indexes seforim.db.lucene/ and seforim.db.lookup.lucene/, lexical.db, catalog.pb and
-# release_info.txt (~12.2 GB) into /sdcard/Android/data/<app>/files/library/. Needs USB debugging on the phone, the app
+# release_info.txt (~12.2 GB) into /sdcard/Android/data/<app>/files/library/, and the semantic search's pack when the
+# desktop library has it (pardes-model/ and pardes.vec.lucene/, ~2.8 GB, both or neither: without them the phone's pack
+# is left as it is, and the app checks that it belongs to the library). Needs USB debugging on the phone, the app
 # installed, and Zayit closed on the computer. No root. Without root, `adb push` cannot write into another app's folder
 # (its fchown fails there), so each file is streamed through `adb shell -T` and written in place by the phone's shell:
 # no staging copy, so the phone only needs room for the library itself. An item is written as .zayit-incoming-<name> (the app deletes <name>.part when it opens) and renamed
@@ -34,6 +36,10 @@ PART=.part
 INCOMING=.zayit-incoming-
 # Indexes and small files first, the database last: the app treats the library as installed once seforim.db is there.
 ITEMS=(seforim.db.lookup.lucene seforim.db.lucene lexical.db catalog.pb release_info.txt seforim.db)
+# Pardes's semantic pack (SEMANTIC_SEARCH.md): its two folders always go together, before the database. What a pack
+# downloaded in the app left for its next start is dropped when one is copied.
+PACK=(pardes-model pardes.vec.lucene)
+PACK_STAGED=.pardes-semantic-staged
 SRC=""; SERIAL=""; NOTES=0; DRY=0; CARD=""; FORCE_SPLIT=0
 # SQLite multiplex chunks for a FAT32 card (SplitDatabase in the app): 2 GiB less 64 KiB, in 64 KiB blocks.
 CHUNK=2147418112; BLOCK=65536
@@ -72,9 +78,20 @@ for d in seforim.db.lucene seforim.db.lookup.lucene; do
   [ -d "$SRC/$d" ] || say "חסר $d: החיפוש לא יעבוד בטלפון" "warning: $d missing, search will not work on the phone"
 done
 if [ $NOTES = 1 ] && [ ! -s "$NOTES_DB" ]; then die "לא נמצא קובץ ההערות $NOTES_DB" "no notes database at $NOTES_DB"; fi
+# A flag, not a list that may be empty: macOS's bash 3.2 takes no empty array under set -u
+HAS_PACK=0
+if [ -d "$SRC/${PACK[0]}" ] && [ -d "$SRC/${PACK[1]}" ]; then
+  HAS_PACK=1
+elif [ -d "$SRC/${PACK[0]}" ] || [ -d "$SRC/${PACK[1]}" ]; then
+  say "בתיקייה יש רק אחת משתי התיקיות של החיפוש לפי משמעות, ולכן החבילה לא תועתק" "warning: only one of the semantic pack's two folders (${PACK[*]}) is in $SRC: the pack is not copied"
+fi
 TOTAL_KB=0; PRESENT=()
 for i in "${ITEMS[@]}"; do
   [ -e "$SRC/$i" ] || continue
+  # The semantic pack before the database, as the indexes
+  if [ "$i" = seforim.db ] && [ $HAS_PACK = 1 ]; then
+    for p in "${PACK[@]}"; do PRESENT+=("$p"); TOTAL_KB=$(( TOTAL_KB + $(du -sk "$SRC/$p" | cut -f1) )); done
+  fi
   PRESENT+=("$i"); TOTAL_KB=$(( TOTAL_KB + $(du -sk "$SRC/$i" | cut -f1) ))
 done
 say "מקור: $SRC ($(( TOTAL_KB / 1024 )) מ״ב)" "source: $SRC ($(( TOTAL_KB / 1024 )) MB): ${PRESENT[*]}"
@@ -138,6 +155,14 @@ if [ -n "$CARD" ] && { [ $FORCE_SPLIT = 1 ] || { [ "$FS" = vfat ] && [ "$DB_BYTE
   SPLIT=1
   say "הכרטיס מפורמט ב-FAT32: seforim.db יועתק בחלקים" "FAT32 card: seforim.db is copied in chunks (seforim.db, seforim.db001…)"
 fi
+# FAT32 takes no file of 4 GiB or more, and only the database is split: the pack's files must each be smaller
+# (pack 2's largest, its vectors, is 2.2 GB).
+if [ -n "$CARD" ] && [ "$FS" = vfat ] && [ $HAS_PACK = 1 ]; then
+  for p in "${PACK[@]}"; do
+    BIG=$(find "$SRC/$p" -type f -size +4194303k | head -1)
+    [ -z "$BIG" ] || die "בחבילה של החיפוש לפי משמעות יש קובץ של 4 ג״ב או יותר ($BIG), וכרטיס FAT32 אינו יכול להכיל אותו" "the semantic pack has a file of 4 GB or more ($BIG), which a FAT32 card cannot hold"
+  done
+fi
 
 # --- the app's folder exists only once it has run
 if [ "$(ask yes shell "[ -d $FILES ] && echo yes")" != yes ]; then
@@ -154,7 +179,9 @@ run shell "mkdir -p $LIB; chmod 777 $LIB 2>/dev/null; rm -f $LIB/.zayit-push; : 
 # --- free space: what is free now plus what the old copies take
 DF=$(ask $'Filesystem 1K-blocks Used Available Use% Mounted on\n/dev/fuse 0 0 52428800 0% /storage/emulated' shell df -k $FILES)
 AVAIL_KB=$(echo "$DF" | awk 'NR == 2 { print $4 + 0 }')
-OLD_KB=$(ask 0 shell "cd $LIB && du -sk ${ITEMS[*]} ${ITEMS[*]/#/$INCOMING} seforim.db[0-9][0-9][0-9] $INCOMING""seforim.db[0-9][0-9][0-9] 2>/dev/null; true" | awk '{ s += $1 } END { print s + 0 }')
+# The phone's pack is replaced, so counts as free, only when one is copied
+OLD_PACK=""; [ $HAS_PACK = 0 ] || OLD_PACK="${PACK[*]} ${PACK[*]/#/$INCOMING} $PACK_STAGED"
+OLD_KB=$(ask 0 shell "cd $LIB && du -sk ${ITEMS[*]} ${ITEMS[*]/#/$INCOMING} $OLD_PACK seforim.db[0-9][0-9][0-9] $INCOMING""seforim.db[0-9][0-9][0-9] 2>/dev/null; true" | awk '{ s += $1 } END { print s + 0 }')
 NEED_KB=$(( TOTAL_KB + 512 * 1024 ))
 say "פנוי במכשיר: $(( (AVAIL_KB + OLD_KB) / 1024 )) מ״ב, נדרש: $(( NEED_KB / 1024 )) מ״ב" "free on device: $(( (AVAIL_KB + OLD_KB) / 1024 )) MB (incl. the old library), needed: $(( NEED_KB / 1024 )) MB"
 [ $(( AVAIL_KB + OLD_KB )) -ge $NEED_KB ] || die "אין מספיק מקום פנוי במכשיר" "not enough free space on the device"
@@ -197,6 +224,8 @@ for i in seforim.db seforim.db-wal seforim.db-shm seforim.db-journal release_inf
 # A split database's chunks (seforim.db001…), whatever their number
 run shell "cd $LIB && rm -f seforim.db[0-9][0-9][0-9] $INCOMING""seforim.db[0-9][0-9][0-9]"
 for i in "${ITEMS[@]}"; do [ -e "$SRC/$i" ] || clear_item $i; done
+# A pack the app staged for its next start would replace the one copied now
+[ $HAS_PACK = 0 ] || clear_item $PACK_STAGED
 for i in "${PRESENT[@]}"; do
   say "מעתיק $i" "copying $i"
   clear_item $i; clear_item $i$PART; clear_item $INCOMING$i  # the old copy goes first, so its space is free for the new one
@@ -249,7 +278,7 @@ if [ -n "$CARD" ]; then
   # One library: the app would keep using the one it chose before, in the phone's storage.
   if [ "$(ask "" shell "[ -f $PHONE_LIB/seforim.db ] && echo yes")" = yes ]; then
     say "מסיר את הספרייה שבזיכרון הטלפון: פרדס ישתמש בזו שבכרטיס" "removing the library in the phone's storage: Pardes uses the card's"
-    run shell "cd $PHONE_LIB && rm -rf seforim.db seforim.db-wal seforim.db-shm seforim.db-journal seforim.db[0-9][0-9][0-9] ${ITEMS[*]} local_update_version.txt seforim.db.applying delta-cache 2>/dev/null; for i in seforim.db ${ITEMS[*]} delta-cache; do [ ! -e \$i ] || mv \$i .zayit-old-\$i-$STAMP; done; true"
+    run shell "cd $PHONE_LIB && rm -rf seforim.db seforim.db-wal seforim.db-shm seforim.db-journal seforim.db[0-9][0-9][0-9] ${ITEMS[*]} ${PACK[*]} $PACK_STAGED local_update_version.txt seforim.db.applying delta-cache 2>/dev/null; for i in seforim.db ${ITEMS[*]} ${PACK[*]} $PACK_STAGED delta-cache; do [ ! -e \$i ] || mv \$i .zayit-old-\$i-$STAMP; done; true"
   fi
 elif [ -n "$(ask "" shell "ls /storage/*/Android/data/$PKG/files/library/seforim.db 2>/dev/null | grep -v emulated; true")" ]; then
   say "שימו לב: גם בכרטיס הזיכרון יש ספרייה. אם פרדס ממשיך להשתמש בה, עברו לספרייה שבטלפון בהגדרות › ניהול נתונים › מיקום הספרייה" \

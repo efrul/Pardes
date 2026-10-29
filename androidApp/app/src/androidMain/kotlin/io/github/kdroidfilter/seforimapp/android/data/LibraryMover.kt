@@ -6,6 +6,8 @@ import android.util.Log
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.delta.DbDeltaUpdateService
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackInstaller
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -207,11 +209,16 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
         (sourceItems + LEFTOVERS.map { File(plan.source, it) }).forEach { runCatching { it.deleteRecursively() } }
     }
 
-    /** The library's items in [dir], database last, with a write-ahead log that still holds pages (it goes with the database). */
+    /**
+     * The library's items in [dir], database last, with a write-ahead log that still holds pages (it goes with the
+     * database), and the semantic pack's two folders before it: the search looks for them beside the library (desktop's
+     * LibraryLocation.NAMES), so a move that left them behind would turn the search by meaning off without a word.
+     */
     private fun items(dir: File): List<File> {
         val wal = File(dir, LibraryStore.DB_NAME + WAL).takeIf { it.isFile && it.length() > 0 }
         val main = LibraryStore.LIBRARY_ITEMS.map { File(dir, it) }.filter(File::exists)
-        return main.dropLast(1) + listOfNotNull(wal) + main.takeLast(1).filter { it.name == LibraryStore.DB_NAME }
+        val pack = SemanticPack.FOLDERS.map { File(dir, it) }.filter(File::isDirectory)
+        return main.dropLast(1) + pack + listOfNotNull(wal) + main.takeLast(1).filter { it.name == LibraryStore.DB_NAME }
     }
 
     /**
@@ -258,7 +265,8 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
     private fun leftoverBytes(dir: File): Long = targetLeftovers(dir).sumOf { item -> item.walkTopDown().filter(File::isFile).sumOf { it.length() } }
 
     private fun targetLeftovers(dir: File): List<File> {
-        val names = LibraryStore.LIBRARY_ITEMS + DB_SIDECARS.map { LibraryStore.DB_NAME + it } + LEFTOVERS + (LibraryStore.DB_NAME + APPLYING_SUFFIX)
+        val names = LibraryStore.LIBRARY_ITEMS + SemanticPack.FOLDERS + DB_SIDECARS.map { LibraryStore.DB_NAME + it } + LEFTOVERS +
+            (LibraryStore.DB_NAME + APPLYING_SUFFIX)
         val chunks = SplitDatabase.allOverflowChunks(dir, LibraryStore.DB_NAME) + SplitDatabase.allOverflowChunks(dir, LibraryStore.DB_NAME + LibraryStore.PARTIAL_SUFFIX)
         return (names.map { File(dir, it) } + names.map { staged(dir, it) }).filter(File::exists) + chunks
     }
@@ -310,8 +318,12 @@ class LibraryMover private constructor(private val app: ZayitApplication) {
         private const val APPLYING_SUFFIX = ".applying"
         private val DB_SIDECARS = listOf("-wal", "-shm", "-journal")
 
-        /** What else the old place may hold that belongs to the library there: the delta cache. */
-        private val LEFTOVERS = listOf("delta-cache")
+        /**
+         * What else the old place may hold that belongs to the library there: the delta cache, and a semantic pack staged
+         * for the next start (SemanticPackInstaller), which is not moved: the next start drops its request, the library
+         * being gone from where it was staged (PendingSemanticPack), as desktop's moves do.
+         */
+        private val LEFTOVERS = listOf("delta-cache", SemanticPackInstaller.STAGING_DIR_NAME)
 
         @Volatile
         private var instance: LibraryMover? = null

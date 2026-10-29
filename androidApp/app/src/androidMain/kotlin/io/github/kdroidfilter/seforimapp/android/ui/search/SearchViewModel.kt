@@ -338,8 +338,18 @@ class SearchViewModel(
             side(window.subList(0, at).asReversed()).asReversed() + window[at] + side(window.subList(at + 1, window.size))
         }
         val engine = runCatching { service.engine() }.getOrNull()
+        // Desktop rememberPreviewHighlights: in the found line, the search's own highlights (the passage closest in
+        // meaning, or the query's words); in the others, the words, or nothing when the search highlights by meaning
+        val byMeaning = engine != null && query.isNotBlank() && engine.highlightsByMeaning(query)
         return lines.map { line ->
-            val ranges = if (engine == null || query.isBlank()) emptyList() else engine.highlightRanges(buildAnnotatedFromHtml(line.content, PREVIEW_LAYOUT_SIZE).text, query)
+            val text = buildAnnotatedFromHtml(line.content, PREVIEW_LAYOUT_SIZE).text
+            val ranges = when {
+                engine == null || query.isBlank() -> emptyList()
+                line.id == hit.lineId -> runCatching { engine.highlights(listOf(text), query).single().ranges }
+                    .onFailure { if (it is CancellationException) throw it }.getOrElse { engine.highlightRanges(text, query) }
+                byMeaning -> emptyList()
+                else -> engine.highlightRanges(text, query)
+            }
             PreviewLine(line, ranges)
         }
     }
@@ -469,6 +479,7 @@ class SearchViewModel(
                 val results = it.results + added
                 it.copy(results = results, hasMore = page != null && !page.isLastPage, isLoadingMore = false, progressCurrent = results.size)
             }
+            refineSnippets(gen, hits)
             countTocHits(added)
         }
     }
@@ -711,6 +722,24 @@ class SearchViewModel(
                 progressCurrent = results.size,
                 progressTotal = page?.totalHits ?: 0L,
             )
+        }
+        refineSnippets(generation, hits)
+    }
+
+    /**
+     * Desktop refineSnippets: swaps in the snippets the session builds after the page is shown (the passage closest in
+     * meaning, HybridSearchEngine's), while the session of [gen] is still the current one.
+     */
+    private fun refineSnippets(gen: Int, hits: List<LineHit>) {
+        val current = session ?: return
+        if (hits.isEmpty()) return
+        viewModelScope.launch(Dispatchers.Default) {
+            val refined = runCatching { current.refinedSnippets(hits) }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+            if (refined.isNullOrEmpty()) return@launch
+            sessionMutex.withLock {
+                if (gen != generation || session !== current) return@launch
+                _state.update { state -> state.copy(results = state.results.map { r -> refined[r.lineId]?.let { r.copy(snippet = it) } ?: r }) }
+            }
         }
     }
 
