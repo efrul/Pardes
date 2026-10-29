@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.android.ui.components.ZIconButton
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
+import io.github.kdroidfilter.seforimapp.icons.MaterialSymbolsMagicButton
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -73,11 +74,21 @@ private const val FOCUS_ATTEMPTS = 4
  * The find-in-page bar (desktop core/presentation/components/FindInPageBar.kt): the field, the "3/861" counter (red
  * when nothing matches, hidden while computing), ▲ ▼ and ✕. Enter steps to the next match, Shift+Enter back, Esc
  * closes; typing again replaces the query, selected when the bar opens. Seeded by a search result, the bar counts
- * the lines the search finds in the book, as desktop's smart mode does (see [FindState.smart]); the meaning-based
- * smart mode itself needs the desktop embedding add-on, and its toggle is left out, as in community builds.
+ * the lines the search finds in the book, as desktop's smart mode does (see [FindState.smart]). [onToggleSmart] shows
+ * desktop's toggle of that mode ("חיפוש חכם לפי משמעות"), as Pardes desktop shows it with its semantic search; null
+ * leaves it out, as desktop's community build does.
  */
 @Composable
-fun FindBar(find: FindState, onQuery: (String) -> Unit, onPrevious: () -> Unit, onNext: () -> Unit, onClose: () -> Unit, compact: Boolean, modifier: Modifier = Modifier) {
+fun FindBar(
+    find: FindState,
+    onQuery: (String) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onClose: () -> Unit,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+    onToggleSmart: (() -> Unit)? = null,
+) {
     val c = Zayit.colors
     val focus = remember { FocusRequester() }
     val windowInfo = LocalWindowInfo.current
@@ -170,6 +181,9 @@ fun FindBar(find: FindState, onQuery: (String) -> Unit, onPrevious: () -> Unit, 
         }
         val button = if (compact) Modifier.size(36.dp) else Modifier
         if (!compact) Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(20.dp).background(c.divider))
+        if (onToggleSmart != null) {
+            ZIconButton(MaterialSymbolsMagicButton, "חיפוש חכם לפי משמעות", onToggleSmart, button, tint = if (find.smart) c.accent else c.textSecondary, selected = find.smart)
+        }
         // Up/down, not left/right: unambiguous in a right-to-left layout
         ZIconButton(Icons.Outlined.KeyboardArrowUp, "התוצאה הקודמת", onPrevious, button, tint = if (count == 0) c.textDisabled else c.text)
         ZIconButton(Icons.Outlined.KeyboardArrowDown, "התוצאה הבאה", onNext, button, tint = if (count == 0) c.textDisabled else c.text)

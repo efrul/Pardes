@@ -59,3 +59,6 @@
 # reached only on Android 13+. R8 moved its VarHandle methods into GroupVIntUtil, which every search loads: Android 11's
 # verifier rejected the whole class (VerifyError) and search failed. Kept, its methods stay in a class only 13+ loads.
 -keep,allowobfuscation class org.apache.lucene.util.AndroidCompatApi33 { *; }
+# ONNX Runtime (the semantic search's model): its JNI library finds the Java classes, constructors, fields and methods
+# by name (OnnxTensor, OrtException, the session's results, TensorInfo...), and its AAR brings no keep rules.
+-keep class ai.onnxruntime.** { *; }

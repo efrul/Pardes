@@ -3,9 +3,14 @@ package io.github.kdroidfilter.seforimapp.android.search
 import android.system.Os
 import android.util.Log
 import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
+import io.github.kdroidfilter.seforimapp.features.search.semantic.HybridSearchEngine
+import io.github.kdroidfilter.seforimapp.features.search.semantic.IndependentSemanticSearch
+import io.github.kdroidfilter.seforimapp.features.search.semantic.LibraryLines
+import io.github.kdroidfilter.seforimapp.features.search.semantic.VectorIndexBuilder
 import io.github.kdroidfilter.seforimapp.framework.search.AcronymFrequencyCache
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimapp.framework.search.RepositorySnippetSourceProvider
+import io.github.kdroidfilter.seforimlibrary.search.LineHit
 import io.github.kdroidfilter.seforimlibrary.search.LuceneSearchEngine
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import io.github.kdroidfilter.seforimlibrary.search.SearchFacets
@@ -19,9 +24,10 @@ import kotlinx.coroutines.withContext
 
 /**
  * The desktop search on the installed library: the same prebuilt Lucene indexes and dictionary that the desktop app
- * keeps next to seforim.db (wired like the 0.6.10 AppCoreBindings provideSearchEngine and
- * provideLuceneLookupSearchService, as the community build: lexical only, no semantic hybrid). Nothing is built on the
- * device; when the files are missing, [engine] and [lookup] return null and the UI explains how to get them.
+ * keeps next to seforim.db (wired like Pardes desktop's AppCoreBindings provideSearchEngine, withSemanticSearch and
+ * provideLuceneLookupSearchService), with Pardes's semantic search fused in when its pack is beside the library and the
+ * device runs it ([SemanticSearchSupport]). Nothing is built on the device; when the files are missing, [engine] and
+ * [lookup] return null and the UI explains how to get them.
  */
 class SearchService(private val store: LibraryStore) {
     data class Part(val name: String, val present: Boolean, val bytes: Long)
@@ -81,7 +87,7 @@ class SearchService(private val store: LibraryStore) {
             val engine = if (isIndex(text)) {
                 // The repository is looked up per page: the installer closes and reopens it when it replaces the library.
                 val snippets = SnippetProvider { lines -> RepositorySnippetSourceProvider(store.repository()).getSnippetSources(lines) }
-                LuceneSearchEngine(text.toPath(), snippets, dictionaryPath = File(dir, DICTIONARY).toPath())
+                withSemanticSearch(LuceneSearchEngine(text.toPath(), snippets, dictionaryPath = File(dir, DICTIONARY).toPath()), text)
             } else {
                 null
             }
@@ -100,11 +106,42 @@ class SearchService(private val store: LibraryStore) {
         }
     }
 
-    /** Changes when any search file is replaced: index commits by name, databases by inode. */
+    /**
+     * Desktop's withSemanticSearch: [lexical] fused with Pardes's semantic search, which loads its model when the first
+     * search asks for it and searches by the words alone without its pack ([HybridSearchEngine]); [lexical] itself on a
+     * device that cannot run the model. A line only the meaning finds is read from the library as desktop reads it.
+     */
+    private fun withSemanticSearch(lexical: LuceneSearchEngine, indexDir: File): SearchEngine {
+        if (!SemanticSearchSupport.supported) return lexical
+        val titles = HashMap<Long, String>()
+        return HybridSearchEngine(lexical, indexDir.toPath(), LibraryLines { store.driver() }) { lineId, query ->
+            val repository = store.repository()
+            repository.getLine(lineId)?.let { line ->
+                // Desktop reads getBook(id).title for each line found: its row and four more tables. The row alone, once a book
+                val title = synchronized(titles) { titles[line.bookId] }
+                    ?: repository.getBookCore(line.bookId)?.title.orEmpty().also { found -> synchronized(titles) { titles[line.bookId] = found } }
+                LineHit(
+                    bookId = line.bookId,
+                    bookTitle = title,
+                    lineId = lineId,
+                    lineIndex = line.lineIndex,
+                    snippet = lexical.buildSnippet(line.content, query, 5),
+                    score = 0f,
+                    rawText = line.content,
+                )
+            }
+        }
+    }
+
+    /** Changes when any search file is replaced: index commits by name, databases by inode, the semantic pack's model too. */
     private fun libraryKey(dir: File): String {
         fun segments(name: String) = File(dir, name).list()?.filter { it.startsWith("segments_") }?.sorted()?.joinToString(",").orEmpty()
         fun inode(file: File) = runCatching { Os.stat(file.path).st_ino }.getOrDefault(-1L)
-        return listOf(dir.path, segments(TEXT_INDEX), segments(LOOKUP_INDEX), inode(File(dir, DICTIONARY)), inode(store.databaseFile)).joinToString("|")
+        val model = File(dir, "${IndependentSemanticSearch.OPEN_MODEL_DIR_NAME}/pardes-model.json")
+        return listOf(
+            dir.path, segments(TEXT_INDEX), segments(LOOKUP_INDEX), inode(File(dir, DICTIONARY)), inode(store.databaseFile),
+            segments(VectorIndexBuilder.DIR_NAME), inode(model),
+        ).joinToString("|")
     }
 
     companion object {
@@ -128,7 +165,8 @@ class SearchService(private val store: LibraryStore) {
 suspend fun SearchEngine.countFacets(query: String, near: Int, bookIds: Collection<Long>? = null, baseBookOnly: Boolean = false): SearchFacets? =
     withContext(Dispatchers.IO) {
         val job = coroutineContext.job
-        val engine = this@countFacets
+        // The facets are the words' alone, the hybrid's too (HybridSearchEngine.computeFacets)
+        val engine = (this@countFacets as? HybridSearchEngine)?.lexicalEngine ?: this@countFacets
         if (engine is LuceneSearchEngine) {
             engine.computeFacetsCancellable(query, near, bookIds = bookIds, baseBookOnly = baseBookOnly) { !job.isActive }
         } else {

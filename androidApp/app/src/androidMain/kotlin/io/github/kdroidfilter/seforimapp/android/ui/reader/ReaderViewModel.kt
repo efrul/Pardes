@@ -71,9 +71,11 @@ data class AltTocUi(
  * The find-in-page session (desktop AppSettings find bar of the tab + BookContentView findResults): [results] are
  * those of [resultsQuery] (null while computing), [current] the match the arrows reached.
  *
- * [smart]: the bar holds the query of the search result that opened the book (desktop seeds the bar in smart mode):
- * it finds the lines the search finds, lit with the search's highlighting, one match each ([findSearchMatchesInBook]),
- * not the literal phrase. Typing another query is the literal find again. [resultsSmart] is the mode of [results].
+ * [smart]: desktop's smart mode (AppSettings.findSmartMode), on when a search result opened the book with its query in
+ * the bar: it finds the lines the search finds, one match each, lit with the search's highlighting, not the literal
+ * phrase ([findSmartMatchesInBook]); by meaning ([byMeaning]) where the semantic search's pack is installed, as Pardes
+ * desktop's. Where the bar offers desktop's toggle for it ([ReaderViewModel.setFindToggle]) it stays on until turned off;
+ * elsewhere typing another query is the literal find again. [resultsSmart] is the mode of [results].
  */
 data class FindState(
     val open: Boolean = false,
@@ -84,6 +86,7 @@ data class FindState(
     val focusRequest: Int = 0,
     val smart: Boolean = false,
     val resultsSmart: Boolean = false,
+    val byMeaning: Boolean = false,
 ) {
     /** The query highlighted in the text and the panes: the typed one, from 2 letters, while the bar is open. */
     val activeQuery: String get() = if (open && query.trim().length >= 2) query else ""
@@ -224,6 +227,7 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
     private var detailsRequested = false
 
     private var findJob: Job? = null
+    private var findToggleOffered = false
     private var tocSearchJob: Job? = null
     private var bookToc: Deferred<List<TocEntry>?>? = null
     private var noteDraftBaseline: Long? = null
@@ -983,10 +987,28 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         recomputeFind()
     }
 
+    /**
+     * Whether the bar shows desktop's smart-mode toggle (Pardes desktop's, with its semantic search): then the mode is
+     * the user's, else the bar is smart while it holds the search's query. Set by the screen: the toggle needs a
+     * 64-bit device and the room of a phone of 300dp.
+     */
+    fun setFindToggle(offered: Boolean) {
+        if (offered == findToggleOffered) return
+        findToggleOffered = offered
+        if (_state.value.find.open) recomputeFind()
+    }
+
+    /** Desktop's toggleFindSmartMode: the smart mode on or off, from the viewport again. */
+    fun toggleFindSmart() {
+        _state.update { it.copy(find = it.find.copy(smart = !it.find.smart, current = null)) }
+        recomputeFind()
+    }
+
     private fun recomputeFind() {
         val searchQuery = _state.value.searchQuery
-        // Smart while the bar holds the search's query as it came (desktop: smart mode set with the seeded query)
-        _state.update { it.copy(find = it.find.copy(smart = searchQuery != null && it.find.query == searchQuery)) }
+        // Without the toggle, smart while the bar holds the search's query as it came (desktop: smart mode set with
+        // the seeded query), as nothing else could turn it off
+        if (!findToggleOffered) _state.update { it.copy(find = it.find.copy(smart = searchQuery != null && it.find.query == searchQuery)) }
         val f = _state.value.find
         val query = f.query
         val smart = f.smart
@@ -1006,9 +1028,13 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         findJob = viewModelScope.launch {
             if (!smart) delay(FIND_DEBOUNCE_MS) // let the typing settle before querying the index
             val engine = runCatching { app.search.engine() }.getOrNull()
+            // By meaning, a line is lit only once known to be found (desktop's semanticFind ids); by its words, every
+            // line is lit as the results would be until then
+            val byMeaning = smart && engine?.highlightsByMeaning(query) == true
+            _state.update { if (it.find.query == query && it.find.smart == smart) it.copy(find = it.find.copy(byMeaning = byMeaning)) else it }
             val matches = runCatching {
                 if (smart) {
-                    engine?.let { findSearchMatchesInBook(it, repository::getLinesByIds, bookId, query) } ?: BookFindMatches.Empty
+                    engine?.let { findSmartMatchesInBook(it, repository::getLinesByIds, bookId, query) } ?: BookFindMatches.Empty
                 } else {
                     findInBook(engine, repository::getLinesByIds, { a, b -> repository.getLines(bookId, a, b) }, bookId, query, narrowing)
                 }
@@ -1045,9 +1071,16 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         }
     }
 
-    /** The search's words in [text] (the engine's rule, as the results highlight them), off the main thread. */
+    /**
+     * What the search highlights of [query] in a found line's [text] (desktop LineItem's smartRanges: the engine's
+     * rule, as the results highlight it): the passage closest in meaning where the semantic search answers, else the
+     * query's words. Off the main thread.
+     */
     suspend fun searchRanges(text: String, query: String): List<IntRange> = withContext(Dispatchers.IO) {
-        runCatching { app.search.engine()?.highlightRanges(text, query) }.getOrNull().orEmpty()
+        runCatching { app.search.engine()?.highlights(listOf(text), query)?.single()?.ranges }
+            .onFailure { if (it is CancellationException) throw it }
+            .getOrNull()
+            .orEmpty()
     }
 
     /** Lines read from the DB, for selections spanning lines the list did not compose (copy with source, report). */

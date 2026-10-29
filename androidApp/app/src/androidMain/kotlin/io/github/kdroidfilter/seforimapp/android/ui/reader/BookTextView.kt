@@ -204,11 +204,11 @@ fun BookText(
     }
 
     val searchRanges: suspend (String, String) -> List<IntRange> = remember(vm) { { text, q -> vm.searchRanges(text, q) } }
-    // Desktop's smart find on a search result, while the bar holds its query: the search's highlighting on the lines
-    // the find counts (all of them until those are known), and not the literal query's (desktop LineItem
-    // highlightQuery/smartQuery); typing another query is the literal find
+    // Desktop's smart find (on with a search result's query): the search's highlighting on the lines the find counts,
+    // and not the literal query's (desktop LineItem highlightQuery/smartQuery). By its words all the lines are lit until
+    // those are known; by meaning none, as each would light its passage closest to the query
     val smart = state.find.open && state.find.smart
-    val searchQuery = state.searchQuery?.takeIf { smart }
+    val searchQuery = state.find.query.takeIf { smart && it.trim().length >= 2 }
     val smartLines = state.find.smartLines
     val findQuery = if (smart) "" else state.find.activeQuery
     val current = state.find.current
@@ -303,7 +303,7 @@ fun BookText(
                                 notes = lineNotes,
                                 findQuery = findQuery,
                                 currentMatchOrdinal = current?.takeIf { it.lineId == line.id }?.ordinal,
-                                searchQuery = searchQuery?.takeIf { smartLines == null || smartLines.hasLine(line.lineIndex, line.id) },
+                                searchQuery = searchQuery?.takeIf { smartLines?.hasLine(line.lineIndex, line.id) ?: !state.find.byMeaning },
                                 searchRanges = searchRanges,
                                 onTap = tap,
                                 modifier = Modifier.padding(vertical = LineVerticalPadding),

@@ -52,6 +52,11 @@
             android:name=".delta.LibraryDeltaService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <!-- The semantic search's pack (SemanticPackManager): its download and unpacking in the foreground. -->
+        <service
+            android:name=".search.SemanticPackService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- The app's own update (update/AppUpdater): the APK's download, PackageInstaller's answer, and the new version
              saying it was installed. -->
