@@ -13,6 +13,7 @@ import io.github.kdroidfilter.seforimapp.android.data.LibraryStore
 import io.github.kdroidfilter.seforimapp.android.data.ReadingHistory
 import io.github.kdroidfilter.seforimapp.android.data.UserDataStore
 import io.github.kdroidfilter.seforimapp.android.search.SearchService
+import io.github.kdroidfilter.seforimapp.android.search.SemanticSearchSupport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -64,6 +65,7 @@ class ZayitApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        SemanticSearchSupport.init(this)
         libraryStore = LibraryStore(this)
         prefs = AppPrefs(this)
         registerActivityLifecycleCallbacks(ForegroundTracker())
