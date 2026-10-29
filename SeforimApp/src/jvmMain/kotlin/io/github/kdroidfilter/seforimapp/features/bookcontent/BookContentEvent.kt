@@ -212,6 +212,21 @@ sealed interface BookContentEvent {
 
     data object ToggleCommentatorsList : BookContentEvent
 
+    // A commentator out of the commentaries pane, into a pane of its own (DetachedCommentators)
+    data class DetachCommentator(
+        val name: String,
+    ) : BookContentEvent
+
+    // Back from its own pane into the commentaries pane
+    data class ReattachCommentator(
+        val name: String,
+    ) : BookContentEvent
+
+    // A split-off commentator's pane closed from the dock: its commentator goes back to the commentaries pane
+    data class CloseCommentatorPane(
+        val slot: Int,
+    ) : BookContentEvent
+
     data class OpenCommentaryTarget(
         val bookId: Long,
         val lineId: Long?,

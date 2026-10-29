@@ -356,6 +356,13 @@
     <string name="no_commentaries_for_line">אין מפרשים זמינים לפסקה זו</string>
     <string name="no_commentaries_from_selected">אין מפרשים זמינים מהמפרשים שנבחרו לשורה זו</string>
     <string name="select_at_least_one_commentator">אנא בחר לפחות מפרש אחד מהרשימה</string>
+    <string name="commentators_select_all">כל המפרשים</string>
+    <string name="commentator_pane">מפרש</string>
+    <string name="commentator_detach">פיצול לחלונית נפרדת</string>
+    <string name="commentator_reattach">החזרה לחלונית המפרשים</string>
+    <string name="commentator_detached_hint">בחלונית נפרדת. לחיצה מחזירה לכאן</string>
+    <string name="commentator_not_on_line">אין פירוש של %1$s לשורה זו</string>
+    <string name="commentators_all_detached">המפרשים שנבחרו מוצגים בחלוניות נפרדות</string>
     <string name="select_line_for_sources">בחר שורה כדי לצפות במקורות</string>
     <string name="no_sources_for_line">אין מקורות זמינים לשורה זו</string>
     <string name="references">מראי מקומות</string>

@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentStateManager
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.MarkedRange
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.Providers
@@ -689,6 +690,21 @@ class BookContentViewModel(
                 BookContentEvent.ToggleCommentatorsList ->
                     stateManager.updateContent {
                         copy(isCommentatorsListVisible = !isCommentatorsListVisible)
+                    }
+
+                is BookContentEvent.DetachCommentator ->
+                    stateManager.updateContent {
+                        copy(detachedCommentators = DetachedCommentators.detach(detachedCommentators, event.name))
+                    }
+
+                is BookContentEvent.ReattachCommentator ->
+                    stateManager.updateContent {
+                        copy(detachedCommentators = DetachedCommentators.reattach(detachedCommentators, event.name))
+                    }
+
+                is BookContentEvent.CloseCommentatorPane ->
+                    stateManager.updateContent {
+                        copy(detachedCommentators = DetachedCommentators.clear(detachedCommentators, event.slot))
                     }
 
                 is BookContentEvent.SelectedCommentatorsChanged ->

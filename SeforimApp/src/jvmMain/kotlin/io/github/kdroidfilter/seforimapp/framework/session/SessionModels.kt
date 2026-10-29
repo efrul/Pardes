@@ -114,6 +114,8 @@ data class BookContentPersistedState(
     val previousTargumSplitPosition: Float = 0.8f,
     // Appended last: the session is ProtoBuf, numbered by declaration order
     val showReferences: Boolean = false,
+    // The commentators shown in panes of their own, by slot ("" for a free one)
+    val detachedCommentators: List<String> = emptyList(),
 )
 
 // -- Virtual desktops persistence models --

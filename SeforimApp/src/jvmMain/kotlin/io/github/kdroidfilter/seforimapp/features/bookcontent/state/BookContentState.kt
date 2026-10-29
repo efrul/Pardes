@@ -228,6 +228,8 @@ data class ContentState(
     val commentariesPageIndex: Int = 0,
     // Visibility of the commentators selection sidebar inside the commentaries pane
     val isCommentatorsListVisible: Boolean = true,
+    // The commentators shown in panes of their own, by slot (DetachedCommentators)
+    val detachedCommentators: List<String> = emptyList(),
     // Filters selected in UI (for current line)
     val selectedCommentatorIds: Set<Long> = emptySet(),
     val selectedTargumSourceIds: Set<Long> = emptySet(),
