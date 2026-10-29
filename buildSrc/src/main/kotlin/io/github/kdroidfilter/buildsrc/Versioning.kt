@@ -32,7 +32,7 @@ object Versioning {
             return null
         }
         val tag = ref.removePrefix("refs/tags/")
-        return tag.removePrefix("v")
+        return tag.asVersion()
     }
 
     private fun resolveFromGitTag(project: Project): String? =
@@ -44,8 +44,7 @@ object Versioning {
             }.standardOutput.asText
             .get()
             .trim()
-            .removePrefix("v")
-            .takeIf { it.isNotEmpty() }
+            .asVersion()
 
     private fun resolveFromGitHubApi(): String? {
         val repository = System.getenv("GITHUB_REPOSITORY") ?: return null
@@ -70,7 +69,7 @@ object Versioning {
                 }
 
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
-                extractFirstTagName(body)?.removePrefix("v")
+                extractFirstTagName(body)?.asVersion()
             }
         } catch (_: Exception) {
             null
@@ -93,6 +92,10 @@ object Versioning {
 
         return json.substring(firstQuote + 1, secondQuote)
     }
+
+    // A tag names a version only when it is one, after an optional "v": a fork's other tags (Pardes's android-*,
+    // desktop-* and semantic-*) do not, and Nucleus refuses to configure with them
+    private fun String.asVersion(): String? = removePrefix("v").takeIf { it.firstOrNull()?.isDigit() == true }
 
     // Simple extension to ensure HttpURLConnection is closed
     private inline fun <T> HttpURLConnection.use(block: (HttpURLConnection) -> T): T {
