@@ -327,6 +327,8 @@ private suspend fun PointerInputScope.selectionGestures(selection: ListSelection
     val clicks = Clicks()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        selection.presses++
+        selection.plainTap = false
         // A mouse's selection has no handles; a second or third tap on a short word is a click, not a handle's drag
         val handle = if (down.type == PointerType.Mouse || clicks.continues(down, viewConfiguration)) -1 else selection.handleAt(down.position)
         when {
@@ -426,9 +428,9 @@ private suspend fun AwaitPointerEventScope.touchSelect(selection: ListSelection,
 }
 
 /**
- * A tap or click, the [count]th in a row: the first ends a selection and stays the line's tap (as desktop's click),
- * the second selects the word, the third the whole text. (Shift+click extends nothing, as on desktop, whose
- * SafeSelectionContainer takes it: it could reach over lines a jump never loaded.)
+ * A tap or click, the [count]th in a row: the first ends a selection and stays the line's tap (as desktop's click; one
+ * that ended none is a [ListSelection.plainTap]), the second selects the word, the third the whole text. (Shift+click
+ * extends nothing, as on desktop, whose SafeSelectionContainer takes it: it could reach over lines a jump never loaded.)
  */
 private fun tapped(selection: ListSelection, down: PointerInputChange, area: AreaHolder, count: Int) {
     val coordinates = area.coordinates
@@ -438,6 +440,7 @@ private fun tapped(selection: ListSelection, down: PointerInputChange, area: Are
         count == 2 -> selection.wordAt(point)
         else -> selection.unitAt(point)
     }
+    selection.plainTap = count == 1 && !selection.hasSelection
     if (range != null) selection.begin(range.first, range.second, touch = down.type != PointerType.Mouse) else selection.clear()
 }
 

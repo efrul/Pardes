@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.UserHighlight
@@ -40,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -61,6 +64,8 @@ fun BookText(
     modifier: Modifier = Modifier,
     /** The find bar spans the text's top (phone), not floats at its corner (tablet). */
     findBarBand: Boolean = true,
+    /** Takes a tap on the line already selected, which would only select it again (the phone hides or shows its bars). */
+    onSelectedLineTap: (() -> Unit)? = null,
     overlay: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit = {},
 ) {
     val app = LocalContext.current.applicationContext as ZayitApplication
@@ -105,6 +110,9 @@ fun BookText(
         }
     }
     val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val doubleTapMillis = LocalViewConfiguration.current.doubleTapTimeoutMillis
+    val selectedLineTap by rememberUpdatedState(onSelectedLineTap)
     val findOpen by rememberUpdatedState(state.find.open)
     val locator = remember { FindMatchLocator() }
     val noteLocator = remember { FindMatchLocator() }
@@ -276,9 +284,25 @@ fun BookText(
                     val headingsInBar = selected && prevSelected && headings.isNotEmpty()
                     val barColor = if (thick) c.accent else c.panelBorder
                     val marked = state.markedRange?.contains(line.lineIndex) == true
+                    val tap: (Boolean) -> Unit = { ctrl ->
+                        when {
+                            ctrl -> vm.toggleLine(line)
+                            // The line already selected, by a tap that did nothing else: the reader's own action, once no
+                            // other press follows within a double tap's time (a double tap selects a word, which the
+                            // phone's bars going would move from under the finger)
+                            selectedLineTap != null && textSelection.plainTap && vm.state.value.tapKeepsSelection(line.id) -> {
+                                val presses = textSelection.presses
+                                scope.launch {
+                                    delay(doubleTapMillis)
+                                    if (textSelection.presses == presses) selectedLineTap?.invoke()
+                                }
+                            }
+                            else -> vm.onLineTap(line)
+                        }
+                    }
                     if (headings.isNotEmpty() && !headingsInBar) {
                         Column(Modifier.padding(start = SelectionBarWidth + 12.dp, end = 8.dp)) {
-                            headings.forEach { h -> AltHeading(h.text, h.level, textSize) { vm.onLineTap(line) } }
+                            headings.forEach { h -> AltHeading(h.text, h.level, textSize) { tap(false) } }
                         }
                     }
                     Row(
@@ -289,8 +313,7 @@ fun BookText(
                     ) {
                         Spacer(Modifier.width(SelectionBarWidth + 8.dp))
                         Column(Modifier.weight(1f)) {
-                            if (headingsInBar) headings.forEach { h -> AltHeading(h.text, h.level, textSize) { vm.onLineTap(line) } }
-                            val tap: (Boolean) -> Unit = { ctrl -> if (ctrl) vm.toggleLine(line) else vm.onLineTap(line) }
+                            if (headingsInBar) headings.forEach { h -> AltHeading(h.text, h.level, textSize) { tap(false) } }
                             val lineHighlights: List<UserHighlight> = highlightsByLine[line.id] ?: emptyList()
                             val lineNotes: List<UserNote> = notesByLine[line.id] ?: emptyList()
                             val unit = index * LINE_UNITS

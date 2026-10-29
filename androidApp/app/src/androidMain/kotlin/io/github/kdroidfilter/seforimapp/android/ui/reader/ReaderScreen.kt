@@ -5,9 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -23,6 +27,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,11 +37,15 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -174,7 +184,8 @@ private const val TAG = "Zayit"
  * and notes on the start side; on the end side the places that refer to the line, the targumim and the book details,
  * columns side by side in the rail's order; the sources beside the commentaries under the text,
  * the breadcrumb at the bottom, the rails on both edges, every divider draggable. A phone shows one pane at a time
- * under the text with a drag handle, a drawer for the TOC and the book tree, and a bottom toolbar. Outside a tab (the
+ * under the text with a drag handle, a drawer for the TOC and the book tree, and a bottom toolbar; a tap on the line
+ * already selected hides the toolbar and the top bar, and the next one (or Back) brings them back. Outside a tab (the
  * tablet search preview, [LocalTabSession] null) it records nothing and reports nothing.
  */
 @OptIn(FlowPreview::class)
@@ -200,6 +211,8 @@ fun ReaderScreen(
     val bookDetailsPref by readerPrefs.bookDetails.collectAsState()
     var notesPage by remember { mutableStateOf(false) }
     var breadcrumbSheet by remember { mutableStateOf(false) }
+    // Phone: a tap on the line already selected hides the top bar and the toolbar, and the next one brings them back
+    var barsHidden by rememberSaveable { mutableStateOf(false) }
     val current by rememberUpdatedState(state)
 
     LaunchedEffect(state.book?.title) { state.book?.title?.let { nav.setTitle(it) } }
@@ -324,13 +337,14 @@ fun ReaderScreen(
     }
 
     // Back: an open drawer (its handler is composed when it opens, so it is the newest), a text selection
-    // (SelectableArea's own handler, registered later than these), the find bar, the multi-selection, then the panes.
-    // A search result's seeded find bar the user never asked for nor edited leaves Back to the shell, which returns to
-    // the results.
+    // (SelectableArea's own handler, registered later than these), the find bar, the multi-selection, the panes, then
+    // the phone's hidden bars come back. A search result's seeded find bar the user never asked for nor edited leaves
+    // Back to the shell, which returns to the results.
     val findBack = state.find.open && (state.find.focusRequest > 0 || state.find.query != state.searchQuery)
     BackHandler(enabled = findBack) { vm.closeFind() }
     BackHandler(enabled = !findBack && state.multiSelect) { vm.setMultiSelect(false) }
     BackHandler(enabled = !wide && !findBack && !state.multiSelect && state.phonePane != null) { vm.closePhonePane() }
+    BackHandler(enabled = !wide && !findBack && !state.multiSelect && state.phonePane == null && barsHidden) { barsHidden = false }
 
     // The reader takes the keys unless the find bar asked for the cursor (a search result's seeded bar did not)
     LaunchedEffect(session?.isFront, state.find.open) {
@@ -370,6 +384,7 @@ fun ReaderScreen(
             findBarBand = !wide,
             onZoom = { factor -> app.prefs.setTextSize(textSize * factor) },
             modifier = mod,
+            onSelectedLineTap = if (wide) null else ({ barsHidden = !barsHidden }),
         ) {
             if (state.multiSelect) MultiSelectChip(state.selectedLineIds.size, Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) { vm.setMultiSelect(false) }
             if (state.find.open) {
@@ -397,6 +412,7 @@ fun ReaderScreen(
             } else {
                 PhoneReader(
                     vm, state, textSize, library, nav, paneActions, topBar, drawerState, drawerTab, { drawerTab = it }, text,
+                    barsHidden = barsHidden,
                     onNotesPage = { notesPage = true },
                     onBreadcrumb = { breadcrumbSheet = true },
                     // The title bar's "דף הבית" (desktop replaceCurrentTabWithNewTabId): Home replaces the book in this tab
@@ -942,6 +958,8 @@ private fun PhoneReader(
     drawerTab: Int,
     setDrawerTab: (Int) -> Unit,
     text: @Composable (Modifier) -> Unit,
+    /** The top bar and the toolbar hidden, all the room for the text (a tap on the line selected). */
+    barsHidden: Boolean,
     onNotesPage: () -> Unit,
     onBreadcrumb: () -> Unit,
     onHome: () -> Unit,
@@ -989,23 +1007,44 @@ private fun PhoneReader(
         // toolbar steps aside meanwhile (edge-to-edge: nothing else makes room for it)
         val typing = WindowInsets.isImeVisible
         Column(Modifier.fillMaxSize().background(c.ground).imePadding()) {
-            topBar(
-                // The title the book was opened with, until the book is read
-                state.book?.title ?: vm.openedTitle,
-                subtitle.ifBlank { null },
-                { ZIconButton(Icons.Outlined.Menu, "תוכן עניינים", { setDrawerTab(0); scope.launch { drawerState.open() } }) },
-                // Very narrow phones (Jelly Star): find moves into the toolbar's "עוד" so the title stays readable
-                if (narrowPhone) null else ({ ZIconButton(Icons.Outlined.FindInPage, "חפש בתוך העמוד", { vm.openFind() }) }),
-            )
+            // The bars slide away and back between the system bars' strips, which keep their room: the status bar stays
+            // on the title bar's colours, and under the navigation bar the toolbar's colour gives way to the ground
+            Box(Modifier.fillMaxWidth().background(c.titleBar).windowInsetsTopHeight(WindowInsets.statusBars))
+            AnimatedVisibility(
+                visible = !barsHidden,
+                modifier = Modifier.consumeWindowInsets(WindowInsets.statusBars),
+                enter = expandVertically(expandFrom = Alignment.Bottom),
+                exit = shrinkVertically(shrinkTowards = Alignment.Bottom),
+            ) {
+                topBar(
+                    // The title the book was opened with, until the book is read
+                    state.book?.title ?: vm.openedTitle,
+                    subtitle.ifBlank { null },
+                    { ZIconButton(Icons.Outlined.Menu, "תוכן עניינים", { setDrawerTab(0); scope.launch { drawerState.open() } }) },
+                    // Very narrow phones (Jelly Star): find moves into the toolbar's "עוד" so the title stays readable
+                    if (narrowPhone) null else ({ ZIconButton(Icons.Outlined.FindInPage, "חפש בתוך העמוד", { vm.openFind() }) }),
+                )
+            }
             PhoneBody(vm, state, textSize, actions, text, onOpenAuthor, onOpenBookAt, typing, Modifier.weight(1f))
-            if (!typing) PhoneToolbar(
-                vm, state, textSize,
-                onHome = onHome,
-                onBooks = { setDrawerTab(1); scope.launch { drawerState.open() } },
-                onFind = if (narrowPhone) ({ vm.openFind() }) else null,
-                onNotesPage = onNotesPage,
-                onBreadcrumb = onBreadcrumb,
-            )
+            if (!typing) {
+                AnimatedVisibility(
+                    visible = !barsHidden,
+                    modifier = Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)),
+                    enter = expandVertically(expandFrom = Alignment.Top),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top),
+                ) {
+                    PhoneToolbar(
+                        vm, state, textSize,
+                        onHome = onHome,
+                        onBooks = { setDrawerTab(1); scope.launch { drawerState.open() } },
+                        onFind = if (narrowPhone) ({ vm.openFind() }) else null,
+                        onNotesPage = onNotesPage,
+                        onBreadcrumb = onBreadcrumb,
+                    )
+                }
+                val navigationStrip by animateColorAsState(if (barsHidden) c.ground else c.panel, label = "navigation strip")
+                Box(Modifier.fillMaxWidth().background(navigationStrip).windowInsetsBottomHeight(WindowInsets.navigationBars))
+            }
         }
     }
 }
