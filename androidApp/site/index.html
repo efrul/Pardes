@@ -325,6 +325,9 @@ pre {
 .bundle .size { color: var(--muted); font-variant-numeric: tabular-nums; }
 .bundle .status { font-size: 0.92rem; color: var(--muted); }
 .bundle .btn { justify-self: start; min-height: 2.5rem; font-size: 0.95rem; }
+.dl-row .bundle { grid-column: 1 / -1; }
+.dl-row .bundle:not(:has(li)):has(.status:empty) { display: none; }
+.desk-steps { margin-top: 1.6rem; }
 
 .extras { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: 1rem; }
 .extra { display: grid; gap: 0.75rem; align-content: start; padding: 1.3rem 1.3rem 1.4rem; border-radius: 16px; background: var(--sheet); border: 1px solid var(--rule); min-width: 0; scroll-margin-top: 1rem; }
@@ -448,6 +451,7 @@ footer p { max-width: 52rem; }
     <span class="chip">מבוסס על זית</span>
     <nav class="topnav" aria-label="בעמוד הזה">
       <a href="#install">התקנה</a>
+      <a href="#desktop">למחשב</a>
       <a href="#library">הספרייה</a>
       <a href="#downloads">הורדות</a>
       <a href="#changelog">מה חדש</a>
@@ -458,7 +462,7 @@ footer p { max-width: 52rem; }
     <div class="pitch">
       <p class="eyebrow">לאנדרואיד 8.0 ומעלה</p>
       <h1 id="title"><span class="mark">פרדס</span><span class="tag">ארון ספרים תורני בטלפון ובטאבלט</span></h1>
-      <p class="lead">אלפי ספרים, מהתנ״ך והגמרא ועד ההלכה, החסידות והשו״ת, עם המפרשים, התרגומים והקישורים שביניהם. החיפוש עובר על כל הספרייה בתוך הטלפון, גם בלי חיבור לרשת, ועם חבילה שמורידים בנפרד גם לפי משמעות. יש בו גם זמני היום, לוח עברי, מעגל השנה ווידג'טים למסך הבית.</p>
+      <p class="lead">אלפי ספרים, מהתנ״ך והגמרא ועד ההלכה, החסידות והשו״ת, עם המפרשים, התרגומים והקישורים שביניהם. החיפוש עובר על כל הספרייה בתוך הטלפון, גם בלי חיבור לרשת, וגם לפי משמעות, עם קבצים שמורידים בנפרד. יש בו גם זמני היום, לוח עברי, מעגל השנה ווידג'טים למסך הבית.</p>
     </div>
 
       <div class="get" role="region" aria-label="הורדת פרדס">
@@ -523,7 +527,7 @@ footer p { max-width: 52rem; }
           <h3>חיפוש לפי משמעות <span class="chip">מגרסה 0.6.0</span></h3>
           <p>פרדס מוצא גם שורות שאומרות את מה שחיפשתם במילים אחרות. ל"לאהוב את החבר כמו את עצמך" החיפוש לפי המילים לא מוצא כלום בספרי היסוד, והחיפוש לפי משמעות מביא ראשון את "ואהבת לרעך כמוך". השורות האלה משתלבות בתוצאות של החיפוש הרגיל, ובכל שורה מודגש הקטע הקרוב ביותר למה שחיפשתם.</p>
           <p>בתוך ספר, הכפתור <b>חיפוש חכם לפי משמעות</b> שבשורת החיפוש מוצא בספר את 60 השורות הקרובות ביותר במשמעות למה שהקלדתם.</p>
-          <p>זה המודל הפתוח של דיקטה, שאומן על הקישורים שבספרייה, כמו בפרדס למחשב. הוא רץ בתוך הטלפון, בלי רשת, ומגיע בחבילה שמורידים בנפרד. <a href="#lib-meaning">איך מתקינים אותה</a></p>
+          <p>זה המודל הפתוח של דיקטה, שאומן על הקישורים שבספרייה, כמו בפרדס למחשב. הוא רץ בתוך הטלפון, בלי רשת, ומגיע בשני קבצים שמורידים בנפרד, המודל והאינדקס. <a href="#lib-meaning">איך מתקינים אותם</a></p>
         </div>
         <div class="devices pair">
           <div class="device"><img src="img/app/meaning.webp" width="540" height="1200" loading="lazy" alt="תוצאות החיפוש ׳לאהוב את החבר כמו את עצמך׳: ראשון ׳ואהבת לרעך כמוך׳, ובכל שורה מודגש הקטע הקרוב במשמעות"></div>
@@ -599,6 +603,36 @@ footer p { max-width: 52rem; }
       <h3 id="updates-title">עדכונים</h3>
       <p>מגרסה 0.3.0 פרדס מתעדכן מתוכו. כשיוצאת גרסה חדשה הוא מודיע עליה, בסרגל העליון וב<b>הגדרות › כללי</b>, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. הספרייה וההגדרות נשמרות. בפעם הראשונה אנדרואיד מבקש לאשר לפרדס להתקין אפליקציות. כל הגרסאות חתומות באותו מפתח, ולכן גם קובץ שמורידים מכאן מותקן מעל הגרסה הקודמת.</p>
     </aside>
+  </section>
+
+  <section id="desktop" aria-labelledby="desktop-title">
+    <div class="head">
+      <span class="kicker">Windows, מק ולינוקס</span>
+      <h2 id="desktop-title">פרדס למחשב</h2>
+      <p class="intro">אותה ספרייה ואותו חיפוש, גם לפי משמעות, ביישום למחשב. פרדס למחשב נבנה מהקוד הפתוח של זית למחשב מאת אליהו גמבש ואינו מטעמו, ואפשר להתקין אותו לצד זית למחשב. <span id="desk-rel"></span></p>
+    </div>
+    <ul class="dls">
+      <li class="dl-row">
+        <div class="dl-what"><strong>Windows</strong><span>Windows 10 או 11</span></div>
+        <div class="dl-file"><span class="ltr" id="desk-win-file">Pardes-…-windows-x64-nsis.exe</span><span id="desk-win-size"></span></div>
+        <div class="dl-go"><a class="btn" id="desk-win" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">הורדה</a><a class="btn btn-line" id="desk-win-arm" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">למעבד ARM</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>מק</strong><span>macOS 12 ומעלה</span></div>
+        <div class="dl-file"><span class="ltr" id="desk-mac-file">Pardes-…-macos-arm64.dmg</span><span id="desk-mac-size"></span></div>
+        <div class="dl-go"><a class="btn" id="desk-mac" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">Apple Silicon</a><a class="btn btn-line" id="desk-mac-intel" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">Intel</a></div>
+      </li>
+      <li class="dl-row">
+        <div class="dl-what"><strong>לינוקס</strong><span>deb לאובונטו ודביאן, rpm לפדורה, pacman לארץ'</span></div>
+        <div class="dl-file"><span class="ltr" id="desk-deb-file">pardes_…_amd64.deb</span><span id="desk-deb-size"></span></div>
+        <div class="dl-go"><a class="btn" id="desk-deb" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">deb</a><a class="btn btn-line" id="desk-rpm" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">rpm</a><a class="btn btn-line" id="desk-pacman" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">pacman</a><a class="btn btn-line" id="desk-arm64" href="https://github.com/efrul/Pardes/releases?q=desktop&amp;expanded=true">ARM64</a></div>
+      </li>
+    </ul>
+    <ol class="steps desk-steps">
+      <li><div><h3>מתקינים</h3><p>הקבצים אינם חתומים. ב־Windows לוחצים <b>מידע נוסף</b> ואז <b>הפעל בכל זאת</b>. במק גוררים את פרדס לתיקיית היישומים, ובפתיחה הראשונה לוחצים <b>לפתוח בכל זאת</b> ב<b>הגדרות המערכת › פרטיות ואבטחה</b>. בלינוקס, למשל: <code class="ltr">sudo apt install ./pardes_…_amd64.deb</code></p></div></li>
+      <li><div><h3>מכניסים את הספרייה</h3><p>בפתיחה הראשונה מדריך ההגדרה מוריד אותה, כ־5.5 ג״ב, וצריך כ־15 ג״ב פנויים. בלי אינטרנט בוחרים <b>התקנה לא-מקוונת</b> ואת <a href="#dl-library">קובצי הספרייה</a> שהורדו. כשזית למחשב מותקן, אפשר להשתמש בספרייה שלו.</p></div></li>
+      <li><div><h3>מוסיפים את החיפוש לפי משמעות</h3><p>ב<b>הגדרות › ניהול נתונים › חיפוש לפי משמעות</b>, שנפתח מעצמו כשהוא לא מותקן, לוחצים <b>הורדה והתקנה</b>, כ־1.9 ג״ב. בלי אינטרנט מורידים את <a href="#dl-meaning">שני הקבצים שלו</a> ולוחצים <b>ייבוא מקבצים…</b></p></div></li>
+    </ol>
   </section>
 
   <section id="library" aria-labelledby="lib-title">
@@ -734,7 +768,7 @@ footer p { max-width: 52rem; }
           <h3>העברה בכבל, בסקריפט ו־adb</h3>
           <p class="when">כשזית למחשב מותקן במחשב, גם בלינוקס ובמק. בלי הורדה, עם ניפוי באגים ב־USB.</p>
         </header>
-        <p>הסקריפט מעתיק את הספרייה שמותקנת במחשב ישר לתיקייה של פרדס בטלפון ומכין אותה לפתיחה, בלי root. כשבמחשב מותקנת גם <a href="#lib-meaning">חבילת החיפוש לפי משמעות</a> של פרדס למחשב, הוא מעתיק גם אותה.</p>
+        <p>הסקריפט מעתיק את הספרייה שמותקנת במחשב ישר לתיקייה של פרדס בטלפון ומכין אותה לפתיחה, בלי root. כשבמחשב מותקנים גם <a href="#lib-meaning">קובצי החיפוש לפי משמעות</a> של פרדס למחשב, הוא מעתיק גם אותם.</p>
 
         <div class="tool">
           <div class="tool-bar">
@@ -785,7 +819,7 @@ footer p { max-width: 52rem; }
         </dl>
         <p>ב־Windows מוסיפים אפשרות כך: בתיקייה שחולצה כותבים <code>cmd</code> בשורת הכתובת של סייר הקבצים ומקישים Enter, ובחלון שנפתח מריצים, למשל:</p>
         <div class="cmd"><pre dir="ltr">push-desktop-library.cmd -SdCard</pre><button class="copy" type="button">העתקה</button></div>
-        <p class="need">בטלפון צריך כ־15.7 ג״ב פנויים בהעברה מ־Windows, או כ־13.6 ג״ב מלינוקס ומק, ועוד כ־2.8 ג״ב לחבילת החיפוש לפי משמעות, אם היא מועתקת. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך (התאריך בקובץ <code>release_info.txt</code> שליד <code>seforim.db</code>); ספרייה ישנה יותר פרדס יבקש לעדכן.</p>
+        <p class="need">בטלפון צריך כ־15.7 ג״ב פנויים בהעברה מ־Windows, או כ־13.6 ג״ב מלינוקס ומק, ועוד כ־2.8 ג״ב לקובצי החיפוש לפי משמעות, אם הם מועתקים. הספרייה במחשב צריכה להיות מ־11 באוקטובר 2026 ואילך (התאריך בקובץ <code>release_info.txt</code> שליד <code>seforim.db</code>); ספרייה ישנה יותר פרדס יבקש לעדכן.</p>
       </article>
 
       <article class="route" id="lib-files">
@@ -811,7 +845,7 @@ footer p { max-width: 52rem; }
     <div class="extras">
       <section class="extra" id="lib-card" aria-labelledby="card-title">
         <h3 id="card-title">בכרטיס זיכרון <span class="chip">מגרסה 0.3.0</span></h3>
-        <p>כשיש בטלפון כרטיס SD, מדריך ההגדרה מראה כמה מקום פנוי בטלפון ובכרטיס ומציע לשמור את הספרייה באחד מהם. ספרייה מותקנת עוברת ביניהם ב<b>הגדרות › ניהול נתונים › מיקום הספרייה</b>, ואיתה חבילת החיפוש לפי משמעות, אם היא מותקנת. כשמוציאים את הכרטיס, פרדס מבקש להחזיר אותו, ונפתח מעצמו כשהוא חוזר.</p>
+        <p>כשיש בטלפון כרטיס SD, מדריך ההגדרה מראה כמה מקום פנוי בטלפון ובכרטיס ומציע לשמור את הספרייה באחד מהם. ספרייה מותקנת עוברת ביניהם ב<b>הגדרות › ניהול נתונים › מיקום הספרייה</b>, ואיתה קובצי החיפוש לפי משמעות, אם הם מותקנים. כשמוציאים את הכרטיס, פרדס מבקש להחזיר אותו, ונפתח מעצמו כשהוא חוזר.</p>
         <p>אפשר גם להעתיק ישר לכרטיס מהמחשב: בסקריפט, עם <code>--sdcard</code> או <code>-SdCard</code>, או בכלי <a href="#lib-export">הספרייה של זית לטלפון</a> כשהכרטיס בקורא כרטיסים במחשב. בכרטיס שכבר היה בטלפון הכלי מציע את התיקייה של פרדס, וכשהכרטיס חוזר לטלפון פרדס מוצא שם את הקבצים: במדריך ההגדרה, אחרי <b>התחלת התקנה לא-מקוונת</b>, לוחצים <b>שימוש בקבצים שנמצאו</b>. בפרדס שכבר יש בו ספרייה, אותו כפתור נמצא ב<b>הגדרות › ניהול נתונים</b>.</p>
         <p class="need">בכרטיס צריך כ־14.1 ג״ב להורדה, כ־13.6 ג״ב להעברה בסקריפט, או מקום לקובץ ועוד כ־14.1 ג״ב (הקובץ נמחק בסוף ההתקנה). ב־Windows הסקריפט צריך גם כ־2.2 ג״ב פנויים בטלפון. כרטיס FAT32 (כך אנדרואיד מפרמט כרטיסים של 32 ג״ב ומטה) מקבל את מסד הנתונים בחלקים, ובינתיים מתעדכן רק בעדכון מלא. כרטיס שפורמט ל־exFAT במחשב מקבל גם עדכון מצטבר.</p>
       </section>
@@ -821,10 +855,10 @@ footer p { max-width: 52rem; }
         <p>בעדכון מלא הספרייה הקיימת נשארת עד שהחדשה נבדקה, כשיש מקום לשתיהן.</p>
       </section>
       <section class="extra" id="lib-meaning" aria-labelledby="meaning-title">
-        <h3 id="meaning-title">חבילת החיפוש לפי משמעות <span class="chip">מגרסה 0.6.0</span></h3>
-        <p>את החיפוש לפי משמעות מוסיפים לספרייה בחבילה: המודל והאינדקס שלו. היא עובדת בכל גרסה של הספרייה. ב<b>הגדרות › ניהול נתונים › חיפוש לפי משמעות</b> לוחצים <b>הורדה והתקנה</b>, ופרדס מוריד את החבילה האחרונה מ־GitHub, כ־2 ג״ב. ההורדה נמשכת גם כשיוצאים מההגדרות, עם התראה שמראה את ההתקדמות, והחבילה נכנסת לשימוש בהפעלה הבאה של פרדס, או מיד ב<b>הפעלה מחדש עכשיו</b>.</p>
-        <p>כשהטלפון לא מגיע ל־GitHub, מורידים בדפדפן את <code>pardes-model.zip</code> ואת <code>pardes.vec.lucene.zip</code> (<a href="#downloads">בהורדות</a>), ובאותו מסך לוחצים <b>ייבוא מקבצים…</b> ובוחרים את שניהם יחד. <a href="#lib-computer">הסקריפט שמעביר את הספרייה בכבל</a> מעתיק גם את החבילה, כשהיא מותקנת בפרדס למחשב.</p>
-        <p class="need">צריך מכשיר של 64 ביט, וכ־3.3 ג״ב פנויים ליד הספרייה, ובייבוא גם מקום לקבצים. כשהמודל בשימוש הוא תופס כ־240 מ״ב מהזיכרון, ולכן במכשיר ש־Android מסמן כדל זיכרון (Android Go) ההגדרה לא מופיעה. בלי החבילה החיפוש מוצא את המילים, כמו תמיד. התקנה מלאה של ספרייה חדשה מוחקת את האינדקס, ואחריה מתקינים שוב את החבילה.</p>
+        <h3 id="meaning-title">קובצי החיפוש לפי משמעות <span class="chip">מגרסה 0.6.0</span></h3>
+        <p>לחיפוש לפי משמעות צריך שני קבצים, שמורידים פעם אחת בנפרד מהספרייה: המודל והאינדקס שלו. הם מתאימים לכל גרסה של הספרייה. ב<b>הגדרות › ניהול נתונים › חיפוש לפי משמעות</b> לוחצים <b>הורדה והתקנה</b>, ופרדס מוריד מ־GitHub את הגרסה האחרונה שלהם, כ־2 ג״ב. ההורדה נמשכת גם כשיוצאים מההגדרות, עם התראה שמראה את ההתקדמות, והחיפוש לפי משמעות פועל מההפעלה הבאה של פרדס, או מיד ב<b>הפעלה מחדש עכשיו</b>.</p>
+        <p>כשהטלפון לא מגיע ל־GitHub, מורידים בדפדפן את <code>pardes-model.zip</code> ואת <code>pardes.vec.lucene.zip</code> (<a href="#downloads">בהורדות</a>), ובאותו מסך לוחצים <b>ייבוא מקבצים…</b> ובוחרים את שניהם יחד. <a href="#lib-computer">הסקריפט שמעביר את הספרייה בכבל</a> מעתיק גם אותם, כשהם מותקנים בפרדס למחשב.</p>
+        <p class="need">צריך מכשיר של 64 ביט, וכ־3.3 ג״ב פנויים ליד הספרייה, ובייבוא גם מקום לקבצים. כשהמודל בשימוש הוא תופס כ־240 מ״ב מהזיכרון, ולכן במכשיר ש־Android מסמן כדל זיכרון (Android Go) ההגדרה לא מופיעה. בלי הקבצים האלה החיפוש מוצא את המילים, כמו תמיד. התקנה מלאה של ספרייה חדשה מוחקת את האינדקס, ואחריה מתקינים אותם שוב.</p>
       </section>
     </div>
   </section>
@@ -842,9 +876,20 @@ footer p { max-width: 52rem; }
         <div class="dl-go"><a class="btn" id="row-apk" href="https://github.com/efrul/Pardes/releases">הורדה</a></div>
       </li>
       <li class="dl-row">
-        <div class="dl-what"><strong>חבילת החיפוש לפי משמעות</strong><span>המודל והאינדקס שלו, לייבוא בפרדס 0.6.0 ומעלה (<a href="#lib-meaning">איך</a>)</span></div>
+        <div class="dl-what"><strong>פרדס למחשב</strong><span>ל־Windows, למק וללינוקס (<a href="#desktop">איך מתקינים</a>)</span></div>
+        <div class="dl-file"><span id="row-desk-ver">…</span></div>
+        <div class="dl-go"><a class="btn" href="#desktop">לקבצים</a></div>
+      </li>
+      <li class="dl-row" id="dl-library">
+        <div class="dl-what"><strong>הספרייה</strong><span>הספרים ואינדקס החיפוש, הספרייה של זית למחשב (SeforimLibrary), להתקנה לא-מקוונת בטלפון ובמחשב</span></div>
+        <div class="dl-file"><span class="ltr">seforim_bundle.tar.zst.part01 …</span><span>כ־5.5 ג״ב יחד</span></div>
+        <div class="dl-go"><button class="btn" type="button" id="row-lib-btn">קישורים ישירים</button><a class="btn btn-line" href="https://github.com/kdroidFilter/SeforimLibrary/releases/latest">עמוד ההפצה</a></div>
+        <div class="bundle"><p class="status" id="row-lib-status" role="status"></p><ul id="row-lib-list" hidden></ul></div>
+      </li>
+      <li class="dl-row" id="dl-meaning">
+        <div class="dl-what"><strong>קובצי החיפוש לפי משמעות</strong><span>המודל והאינדקס שלו, לייבוא בפרדס לאנדרואיד 0.6.0 ומעלה (<a href="#lib-meaning">איך</a>) ובפרדס למחשב (<a href="#desktop">איך</a>)</span></div>
         <div class="dl-file"><span class="ltr">pardes-model.zip · pardes.vec.lucene.zip</span><span id="row-pack-size">כ־2 ג״ב יחד</span></div>
-        <div class="dl-go" id="row-pack"><a class="btn btn-line" href="https://github.com/efrul/Pardes/releases?q=semantic&amp;expanded=true">עמוד החבילות</a></div>
+        <div class="dl-go" id="row-pack"><a class="btn btn-line" href="https://github.com/efrul/Pardes/releases?q=semantic&amp;expanded=true">עמוד הקבצים</a></div>
       </li>
       <li class="dl-row">
         <div class="dl-what"><strong>הספרייה של זית לטלפון</strong><span>אורז את הספרייה של זית למחשב לקובץ לטלפון</span></div>
@@ -953,6 +998,8 @@ footer p { max-width: 52rem; }
   // A changelog date (YYYY-MM-DD) is a day, not an instant: noon local time, so no time zone moves it.
   function day(ymd) { var p = ymd.split('-'); return new Date(+p[0], p[1] - 1, +p[2], 12); }
   function mb(bytes) { return (bytes / 1048576).toLocaleString('he-IL', { maximumFractionDigits: 1 }) + ' מ״ב'; }
+  // A manifest is a few hundred bytes: in kilobytes, not as 0 megabytes
+  function size(bytes) { return bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' ק״ב' : mb(bytes); }
   function gb(bytes) { return (bytes / 1073741824).toLocaleString('he-IL', { maximumFractionDigits: 1 }) + ' ג״ב'; }
 
   // android-<versionName>-<run number>[-r<attempt>], as android-release.yml tags a release
@@ -1031,9 +1078,37 @@ footer p { max-width: 52rem; }
       if (!best || pack > best.pack || (pack === best.pack && key > best.key)) best = { pack: pack, key: key, zips: zips };
     });
     if (!best) return;
-    $('row-pack-size').textContent = gb(best.zips[0].size + best.zips[1].size) + ' יחד · חבילה ' + best.pack;
+    $('row-pack-size').textContent = gb(best.zips[0].size + best.zips[1].size) + ' יחד · גרסה ' + best.pack;
     $('row-pack').innerHTML = '<a class="btn btn-line" href="' + esc(best.zips[0].browser_download_url) + '">המודל</a>' +
       '<a class="btn btn-line" href="' + esc(best.zips[1].browser_download_url) + '">האינדקס</a>';
+  }
+
+  // Pardes for desktop: the newest release of desktop-release.yml (desktop-<version>-<run>, not a pre-release) and its
+  // installers by platform, as it names them; ARM64 Linux's are on the release's page.
+  var DESKTOP = [
+    ['desk-win', /-windows-x64-nsis\.exe$/i], ['desk-win-arm', /-windows-arm64-nsis\.exe$/i],
+    ['desk-mac', /-macos-arm64\.dmg$/i], ['desk-mac-intel', /-macos-x64\.dmg$/i],
+    ['desk-deb', /_amd64\.deb$/i], ['desk-rpm', /\.x86_64\.rpm$/i], ['desk-pacman', /-x86_64\.pacman$/i]
+  ];
+  function showDesktop(list) {
+    var rel = list.filter(function (r) {
+      return !r.draft && !r.prerelease && /^desktop-\d/.test(r.tag_name || '') &&
+        (r.assets || []).some(function (a) { return /\.exe$/i.test(a.name); });
+    })[0];
+    if (!rel) return;
+    var ver = (/^desktop-(\d+(?:\.\d+)*)-/.exec(rel.tag_name) || [])[1] || rel.tag_name;
+    DESKTOP.forEach(function (d) {
+      var a = (rel.assets || []).filter(function (x) { return d[1].test(x.name); })[0];
+      if (!a) return;
+      $(d[0]).href = a.browser_download_url;
+      if ($(d[0] + '-file')) {
+        $(d[0] + '-file').textContent = a.name;
+        $(d[0] + '-size').textContent = mb(a.size);
+      }
+    });
+    $('desk-arm64').href = rel.html_url;
+    $('desk-rel').textContent = 'הגרסה האחרונה: ' + ver + (rel.published_at ? ', ' + both(new Date(rel.published_at)) : '') + '.';
+    $('row-desk-ver').textContent = 'גרסה ' + ver;
   }
 
   function fallback(text) {
@@ -1099,12 +1174,21 @@ footer p { max-width: 52rem; }
     })
     .catch(function () { return false; });
   fromApi()
-    .then(function (list) { live = true; show(list, null); showPack(list); })
+    .then(function (list) { live = true; show(list, null); showPack(list); showDesktop(list); })
     .catch(function () {
       snapshot.then(function (ok) {
         if (!ok) fallback('פרטי הגרסה לא נטענו. הכפתור מוביל לעמוד הגרסאות ב־GitHub, ושם הקובץ האחרון.');
       });
     });
+
+  // downloads.json, written by the deploy as releases.json is: Pardes for desktop's installers, the semantic search's
+  // zips and the library's files, shown until the API answers, and when it can't be reached.
+  var downloads = get('downloads.json', 10000).catch(function () { return null; });
+  downloads.then(function (d) {
+    if (live || !d || !Array.isArray(d.releases)) return;
+    showDesktop(d.releases);
+    showPack(d.releases);
+  });
 
   // The changelog: androidApp/CHANGELOG.md, deployed as changelog.md. Its own small Markdown: "## <version> · <date>"
   // starts a version, "###" a heading in it, "- " a list item, `code`, **bold** and [text](https://…) inline; the
@@ -1227,29 +1311,34 @@ footer p { max-width: 52rem; }
     viewer.addEventListener('click', function (e) { if (e.target === viewer) viewer.close(); });
   })();
 
-  // Direct links to the library's files, asked of the GitHub API only when wanted (it allows 60 calls an hour).
-  (function () {
-    var btn = $('bundle-btn'), status = $('bundle-status'), list = $('bundle-list');
+  // Direct links to the library's files, asked of the GitHub API only when wanted (it allows 60 calls an hour), else
+  // downloads.json's copy, as of the deploy: in the library's section and in the downloads.
+  function bundleLinks(btn, status, list) {
     var page = '<a href="https://github.com/kdroidFilter/SeforimLibrary/releases/latest">עמוד ההפצה</a>';
+    function render(rel) {
+      var files = ((rel && rel.assets) || []).filter(function (a) { return a.name.indexOf('seforim_bundle.tar.zst') === 0; });
+      if (!files.length) throw new Error('none');
+      files.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      list.innerHTML = files.map(function (a) {
+        return '<li><a href="' + esc(a.browser_download_url) + '"><span class="ltr">' + esc(a.name) + '</span></a><span class="size">' + size(a.size) + '</span></li>';
+      }).join('');
+      list.hidden = false;
+      btn.hidden = true;
+      status.innerHTML = files.length + ' קבצים, מההפצה <span class="ltr">' + esc(rel.tag_name) + '</span> שב' + page + '. מורידים את כולם.';
+    }
     btn.addEventListener('click', function () {
       btn.disabled = true;
       status.textContent = 'טוען את רשימת הקבצים מ־GitHub…';
-      get(LIBRARY_API, 10000).then(function (rel) {
-        var files = (rel.assets || []).filter(function (a) { return a.name.indexOf('seforim_bundle.tar.zst') === 0; });
-        if (!files.length) throw new Error('none');
-        files.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
-        list.innerHTML = files.map(function (a) {
-          return '<li><a href="' + esc(a.browser_download_url) + '"><span class="ltr">' + esc(a.name) + '</span></a><span class="size">' + mb(a.size) + '</span></li>';
-        }).join('');
-        list.hidden = false;
-        btn.hidden = true;
-        status.innerHTML = files.length + ' קבצים, מההפצה <span class="ltr">' + esc(rel.tag_name) + '</span> שב' + page + '. מורידים את כולם.';
-      }).catch(function () {
-        btn.disabled = false;
-        status.innerHTML = 'הרשימה לא נטענה מ־GitHub. הקבצים נמצאים גם ב' + page + '.';
-      });
+      get(LIBRARY_API, 10000).then(render)
+        .catch(function () { return downloads.then(function (d) { render(d && d.library); }); })
+        .catch(function () {
+          btn.disabled = false;
+          status.innerHTML = 'הרשימה לא נטענה מ־GitHub. הקבצים נמצאים גם ב' + page + '.';
+        });
     });
-  })();
+  }
+  bundleLinks($('bundle-btn'), $('bundle-status'), $('bundle-list'));
+  bundleLinks($('row-lib-btn'), $('row-lib-status'), $('row-lib-list'));
 })();
 </script>
 </body>
