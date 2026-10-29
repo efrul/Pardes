@@ -56,6 +56,18 @@ model for Pardes; the app loads the legacy model only when `SEFORIM_MODEL_DIR` p
   time, downloaded or imported from the release's files, unpacked beside the library and swapped in at the next start;
   `docs/SEMANTIC_PLAN.md` has the plan and its state.
 
+## Android (Pardes for Android)
+
+The same model and pack run on Android (`androidApp/`, since 2026-10-28): `androidApp/docs/DEVELOPMENT.md` › Semantic
+search and `androidApp/docs/PARITY.md` › Pardes desktop's semantic search; the `zayit-android` skill covers the device.
+Desktop's files that compile there are built unchanged (`syncDesktopSemantic`), the rest are Android variants in
+`androidApp/.../android/search/semantic/` with desktop's packages and names, each with a header of its changes: after a
+change here, port it there too (the header says what differs), and run the Android unit tests, which are desktop's.
+- ONNX Runtime is 1.20.0 there (16 KB-aligned libraries), 64-bit only; the model must stay loadable by it.
+- Android's regex is ICU: no `Pattern.UNICODE_CHARACTER_CLASS` (it throws). The Android `HfTokenizer` spells out
+  Oniguruma's `\w`, `\s` and `\d`; a new tokenizer pattern class needs the same there, and `HfTokenizerParityTest` runs
+  on a device (`androidInstrumentedTest`) with this repository's fixtures.
+
 ## Running the GPU steps
 
 `kaggle_run.py push train|tune|distill|embed|int8|pool` (token as `KAGGLE_API_TOKEN` or `~/.kaggle/access_token`, user in

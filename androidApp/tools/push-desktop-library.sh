@@ -18,7 +18,7 @@
 #
 # Copies seforim.db, the search indexes seforim.db.lucene/ and seforim.db.lookup.lucene/, lexical.db, catalog.pb and
 # release_info.txt (~12.2 GB) into /sdcard/Android/data/<app>/files/library/, and the semantic search's pack when the
-# desktop library has it (pardes-model/ and pardes.vec.lucene/, ~2.7 GB, both or neither: without them the phone's pack
+# desktop library has it (pardes-model/ and pardes.vec.lucene/, ~2.8 GB, both or neither: without them the phone's pack
 # is left as it is, and the app checks that it belongs to the library). Needs USB debugging on the phone, the app
 # installed, and Zayit closed on the computer. No root. Without root, `adb push` cannot write into another app's folder
 # (its fchown fails there), so each file is streamed through `adb shell -T` and written in place by the phone's shell:

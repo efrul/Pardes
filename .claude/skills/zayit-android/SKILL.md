@@ -169,6 +169,13 @@ Rules:
 - Don't re-research whether Lucene can work; that is settled.
 - Read [references/lucene-android.md](references/lucene-android.md) before touching search, the patched jar or R8 rules for Lucene.
 
+## Semantic search (Pardes's own)
+
+Since 2026-10-28 the app has Pardes desktop's semantic search (the `pardes-semantic-search` skill; `androidApp/docs/DEVELOPMENT.md` › Semantic search): Dicta's open model on ONNX Runtime 1.20.0 (64-bit only, `SemanticSearchSupport`) and the pack's vector index, fused with the Lucene search by `HybridSearchEngine`. Desktop's files are built unchanged where they compile (`syncDesktopSemantic`); the Android variants in `search/semantic/` keep desktop's names, with a header listing what differs. Don't approximate them: port desktop's change, then run `./gradlew :app:testDebugUnitTest` (desktop's semantic tests on the port).
+- **The pack** is two folders beside `seforim.db`: `pardes-model/` and `pardes.vec.lucene/` (2.8 GB). Settings › ניהול נתונים › חיפוש לפי משמעות downloads or imports it and swaps it in at the next start; `push-desktop-library.sh --source <dir>` copies it with a library that has both folders. Its index covers the whole library: with a subset library, push the full `pardes.vec.lucene/` all the same (the lines outside the subset are skipped).
+- **On a device:** `HfTokenizerParityTest` and `SemanticReferenceTest` (`app/src/androidInstrumentedTest`, the commands in DEVELOPMENT.md). The reference test logs its timings and memory as `PardesSemanticTest`.
+- **ICU regex:** `Pattern.UNICODE_CHARACTER_CLASS` throws on Android; the tokenizer spells out Oniguruma's classes instead.
+
 ## Things that will bite you
 
 The full list with fixes is in [references/pitfalls.md](references/pitfalls.md); read it before UI work. The ones that cost the most time:
