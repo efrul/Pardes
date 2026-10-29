@@ -421,6 +421,7 @@
     <string name="row_action_open">פתיחה</string>
     <string name="row_action_search_inside">חיפוש בתוך</string>
     <string name="row_action_search_category">חיפוש בקטגוריה</string>
+    <string name="row_action_add_to_search">הוספה לחיפוש</string>
     <string name="row_action_search">חיפוש</string>
     <string name="row_action_search_base">בספרי יסוד</string>
     <string name="row_action_search_all">בכל הספרים</string>

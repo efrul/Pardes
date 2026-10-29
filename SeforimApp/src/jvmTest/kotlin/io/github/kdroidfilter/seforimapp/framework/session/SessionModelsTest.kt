@@ -171,6 +171,21 @@ class SessionModelsTest {
     }
 
     @Test
+    fun `a search in several books and categories keeps them, and goes back to them from one of its books`() {
+        val several = SearchScope.Multi(bookIds = listOf(3L, 4L), categoryIds = listOf(7L))
+        val state = SearchPersistedState().withScope(several)
+        assertEquals("multi", state.datasetScope)
+        val restored = ProtoBuf.decodeFromByteArray<SearchPersistedState>(ProtoBuf.encodeToByteArray(state))
+        assertEquals(several, restored.scope)
+        // As filterByBookId narrows it: the books and categories stay, to go back to
+        val narrowed =
+            state.withScope(SearchScope.Book(3L)).copy(fetchBookIds = state.fetchBookIds, fetchCategoryIds = state.fetchCategoryIds)
+        assertEquals(SearchScope.Book(3L), narrowed.scope)
+        assertEquals(several, narrowed.wideScope)
+        assertEquals(SearchScope.Global, state.withScope(SearchScope.Global).scope)
+    }
+
+    @Test
     fun `a search narrowed to one book goes back to its category's or author's books`() {
         val narrowed = SearchPersistedState().withScope(SearchScope.Book(3L)).copy(fetchCategoryId = 7L)
         assertEquals(SearchScope.Book(3L), narrowed.scope)
