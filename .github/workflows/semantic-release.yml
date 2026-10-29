@@ -16,7 +16,8 @@ name: Semantic pack release
 #
 # Secret: KAGGLE_API_TOKEN, an API token of the Kaggle account that owns the dataset (kaggle.com › Settings › API). The
 # dataset is named without its owner, the token's account, whose name is never written here nor shown in the log.
-# Runs only by hand: Actions › Semantic pack release › Run workflow.
+# Its title and notes come from semantic-model/release_notes.py; semantic-notes.yml writes them again on a pack already
+# released, after the template changes. Runs only by hand: Actions › Semantic pack release › Run workflow.
 
 on:
   workflow_dispatch:
@@ -35,6 +36,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The release's title and notes (semantic-model/release_notes.py)
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: semantic-model/release_notes.py
+          sparse-checkout-cone-mode: false
+
       - name: Download the pack from Kaggle
         env:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
@@ -102,35 +109,11 @@ jobs:
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             echo "::error::$TAG is already released"; exit 1
           fi
-          lines="$(echo "$LINES" | sed -E ':a;s/^([0-9]+)([0-9]{3})/\1,\2/;ta')"
-          cat > notes.md <<EOF
-          הקבצים של החיפוש לפי משמעות בפרדס, גרסה $PACK: המודל ואינדקס הווקטורים של כל הספרייה. מורידים אותם פעם אחת, בנפרד מהיישום ומהספרייה, והם מתאימים לכל גרסה של הספרייה. לפרדס למחשב ולפרדס לאנדרואיד 0.6.0 ומעלה.
-
-          **התקנה מתוך פרדס**
-          בהגדרות › ניהול נתונים › חיפוש לפי משמעות לוחצים **הורדה והתקנה**. פרדס מוריד את הקבצים, בודק אותם, והחיפוש לפי משמעות פועל מההפעלה הבאה.
-
-          **בלי חיבור ל־GitHub מתוך פרדס**
-          מורידים בדפדפן, גם במחשב אחר, רק את שני קובצי ה־zip: \`pardes-model.zip\` ו־\`pardes.vec.lucene.zip\`. באותו מסך לוחצים **ייבוא מקבצים…** ובוחרים אחד מהם. שאר הקבצים כאן הם בשביל ההורדה מתוך פרדס.
-
-          **התקנה ידנית**
-          1. סוגרים את פרדס.
-          2. מוחקים מתיקיית הספרייה את התיקיות הישנות \`pardes-model\` ו־\`pardes.vec.lucene\`, אם יש. מחליפים את שתיהן יחד: מודל ואינדקס מחבילות שונות לא עובדים זה עם זה.
-          3. פורסים את שני קובצי ה־zip לתיקיית הספרייה, ליד \`seforim.db\`. הגדרות › ניהול נתונים › מיקום הספרייה מראה איפה היא.
-          4. פותחים את פרדס.
-
-          **מה יש כאן**
-          - \`pardes-model\`: המודל לשאילתות, נגזר מ־[neodictabert-bilingual-embed](https://huggingface.co/dicta-il/neodictabert-bilingual-embed) של דיקטה, מאומן לספרייה. ONNX int8, ‏$DIMENSION ממדים (\`$MODEL\`).
-          - \`pardes.vec.lucene\`: אינדקס הווקטורים של הספרייה כולה, $lines שורות. נבנה על הספרייה מגרסת SeforimLibrary ‏\`$LIBRARY\`, ומתאים גם לגרסאות האחרות שלה.
-
-          **רישיון**
-          המודל נגזר מ־neodictabert-bilingual-embed של דיקטה: המרכז הישראלי לניתוח טקסטים, ומופץ לפי [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). מי שמעביר אותו הלאה מעביר גם את \`pardes-model/NOTICE.md\`. דיקטה אינה ממליצה על פרדס.
-
-          פרדס מבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. המודל והאינדקס הם של פרדס, ואינם באים מחבילת החיפוש הסמנטי של זית.
-          EOF
+          python3 semantic-model/release_notes.py pack/pardes-semantic.tar.zst.manifest.json > notes.md
           gh release create "$TAG" pack/* pardes-model.zip pardes.vec.lucene.zip \
             -R "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "קובצי החיפוש לפי משמעות, גרסה $PACK" \
+            --title "$(python3 semantic-model/release_notes.py --title pack/pardes-semantic.tar.zst.manifest.json)" \
             --notes-file notes.md \
             --latest=false
           # With files, gh creates a draft, uploads them and then publishes it, and the publishing makes it the Latest
