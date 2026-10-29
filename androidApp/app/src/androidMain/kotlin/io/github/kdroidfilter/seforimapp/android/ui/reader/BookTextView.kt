@@ -37,12 +37,14 @@ import io.github.kdroidfilter.seforimapp.android.data.UserNote
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
 import io.github.kdroidfilter.seforimapp.android.ui.components.pinchTextZoom
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -93,6 +95,10 @@ fun BookText(
         value = if (state.shnayimMikra) loadShnayimMikraTargum(app, bookId) else emptyMap()
     }
     val charCounts by vm.charCounts.collectAsState()
+    // Where this book's commentary anchors lead, read off the main thread once per book (desktop 0.6.12)
+    val anchorIndex by produceState(CommentAnchorIndex.EMPTY, bookId) {
+        value = withContext(Dispatchers.IO) { commentAnchorIndex(app.assets, bookId) }
+    }
 
     // The visible lines' connections (desktop prefetch of the viewport, debounced)
     LaunchedEffect(listState) {
@@ -294,10 +300,22 @@ fun BookText(
                                 val presses = textSelection.presses
                                 scope.launch {
                                     delay(doubleTapMillis)
-                                    if (textSelection.presses == presses) selectedLineTap?.invoke()
+                                    if (textSelection.presses != presses) return@launch
+                                    // Outside its passage, a tap lets the passage go before it hides anything
+                                    if (vm.state.value.selectedPassage?.lineId == line.id) vm.clearPassage() else selectedLineTap?.invoke()
                                 }
                             }
                             else -> vm.onLineTap(line)
+                        }
+                    }
+                    // A tap on a passage selects it with its line; on the passage already selected, lets it go (touch's
+                    // way back, as a tap outside it); in multi-select mode taps add lines only
+                    val passageTap: ((SelectedPassage) -> Unit)? = if (state.multiSelect) {
+                        null
+                    } else {
+                        { passage ->
+                            val current = vm.state.value.selectedPassage
+                            if (current?.lineId == line.id && current.anchors == passage.anchors) vm.clearPassage() else vm.onPassageTap(line, passage)
                         }
                     }
                     if (headings.isNotEmpty() && !headingsInBar) {
@@ -334,6 +352,12 @@ fun BookText(
                                 noteLocator = noteLocator.takeIf { state.noteDraft?.lineId == line.id },
                                 lineId = line.id,
                                 selectable = rememberSelectableText(textSelection, unit + LINE_PART_TEXT),
+                                anchorCommentators = anchorIndex.commentators,
+                                anchorTargets = anchorIndex.of(line.id),
+                                passageBooks = state.visibleCommentatorIds,
+                                selectedAnchors = state.selectedPassage?.takeIf { it.lineId == line.id }?.anchors,
+                                showPassages = line.id == state.primaryLineId && !state.multiSelect,
+                                onPassageTap = passageTap,
                             )
                             // The verse read again, then its targum (headings have no reference)
                             if (state.shnayimMikra && !line.heRef.isNullOrBlank()) {
