@@ -58,7 +58,7 @@ fun handleShellShortcut(event: KeyEvent, appVm: AppViewModel, prefs: AppPrefs, a
         ctrl && code == KeyEvent.KEYCODE_N -> appVm.createWorkspace()
         ctrl && code == KeyEvent.KEYCODE_T -> appVm.newHomeTab()
         alt && code == KeyEvent.KEYCODE_MOVE_HOME -> appVm.goHome()
-        ctrl && code == KeyEvent.KEYCODE_COMMA -> if (appVm.state.value.overlays.lastOrNull() != Overlay.Settings) appVm.push(Overlay.Settings)
+        ctrl && code == KeyEvent.KEYCODE_COMMA -> if (appVm.state.value.overlays.lastOrNull() !is Overlay.Settings) appVm.push(Overlay.Settings())
         code == KeyEvent.KEYCODE_F11 && !ctrl && !alt -> actions.toggleFullscreen()
         // Find-in-page of the current tab (desktop showFindBar): left alone where the tab has none.
         ctrl && code == KeyEvent.KEYCODE_F -> return appVm.requestFind()
