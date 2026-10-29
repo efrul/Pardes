@@ -535,6 +535,12 @@ internal class SemanticPackInstaller(
         /** In each staged folder until [PendingSemanticPack] has put both in place. */
         const val STAGED_MARK = ".pardes-staged"
 
+        /**
+         * The room [online] asks for on the library's volume, for a bundle of [bundleBytes]. Android: what it unpacks to
+         * and the margin, without the bundle, read as it downloads (desktop adds the parts it keeps).
+         */
+        fun installBytes(bundleBytes: Long): Long = unpackedEstimate(bundleBytes) + MARGIN_BYTES
+
         /** Room left on the library's volume beyond the pack, as a library move leaves. */
         private const val MARGIN_BYTES = 200L shl 20
 
