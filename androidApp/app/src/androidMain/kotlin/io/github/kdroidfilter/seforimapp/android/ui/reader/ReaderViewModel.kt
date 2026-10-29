@@ -1026,7 +1026,9 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         val narrowing = previous?.takeIf { !smart && queryNarrows(query, f.resultsQuery) }
         _state.update { it.copy(find = it.find.copy(results = null)) }
         findJob = viewModelScope.launch {
-            if (!smart) delay(FIND_DEBOUNCE_MS) // let the typing settle before querying the index
+            // Let the typing settle before querying the index; a query typed in the smart mode too (each would run the
+            // model), not the search's own, there as the book opens
+            if (!smart || query != searchQuery) delay(FIND_DEBOUNCE_MS)
             val engine = runCatching { app.search.engine() }.getOrNull()
             // By meaning, a line is lit only once known to be found (desktop's semanticFind ids); by its words, every
             // line is lit as the results would be until then
