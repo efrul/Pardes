@@ -213,6 +213,7 @@ See `TAB_SYSTEM_README.md` for complete details. Key points:
 
 ### Security & Configuration
 - **Secrets**: Never commit to repository; use `local.properties` for machine-specific settings
+- **Kaggle**: the account that holds the semantic packs is never named in this repository, its workflows or their logs (it was scrubbed from the history on 2026-10-28). Name Kaggle datasets and kernels without their owner; `semantic-release.yml` takes the owner from `KAGGLE_API_TOKEN` and masks it in the log
 - **Logging**: Add `-Dorg.slf4j.simpleLogger.defaultLogLevel=debug` to JVM args for verbose logging
 
 ### Git & Pull Requests
