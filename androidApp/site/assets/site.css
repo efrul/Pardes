@@ -260,8 +260,6 @@ a.file { color: var(--ink); }
 .dl-what span { font-size: 0.92rem; color: var(--muted); overflow-wrap: anywhere; }
 .dl-what .ltr { justify-self: start; font-family: var(--mono); font-size: 0.86rem; }
 .dl-go { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.sha { display: flex; gap: 0.5rem; align-items: center; min-width: 0; font-size: 0.85rem; color: var(--muted); }
-.sha code { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bundle { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; font-size: 0.92rem; }
 .bundle li { display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; }
 .bundle .size { color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -327,7 +325,7 @@ footer .wrap { padding-block: 2.6rem 3rem; display: grid; grid-template-columns:
   .card { padding: 1.8rem 2rem; }
   .ways { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
   .dl-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 1.5rem; }
-  .dl-row > .sha, .dl-row > .bundle, .dl-row > .status { grid-column: 1 / -1; }
+  .dl-row > .bundle, .dl-row > .status { grid-column: 1 / -1; }
   .dl-go { justify-content: flex-end; }
 }
 @media (min-width: 64rem) {
