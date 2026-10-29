@@ -10,7 +10,7 @@ Site: https://efrul.github.io/Pardes/ (source in [site/](site/), deployed to Git
 
 ## Build
 
-This is a standalone Gradle build. It compiles SeforimLibrary (core, dao, search, delta-updater, and generator-common's `PatchTables.kt`) from the repository's `../SeforimLibrary` submodule, at the commit desktop Zayit 0.6.11 builds with (4f07145): desktop and Android build from the same checkout. From the rest of the repository it reads `../icons` (the search telescope), `../LICENSE` (bundled as the app's licence text) and the Temple widget's `temple_count.txt` (desktop's `files/`, copied into the assets). Desktop's htmlparser and user-settings schema are vendored, as 0.6.10 has them, in `app/src/androidMain/htmlparser` and `app/src/androidMain/sqldelight-user`.
+This is a standalone Gradle build. It compiles SeforimLibrary (core, dao, search, delta-updater, and generator-common's `PatchTables.kt`) from the repository's `../SeforimLibrary` submodule, at the commit desktop Zayit 0.6.12 builds with (4f07145, 0.6.11's too): desktop and Android build from the same checkout. From the rest of the repository it reads `../icons` (the search telescope), `../LICENSE` (bundled as the app's licence text) and the Temple widget's `temple_count.txt` (desktop's `files/`, copied into the assets). Desktop's htmlparser and user-settings schema are vendored, as 0.6.10 has them, in `app/src/androidMain/htmlparser` and `app/src/androidMain/sqldelight-user`.
 
 ```bash
 git submodule update --init SeforimLibrary   # once, after cloning (from the repository's root)
@@ -79,7 +79,7 @@ Pardes updates itself from within, as desktop Zayit does with its Nucleus update
 
 ## Known differences from desktop
 
-The app follows desktop Zayit 0.6.11 screen by screen (0.6.1 until October 2026). [docs/PARITY.md](docs/PARITY.md) is the checklist of every difference found by comparing it with the real 0.6.1 sources, and records what each desktop release since then changed and what became of it here. What still differs on purpose:
+The app follows desktop Zayit 0.6.12 screen by screen (0.6.1 until October 2026). [docs/PARITY.md](docs/PARITY.md) is the checklist of every difference found by comparing it with the real 0.6.1 sources, and records what each desktop release since then changed and what became of it here. What still differs on purpose:
 
 - **Name and authorship:** The app is Pardes, with its own icon, wherever desktop says Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept, and About links Pardes's own source. Desktop's About text (its author on Zayit, in his first person) and the Rashi Amiti font (licensed to the Zayit app only) are left out.
 - **Meaning-based (semantic) search:** Zayit's comes from a private package and is not included. Pardes has its own, the one of Pardes for desktop (Dicta's open model, [../SEMANTIC_SEARCH.md](../SEMANTIC_SEARCH.md)), with the same model and pack, on 64-bit devices (not Android Go ones, short of memory for the model): Settings › ניהול נתונים › "חיפוש לפי משמעות" downloads the pack (2 GB, about 3.3 GB free needed) or imports its files, and the transfer scripts copy it from a desktop library that has it. Without the pack the search finds the words, like the desktop community build. What differs from Pardes desktop: [docs/PARITY.md](docs/PARITY.md#pardes-desktops-semantic-search).
@@ -91,7 +91,7 @@ The app follows desktop Zayit 0.6.11 screen by screen (0.6.1 until October 2026)
 
 ## Licence and credits
 
-- **Zayit and SeforimLibrary:** by Elie (Elyahou) Gambache. Copyright (C) 2025 Elie Gambache, under the GNU AGPL v3 with an additional attribution term (§7b); see [../LICENSE](../LICENSE). Pardes is a modified version of that code (from desktop Zayit 0.6.11, adapted to Android in 2026). It is distributed under the same licence, keeps those notices, and its source is available under AGPL-3.0: this repository, and the complete source attached to every release.
+- **Zayit and SeforimLibrary:** by Elie (Elyahou) Gambache. Copyright (C) 2025 Elie Gambache, under the GNU AGPL v3 with an additional attribution term (§7b); see [../LICENSE](../LICENSE). Pardes is a modified version of that code (from desktop Zayit 0.6.12, adapted to Android in 2026). It is distributed under the same licence, keeps those notices, and its source is available under AGPL-3.0: this repository, and the complete source attached to every release.
 - **Attribution (§7b):** Powered by the technologies that drive Zayit — https://zayitapp.com/
 - **Not included:** the official desktop releases add proprietary modules (Zayit's meaning-based search, the full smart siddur, the Talmud's verse quote links) that Pardes does not have.
 - **Semantic search:** Pardes's model is [neodictabert-bilingual-embed](https://huggingface.co/dicta-il/neodictabert-bilingual-embed) by Dicta, under CC BY 4.0, fine-tuned and converted by the Pardes project ([../semantic-model/NOTICE.md](../semantic-model/NOTICE.md)); it comes with the pack, not in the APK. It runs on [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT). Both are credited, with their licence texts, in Settings › רישיונות.

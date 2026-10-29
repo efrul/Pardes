@@ -85,6 +85,11 @@ class AppPrefs(context: Context) {
     private val _appUpdateCheck = MutableStateFlow(sp.getBoolean(KEY_APP_UPDATE_CHECK, true))
     val appUpdateCheck: StateFlow<Boolean> = _appUpdateCheck.asStateFlow()
 
+    private val _searchListSplit = MutableStateFlow(sp.getFloat(KEY_SEARCH_LIST_SPLIT, DEFAULT_SEARCH_LIST_SPLIT))
+
+    /** The share of a search tab's width its results list takes beside the selected passage (desktop 0.6.12). */
+    val searchListSplit: StateFlow<Float> = _searchListSplit.asStateFlow()
+
     /** Desktop isSemanticPackPromptEnabled: whether a start without the semantic search in use opens the settings on it. */
     private val _semanticPackPrompt = MutableStateFlow(sp.getBoolean(KEY_SEMANTIC_PACK_PROMPT, true))
     val semanticPackPrompt: StateFlow<Boolean> = _semanticPackPrompt.asStateFlow()
@@ -239,6 +244,11 @@ class AppPrefs(context: Context) {
         sp.edit().putBoolean(KEY_COMPACT_RAILS, compact).apply()
     }
 
+    fun setSearchListSplit(ratio: Float) {
+        _searchListSplit.value = ratio
+        sp.edit().putFloat(KEY_SEARCH_LIST_SPLIT, ratio).apply()
+    }
+
     fun setAppUpdateCheck(on: Boolean) {
         _appUpdateCheck.value = on
         sp.edit().putBoolean(KEY_APP_UPDATE_CHECK, on).apply()
@@ -316,6 +326,7 @@ class AppPrefs(context: Context) {
         _persistSession.value = true
         _compactRails.value = false
         _appUpdateCheck.value = true
+        _searchListSplit.value = DEFAULT_SEARCH_LIST_SPLIT
         _semanticPackPrompt.value = true
         _maxCommentatorsPerPage.value = 0
         _bookFont.value = ZayitFont.DefaultBook
@@ -397,6 +408,10 @@ class AppPrefs(context: Context) {
         private const val KEY_CATALOG_ROW_WIDTH = "home_catalog_row_width"
         private const val KEY_CATALOG_ROW_HEIGHT = "home_catalog_row_height"
         private const val KEY_APP_UPDATE_CHECK = "app_update_check_on_start"
+
+        // Desktop's key and default; not in a backup, as on desktop (a pane size)
+        private const val KEY_SEARCH_LIST_SPLIT = "search_list_split"
+        const val DEFAULT_SEARCH_LIST_SPLIT = 0.34f
 
         // Desktop's key; not in a backup, as on desktop (it is about this device's library)
         private const val KEY_SEMANTIC_PACK_PROMPT = "semantic_pack_prompt"
