@@ -31,12 +31,14 @@ import io.github.kdroidfilter.seforimapp.android.data.SavedSession
 import io.github.kdroidfilter.seforimapp.android.data.SessionStore
 import io.github.kdroidfilter.seforimapp.android.delta.DbDeltaUpdateService
 import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
+import io.github.kdroidfilter.seforimapp.android.ui.Overlay
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
 import io.github.kdroidfilter.seforimapp.android.ui.database.DatabaseUpdateReason
 import io.github.kdroidfilter.seforimapp.android.ui.database.DatabaseUpdateScreen
 import io.github.kdroidfilter.seforimapp.android.ui.database.LibraryCardMissingScreen
 import io.github.kdroidfilter.seforimapp.android.ui.database.databaseUpdateReason
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.OnboardingFlow
+import io.github.kdroidfilter.seforimapp.android.ui.settings.SettingsPage
 import io.github.kdroidfilter.seforimapp.android.ui.shell.DismissKeyboardOnRequest
 import io.github.kdroidfilter.seforimapp.android.ui.shell.KeyShortcuts
 import io.github.kdroidfilter.seforimapp.android.ui.shell.LauncherShortcuts
@@ -48,6 +50,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitTheme
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
+import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -103,6 +106,12 @@ class MainActivity : ComponentActivity() {
 
     /** The app is starting afresh: Settings' update flow stays on screen until it has. */
     private var restarting = false
+
+    /**
+     * A start of the app's own, not a link's, a launcher shortcut's or a widget's (which came for a page of their own),
+     * nor a rotation: the settings may open on the semantic search ([SemanticPackPrompt]), once.
+     */
+    private var plainStart = false
 
     private fun entryOf(intent: Intent): ShellEntry? = when (intent.action) {
         LauncherShortcuts.ACTION_NEW_TAB -> ShellEntry.NewTab
@@ -171,6 +180,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // A rotation or a restored process must not open the launching link again.
         if (savedInstanceState == null) take(intent, launch = true)
+        plainStart = savedInstanceState == null && pendingEntry == null && pendingWidget == null
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val app = application as ZayitApplication
@@ -226,6 +236,16 @@ class MainActivity : ComponentActivity() {
                     // First: its effect starts before ZayitApp's link handling and the widget launch below
                     DismissKeyboardOnRequest(outsideRequests, window)
                     ZayitApp(entry = pendingEntry, onEntryHandled = { pendingEntry = null }, shortcuts = shortcuts, appVm = appVm)
+                    // Desktop main.kt: a library whose semantic search has no pack opens the settings on it, after an
+                    // update dialog shown at start (SemanticPackPrompt); the session is in by now
+                    LaunchedEffect(Unit) {
+                        if (plainStart) {
+                            plainStart = false
+                            SemanticPackPrompt.openAtStart(app.prefs, app.libraryStore.libraryDir, app.filesDir, AppUpdater.get(app).dialogVisible) {
+                                appVm.push(Overlay.Settings(SettingsPage.Data.name))
+                            }
+                        }
+                    }
                     // After the session is restored, or restoreFromDisk would replace what the tap opened
                     val widget = pendingWidget
                     LaunchedEffect(widget) {

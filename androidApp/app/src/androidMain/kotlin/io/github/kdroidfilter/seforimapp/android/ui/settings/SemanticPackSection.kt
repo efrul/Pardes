@@ -2,21 +2,38 @@ package io.github.kdroidfilter.seforimapp.android.ui.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.android.search.SemanticPackManager
@@ -31,15 +48,19 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.rememberWithNotif
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PackProblem
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackInstaller
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackReleases
+import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackPrompt
 
 /**
  * Port of Pardes desktop's features/settings/semantic/SemanticPackCard, in Settings › ניהול נתונים after the library's
- * location (as desktop's after LibraryLocationCard): Pardes's semantic search, its pack beside the library, downloaded
- * or imported from files ([SemanticPackManager]). Android: hidden on a device that cannot run the model
+ * location (as desktop's after LibraryLocationCard): Pardes's semantic search, its files beside the library, downloaded
+ * or imported ([SemanticPackManager]). While none is in use it says how to install them, and a start opens the settings
+ * on it ([SemanticPackPrompt]), marked and scrolled into view. Android: hidden on a device that cannot run the model
  * ([SemanticSearchSupport]); the files of an import are picked all together, as the system's picker shows no folder.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun SemanticPackSection() {
     if (!SemanticSearchSupport.supported) return
@@ -57,38 +78,44 @@ internal fun SemanticPackSection() {
     val pickFiles = rememberWithNotificationPermission { importLauncher.launch(arrayOf("*/*")) }
     val uriHandler = LocalUriHandler.current
     val c = Zayit.colors
-    SettingsCard(title = SemanticPackStrings.title) {
+    // The settings opened at start for the card (SemanticPackPrompt)
+    val marked = remember { SemanticPackPrompt.takeFocus() }
+    val inView = remember { BringIntoViewRequester() }
+    var cardSize by remember { mutableStateOf(IntSize.Zero) }
+    if (marked) {
+        // Android: the page goes on under the navigation bar, so the card comes up above it, by the cards' gap
+        val density = LocalDensity.current
+        val below = WindowInsets.navigationBars.getBottom(density) + with(density) { 12.dp.toPx() }
+        // Once the page is laid out, and again once the check for the files has settled the card's lines
+        LaunchedEffect(state.available == Available.Checking) {
+            withFrameNanos {}
+            inView.bringIntoView(Rect(0f, 0f, cardSize.width.toFloat(), cardSize.height + below))
+        }
+    }
+    SettingsCard(
+        Modifier.onSizeChanged { cardSize = it }.bringIntoViewRequester(inView),
+        title = SemanticPackStrings.title,
+        marked = marked,
+    ) {
         Text(SemanticPackStrings.description, fontSize = 13.sp, lineHeight = 19.sp, color = c.textSecondary)
         if (!state.hasLibrary) {
             Text(SemanticPackStrings.noLibrary, fontSize = 14.sp, color = c.text)
             return@SettingsCard
         }
+        // No files in use: the card says how to install them, and opens at every start until they are (SemanticPackPrompt)
+        val missing = state.installed !is InstalledPack.InUse
+        // While the files download, unpack or wait for the restart, the releases and how to install say nothing more
+        val settled = !state.busy && state.work != Work.Ready
         Text(installedText(state.installed), fontSize = 14.sp, lineHeight = 20.sp, color = c.text)
-        Text(availableText(state.available, state.installed), fontSize = 13.sp, lineHeight = 19.sp, color = c.textSecondary)
-
-        when (val work = state.work) {
-            is Work.Downloading -> {
-                LinearProgressIndicator(
-                    progress = { (work.read.toFloat() / work.total.coerceAtLeast(1L)).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = c.accent,
-                    trackColor = c.divider,
-                )
-                Text(
-                    SemanticPackStrings.downloading.format(formatBytes(work.read), formatBytes(work.total)),
-                    fontSize = 13.sp,
-                    color = c.textSecondary,
-                )
-            }
-            is Work.Unpacking -> {
-                LinearProgressIndicator(progress = { work.progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = c.accent, trackColor = c.divider)
-                Text(SemanticPackStrings.unpacking, fontSize = 13.sp, color = c.textSecondary)
-            }
-            Work.Ready -> InfoBanner(SemanticPackStrings.ready, success = true)
-            is Work.Failed -> ErrorBanner(problemText(work.problem))
-            Work.Idle -> Unit
+        if (settled) {
+            Text(availableText(state.available, state.installed), fontSize = 13.sp, lineHeight = 19.sp, color = c.textSecondary)
+            // With internet while the button is or will be there; from the zips whenever files are out
+            if (missing && state.available != Available.NoneYet) HowToInstall(online = state.available != Available.Unreachable)
         }
-        state.startFailure?.let { failure -> InfoBanner(SemanticPackStrings.startFailed.format(failure)) }
+
+        WorkStatus(state.work)
+        // Why, in the log (PendingSemanticPack.runOnce)
+        if (state.startFailure != null) InfoBanner(SemanticPackStrings.startFailed)
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), itemVerticalAlignment = Alignment.CenterVertically) {
             when {
@@ -101,17 +128,81 @@ internal fun SemanticPackSection() {
                         AccentButton(label, install)
                     }
                     OutlineButton(SemanticPackStrings.import, pickFiles)
-                    if (state.available is Available.Unreachable) {
-                        OutlineButton(SemanticPackStrings.releasesPage, { uriHandler.openSafely(SemanticPackReleases.RELEASES_PAGE) })
+                    if (missing || state.available is Available.Unreachable) {
+                        OutlineButton(SemanticPackStrings.releasesPage, { uriHandler.openSafely(releasesPage(state.available)) })
                     }
                     if (state.work is Work.Failed || state.startFailure != null) OutlineButton(SemanticPackStrings.dismiss, manager::dismiss)
                 }
             }
         }
-        // Android: the picker gives the files picked, not their folder
-        if (!state.busy && state.work != Work.Ready) Text(SemanticPackStrings.importHint, fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
+        if (settled) {
+            // Android: the picker gives the files picked, not their folder
+            Text(SemanticPackStrings.importHint, fontSize = 12.sp, lineHeight = 17.sp, color = c.textSecondary)
+            if (missing) CheckRow(SemanticPackStrings.prompt, state.promptAtStart, manager::setPromptAtStart)
+        }
     }
 }
+
+/** The download's or the unpacking's progress, files ready for the restart, or why they were not installed. */
+@Composable
+private fun WorkStatus(work: Work) {
+    val c = Zayit.colors
+    when (work) {
+        is Work.Downloading -> {
+            LinearProgressIndicator(
+                progress = { (work.read.toFloat() / work.total.coerceAtLeast(1L)).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(),
+                color = c.accent,
+                trackColor = c.divider,
+            )
+            Text(SemanticPackStrings.downloading.format(formatBytes(work.read), formatBytes(work.total)), fontSize = 13.sp, color = c.textSecondary)
+        }
+        is Work.Unpacking -> {
+            LinearProgressIndicator(progress = { work.progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = c.accent, trackColor = c.divider)
+            Text(SemanticPackStrings.unpacking, fontSize = 13.sp, color = c.textSecondary)
+        }
+        Work.Ready -> InfoBanner(SemanticPackStrings.ready, success = true)
+        is Work.Failed -> ErrorBanner(problemText(work.problem))
+        Work.Idle -> Unit
+    }
+}
+
+/** How to install the files: here with internet ([online]: the button is offered), or from their two zips. */
+@Composable
+private fun HowToInstall(online: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (online) HowToLine(SemanticPackStrings.onlineLabel, SemanticPackStrings.online)
+        HowToLine(
+            SemanticPackStrings.offlineLabel,
+            SemanticPackStrings.offline.format(
+                fileName(SemanticPackReleases.RELEASES_PAGE.removePrefix("https://")),
+                fileName(SemanticPack.MODEL_ZIP),
+                fileName(SemanticPack.INDEX_ZIP),
+            ),
+        )
+    }
+}
+
+@Composable
+private fun HowToLine(
+    label: String,
+    text: String,
+) {
+    val c = Zayit.colors
+    Text(
+        buildAnnotatedString {
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(label) }
+            append(' ')
+            append(text)
+        },
+        fontSize = 13.sp,
+        lineHeight = 19.sp,
+        color = c.text,
+    )
+}
+
+/** The newest files' release, or all of them before one is known. */
+private fun releasesPage(available: Available): String = (available as? Available.Pack)?.pack?.page ?: SemanticPackReleases.RELEASES_PAGE
 
 /** The newest pack, when it is not the one installed. */
 private fun offered(
@@ -132,7 +223,7 @@ private fun installedText(installed: InstalledPack): String =
         InstalledPack.NoModel -> SemanticPackStrings.noModel
         InstalledPack.NoIndex -> SemanticPackStrings.noIndex
         InstalledPack.OtherModel -> SemanticPackStrings.otherModel
-        is InstalledPack.Unreadable -> SemanticPackStrings.unreadable.format(installed.message)
+        is InstalledPack.Unreadable -> SemanticPackStrings.unreadable.format(isolatedName(installed.message))
     }
 
 private fun availableText(
@@ -145,23 +236,26 @@ private fun availableText(
             if (offered(available, installed) == null) {
                 SemanticPackStrings.upToDate
             } else {
-                SemanticPackStrings.available.format(available.pack.pack, formatBytes(available.pack.bundleBytes))
+                val bytes = available.pack.bundleBytes
+                SemanticPackStrings.available.format(available.pack.pack, formatBytes(bytes), formatBytes(SemanticPackInstaller.installBytes(bytes)))
             }
         Available.NoneYet -> SemanticPackStrings.noneYet
         Available.Unreachable -> SemanticPackStrings.unreachable
     }
 
-/** Why the pack was not installed, for the user. */
+/** Why the files were not installed, for the user; a reason in English stays one piece in the Hebrew line. */
 private fun problemText(problem: Throwable): String =
     when (problem) {
-        is PackProblem.NotAPack -> SemanticPackStrings.problemNotAPack.format(isolatedName(problem.name))
-        is PackProblem.Missing -> SemanticPackStrings.problemMissing.format(isolatedName(problem.name))
-        is PackProblem.Corrupted -> SemanticPackStrings.problemCorrupted.format(isolatedName(problem.name))
-        is PackProblem.Unusable -> SemanticPackStrings.problemUnusable.format(problem.reason)
-        is PackProblem.NoSpace ->
-            SemanticPackStrings.problemNoSpace.format(isolatedName(problem.dir), formatBytes(problem.needed), formatBytes(problem.free))
-        else -> SemanticPackStrings.problemFailed.format(problem.message ?: problem.toString())
+        is PackProblem.NotAPack -> SemanticPackStrings.problemNotAPack.format(fileName(problem.name))
+        is PackProblem.Missing -> SemanticPackStrings.problemMissing.format(fileName(problem.name))
+        is PackProblem.Corrupted -> SemanticPackStrings.problemCorrupted.format(fileName(problem.name))
+        is PackProblem.Unusable -> SemanticPackStrings.problemUnusable.format(isolatedName(problem.reason))
+        is PackProblem.NoSpace -> SemanticPackStrings.problemNoSpace.format(formatBytes(problem.needed), formatBytes(problem.free))
+        else -> SemanticPackStrings.problemFailed.format(isolatedName(problem.message ?: problem.toString()))
     }
 
 /** A file name or path inside a Hebrew sentence, kept left to right (desktop's isolatedPath). */
 private fun isolatedName(name: String) = "⁦$name⁩"
+
+/** A file's name or address as one piece in a Hebrew line: left to right, and never cut at a hyphen (desktop's fileName). */
+private fun fileName(name: String): String = isolatedName(name.replace("-", "-⁠"))

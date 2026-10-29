@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.android.ui.settings
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -96,12 +97,16 @@ internal fun SettingsColumn(wide: Boolean, content: @Composable ColumnScope.() -
     }
 }
 
-/** Bordered card of the settings pages (desktop SectionCard / SettingCard frame). */
+/**
+ * Bordered card of the settings pages (desktop SectionCard / SettingCard frame); [marked] when the settings were opened
+ * for it: a thicker border in the accent colour (desktop's focused outline).
+ */
 @Composable
-internal fun SettingsCard(modifier: Modifier = Modifier, title: String? = null, content: @Composable ColumnScope.() -> Unit) {
+internal fun SettingsCard(modifier: Modifier = Modifier, title: String? = null, marked: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     val c = Zayit.colors
+    val border = if (marked) BorderStroke(2.dp, c.accent) else BorderStroke(1.dp, c.panelBorder)
     Column(
-        modifier.fillMaxWidth().clip(CardShape).background(c.panel).border(1.dp, c.panelBorder, CardShape).padding(14.dp),
+        modifier.fillMaxWidth().clip(CardShape).background(c.panel).border(border, CardShape).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // Desktop SectionCard title: 15sp.
@@ -142,6 +147,24 @@ internal fun SettingCheckCard(title: String, description: String, checked: Boole
                 modifier = Modifier.padding(start = 48.dp, end = 16.dp, bottom = 14.dp),
             )
         }
+    }
+}
+
+/** A checkbox with its line, inside a card (desktop's CheckboxRow). */
+@Composable
+internal fun CheckRow(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val c = Zayit.colors
+    Row(
+        Modifier.fillMaxWidth().clip(CardShape).toggleable(value = checked, role = Role.Checkbox, onValueChange = onCheckedChange),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = null,
+            modifier = Modifier.padding(end = 10.dp, top = 6.dp, bottom = 6.dp),
+            colors = CheckboxDefaults.colors(checkedColor = c.accent, uncheckedColor = c.textSecondary, checkmarkColor = c.onAccent),
+        )
+        Text(text, fontSize = 13.sp, lineHeight = 18.sp, color = c.text, modifier = Modifier.weight(1f))
     }
 }
 

@@ -12,6 +12,7 @@ import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.Installed
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackInstaller
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackReleases
+import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackPrompt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -75,13 +76,15 @@ class SemanticPackManager private constructor(private val app: ZayitApplication)
         val work: Work = Work.Idle,
         /** Why the last start did not put the pack in place, or null. */
         val startFailure: String? = null,
+        /** Whether a start without a pack in use opens the settings on the card ([SemanticPackPrompt]). */
+        val promptAtStart: Boolean = true,
     ) {
         val busy: Boolean get() = work is Work.Downloading || work is Work.Unpacking
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val releases = SemanticPackReleases()
-    private val _state = MutableStateFlow(State())
+    private val _state = MutableStateFlow(State(promptAtStart = app.prefs.semanticPackPrompt.value))
     val state: StateFlow<State> = _state.asStateFlow()
 
     @Volatile
@@ -143,6 +146,11 @@ class SemanticPackManager private constructor(private val app: ZayitApplication)
 
     /** Starts the app afresh, which puts the staged pack in place before the search opens. */
     fun restart() = app.restart()
+
+    fun setPromptAtStart(enabled: Boolean) {
+        app.prefs.setSemanticPackPrompt(enabled)
+        _state.update { it.copy(promptAtStart = enabled) }
+    }
 
     private fun launchInstall(
         initial: Work,

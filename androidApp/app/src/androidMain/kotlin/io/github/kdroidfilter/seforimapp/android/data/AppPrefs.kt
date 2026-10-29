@@ -85,6 +85,10 @@ class AppPrefs(context: Context) {
     private val _appUpdateCheck = MutableStateFlow(sp.getBoolean(KEY_APP_UPDATE_CHECK, true))
     val appUpdateCheck: StateFlow<Boolean> = _appUpdateCheck.asStateFlow()
 
+    /** Desktop isSemanticPackPromptEnabled: whether a start without the semantic search in use opens the settings on it. */
+    private val _semanticPackPrompt = MutableStateFlow(sp.getBoolean(KEY_SEMANTIC_PACK_PROMPT, true))
+    val semanticPackPrompt: StateFlow<Boolean> = _semanticPackPrompt.asStateFlow()
+
     /** "מספר מרבי של מפרשים בעמוד": 0 = automatic, otherwise 1..[MAX_COMMENTATORS_PER_PAGE]. */
     private val _maxCommentatorsPerPage = MutableStateFlow(sp.getInt(KEY_MAX_COMMENTATORS, 0).coerceIn(0, MAX_COMMENTATORS_PER_PAGE))
     val maxCommentatorsPerPage: StateFlow<Int> = _maxCommentatorsPerPage.asStateFlow()
@@ -240,6 +244,11 @@ class AppPrefs(context: Context) {
         sp.edit().putBoolean(KEY_APP_UPDATE_CHECK, on).apply()
     }
 
+    fun setSemanticPackPrompt(enabled: Boolean) {
+        _semanticPackPrompt.value = enabled
+        sp.edit().putBoolean(KEY_SEMANTIC_PACK_PROMPT, enabled).apply()
+    }
+
     fun setMaxCommentatorsPerPage(max: Int) {
         val v = max.coerceIn(0, MAX_COMMENTATORS_PER_PAGE)
         _maxCommentatorsPerPage.value = v
@@ -307,6 +316,7 @@ class AppPrefs(context: Context) {
         _persistSession.value = true
         _compactRails.value = false
         _appUpdateCheck.value = true
+        _semanticPackPrompt.value = true
         _maxCommentatorsPerPage.value = 0
         _bookFont.value = ZayitFont.DefaultBook
         _commentaryFont.value = ZayitFont.DefaultCommentary
@@ -387,6 +397,9 @@ class AppPrefs(context: Context) {
         private const val KEY_CATALOG_ROW_WIDTH = "home_catalog_row_width"
         private const val KEY_CATALOG_ROW_HEIGHT = "home_catalog_row_height"
         private const val KEY_APP_UPDATE_CHECK = "app_update_check_on_start"
+
+        // Desktop's key; not in a backup, as on desktop (it is about this device's library)
+        private const val KEY_SEMANTIC_PACK_PROMPT = "semantic_pack_prompt"
         private const val SCHEMA = 1
 
         /** Desktop AppSettings.PORTABLE_KEYS: what a backup carries to another machine. */
