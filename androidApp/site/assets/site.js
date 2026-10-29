@@ -127,7 +127,8 @@
   }
 
   // ── Pardes for desktop: the newest desktop-<version>-<run> that is not a pre-release, its installers as
-  // desktop-release.yml names them.
+  // desktop-release.yml names them. A platform the newest release has no installer for yet (it was out without the
+  // Apple Silicon Mac) gets the newest release's that has one.
   var DESKTOP = {
     win: /-windows-x64-nsis\.exe$/i, winarm: /-windows-arm64-nsis\.exe$/i,
     mac: /-macos-arm64\.dmg$/i, macintel: /-macos-x64\.dmg$/i,
@@ -135,24 +136,29 @@
     debarm: /_arm64\.deb$/i, rpmarm: /\.aarch64\.rpm$/i, pacmanarm: /-aarch64\.pacman$/i
   };
   function desktop(list) {
-    var rel = list.filter(function (r) {
+    var rels = list.filter(function (r) {
       return !r.draft && !r.prerelease && /^desktop-\d/.test(r.tag_name || '') &&
         (r.assets || []).some(function (a) { return /\.exe$/i.test(a.name); });
-    })[0];
+    });
+    var rel = rels[0];
     if (!rel) return null;
     var released = {};
     list.forEach(function (r) {
       var v = (/^desktop-(\d+(?:\.\d+)*)-/.exec(r.tag_name || '') || [])[1];
       if (v && !r.draft && !r.prerelease) released[v] = r.published_at;
     });
-    return { rel: rel, version: (/^desktop-(\d+(?:\.\d+)*)-/.exec(rel.tag_name) || [])[1] || rel.tag_name, released: released };
+    return { rel: rel, rels: rels, version: (/^desktop-(\d+(?:\.\d+)*)-/.exec(rel.tag_name) || [])[1] || rel.tag_name, released: released };
   }
   function showDesktop(d) {
     set('desk.version', d.version);
     set('desk.date', both(new Date(d.rel.published_at)));
     set('desk.page', d.rel.html_url);
     Object.keys(DESKTOP).forEach(function (k) {
-      var a = (d.rel.assets || []).filter(function (x) { return DESKTOP[k].test(x.name); })[0];
+      var a = null;
+      d.rels.some(function (r) {
+        a = (r.assets || []).filter(function (x) { return DESKTOP[k].test(x.name); })[0];
+        return a;
+      });
       if (!a) return;
       set('desk.' + k + '.url', a.browser_download_url);
       set('desk.' + k + '.name', a.name);

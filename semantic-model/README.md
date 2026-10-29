@@ -20,7 +20,7 @@ package or its model.
 | Index | `./gradlew :SeforimApp:buildVectorIndex -Pvectors=build/vectors -Pdb=… -Pout=…/pardes.vec.lucene` | CPU | `pardes.vec.lucene` |
 | Check the vectors | `check_vectors.py build/vectors-int8 build/model seforim.db` | CPU | 300 rows against their lines embedded again |
 | Check the index | `eval-100/harness/IndexCheck.kt seforim.db queries.tsv check.jsonl`, then `check_index.py check.jsonl …/pardes-model` | CPU | the app's query vectors against Python's, the graph's first ten against an exact search, the search's time |
-| Pack | `package_pack.py --model build/model --index …/pardes.vec.lucene --library v3-… --pack N --out build/pack`, then `--verify build/pack` | CPU | `pardes-semantic.tar.zst` (or its `.partNN`) and its manifest, SeforimLibrary's bundle format: efrul/Pardes's `semantic-release.yml` publishes it (its `docs/SEMANTIC_PLAN.md`) |
+| Pack | `package_pack.py --model build/model --index …/pardes.vec.lucene --library v3-… --pack N --out build/pack`, then `--verify build/pack` | CPU | `pardes-semantic.tar.zst` (or its `.partNN`) and its manifest, SeforimLibrary's bundle format: efrul/Pardes's `semantic-release.yml` publishes it (its `docs/SEMANTIC_PLAN.md`), titled and described by `release_notes.py` (`semantic-notes.yml` writes them again on a pack already released) |
 | Measure | `embed_corpus.py --corpus build/eval/corpus.jsonl --model build/model …` then `evaluate.py` | CPU | `report.md` |
 
 The benchmark's books (the Shulchan Aruch, Berakhot, Shabbat, Bava Kamma, Bava Metzia, Sanhedrin) and the Rambam
