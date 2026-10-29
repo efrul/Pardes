@@ -14,6 +14,8 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
     vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, the Linux launcher
     entry's English and Hebrew name and comment, Windows upgrade id, macOS bundle id and app name, icons);
   - removes the OS URL scheme: `zayit://` belongs to Zayit, and two apps registering it would clash;
+  - removes the Microsoft Store package (`TargetFormat.AppX`): upstream's `appx { }` is Zayit's own Store listing
+    (identity `KdroidFilter.Zayit`, named זית);
   - fails if one of Zayit's private add-ons (smart siddur, semantic search, quote links) would be compiled: their
     licence is for Zayit only;
   - lays `<brand>/composeResources` over `SeforimApp/src/commonMain/composeResources` and `<brand>/assets` over
@@ -52,6 +54,8 @@ Keep this list short and exact; every line here is a possible merge conflict.
 | `SeforimApp/.../framework/database/PendingDbCleanup.kt` | drops pending deletions in a foreign folder |
 | `SeforimApp/.../features/onboarding/licence/LicenceScreen.kt` | offers `ExistingLibraryScreen` when `ForeignLibraries.find()` finds one |
 | `SeforimApp/.../features/onboarding/navigation/OnBoardingDestination.kt`, `OnBoardingNavHost.kt` | the `ExistingLibraryScreen` destination |
+| `SeforimApp/.../framework/crashreporting/CrashReporting.kt`, `DataSettingsViewModel.kt`, `DataSettingsScreen.kt` | `isAvailable` (a Sentry DSN): without one the error reports' switch is not shown, as Pardes sends none; a fix for any community build |
+| `buildSrc/.../Versioning.kt` | a local build takes its version from the latest `v*` tag only (`--match v[0-9]*`): a fork's `android-*`, `desktop-*` and `semantic-*` tags are not versions, and Nucleus refused to configure with one |
 | `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `onboarding_existing_library_*` strings (one block) |
 
 New files in upstream folders (no conflict, but generic code a Zayit merge must still compile with):
@@ -117,4 +121,7 @@ photo). When a Zayit merge conflicts there, keep Pardes's side.
 - `composeResources/files/ABOUT.md` and `CONDITIONS.md`: in both, the §7b line ends with a space before the closing
   direction mark (U+2069). Without it the autolinker puts the mark into the zayitapp.com link. Keep the line's words
   unchanged.
+- `CONDITIONS.md`'s privacy section (since Zayit 0.6.12) keeps upstream's `<!-- if:self-update -->` and
+  `<!-- if:update-helper -->` blocks, which `ConditionsText` drops where they do not apply; Pardes sends no error
+  reports, so it says so instead of upstream's first paragraph.
 - Who made the app: the name and authorship rules of the `zayit-android` skill apply to every Pardes text.

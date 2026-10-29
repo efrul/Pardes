@@ -23,6 +23,9 @@ import io.sentry.SentryOptions
 class CrashReporting(
     private val appSettings: AppSettings,
 ) {
+    /** False in a build without a DSN (a community build): nothing can be sent, so there is nothing to turn off. */
+    val isAvailable: Boolean = BuildConfig.SENTRY_DSN.isNotBlank()
+
     /** Starts Sentry when the official build carries a DSN and the user has not turned the reports off. */
     fun start() {
         val enabled = appSettings.isErrorReportingEnabled()
