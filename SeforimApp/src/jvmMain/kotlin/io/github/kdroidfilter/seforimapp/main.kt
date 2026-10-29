@@ -56,6 +56,8 @@ import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSe
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
+import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackPrompt
 import io.github.kdroidfilter.seforimapp.features.siddur.installedSiddur
 import io.github.kdroidfilter.seforimapp.features.update.UpdateDialog
 import io.github.kdroidfilter.seforimapp.framework.backup.PendingUserDataRestore
@@ -400,6 +402,18 @@ fun main(args: Array<String>) {
                         // vector graph and the indexes' pages loaded
                         LaunchedEffect(Unit) {
                             if (!E2e.enabled) warmSearch(appGraph)
+                        }
+
+                        // A library whose semantic search has no pack opens the settings on it (SemanticPackPrompt)
+                        LaunchedEffect(Unit) {
+                            if (!E2e.enabled) {
+                                SemanticPackPrompt.openAtStart(
+                                    appGraph.appSettings,
+                                    snapshotFlow { sessionRestored },
+                                    desktopManager,
+                                    appGraph.appUpdateService.dialogVisible,
+                                ) { settingsWindowViewModel.onEvent(SettingsWindowEvents.OnOpenTo(SettingsDestination.Data)) }
+                            }
                         }
 
                         // Debounced session autosave: any tab/window change persists ~2s later, so a

@@ -295,6 +295,13 @@ class AppSettings(
         settings[KEY_LIBRARY_INSTALL_DIR] = path.orEmpty()
     }
 
+    // Whether a start whose library has no semantic pack in use opens the settings on it (SemanticPackPrompt).
+    fun isSemanticPackPromptEnabled(): Boolean = settings[KEY_SEMANTIC_PACK_PROMPT, true]
+
+    fun setSemanticPackPromptEnabled(enabled: Boolean) {
+        settings[KEY_SEMANTIC_PACK_PROMPT] = enabled
+    }
+
     /** Writes the settings to disk now (Java preferences do it within 30 s otherwise), before a step that relies on them. */
     fun flush() {
         // The app's node is under the user root, whose flush writes its descendants
@@ -689,6 +696,7 @@ class AppSettings(
         private const val KEY_CLOSE_TREE_ON_NEW_BOOK = "close_tree_on_new_book"
         private const val KEY_DATABASE_PATH = "database_path"
         private const val KEY_LIBRARY_INSTALL_DIR = "library_install_dir"
+        private const val KEY_SEMANTIC_PACK_PROMPT = "semantic_pack_prompt"
         private const val KEY_PERSIST_SESSION = "persist_session"
         private const val KEY_KEEP_SCREEN_AWAKE_ON_BOOK = "keep_screen_awake_on_book"
         private const val KEY_FONT_BOOK = "font_book"

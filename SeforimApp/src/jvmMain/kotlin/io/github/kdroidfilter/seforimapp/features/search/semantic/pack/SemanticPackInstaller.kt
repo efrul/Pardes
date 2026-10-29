@@ -481,6 +481,9 @@ class SemanticPackInstaller(
 
         fun unpackedEstimate(bundleBytes: Long): Long = (bundleBytes * UNPACK_RATIO).toLong()
 
+        /** The room [download] asks for on the library's drive, to download a bundle of [bundleBytes] and unpack it. */
+        fun installBytes(bundleBytes: Long): Long = bundleBytes + unpackedEstimate(bundleBytes) + MARGIN_BYTES
+
         /** What [zip] unpacks to, as its central directory says. */
         private fun zipBytes(zip: File): Long =
             ZipFile(zip).use { z ->
