@@ -2884,6 +2884,18 @@
             "glob": "ai/onnxruntime/native/linux-aarch64/libonnxruntime4j_jni.so"
         },
         {
+            "glob": "ai/onnxruntime/native/osx-aarch64/libonnxruntime.dylib"
+        },
+        {
+            "glob": "ai/onnxruntime/native/osx-aarch64/libonnxruntime4j_jni.dylib"
+        },
+        {
+            "glob": "ai/onnxruntime/native/osx-x64/libonnxruntime.dylib"
+        },
+        {
+            "glob": "ai/onnxruntime/native/osx-x64/libonnxruntime4j_jni.dylib"
+        },
+        {
             "glob": "libcudart.so"
         },
         {

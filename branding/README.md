@@ -12,7 +12,7 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
   (`-Pseforimapp.brand=pardes`, the default, or `zayit`) and, for Pardes:
   - sets the packaging values of `nucleus.application` from `<brand>/brand.properties` (name, package and image name,
     vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, the Linux launcher
-    entry's English and Hebrew name and comment, Windows upgrade id, icons);
+    entry's English and Hebrew name and comment, Windows upgrade id, macOS bundle id and app name, icons);
   - removes the OS URL scheme: `zayit://` belongs to Zayit, and two apps registering it would clash;
   - fails if one of Zayit's private add-ons (smart siddur, semantic search, quote links) would be compiled: their
     licence is for Zayit only;
@@ -92,7 +92,7 @@ tests and fixtures under `jvmTest/`; `SEMANTIC_SEARCH.md`, `docs/SEMANTIC_PLAN.m
 | `SeforimApp/.../features/settings/ui/DataSettingsScreen.kt` | `SemanticPackCard()` |
 | `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `semantic_pack_*` and `semantic_problem_*` strings (one block) |
 | `SeforimApp/.../framework/database/LibraryLocation.kt` | `NAMES`: `pardes-model` and `pardes.vec.lucene` move with the library; `LEFTOVERS`: a pack's download and staging folders |
-| `SeforimApp/src/graalvm/reachability-metadata.json` | ONNX Runtime's libraries for `win-x64` and `linux-aarch64` |
+| `SeforimApp/src/graalvm/reachability-metadata.json` | ONNX Runtime's libraries for `win-x64`, `linux-aarch64`, `osx-aarch64` and `osx-x64` |
 
 Licence-restricted files are replaced in place, not overlaid, because they must not be in the repository at all:
 the Rashi Amiti font (removed, with its `FontCatalog` entry; `FontCatalogTest` counts 27 fonts) and the temple
@@ -108,7 +108,7 @@ photo). When a Zayit merge conflicts there, keep Pardes's side.
 3. Build: `BrandResources` fails if a replaced file or string moved upstream; update `<brand>/` accordingly. It
    does not check sizes: if upstream changes a replaced picture's size, change it in `desktop()` of
    `.claude/skills/zayit-android/scripts/pardes-icon.py` and run `python3 .claude/skills/zayit-android/scripts/pardes-icon.py desktop .`,
-   which writes all the pictures (AppIcon, LinuxIcon, WindowsIcon.ico, zayit_transparent, zayit_logo_branch,
+   which writes all the pictures (AppIcon, LinuxIcon, WindowsIcon.ico, MacosIcon.icns, zayit_transparent, zayit_logo_branch,
    zayit_new_logo(_text), splash) at upstream's sizes.
 4. Check that `-Pseforimapp.brand=zayit` still compiles.
 
