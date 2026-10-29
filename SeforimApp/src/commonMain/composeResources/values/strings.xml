@@ -218,14 +218,12 @@
     <string name="semantic_pack_no_model">בתיקיית הספרייה יש אינדקס בלי המודל שלו (pardes-model), ולכן החיפוש לפי משמעות כבוי.</string>
     <string name="semantic_pack_no_index">בתיקיית הספרייה יש מודל בלי האינדקס שלו (pardes.vec.lucene), למשל אחרי עדכון מלא של הספרייה. לכן החיפוש לפי משמעות כבוי.</string>
     <string name="semantic_pack_other_model">המודל והאינדקס שבתיקיית הספרייה הם מחבילות שונות, ולכן החיפוש לפי משמעות כבוי.</string>
-    <string name="semantic_pack_other_library">האינדקס שבתיקיית הספרייה נבנה לספרייה מ־%1$s, והספרייה המותקנת היא מ־%2$s. לכן החיפוש לפי משמעות כבוי.</string>
     <string name="semantic_pack_unreadable">אי אפשר לקרוא את החבילה שבתיקיית הספרייה (%1$s), ולכן החיפוש לפי משמעות כבוי.</string>
-    <string name="semantic_pack_checking">בודק אם יש חבילה לספרייה…</string>
+    <string name="semantic_pack_checking">בודק אם יש חבילה…</string>
     <string name="semantic_pack_available">חבילה %1$s זמינה להורדה (%2$s).</string>
-    <string name="semantic_pack_up_to_date">זו החבילה האחרונה לספרייה הזו.</string>
-    <string name="semantic_pack_none_yet">אין עדיין חבילה לספרייה מ־%1$s.</string>
+    <string name="semantic_pack_up_to_date">זו החבילה האחרונה.</string>
+    <string name="semantic_pack_none_yet">אין עדיין חבילה להורדה.</string>
     <string name="semantic_pack_unreachable">אי אפשר לבדוק כרגע אם יש חבילה, כי אין חיבור ל־GitHub. אפשר להוריד אותה בדפדפן מדף ההורדות ולייבא אותה.</string>
-    <string name="semantic_pack_unknown_library">לא ידוע מאיזו גרסה הספרייה המותקנת, ולכן אי אפשר לבחור לה חבילה. אפשר לייבא חבילה מקבצים.</string>
     <string name="semantic_pack_no_library">צריך להתקין קודם את הספרייה.</string>
     <string name="semantic_pack_download">הורדה והתקנה</string>
     <string name="semantic_pack_update">עדכון לחבילה %1$s</string>
@@ -242,7 +240,6 @@
     <string name="semantic_problem_missing">חסר הקובץ %1$s.</string>
     <string name="semantic_problem_corrupted">הקובץ %1$s פגום או חלקי. אפשר להוריד אותו שוב.</string>
     <string name="semantic_problem_unusable">אי אפשר להשתמש בחבילה הזו (%1$s).</string>
-    <string name="semantic_problem_other_library">החבילה נבנתה לספרייה מ־%1$s, והספרייה המותקנת היא מ־%2$s.</string>
     <string name="semantic_problem_failed">ההתקנה נכשלה (%1$s).</string>
     <string name="add_tab">הוסף לשונית</string>
     <string name="home">דף הבית</string>

@@ -27,7 +27,7 @@ class PendingSemanticPackTest {
         PackFixtures.folders(library, tag = "old")
         stage()
         val expected = newContents()
-        PendingSemanticPack.schedule(PendingSemanticPack.Request(library, PackFixtures.LIBRARY_TAG), markers)
+        PendingSemanticPack.schedule(PendingSemanticPack.Request(library), markers)
 
         assertEquals(PendingSemanticPack.Outcome.Installed, PendingSemanticPack.runOnce(markers))
 
@@ -43,7 +43,7 @@ class PendingSemanticPackTest {
         stage()
         val expected = newContents()
 
-        val outcome = PendingSemanticPack.apply(PendingSemanticPack.Request(library, null))
+        val outcome = PendingSemanticPack.apply(PendingSemanticPack.Request(library))
 
         assertEquals(PendingSemanticPack.Outcome.Installed, outcome)
         assertEquals(expected, PackFixtures.contents(library).filterKeys { it.substringBefore('/') in SemanticPack.FOLDERS })
@@ -61,7 +61,7 @@ class PendingSemanticPackTest {
             Files.move(from.toPath(), to.toPath())
         }
 
-        val outcome = PendingSemanticPack.apply(PendingSemanticPack.Request(library, PackFixtures.LIBRARY_TAG), failing)
+        val outcome = PendingSemanticPack.apply(PendingSemanticPack.Request(library), failing)
 
         assertEquals(PendingSemanticPack.Outcome.Failed("locked"), outcome)
         assertEquals(old, oldContents())
@@ -78,7 +78,7 @@ class PendingSemanticPackTest {
             Files.move(from.toPath(), to.toPath())
         }
 
-        assertIs<PendingSemanticPack.Outcome.Failed>(PendingSemanticPack.apply(PendingSemanticPack.Request(library, null), failing))
+        assertIs<PendingSemanticPack.Outcome.Failed>(PendingSemanticPack.apply(PendingSemanticPack.Request(library), failing))
 
         for (name in SemanticPack.FOLDERS) assertFalse(File(library, name).exists(), name)
     }
@@ -91,7 +91,7 @@ class PendingSemanticPackTest {
         // The model's new folder already in, its old one aside; the index not yet
         Files.move(File(library, SemanticPack.MODEL_DIR).toPath(), File(library, "${SemanticPack.MODEL_DIR}.old").toPath())
         Files.move(File(staging, SemanticPack.MODEL_DIR).toPath(), File(library, SemanticPack.MODEL_DIR).toPath())
-        PendingSemanticPack.schedule(PendingSemanticPack.Request(library, PackFixtures.LIBRARY_TAG), markers)
+        PendingSemanticPack.schedule(PendingSemanticPack.Request(library), markers)
 
         assertEquals(PendingSemanticPack.Outcome.Installed, PendingSemanticPack.runOnce(markers))
 
@@ -100,16 +100,21 @@ class PendingSemanticPackTest {
     }
 
     @Test
-    fun `a pack for a library replaced since is dropped`() {
+    fun `a pack goes in over another release of the library, and not where the library is gone`() {
         PackFixtures.folders(library, tag = "old")
-        val old = oldContents()
         stage()
+        val expected = newContents()
+        // A request Pardes 1.0.0 wrote, with the library's release on a second line
+        File(markers, "pending-semantic-pack.txt").writeText("${library.absolutePath}\n${PackFixtures.LIBRARY}")
         PackFixtures.library(library, release = "20261111000000")
 
-        val outcome = PendingSemanticPack.apply(PendingSemanticPack.Request(library, PackFixtures.LIBRARY_TAG))
+        assertEquals(PendingSemanticPack.Request(library), PendingSemanticPack.read(markers))
+        assertEquals(PendingSemanticPack.Outcome.Installed, PendingSemanticPack.runOnce(markers))
+        assertEquals(expected, PackFixtures.contents(library).filterKeys { it.substringBefore('/') in SemanticPack.FOLDERS })
 
-        assertIs<PendingSemanticPack.Outcome.Dropped>(outcome)
-        assertEquals(old, oldContents())
+        stage()
+        File(library, "seforim.db").delete()
+        assertIs<PendingSemanticPack.Outcome.Dropped>(PendingSemanticPack.apply(PendingSemanticPack.Request(library)))
         assertFalse(staging.exists())
     }
 
@@ -118,7 +123,7 @@ class PendingSemanticPackTest {
         PackFixtures.folders(library, tag = "old")
         val old = oldContents()
         stage()
-        PendingSemanticPack.schedule(PendingSemanticPack.Request(library, null), markers)
+        PendingSemanticPack.schedule(PendingSemanticPack.Request(library), markers)
         // A link to nowhere where the old index was: not there to move aside, but in the way of the new one
         File(library, SemanticPack.INDEX_DIR).deleteRecursively()
         Files.createSymbolicLink(File(library, SemanticPack.INDEX_DIR).toPath(), File(root, "nowhere").toPath())

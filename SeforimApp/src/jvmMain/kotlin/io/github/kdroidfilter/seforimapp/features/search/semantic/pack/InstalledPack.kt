@@ -2,7 +2,6 @@ package io.github.kdroidfilter.seforimapp.features.search.semantic.pack
 
 import io.github.kdroidfilter.seforimapp.features.search.semantic.OpenModelSpec
 import io.github.kdroidfilter.seforimapp.features.search.semantic.VectorIndexBuilder
-import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import java.io.File
 
 /** The semantic pack beside a library, as the settings show it, checked as IndependentSemanticSearch opens it. */
@@ -26,11 +25,6 @@ sealed interface InstalledPack {
 
     data object OtherModel : NotUsed
 
-    data class OtherLibrary(
-        val pack: String,
-        val installed: String,
-    ) : NotUsed
-
     data class Unreadable(
         val message: String,
     ) : NotUsed
@@ -43,11 +37,8 @@ sealed interface InstalledPack {
             return runCatching {
                 val spec = OpenModelSpec.read(modelDir.toPath()) ?: return NoModel
                 val index = VectorIndexBuilder.readInfo(indexDir.toPath()) ?: return NoIndex
-                val library = LibraryLocation.version(libraryDir)
                 when {
                     index.model != spec.id || index.dimension != spec.dimension -> OtherModel
-                    index.dbRelease != null && library != null && !SemanticPack.sameLibrary(index.dbRelease, library) ->
-                        OtherLibrary(index.dbRelease, library)
                     else -> {
                         val info =
                             File(modelDir, SemanticPack.INFO_NAME)
