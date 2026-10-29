@@ -219,6 +219,9 @@ data class SearchPersistedState(
     val draftQuery: String = "",
     // The author whose books are searched (none with a book or TOC scope)
     val fetchAuthorId: Long = 0L,
+    // Several books and categories searched together (SearchScope.Multi)
+    val fetchBookIds: List<Long> = emptyList(),
+    val fetchCategoryIds: List<Long> = emptyList(),
 ) {
     /** The scope the search runs in: its fetch scope, else its view filter. */
     val scope: SearchScope
@@ -232,11 +235,15 @@ data class SearchPersistedState(
             }
         }
 
-    /** The author's or category's books the search runs in, else everywhere: where a search narrowed to a book goes back to. */
+    /**
+     * The author's, category's, or several books' and categories' books the search runs in, else everywhere: where a
+     * search narrowed to a book goes back to.
+     */
     val wideScope: SearchScope
         get() =
             when {
                 fetchAuthorId > 0 -> SearchScope.Author(fetchAuthorId)
+                fetchBookIds.isNotEmpty() || fetchCategoryIds.isNotEmpty() -> SearchScope.Multi(fetchBookIds, fetchCategoryIds)
                 fetchCategoryId > 0 -> SearchScope.Category(fetchCategoryId)
                 else -> SearchScope.Global
             }
@@ -258,6 +265,7 @@ data class SearchPersistedState(
                     is SearchScope.Book -> "book"
                     is SearchScope.Toc -> "toc"
                     is SearchScope.Author -> "author"
+                    is SearchScope.Multi -> "multi"
                 },
             filterCategoryId = 0L,
             filterBookId = bookId,
@@ -266,6 +274,8 @@ data class SearchPersistedState(
             fetchBookId = bookId,
             fetchTocId = tocId,
             fetchAuthorId = (scope as? SearchScope.Author)?.authorId ?: 0L,
+            fetchBookIds = (scope as? SearchScope.Multi)?.bookIds.orEmpty(),
+            fetchCategoryIds = (scope as? SearchScope.Multi)?.categoryIds.orEmpty(),
         )
     }
 }

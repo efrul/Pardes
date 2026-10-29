@@ -82,8 +82,8 @@ data class SearchUiState(
     val results: List<SearchResult> = emptyList(),
     val scopeBook: Book? = null,
     val scopeTocId: Long? = null,
-    // The category searched in, whole (its CategoryHit.label), null in any other scope
-    val scopeCategory: String? = null,
+    // The category, or the books and categories, searched in whole (CategoryHit.label, titles), null in any other scope
+    val scopeLabel: String? = null,
     // Scroll/anchor persistence
     val scrollIndex: Int = 0,
     val scrollOffset: Int = 0,
@@ -146,6 +146,7 @@ class SearchResultViewModel(
             when (scope) {
                 SearchScope.Global -> null
                 is SearchScope.Category -> repository.getCategory(scope.categoryId)?.title
+                is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds)
                 is SearchScope.Book -> repository.getBookCore(scope.bookId)?.title
                 is SearchScope.Author -> authorScope(scope.authorId)?.name?.let(AuthorNames::display)
                 is SearchScope.Toc ->
@@ -707,27 +708,50 @@ class SearchResultViewModel(
                 ?.also { authorScopeCache = it }
         }
 
-    /** Shows the category [categoryId] (none at 0) as where the search runs, as the status line says. */
-    private suspend fun showScopeCategory(categoryId: Long) {
+    /** Shows where [state] searches, when it is a category or several books and categories, as the status line says. */
+    private suspend fun showScopeLabel(state: SearchPersistedState) {
         val label =
-            categoryId.takeIf { it > 0 }?.let { id ->
-                runSuspendCatching { categoryNavigationUseCase.buildCategoryPath(id) }
-                    .getOrDefault(emptyList())
-                    .takeIf { it.isNotEmpty() }
-                    ?.let { path -> CategoryHit(id, path.map { it.title }).label }
+            when (val scope = state.wideScope) {
+                is SearchScope.Category -> categoryLabel(scope.categoryId)
+                is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds)
+                else -> null
             }
-        if (_uiState.value.scopeCategory != label) _uiState.value = _uiState.value.copy(scopeCategory = label)
+        if (_uiState.value.scopeLabel != label) _uiState.value = _uiState.value.copy(scopeLabel = label)
+    }
+
+    // A category's name as the bar's chip has it (CategoryHit.label)
+    private suspend fun categoryLabel(categoryId: Long): String? =
+        runSuspendCatching { categoryNavigationUseCase.buildCategoryPath(categoryId) }
+            .getOrDefault(emptyList())
+            .takeIf { it.isNotEmpty() }
+            ?.let { path -> CategoryHit(categoryId, path.map { it.title }).label }
+
+    // Books' titles and categories' names, as the bar's chips (`ברכות, שבת, רש״י › תורה`)
+    private suspend fun multiScopeLabel(
+        bookIds: List<Long>,
+        categoryIds: List<Long>,
+    ): String? {
+        val books = bookIds.mapNotNull { runSuspendCatching { repository.getBookCore(it)?.title }.getOrNull() }
+        val categories = categoryIds.mapNotNull { categoryLabel(it) }
+        return (books + categories).joinToString(", ").ifBlank { null }
     }
 
     /**
-     * The books searched when the search is scoped to an author or a category, null for any other scope. An
-     * author or category without books searches none: a book id no book has (an empty filter would search
+     * The books searched when the search is scoped to an author, a category, or several books and categories, null
+     * for any other scope. A scope without books searches none: a book id no book has (an empty filter would search
      * everywhere).
      */
     private suspend fun scopeBookIds(): List<Long>? {
         val state = persistedSearchState()
         state.fetchAuthorId.takeIf { it > 0 }?.let { authorId ->
             return authorScope(authorId)?.bookIds.orEmpty().ifEmpty { listOf(NO_BOOK_ID) }
+        }
+        if (state.fetchBookIds.isNotEmpty() || state.fetchCategoryIds.isNotEmpty()) {
+            val underCategories =
+                state.fetchCategoryIds.flatMap { id ->
+                    runSuspendCatching { collectBookIdsUnderCategory(id) }.getOrDefault(emptySet())
+                }
+            return (state.fetchBookIds + underCategories).distinct().ifEmpty { listOf(NO_BOOK_ID) }
         }
         val categoryId = state.fetchCategoryId.takeIf { it > 0 } ?: return null
         return runSuspendCatching { collectBookIdsUnderCategory(categoryId) }
@@ -751,7 +775,7 @@ class SearchResultViewModel(
         _selectedBookIds.value = persisted.selectedBookIds
         _selectedTocIds.value = persisted.selectedTocIds
         // A restored tab shows its results at once: where they were searched, for the status line, too
-        if (persisted.fetchCategoryId > 0) viewModelScope.launch { showScopeCategory(persisted.fetchCategoryId) }
+        if (persisted.wideScope != SearchScope.Global) viewModelScope.launch { showScopeLabel(persisted) }
         _breadcrumbs.value = persisted.breadcrumbs.toImmutableMap()
 
         _uiState.value =
@@ -1002,7 +1026,7 @@ class SearchResultViewModel(
                 }
                 try {
                     val persisted = persistedSearchState()
-                    showScopeCategory(persisted.fetchCategoryId)
+                    showScopeLabel(persisted)
                     val fetchBookId = persisted.fetchBookId.takeIf { it > 0 } ?: persisted.filterBookId.takeIf { it > 0 }
                     val fetchTocId = persisted.fetchTocId.takeIf { it > 0 } ?: persisted.filterTocId.takeIf { it > 0 }
                     // Apply persisted/initial global-extended flag to UI state so toolbar reflects it
@@ -1368,6 +1392,8 @@ class SearchResultViewModel(
                     // An author's or category's search narrowed to one of its books goes back to all of them when cleared
                     fetchAuthorId = it.fetchAuthorId,
                     fetchCategoryId = it.fetchCategoryId,
+                    fetchBookIds = it.fetchBookIds,
+                    fetchCategoryIds = it.fetchCategoryIds,
                     selectedCategoryIds = emptySet(),
                     selectedBookIds = emptySet(),
                     selectedTocIds = emptySet(),
@@ -1409,6 +1435,8 @@ class SearchResultViewModel(
                 it.withScope(SearchScope.Toc(bookId = bookIdFromToc ?: 0L, tocId = tocId)).copy(
                     fetchAuthorId = it.fetchAuthorId,
                     fetchCategoryId = it.fetchCategoryId,
+                    fetchBookIds = it.fetchBookIds,
+                    fetchCategoryIds = it.fetchCategoryIds,
                     selectedCategoryIds = emptySet(),
                     selectedBookIds = emptySet(),
                     selectedTocIds = emptySet(),

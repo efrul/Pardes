@@ -437,7 +437,7 @@ private fun SearchResultContentMvi(
                                         if (oneBook) {
                                             state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle
                                         } else {
-                                            state.scopeCategory
+                                            state.scopeLabel
                                         },
                                     total = totalResults,
                                     isLoading = showProgress,
