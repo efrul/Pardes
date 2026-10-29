@@ -4,12 +4,10 @@
 //    java.lang.foreign (absent on Android). The HNSW search reads its vectors through positional reads instead;
 //  - the open model is only looked for next to the index: PARDES_MODEL_DIR / -Dpardes.model.dir do not exist on a phone;
 //  - no legacy model: desktop runs it only when SEFORIM_MODEL_DIR names it, for a comparison, and it is not Pardes's;
-//  - release_info.txt is read with readAllBytes (Files.readString is API 33);
 //  - android.util.Log instead of desktop's logger.
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
 import android.util.Log
-import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
 import org.apache.lucene.document.IntPoint
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.StoredFields
@@ -19,7 +17,6 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.store.NIOFSDirectory
 import java.io.Closeable
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -226,20 +223,6 @@ class IndependentSemanticSearch(
             }
         }
 
-        private fun otherLibrary(
-            info: VectorIndexBuilder.Info,
-            indexDir: Path,
-        ): Boolean {
-            val library =
-                indexDir
-                    .resolveSibling("release_info.txt")
-                    .takeIf(Files::isRegularFile)
-                    // Android: readAllBytes (Files.readString is API 33)
-                    ?.let { runCatching { String(Files.readAllBytes(it), StandardCharsets.UTF_8).trim() }.getOrNull() }
-                    ?.ifEmpty { null }
-            return info.dbRelease != null && library != null && !SemanticPack.sameLibrary(info.dbRelease, library)
-        }
-
         /** The vector index of the open model, next to the full-text index [indexDir]. */
         fun openVectorIndexDir(indexDir: Path): Path = indexDir.resolveSibling(VectorIndexBuilder.DIR_NAME)
 
@@ -268,14 +251,10 @@ class IndependentSemanticSearch(
                         )
                         null
                     }
-                    // Vectors of another library release (release_info.txt, which the library's delta updates keep):
-                    // their line ids may name other lines
-                    otherLibrary(info, indexDir) -> {
-                        Log.w(TAG, "$vectorDir was embedded on the library ${info.dbRelease}: not used")
-                        null
-                    }
+                    // Vectors of any library release: SeforimLibrary keeps a line's id from release to release, so
+                    // the vectors of another release miss only the lines changed in between (SemanticPackReleases.newest)
                     else -> {
-                        Log.i(TAG, "Open model ${spec.id}, ${info.lines} vectors")
+                        Log.i(TAG, "Open model ${spec.id}, ${info.lines} vectors of the library ${info.dbRelease}")
                         IndependentSemanticSearch(vectorDir, OnnxEmbeddingProvider.open(spec), spec.hybridDenseWeight)
                     }
                 }

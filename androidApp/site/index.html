@@ -822,9 +822,9 @@ footer p { max-width: 52rem; }
       </section>
       <section class="extra" id="lib-meaning" aria-labelledby="meaning-title">
         <h3 id="meaning-title">חבילת החיפוש לפי משמעות <span class="chip">מגרסה 0.6.0</span></h3>
-        <p>את החיפוש לפי משמעות מוסיפים לספרייה בחבילה: המודל והאינדקס שלו, לגרסה של הספרייה המותקנת. ב<b>הגדרות › ניהול נתונים › חיפוש לפי משמעות</b> לוחצים <b>הורדה והתקנה</b>, ופרדס מוריד את החבילה המתאימה מ־GitHub, כ־2 ג״ב. ההורדה נמשכת גם כשיוצאים מההגדרות, עם התראה שמראה את ההתקדמות, והחבילה נכנסת לשימוש בהפעלה הבאה של פרדס, או מיד ב<b>הפעלה מחדש עכשיו</b>.</p>
+        <p>את החיפוש לפי משמעות מוסיפים לספרייה בחבילה: המודל והאינדקס שלו. היא עובדת בכל גרסה של הספרייה. ב<b>הגדרות › ניהול נתונים › חיפוש לפי משמעות</b> לוחצים <b>הורדה והתקנה</b>, ופרדס מוריד את החבילה האחרונה מ־GitHub, כ־2 ג״ב. ההורדה נמשכת גם כשיוצאים מההגדרות, עם התראה שמראה את ההתקדמות, והחבילה נכנסת לשימוש בהפעלה הבאה של פרדס, או מיד ב<b>הפעלה מחדש עכשיו</b>.</p>
         <p>כשהטלפון לא מגיע ל־GitHub, מורידים בדפדפן את <code>pardes-model.zip</code> ואת <code>pardes.vec.lucene.zip</code> (<a href="#downloads">בהורדות</a>), ובאותו מסך לוחצים <b>ייבוא מקבצים…</b> ובוחרים את שניהם יחד. <a href="#lib-computer">הסקריפט שמעביר את הספרייה בכבל</a> מעתיק גם את החבילה, כשהיא מותקנת בפרדס למחשב.</p>
-        <p class="need">צריך מכשיר של 64 ביט, וכ־3.3 ג״ב פנויים ליד הספרייה, ובייבוא גם מקום לקבצים. כשהמודל בשימוש הוא תופס כ־240 מ״ב מהזיכרון, ולכן במכשיר ש־Android מסמן כדל זיכרון (Android Go) ההגדרה לא מופיעה. בלי החבילה החיפוש מוצא את המילים, כמו תמיד. התקנה מלאה של ספרייה חדשה מוחקת את האינדקס, כי הוא שייך לספרייה הקודמת, ואז מתקינים את החבילה של הספרייה החדשה.</p>
+        <p class="need">צריך מכשיר של 64 ביט, וכ־3.3 ג״ב פנויים ליד הספרייה, ובייבוא גם מקום לקבצים. כשהמודל בשימוש הוא תופס כ־240 מ״ב מהזיכרון, ולכן במכשיר ש־Android מסמן כדל זיכרון (Android Go) ההגדרה לא מופיעה. בלי החבילה החיפוש מוצא את המילים, כמו תמיד. התקנה מלאה של ספרייה חדשה מוחקת את האינדקס, ואחריה מתקינים שוב את החבילה.</p>
       </section>
     </div>
   </section>
@@ -1014,22 +1014,26 @@ footer p { max-width: 52rem; }
   }
 
   // The newest semantic pack (semantic-<pack>-<library>, as semantic-release.yml tags it) with its two zips, for the
-  // import: the row links them directly once the API has listed the releases, and stays on the releases page otherwise
-  // (releases.json keeps only the releases with an APK).
+  // import: the highest number, and of its builds the newest library's, as the app picks one for no library in
+  // particular (SemanticPackReleases.newest: a pack works on every library release). The row links the zips directly
+  // once the API has listed the releases, and stays on the releases page otherwise (releases.json keeps only the
+  // releases with an APK).
   function showPack(list) {
-    for (var i = 0; i < list.length; i++) {
-      var r = list[i], m = /^semantic-(\d+)-(.*?(\d{4})(\d{2})(\d{2})\d*)$/.exec(r.tag_name || '');
-      if (r.draft || r.prerelease || !m) continue;
+    var best = null;
+    list.forEach(function (r) {
+      var m = /^semantic-(\d+)-(.+)$/.exec(r.tag_name || '');
+      if (r.draft || r.prerelease || !m) return;
       var zips = ['pardes-model.zip', 'pardes.vec.lucene.zip'].map(function (name) {
         return (r.assets || []).filter(function (a) { return a.name === name; })[0];
       });
-      if (!zips[0] || !zips[1]) continue;
-      $('row-pack-size').textContent = gb(zips[0].size + zips[1].size) + ' יחד · חבילה ' + m[1] + ', לספרייה מ־' +
-        civil(day(m[3] + '-' + m[4] + '-' + m[5]));
-      $('row-pack').innerHTML = '<a class="btn btn-line" href="' + esc(zips[0].browser_download_url) + '">המודל</a>' +
-        '<a class="btn btn-line" href="' + esc(zips[1].browser_download_url) + '">האינדקס</a>';
-      return;
-    }
+      if (!zips[0] || !zips[1]) return;
+      var pack = +m[1], key = m[2].replace(/^.*-/, '').replace(/^v/, ''); // SemanticPack.libraryKey
+      if (!best || pack > best.pack || (pack === best.pack && key > best.key)) best = { pack: pack, key: key, zips: zips };
+    });
+    if (!best) return;
+    $('row-pack-size').textContent = gb(best.zips[0].size + best.zips[1].size) + ' יחד · חבילה ' + best.pack;
+    $('row-pack').innerHTML = '<a class="btn btn-line" href="' + esc(best.zips[0].browser_download_url) + '">המודל</a>' +
+      '<a class="btn btn-line" href="' + esc(best.zips[1].browser_download_url) + '">האינדקס</a>';
   }
 
   function fallback(text) {
