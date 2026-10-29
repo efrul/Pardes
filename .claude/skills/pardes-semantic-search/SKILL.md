@@ -54,7 +54,8 @@ model for Pardes; the app loads the legacy model only when `SEFORIM_MODEL_DIR` p
   Android 0.3.0 to 0.4.1 reads only the 30 newest. The app installs a pack itself (Settings › ניהול נתונים, code in
   `features/search/semantic/pack/`): the newest `semantic-<pack>-<library>` release (of its builds, the installed
   library's when there is one: SeforimLibrary keeps a line's id from release to release, its DELTA_UPDATE_WORKFLOW.md, so a
-  pack works on every library release and is never refused for another), downloaded or imported from the release's files, unpacked beside the library and swapped in at the next start;
+  pack works on every library release and is never refused for another), downloaded or imported from the release's files, unpacked beside the library and swapped in at the next start; while
+  none is in use, every start opens the settings on that card, which says how to install one (`SemanticPackPrompt`);
   `docs/SEMANTIC_PLAN.md` has the plan and its state.
 
 ## Android (Pardes for Android)

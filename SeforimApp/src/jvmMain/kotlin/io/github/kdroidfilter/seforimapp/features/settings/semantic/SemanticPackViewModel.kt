@@ -77,12 +77,14 @@ class SemanticPackViewModel(
         val work: Work = Work.Idle,
         /** Why the last start did not put the pack in place, or null. */
         val startFailure: String? = null,
+        /** Whether a start without a pack in use opens the settings on the card ([SemanticPackPrompt]). */
+        val promptAtStart: Boolean = true,
     ) {
         val busy: Boolean get() = work is Work.Downloading || work is Work.Unpacking
     }
 
     private val releases = SemanticPackReleases()
-    private val _state = MutableStateFlow(State())
+    private val _state = MutableStateFlow(State(promptAtStart = appSettings.isSemanticPackPromptEnabled()))
     val state: StateFlow<State> = _state.asStateFlow()
     private var job: Job? = null
 
@@ -145,6 +147,11 @@ class SemanticPackViewModel(
     fun dismiss() = _state.update { it.copy(work = if (it.work is Work.Failed) Work.Idle else it.work, startFailure = null) }
 
     fun restart() = restartApplication()
+
+    fun setPromptAtStart(enabled: Boolean) {
+        appSettings.setSemanticPackPromptEnabled(enabled)
+        _state.update { it.copy(promptAtStart = enabled) }
+    }
 
     private fun launchInstall(block: suspend (SemanticPackInstaller) -> Unit) {
         if (job?.isActive == true) return
