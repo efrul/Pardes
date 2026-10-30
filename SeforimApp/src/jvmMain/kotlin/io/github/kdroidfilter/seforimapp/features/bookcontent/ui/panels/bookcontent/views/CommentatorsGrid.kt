@@ -7,8 +7,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.hoverable
@@ -48,13 +46,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -320,45 +314,20 @@ internal fun CommentatorsGridScaffold(
 }
 
 /**
- * Turns the commentators' pages by a sideways swipe, as a finger does on a tablet: a mouse drag, over the texts too,
- * a touchpad's sideways swipe, a tilt wheel or Shift + wheel. One page per gesture. Over a text, a drag sideways at
- * once turns the page; held a moment first, or downwards, it selects the text.
+ * Turns the commentators' pages by a sideways swipe: a mouse drag (outside the texts, where a drag
+ * selects), a touchpad's sideways swipe, a tilt wheel or Shift + wheel. One page per gesture.
  */
 @Composable
 private fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
     val scope = rememberCoroutineScope()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val focusManager = LocalFocusManager.current
     var dragStartPage by remember { mutableIntStateOf(0) }
     var dragging by remember { mutableStateOf(false) }
-
-    // The pages follow the pointer, [dx] px sideways: in RTL the next one comes in from the left
-    fun follow(dx: Float) {
-        pagerState.dispatchRawDelta(if (isRtl) dx else -dx)
-    }
-
-    // Let go at [velocityX] px/s: on to the page swiped to, else back to [fromPage]
-    fun settle(
-        fromPage: Int,
-        velocityX: Float,
-    ) {
-        val onward = if (isRtl) velocityX else -velocityX
-        val moved = pagerState.currentPage + pagerState.currentPageOffsetFraction - fromPage
-        val target =
-            when {
-                onward > SWIPE_FLING_VELOCITY || moved > SWIPE_PAGE_FRACTION -> fromPage + 1
-                onward < -SWIPE_FLING_VELOCITY || moved < -SWIPE_PAGE_FRACTION -> fromPage - 1
-                else -> fromPage
-            }.coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
-        scope.launch {
-            try {
-                pagerState.animateScrollToPage(target)
-            } finally {
-                dragging = false
-            }
+    val dragState =
+        rememberDraggableState { delta ->
+            // The delta comes reversed in RTL (reverseDirection): negative moves on to the next page
+            pagerState.dispatchRawDelta(-delta)
         }
-    }
-    val dragState = rememberDraggableState { delta -> follow(delta) }
     // A page change cut short (the selection changed again meanwhile) leaves the pager between two pages, and its
     // own gestures, which would snap it, are off: snap it to the nearest page once it rests.
     LaunchedEffect(pagerState) {
@@ -404,56 +373,32 @@ private fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
                     }
                 }
             }
-        }.pointerInput(pagerState, isRtl) {
-            // A drag over the texts: in the Initial pass too, ahead of their selection, which takes it in the Main one
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                if (down.type == PointerType.Mouse && !currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
-                val velocity = VelocityTracker().apply { addPosition(down.uptimeMillis, down.position) }
-                var fromPage = -1
-                var settled = false
-                try {
-                    while (true) {
-                        val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
-                        if (fromPage < 0) {
-                            if (!change.pressed) break
-                            val moved = change.position - down.position
-                            if (moved.getDistance() < viewConfiguration.touchSlop) continue
-                            // Held a moment first, or downwards: the text's selection, as before
-                            if (change.uptimeMillis - down.uptimeMillis >= HOLD_TO_SELECT_MS || abs(moved.y) >= abs(moved.x)) break
-                            fromPage = pagerState.currentPage
-                            dragging = true
-                            // The few letters the selection took before the drag was a swipe go with its focus
-                            focusManager.clearFocus()
-                        }
-                        change.consume()
-                        velocity.addPosition(change.uptimeMillis, change.position)
-                        if (!change.pressed) {
-                            settled = true
-                            settle(fromPage, velocity.calculateVelocity().x)
-                            break
-                        }
-                        follow(change.position.x - change.previousPosition.x)
-                    }
-                } finally {
-                    // Cut short (the pointer gone, the pager recomposed): back to a page
-                    if (fromPage >= 0 && !settled) settle(fromPage, 0f)
-                }
-            }
         }.draggable(
-            // Where no text takes the drag, after a hold too
             state = dragState,
             orientation = Orientation.Horizontal,
+            reverseDirection = isRtl,
             onDragStarted = {
                 dragging = true
                 dragStartPage = pagerState.currentPage
             },
-            onDragStopped = { velocity -> settle(dragStartPage, velocity) },
+            onDragStopped = { velocity ->
+                val moved = pagerState.currentPage + pagerState.currentPageOffsetFraction - dragStartPage
+                val target =
+                    when {
+                        velocity < -SWIPE_FLING_VELOCITY || moved > SWIPE_PAGE_FRACTION -> dragStartPage + 1
+                        velocity > SWIPE_FLING_VELOCITY || moved < -SWIPE_PAGE_FRACTION -> dragStartPage - 1
+                        else -> dragStartPage
+                    }.coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
+                scope.launch {
+                    try {
+                        pagerState.animateScrollToPage(target)
+                    } finally {
+                        dragging = false
+                    }
+                }
+            },
         )
 }
-
-// A press held this long before its drag selects the text instead of turning the page (as a long press on a tablet)
-private const val HOLD_TO_SELECT_MS = 300L
 
 // Wheel units of sideways scroll that turn a page (a tilt-wheel notch or Shift + wheel notch is 1)
 private const val SWIPE_SCROLL_THRESHOLD = 1f
