@@ -97,7 +97,7 @@ class HistoryStore(database: UserSettingsDb) {
             visitedAt = timestamp,
             tocEntryId = null,
             lineId = null,
-            searchCategoryId = null,
+            searchCategoryId = (scope as? SearchScope.Category)?.categoryId,
             searchBookId = when (scope) {
                 is SearchScope.Book -> scope.bookId
                 is SearchScope.Toc -> scope.bookId
@@ -193,16 +193,18 @@ class HistoryStore(database: UserSettingsDb) {
         searchScope = when {
             searchTocId != null && searchBookId != null -> SearchScope.Toc(bookId = searchBookId, tocId = searchTocId)
             searchBookId != null -> SearchScope.Book(searchBookId)
-            // No column for an author: their id is in the key only. A search once scoped to a
-            // category (searchCategoryId) runs everywhere now
-            else -> authorIdInKey(key)?.let(SearchScope::Author) ?: SearchScope.Global
+            searchCategoryId != null -> SearchScope.Category(searchCategoryId)
+            // No column for an author or several books and categories: they are in the key only
+            else -> authorIdInKey(key)?.let(SearchScope::Author) ?: multiScopeInKey(key) ?: SearchScope.Global
         },
         searchGlobalExtended = searchExtended,
     )
 
     private fun searchKey(query: String, scope: SearchScope, globalExtended: Boolean): String {
         val scopeKey = when (scope) {
-            SearchScope.Global, is SearchScope.Category -> "g"
+            SearchScope.Global -> "g"
+            is SearchScope.Category -> "c${scope.categoryId}"
+            is SearchScope.Multi -> "$MULTI_KEY${scope.bookIds.joinToString(".")}_${scope.categoryIds.joinToString(".")}"
             is SearchScope.Book -> "b${scope.bookId}"
             is SearchScope.Toc -> "t${scope.tocId}"
             is SearchScope.Author -> "$AUTHOR_KEY${scope.authorId}"
@@ -218,9 +220,19 @@ class HistoryStore(database: UserSettingsDb) {
             ?.takeWhile(Char::isDigit)
             ?.toLongOrNull()
 
+    // `search:m12.34_56:…` (or `m12.34_56x`) → books 12 and 34, category 56 (Pardes desktop HistoryStore)
+    private fun multiScopeInKey(key: String): SearchScope.Multi? {
+        val scopeKey = key.removePrefix("$KIND_SEARCH:").takeIf { it != key }?.substringBefore(':')?.takeIf { it.startsWith(MULTI_KEY) } ?: return null
+        val body = scopeKey.removePrefix(MULTI_KEY).removeSuffix("x")
+        val bookIds = body.substringBefore('_').split('.').mapNotNull(String::toLongOrNull)
+        val categoryIds = body.substringAfter('_', "").split('.').mapNotNull(String::toLongOrNull)
+        return SearchScope.Multi(bookIds, categoryIds).takeIf { bookIds.isNotEmpty() || categoryIds.isNotEmpty() }
+    }
+
     private companion object {
         const val KIND_BOOK = "book"
         const val KIND_SEARCH = "search"
         const val AUTHOR_KEY = "a"
+        const val MULTI_KEY = "m"
     }
 }

@@ -160,6 +160,15 @@ Pardes desktop's own semantic search (חיפוש לפי משמעות, `SEMANTIC_
 | `warmUp` at start (the model and the vector graph loaded in the background) | **Not done**: the model loads when the first search asks for it, so the 166 MB model costs no memory to whoever does not search |
 | The transfer of a library from desktop | `tools/push-desktop-library.sh`/`.ps1` copy `pardes-model/` and `pardes.vec.lucene/` with it when desktop has both, and the library's moves to and from a memory card take them along (`LibraryMover`); a full library install deletes the vector index, as desktop's does, and keeps the model |
 
+## Pardes desktop's search in categories, several books together, and the commentators' groups
+
+Ported on 2026-10-30 from Pardes desktop (`d85afee`, `5418012`, `574f3d5`, `d27e086`):
+- **A category in the search bar:** the categories the typed text names (`תלמוד`, `שולחן ערוך`, `רש"י על התורה` → תנ״ך › ראשונים › רש״י › תורה, `אחרונים על הש"ס` → תלמוד › בבלי › אחרונים), with a folder icon, searched whole. The matching is desktop's `CategorySuggestions.kt` and `SearchKey.kt`, built unchanged (`syncDesktopSearch`); its test runs on the port (`syncDesktopSemanticTests`).
+- **Several books and categories together:** "חיפוש בתוך" (Tab) on a book or category adds it, each a chip ("הוספה לחיפוש" once one is picked), and the text is searched in all of them (`SearchScope.Multi`; `SearchScope.Category` is a scope again). One book alone stays the bar's book, with its TOC; in it, the other books and categories the text names come after its TOC entries, to add. Desktop's `ScopeItems.kt` has an Android variant (`search/ScopeItems.kt`): it names Android's own `SearchScope`. The history keeps a category in its column and several books and categories in the key, as desktop.
+- **"כל המפרשים" and each group's checkbox** in the commentators list (the tablet's list and the phone's "סנן" sheet): checked when all are, half when some are.
+- **Tablet commentaries:** the pages side by side (`HorizontalPager`), turned by a sideways swipe or their dots, in a row above them. The phone kept its pages of one commentator each, with the chips as their indicator.
+- Not ported: a commentator split off into a pane of its own (desktop's dock of line panes has no counterpart here).
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)

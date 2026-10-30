@@ -46,6 +46,19 @@ val syncDesktopSemantic by tasks.registering(Sync::class) {
     into(layout.buildDirectory.dir("generated/desktopSemantic"))
 }
 
+// Desktop's search-bar logic that compiles on Android unchanged (SeforimApp/src/jvmMain, as-is): the categories the typed
+// text names (CategorySuggestions, with the names' comparison key it uses). The bar's picked books and categories
+// (ScopeItems) have an Android variant in src/androidMain/.../android/search: they name Android's own SearchScope.
+val syncDesktopSearch by tasks.registering(Sync::class) {
+    from(desktopApp) {
+        include(
+            "io/github/kdroidfilter/seforimapp/features/search/domain/CategorySuggestions.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/domain/SearchKey.kt",
+        )
+    }
+    into(layout.buildDirectory.dir("generated/desktopSearch"))
+}
+
 // Desktop's semantic tests that run on the port unchanged (SeforimApp/src/jvmTest): the fusion's leaders and quotes, the
 // precedence by level, the passages, the fallback to words alone, the swap of a staged pack at the next start, and the
 // choice of the pack among the releases.
@@ -61,6 +74,8 @@ val syncDesktopSemanticTests by tasks.registering(Sync::class) {
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleasesTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PackFixtures.kt",
             "io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackPromptTest.kt",
+            // The search bar's category suggestions (syncDesktopSearch)
+            "io/github/kdroidfilter/seforimapp/features/search/domain/CategorySuggestionsTest.kt",
         )
     }
     into(layout.buildDirectory.dir("generated/desktopSemanticTests"))
@@ -121,6 +136,8 @@ kotlin {
             kotlin.srcDir(syncPatchTables)
             // Pardes desktop's semantic search files that need no Android variant (see syncDesktopSemantic).
             kotlin.srcDir(syncDesktopSemantic)
+            // Desktop's category suggestions for the search bar (see syncDesktopSearch).
+            kotlin.srcDir(syncDesktopSearch)
             // Desktop icons (the search telescope).
             kotlin.srcDir(desktopRoot.resolve("icons/src/commonMain/kotlin"))
             dependencies {

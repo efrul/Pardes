@@ -10,6 +10,10 @@ import io.github.kdroidfilter.seforimapp.android.search.SearchService
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.shell.parseZayitDeepLink
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
+import io.github.kdroidfilter.seforimapp.features.search.domain.CategorySuggestions
+import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
+import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItems
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceResolver
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.RepositoryReferenceSource
@@ -18,6 +22,7 @@ import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchServ
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
+import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.CancellationException
@@ -62,6 +67,15 @@ data class SearchBarUiState(
     val authorSuggestions: List<AuthorHit> = emptyList(),
     /** The author picked: the books listed are then theirs, and the text is searched in all of them. */
     val selectedScopeAuthor: AuthorHit? = null,
+    /** Categories the typed text names (`תלמוד`, `רש"י על התורה`), to search in whole. */
+    val categorySuggestions: List<CategoryHit> = emptyList(),
+    /** The category picked alone: the text is searched in all its books. */
+    val selectedScopeCategory: CategoryHit? = null,
+    /**
+     * The books and categories picked ("חיפוש בתוך", "הוספה לחיפוש"), in order: the text is searched in all of them
+     * together. One book alone is also [selectedScopeBook], one category alone [selectedScopeCategory].
+     */
+    val scopeItems: List<ScopeItem> = emptyList(),
     val tocSuggestionsVisible: Boolean = false,
     val isTocLoading: Boolean = false,
     val tocSuggestions: List<TocSuggestionDto> = emptyList(),
@@ -77,7 +91,8 @@ data class SearchBarUiState(
  * one per results tab, as desktop TabsContent's "search-bar" ViewModel): 0.6.1's with the 0.6.2 fix 90552dbc (author
  * suggestions kept only when typed word by word) and the 0.6.5 commits 1723de06 and 9e3d19a8 (a picked author is a
  * search scope: the text is searched in all their books; a restored tab searches there before the chip has loaded);
- * the navigation it emits there is done by the caller here with what
+ * and Pardes desktop's categories and several books (a category the text names searched whole; the books and
+ * categories picked searched together, [scopeItems]); the navigation it emits there is done by the caller here with what
  * [resolvePickedReference] / [deepLinkTarget] return. Without the lookup index (or when Lucene cannot open it) books
  * are suggested from the database titles and acronyms, and no author is.
  */
@@ -104,6 +119,14 @@ class SearchBarViewModel(
 
     // The author a restored results tab searched in, while their name loads for the chip
     private var restoringAuthorId: Long? = null
+
+    // The category, or the books and categories, a restored results tab searched in, while they load for the chips
+    private var restoringCategoryId: Long? = null
+    private var restoringMultiScope: SearchScope.Multi? = null
+
+    // The library's categories with their paths, loaded once for the suggestions
+    private var categories: List<CategoryHit>? = null
+    private val categoriesMutex = Mutex()
 
     private val referenceQuery = MutableStateFlow("")
     private val tocQuery = MutableStateFlow("")
@@ -157,6 +180,8 @@ class SearchBarViewModel(
                 .distinctUntilChanged()
                 .collectLatest { qRaw ->
                     val q = qRaw.trim()
+                    // Books and categories picked: more of them to add, no authors (searched apart)
+                    val addingScopes = _uiState.value.scopeItems.isNotEmpty()
                     if (_uiState.value.selectedScopeAuthor != null) {
                         _uiState.value = _uiState.value.copy(
                             isReferenceLoading = false,
@@ -169,6 +194,7 @@ class SearchBarViewModel(
                             bookSuggestions = emptyList(),
                             jumpSuggestions = emptyList(),
                             authorSuggestions = emptyList(),
+                            categorySuggestions = emptyList(),
                             suggestionsVisible = false,
                         )
                     } else {
@@ -179,6 +205,7 @@ class SearchBarViewModel(
                                 // Books: same acronym-aware suggestions as the book tree search
                                 val booksDeferred = async(Dispatchers.Default) { bookSuggestions(lookup, q) }
                                 val authorsDeferred = async(Dispatchers.IO) {
+                                    if (addingScopes) return@async emptyList()
                                     catching {
                                         // More than shown: those not typed word by word are dropped (`בבא ב`)
                                         lookup?.let { index ->
@@ -194,7 +221,10 @@ class SearchBarViewModel(
                                     }.orEmpty()
                                 }
                                 val jumpsDeferred = async(Dispatchers.IO) { catching { referenceResolver.resolve(q) }.orEmpty() }
-                                Suggestions(booksDeferred.await(), jumpsDeferred.await(), authorsDeferred.await())
+                                val categoriesDeferred = async(Dispatchers.IO) {
+                                    CategorySuggestions.match(q, allCategories(), limit = MAX_CATEGORY_SUGGESTIONS)
+                                }
+                                Suggestions(booksDeferred.await(), jumpsDeferred.await(), authorsDeferred.await(), categoriesDeferred.await())
                             }
                         }
                         // An author picked while the lookup ran (a restored author tab, or "חיפוש בתוך"): their books are
@@ -205,6 +235,7 @@ class SearchBarViewModel(
                             bookSuggestions = result.books,
                             jumpSuggestions = result.jumps,
                             authorSuggestions = result.authors,
+                            categorySuggestions = result.categories,
                             suggestionsVisible = true,
                         )
                     }
@@ -230,6 +261,11 @@ class SearchBarViewModel(
                             _uiState.value = _uiState.value.copy(tocSuggestions = suggestions, tocSuggestionsVisible = true, isTocLoading = false)
                         }
                     }
+                    // In a book, the other books and categories the text names, to search in with it
+                    if (book != null) {
+                        val (books, categories) = if (q.length >= MIN_BOOK_QUERY_LENGTH) booksAndCategoriesToAdd(q, book) else emptyList<BookSuggestionDto>() to emptyList()
+                        _uiState.value = _uiState.value.copy(bookSuggestions = books, categorySuggestions = categories)
+                    }
                 }
         }
     }
@@ -254,6 +290,32 @@ class SearchBarViewModel(
         return books.map { BookSuggestionDto(it, buildCategoryPathTitlesCached(it.categoryId) + it.title) }
     }
 
+    // The books (other than [book]) and categories [q] names, a few of each, offered in a book to add to its search
+    private suspend fun booksAndCategoriesToAdd(q: String, book: Book): Pair<List<BookSuggestionDto>, List<CategoryHit>> {
+        val books = bookSuggestions(lookup(), q).filter { it.book.id != book.id }.take(MAX_ADD_BOOK_SUGGESTIONS)
+        val categories = withContext(Dispatchers.Default) { CategorySuggestions.match(q, allCategories(), limit = MAX_ADD_CATEGORY_SUGGESTIONS) }
+        return books to categories
+    }
+
+    // The library's categories with their paths, for the suggestions: once, from the database
+    private suspend fun allCategories(): List<CategoryHit> = categoriesMutex.withLock {
+        categories ?: catching { withContext(Dispatchers.IO) { loadCategories() } }.orEmpty().also { loaded ->
+            if (loaded.isNotEmpty()) categories = loaded
+        }
+    }
+
+    private suspend fun loadCategories(): List<CategoryHit> {
+        val result = ArrayList<CategoryHit>()
+        suspend fun walk(category: Category, parentPath: List<String>) {
+            currentCoroutineContext().ensureActive()
+            val path = parentPath + category.title
+            result += CategoryHit(category.id, path)
+            repository.getCategoryChildren(category.id).forEach { walk(it, path) }
+        }
+        repository.getRootCategories().forEach { walk(it, emptyList()) }
+        return result
+    }
+
     // The TOC entries containing [q], best matches first
     private fun tocMatching(entries: List<TocSuggestionDto>, q: String): List<TocSuggestionDto> =
         entries.asSequence()
@@ -264,7 +326,14 @@ class SearchBarViewModel(
     fun onReferenceQueryChanged(query: String) {
         referenceQuery.value = query
         if (query.isBlank()) {
-            _uiState.value = _uiState.value.copy(selectedScopeBook = null, selectedScopeToc = null, isReferenceLoading = false)
+            val current = _uiState.value
+            _uiState.value = current.copy(
+                selectedScopeBook = null,
+                selectedScopeToc = null,
+                // Out of its book, the bar no longer searches in it
+                scopeItems = if (current.selectedScopeBook != null) emptyList() else current.scopeItems,
+                isReferenceLoading = false,
+            )
         }
     }
 
@@ -297,8 +366,12 @@ class SearchBarViewModel(
         showSuggestions: Boolean,
     ) {
         restoringAuthorId = null
+        restoringCategoryId = null
+        restoringMultiScope = null
         _uiState.value = _uiState.value.copy(
             selectedScopeAuthor = author,
+            selectedScopeCategory = null,
+            scopeItems = emptyList(),
             selectedScopeBook = null,
             selectedScopeToc = null,
             authorSuggestions = emptyList(),
@@ -319,6 +392,51 @@ class SearchBarViewModel(
         }
     }
 
+    /** Searches in all the books of [category] and its subcategories, with the books and categories picked before. */
+    fun onPickCategory(category: CategoryHit) = onAddScope(ScopeItem.CategoryItem(category))
+
+    /**
+     * Adds [item] to the books and categories the text is searched in ("חיפוש בתוך", Tab). The first book alone puts the
+     * bar in it, with its TOC; the next book or category searches them all together.
+     */
+    fun onAddScope(item: ScopeItem) = applyScopeItems(ScopeItems.add(_uiState.value.scopeItems, item), showSuggestions = true)
+
+    /** Takes [item] out of the books and categories searched (its chip's ✕, or Backspace in the empty bar). */
+    fun onRemoveScope(item: ScopeItem) = applyScopeItems(ScopeItems.remove(_uiState.value.scopeItems, item), showSuggestions = false)
+
+    private fun applyScopeItems(items: List<ScopeItem>, showSuggestions: Boolean) {
+        val single = items.singleOrNull()
+        // One book: the bar is in it, its TOC to pick from
+        if (single is ScopeItem.BookItem) {
+            if (_uiState.value.selectedScopeBook?.id != single.book.id) onPickBook(single.book, showSuggestions)
+            return
+        }
+        restoringAuthorId = null
+        restoringCategoryId = null
+        restoringMultiScope = null
+        authorBooks = emptyList()
+        // What was typed to find the item is gone from the bar: its suggestions too
+        referenceQuery.value = ""
+        tocQuery.value = ""
+        _uiState.value = _uiState.value.copy(
+            scopeItems = items,
+            selectedScopeCategory = (single as? ScopeItem.CategoryItem)?.category,
+            selectedScopeAuthor = null,
+            selectedScopeBook = null,
+            selectedScopeToc = null,
+            bookPickedByUser = showSuggestions,
+            bookSuggestions = emptyList(),
+            categorySuggestions = emptyList(),
+            authorSuggestions = emptyList(),
+            jumpSuggestions = emptyList(),
+            tocSuggestions = emptyList(),
+            tocSuggestionsVisible = false,
+            isReferenceLoading = false,
+            isTocLoading = false,
+            suggestionsVisible = false,
+        )
+    }
+
     fun onClearAuthor() {
         restoringAuthorId = null
         authorBooks = emptyList()
@@ -331,13 +449,19 @@ class SearchBarViewModel(
         showSuggestions: Boolean = true,
     ) {
         restoringAuthorId = null
+        restoringCategoryId = null
+        restoringMultiScope = null
         authorBooks = emptyList()
         _uiState.value = _uiState.value.copy(
             selectedScopeAuthor = null,
+            selectedScopeCategory = null,
+            scopeItems = listOf(ScopeItem.BookItem(book)),
             selectedScopeBook = book,
             selectedScopeToc = null,
             bookPickedByUser = showSuggestions,
             suggestionsVisible = false,
+            bookSuggestions = emptyList(),
+            categorySuggestions = emptyList(),
             tocSuggestionsVisible = false,
             tocSuggestions = emptyList(),
             isReferenceLoading = false,
@@ -415,6 +539,14 @@ class SearchBarViewModel(
                 showAuthorScope(scope.authorId)
                 return
             }
+            is SearchScope.Category -> {
+                showCategoryScope(scope.categoryId)
+                return
+            }
+            is SearchScope.Multi -> {
+                showMultiScope(scope)
+                return
+            }
             else -> return
         }
         viewModelScope.launch {
@@ -437,7 +569,37 @@ class SearchBarViewModel(
         }
     }
 
-    /** Where the bar searches: its picked TOC entry, book or author, else everywhere. */
+    private fun showCategoryScope(categoryId: Long) {
+        if (_uiState.value.selectedScopeCategory?.id == categoryId) return
+        // The bar searches in its books at once, before its path is loaded for the chip
+        restoringCategoryId = categoryId
+        viewModelScope.launch {
+            val path = buildCategoryPathTitlesCached(categoryId)
+            // Another scope picked meanwhile
+            if (restoringCategoryId != categoryId) return@launch
+            restoringCategoryId = null
+            if (path.isEmpty()) return@launch
+            applyScopeItems(listOf(ScopeItem.CategoryItem(CategoryHit(categoryId, path))), showSuggestions = false)
+        }
+    }
+
+    private fun showMultiScope(scope: SearchScope.Multi) {
+        if (ScopeItems.scopeOf(_uiState.value.scopeItems) == scope) return
+        // The bar searches in them at once, before their names are loaded for the chips
+        restoringMultiScope = scope
+        viewModelScope.launch {
+            val books = scope.bookIds.mapNotNull { id -> catching { repository.getBookCore(id) }?.let(ScopeItem::BookItem) }
+            val categories = scope.categoryIds.mapNotNull { id ->
+                buildCategoryPathTitlesCached(id).takeIf { it.isNotEmpty() }?.let { ScopeItem.CategoryItem(CategoryHit(id, it)) }
+            }
+            // Another scope picked meanwhile
+            if (restoringMultiScope != scope) return@launch
+            restoringMultiScope = null
+            applyScopeItems(books + categories, showSuggestions = false)
+        }
+    }
+
+    /** Where the bar searches: its picked TOC entry, book, author, or books and categories, else everywhere. */
     fun barScope(): SearchScope {
         val selected = _uiState.value
         val toc = selected.selectedScopeToc
@@ -447,7 +609,11 @@ class SearchBarViewModel(
             toc != null -> SearchScope.Book(toc.bookId)
             selected.selectedScopeBook != null -> SearchScope.Book(selected.selectedScopeBook.id)
             selected.selectedScopeAuthor != null -> SearchScope.Author(selected.selectedScopeAuthor.id)
-            else -> restoringAuthorId?.let(SearchScope::Author) ?: SearchScope.Global
+            selected.scopeItems.isNotEmpty() -> ScopeItems.scopeOf(selected.scopeItems)
+            else -> restoringAuthorId?.let(SearchScope::Author)
+                ?: restoringCategoryId?.let(SearchScope::Category)
+                ?: restoringMultiScope
+                ?: SearchScope.Global
         }
     }
 
@@ -479,6 +645,8 @@ class SearchBarViewModel(
     /** The bar as a new one starts: nothing typed, no book, author or chapter picked, nothing suggested. */
     fun reset() {
         restoringAuthorId = null
+        restoringCategoryId = null
+        restoringMultiScope = null
         authorBooks = emptyList()
         referenceQuery.value = ""
         tocQuery.value = ""
@@ -519,11 +687,21 @@ class SearchBarViewModel(
         return dedupAdjacent(if (bookTitle != null) listOf(bookTitle) + path else path)
     }
 
-    private data class Suggestions(val books: List<BookSuggestionDto>, val jumps: List<ResolvedReference>, val authors: List<AuthorHit>)
+    private data class Suggestions(
+        val books: List<BookSuggestionDto>,
+        val jumps: List<ResolvedReference>,
+        val authors: List<AuthorHit>,
+        val categories: List<CategoryHit>,
+    )
 
     companion object {
         private const val MAX_AUTHOR_SUGGESTIONS = 4
         private const val MAX_FALLBACK_BOOKS = 20
+        private const val MAX_CATEGORY_SUGGESTIONS = 4
+
+        // In a book, the other books and categories offered to add to its search
+        private const val MAX_ADD_BOOK_SUGGESTIONS = 5
+        private const val MAX_ADD_CATEGORY_SUGGESTIONS = 3
 
         /** [initialScope]: a results tab's bar opens where its search looked (desktop showScope at its creation). */
         fun factory(repository: SeforimRepository, service: SearchService, initialScope: SearchScope? = null) = object : ViewModelProvider.Factory {

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.data.SearchScope
+import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.android.search.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntityFinder
@@ -98,6 +99,8 @@ data class SearchUiState(
     val scopeTocId: Long? = null,
     /** The author whose books the search was scoped to, as their name shows (AuthorNames.display). */
     val scopeAuthorName: String? = null,
+    /** The category, or the books and categories, the search was scoped to, as the bar's chips name them. */
+    val scopeLabel: String? = null,
     val hasMore: Boolean = false,
     val isLoadingMore: Boolean = false,
     val progressCurrent: Int = 0,
@@ -171,7 +174,7 @@ class SearchViewModel(
     val executed: SharedFlow<ExecutedSearch> = _executed.asSharedFlow()
 
     /** Where this tab's search looks (desktop's persisted scope, the one truth of the search). */
-    var searchScope: SearchScope = destination.scope.let { if (it is SearchScope.Category) SearchScope.Global else it }
+    var searchScope: SearchScope = destination.scope
         private set
 
     private var job: Job? = null
@@ -208,13 +211,27 @@ class SearchViewModel(
                 ?.also { authorScopeCache = it }
 
     /**
-     * The books searched when [scope] is an author's, null for any other scope. An author without books searches none:
-     * a book id no book has (an empty filter would search everywhere). Desktop authorBookIds.
+     * The books searched when [scope] is an author's, a category's, or several books' and categories', null for any
+     * other scope. A scope without books searches none: a book id no book has (an empty filter would search
+     * everywhere). Pardes desktop scopeBookIds.
      */
-    private suspend fun authorBookIds(scope: SearchScope = searchScope): List<Long>? {
-        val authorId = (scope as? SearchScope.Author)?.authorId ?: return null
-        return authorScope(authorId)?.bookIds.orEmpty().ifEmpty { listOf(NO_BOOK_ID) }
+    private suspend fun scopeBookIds(scope: SearchScope = searchScope): List<Long>? = when (scope) {
+        is SearchScope.Author -> authorScope(scope.authorId)?.bookIds.orEmpty().ifEmpty { listOf(NO_BOOK_ID) }
+        is SearchScope.Category -> booksUnder(scope.categoryId).toList().ifEmpty { listOf(NO_BOOK_ID) }
+        is SearchScope.Multi -> (scope.bookIds + scope.categoryIds.flatMap { booksUnder(it) }).distinct().ifEmpty { listOf(NO_BOOK_ID) }
+        else -> null
     }
+
+    // The category's, or the books' and categories', names as the bar's chips show them (`ברכות, שבת, רש״י › תורה`)
+    private suspend fun scopeLabel(scope: SearchScope): String? = when (scope) {
+        is SearchScope.Category -> categoryLabel(scope.categoryId)
+        is SearchScope.Multi ->
+            (scope.bookIds.mapNotNull { book(it)?.title } + scope.categoryIds.mapNotNull { categoryLabel(it) }).joinToString(", ").ifBlank { null }
+        else -> null
+    }
+
+    private suspend fun categoryLabel(categoryId: Long): String? =
+        readOrNull { categoryPath(categoryId) }?.takeIf { it.isNotEmpty() }?.let { path -> CategoryHit(categoryId, path.map { it.title }).label }
 
     init {
         viewModelScope.launch {
@@ -412,13 +429,17 @@ class SearchViewModel(
                 }?.takeIf { it > 0 }
                 val fetchTocId = (scope as? SearchScope.Toc)?.tocId?.takeIf { it > 0 }
                 val scopeBook = fetchBookId?.let { book(it) }
-                val authorBooks = authorBookIds(scope)
+                val authorBooks = scopeBookIds(scope)
                 val scopeAuthorName = (scope as? SearchScope.Author)?.let { authorScope(it.authorId)?.name }
+                val scopeLabel = scopeLabel(scope)
                 tocCountsAcc.clear()
                 _state.update {
-                    it.copy(scopeBook = scopeBook, scopeTocId = fetchTocId, scopeAuthorName = scopeAuthorName, tocTree = null, tocCounts = emptyMap(), selectedTocIds = emptySet())
+                    it.copy(
+                        scopeBook = scopeBook, scopeTocId = fetchTocId, scopeAuthorName = scopeAuthorName, scopeLabel = scopeLabel,
+                        tocTree = null, tocCounts = emptyMap(), selectedTocIds = emptySet(),
+                    )
                 }
-                // A book, a TOC entry or an author the user chose is searched whole, base books or not
+                // A book, a TOC entry, an author or a category the user chose is searched whole, base books or not
                 var baseOnly = !_state.value.globalExtended && fetchTocId == null && fetchBookId == null && authorBooks == null
                 val facetsBookIds = fetchBookId?.let { listOf(it) } ?: authorBooks
                 val lineIds = if (fetchTocId != null && fetchBookId != null) lineIdsUnderToc(fetchTocId, fetchBookId) else null
@@ -567,8 +588,8 @@ class SearchViewModel(
         val s = _state.value
         if (s.selectedCategoryIds.isNotEmpty() || s.bookFilterIds.isNotEmpty() || s.selectedTocIds.isNotEmpty()) return
         _state.update { it.copy(scopeBook = null, scopeTocId = null, tocTree = null) }
-        // Back to all the results: an author's books stay the searched ones
-        searchScope = searchScope as? SearchScope.Author ?: SearchScope.Global
+        // Back to all the results: an author's, a category's, or the picked books' and categories' stay the searched ones
+        searchScope = searchScope.takeIf { it is SearchScope.Author || it is SearchScope.Category || it is SearchScope.Multi } ?: SearchScope.Global
     }
 
     /** The scoped search's TOC pane: an entry (and its sub-entries) checked or not, searched whole (desktop setTocChecked). */
@@ -618,8 +639,8 @@ class SearchViewModel(
                 } else {
                     for (catId in s.selectedCategoryIds) bookIds += booksUnder(catId)
                 }
-                // In an author's books only: theirs among the category tab's, all theirs without one
-                val authorBooks = authorBookIds()
+                // In an author's (a category's, the picked ones') books only: those among the category tab's, all without one
+                val authorBooks = scopeBookIds()
                 if (authorBooks != null && s.bookFilterIds.isEmpty()) {
                     if (s.selectedCategoryIds.isEmpty()) {
                         bookIds += authorBooks
