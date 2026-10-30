@@ -8,7 +8,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import dev.nucleusframework.application.aotTraining
 import dev.nucleusframework.application.nucleusApplication
-import dev.nucleusframework.core.runtime.NucleusApp
 import dev.nucleusframework.energymanager.EnergyManager
 import dev.nucleusframework.launcher.windows.WindowsJumpListManager
 import dev.nucleusframework.window.NucleusDecoratedWindowTheme
@@ -69,7 +68,6 @@ import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.framework.search.AcronymFrequencyCache
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimapp.framework.search.withSemanticSearch
-import io.github.kdroidfilter.seforimapp.logger.infoln
 import io.github.kdroidfilter.seforimapp.logger.isDevEnv
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.cli.CliHost
@@ -77,7 +75,6 @@ import io.github.kdroidfilter.seforimlibrary.cli.LookupBookOutput
 import io.github.kdroidfilter.seforimlibrary.cli.LookupOutput
 import io.github.kdroidfilter.seforimlibrary.cli.runCli
 import io.github.vinceglb.filekit.FileKit
-import io.sentry.Sentry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -133,31 +130,6 @@ private fun computeStartupState(appGraph: AppGraph): StartupState =
         }
     }
 
-private fun initializeSentry() {
-    if (BuildConfig.SENTRY_DSN.isBlank()) {
-        infoln { "Sentry DSN not configured; crash reporting disabled." }
-        return
-    }
-    val sentryEnvironment =
-        System
-            .getenv("SENTRY_ENVIRONMENT")
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: "development"
-
-    Sentry.init { options ->
-        options.dsn = BuildConfig.SENTRY_DSN
-        options.environment = sentryEnvironment
-        options.release = NucleusApp.version
-        options.isDebug = isDevEnv
-        // Otherwise the UncaughtExceptionHandlerIntegration captures the crash and swallows it:
-        // in the GraalVM native image the envelope upload also fails (no CA trust store), so the
-        // real stack trace is lost entirely. Printing it keeps it visible on the console.
-        options.setPrintUncaughtStackTrace(true)
-    }
-    infoln { "Sentry initialized for environment '$sentryEnvironment'." }
-}
-
 /** The app's own engines for `zayit cli`: its search (hybrid semantic in the official builds) and its lookup index. */
 private fun appCliHost() =
     CliHost(
@@ -180,7 +152,7 @@ private fun appCliHost() =
 fun main(args: Array<String>) {
     // Headless CLI mode: when the binary is launched as `zayit cli <args...>` (e.g. from the
     // in-app "open CLI in terminal" action), delegate to the SeforimLibrary search CLI and exit
-    // BEFORE any Sentry/Nucleus/GUI initialization. This keeps the normal GUI launch path
+    // BEFORE any Nucleus/GUI initialization. This keeps the normal GUI launch path
     // completely untouched — the branch is only taken when "cli" is the first argument.
     if (args.firstOrNull() == "cli") {
         // stdout carries the results (often --json): no app logs mixed in
@@ -190,8 +162,6 @@ fun main(args: Array<String>) {
 
     val loggingEnv = System.getenv("SEFORIMAPP_LOGGING")?.lowercase()
     isDevEnv = loggingEnv == "true" || loggingEnv == "1" || loggingEnv == "yes"
-
-    initializeSentry()
 
     // Roll back any half-applied seforim.db delta update from a previous
     // launch BEFORE the SQLDelight repository opens the DB. Cheap stat()
@@ -245,7 +215,13 @@ fun main(args: Array<String>) {
         val pendingLibraryMove = remember { PendingLibraryMove.read() }
 
         // Create the application graph via Metro and expose via CompositionLocal
-        val appGraph = remember { createGraph<AppGraph>().also { if (pendingLibraryMove == null) warmCatalog(it) } }
+        val appGraph =
+            remember {
+                createGraph<AppGraph>().also {
+                    it.crashReporting.start()
+                    if (pendingLibraryMove == null) warmCatalog(it)
+                }
+            }
 
         // Daily Google Drive backup while the app runs (a no-op until an account is connected).
         LaunchedEffect(appGraph) { if (!E2e.enabled) appGraph.googleDriveSync.runAutoBackup() }
@@ -391,10 +367,10 @@ fun main(args: Array<String>) {
                             }
                         }
 
-                        // Check for updates once at startup. PATCH updates are pre-downloaded
+                        // Check for updates once at startup, unless the user turned it off. PATCH updates are pre-downloaded
                         // here; MINOR/MAJOR surface the title-bar icon + UpdateDialog.
                         LaunchedEffect(Unit) {
-                            appGraph.appUpdateService.checkOnStartup()
+                            if (appGraph.appSettings.isAutoUpdateCheckEnabled()) appGraph.appUpdateService.checkOnStartup()
                         }
 
                         // The search warmed in the background once the library is open (not while it is installed,

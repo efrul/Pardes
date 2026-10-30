@@ -30,6 +30,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -43,6 +48,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.kdroidfilter.seforim.htmlparser.CommentAnchor
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.data.UserHighlight
 import io.github.kdroidfilter.seforimapp.android.data.UserNote
@@ -55,15 +61,27 @@ const val READER_LINE_HEIGHT = 1.65f
 @Immutable
 class HtmlAnnotation(val text: AnnotatedString, val inline: Map<String, InlineTextContent>)
 
-/** [html] with the diacritics [diacritics] hides removed, built for display at [textSize]. */
+/**
+ * [html] with the diacritics [diacritics] hides removed, built for display at [textSize]; the commentary anchors of
+ * [anchorCommentators] become its passages (desktop 0.6.12, CommentSegments.kt), which leave the text as it is.
+ */
 @Composable
-fun rememberHtmlAnnotation(html: String, textSize: Float, diacritics: DiacriticsMode): HtmlAnnotation {
+fun rememberHtmlAnnotation(html: String, textSize: Float, diacritics: DiacriticsMode, anchorCommentators: Set<String> = emptySet()): HtmlAnnotation {
     val c = Zayit.colors
-    return remember(html, textSize, diacritics, c.isDark, c.accent) { buildHtmlAnnotation(html, textSize, diacritics, c.isDark, c.accent) }
+    return remember(html, textSize, diacritics, c.isDark, c.accent, anchorCommentators) {
+        buildHtmlAnnotation(html, textSize, diacritics, c.isDark, c.accent, anchorCommentators)
+    }
 }
 
 /** What [rememberHtmlAnnotation] shows, built outside composition (a selected text scrolled away is read with it). */
-fun buildHtmlAnnotation(html: String, textSize: Float, diacritics: DiacriticsMode, dark: Boolean, accent: Color): HtmlAnnotation {
+fun buildHtmlAnnotation(
+    html: String,
+    textSize: Float,
+    diacritics: DiacriticsMode,
+    dark: Boolean,
+    accent: Color,
+    anchorCommentators: Set<String> = emptySet(),
+): HtmlAnnotation {
     val inline = HashMap<String, InlineTextContent>()
     val text = buildAnnotatedFromHtml(
         diacritics.apply(html),
@@ -71,6 +89,7 @@ fun buildHtmlAnnotation(html: String, textSize: Float, diacritics: DiacriticsMod
         footnoteMarkerColor = accent,
         inlineContent = inline,
         imageContentBuilder = readerImageBuilder(dark),
+        anchorCommentators = anchorCommentators,
     )
     return HtmlAnnotation(text, inline)
 }
@@ -164,6 +183,11 @@ class FindMatchLocator {
  * [findLocator] is given to the line holding the current find match, which tells it where the match is;
  * [noteLocator] to the line a note is being written on, which tells it where the note's passage starts.
  * [selectable] makes it one of a [ListSelection]'s texts.
+ *
+ * The passages commentaries explain (desktop 0.6.12): the anchors of [anchorCommentators] leading, by [anchorTargets],
+ * to a commentary book open in the pane ([passageBooks]). A tap on one reports it to [onPassageTap] instead of [onTap];
+ * the passage selected ([selectedAnchors]) is underlined as a tray, and with [showPassages] (the primary line: touch has
+ * no pointer to hover the text with, as desktop shows them) the others faintly.
  */
 @Composable
 fun LineItem(
@@ -185,9 +209,15 @@ fun LineItem(
     noteLocator: FindMatchLocator? = null,
     lineId: Long = -1L,
     selectable: SelectableText? = null,
+    anchorCommentators: Set<String> = emptySet(),
+    anchorTargets: Map<CommentAnchor, AnchorTarget> = emptyMap(),
+    passageBooks: Set<Long> = emptySet(),
+    selectedAnchors: Set<CommentAnchor>? = null,
+    showPassages: Boolean = false,
+    onPassageTap: ((SelectedPassage) -> Unit)? = null,
 ) {
     val c = Zayit.colors
-    val annotation = rememberHtmlAnnotation(html, textSize, diacritics)
+    val annotation = rememberHtmlAnnotation(html, textSize, diacritics, anchorCommentators)
     val annotated = annotation.text
     val needsOriginal = diacritics != DiacriticsMode.All && (highlights.isNotEmpty() || notes.isNotEmpty())
     val originalPlain = remember(html, needsOriginal) { if (needsOriginal) buildAnnotatedFromHtml(html, textSize).text else null }
@@ -207,6 +237,23 @@ fun LineItem(
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val noteColor = c.textSecondary
     val tap by rememberUpdatedState(onTap)
+    // The passages of this line that lead to a commentary open in the pane (desktop LineItem's segments)
+    val allSegments = remember(annotated) { annotated.commentSegments() }
+    val tappable = onPassageTap != null
+    val segments = remember(allSegments, anchorTargets, passageBooks, lineId, tappable) {
+        if (!tappable) emptyList() else allSegments.filter { passageOf(lineId, it, anchorTargets, passageBooks) != null }
+    }
+    // The selected one stays drawn even if its commentator no longer answers
+    val selectedSegment = selectedAnchors?.let { anchors -> allSegments.firstOrNull { it.anchors == anchors } }
+    val passageHit = remember(lineId) { PassageHit() }
+    val trays = remember(lineId) { PassageTrays() }
+    val passageTap by rememberUpdatedState(onPassageTap)
+    SideEffect {
+        passageHit.segments = segments
+        passageHit.passageOf = { passageOf(lineId, it, anchorTargets, passageBooks) }
+        passageHit.layout = { layout }
+    }
+    val trayColor = c.accent
     if (findLocator != null) {
         // A smart find's line is one match, from its first lit word; a literal find's current occurrence
         val matchStart = remember(annotated.text, search, searchQuery, findQuery, currentMatchOrdinal) {
@@ -238,14 +285,28 @@ fun LineItem(
                     // Desktop LineItem: a press released unconsumed is a click; a long press goes to the selection, a
                     // drag to the list and a link's tap to its link, which consume it.
                     awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
+                        val down = awaitFirstDown(requireUnconsumed = false)
                         // Ctrl/Cmd held on a hardware keyboard (desktop Ctrl+click adds the line to the selection)
                         val ctrl = ((currentEvent.motionEvent?.metaState ?: 0) and (android.view.KeyEvent.META_CTRL_ON or android.view.KeyEvent.META_META_ON)) != 0
                         val up = waitForUpOrCancellation()
-                        if (up != null && !up.isConsumed) tap(ctrl)
+                        if (up != null && !up.isConsumed) {
+                            // One tap, one event: the passage it lands on, else the line (desktop LineItem)
+                            val passage = if (ctrl) null else passageHit.passageAt(down.position, up.position, viewConfiguration.touchSlop)
+                            val onPassage = passageTap
+                            if (passage != null && onPassage != null) onPassage(passage) else tap(ctrl)
+                        }
                     }
                 }
-                .drawBehind { layout?.let { drawNoteUnderlines(it, noteRanges, noteColor) } },
+                .drawBehind {
+                    val laid = layout ?: return@drawBehind
+                    if (showPassages) {
+                        segments.forEach { segment ->
+                            if (segment != selectedSegment) with(trays) { draw(laid, segment, trayColor.copy(alpha = PASSAGE_UNDERLINE_ALPHA)) }
+                        }
+                    }
+                    selectedSegment?.let { with(trays) { draw(laid, it, trayColor.copy(alpha = SELECTED_UNDERLINE_ALPHA)) } }
+                    drawNoteUnderlines(laid, noteRanges, noteColor)
+                },
             onTextLayout = {
                 layout = it
                 justified.onLayout(it)
@@ -256,6 +317,84 @@ fun LineItem(
             style = style.copy(textAlign = justified.textAlign),
         )
     }
+}
+
+/** Where a point of a line's text falls among its passages: set by the line once its text is laid out (desktop PassageHit). */
+private class PassageHit {
+    var segments: List<CommentSegment> = emptyList()
+    var layout: () -> TextLayoutResult? = { null }
+    var passageOf: (CommentSegment) -> SelectedPassage? = { null }
+
+    fun at(position: Offset): CommentSegment? {
+        if (segments.isEmpty()) return null
+        val result = layout() ?: return null
+        // Below the text the nearest offset is its last character: not a passage under the finger
+        if (position.y > result.size.height) return null
+        return segments.at(result.getOffsetForPosition(position))
+    }
+
+    // A tap, not a drag (beyond [slop]), on a passage: the passage with the commentary lines it leads to
+    fun passageAt(down: Offset, up: Offset, slop: Float): SelectedPassage? = if ((up - down).getDistance() > slop) null else at(up)?.let(passageOf)
+}
+
+// Desktop's tray alphas: the passages shown at rest are its hovered line's, the selected one its pointed one
+private const val PASSAGE_UNDERLINE_ALPHA = 0.35f
+private const val SELECTED_UNDERLINE_ALPHA = 0.9f
+private val PassageUnderlineWidth = 2.dp
+
+// Past the bottom of the text's last row, clear of its letters' tails and vowels (negative: below it)
+private val PassageUnderlineLift = (-3).dp
+
+// Each end pushed just past the passage's outer letters, so the tray holds them; the space between two passages keeps
+// their trays apart
+private val PassageUnderlineOutset = 1.dp
+
+// The rims rising at a passage's two ends, so its underline holds it like a tray
+private val PassageRimHeight = 9.dp
+
+/** The trays of a line's passages, traced once per layout (and density): a frame only strokes them (desktop PassageTrays). */
+private class PassageTrays {
+    private var layout: TextLayoutResult? = null
+    private var density = 0f
+    private val paths = HashMap<CommentSegment, Path>()
+
+    fun DrawScope.draw(layout: TextLayoutResult, passage: CommentSegment, color: Color) {
+        if (layout !== this@PassageTrays.layout || density != this@PassageTrays.density) {
+            paths.clear()
+            this@PassageTrays.layout = layout
+            this@PassageTrays.density = density
+        }
+        val tray = paths.getOrPut(passage) { trayOf(layout, passage) }
+        drawPath(tray, color, style = Stroke(width = PassageUnderlineWidth.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
+
+/**
+ * A passage underlined row by row as a tray: the line under it rises at its first and last character, just past them.
+ * A row only continuing the passage has the line alone (desktop trayOf).
+ */
+private fun DrawScope.trayOf(layout: TextLayoutResult, passage: CommentSegment): Path {
+    val tray = Path()
+    val text = layout.layoutInput.text.text
+    // Without the space that may close the passage
+    val end = (passage.end.coerceAtMost(text.length) downTo passage.start + 1).firstOrNull { !text[it - 1].isWhitespace() } ?: return tray
+    val outset = PassageUnderlineOutset.toPx()
+    val rim = PassageRimHeight.toPx()
+    layout.forEachRowSpan(passage.start, end) { row, from, to, xFrom, xTo ->
+        if (from >= to) return@forEachRowSpan
+        // Each end pushed outwards, whichever side it stands on
+        val direction = if (xTo >= xFrom) 1f else -1f
+        val a = xFrom - direction * outset
+        val b = xTo + direction * outset
+        // Only the text's last row has room below it; a row with another under it keeps the line on its own bottom
+        val lift = if (row == layout.lineCount - 1) PassageUnderlineLift else 0.dp
+        val y = layout.getLineBottom(row) - lift.toPx()
+        tray.moveTo(a, if (from == passage.start) y - rim else y)
+        tray.lineTo(a, y)
+        tray.lineTo(b, y)
+        if (to == end) tray.lineTo(b, y - rim)
+    }
+    return tray
 }
 
 /** Desktop AltHeadingItem: an alternative structure's heading inline in the text ("בראשית", "עליה א"). */

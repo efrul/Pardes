@@ -74,8 +74,8 @@ internal class WidgetDay(val city: City, val opinion: ZmanimOpinion, val today: 
     val zmanRows by lazy { ZmanimDay.rows(city, today, opinion) }
 
     /**
-     * nextZmanim's list for any moment of [today] before it drops the ones passed: the zmanim of yesterday, today and
-     * tomorrow after today's midnight, in order ([WidgetData.upcomingZmanim] keeps the ones after now).
+     * nextZmanim's list for any moment of [today] before it drops the ones passed: the zmanim of yesterday, today,
+     * tomorrow and the day after, after today's midnight, in order ([WidgetData.upcomingZmanim] keeps the ones after now).
      */
     val zmanimFromMidnight by lazy { nextZmanim(Date(midnight), location, opinion, inIsrael, count = Int.MAX_VALUE) }
     val shabbat by lazy { computeShabbatTimes(today, location, opinion, cityLabel, inIsrael) }
