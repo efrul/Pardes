@@ -14,6 +14,8 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
     vendor, the installers' copyright, homepage, release repository, Linux maintainer and WM class, the Linux launcher
     entry's English and Hebrew name and comment, Windows upgrade id, macOS bundle id and app name, icons);
   - removes the OS URL scheme: `zayit://` belongs to Zayit, and two apps registering it would clash;
+  - removes the Microsoft Store package (`TargetFormat.AppX`): upstream's `appx { }` is Zayit's own Store listing
+    (identity `KdroidFilter.Zayit`, named זית);
   - fails if one of Zayit's private add-ons (smart siddur, semantic search, quote links) would be compiled: their
     licence is for Zayit only;
   - lays `<brand>/composeResources` over `SeforimApp/src/commonMain/composeResources` and `<brand>/assets` over
@@ -52,6 +54,8 @@ Keep this list short and exact; every line here is a possible merge conflict.
 | `SeforimApp/.../framework/database/PendingDbCleanup.kt` | drops pending deletions in a foreign folder |
 | `SeforimApp/.../features/onboarding/licence/LicenceScreen.kt` | offers `ExistingLibraryScreen` when `ForeignLibraries.find()` finds one |
 | `SeforimApp/.../features/onboarding/navigation/OnBoardingDestination.kt`, `OnBoardingNavHost.kt` | the `ExistingLibraryScreen` destination |
+| `SeforimApp/.../framework/crashreporting/CrashReporting.kt`, `DataSettingsViewModel.kt`, `DataSettingsScreen.kt` | `isAvailable` (a Sentry DSN): without one the error reports' switch is not shown, as Pardes sends none; a fix for any community build |
+| `buildSrc/.../Versioning.kt` | a local build takes its version from the latest `v*` tag only (`--match v[0-9]*`): a fork's `android-*`, `desktop-*` and `semantic-*` tags are not versions, and Nucleus refused to configure with one |
 | `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `onboarding_existing_library_*` strings (one block) |
 
 New files in upstream folders (no conflict, but generic code a Zayit merge must still compile with):
@@ -94,6 +98,15 @@ tests and fixtures under `jvmTest/`; `SEMANTIC_SEARCH.md`, `docs/SEMANTIC_PLAN.m
 | `SeforimApp/.../framework/database/LibraryLocation.kt` | `NAMES`: `pardes-model` and `pardes.vec.lucene` move with the library; `LEFTOVERS`: a pack's download and staging folders |
 | `SeforimApp/src/graalvm/reachability-metadata.json` | ONNX Runtime's libraries for `win-x64`, `linux-aarch64`, `osx-aarch64` and `osx-x64` |
 
+Fixes of upstream code and tests, written for Zayit as well, to drop once upstream has its own (CI runs the tests since
+`Versioning` stopped failing on Pardes's tags):
+
+| File | Hook |
+|---|---|
+| `SeforimApp/.../framework/platform/PlatformInfo.kt` | `lowEndForTests`, which `isLowEnd` answers first: a test sets it so its widgets don't depend on the machine's GPU (a CI runner's is a software one, where the 3D widgets are off) |
+| `SeforimApp/.../features/home/widgets/luach/LuachData.kt` | `nextZmanim` over the day after too (`-1L..2L`): from the evening the next zman's card listed some fifteen of its twenty, half empty (Android's port the same) |
+| `SeforimApp/src/jvmTest/.../home/widgets/HomeWidgetsLayoutTest.kt`, `WidgetDragUiTest.kt` | the default layout checked on either machine; the drag tests set `lowEndForTests = false` |
+
 Licence-restricted files are replaced in place, not overlaid, because they must not be in the repository at all:
 the Rashi Amiti font (removed, with its `FontCatalog` entry; `FontCatalogTest` counts 27 fonts) and the temple
 picture (`files/temple_jerusalem_in_fire.webp`, a public-domain painting by David Roberts instead of a Shutterstock
@@ -117,4 +130,7 @@ photo). When a Zayit merge conflicts there, keep Pardes's side.
 - `composeResources/files/ABOUT.md` and `CONDITIONS.md`: in both, the §7b line ends with a space before the closing
   direction mark (U+2069). Without it the autolinker puts the mark into the zayitapp.com link. Keep the line's words
   unchanged.
+- `CONDITIONS.md`'s privacy section (since Zayit 0.6.12) keeps upstream's `<!-- if:self-update -->` and
+  `<!-- if:update-helper -->` blocks, which `ConditionsText` drops where they do not apply; Pardes sends no error
+  reports, so it says so instead of upstream's first paragraph.
 - Who made the app: the name and authorship rules of the `zayit-android` skill apply to every Pardes text.

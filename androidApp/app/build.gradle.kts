@@ -9,7 +9,7 @@ plugins {
     id("pardes.compose-vector-moves")
 }
 
-// SeforimLibrary as desktop Zayit 0.6.11 builds it: the repository's SeforimLibrary submodule (4f07145), the same
+// SeforimLibrary as desktop Zayit 0.6.12 builds it: the repository's SeforimLibrary submodule (4f07145, 0.6.11's too), the same
 // checkout the desktop app and the shared modules build with.
 val seforimLibrary = rootDir.resolve("../SeforimLibrary")
 // Other shared sources reused as-is from the desktop project.
@@ -211,8 +211,8 @@ android {
         // java.nio.file, java.time and MethodHandle.invoke.
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.6.1"
+        versionCode = 9
+        versionName = "0.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -337,13 +337,19 @@ abstract class LicenceAssets : DefaultTask() {
 }
 
 /**
- * Desktop's own texts the app reads as they are, copied into the APK's assets rather than kept twice: temple_count.txt,
- * the Temple widget's counts explained (desktop composeResources/files, since 0.6.8).
+ * Desktop's own texts and data the app reads as they are, copied into the APK's assets rather than kept twice:
+ * temple_count.txt, the Temple widget's counts explained (desktop composeResources/files, since 0.6.8), and
+ * comment-anchors/, where each base book's commentary anchors lead (desktop jvmMain/resources, since 0.6.12: one
+ * protobuf table per book, 4 MB in all, read by CommentAnchorTargets).
  */
 abstract class DesktopTextAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val templeCount: RegularFileProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val commentAnchors: DirectoryProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -354,6 +360,7 @@ abstract class DesktopTextAssets : DefaultTask() {
         dir.deleteRecursively()
         dir.mkdirs()
         templeCount.get().asFile.copyTo(dir.resolve("temple_count.txt"))
+        commentAnchors.get().asFile.copyRecursively(dir.resolve("comment-anchors"))
     }
 }
 
@@ -368,6 +375,7 @@ androidComponents {
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::outputDir)
         val desktopTexts = tasks.register<DesktopTextAssets>("${variant.name}DesktopTextAssets") {
             templeCount.set(desktopRoot.resolve("SeforimApp/src/commonMain/composeResources/files/temple_count.txt"))
+            commentAnchors.set(desktopRoot.resolve("SeforimApp/src/jvmMain/resources/comment-anchors"))
         }
         variant.sources.assets?.addGeneratedSourceDirectory(desktopTexts, DesktopTextAssets::outputDir)
     }

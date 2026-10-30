@@ -1,5 +1,7 @@
 package io.github.kdroidfilter.seforimapp.android.ui.reader
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
@@ -61,6 +64,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -94,6 +99,7 @@ import io.github.kdroidfilter.seforimlibrary.core.models.ConnectionType
 import io.github.kdroidfilter.seforimlibrary.dao.repository.CommentaryWithText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** What the panes do outside themselves: the shell's tabs and the reader's shared actions. */
@@ -240,6 +246,19 @@ class PagedLinks(private val load: suspend (offset: Int, limit: Int) -> List<Com
         }
     }
 
+    /**
+     * The place of the first link among [targetLineIds], reading the next pages while it is not loaded yet; null when
+     * the column ends without it (desktop 0.6.12 loadedIndexOf).
+     */
+    suspend fun indexOfFirst(targetLineIds: Set<Long>): Int? {
+        while (true) {
+            val index = items.indexOfFirst { it.link.targetLineId in targetLineIds }
+            if (index >= 0) return index
+            if (done) return null
+            if (loading) snapshotFlow { loading }.first { !it } else more()
+        }
+    }
+
     companion object {
         const val PAGE = 64
     }
@@ -248,10 +267,24 @@ class PagedLinks(private val load: suspend (offset: Int, limit: Int) -> List<Com
 /** The selected text's commentaries, targumim or sources share the reader's text size × 0.875 (desktop). */
 fun paneTextSize(textSize: Float) = textSize * 0.875f
 
-/** One link's text (desktop CommentaryItem / LinkItem): highlights of its own book, the find query, links, images. */
+/**
+ * One link's text (desktop CommentaryItem / LinkItem): highlights of its own book, the find query, links, images.
+ * [isInPassage]: led to by the passage selected in the text, it stands on a light tint of the accent, faded in (desktop
+ * 0.6.12: nothing fades, as a commentary not linked to the passage may still be about it).
+ */
 @Composable
-fun LinkItem(item: CommentaryWithText, textSize: Float, font: FontFamily, diacritics: DiacriticsMode, highlights: List<UserHighlight>, findQuery: String, selectable: SelectableText? = null) {
+fun LinkItem(
+    item: CommentaryWithText,
+    textSize: Float,
+    font: FontFamily,
+    diacritics: DiacriticsMode,
+    highlights: List<UserHighlight>,
+    findQuery: String,
+    selectable: SelectableText? = null,
+    isInPassage: Boolean = false,
+) {
     val c = Zayit.colors
+    val passageTint by animateFloatAsState(if (isInPassage) 1f else 0f, tween(durationMillis = 250), label = "passage tint")
     val annotation = rememberHtmlAnnotation(item.targetText, textSize, diacritics)
     val needsOriginal = diacritics != DiacriticsMode.All && highlights.isNotEmpty()
     val original = remember(item.targetText, needsOriginal) { if (needsOriginal) buildAnnotatedFromHtml(item.targetText, textSize).text else null }
@@ -260,8 +293,14 @@ fun LinkItem(item: CommentaryWithText, textSize: Float, font: FontFamily, diacri
         highlightAnnotatedWithCurrent(applyUserHighlights(annotation.text, highlights, original, diacritics), findQuery, baseHl, baseHl)
     }
     val style = TextStyle(fontFamily = font, fontSize = textSize.sp, lineHeight = (textSize * READER_LINE_HEIGHT).sp, color = c.text, textAlign = TextAlign.Justify)
+    val tint = c.accent
     // The width the Text fills, which its lines are justified to (Justify.kt)
-    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+    BoxWithConstraints(
+        Modifier
+            .drawBehind { if (passageTint > 0f) drawRoundRect(tint.copy(alpha = PASSAGE_TINT_ALPHA * passageTint), cornerRadius = CornerRadius(6.dp.toPx())) }
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
         val justified = rememberJustifiedText(display, style, constraints.maxWidth, inline = annotation.inline.isNotEmpty())
         Text(
             justified.text,
@@ -320,11 +359,22 @@ private fun CommentatorColumn(
     actions: PaneActions,
     modifier: Modifier = Modifier,
     compactHeader: Boolean = false,
+    passage: SelectedPassage? = null,
 ) {
     val scope = rememberCoroutineScope()
     val paged = remember(selection, commentatorId) { PagedLinks { o, l -> vm.linksPage(selection, ConnectionType.COMMENTARY, commentatorId, o, l) } }
     LaunchedEffect(paged) { paged.more() }
     val list = rememberLazyListState()
+    // The passage selected in the text: the commentary lines it leads to stand out, and the column brings the first in
+    // view once, reading further pages when needed, unless it is already wholly shown (desktop 0.6.12)
+    LaunchedEffect(passage, paged) {
+        val targets = passage?.takeIf { commentatorId in it.targetBookIds }?.targetLineIds ?: return@LaunchedEffect
+        val index = paged.indexOfFirst(targets) ?: return@LaunchedEffect
+        val layout = list.layoutInfo
+        val shown = layout.visibleItemsInfo.firstOrNull { it.index == index }
+        val isWhollyShown = shown != null && shown.offset >= layout.viewportStartOffset && shown.offset + shown.size <= layout.viewportEndOffset
+        if (!isWhollyShown) list.animateScrollToItem(index)
+    }
     LaunchedEffect(list, paged) {
         snapshotFlow { (list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= paged.items.size - 8 }.distinctUntilChanged().collect { if (it) paged.more() }
     }
@@ -342,7 +392,16 @@ private fun CommentatorColumn(
             LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
                 itemsIndexed(paged.items, key = { i, it -> "${it.link.id}-$i" }) { i, item ->
                     val selectable = rememberSelectableText(textSelection, i.toLong())
-                    LinkItem(item, textSize, Zayit.fonts.commentary, diacritics, highlights[item.link.targetBookId]?.get(item.link.targetLineId).orEmpty(), findQuery, selectable)
+                    LinkItem(
+                        item,
+                        textSize,
+                        Zayit.fonts.commentary,
+                        diacritics,
+                        highlights[item.link.targetBookId]?.get(item.link.targetLineId).orEmpty(),
+                        findQuery,
+                        selectable,
+                        isInPassage = passage != null && item.link.targetLineId in passage.targetLineIds,
+                    )
                 }
                 if (paged.loading && paged.items.isEmpty()) item { LoadingBox(Modifier.fillMaxWidth().height(80.dp)) }
             }
@@ -406,6 +465,8 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
     var filterOpen by remember { mutableStateOf(false) }
     val pane = paneTextSize(textSize)
     val findQuery = state.find.activeQuery
+    // The passage selected in the text, on a single selected line
+    val passage = state.selectedPassage?.takeIf { selection is LinkSelection.Single && it.lineId == selection.lineId }
 
     fun toggle(id: Long) {
         val p = primary ?: return
@@ -441,7 +502,7 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
                 selection == null -> EmptyHint("בחר שורה כדי לצפות במפרשים שלה", Modifier.fillMaxSize())
                 snapshot == null -> LoadingBox(Modifier.fillMaxSize())
                 groups.isEmpty() -> EmptyHint("אין מפרשים זמינים לפסקה זו", Modifier.fillMaxSize())
-                !wide -> PhoneCommentaries(vm, selection, shown, pane, state.diacritics, findQuery, actions, onFilter = { filterOpen = true }, onJump = {})
+                !wide -> PhoneCommentaries(vm, selection, shown, pane, state.diacritics, findQuery, actions, passage, onFilter = { filterOpen = true }, onJump = {})
                 else -> Row(Modifier.fillMaxSize()) {
                     if (listVisible) {
                         Column(Modifier.then(if (compact) Modifier.fillMaxSize() else Modifier.width(maxOf(150.dp, paneWidth * 0.22f)).fillMaxHeight()).verticalScroll(rememberScrollState())) {
@@ -454,7 +515,7 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
                             if (shown.isEmpty()) {
                                 EmptyHint("אנא בחר לפחות מפרש אחד מהרשימה", Modifier.fillMaxSize())
                             } else {
-                                CommentatorsGrid(vm, selection, shown, pane, state.diacritics, findQuery, actions)
+                                CommentatorsGrid(vm, selection, shown, pane, state.diacritics, findQuery, actions, passage)
                             }
                         }
                     }
@@ -534,7 +595,16 @@ internal fun commentatorsCheckState(ids: Collection<Long>, selected: Set<Long>):
  * turned by a sideways swipe (a commentator's own scroll is vertical) or by their dots, in a row above them.
  */
 @Composable
-private fun CommentatorsGrid(vm: ReaderViewModel, selection: LinkSelection, shown: List<CommentatorItem>, textSize: Float, diacritics: DiacriticsMode, findQuery: String, actions: PaneActions) {
+private fun CommentatorsGrid(
+    vm: ReaderViewModel,
+    selection: LinkSelection,
+    shown: List<CommentatorItem>,
+    textSize: Float,
+    diacritics: DiacriticsMode,
+    findQuery: String,
+    actions: PaneActions,
+    passage: SelectedPassage?,
+) {
     val app = LocalContext.current.applicationContext as ZayitApplication
     val max by app.prefs.maxCommentatorsPerPage.collectAsState()
     val scope = rememberCoroutineScope()
@@ -542,6 +612,13 @@ private fun CommentatorsGrid(vm: ReaderViewModel, selection: LinkSelection, show
         val cap = computeGridCapacity(maxWidth.value, maxHeight.value, textSize, max)
         val pages = remember(shown, cap.perPage) { shown.chunked(cap.perPage) }
         val pager = rememberPagerState { pages.size }
+        // The commentators of the page shown, for the text to offer their passages only (none once the grid goes)
+        ReportVisibleCommentators(vm) { pages.getOrNull(pager.settledPage).orEmpty() }
+        // The selected passage's commentator keeps its page shown, whatever repaginates (desktop's pager anchor)
+        LaunchedEffect(passage, pages) {
+            val page = passage?.let { p -> pages.indexOfFirst { names -> names.any { it.bookId in p.targetBookIds } } } ?: -1
+            if (page >= 0 && page != pager.currentPage) pager.animateScrollToPage(page)
+        }
         // A commentator just ticked: its page comes into view (desktop's anchor follows the added one)
         var previous by remember { mutableStateOf<List<Long>?>(null) }
         LaunchedEffect(shown) {
@@ -577,7 +654,18 @@ private fun CommentatorsGrid(vm: ReaderViewModel, selection: LinkSelection, show
                         Row(Modifier.weight(1f).fillMaxWidth()) {
                             row.forEach { item ->
                                 androidx.compose.runtime.key(item.bookId) {
-                                    CommentatorColumn(vm, selection, item.bookId, item.name, textSize, diacritics, findQuery, actions, Modifier.weight(1f).fillMaxHeight().padding(horizontal = 4.dp))
+                                    CommentatorColumn(
+                                        vm,
+                                        selection,
+                                        item.bookId,
+                                        item.name,
+                                        textSize,
+                                        diacritics,
+                                        findQuery,
+                                        actions,
+                                        Modifier.weight(1f).fillMaxHeight().padding(horizontal = 4.dp),
+                                        passage = passage,
+                                    )
                                 }
                             }
                         }
@@ -587,6 +675,21 @@ private fun CommentatorsGrid(vm: ReaderViewModel, selection: LinkSelection, show
         }
     }
 }
+
+/**
+ * Tells the reader which commentators the pane shows on its current page ([visible]), as it changes, and none once
+ * the pane goes (desktop 0.6.12 CommentariesVisibleChanged): only their passages answer in the text.
+ */
+@Composable
+private fun ReportVisibleCommentators(vm: ReaderViewModel, visible: () -> List<CommentatorItem>) {
+    val current by rememberUpdatedState(visible)
+    LaunchedEffect(vm) {
+        snapshotFlow { current().mapTo(HashSet()) { it.bookId } }.distinctUntilChanged().collect { vm.setVisibleCommentators(it) }
+    }
+    DisposableEffect(vm) { onDispose { vm.setVisibleCommentators(emptySet()) } }
+}
+
+private const val PASSAGE_TINT_ALPHA = 0.1f
 
 /** Below this height a phone commentary page's title row (about 30dp) shrinks to one tight line (about 22dp). */
 private val PhoneCommentaryHeaderRoom = 140.dp
@@ -601,6 +704,7 @@ private fun PhoneCommentaries(
     diacritics: DiacriticsMode,
     findQuery: String,
     actions: PaneActions,
+    passage: SelectedPassage?,
     onFilter: () -> Unit,
     onJump: (Int) -> Unit,
 ) {
@@ -610,6 +714,13 @@ private fun PhoneCommentaries(
     val current by rememberUpdatedState(shown)
     val pager = rememberPagerState { current.size }
     val scope = rememberCoroutineScope()
+    // The commentator of the page shown, for the text to offer its passages only (none once the pane goes)
+    ReportVisibleCommentators(vm) { listOfNotNull(current.getOrNull(pager.settledPage)) }
+    // The selected passage's commentator stays the page shown
+    LaunchedEffect(passage, shown) {
+        val page = passage?.let { p -> shown.indexOfFirst { it.bookId in p.targetBookIds } } ?: -1
+        if (page >= 0 && page != pager.currentPage) pager.animateScrollToPage(page)
+    }
     Column(Modifier.fillMaxSize()) {
         LazyRow(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(horizontal = 10.dp)) {
             item { ZChip("סנן", selected = false, onClick = onFilter, leading = Icons.Outlined.FilterList) }
@@ -629,7 +740,7 @@ private fun PhoneCommentaries(
                 val compactHeader = maxHeight < PhoneCommentaryHeaderRoom
                 HorizontalPager(pager, Modifier.fillMaxSize(), key = { current.getOrNull(it)?.bookId ?: it }) { page ->
                     val item = current.getOrNull(page) ?: return@HorizontalPager
-                    CommentatorColumn(vm, selection, item.bookId, item.name, textSize, diacritics, findQuery, actions, Modifier.fillMaxSize(), compactHeader = compactHeader)
+                    CommentatorColumn(vm, selection, item.bookId, item.name, textSize, diacritics, findQuery, actions, Modifier.fillMaxSize(), compactHeader = compactHeader, passage = passage)
                 }
             }
         }

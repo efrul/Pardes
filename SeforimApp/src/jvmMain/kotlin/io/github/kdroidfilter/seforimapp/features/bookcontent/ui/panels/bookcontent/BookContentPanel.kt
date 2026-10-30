@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -150,6 +151,20 @@ private fun BookContentPanelContent(
 
     // Shared with the links / commentaries / sources panes of the window showing this tab.
     val connectionsCache = tabUi.connections(selectedBook.id)
+    // The commentators in panes of their own (kept by name), as books of this one's lines the text has loaded
+    val detachedNames = uiState.content.detachedCommentators
+    val detachedCommentatorIds: Set<Long> by remember(detachedNames, connectionsCache) {
+        derivedStateOf<Set<Long>> {
+            val names = detachedNames.filterTo(HashSet()) { it.isNotEmpty() }
+            if (names.isEmpty()) {
+                emptySet()
+            } else {
+                connectionsCache.values.flatMapTo(HashSet()) { snapshot ->
+                    snapshot.commentatorGroups.flatMap { group -> group.commentators.filter { it.name in names }.map { it.bookId } }
+                }
+            }
+        }
+    }
     val prefetchConnections =
         remember(tabUi, selectedBook.id, providers) {
             { ids: List<Long> -> tabUi.prefetch(selectedBook.id, providers, ids) }
@@ -200,6 +215,12 @@ private fun BookContentPanelContent(
                     lazyPagingItems = lazyPagingItems,
                     selectedLineIds = uiState.content.selectedLineIds,
                     primarySelectedLineId = uiState.content.primarySelectedLineId,
+                    selectedPassage = uiState.content.selectedPassage,
+                    // Only the passages of the commentators shown answer: the pane's page (none while it is hidden),
+                    // and those in panes of their own
+                    passageCommentatorIds =
+                        (if (uiState.content.showCommentaries) uiState.content.visibleCommentatorIds else emptySet()) +
+                            detachedCommentatorIds,
                     isTocEntrySelection = uiState.content.isTocEntrySelection,
                     markedLines =
                         uiState.content.markedRange

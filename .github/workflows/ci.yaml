@@ -187,8 +187,9 @@ jobs:
           # Copy splash image
           Copy-Item "..\SeforimApp\src\jvmMain\assets\common\splash.png" "resources\splash.png"
 
-          # Find NSIS installer (GraalVM or Release path)
-          $nsisFile = Get-ChildItem "..\SeforimApp\build\compose\binaries\main\graalvm-nsis\zayit-*-nsis.exe","..\SeforimApp\build\compose\binaries\main-release\nsis\zayit-*-nsis.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          # Find NSIS installer (GraalVM or Release path), named after the brand's package (pardes-…, zayit-…), as
+          # desktop-release.yml finds it; the installer crate embeds it as resources\zayit-nsis.exe whatever its name
+          $nsisFile = Get-ChildItem "..\SeforimApp\build\compose\binaries\main\graalvm-nsis\*-nsis.exe","..\SeforimApp\build\compose\binaries\main-release\nsis\*-nsis.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $nsisFile) {
             Write-Error "NSIS installer not found"
             exit 1

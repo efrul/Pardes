@@ -30,10 +30,27 @@ jobs:
             const signOffRegex = /^Signed-off-by: .+ <.+@.+>$/m;
             const failures = [];
 
+            // Zayit's own commits, brought by the merge of one of its releases ("Merge Zayit v<x.y.z> into Pardes"),
+            // are its history as released: Pardes cannot sign them off without rewriting it, which the next merge of
+            // Zayit would then meet again (d4aff54 in v0.6.12 has no sign-off). Pardes's own commits are checked.
+            const bySha = new Map(commits.map((c) => [c.sha, c]));
+            const upstream = new Set();
+            for (const c of commits) {
+              if (c.parents.length < 2 || !/^Merge Zayit v\d/.test(c.commit.message || "")) continue;
+              const stack = c.parents.slice(1).map((p) => p.sha);
+              while (stack.length > 0) {
+                const sha = stack.pop();
+                const commit = bySha.get(sha);
+                if (!commit || upstream.has(sha)) continue;
+                upstream.add(sha);
+                stack.push(...commit.parents.map((p) => p.sha));
+              }
+            }
+
             for (const c of commits) {
               // A merge carries no sign-off of its own (GitHub's "Merge pull request" commits in Zayit's history,
-              // merged here as released): the commits it brings are checked
-              if (c.parents.length > 1) continue;
+              // merged here as released): the commits it brings are checked, a Zayit release's aside
+              if (c.parents.length > 1 || upstream.has(c.sha)) continue;
               const message = c.commit.message || "";
               if (!signOffRegex.test(message)) {
                 failures.push(`${c.sha.substring(0, 7)} — ${message.split("\n")[0]}`);
@@ -47,5 +64,5 @@ jobs:
                 failures.map((f) => `  - ${f}`).join("\n")
               );
             } else {
-              core.info(`All ${commits.length} commit(s) are signed off.`);
+              core.info(`All ${commits.length - upstream.size} commit(s) of Pardes are signed off (${upstream.size} of Zayit's releases, merged as released, not checked).`);
             }

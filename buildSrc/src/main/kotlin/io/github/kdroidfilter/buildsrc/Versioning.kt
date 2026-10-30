@@ -5,7 +5,6 @@ import java.net.HttpURLConnection
 import java.net.URI
 
 object Versioning {
-    @Suppress("UNUSED_PARAMETER")
     fun resolveVersion(project: Project): String {
         val fromEnv = resolveFromGitHubRef()
         if (!fromEnv.isNullOrBlank()) {
@@ -17,6 +16,13 @@ object Versioning {
             return fromGitHub
         }
 
+        // A local build: the latest release tag (v<version>) of the checkout, as the release it would be. Other tags
+        // (a fork's android-*, desktop-* or semantic-* ones) are not versions
+        val fromGitTag = resolveFromGitTag(project)
+        if (!fromGitTag.isNullOrBlank()) {
+            return fromGitTag
+        }
+
         return "1.0.0"
     }
 
@@ -26,8 +32,19 @@ object Versioning {
             return null
         }
         val tag = ref.removePrefix("refs/tags/")
-        return tag.removePrefix("v")
+        return tag.asVersion()
     }
+
+    private fun resolveFromGitTag(project: Project): String? =
+        project.providers
+            .exec {
+                commandLine("git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
+                workingDir = project.rootDir
+                isIgnoreExitValue = true
+            }.standardOutput.asText
+            .get()
+            .trim()
+            .asVersion()
 
     private fun resolveFromGitHubApi(): String? {
         val repository = System.getenv("GITHUB_REPOSITORY") ?: return null
@@ -52,7 +69,7 @@ object Versioning {
                 }
 
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
-                extractFirstTagName(body)?.removePrefix("v")
+                extractFirstTagName(body)?.asVersion()
             }
         } catch (_: Exception) {
             null
@@ -75,6 +92,10 @@ object Versioning {
 
         return json.substring(firstQuote + 1, secondQuote)
     }
+
+    // A tag names a version only when it is one, after an optional "v": a fork's other tags (Pardes's android-*,
+    // desktop-* and semantic-*) do not, and Nucleus refuses to configure with them
+    private fun String.asVersion(): String? = removePrefix("v").takeIf { it.firstOrNull()?.isDigit() == true }
 
     // Simple extension to ensure HttpURLConnection is closed
     private inline fun <T> HttpURLConnection.use(block: (HttpURLConnection) -> T): T {

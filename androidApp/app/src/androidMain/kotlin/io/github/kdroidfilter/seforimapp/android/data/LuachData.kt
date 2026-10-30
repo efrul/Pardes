@@ -296,8 +296,10 @@ internal fun nextZmanim(
     count: Int = 3,
 ): List<NextZman> {
     val today = now.toInstant().atZone(location.timeZone.toZoneId()).toLocalDate()
-    // Yesterday's חצות הלילה may still be ahead after midnight; tomorrow's alos once tonight's zmanim are past
-    return (-1L..1L)
+    // Yesterday's חצות הלילה may still be ahead after midnight; tomorrow's alos once tonight's zmanim are past. The day
+    // after too (Pardes's fix, also on desktop): from the evening, tonight's and tomorrow's are some fifteen, fewer than
+    // the next zman's card lists
+    return (-1L..2L)
         .flatMap { offset ->
             val z = computeZmanimTimes(today.plusDays(offset), location, opinion, inIsrael)
             listOf(

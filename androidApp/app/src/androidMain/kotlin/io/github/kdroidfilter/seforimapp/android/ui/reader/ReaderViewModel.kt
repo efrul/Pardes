@@ -113,6 +113,16 @@ data class ReaderUiState(
     val primaryLineIndex: Int? = null,
     /** The selection is a TOC heading's section (thin bar for its lines, targum only by default). */
     val isTocEntrySelection: Boolean = false,
+    /**
+     * The passage of the primary line tapped in the text, part of the selection: any other change of the selection
+     * lets it go ([withPassageOfItsSelection]). Not persisted (desktop 0.6.12 ContentState.selectedPassage).
+     */
+    val selectedPassage: SelectedPassage? = null,
+    /**
+     * The commentators (book ids) the commentaries pane shows on its current page: only their passages answer in the
+     * text, none while the pane is closed. Reported by the pane, which alone knows its page. Not persisted.
+     */
+    val visibleCommentatorIds: Set<Long> = emptySet(),
     /** Touch stand-in for Ctrl+click: taps add or remove lines. */
     val multiSelect: Boolean = false,
     val scrollRequest: ScrollRequest? = null,
@@ -167,6 +177,12 @@ data class ReaderUiState(
      */
     fun tapKeepsSelection(lineId: Long): Boolean =
         !multiSelect && primaryLineId == lineId && (selectedLineIds.size == 1 || isTocEntrySelection)
+
+    /**
+     * Whether a tap on a passage of [lineId] must select its line first: not when the line is the primary of the
+     * selection and that selection is the line alone or its TOC section (desktop needsLineSelectionFor).
+     */
+    fun needsLineSelectionFor(lineId: Long): Boolean = !(primaryLineId == lineId && (selectedLineIds.size == 1 || isTocEntrySelection))
 
     /** The desktop TOC skips a lone root wrapping the book (its title): its children are the first level. */
     val tocDisplayRoots: List<TocEntry>
@@ -453,8 +469,26 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
 
     /** A tap on a line: selects it, its section when it is a heading; in multi-select mode, adds or removes it. */
     fun onLineTap(line: Line) {
-        viewModelScope.launch { selectLineInternal(line, toggle = _state.value.multiSelect) }
+        viewModelScope.launch {
+            selectLineInternal(line, toggle = _state.value.multiSelect)
+            // A tap on the line outside any passage lets the passage go
+            if (!_state.value.multiSelect) clearPassage()
+        }
     }
+
+    /** A tap on a passage of [line] (desktop PassageSelected): selects the line, when it is not already, and the passage. */
+    fun onPassageTap(line: Line, passage: SelectedPassage) {
+        viewModelScope.launch {
+            if (_state.value.needsLineSelectionFor(line.id)) selectLineInternal(line, toggle = false)
+            _state.update { it.copy(selectedPassage = passage).withPassageOfItsSelection(previous = it) }
+        }
+    }
+
+    /** A tap on the selected line outside any passage lets its passage go (desktop LineSelected). */
+    fun clearPassage() = _state.update { if (it.selectedPassage == null) it else it.copy(selectedPassage = null) }
+
+    /** The commentators the commentaries pane shows on its page (none once it goes; desktop CommentariesVisibleChanged). */
+    fun setVisibleCommentators(ids: Set<Long>) = _state.update { if (it.visibleCommentatorIds == ids) it else it.copy(visibleCommentatorIds = ids) }
 
     /** Ctrl+click (a keyboard) or the multi-select mode: adds or removes [line]. */
     fun toggleLine(line: Line) {
@@ -498,12 +532,15 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
                     primaryLineIndex = primary?.let { id -> indexById[id] },
                     isTocEntrySelection = false,
                     multiSelect = it.multiSelect && next.isNotEmpty(),
-                )
+                ).withPassageOfItsSelection(previous = it)
             }
         } else {
             val heading = runCatching { repository.getHeadingTocEntryByLineId(line.id) }.getOrNull()
             val ids = if (heading != null) sectionWindow(heading.id, line.id).toSet() + line.id else setOf(line.id)
-            _state.update { it.copy(selectedLineIds = ids, primaryLineId = line.id, primaryLineIndex = line.lineIndex, isTocEntrySelection = heading != null) }
+            _state.update {
+                it.copy(selectedLineIds = ids, primaryLineId = line.id, primaryLineIndex = line.lineIndex, isTocEntrySelection = heading != null)
+                    .withPassageOfItsSelection(previous = it)
+            }
         }
         val primary = _state.value.primaryLineId
         if (primary != null && primary != noteDraftBaseline && _state.value.noteDraft != null) _state.update { it.copy(noteDraft = null) }
@@ -1119,3 +1156,15 @@ private val CHUMASH_TITLES = setOf("בראשית", "שמות", "ויקרא", "ב
 
 /** The five books of the Chumash: the only ones shnayim mikra reads (desktop ShnayimMikraTargum.isChumash). */
 val Book.isChumash: Boolean get() = title in CHUMASH_TITLES
+
+/**
+ * The selected passage belongs to the line selection: it stands only on the primary line, and a selection that changes
+ * without setting it again lets it go (desktop 0.6.12 BookContentStateManager.withPassageOfItsSelection). Every write
+ * of the selection goes through here.
+ */
+internal fun ReaderUiState.withPassageOfItsSelection(previous: ReaderUiState): ReaderUiState {
+    val passage = selectedPassage ?: return this
+    val selectionChanged = primaryLineId != previous.primaryLineId || selectedLineIds != previous.selectedLineIds
+    val isStale = passage.lineId != primaryLineId || (selectionChanged && passage == previous.selectedPassage)
+    return if (isStale) copy(selectedPassage = null) else this
+}
