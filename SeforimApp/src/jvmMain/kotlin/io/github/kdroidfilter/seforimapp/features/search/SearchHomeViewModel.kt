@@ -726,6 +726,12 @@ class SearchHomeViewModel(
         }
     }
 
+    /**
+     * A new tab's bar opens empty, as Zayit's, where it dropped the book picked: this bar is the window's, its other
+     * tabs' too, and the books, categories or author they searched in are not the new tab's.
+     */
+    fun onNewTabBarOpened() = applyScopeItems(emptyList(), showSuggestions = false)
+
     private fun showAuthorScope(authorId: Long) {
         if (_uiState.value.selectedScopeAuthor?.id == authorId) return
         // The bar searches in their books at once, before their name is loaded for the chip

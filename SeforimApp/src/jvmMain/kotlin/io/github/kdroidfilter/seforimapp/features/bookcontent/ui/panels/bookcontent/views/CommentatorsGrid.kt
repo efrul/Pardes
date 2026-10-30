@@ -315,10 +315,11 @@ internal fun CommentatorsGridScaffold(
 
 /**
  * Turns the commentators' pages by a sideways swipe: a mouse drag (outside the texts, where a drag
- * selects), a touchpad's sideways swipe, a tilt wheel or Shift + wheel. One page per gesture.
+ * selects), a touchpad's sideways swipe with two fingers (a pan on Windows, a scroll elsewhere), a tilt wheel or
+ * Shift + wheel. One page per gesture.
  */
 @Composable
-private fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
+internal fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
     val scope = rememberCoroutineScope()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     var dragStartPage by remember { mutableIntStateOf(0) }
@@ -338,27 +339,45 @@ private fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
         .pointerInput(pagerState, isRtl) {
             // Initial pass: ahead of the columns, which would take Shift + wheel as their own scroll.
             awaitPointerEventScope {
+                val panPerTurn = SWIPE_PAN_DISTANCE.toPx()
                 var accumulated = 0f
                 var lastScrollAt = 0L
                 var turned = false
+                // The fingers' move so far in a touchpad's swipe
+                var panX = 0f
+                var panY = 0f
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                    if (event.type != PointerEventType.Scroll) continue
                     val change = event.changes.firstOrNull() ?: continue
-                    val delta = change.scrollDelta
+                    val now = change.uptimeMillis
+                    // A pause, or a new touchpad swipe, ends the gesture: the next one may turn another page
+                    if (event.type == PointerEventType.PanStart || now - lastScrollAt > SWIPE_GESTURE_GAP_MS) {
+                        accumulated = 0f
+                        turned = false
+                        panX = 0f
+                        panY = 0f
+                    }
                     val sideways =
-                        when {
-                            abs(delta.x) > abs(delta.y) -> delta.x
-                            event.keyboardModifiers.isShiftPressed && delta.y != 0f -> delta.y
+                        when (event.type) {
+                            PointerEventType.Scroll -> {
+                                val delta = change.scrollDelta
+                                when {
+                                    abs(delta.x) > abs(delta.y) -> delta.x
+                                    event.keyboardModifiers.isShiftPressed && delta.y != 0f -> delta.y
+                                    else -> continue
+                                }
+                            }
+                            // Two fingers on a touchpad come as a pan (Windows): the fingers' move in px, which scrolls the
+                            // other way; an up-and-down one is the column's scroll
+                            PointerEventType.PanMove -> {
+                                panX += change.panOffset.x
+                                panY += change.panOffset.y
+                                if (abs(panX) <= abs(panY)) continue
+                                -change.panOffset.x / panPerTurn
+                            }
                             else -> continue
                         }
                     change.consume()
-                    val now = change.uptimeMillis
-                    // A pause ends the gesture: the next swipe may turn another page
-                    if (now - lastScrollAt > SWIPE_GESTURE_GAP_MS) {
-                        accumulated = 0f
-                        turned = false
-                    }
                     lastScrollAt = now
                     if (turned) continue
                     accumulated += sideways
@@ -402,6 +421,9 @@ private fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
 
 // Wheel units of sideways scroll that turn a page (a tilt-wheel notch or Shift + wheel notch is 1)
 private const val SWIPE_SCROLL_THRESHOLD = 1f
+
+// A touchpad's swipe this long sideways turns a page
+private val SWIPE_PAN_DISTANCE = 48.dp
 
 // Sideways scroll events closer than this belong to one gesture
 private const val SWIPE_GESTURE_GAP_MS = 250L

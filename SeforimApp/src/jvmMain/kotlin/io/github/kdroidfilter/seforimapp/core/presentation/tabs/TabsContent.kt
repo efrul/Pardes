@@ -302,6 +302,8 @@ private fun SearchTabContent(
                     if (extended) viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetGlobalExtended(true))
                 },
                 onSubmitTextSearch = { query -> viewModel.searchFromBar(query, barViewModel.barScope()) },
+                // Its own bar, which opens where its search looked
+                onNewBarOpened = null,
             )
         }
     val bookVm = tabBookViewModel(tabOwner, destination)
@@ -430,6 +432,7 @@ private fun rememberHomeSearchCallbacks(
             onClearCategory = searchHomeViewModel::onClearCategory,
             onAddScope = searchHomeViewModel::onAddScope,
             onRemoveScope = searchHomeViewModel::onRemoveScope,
+            onNewBarOpened = searchHomeViewModel::onNewTabBarOpened,
             onOpenJump = { jump ->
                 val tabId = latestCurrentTabId() ?: return@HomeSearchCallbacks
                 scope.launch { searchHomeViewModel.openJump(jump, tabId) }
