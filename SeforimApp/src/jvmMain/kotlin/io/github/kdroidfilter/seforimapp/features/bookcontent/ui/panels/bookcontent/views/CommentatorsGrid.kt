@@ -367,13 +367,13 @@ internal fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
                                     else -> continue
                                 }
                             }
-                            // Two fingers on a touchpad come as a pan (Windows): the fingers' move in px, which scrolls the
-                            // other way; an up-and-down one is the column's scroll
+                            // Two fingers on a touchpad come as a pan (Windows), in px, the way a scroll goes (tried on a
+                            // Windows touchpad); an up-and-down one is the column's scroll
                             PointerEventType.PanMove -> {
                                 panX += change.panOffset.x
                                 panY += change.panOffset.y
                                 if (abs(panX) <= abs(panY)) continue
-                                -change.panOffset.x / panPerTurn
+                                change.panOffset.x / panPerTurn
                             }
                             else -> continue
                         }

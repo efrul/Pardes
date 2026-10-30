@@ -21,7 +21,8 @@ import kotlin.test.assertEquals
 
 /**
  * A touchpad's swipe with two fingers turns the commentators' page, one page a swipe. On Windows it comes as a pan
- * (Nucleus's Tao windows), its fingers' move in px; in RTL fingers moving right bring the next page, as on a tablet.
+ * (Nucleus's Tao windows), in px the way a scroll goes, as a Windows touchpad showed: in RTL a pan to the left brings
+ * the next page.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class CommentatorsPageSwipeTest {
@@ -74,18 +75,18 @@ class CommentatorsPageSwipeTest {
     }
 
     @Test
-    fun `fingers moving right bring the next page in RTL, moving left the previous one`() {
+    fun `a pan to the left brings the next page in RTL, to the right the previous one`() {
         settle()
-        swipe(dx = 20f)
-        assertEquals(1, pagerState.currentPage)
         swipe(dx = -20f)
+        assertEquals(1, pagerState.currentPage)
+        swipe(dx = 20f)
         assertEquals(0, pagerState.currentPage)
     }
 
     @Test
     fun `a long swipe turns one page only`() {
         settle()
-        swipe(dx = 20f, steps = 30)
+        swipe(dx = -20f, steps = 30)
         assertEquals(1, pagerState.currentPage)
     }
 
