@@ -168,9 +168,6 @@ class SearchHomeViewModel(
     // The books and categories a restored results tab searched in, while they load for the chips
     private var restoringMultiScope: SearchScope.Multi? = null
 
-    // Where the window's selected results tab searches, as its bar says (a window's bar only): its next new tab's scope
-    private var carriedScope: SearchScope? = null
-
     // The library's categories with their paths, loaded once for the bar's suggestions
     private var categories: List<CategoryHit>? = null
     private val categoriesMutex = Mutex()
@@ -727,27 +724,6 @@ class SearchHomeViewModel(
         viewModelScope.launch {
             runSuspendCatching { repository.getBookCore(bookId) }.getOrNull()?.let { onPickBook(it, showSuggestions = false) }
         }
-    }
-
-    /**
-     * Records where the selected results tab's own bar searches ([scope]), that the window's next new tab opens there;
-     * null once a tab of this bar (the window's) is selected.
-     */
-    fun carryScope(scope: SearchScope?) {
-        carriedScope = scope
-    }
-
-    /** Puts this bar where the results tab a new tab was opened from searched: its books and categories, its author. */
-    fun adoptCarriedScope() {
-        val scope = carriedScope ?: return
-        carriedScope = null
-        if (scope == SearchScope.Global) applyScopeItems(emptyList(), showSuggestions = false) else showScope(scope)
-    }
-
-    /** A field of this bar opened empty (a new tab's, whose bar this is too): nothing typed, the scope unchanged. */
-    fun onReferenceFieldOpened() {
-        referenceQuery.value = ""
-        _uiState.value = _uiState.value.copy(isReferenceLoading = false)
     }
 
     private fun showAuthorScope(authorId: Long) {
