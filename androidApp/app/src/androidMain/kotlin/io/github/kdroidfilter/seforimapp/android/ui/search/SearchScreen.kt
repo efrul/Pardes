@@ -674,9 +674,14 @@ private fun StatusRow(state: SearchUiState, oneBook: Boolean, wide: Boolean, com
     val loaded = maxOf(state.progressCurrent, state.results.size)
     val total = maxOf(loaded.toLong(), state.progressTotal ?: loaded.toLong())
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        // In one book, or in an author's books, where it searched: no base/all books choice there. Desktop 0.6.5 still
-        // offers it in an author's books, which are all searched whatever is chosen
-        val scopeName = if (oneBook) state.scopeBook?.title ?: state.results.firstOrNull()?.bookTitle else state.scopeAuthorName?.let { "ספרי $it" }
+        // In one book, in an author's books, or in a category or the picked books and categories, where it searched: no
+        // base/all books choice there. Desktop 0.6.5 still offers it in an author's books, which are all searched
+        // whatever is chosen
+        val scopeName = if (oneBook) {
+            state.scopeBook?.title ?: state.results.firstOrNull()?.bookTitle
+        } else {
+            state.scopeAuthorName?.let { "ספרי $it" } ?: state.scopeLabel
+        }
         if (state.isLoading) {
             SearchStatusLine(scopeName, total, true, state.globalExtended, state.baseBooksHadNoResults, wide, compact, vm::setGlobalExtended, Modifier.padding(end = 12.dp))
             // Only during the search itself, not while a page loads (that has its own spinner at the list's end)

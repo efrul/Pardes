@@ -810,7 +810,13 @@ class AppViewModel(application: Application, private val handle: SavedStateHandl
     private suspend fun searchScopeLabel(scope: SearchScope): String? = runCatching {
         val repo = app.libraryStore.repository()
         when (scope) {
-            SearchScope.Global, is SearchScope.Category -> null
+            SearchScope.Global -> null
+            is SearchScope.Category -> repo.getCategory(scope.categoryId)?.title
+            // Several books and categories (Pardes desktop's)
+            is SearchScope.Multi ->
+                (scope.bookIds.mapNotNull { repo.getBookCore(it)?.title } + scope.categoryIds.mapNotNull { repo.getCategory(it)?.title })
+                    .joinToString(", ")
+                    .ifBlank { null }
             is SearchScope.Book -> repo.getBookCore(scope.bookId)?.title
             // An author's books (desktop 0.6.5 1723de06)
             is SearchScope.Author -> repo.getAuthorDetails(scope.authorId)?.name?.let(AuthorNames::display)

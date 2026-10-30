@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -36,11 +35,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewSidebar
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +67,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -411,6 +413,13 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
         vm.updateSelectedCommentators(p, next.filter { i -> available.any { it.bookId == i } }.toSet(), available.map { it.bookId })
     }
 
+    // A group's commentators, or all of them, checked or unchecked at once
+    fun setMany(ids: Collection<Long>, checked: Boolean) {
+        val p = primary ?: return
+        val next = if (checked) selectedIds + ids else selectedIds - ids.toSet()
+        vm.updateSelectedCommentators(p, next.filter { i -> available.any { it.bookId == i } }.toSet(), available.map { it.bookId })
+    }
+
     BoxWithConstraints(modifier) {
         val compact = maxWidth < CompactCommentariesWidth
         val paneWidth = maxWidth
@@ -436,7 +445,7 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
                 else -> Row(Modifier.fillMaxSize()) {
                     if (listVisible) {
                         Column(Modifier.then(if (compact) Modifier.fillMaxSize() else Modifier.width(maxOf(150.dp, paneWidth * 0.22f)).fillMaxHeight()).verticalScroll(rememberScrollState())) {
-                            CommentatorChecklist(groups, selectedIds, ::toggle)
+                            CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany)
                         }
                         if (!compact) Box(Modifier.width(1.dp).fillMaxHeight().background(Zayit.colors.divider))
                     }
@@ -457,27 +466,73 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
         ModalBottomSheet(onDismissRequest = { filterOpen = false }, sheetState = rememberModalBottomSheetState(), containerColor = Zayit.colors.panel) {
             WindowBackScope {
                 Text("מפרשים", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Zayit.colors.text, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { CommentatorChecklist(groups, selectedIds, ::toggle) }
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany) }
             }
         }
     }
 }
 
-/** Desktop CommentatorsList: group headers (when more than one group), dividers, checkboxes. */
+/**
+ * Desktop CommentatorsList: "כל המפרשים" and each group's header as a checkbox over its commentators (Pardes desktop:
+ * checked when all are, half when some are, a tap checks them all or unchecks them all), dividers, checkboxes.
+ */
 @Composable
-private fun CommentatorChecklist(groups: List<CommentatorGroup>, selected: Set<Long>, onToggle: (Long) -> Unit) {
+private fun CommentatorChecklist(
+    groups: List<CommentatorGroup>,
+    selected: Set<Long>,
+    onToggle: (Long) -> Unit,
+    // Checks or unchecks these commentators: a group's or all of them
+    onSetMany: (Collection<Long>, Boolean) -> Unit,
+) {
     val c = Zayit.colors
+    val all = remember(groups) { groups.flatMap { group -> group.commentators.map { it.bookId } } }
+    if (all.size > 1) {
+        CheckAllRow("כל המפרשים", all, selected, FontWeight.Bold, onSetMany)
+        HorizontalDivider(color = c.divider)
+    }
     groups.forEachIndexed { i, group ->
         if (group.commentators.isEmpty()) return@forEachIndexed
         if (i > 0) HorizontalDivider(color = c.divider)
         if (groups.size > 1 && group.label.isNotBlank()) {
-            Text(group.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.text, modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 2.dp, end = 8.dp))
+            CheckAllRow(group.label, group.commentators.map { it.bookId }, selected, FontWeight.SemiBold, onSetMany)
         }
         group.commentators.forEach { item -> ZCheckRow(item.name, item.bookId in selected, onToggle = { onToggle(item.bookId) }) }
     }
 }
 
-/** Tablet: desktop CommentatorsGridScaffold, cells rebalanced per page, a vertical pager driven by its dots. */
+/** A checkbox over several commentators ([ids]): checked when all are, half when some are; a tap checks or unchecks them all. */
+@Composable
+private fun CheckAllRow(text: String, ids: List<Long>, selected: Set<Long>, weight: FontWeight, onSetMany: (Collection<Long>, Boolean) -> Unit) {
+    val c = Zayit.colors
+    val state = commentatorsCheckState(ids, selected)
+    val onClick = { onSetMany(ids, state != ToggleableState.On) }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Checkbox, onClick = onClick).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TriStateCheckbox(
+            state = state,
+            onClick = onClick,
+            colors = CheckboxDefaults.colors(checkedColor = c.accent, uncheckedColor = c.textSecondary, checkmarkColor = c.onAccent),
+        )
+        Text(text, fontSize = 14.sp, fontWeight = weight, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** On when all of [ids] are selected, Off when none is, Indeterminate otherwise (Pardes desktop commentatorsCheckState). */
+internal fun commentatorsCheckState(ids: Collection<Long>, selected: Set<Long>): ToggleableState {
+    val count = ids.count { it in selected }
+    return when {
+        ids.isEmpty() || count == 0 -> ToggleableState.Off
+        count == ids.size -> ToggleableState.On
+        else -> ToggleableState.Indeterminate
+    }
+}
+
+/**
+ * Tablet: desktop CommentatorsGridScaffold, cells rebalanced per page; as Pardes desktop has it, the pages side by side,
+ * turned by a sideways swipe (a commentator's own scroll is vertical) or by their dots, in a row above them.
+ */
 @Composable
 private fun CommentatorsGrid(vm: ReaderViewModel, selection: LinkSelection, shown: List<CommentatorItem>, textSize: Float, diacritics: DiacriticsMode, findQuery: String, actions: PaneActions) {
     val app = LocalContext.current.applicationContext as ZayitApplication
@@ -495,8 +550,25 @@ private fun CommentatorsGrid(vm: ReaderViewModel, selection: LinkSelection, show
             previous = shown.map { it.bookId }
             if (added != null) pager.animateScrollToPage(shown.indexOf(added) / cap.perPage)
         }
-        Row(Modifier.fillMaxSize()) {
-            VerticalPager(pager, Modifier.weight(1f).fillMaxHeight(), userScrollEnabled = false, beyondViewportPageCount = 1) { page ->
+        // A page change cut short (the selection changed again meanwhile) leaves the pager between two pages, where no
+        // gesture of the user's ends to snap it: snap it to the nearest page once it rests
+        LaunchedEffect(pager) {
+            snapshotFlow { !pager.isScrollInProgress && kotlin.math.abs(pager.currentPageOffsetFraction) > 0.001f }
+                .collect { offPage -> if (offPage) scope.launch { pager.animateScrollToPage(pager.currentPage) } }
+        }
+        Column(Modifier.fillMaxSize()) {
+            // The dots in a row above the pages: in RTL the first page's on the right, as its page
+            if (pages.size > 1) {
+                Row(Modifier.fillMaxWidth().height(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    repeat(pages.size) { i ->
+                        val active = pager.currentPage == i
+                        Box(Modifier.size(24.dp).clickable(role = Role.Button) { scope.launch { pager.animateScrollToPage(i) } }, contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(if (active) 10.dp else 7.dp).clip(CircleShape).background(Zayit.colors.text.copy(alpha = if (active) 1f else 0.4f)))
+                        }
+                    }
+                }
+            }
+            HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), beyondViewportPageCount = 1) { page ->
                 val names = pages.getOrNull(page).orEmpty()
                 val rowsNeeded = ((names.size + cap.cols - 1) / cap.cols).coerceAtLeast(1)
                 val perRow = ((names.size + rowsNeeded - 1) / rowsNeeded).coerceAtLeast(1)
@@ -508,16 +580,6 @@ private fun CommentatorsGrid(vm: ReaderViewModel, selection: LinkSelection, show
                                     CommentatorColumn(vm, selection, item.bookId, item.name, textSize, diacritics, findQuery, actions, Modifier.weight(1f).fillMaxHeight().padding(horizontal = 4.dp))
                                 }
                             }
-                        }
-                    }
-                }
-            }
-            if (pages.size > 1) {
-                Column(Modifier.fillMaxHeight().width(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                    repeat(pages.size) { i ->
-                        val active = pager.currentPage == i
-                        Box(Modifier.size(24.dp).clickable(role = Role.Button) { scope.launch { pager.animateScrollToPage(i) } }, contentAlignment = Alignment.Center) {
-                            Box(Modifier.size(if (active) 10.dp else 7.dp).clip(CircleShape).background(Zayit.colors.text.copy(alpha = if (active) 1f else 0.4f)))
                         }
                     }
                 }

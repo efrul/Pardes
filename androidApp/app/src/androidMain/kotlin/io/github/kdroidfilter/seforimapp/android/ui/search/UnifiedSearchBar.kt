@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
@@ -44,6 +46,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -144,6 +147,8 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalTabSession
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
+import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ResolvedReference
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
 import io.github.kdroidfilter.seforimapp.icons.JournalBookmark
@@ -165,9 +170,12 @@ import kotlin.math.roundToInt
 private const val SEARCH_TEXT_ROW = "חיפוש במאגר: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_BOOK = "חיפוש בתוך %2\$s: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_AUTHOR = "חיפוש בספרי %2\$s: %1\$s"
+private const val SEARCH_TEXT_ROW_IN_CATEGORY = "חיפוש בכל ספרי %2\$s: %1\$s"
 private const val SEARCH_IN_BOOK_PLACEHOLDER = "מה לחפש בספר זה? פרק, סימן או כל מילה"
 private const val ROW_ACTION_OPEN = "פתיחה"
 private const val ROW_ACTION_SEARCH_INSIDE = "חיפוש בתוך"
+private const val ROW_ACTION_SEARCH_CATEGORY = "חיפוש בקטגוריה"
+private const val ROW_ACTION_ADD_TO_SEARCH = "הוספה לחיפוש"
 private const val ROW_ACTION_SEARCH = "חיפוש"
 private const val ROW_ACTION_SEARCH_BASE = "בספרי יסוד"
 private const val ROW_ACTION_SEARCH_ALL = "בכל הספרים"
@@ -234,11 +242,16 @@ private sealed interface CatBookRow {
     data class Author(val hit: AuthorHit) : CatBookRow
 
     data class BookRow(val suggestion: BookSuggestionDto) : CatBookRow
+
+    // A category to search in, whole
+    data class Category(val hit: CategoryHit) : CatBookRow
 }
 
 /**
- * The book-stage rows in order: the references, then the books and authors named exactly as typed (`חולין` opens
- * Chullin on Enter; `שוע` puts the שולחן ערוך parts first), the text search, then the other authors and books.
+ * The book-stage rows in order: the references, then the books, categories and authors named exactly as typed (`חולין`
+ * opens Chullin on Enter; `שוע` puts the שולחן ערוך parts first; `תלמוד` searches the Talmud), the text search, then the
+ * other authors, categories and books. Once books or categories are picked ([textSearchFirst]), the text search comes
+ * first: Enter searches in them, and the books and categories listed are to add.
  * A title being typed past its first word (`בבא ק`) is no text search: with no book named exactly,
  * the first book whose title it begins comes before the text search too (desktop 0.6.2 fix 51463d23).
  */
@@ -248,8 +261,11 @@ private fun catBookRows(
     textSearch: Boolean,
     authors: List<AuthorHit>,
     books: List<BookSuggestionDto>,
+    categories: List<CategoryHit> = emptyList(),
+    textSearchFirst: Boolean = false,
 ): List<CatBookRow> {
     val key = query.searchKey()
+    val (exactCategories, otherCategories) = categories.partition { it.title.searchKey() == key }
     val (exactAuthors, otherAuthors) = authors.partition { author ->
         listOfNotNull(author.name, AuthorNames.display(author.name), author.alias).any { it.searchKey() == key }
     }
@@ -264,11 +280,14 @@ private fun catBookRows(
         }
     val exactBooks = namedBooks + listOfNotNull(typedTitle)
     return buildList {
+        if (textSearch && textSearchFirst) add(CatBookRow.TextSearch)
         jumps.mapTo(this) { CatBookRow.Jump(it) }
         exactBooks.mapTo(this) { CatBookRow.BookRow(it) }
+        exactCategories.mapTo(this) { CatBookRow.Category(it) }
         exactAuthors.mapTo(this) { CatBookRow.Author(it) }
-        if (textSearch) add(CatBookRow.TextSearch)
+        if (textSearch && !textSearchFirst) add(CatBookRow.TextSearch)
         otherAuthors.mapTo(this) { CatBookRow.Author(it) }
+        otherCategories.mapTo(this) { CatBookRow.Category(it) }
         otherBooks.filter { it !== typedTitle }.mapTo(this) { CatBookRow.BookRow(it) }
     }
 }
@@ -279,7 +298,9 @@ private fun catBookRows(
  * TocSuggestionsPanel, SuggestionRow, RowActionChip, SelectedBookChip) and texteffects/TypewriterPlaceholder.kt:
  * 0.6.1's with the 0.6.2 fix 51463d23 in [catBookRows] (a title being typed opens the book before the text search)
  * and the 0.6.5 commits 1723de06 and 9e3d19a8 (once an author is picked, the text row searches all their books: one
- * action, no base books to choose, Ctrl+Enter as Enter).
+ * action, no base books to choose, Ctrl+Enter as Enter), and Pardes desktop's categories and several books: the
+ * categories the text names, and the books and categories picked ("חיפוש בתוך", Tab), each a chip, searched together;
+ * in a book, the other books and categories the text names come after its TOC entries, to add.
  *
  * Touch adaptation: a tap on a row is desktop's click (Enter); IME "Search" is Enter (it runs the highlighted row,
  * the first one by default); the text row always shows its "בספרי יסוד" / "בכל הספרים" buttons ("חיפוש" alone in an
@@ -393,24 +414,39 @@ fun UnifiedSearchBar(
     val textSearchEnabled = ui.selectedScopeToc == null
     // Once an author is picked, the text is searched in all their books
     val textSearchInAuthor = ui.selectedScopeAuthor?.name?.let(AuthorNames::display)
+    // The books and categories picked, as chips; one book alone is the bar's book (its own chip, its TOC)
+    val scopeChips = if (isTocMode) emptyList() else ui.scopeItems
+    // Once books or categories are picked, the text is searched in all of them; more of them are added
+    val textSearchInScope = scopeChips.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.label }
+    val adding = scopeChips.isNotEmpty()
     val query = field.text.trim()
     val hasUserText = field.text.isNotBlank()
     val queryLength = field.text.length
-    val rows = remember(query, ui.jumpSuggestions, textSearchEnabled, ui.authorSuggestions, ui.bookSuggestions, isTocMode) {
-        if (isTocMode) emptyList() else catBookRows(query, ui.jumpSuggestions, textSearchEnabled && query.isNotEmpty(), ui.authorSuggestions, ui.bookSuggestions)
+    val rows = remember(query, ui.jumpSuggestions, textSearchEnabled, ui.authorSuggestions, ui.bookSuggestions, ui.categorySuggestions, isTocMode, adding) {
+        if (isTocMode) {
+            emptyList()
+        } else {
+            catBookRows(query, ui.jumpSuggestions, textSearchEnabled && query.isNotEmpty(), ui.authorSuggestions, ui.bookSuggestions, ui.categorySuggestions, textSearchFirst = adding)
+        }
+    }
+    // In a book, the other books and categories the text names, to add to its search ("הוספה לחיפוש", Tab)
+    val tocAddRows = remember(ui.bookSuggestions, ui.categorySuggestions, isTocMode) {
+        if (isTocMode) ui.bookSuggestions.map { CatBookRow.BookRow(it) } + ui.categorySuggestions.map { CatBookRow.Category(it) } else emptyList()
     }
     val totalCatBook = rows.size
     // Keyboard navigation operates on the exact list the TOC panel renders, so the highlighted row is the one opened
     val visibleToc = remember(ui.tocSuggestions, selectedBook) { if (isTocMode) tocSuggestionsForDisplay(selectedBook, ui.tocSuggestions) else emptyList() }
     val totalToc = visibleToc.size
     val textRow = textSearchEnabled && hasUserText
-    val totalTocRows = totalToc + if (textRow) 1 else 0
+    // The rows to add a book or category start after the TOC entries and the text search
+    val tocAddStart = totalToc + if (textRow) 1 else 0
+    val totalTocRows = tocAddStart + tocAddRows.size
     val showBookStage = ui.suggestionsVisible && totalCatBook > 0 && !isTocMode
-    val showToc = (ui.tocSuggestionsVisible || textRow) && totalTocRows > 0 && isTocMode
+    val showToc = (ui.tocSuggestionsVisible || textRow || tocAddRows.isNotEmpty()) && totalTocRows > 0 && isTocMode
     val showBookLoading = !isTocMode && ui.isReferenceLoading && hasUserText && queryLength >= 2
     val showTocLoading = isTocMode && ui.isTocLoading && hasUserText && queryLength >= 1
     val showBookEmpty = !isTocMode && ui.suggestionsVisible && totalCatBook == 0 && hasUserText && queryLength >= 2 && !showBookLoading
-    val showTocEmpty = isTocMode && ui.tocSuggestionsVisible && totalToc == 0 && hasUserText && queryLength >= 1 && !showTocLoading
+    val showTocEmpty = isTocMode && ui.tocSuggestionsVisible && totalToc == 0 && tocAddRows.isEmpty() && hasUserText && queryLength >= 1 && !showTocLoading
 
     var focusedIndex by remember { mutableIntStateOf(-1) }
     var popupVisible by remember { mutableStateOf(false) }
@@ -458,7 +494,7 @@ fun UnifiedSearchBar(
         }
     }
     LaunchedEffect(
-        ui.suggestionsVisible, ui.tocSuggestionsVisible, ui.bookSuggestions, ui.jumpSuggestions, ui.authorSuggestions, textRow,
+        ui.suggestionsVisible, ui.tocSuggestionsVisible, ui.bookSuggestions, ui.jumpSuggestions, ui.authorSuggestions, ui.categorySuggestions, textRow,
         ui.tocSuggestions, isTocMode, showBookEmpty, showTocEmpty, showBookLoading, showTocLoading, openRequests,
     ) {
         val shouldOpen = showToc || showBookStage || showBookEmpty || showTocEmpty || showBookLoading || showTocLoading
@@ -507,11 +543,22 @@ fun UnifiedSearchBar(
         scope.launch { vm.resolvePickedReference()?.let { (book, line) -> currentActions.openBook(book, line) } }
     }
 
+    // The bar's book if it is the first picked, else one more searched with the others
     fun pickBook(book: Book) {
-        vm.onPickBook(book)
+        vm.onAddScope(ScopeItem.BookItem(book))
         editReference(TextFieldValue(), notify = false)
         // Not skipped, as desktop (its skip flag is reset before the change is seen): the book's TOC starts unfiltered
         editToc(TextFieldValue())
+        tocEditedSinceBook = false
+        dismissPopup()
+        focusLater()
+    }
+
+    // A category searched whole, alone or with the books and categories picked before
+    fun pickCategory(category: CategoryHit) {
+        vm.onAddScope(ScopeItem.CategoryItem(category))
+        editReference(TextFieldValue(), notify = false)
+        editToc(TextFieldValue(), notify = false)
         tocEditedSinceBook = false
         dismissPopup()
         focusLater()
@@ -566,6 +613,8 @@ fun UnifiedSearchBar(
             } else {
                 pickBook(row.suggestion.book)
             }
+            // A category has nothing to open: both search in it
+            is CatBookRow.Category -> pickCategory(row.hit)
         }
     }
 
@@ -576,6 +625,7 @@ fun UnifiedSearchBar(
         when {
             isTocMode && row in 0 until totalToc -> openToc(visibleToc[row])
             isTocMode && textRow && row == totalToc -> handleTextSearch()
+            isTocMode && row in tocAddStart until totalTocRows -> runCatBookRow(tocAddRows[row - tocAddStart], open = true)
             !isTocMode && row in 0 until totalCatBook -> runCatBookRow(rows[row], open = true)
             selectedBook != null -> {
                 dismissPopup()
@@ -589,6 +639,8 @@ fun UnifiedSearchBar(
     fun runTab() {
         when {
             isTocMode && focusedIndex in 0 until totalToc -> openToc(visibleToc[focusedIndex])
+            // In a book, Tab on another book or a category adds it
+            isTocMode && focusedIndex in tocAddStart until totalTocRows -> runCatBookRow(tocAddRows[focusedIndex - tocAddStart], open = false)
             !isTocMode && focusedIndex in 0 until totalCatBook -> runCatBookRow(rows[focusedIndex], open = false)
         }
     }
@@ -650,6 +702,12 @@ fun UnifiedSearchBar(
                 } else if (ui.selectedScopeAuthor != null) {
                     SelectedChip(AuthorNames.display(ui.selectedScopeAuthor!!.name), Modifier.widthIn(max = chipMax)) {
                         vm.onClearAuthor()
+                        runCatching { focusRequester.requestFocus() }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                } else if (scopeChips.isNotEmpty()) {
+                    ScopeChips(scopeChips, Modifier.widthIn(max = chipMax)) { item ->
+                        vm.onRemoveScope(item)
                         runCatching { focusRequester.requestFocus() }
                     }
                     Spacer(Modifier.width(8.dp))
@@ -727,6 +785,20 @@ fun UnifiedSearchBar(
                                             }
                                             else -> false
                                         }
+                                        // Backspace in the empty field takes the last book or category picked out
+                                        ev.key == Key.Backspace && !isTocMode && scopeChips.isNotEmpty() -> when (ev.type) {
+                                            KeyEventType.KeyDown -> {
+                                                backspaceStartedEmpty = field.text.isEmpty()
+                                                false
+                                            }
+                                            KeyEventType.KeyUp -> {
+                                                val clear = backspaceStartedEmpty && field.text.isEmpty()
+                                                backspaceStartedEmpty = false
+                                                if (clear) vm.onRemoveScope(scopeChips.last())
+                                                clear
+                                            }
+                                            else -> false
+                                        }
                                         ev.key == Key.Backspace && isTocMode -> when (ev.type) {
                                             KeyEventType.KeyDown -> {
                                                 backspaceStartedEmpty = field.text.isEmpty()
@@ -743,8 +815,8 @@ fun UnifiedSearchBar(
                                         // Enter acts on release, as desktop; its press must not reach the field's IME action
                                         enter && ev.type == KeyEventType.KeyDown -> true
                                         enter && ev.isCtrlPressed && ev.type == KeyEventType.KeyUp -> {
-                                            // An author's books are all searched already: Ctrl+Enter is Enter there
-                                            if (textSearchEnabled) handleTextSearch(extended = textSearchInAuthor == null)
+                                            // An author's, or the picked books and categories', are all searched already: Ctrl+Enter is Enter there
+                                            if (textSearchEnabled) handleTextSearch(extended = textSearchInAuthor == null && textSearchInScope == null)
                                             true
                                         }
                                         enter && ev.type == KeyEventType.KeyUp -> {
@@ -822,6 +894,42 @@ fun UnifiedSearchBar(
                             narrow = narrowList,
                             dense = dense,
                         )
+                    } else if (index >= tocAddStart) {
+                        val row = tocAddRows[index - tocAddStart]
+                        val add = RowAction("Tab", ROW_ACTION_ADD_TO_SEARCH) { runCatBookRow(row, false) }
+                        when (row) {
+                            is CatBookRow.BookRow -> {
+                                val open = RowAction("↵", ROW_ACTION_OPEN) { runCatBookRow(row, true) }
+                                SuggestionRow(
+                                    parts = dedupAdjacent(row.suggestion.path),
+                                    kind = SuggestionKind.BOOK,
+                                    highlighted = index == focusedIndex,
+                                    wide = wide,
+                                    keys = hardKeyboard,
+                                    actions = listOf(open, add),
+                                    alwaysShown = listOf(add),
+                                    onClick = open.onClick,
+                                    narrow = narrowList,
+                                    dense = dense,
+                                )
+                            }
+                            is CatBookRow.Category -> {
+                                val addCategory = RowAction("↵", ROW_ACTION_ADD_TO_SEARCH) { runCatBookRow(row, true) }
+                                SuggestionRow(
+                                    parts = row.hit.path,
+                                    kind = SuggestionKind.CATEGORY,
+                                    highlighted = index == focusedIndex,
+                                    wide = wide,
+                                    keys = hardKeyboard,
+                                    actions = listOf(addCategory),
+                                    alwaysShown = listOf(addCategory),
+                                    onClick = addCategory.onClick,
+                                    narrow = narrowList,
+                                    dense = dense,
+                                )
+                            }
+                            else -> Unit
+                        }
                     } else {
                         val q = field.text.trim()
                         val searchAction = RowAction("↵", ROW_ACTION_SEARCH) { handleTextSearch() }
@@ -853,7 +961,7 @@ fun UnifiedSearchBar(
                     val row = rows[index]
                     val focused = index == focusedIndex
                     val open = RowAction("↵", ROW_ACTION_OPEN) { runCatBookRow(row, true) }
-                    val searchInside = RowAction("Tab", ROW_ACTION_SEARCH_INSIDE) { runCatBookRow(row, false) }
+                    val searchInside = RowAction("Tab", if (adding) ROW_ACTION_ADD_TO_SEARCH else ROW_ACTION_SEARCH_INSIDE) { runCatBookRow(row, false) }
                     when (row) {
                         is CatBookRow.Jump -> SuggestionRow(
                             parts = listOf(row.reference.book.title, row.reference.label),
@@ -869,8 +977,8 @@ fun UnifiedSearchBar(
                         )
                         CatBookRow.TextSearch -> {
                             val q = field.text.trim()
-                            // An author's books are all searched: no base books to choose
-                            val actions = if (textSearchInAuthor != null) {
+                            // An author's, or the picked books and categories', are all searched: no base books to choose
+                            val actions = if (textSearchInAuthor != null || textSearchInScope != null) {
                                 listOf(RowAction("↵", ROW_ACTION_SEARCH) { runCatBookRow(row, true) })
                             } else {
                                 listOf(
@@ -882,6 +990,8 @@ fun UnifiedSearchBar(
                                 parts = listOf(
                                     if (textSearchInAuthor != null) {
                                         SEARCH_TEXT_ROW_IN_AUTHOR.replace("%2\$s", textSearchInAuthor).replace("%1\$s", q)
+                                    } else if (textSearchInScope != null) {
+                                        SEARCH_TEXT_ROW_IN_CATEGORY.replace("%2\$s", textSearchInScope).replace("%1\$s", q)
                                     } else {
                                         SEARCH_TEXT_ROW.replace("%1\$s", q)
                                     },
@@ -923,6 +1033,21 @@ fun UnifiedSearchBar(
                             narrow = narrowList,
                             dense = dense,
                         )
+                        is CatBookRow.Category -> {
+                            val searchCategory = RowAction("↵", if (adding) ROW_ACTION_ADD_TO_SEARCH else ROW_ACTION_SEARCH_CATEGORY) { runCatBookRow(row, true) }
+                            SuggestionRow(
+                                parts = row.hit.path,
+                                kind = SuggestionKind.CATEGORY,
+                                highlighted = focused,
+                                wide = wide,
+                                keys = hardKeyboard,
+                                actions = listOf(searchCategory),
+                                alwaysShown = listOf(searchCategory),
+                                onClick = searchCategory.onClick,
+                                narrow = narrowList,
+                                dense = dense,
+                            )
+                        }
                     }
                 }
             }
@@ -935,9 +1060,14 @@ fun UnifiedSearchBar(
                     SheetField(
                         value = field,
                         placeholder = if (isTocMode) SEARCH_IN_BOOK_PLACEHOLDER else HINTS.first(),
-                        chip = selectedBook?.title ?: ui.selectedScopeAuthor?.let { AuthorNames.display(it.name) },
+                        chip = selectedBook?.title ?: ui.selectedScopeAuthor?.let { AuthorNames.display(it.name) } ?: textSearchInScope,
                         onClearChip = {
-                            if (selectedBook != null) clearBook() else vm.onClearAuthor()
+                            when {
+                                selectedBook != null -> clearBook()
+                                ui.selectedScopeAuthor != null -> vm.onClearAuthor()
+                                // The books and categories picked: the last one out, as Backspace
+                                scopeChips.isNotEmpty() -> vm.onRemoveScope(scopeChips.last())
+                            }
                             runCatching { focusRequester.requestFocus() }
                         },
                         // The real field's selection, read when it lands: the keyboard may have typed since
@@ -1284,7 +1414,7 @@ private fun Message(text: String) {
 }
 
 /** What a suggestion row leads to, shown by its icon. */
-private enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK }
+private enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK, CATEGORY }
 
 /** One thing a suggestion row does: its keys (`↵`, `Tab`) and what it does. */
 private class RowAction(val keys: String, val label: String, val onClick: () -> Unit)
@@ -1298,6 +1428,7 @@ private fun SuggestionIcon(kind: SuggestionKind, size: androidx.compose.ui.unit.
         SuggestionKind.BOOK -> Image(rememberVectorPainter(bookOpenTabs(tint)), null, m, colorFilter = ColorFilter.tint(tint))
         SuggestionKind.TEXT_SEARCH -> Icon(Icons.Outlined.Search, null, m, tint = tint)
         SuggestionKind.AUTHOR -> Image(rememberVectorPainter(WritingHand), null, m, colorFilter = ColorFilter.tint(tint))
+        SuggestionKind.CATEGORY -> Icon(Icons.Outlined.Folder, null, m, tint = tint)
     }
 }
 
@@ -1413,6 +1544,24 @@ private fun RowActionChip(action: RowAction, wide: Boolean, keys: Boolean) {
         if (keys) Text(action.keys, fontSize = 10.sp, color = c.textSecondary, maxLines = 1, softWrap = false, style = TextStyle(textDirection = TextDirection.Ltr))
     }
 }
+
+/**
+ * The books and categories picked, each a chip with its ×, in the order picked: a row that scrolls within [modifier]'s
+ * width, to the last one picked (beside the text), when they don't all fit.
+ */
+@Composable
+private fun ScopeChips(items: List<ScopeItem>, modifier: Modifier = Modifier, onRemove: (ScopeItem) -> Unit) {
+    val scroll = rememberScrollState()
+    LaunchedEffect(items.size) { scroll.animateScrollTo(scroll.maxValue) }
+    Row(modifier.horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        items.forEach { item ->
+            SelectedChip(item.label, Modifier.widthIn(max = SCOPE_CHIP_MAX_WIDTH)) { onRemove(item) }
+        }
+    }
+}
+
+// A chip of a book or category picked: several fit beside the text
+private val SCOPE_CHIP_MAX_WIDTH = 130.dp
 
 /** The picked book or author in the field, with its ×. */
 @Composable
