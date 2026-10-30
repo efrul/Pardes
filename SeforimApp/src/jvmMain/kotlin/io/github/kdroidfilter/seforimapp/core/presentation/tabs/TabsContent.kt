@@ -11,10 +11,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
 import androidx.lifecycle.DEFAULT_ARGS_KEY
@@ -259,6 +261,7 @@ private fun HomeTabContent(
     val uiState by viewModel.uiState.collectAsState()
     val diacritics by viewModel.diacritics.collectAsState()
     val bookCharCounts by viewModel.bookCharCounts.collectAsState()
+    WindowBarFollowsResults(isSelected, isRestoringSession, opensBar = true)
 
     BookContentScreen(
         uiState = uiState,
@@ -271,6 +274,28 @@ private fun HomeTabContent(
         isSelected = isSelected,
         bookCharCounts = bookCharCounts,
     )
+}
+
+/**
+ * The window's bar in a tab ([opensBar]: a new tab's, without a book): opened from a results tab (its "+"), it searches
+ * where that tab's own bar did, its books and categories; selected, a next new tab follows the window's bar as it is.
+ */
+@Composable
+private fun WindowBarFollowsResults(
+    isSelected: Boolean,
+    isRestoringSession: Boolean,
+    opensBar: Boolean,
+) {
+    val windowBar = LocalOpenWindow.current.searchHomeViewModel
+    // Opened selected, as a new tab; not a tab restored or brought by another desktop
+    val openedNew = remember { isSelected && !isRestoringSession }
+    var opened by remember { mutableStateOf(false) }
+    LaunchedEffect(isSelected, windowBar) {
+        if (!isSelected) return@LaunchedEffect
+        if (opensBar && openedNew && !opened) windowBar.adoptCarriedScope()
+        opened = true
+        windowBar.carryScope(null)
+    }
 }
 
 @Composable
@@ -291,6 +316,11 @@ private fun SearchTabContent(
     val homeSearchUi by barViewModel.uiState.collectAsState()
     LaunchedEffect(barViewModel, tabsViewModel) {
         barViewModel.navigationEvents.collect { event -> navigate(event, tabsViewModel) }
+    }
+    // Selected, where its bar searches is where a new tab opened from it searches
+    val windowBar = LocalOpenWindow.current.searchHomeViewModel
+    LaunchedEffect(isSelected, barViewModel, windowBar) {
+        if (isSelected) barViewModel.uiState.collect { windowBar.carryScope(barViewModel.barScope()) }
     }
     val homeSearchCallbacks = rememberHomeSearchCallbacks(barViewModel) { destination.tabId }
     // The home bar here: its text search runs in this tab, where the bar says (its picked book or
@@ -430,6 +460,7 @@ private fun rememberHomeSearchCallbacks(
             onClearCategory = searchHomeViewModel::onClearCategory,
             onAddScope = searchHomeViewModel::onAddScope,
             onRemoveScope = searchHomeViewModel::onRemoveScope,
+            onReferenceFieldOpened = searchHomeViewModel::onReferenceFieldOpened,
             onOpenJump = { jump ->
                 val tabId = latestCurrentTabId() ?: return@HomeSearchCallbacks
                 scope.launch { searchHomeViewModel.openJump(jump, tabId) }
@@ -509,6 +540,8 @@ private fun BookContentTabContent(
     LaunchedEffect(destination.bookId, destination.lineId, destination.endLineId) {
         viewModel.openDestination(destination.bookId, destination.lineId, destination.endLineId)
     }
+    // A new tab ("+") is a book's without its book: the bar's
+    WindowBarFollowsResults(isSelected, isRestoringSession, opensBar = destination.bookId < 0)
 
     BookContentScreen(
         uiState = uiState,
