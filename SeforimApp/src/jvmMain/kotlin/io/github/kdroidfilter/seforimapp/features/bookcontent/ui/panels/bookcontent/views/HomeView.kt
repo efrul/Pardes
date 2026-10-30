@@ -244,6 +244,8 @@ data class HomeSearchCallbacks(
     val onRemoveScope: (ScopeItem) -> Unit = {},
     val onOpenBook: (BookModel) -> Unit = {},
     val onOpenAuthor: (AuthorHit) -> Unit = {},
+    // The bar's field opened (a new tab's): empty, as Zayit's; null where it opens where its search looked (results)
+    val onNewBarOpened: (() -> Unit)? = null,
 )
 
 /**
@@ -495,12 +497,16 @@ internal fun UnifiedSearchBar(
     val mainSearchFocusRequester = remember { FocusRequester() }
     // Forward reference input changes to the ViewModel (VM handles debouncing and suggestions)
     LaunchedEffect(Unit) {
+        var opened = false
         snapshotFlow { referenceSearchState.text.toString() }.collect { qRaw ->
             currentOnTextChange(qRaw)
-            if (skipNextReferenceQuery) {
-                skipNextReferenceQuery = false
-            } else {
-                searchCallbacks.onReferenceQueryChanged(qRaw)
+            val newBar = searchCallbacks.onNewBarOpened.takeUnless { opened }
+            opened = true
+            when {
+                skipNextReferenceQuery -> skipNextReferenceQuery = false
+                // A new tab's bar, the window's, which its other tabs share: no book or category of theirs
+                newBar != null -> newBar()
+                else -> searchCallbacks.onReferenceQueryChanged(qRaw)
             }
         }
     }
