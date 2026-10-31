@@ -1,0 +1,124 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.nucleusframework",
+    "module": "nucleus.decorated-window-tao",
+    "version": "3.0.0-dev-202610272317-1-tearoff",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.nucleusframework",
+          "module": "nucleus.decorated-window-core",
+          "version": {
+            "requires": "3.0.0-dev-202610272317"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
+          "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
+          "size": 6267165,
+          "sha512": "c77847c92b6a405468bb1828e41d2265e81ed93d6c8d2a4b845f8ba3e33b00d80a36523fd732dae92731f48e0d37bdfc9290b5081474102327a77a49f8174dac",
+          "sha256": "2aea99772313eefda1737aa14973aa5b208ef37ebf7209fd77455fe3967b89bf",
+          "sha1": "0adebaa89d47b9745737c7a80f175ca55ba89f63",
+          "md5": "5d8b882261bf9e933ec28c56e605260e"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.nucleusframework",
+          "module": "nucleus.core-runtime",
+          "version": {
+            "requires": "3.0.0-dev-202610272317"
+          }
+        },
+        {
+          "group": "dev.nucleusframework",
+          "module": "nucleus.energy-manager",
+          "version": {
+            "requires": "3.0.0-dev-202610272317"
+          }
+        },
+        {
+          "group": "dev.nucleusframework",
+          "module": "nucleus.angle-natives",
+          "version": {
+            "requires": "8037.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.compose.desktop",
+          "module": "desktop",
+          "version": {
+            "requires": "1.12.1"
+          }
+        },
+        {
+          "group": "dev.nucleusframework",
+          "module": "nucleus.decorated-window-core",
+          "version": {
+            "requires": "3.0.0-dev-202610272317"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
+          "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
+          "size": 6267165,
+          "sha512": "c77847c92b6a405468bb1828e41d2265e81ed93d6c8d2a4b845f8ba3e33b00d80a36523fd732dae92731f48e0d37bdfc9290b5081474102327a77a49f8174dac",
+          "sha256": "2aea99772313eefda1737aa14973aa5b208ef37ebf7209fd77455fe3967b89bf",
+          "sha1": "0adebaa89d47b9745737c7a80f175ca55ba89f63",
+          "md5": "5d8b882261bf9e933ec28c56e605260e"
+        }
+      ]
+    }
+  ]
+}
