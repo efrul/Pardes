@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,7 @@ import dev.nucleusframework.window.tao.SatelliteScope
 import dev.nucleusframework.window.tao.satelliteDragHandle
 import io.github.kdroidfilter.seforimapp.core.presentation.components.HorizontalDivider
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalIsTouchMode
+import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.theme.PreviewContainer
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -73,7 +75,7 @@ fun PaneHeader(
                 .fillMaxWidth()
                 .background(headerBackground)
                 .hoverable(headerHoverSource)
-                .then(if (satellite?.isDocked == true) Modifier.satelliteDragHandle(satellite) else Modifier),
+                .then(if (satellite?.isDocked == true) Modifier.paneDragHandle(satellite) else Modifier),
     ) {
         Row(
             modifier =
@@ -116,6 +118,18 @@ fun PaneHeader(
     }
 }
 
+/**
+ * Makes this element the grip that drags [satellite]'s pane. The pointer is an open hand over it, closed while
+ * dragging; on Windows, which has no such hands (Nucleus shows the move cursor there, four arrows), the pointing hand.
+ */
+@OptIn(ExperimentalNucleusApi::class)
+fun Modifier.paneDragHandle(satellite: SatelliteScope): Modifier =
+    if (PlatformInfo.isWindows) {
+        satelliteDragHandle(satellite, PointerIcon.Hand, PointerIcon.Hand)
+    } else {
+        satelliteDragHandle(satellite)
+    }
+
 /** Anchors [DockToWindowIcon]'s resource lookup to this module's class loader. */
 private object PaneHeaderIconAnchor
 
@@ -136,7 +150,7 @@ private fun PaneDockButton(satellite: SatelliteScope) {
                 key = DockToWindowIcon,
                 text = stringResource(Res.string.pane_dock),
                 onClick = { satellite.dock() },
-                modifier = Modifier.satelliteDragHandle(satellite),
+                modifier = Modifier.paneDragHandle(satellite),
             )
     }
 }

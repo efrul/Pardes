@@ -8,11 +8,11 @@ filekitCore = "0.16.0"
 hebrewNumerals = "0.2.6"
 jsoup = "1.23.2"
 jvmToolchain = "25"
-# Branch commentator-tearoff: efrul/Nucleus's commentator-tearoff (Modifier.satelliteTearOffHandle), published to Maven
-# Local by its scripts/publish-tearoff-local.sh; every other module is 3.0.0-dev-202610272317's, under this version.
-nucleus = "3.0.0-dev-202610272317-1-tearoff"
-# The Gradle plugin is unchanged: the released one, from the plugin portal.
-nucleusPlugin = "3.0.0-dev-202610272317"
+nucleus = "3.0.0-dev-202610272317"
+# decorated-window-tao alone comes from efrul/Nucleus's commentator-tearoff (Modifier.satelliteTearOffHandle), kept in
+# nucleus-fork/maven: the release's module with the commentator tear-off, until upstream has it. It wins over the
+# release's tao the other Nucleus modules ask for, being the higher version. See nucleus-fork/README.md.
+nucleusTao = "3.0.0-dev-202610272317-1-tearoff"
 koalaplotCore = "0.12.1"
 kotlin = "2.4.20"
 compose = "1.12.1"
@@ -79,7 +79,7 @@ nucleus-aot-runtime = { module = "dev.nucleusframework:nucleus.aot-runtime", ver
 nucleus-darkmode-detector = { module = "dev.nucleusframework:nucleus.darkmode-detector", version.ref = "nucleus" }
 nucleus-application = { module = "dev.nucleusframework:nucleus.nucleus-application", version.ref = "nucleus" }
 nucleus-decorated-window-core = { module = "dev.nucleusframework:nucleus.decorated-window-core", version.ref = "nucleus" }
-nucleus-decorated-window-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", version.ref = "nucleus" }
+nucleus-decorated-window-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", version.ref = "nucleusTao" }
 nucleus-decorated-window-jewel = { module = "dev.nucleusframework:nucleus.decorated-window-jewel", version.ref = "nucleus" }
 nucleus-graalvm-runtime = { module = "dev.nucleusframework:nucleus.graalvm-runtime", version.ref = "nucleus" }
 nucleus-updater-runtime = { module = "dev.nucleusframework:nucleus.updater-runtime", version.ref = "nucleus" }
@@ -198,7 +198,7 @@ sqlDelight = { id = "app.cash.sqldelight", version.ref = "sqlDelight" }
 android-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 caupain =  { id = "com.deezer.caupain", version = "1.9.1"}
 metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
-nucleus = { id = "dev.nucleusframework", version.ref = "nucleusPlugin" }
+nucleus = { id = "dev.nucleusframework", version.ref = "nucleus" }
 stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.10.0" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
