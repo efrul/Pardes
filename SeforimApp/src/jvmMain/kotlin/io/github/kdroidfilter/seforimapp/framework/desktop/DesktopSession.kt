@@ -4,6 +4,7 @@ package io.github.kdroidfilter.seforimapp.framework.desktop
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.nucleusframework.window.ExperimentalNucleusApi
@@ -16,6 +17,7 @@ import io.github.kdroidfilter.seforim.tabs.TabItem
 import io.github.kdroidfilter.seforim.tabs.TabType
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.SimpleTabViewModelOwner
+import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.framework.session.SerializableTabTitle
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedState
 import io.github.kdroidfilter.seforimapp.framework.session.WindowSnapshot
@@ -90,7 +92,17 @@ class DesktopSession internal constructor(
     fun panesOf(
         groupId: String,
         navigation: Boolean,
-    ): SatelliteWorkspace = (if (navigation) navPaneWorkspaces else linePaneWorkspaces).getOrPut(groupId) { SatelliteWorkspace() }
+    ): SatelliteWorkspace =
+        (if (navigation) navPaneWorkspaces else linePaneWorkspaces).getOrPut(groupId) {
+            SatelliteWorkspace().apply {
+                // Windows has no open or closed hand: Nucleus would show its move cursor (four arrows) over every pane's
+                // grip, the floating windows' title bars included. The pointing hand there.
+                if (PlatformInfo.isWindows) {
+                    gripIcon = PointerIcon.Hand
+                    gripDraggingIcon = PointerIcon.Hand
+                }
+            }
+        }
 
     fun ownerOf(tabId: String): SimpleTabViewModelOwner = owners.getOrPut(tabId) { SimpleTabViewModelOwner(tabId) }
 
