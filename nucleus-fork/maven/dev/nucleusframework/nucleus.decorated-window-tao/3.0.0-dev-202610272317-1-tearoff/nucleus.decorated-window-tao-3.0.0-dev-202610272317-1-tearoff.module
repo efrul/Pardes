@@ -45,11 +45,11 @@
         {
           "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
           "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
-          "size": 6267165,
-          "sha512": "c77847c92b6a405468bb1828e41d2265e81ed93d6c8d2a4b845f8ba3e33b00d80a36523fd732dae92731f48e0d37bdfc9290b5081474102327a77a49f8174dac",
-          "sha256": "2aea99772313eefda1737aa14973aa5b208ef37ebf7209fd77455fe3967b89bf",
-          "sha1": "0adebaa89d47b9745737c7a80f175ca55ba89f63",
-          "md5": "5d8b882261bf9e933ec28c56e605260e"
+          "size": 6267459,
+          "sha512": "f0d6c4e13da8cb70c6792a4ca179c8852c5991e5b3c536ee8b4d6685b48d0fa2f10e2851bcc45a08aa0b0edee2cd4ea06b2bf10d7f5610196bacb609b2dc379f",
+          "sha256": "35aaffc559d40a79b812352d7e56820f053b156e1d1453aff38b30a16718018d",
+          "sha1": "7558eadab600ff53878439d085abe5db6fc13491",
+          "md5": "f412f813d468981d8a69ddcddb978d12"
         }
       ]
     },
@@ -112,11 +112,11 @@
         {
           "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
           "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
-          "size": 6267165,
-          "sha512": "c77847c92b6a405468bb1828e41d2265e81ed93d6c8d2a4b845f8ba3e33b00d80a36523fd732dae92731f48e0d37bdfc9290b5081474102327a77a49f8174dac",
-          "sha256": "2aea99772313eefda1737aa14973aa5b208ef37ebf7209fd77455fe3967b89bf",
-          "sha1": "0adebaa89d47b9745737c7a80f175ca55ba89f63",
-          "md5": "5d8b882261bf9e933ec28c56e605260e"
+          "size": 6267459,
+          "sha512": "f0d6c4e13da8cb70c6792a4ca179c8852c5991e5b3c536ee8b4d6685b48d0fa2f10e2851bcc45a08aa0b0edee2cd4ea06b2bf10d7f5610196bacb609b2dc379f",
+          "sha256": "35aaffc559d40a79b812352d7e56820f053b156e1d1453aff38b30a16718018d",
+          "sha1": "7558eadab600ff53878439d085abe5db6fc13491",
+          "md5": "f412f813d468981d8a69ddcddb978d12"
         }
       ]
     }

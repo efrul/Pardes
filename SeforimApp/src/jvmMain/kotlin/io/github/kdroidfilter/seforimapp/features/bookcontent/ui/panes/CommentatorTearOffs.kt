@@ -6,7 +6,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.nucleusframework.window.ExperimentalNucleusApi
@@ -15,7 +14,6 @@ import dev.nucleusframework.window.tao.SatelliteWorkspace
 import dev.nucleusframework.window.tao.WindowAnchor
 import dev.nucleusframework.window.tao.WindowPositioner
 import dev.nucleusframework.window.tao.satelliteTearOffHandle
-import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -60,17 +58,8 @@ class CommentatorTearOffs(
     /** The satellite [name]'s pane is in this window. */
     fun satelliteId(name: String): String = ReaderPane.Commentator(name).idIn(groupId)
 
-    /**
-     * Makes an element [name]'s grip: dragged, it opens [name]'s pane where it is dropped. The pointer is an open hand
-     * over it, closed while dragging; on Windows, which has no such hands (Nucleus shows the move cursor there, four
-     * arrows), the pointing hand.
-     */
-    fun tearOffHandle(name: String): Modifier =
-        if (PlatformInfo.isWindows) {
-            Modifier.satelliteTearOffHandle(workspace, satelliteId(name), PointerIcon.Hand, PointerIcon.Hand)
-        } else {
-            Modifier.satelliteTearOffHandle(workspace, satelliteId(name))
-        }
+    /** Makes an element [name]'s grip: dragged, it opens [name]'s pane where it is dropped (the workspace's grip icons). */
+    fun tearOffHandle(name: String): Modifier = Modifier.satelliteTearOffHandle(workspace, satelliteId(name))
 
     /**
      * Opens [name]'s pane in a window of its own, as the panes' "open in a separate window" does: over the middle of
