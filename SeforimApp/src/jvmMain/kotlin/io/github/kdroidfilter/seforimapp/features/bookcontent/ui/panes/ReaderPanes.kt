@@ -22,6 +22,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -45,6 +46,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookTextMenus
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LayoutState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.SplitDefaults
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.LocalPaneSatellite
@@ -95,117 +97,106 @@ import kotlin.math.roundToInt
  * side or be reordered, and no pane can be dropped in front of them — they can still be hidden and
  * resized. A side's panes come in the order of their buttons in the reader's bar: the first one at the side's edge
  * (beside the bar), or at the start of the row under the text.
+ *
+ * [standard] are the panes every window has; a [Commentator] pane exists for each commentator split off the
+ * commentaries pane.
  */
-enum class ReaderPane(
+sealed class ReaderPane(
     val id: String,
     val title: StringResource,
     val home: SatellitePlacement.Docked,
     val toggle: BookContentEvent,
     val navigation: Boolean,
     val fixed: Boolean = false,
-    // The slot of the split-off commentator this pane shows (DetachedCommentators), -1 for the other panes
-    val commentatorSlot: Int = -1,
 ) {
-    Tree(
+    data object Tree : ReaderPane(
         "tree",
         Res.string.book_list,
         SatellitePlacement.Docked(DockSide.Right, order = 0, extent = 150.dp),
         toggle = BookContentEvent.ToggleBookTree,
         navigation = true,
         fixed = true,
-    ),
-    Toc(
+    )
+
+    data object Toc : ReaderPane(
         "toc",
         Res.string.table_of_contents,
         SatellitePlacement.Docked(DockSide.Right, order = 1, extent = 120.dp),
         toggle = BookContentEvent.ToggleToc,
         navigation = true,
         fixed = true,
-    ),
-    Notes(
+    )
+
+    data object Notes : ReaderPane(
         "notes",
         Res.string.notes_pane,
         SatellitePlacement.Docked(DockSide.Right, order = 2, extent = 220.dp),
         toggle = BookContentEvent.ToggleNotes,
         navigation = true,
-    ),
-    Targum(
+    )
+
+    data object Targum : ReaderPane(
         "targum",
         Res.string.links,
         SatellitePlacement.Docked(DockSide.Left, order = 1, extent = 220.dp),
         toggle = BookContentEvent.ToggleTargum,
         navigation = false,
-    ),
-    Comments(
+    )
+
+    data object Comments : ReaderPane(
         "comments",
         Res.string.commentaries,
         SatellitePlacement.Docked(DockSide.Bottom, order = 1, extent = 220.dp, weight = 2f),
         toggle = BookContentEvent.ToggleCommentaries,
         navigation = false,
-    ),
-    Sources(
+    )
+
+    data object Sources : ReaderPane(
         "sources",
         Res.string.sources,
         SatellitePlacement.Docked(DockSide.Bottom, order = 0, extent = 120.dp),
         toggle = BookContentEvent.ToggleSources,
         navigation = false,
-    ),
+    )
 
     // The book's details (authors, parts): sized by the dock, no split percentage of its own
-    BookDetails(
+    data object BookDetails : ReaderPane(
         "book-details",
         Res.string.search_book_details,
         SatellitePlacement.Docked(DockSide.Left, order = 0, extent = 280.dp),
         toggle = BookContentEvent.ToggleBookDetails,
         navigation = false,
-    ),
+    )
 
     // The places that refer to the line: a column by default, a row of columns once docked under the text
-    References(
+    data object References : ReaderPane(
         "references",
         Res.string.references,
         SatellitePlacement.Docked(DockSide.Left, order = 2, extent = 400.dp),
         toggle = BookContentEvent.ToggleReferences,
         navigation = false,
-    ),
+    )
 
-    // Commentators split off the commentaries pane, each in a pane of its own, from where they move as any line pane.
-    // Spread around the text by default, so that the text keeps its width: the first on its left (after the links),
-    // the second on its right, the next two in the row under it, after the commentaries. Closing one gives its
-    // commentator back to the commentaries.
-    Commentator1(
-        "commentator-1",
-        Res.string.commentator_pane,
-        SatellitePlacement.Docked(DockSide.Left, order = 3, extent = 320.dp),
-        toggle = BookContentEvent.CloseCommentatorPane(0),
-        navigation = false,
-        commentatorSlot = 0,
-    ),
-    Commentator2(
-        "commentator-2",
-        Res.string.commentator_pane,
-        SatellitePlacement.Docked(DockSide.Right, order = 0, extent = 320.dp),
-        toggle = BookContentEvent.CloseCommentatorPane(1),
-        navigation = false,
-        commentatorSlot = 1,
-    ),
-    Commentator3(
-        "commentator-3",
-        Res.string.commentator_pane,
-        SatellitePlacement.Docked(DockSide.Bottom, order = 2, extent = 220.dp),
-        toggle = BookContentEvent.CloseCommentatorPane(2),
-        navigation = false,
-        commentatorSlot = 2,
-    ),
-    Commentator4(
-        "commentator-4",
-        Res.string.commentator_pane,
-        SatellitePlacement.Docked(DockSide.Bottom, order = 3, extent = 220.dp),
-        toggle = BookContentEvent.CloseCommentatorPane(3),
-        navigation = false,
-        commentatorSlot = 3,
-    ),
-    ;
+    /**
+     * A commentator split off the commentaries pane ([name], DetachedCommentators), in a pane of its own: torn off
+     * the commentaries pane by its column's header, it opens where it is dropped, and from there it moves as any line
+     * pane. Its satellite is keyed by the name ([commentatorPaneId]), so the place it was given is the commentator's.
+     * It is sized by the dock, never by the tab's split percentages. Closing it gives the commentator back to the
+     * commentaries.
+     */
+    data class Commentator(
+        val name: String,
+    ) : ReaderPane(
+            commentatorPaneId(name),
+            Res.string.commentator_pane,
+            commentatorHome(0),
+            toggle = BookContentEvent.CloseCommentatorPane(name),
+            navigation = false,
+        )
+
+    /** What the tab is told when the dock itself opens ([opened]) or closes this pane. */
+    fun followEvent(opened: Boolean): BookContentEvent =
+        if (this is Commentator && opened) BookContentEvent.DetachCommentator(name) else toggle
 
     /** This pane's satellite id in the dock of window [groupId]: every window has its own docks. */
     fun idIn(groupId: String): String = "$groupId-$id"
@@ -216,10 +207,50 @@ enum class ReaderPane(
     ): SatelliteWorkspace = session.panesOf(groupId, navigation)
 
     companion object {
-        /** The pane of the split-off commentators' [slot], null past the last. */
-        fun forCommentatorSlot(slot: Int): ReaderPane? = entries.firstOrNull { it.commentatorSlot == slot }
+        /** The panes every reader window has, in their declaration order. */
+        val standard: List<ReaderPane> by lazy { listOf(Tree, Toc, Notes, Targum, Comments, Sources, BookDetails, References) }
+
+        /** The commentator pane whose satellite in window [groupId] is [satelliteId], null for any other satellite. */
+        fun commentatorOf(
+            groupId: String,
+            satelliteId: String,
+        ): Commentator? =
+            satelliteId
+                .removePrefix("$groupId-")
+                .takeIf { it.length < satelliteId.length }
+                ?.let(::commentatorNameOf)
+                ?.let(::Commentator)
     }
 }
+
+private const val COMMENTATOR_ID_PREFIX = "commentator-"
+
+/**
+ * The stable id of [name]'s pane: its UTF-8 bytes in hex, so any name (Hebrew, quotes, spaces) gives a plain id and
+ * the id gives the name back ([commentatorNameOf]).
+ */
+fun commentatorPaneId(name: String): String =
+    COMMENTATOR_ID_PREFIX + name.toByteArray(Charsets.UTF_8).joinToString("") { "%02x".format(it) }
+
+/** The commentator whose pane id is [paneId], null for an id that is no commentator's. */
+fun commentatorNameOf(paneId: String): String? {
+    val hex = paneId.removePrefix(COMMENTATOR_ID_PREFIX)
+    if (hex.length == paneId.length || hex.isEmpty() || hex.length % 2 != 0) return null
+    val bytes = hex.chunked(2).map { it.toIntOrNull(16)?.toByte() ?: return null }
+    return String(bytes.toByteArray(), Charsets.UTF_8)
+}
+
+/**
+ * Where the [index]th split-off commentator's pane opens when nothing placed it yet (a session reopened): spread
+ * around the text, so that it keeps its width — the first on its left (after the links), the second on its right, the
+ * next ones in the row under it, after the commentaries.
+ */
+fun commentatorHome(index: Int): SatellitePlacement.Docked =
+    when (index) {
+        0 -> SatellitePlacement.Docked(DockSide.Left, order = 3, extent = 320.dp)
+        1 -> SatellitePlacement.Docked(DockSide.Right, order = 0, extent = 320.dp)
+        else -> SatellitePlacement.Docked(DockSide.Bottom, order = index, extent = 220.dp)
+    }
 
 /** The navigation column is the start side of the window, as the split panes had it. */
 private val NavigationDockSides = setOf(DockSide.Right)
@@ -240,22 +271,35 @@ val LineSideOrder = listOf(DockSide.Bottom, DockSide.Left, DockSide.Right, DockS
  * The panes of one reader window, declared at application scope so they belong to the window, not
  * to a tab: a tab change creates or destroys no panel, it changes what the panels draw and which
  * are open — each tab keeps its own open panes (its ViewModel's visibility flags).
+ *
+ * Besides the [ReaderPane.standard] panes, a commentator's pane is declared while the selected tab shows the
+ * commentator in it, or while the commentator's header is on screen in the commentaries pane, from where it can be
+ * torn off ([CommentatorTearOffs]). A pane declared once stays known to the dock with its place, whether declared or
+ * not.
  */
 @Composable
 fun WindowPanes(window: OpenWindow) {
     val session = window.session
     val groupId = window.groupId
+    val scope = rememberCoroutineScope()
+    val tearOffs =
+        remember(session, groupId) {
+            CommentatorTearOffs(session.panesOf(groupId, navigation = false), groupId, scope)
+        }
     PaneSync(window, session, groupId)
     val detached = selectedTabDetachedCommentators(session, groupId)
-    for (pane in ReaderPane.entries) {
+    val commentators = detached + tearOffs.names.filter { it !in detached }
+    val panes = ReaderPane.standard + commentators.map(ReaderPane::Commentator)
+    for (pane in panes) {
         key(pane) {
-            // A split-off commentator's pane is called by its commentator's name
-            val title = detached.getOrNull(pane.commentatorSlot)?.takeIf { it.isNotEmpty() } ?: stringResource(pane.title)
+            val commentator = pane as? ReaderPane.Commentator
             Satellite(
                 workspace = pane.workspaceIn(session, groupId),
                 id = pane.idIn(groupId),
-                title = title,
-                initialPlacement = pane.home,
+                // A split-off commentator's pane is called by its commentator's name
+                title = commentator?.name ?: stringResource(pane.title),
+                // Read once, when the dock first meets the commentator: from then on its place is its own
+                initialPlacement = commentator?.let { commentatorHome(commentators.indexOf(it.name)) } ?: pane.home,
                 initiallyOpen = false,
                 dockSides = if (pane.navigation) NavigationDockSides else LineDockSides,
                 floatable = !pane.fixed,
@@ -269,7 +313,7 @@ fun WindowPanes(window: OpenWindow) {
                 // The controls where the main window has them: the OS side, not the RTL content's.
                 controlButtonsDirection = ControlButtonsDirection.SystemNative,
             ) {
-                CompositionLocalProvider(LocalPaneSatellite provides this) {
+                CompositionLocalProvider(LocalPaneSatellite provides this, LocalCommentatorTearOffs provides tearOffs) {
                     PaneBody(session, groupId, pane)
                 }
             }
@@ -322,10 +366,20 @@ private fun PaneSync(
 
         fun entry(pane: ReaderPane) = workspace(pane).satellite(pane.idIn(groupId))
 
+        // Every pane the docks know: the standard ones, and each commentator pane ever declared in this window.
+        fun knownPanes(): List<ReaderPane> =
+            ReaderPane.standard +
+                session
+                    .panesOf(groupId, navigation = false)
+                    .satellites
+                    .mapNotNull { ReaderPane.commentatorOf(groupId, it.id) }
+
         // The tab's split percentages size a line pane only on its home side: moved elsewhere, its size is the
-        // dock's own, else two panes sharing one percentage would resize each other.
+        // dock's own, else two panes sharing one percentage would resize each other. A commentator's pane is always
+        // the dock's.
         fun sizedByTab(pane: ReaderPane): Boolean =
-            pane.navigation || (entry(pane)?.placement as? SatellitePlacement.Docked)?.side == pane.home.side
+            pane !is ReaderPane.Commentator &&
+                (pane.navigation || (entry(pane)?.placement as? SatellitePlacement.Docked)?.side == pane.home.side)
 
         // The navigation column and the line panes beside the text are layered (each pane its own width); the
         // line panes under the text split their row.
@@ -361,7 +415,7 @@ private fun PaneSync(
         var followed: Set<ReaderPane>? = null
         window.panesReadyFor = null
         snapshotFlow {
-            val registered = ReaderPane.entries.filter { entry(it) != null }.toSet()
+            val registered = knownPanes().filter { entry(it) != null }.toSet()
             val open = registered.filter { entry(it)?.isOpen == true }.toSet()
             val sizes = window.dockSizes
             val extents =
@@ -409,10 +463,12 @@ private fun PaneSync(
             }
             val expected = current.panes intersect frame.registered
             if (frame.open != expected) {
-                // The user closed (or reopened) a pane from the dock: follow on the tab, once per tab state.
+                // The user closed (or opened) a pane from the dock — a commentator torn off the commentaries opens his:
+                // follow on the tab, once per tab state.
                 if (followed != current.panes) {
                     followed = current.panes
-                    (frame.open - expected).plus(expected - frame.open).forEach { current.onEvent(it.toggle) }
+                    (frame.open - expected).forEach { current.onEvent(it.followEvent(opened = true)) }
+                    (expected - frame.open).forEach { current.onEvent(it.followEvent(opened = false)) }
                 }
                 return@collect
             }
@@ -477,7 +533,7 @@ private fun selectedTabDemand(
     }
 }
 
-/** The commentators the selected tab shows in panes of their own, by slot; read apart so a scroll recomposes nothing. */
+/** The commentators the selected tab shows in panes of their own; read apart so a scroll recomposes nothing. */
 @Composable
 private fun selectedTabDetachedCommentators(
     session: DesktopSession,
@@ -489,7 +545,9 @@ private fun selectedTabDetachedCommentators(
         when (val destination = item.destination) {
             is TabsDestination.Home, is TabsDestination.BookContent, is TabsDestination.Search -> {
                 val uiState = tabBookViewModel(session.ownerOf(tabId), destination).uiState.collectAsState()
-                val detached by remember(uiState) { derivedStateOf { uiState.value.content.detachedCommentators } }
+                val detached by remember(uiState) {
+                    derivedStateOf { DetachedCommentators.names(uiState.value.content.detachedCommentators) }
+                }
                 detached
             }
             else -> emptyList()
@@ -526,7 +584,7 @@ private fun innerWidthPx(
     splitter: Int,
 ): Int =
     sizes.outerWidthPx -
-        ReaderPane.entries.filter { it.navigation && it in open }.sumOf { (extents[it] ?: 0) + splitter }
+        ReaderPane.standard.filter { it.navigation && it in open }.sumOf { (extents[it] ?: 0) + splitter }
 
 /**
  * The px thickness of every pane in [open] for [layout]'s split positions — Compose `SplitPane`'s
@@ -600,13 +658,7 @@ private fun writeBack(
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage = ratio
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage = ratio
         // Never planned (see plannedExtents): their size is the dock's own
-        ReaderPane.BookDetails,
-        ReaderPane.References,
-        ReaderPane.Commentator1,
-        ReaderPane.Commentator2,
-        ReaderPane.Commentator3,
-        ReaderPane.Commentator4,
-        -> Unit
+        ReaderPane.BookDetails, ReaderPane.References, is ReaderPane.Commentator -> Unit
     }
 }
 
@@ -618,13 +670,7 @@ private fun ReaderPane.position(layout: LayoutState): Float =
         ReaderPane.Notes -> layout.notesSplitState.positionPercentage
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage
-        ReaderPane.BookDetails,
-        ReaderPane.References,
-        ReaderPane.Commentator1,
-        ReaderPane.Commentator2,
-        ReaderPane.Commentator3,
-        ReaderPane.Commentator4,
-        -> 0f
+        ReaderPane.BookDetails, ReaderPane.References, is ReaderPane.Commentator -> 0f
     }
 
 /** The first pane's minimum of this pane's split (the text, for the line panes), in dp. */
@@ -659,10 +705,8 @@ private fun desiredPanes(
             if (uiState.content.showCommentaries) add(ReaderPane.Comments)
             if (uiState.content.showSources) add(ReaderPane.Sources)
             if (uiState.content.showReferences) add(ReaderPane.References)
-            // Each split-off commentator in its slot's pane, whether the commentaries pane is open or not
-            uiState.content.detachedCommentators.forEachIndexed { slot, name ->
-                if (name.isNotEmpty()) ReaderPane.forCommentatorSlot(slot)?.let(::add)
-            }
+            // Each split-off commentator in his pane, whether the commentaries pane is open or not
+            DetachedCommentators.names(uiState.content.detachedCommentators).forEach { add(ReaderPane.Commentator(it)) }
         }
     }
 
@@ -754,11 +798,10 @@ private fun BookPaneBody(
                     else -> SourcesPane(uiState, onEvent, diacritics, modifier)
                 }
             }
-            ReaderPane.Commentator1, ReaderPane.Commentator2, ReaderPane.Commentator3, ReaderPane.Commentator4 -> {
+            is ReaderPane.Commentator -> {
                 val book = uiState.navigation.selectedBook ?: return@BookTextMenus
-                val name = uiState.content.detachedCommentators.getOrNull(pane.commentatorSlot)
-                if (name.isNullOrEmpty()) return@BookTextMenus
-                DetachedCommentatorPane(uiState, onEvent, name, tabUi.connections(book.id), diacritics, modifier)
+                if (pane.name !in uiState.content.detachedCommentators) return@BookTextMenus
+                DetachedCommentatorPane(uiState, onEvent, pane.name, tabUi.connections(book.id), diacritics, modifier)
             }
         }
     }

@@ -717,7 +717,7 @@ class BookContentViewModel(
 
                 is BookContentEvent.CloseCommentatorPane ->
                     stateManager.updateContent {
-                        copy(detachedCommentators = DetachedCommentators.clear(detachedCommentators, event.slot))
+                        copy(detachedCommentators = DetachedCommentators.reattach(detachedCommentators, event.name))
                     }
 
                 is BookContentEvent.SelectedCommentatorsChanged ->

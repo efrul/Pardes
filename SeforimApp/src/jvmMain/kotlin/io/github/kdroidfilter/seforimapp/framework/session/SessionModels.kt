@@ -114,7 +114,8 @@ data class BookContentPersistedState(
     val previousTargumSplitPosition: Float = 0.8f,
     // Appended last: the session is ProtoBuf, numbered by declaration order
     val showReferences: Boolean = false,
-    // The commentators shown in panes of their own, by slot ("" for a free one)
+    // The commentators shown in panes of their own, by name. Desktop 1.0.5 wrote them by slot, "" for a free one:
+    // read here as the names alone (DetachedCommentators.names), and a plain list of names reads there as the first slots.
     val detachedCommentators: List<String> = emptyList(),
 )
 

@@ -358,7 +358,6 @@
     <string name="select_at_least_one_commentator">אנא בחר לפחות מפרש אחד מהרשימה</string>
     <string name="commentators_select_all">כל המפרשים</string>
     <string name="commentator_pane">מפרש</string>
-    <string name="commentator_detach">פיצול לחלונית נפרדת</string>
     <string name="commentator_reattach">החזרה לחלונית המפרשים</string>
     <string name="commentator_detached_hint">בחלונית נפרדת. לחיצה מחזירה לכאן</string>
     <string name="commentator_not_on_line">אין פירוש של %1$s לשורה זו</string>
