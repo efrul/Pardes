@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 /**
  * A touchpad's swipe with two fingers turns the commentators' page, one page a swipe. On Windows it comes as a pan
  * (Nucleus's Tao windows), in px the way a scroll goes, as a Windows touchpad showed: in RTL a pan to the left brings
- * the next page.
+ * the next page. A mouse drag turns none: on a commentator's header it tears him off into a pane of his own.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class CommentatorsPageSwipeTest {
@@ -101,6 +101,45 @@ class CommentatorsPageSwipeTest {
     fun `a short swipe turns no page`() {
         settle()
         swipe(dx = 8f, steps = 3)
+        assertEquals(0, pagerState.currentPage)
+    }
+
+    // A press, [steps] moves by dx px, and the release, as a mouse drag
+    private fun mouseDrag(
+        dx: Float,
+        steps: Int = 10,
+    ) {
+        var x = 200f
+        mouse(PointerEventType.Press, x, pressed = true)
+        repeat(steps) {
+            x += dx
+            mouse(PointerEventType.Move, x, pressed = true)
+        }
+        mouse(PointerEventType.Release, x, pressed = false)
+        settle()
+    }
+
+    private fun mouse(
+        type: PointerEventType,
+        x: Float,
+        pressed: Boolean,
+    ) {
+        time += 16
+        scene.sendPointerEvent(
+            eventType = type,
+            pointers = listOf(ComposeScenePointer(PointerId(0), Offset(x, 150f), pressed = pressed, type = PointerType.Mouse)),
+            timeMillis = time,
+        )
+        scene.render(time * 1_000_000)
+    }
+
+    @Test
+    fun `a mouse drag turns no page`() {
+        settle()
+        mouseDrag(dx = -20f)
+        assertEquals(0, pagerState.currentPage)
+        assertEquals(0f, pagerState.currentPageOffsetFraction)
+        mouseDrag(dx = 20f)
         assertEquals(0, pagerState.currentPage)
     }
 }

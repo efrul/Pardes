@@ -6,9 +6,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -32,12 +29,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -315,25 +310,18 @@ internal fun CommentatorsGridScaffold(
 }
 
 /**
- * Turns the commentators' pages by a sideways swipe: a mouse drag (outside the texts, where a drag
- * selects), a touchpad's sideways swipe with two fingers (a pan on Windows, a scroll elsewhere), a tilt wheel or
- * Shift + wheel. One page per gesture.
+ * Turns the commentators' pages by a sideways swipe: a touchpad's sideways swipe with two fingers (a pan on Windows, a
+ * scroll elsewhere), a tilt wheel or Shift + wheel. One page per gesture. Not a mouse drag: a press and drag on a
+ * commentator's header tears him off into a pane of his own, and the page must stay where it is meanwhile.
  */
 @Composable
 internal fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
     val scope = rememberCoroutineScope()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    var dragStartPage by remember { mutableIntStateOf(0) }
-    var dragging by remember { mutableStateOf(false) }
-    val dragState =
-        rememberDraggableState { delta ->
-            // The delta comes reversed in RTL (reverseDirection): negative moves on to the next page
-            pagerState.dispatchRawDelta(-delta)
-        }
     // A page change cut short (the selection changed again meanwhile) leaves the pager between two pages, and its
     // own gestures, which would snap it, are off: snap it to the nearest page once it rests.
     LaunchedEffect(pagerState) {
-        snapshotFlow { !dragging && !pagerState.isScrollInProgress && abs(pagerState.currentPageOffsetFraction) > SNAP_EPSILON }
+        snapshotFlow { !pagerState.isScrollInProgress && abs(pagerState.currentPageOffsetFraction) > SNAP_EPSILON }
             .collect { offPage -> if (offPage) scope.launch { pagerState.animateScrollToPage(pagerState.currentPage) } }
     }
     return this
@@ -393,31 +381,7 @@ internal fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
                     }
                 }
             }
-        }.draggable(
-            state = dragState,
-            orientation = Orientation.Horizontal,
-            reverseDirection = isRtl,
-            onDragStarted = {
-                dragging = true
-                dragStartPage = pagerState.currentPage
-            },
-            onDragStopped = { velocity ->
-                val moved = pagerState.currentPage + pagerState.currentPageOffsetFraction - dragStartPage
-                val target =
-                    when {
-                        velocity < -SWIPE_FLING_VELOCITY || moved > SWIPE_PAGE_FRACTION -> dragStartPage + 1
-                        velocity > SWIPE_FLING_VELOCITY || moved < -SWIPE_PAGE_FRACTION -> dragStartPage - 1
-                        else -> dragStartPage
-                    }.coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
-                scope.launch {
-                    try {
-                        pagerState.animateScrollToPage(target)
-                    } finally {
-                        dragging = false
-                    }
-                }
-            },
-        )
+        }
 }
 
 // Wheel units of sideways scroll that turn a page (a tilt-wheel notch or Shift + wheel notch is 1)
@@ -428,12 +392,6 @@ private val SWIPE_PAN_DISTANCE = 48.dp
 
 // Sideways scroll events closer than this belong to one gesture
 private const val SWIPE_GESTURE_GAP_MS = 250L
-
-// A drag let go faster than this (px/s) turns the page whatever its length
-private const val SWIPE_FLING_VELOCITY = 400f
-
-// Else a drag turns it once it has moved this fraction of a page
-private const val SWIPE_PAGE_FRACTION = 0.2f
 
 // A pager further than this fraction from a page is between two
 private const val SNAP_EPSILON = 0.001f
