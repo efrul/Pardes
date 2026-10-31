@@ -1,43 +1,37 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.state
 
 /**
- * The commentators a tab shows in panes of their own, out of the commentaries pane: each in its slot, so it
- * stays in the pane (and the place) it was given while others come and go. An empty name is a free slot; the
- * list ends with a used one. Commentators are kept by name (as the commentaries pane lists them), so Rashi
- * stays in his pane from Bereshit to Shemot, where he is another book.
+ * The commentators a tab shows in panes of their own, out of the commentaries pane, in the order they were split
+ * off. Each has its own pane (ReaderPane.Commentator, a satellite keyed by its name), so it stays where it was put
+ * while others come and go. Commentators are kept by name (as the commentaries pane lists them), so Rashi stays in
+ * his pane from Bereshit to Shemot, where he is another book.
+ *
+ * Desktop 1.0.5 kept the same list by slot, an empty name standing for a free one: such a list reads here as its
+ * names, and the plain list of names written here reads there as the first slots.
  */
 object DetachedCommentators {
-    /** The panes there are for split-off commentators in each window ([ReaderPane]'s commentator slots). */
-    const val MAX = 4
+    /** How many commentators a tab can show in panes of their own: more than any screen holds side by side. */
+    const val MAX = 8
 
-    /** [slots] with [name] in the first free slot; unchanged when it already has one or none is free. */
+    /** The names of [saved], in order, without free slots (1.0.5's empty names) or repeats. */
+    fun names(saved: List<String>): List<String> = saved.filter { it.isNotBlank() }.distinct()
+
+    /** [saved] with [name] at its end; unchanged when it is already there or [MAX] are. */
     fun detach(
-        slots: List<String>,
+        saved: List<String>,
         name: String,
     ): List<String> {
-        if (name.isBlank() || name in slots) return slots
-        val free = slots.indexOf("")
-        return when {
-            free >= 0 -> slots.toMutableList().apply { this[free] = name }
-            slots.size < MAX -> slots + name
-            else -> slots
-        }
+        val names = names(saved)
+        if (name.isBlank() || name in names || names.size >= MAX) return names
+        return names + name
     }
 
-    /** [slots] without [name], its slot freed. */
+    /** [saved] without [name]: its pane is closed and it is back in the commentaries pane. */
     fun reattach(
-        slots: List<String>,
+        saved: List<String>,
         name: String,
-    ): List<String> = slots.map { if (it == name) "" else it }.trimmed()
-
-    /** [slots] with [slot] freed, as when its pane is closed from the dock. */
-    fun clear(
-        slots: List<String>,
-        slot: Int,
-    ): List<String> = slots.mapIndexed { i, name -> if (i == slot) "" else name }.trimmed()
+    ): List<String> = names(saved) - name
 
     /** Whether another commentator can be given a pane of its own. */
-    fun canDetach(slots: List<String>): Boolean = slots.count { it.isNotEmpty() } < MAX
-
-    private fun List<String>.trimmed(): List<String> = dropLastWhile { it.isEmpty() }
+    fun canDetach(saved: List<String>): Boolean = names(saved).size < MAX
 }

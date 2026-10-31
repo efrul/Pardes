@@ -8,7 +8,11 @@ filekitCore = "0.16.0"
 hebrewNumerals = "0.2.6"
 jsoup = "1.23.2"
 jvmToolchain = "25"
-nucleus = "3.0.0-dev-202610272317"
+# Branch commentator-tearoff: efrul/Nucleus's commentator-tearoff (Modifier.satelliteTearOffHandle), published to Maven
+# Local by its scripts/publish-tearoff-local.sh; every other module is 3.0.0-dev-202610272317's, under this version.
+nucleus = "3.0.0-dev-202610272317-1-tearoff"
+# The Gradle plugin is unchanged: the released one, from the plugin portal.
+nucleusPlugin = "3.0.0-dev-202610272317"
 koalaplotCore = "0.12.1"
 kotlin = "2.4.20"
 compose = "1.12.1"
@@ -194,7 +198,7 @@ sqlDelight = { id = "app.cash.sqldelight", version.ref = "sqlDelight" }
 android-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 caupain =  { id = "com.deezer.caupain", version = "1.9.1"}
 metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
-nucleus = { id = "dev.nucleusframework", version.ref = "nucleus" }
+nucleus = { id = "dev.nucleusframework", version.ref = "nucleusPlugin" }
 stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.10.0" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }

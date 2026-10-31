@@ -97,7 +97,7 @@ class BookContentStateManager(
                     commentariesColumnScrollOffsetByCommentator = persisted.commentariesColumnScrollOffsetByCommentator,
                     commentariesPageIndex = persisted.commentariesPageIndex,
                     isCommentatorsListVisible = persisted.isCommentatorsListVisible,
-                    detachedCommentators = persisted.detachedCommentators,
+                    detachedCommentators = DetachedCommentators.names(persisted.detachedCommentators),
                     selectedCommentatorsByLine = persisted.selectedCommentatorsByLine,
                     selectedCommentatorsByBook = persisted.selectedCommentatorsByBook,
                     selectedLinkSourcesByLine = persisted.selectedTargumSourcesByLine,

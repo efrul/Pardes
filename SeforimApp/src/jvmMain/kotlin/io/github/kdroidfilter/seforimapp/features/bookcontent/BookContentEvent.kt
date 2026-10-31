@@ -236,7 +236,7 @@ sealed interface BookContentEvent {
 
     // A split-off commentator's pane closed from the dock: its commentator goes back to the commentaries pane
     data class CloseCommentatorPane(
-        val slot: Int,
+        val name: String,
     ) : BookContentEvent
 
     data class OpenCommentaryTarget(

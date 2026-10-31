@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.CommentatorTearOffs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -65,7 +66,7 @@ import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.Tooltip
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.commentator_detach
+import seforimapp.seforimapp.generated.resources.pane_float
 import kotlin.math.abs
 
 // Grid capacity thresholds at the reference commentary font size ([REFERENCE_TEXT_SIZE]).
@@ -468,7 +469,7 @@ private fun CommentatorPageGrid(
                             commentTextSize = config.textSizes.commentTextSize,
                             isRecentlyAdded = name == recentlyAdded,
                             onTitleClick = { config.onOpenCommentatorBook(id) },
-                            onDetach = config.onDetachCommentator?.let { detach -> { detach(name) } },
+                            tearOffs = config.tearOffs,
                             modifier = Modifier.weight(1f).fillMaxHeight().padding(horizontal = 4.dp),
                         ) {
                             column(id)
@@ -486,7 +487,7 @@ private fun CommentatorCell(
     commentTextSize: Float,
     isRecentlyAdded: Boolean,
     onTitleClick: () -> Unit,
-    onDetach: (() -> Unit)?,
+    tearOffs: CommentatorTearOffs?,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -496,7 +497,7 @@ private fun CommentatorCell(
             commentTextSize = commentTextSize,
             isRecentlyAdded = isRecentlyAdded,
             onClick = onTitleClick,
-            onDetach = onDetach,
+            tearOffs = tearOffs,
         )
         content()
     }
@@ -584,8 +585,9 @@ internal fun CommentatorHeader(
     commentTextSize: Float,
     isRecentlyAdded: Boolean = false,
     onClick: () -> Unit = {},
-    // Gives the commentator a pane of its own: a button at the header's end, shown on hover
-    onDetach: (() -> Unit)? = null,
+    // Gives the commentator a pane of its own: the header is its grip (dragged, the pane opens where it is dropped,
+    // as any pane moves by its header), and a button at its end, on hover, opens it in a window of its own
+    tearOffs: CommentatorTearOffs? = null,
 ) {
     // Progressive underline: the stroke grows from the reading-side edge (LTR → left to
     // right, RTL → right to left) while fading in, holds briefly, then fades out.
@@ -606,13 +608,21 @@ internal fun CommentatorHeader(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
+    // The dock knows the commentator's pane while his header is on screen: a tear-off drags a pane it knows
+    if (tearOffs != null) {
+        DisposableEffect(tearOffs, commentator) {
+            tearOffs.show(commentator)
+            onDispose { tearOffs.hide(commentator) }
+        }
+    }
 
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .hoverable(interactionSource)
-                .pointerHoverIcon(PointerIcon.Hand)
+                // The grip's open hand, closed while dragging; a press without moving is still the click on the title
+                .then(tearOffs?.tearOffHandle(commentator) ?: Modifier.pointerHoverIcon(PointerIcon.Hand))
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -645,13 +655,14 @@ internal fun CommentatorHeader(
                     )
                 },
         )
-        if (onDetach != null && isHovered) {
-            val detachText = stringResource(Res.string.commentator_detach)
-            Tooltip({ Text(detachText) }, modifier = Modifier.align(Alignment.CenterEnd)) {
+        if (tearOffs != null && isHovered) {
+            // The panes' own "open in a separate window" (PaneHeader's dock button): same icon, text and outcome
+            val floatText = stringResource(Res.string.pane_float)
+            Tooltip({ Text(floatText) }, modifier = Modifier.align(Alignment.CenterEnd)) {
                 IconActionButton(
-                    key = AllIconsKeys.Actions.SplitVertically,
-                    onClick = onDetach,
-                    contentDescription = detachText,
+                    key = AllIconsKeys.Actions.MoveToWindow,
+                    onClick = { tearOffs.openInWindow(commentator) },
+                    contentDescription = floatText,
                 )
             }
         }

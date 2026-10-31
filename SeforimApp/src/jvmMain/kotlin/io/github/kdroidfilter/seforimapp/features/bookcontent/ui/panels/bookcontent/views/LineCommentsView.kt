@@ -73,6 +73,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.Providers
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.EnhancedHorizontalSplitPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneHeader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.asStable
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.CommentatorTearOffs
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.LocalCommentatorTearOffs
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.LayoutSidebarRight
 import io.github.kdroidfilter.seforimapp.icons.LayoutSidebarRightOff
@@ -1547,8 +1549,8 @@ internal data class CommentariesLayoutConfig(
     val highlightQuery: String,
     val diacritics: DiacriticsMode,
     val maxCommentatorsPerPage: Int,
-    // Gives a commentator a pane of its own; null when every such pane is taken, or in such a pane
-    val onDetachCommentator: ((String) -> Unit)? = null,
+    // Lets a commentator be torn off into a pane of its own; null when no more can be, or in such a pane
+    val tearOffs: CommentatorTearOffs? = null,
 )
 
 @Composable
@@ -1569,8 +1571,10 @@ private fun rememberCommentariesLayoutConfig(
     val commentaryFontFamily = FontCatalog.familyFor(commentaryFontCode)
     val maxCommentatorsPerPage by appSettings.maxCommentatorsPerPageFlow.collectAsState()
     val boldScaleForPlatform = FontCatalog.boldScaleFor(commentaryFontCode)
+    val tearOffs = LocalCommentatorTearOffs.current
 
     return remember(
+        tearOffs,
         selectedCommentators,
         titleToIdMap,
         selection,
@@ -1612,12 +1616,7 @@ private fun rememberCommentariesLayoutConfig(
             highlightQuery = findQueryText,
             diacritics = diacritics,
             maxCommentatorsPerPage = maxCommentatorsPerPage,
-            onDetachCommentator =
-                if (canDetach) {
-                    { name -> onEvent(BookContentEvent.DetachCommentator(name)) }
-                } else {
-                    null
-                },
+            tearOffs = tearOffs.takeIf { canDetach },
         )
     }
 }
