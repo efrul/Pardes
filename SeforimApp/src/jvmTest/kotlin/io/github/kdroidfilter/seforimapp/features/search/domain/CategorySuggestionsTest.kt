@@ -50,6 +50,17 @@ class CategorySuggestionsTest {
     }
 
     @Test
+    fun `a category holding base books and others is offered in its base books alone too, right after it`() {
+        val talmudMixed = talmud.copy(hasBaseBooksAndOthers = true)
+        assertEquals(
+            listOf(talmudMixed, talmudMixed.copy(baseBooksOnly = true)),
+            CategorySuggestions.match("תלמוד", listOf(talmudMixed, bavliAcharonim), limit = 4),
+        )
+        // Rashi's books are all commentaries: offered once
+        assertEquals(listOf(rashiTorah), CategorySuggestions.match("רש\"י על התורה", listOf(rashiTorah), limit = 4))
+    }
+
+    @Test
     fun `the words name the category, its own title at least`() {
         assertEquals(listOf(shulchanAruchCommentaries), match("מפרשים שולחן ערוך"))
         // תורה alone is in רש״י's path, but no title of it is רש״י's

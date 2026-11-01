@@ -38,4 +38,20 @@ class HistoryStoreTest {
                 store.query("", limit = 10).map { it.searchScope },
             )
         }
+
+    @Test
+    fun `a category searched in its base books alone reopens so, apart from the same category whole`() =
+        runBlocking {
+            val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create)
+            val store = HistoryStore(UserSettingsDb(driver))
+            val baseBooks = SearchScope.Category(12L, baseBooksOnly = true)
+            val several = SearchScope.Multi(bookIds = listOf(34L), categoryIds = listOf(12L, 1142L), baseOnlyCategoryIds = listOf(12L))
+            store.recordSearchVisit("אור", baseBooks, globalExtended = false, scopeLabel = "תלמוד (ספרי יסוד)", timestamp = 2)
+            store.recordSearchVisit("אור", SearchScope.Category(12L), globalExtended = false, scopeLabel = "תלמוד", timestamp = 1)
+            store.recordSearchVisit("אור", several, globalExtended = false, scopeLabel = null, timestamp = 0)
+            assertEquals(
+                listOf(baseBooks, SearchScope.Category(12L), several),
+                store.query("", limit = 10).map { it.searchScope },
+            )
+        }
 }

@@ -135,14 +135,14 @@ import io.github.kdroidfilter.seforimlibrary.core.models.Book as BookModel
 
 // Suggestion models for the scope picker
 @Immutable
-private data class BookSuggestion(
+internal data class BookSuggestion(
     val book: BookModel,
     val path: List<String>,
     val exactAcronym: Boolean = false,
 )
 
 /** A row of the book-stage list; see [catBookRows] for their order. */
-private sealed interface CatBookRow {
+internal sealed interface CatBookRow {
     data class Jump(
         val reference: ResolvedReference,
     ) : CatBookRow
@@ -167,10 +167,11 @@ private sealed interface CatBookRow {
  * The book-stage rows in order: the references, then the books, categories and authors named exactly as typed
  * (`חולין` opens Chullin on Enter; `שוע` puts the שולחן ערוך parts first; `תלמוד` searches the Talmud), the
  * text search, then the other authors, categories and books.
- * A title being typed past its first word (`בבא ק`) is no text search: with no book named exactly,
- * the first book whose title it begins comes before the text search too.
+ * A title being typed past its first word (`בבא ק`) is no text search: with no book or category named exactly,
+ * the first book whose title it begins comes before the text search too. A category's name is no title being typed:
+ * `משנה תורה` is the category, not the first of its books (משנה תורה, מסירת תורה שבעל פה).
  */
-private fun catBookRows(
+internal fun catBookRows(
     query: String,
     jumps: List<ResolvedReference>,
     textSearch: Boolean,
@@ -193,7 +194,7 @@ private fun catBookRows(
                 book.book.title
                     .searchKey()
                     .replace(",", "")
-            namedBooks.isEmpty() && ' ' in key && title.startsWith(key)
+            namedBooks.isEmpty() && exactCategories.isEmpty() && ' ' in key && title.startsWith(key)
         }
     val exactBooks = namedBooks + listOfNotNull(typedTitle)
     return buildList {
@@ -207,6 +208,24 @@ private fun catBookRows(
         otherCategories.mapTo(this) { CatBookRow.Category(it) }
         otherBooks.filter { it !== typedTitle }.mapTo(this) { CatBookRow.Book(it) }
     }.toImmutableList()
+}
+
+/**
+ * In a book, the other books and categories [query] names, to add to its search: the categories named exactly as typed
+ * first (`משנה תורה`: the category, before the books whose titles begin so), then the books, then the other categories.
+ */
+internal fun tocAddRows(
+    query: String,
+    books: List<BookSuggestion>,
+    categories: List<CategoryHit>,
+): ImmutableList<CatBookRow> {
+    val key = query.searchKey()
+    val (exactCategories, otherCategories) = categories.partition { it.title.searchKey() == key }
+    return (
+        exactCategories.map { CatBookRow.Category(it) } +
+            books.map { CatBookRow.Book(it) } +
+            otherCategories.map { CatBookRow.Category(it) }
+    ).toImmutableList()
 }
 
 @Immutable
@@ -574,10 +593,7 @@ internal fun UnifiedSearchBar(
     // In a book, the other books and categories the text names, to add to its search (Tab)
     val tocAddRows =
         if (isTocInTopBar) {
-            (
-                mappedBookSuggestionsForBar.map { CatBookRow.Book(it) } +
-                    searchUi.categorySuggestions.map { CatBookRow.Category(it) }
-            ).toImmutableList()
+            tocAddRows(tocSearchState.text.toString(), mappedBookSuggestionsForBar, searchUi.categorySuggestions)
         } else {
             persistentListOf()
         }
@@ -606,7 +622,8 @@ internal fun UnifiedSearchBar(
         textSearchEnabled = searchUi.selectedScopeToc == null,
         textSearchInBook = searchUi.selectedScopeBook?.title,
         textSearchInAuthor = searchUi.selectedScopeAuthor?.name?.let(AuthorNames::display),
-        textSearchInScope = scopeChips.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.label },
+        textSearchInScope = scopeChips.takeIf { it.isNotEmpty() }?.map { it.chipLabel() }?.joinToString(", "),
+        textSearchInScopeBaseBooks = scopeChips.any { it is ScopeItem.CategoryItem && it.category.baseBooksOnly },
         onTextSearch = ::searchText,
         // Before a book is picked: go-to rows, the text search and books; after: its TOC
         suggestionsVisible = if (!isTocInTopBar) searchUi.suggestionsVisible else false,
@@ -942,6 +959,7 @@ private fun SuggestionsPanel(
                                 onClick = searchCategory.onClick,
                                 kind = SuggestionKind.CATEGORY,
                                 highlighted = focused,
+                                detail = baseBooksDetail(row.hit),
                                 actions = listOf(searchCategory),
                             )
                         }
@@ -1085,6 +1103,7 @@ private fun TocSuggestionsPanel(
                                 onClick = add.onClick,
                                 kind = SuggestionKind.CATEGORY,
                                 highlighted = addStart + index == focusedIndex,
+                                detail = baseBooksDetail(row.hit),
                                 actions = listOf(RowAction(KEY_ENTER, add.label, add.onClick)),
                             )
                         else -> Unit
@@ -1101,13 +1120,26 @@ private fun textSearchLabel(
     inBook: String?,
     inAuthor: String? = null,
     inCategory: String? = null,
+    // One at least of the books and categories picked is a category in its base books alone: not all its books
+    inBaseBooks: Boolean = false,
 ): String =
     when {
         inBook != null -> stringResource(Res.string.search_text_row_in_book, query, inBook)
         inAuthor != null -> stringResource(Res.string.search_text_row_in_author, query, inAuthor)
+        inCategory != null && inBaseBooks -> stringResource(Res.string.search_text_row_in_scope, query, inCategory)
         inCategory != null -> stringResource(Res.string.search_text_row_in_category, query, inCategory)
         else -> stringResource(Res.string.search_text_row, query)
     }
+
+// A category's suggestion in its base books alone says so, beside the same category whole
+@Composable
+private fun baseBooksDetail(hit: CategoryHit): String? =
+    if (hit.baseBooksOnly) stringResource(Res.string.category_base_books_only) else null
+
+/** A book's or category's name on its chip; a category in its base books alone is marked (`תלמוד (ספרי יסוד)`). */
+@Composable
+private fun ScopeItem.chipLabel(): String =
+    if (this is ScopeItem.CategoryItem && category.baseBooksOnly) stringResource(Res.string.scope_base_books_label, label) else label
 
 /**
  * Collapses adjacent breadcrumb segments when the next segment strictly extends
@@ -1361,8 +1393,10 @@ private fun SearchBar(
     // The books and categories picked (several, or one category), as chips; Backspace in the empty field drops the last
     scopeChips: List<ScopeItem> = emptyList(),
     onRemoveScope: (ScopeItem) -> Unit = {},
-    // Once books or categories are picked, the text is searched in all of them (their names)
+    // Once books or categories are picked, the text is searched in all of them (their names), [textSearchInScopeBaseBooks]
+    // when a category of them is searched in its base books alone
     textSearchInScope: String? = null,
+    textSearchInScopeBaseBooks: Boolean = false,
     // In a book: other books and categories to add to its search, after its TOC entries and the text search
     tocAddRows: ImmutableList<CatBookRow> = persistentListOf(),
     // The "search this text" row: offered while text is typed, Ctrl+Enter runs it from anywhere
@@ -1885,7 +1919,7 @@ private fun SearchBar(
                     } else {
                         scopeChips.forEach { item ->
                             SelectedBookChip(
-                                title = item.label,
+                                title = item.chipLabel(),
                                 onClear = {
                                     onRemoveScope(item)
                                     effectiveFocusRequester.requestFocus()
@@ -1979,7 +2013,13 @@ private fun SearchBar(
                                 if (textSearchEnabled &&
                                     state.text.isNotBlank()
                                 ) {
-                                    textSearchLabel(state.text.toString().trim(), null, textSearchInAuthor, textSearchInScope)
+                                    textSearchLabel(
+                                        state.text.toString().trim(),
+                                        null,
+                                        textSearchInAuthor,
+                                        textSearchInScope,
+                                        textSearchInScopeBaseBooks,
+                                    )
                                 } else {
                                     null
                                 },

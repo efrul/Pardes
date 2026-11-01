@@ -26,6 +26,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryNavigationUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.ExecuteSearchUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.GetBreadcrumbPiecesUseCase
+import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
 import io.github.kdroidfilter.seforimapp.features.search.domain.ResultsIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.ResultsIndexingUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
@@ -60,6 +61,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
+import org.jetbrains.compose.resources.getString
+import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.scope_base_books_label
 import java.util.UUID
 import kotlin.collections.ArrayDeque
 
@@ -84,6 +88,10 @@ data class SearchUiState(
     val scopeTocId: Long? = null,
     // The category, or the books and categories, searched in whole (CategoryHit.label, titles), null in any other scope
     val scopeLabel: String? = null,
+    // Searched in a category holding base books and others: whether in its base books alone (the texts without their
+    // commentaries), with [scopeLabel] without that mark for the other choice; null in any other scope
+    val scopeBaseBooksOnly: Boolean? = null,
+    val scopeAllBooksLabel: String? = null,
     // Scroll/anchor persistence
     val scrollIndex: Int = 0,
     val scrollOffset: Int = 0,
@@ -108,6 +116,7 @@ class SearchResultViewModel(
     private val historyStore: HistoryStore,
     private val appSettings: AppSettings,
     lookup: LuceneLookupSearchService,
+    private val libraryCategories: LibraryCategories,
 ) : ViewModel() {
     @AssistedFactory
     @ViewModelAssistedFactoryKey(SearchResultViewModel::class)
@@ -145,8 +154,9 @@ class SearchResultViewModel(
         runSuspendCatching {
             when (scope) {
                 SearchScope.Global -> null
-                is SearchScope.Category -> repository.getCategory(scope.categoryId)?.title
-                is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds)
+                is SearchScope.Category ->
+                    repository.getCategory(scope.categoryId)?.title?.let { if (scope.baseBooksOnly) baseBooksLabel(it) else it }
+                is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, scope.baseOnlyCategoryIds)
                 is SearchScope.Book -> repository.getBookCore(scope.bookId)?.title
                 is SearchScope.Author -> authorScope(scope.authorId)?.name?.let(AuthorNames::display)
                 is SearchScope.Toc ->
@@ -228,6 +238,11 @@ class SearchResultViewModel(
         data class SetGlobalExtended(
             val extended: Boolean,
         ) : SearchResultEvents()
+
+        // In a category's search, its base books alone (the texts without their commentaries) or all its books
+        data class SetScopeBaseBooksOnly(
+            val baseBooksOnly: Boolean,
+        ) : SearchResultEvents()
     }
 
     fun onEvent(event: SearchResultEvents) {
@@ -299,6 +314,8 @@ class SearchResultViewModel(
                 _uiState.value = _uiState.value.copy(globalExtended = event.extended)
                 updatePersistedSearch { it.copy(globalExtended = event.extended) }
             }
+
+            is SearchResultEvents.SetScopeBaseBooksOnly -> setScopeBaseBooksOnly(event.baseBooksOnly)
         }
     }
 
@@ -708,33 +725,103 @@ class SearchResultViewModel(
                 ?.also { authorScopeCache = it }
         }
 
-    /** Shows where [state] searches, when it is a category or several books and categories, as the status line says. */
+    /**
+     * Shows where [state] searches, when it is a category or several books and categories, as the status line says,
+     * with the choice between base books alone and all books where a category searched holds both.
+     */
     private suspend fun showScopeLabel(state: SearchPersistedState) {
+        val scope = state.wideScope
         val label =
-            when (val scope = state.wideScope) {
-                is SearchScope.Category -> categoryLabel(scope.categoryId)
-                is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds)
+            when (scope) {
+                is SearchScope.Category -> categoryLabel(scope.categoryId, scope.baseBooksOnly)
+                is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, scope.baseOnlyCategoryIds)
                 else -> null
             }
-        if (_uiState.value.scopeLabel != label) _uiState.value = _uiState.value.copy(scopeLabel = label)
+        val choosable = scopeCategoryIds(scope).filter { hasBaseBooksAndOthers(it) }
+        val baseOnly = choosable.takeIf { it.isNotEmpty() }?.all { it in baseOnlyCategoryIds(scope) }
+        val allBooksLabel =
+            when {
+                baseOnly != true -> null
+                scope is SearchScope.Category -> categoryLabel(scope.categoryId)
+                scope is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, emptyList())
+                else -> null
+            }
+        _uiState.value = _uiState.value.copy(scopeLabel = label, scopeBaseBooksOnly = baseOnly, scopeAllBooksLabel = allBooksLabel)
     }
 
-    // A category's name as the bar's chip has it (CategoryHit.label)
-    private suspend fun categoryLabel(categoryId: Long): String? =
-        runSuspendCatching { categoryNavigationUseCase.buildCategoryPath(categoryId) }
-            .getOrDefault(emptyList())
-            .takeIf { it.isNotEmpty() }
-            ?.let { path -> CategoryHit(categoryId, path.map { it.title }).label }
+    // The categories [scope] searches, and those of them in their base books alone
+    private fun scopeCategoryIds(scope: SearchScope): List<Long> =
+        when (scope) {
+            is SearchScope.Category -> listOf(scope.categoryId)
+            is SearchScope.Multi -> scope.categoryIds
+            else -> emptyList()
+        }
+
+    private fun baseOnlyCategoryIds(scope: SearchScope): List<Long> =
+        when (scope) {
+            is SearchScope.Category -> if (scope.baseBooksOnly) listOf(scope.categoryId) else emptyList()
+            is SearchScope.Multi -> scope.baseOnlyCategoryIds
+            else -> emptyList()
+        }
+
+    private suspend fun hasBaseBooksAndOthers(categoryId: Long): Boolean =
+        runSuspendCatching { libraryCategories.hasBaseBooksAndOthers(categoryId) }.getOrDefault(false)
+
+    // A category's name as the bar's chip has it (CategoryHit.label), marked when in its base books alone
+    private suspend fun categoryLabel(
+        categoryId: Long,
+        baseBooksOnly: Boolean = false,
+    ): String? {
+        val label =
+            runSuspendCatching { libraryCategories.hit(categoryId)?.label }.getOrNull()
+                ?: runSuspendCatching { categoryNavigationUseCase.buildCategoryPath(categoryId) }
+                    .getOrDefault(emptyList())
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { path -> CategoryHit(categoryId, path.map { it.title }).label }
+        return label?.let { if (baseBooksOnly) baseBooksLabel(it) else it }
+    }
+
+    // [label] marked as searched in its base books alone (`תלמוד (ספרי יסוד)`)
+    private suspend fun baseBooksLabel(label: String): String = getString(Res.string.scope_base_books_label, label)
 
     // Books' titles and categories' names, as the bar's chips (`ברכות, שבת, רש״י › תורה`)
     private suspend fun multiScopeLabel(
         bookIds: List<Long>,
         categoryIds: List<Long>,
+        baseOnlyCategoryIds: List<Long>,
     ): String? {
         val books = bookIds.mapNotNull { runSuspendCatching { repository.getBookCore(it)?.title }.getOrNull() }
-        val categories = categoryIds.mapNotNull { categoryLabel(it) }
+        val categories = categoryIds.mapNotNull { categoryLabel(it, it in baseOnlyCategoryIds) }
         return (books + categories).joinToString(", ").ifBlank { null }
     }
+
+    /**
+     * Searches the category, or the categories, of this search again in their base books alone (each one that holds
+     * others too), or in all their books: the status line's choice. The bar's chips follow ([scopeChanges]).
+     */
+    private fun setScopeBaseBooksOnly(baseBooksOnly: Boolean) {
+        viewModelScope.launch {
+            val state = persistedSearchState()
+            val scope =
+                when (val wide = state.wideScope) {
+                    is SearchScope.Category -> wide.copy(baseBooksOnly = baseBooksOnly && hasBaseBooksAndOthers(wide.categoryId))
+                    is SearchScope.Multi ->
+                        wide.copy(
+                            baseOnlyCategoryIds = if (baseBooksOnly) wide.categoryIds.filter { hasBaseBooksAndOthers(it) } else emptyList(),
+                        )
+                    else -> return@launch
+                }
+            val query = state.query.ifBlank { _uiState.value.query }
+            if (query.isBlank()) return@launch
+            _scopeChanges.tryEmit(scope)
+            searchFromBar(query, scope)
+        }
+    }
+
+    private val _scopeChanges = MutableSharedFlow<SearchScope>(extraBufferCapacity = 1)
+
+    /** The scopes this search moves to by itself (the status line's choice of books), for its bar to show. */
+    val scopeChanges: SharedFlow<SearchScope> = _scopeChanges.asSharedFlow()
 
     /**
      * The books searched when the search is scoped to an author, a category, or several books and categories, null
@@ -746,18 +833,17 @@ class SearchResultViewModel(
         state.fetchAuthorId.takeIf { it > 0 }?.let { authorId ->
             return authorScope(authorId)?.bookIds.orEmpty().ifEmpty { listOf(NO_BOOK_ID) }
         }
+
+        // A category's books, or its base books alone (the texts without their commentaries)
+        suspend fun underCategory(id: Long): List<Long> =
+            runSuspendCatching { libraryCategories.bookIds(id, baseBooksOnly = id in state.fetchBaseOnlyCategoryIds) }
+                .getOrDefault(emptyList())
         if (state.fetchBookIds.isNotEmpty() || state.fetchCategoryIds.isNotEmpty()) {
-            val underCategories =
-                state.fetchCategoryIds.flatMap { id ->
-                    runSuspendCatching { collectBookIdsUnderCategory(id) }.getOrDefault(emptySet())
-                }
+            val underCategories = state.fetchCategoryIds.flatMap { underCategory(it) }
             return (state.fetchBookIds + underCategories).distinct().ifEmpty { listOf(NO_BOOK_ID) }
         }
         val categoryId = state.fetchCategoryId.takeIf { it > 0 } ?: return null
-        return runSuspendCatching { collectBookIdsUnderCategory(categoryId) }
-            .getOrDefault(emptySet())
-            .toList()
-            .ifEmpty { listOf(NO_BOOK_ID) }
+        return underCategory(categoryId).ifEmpty { listOf(NO_BOOK_ID) }
     }
 
     init {
@@ -1394,6 +1480,7 @@ class SearchResultViewModel(
                     fetchCategoryId = it.fetchCategoryId,
                     fetchBookIds = it.fetchBookIds,
                     fetchCategoryIds = it.fetchCategoryIds,
+                    fetchBaseOnlyCategoryIds = it.fetchBaseOnlyCategoryIds,
                     selectedCategoryIds = emptySet(),
                     selectedBookIds = emptySet(),
                     selectedTocIds = emptySet(),
@@ -1437,6 +1524,7 @@ class SearchResultViewModel(
                     fetchCategoryId = it.fetchCategoryId,
                     fetchBookIds = it.fetchBookIds,
                     fetchCategoryIds = it.fetchCategoryIds,
+                    fetchBaseOnlyCategoryIds = it.fetchBaseOnlyCategoryIds,
                     selectedCategoryIds = emptySet(),
                     selectedBookIds = emptySet(),
                     selectedTocIds = emptySet(),
@@ -1945,8 +2033,8 @@ class SearchResultViewModel(
         }
     }
 
-    private suspend fun collectBookIdsUnderCategory(categoryId: Long): Set<Long> =
-        categoryNavigationUseCase.collectBookIdsUnderCategory(categoryId)
+    // A category's books, its subcategories' too: from the app's catalog, the database's only without one
+    private suspend fun collectBookIdsUnderCategory(categoryId: Long): Set<Long> = libraryCategories.bookIds(categoryId).toSet()
 
     /**
      * Compute breadcrumb pieces for a given search result: category path, book, and TOC path to the line.

@@ -40,6 +40,19 @@ class ScopeItemsTest {
     }
 
     @Test
+    fun `a category picked again takes the new choice of its books, in its place`() {
+        val talmud = CategoryHit(12L, listOf("תלמוד"), hasBaseBooksAndOthers = true)
+        val whole = ScopeItem.CategoryItem(talmud)
+        val baseBooks = ScopeItem.CategoryItem(talmud.copy(baseBooksOnly = true))
+        assertEquals(listOf(berakhot, baseBooks, shabbat), ScopeItems.add(listOf(berakhot, whole, shabbat), baseBooks))
+        assertEquals(SearchScope.Category(12L, baseBooksOnly = true), ScopeItems.scopeOf(listOf(baseBooks)))
+        assertEquals(
+            SearchScope.Multi(bookIds = listOf(1L), categoryIds = listOf(12L, 1142L), baseOnlyCategoryIds = listOf(12L)),
+            ScopeItems.scopeOf(listOf(berakhot, baseBooks, rashiTorah)),
+        )
+    }
+
+    @Test
     fun `a chip names a category with its parent`() {
         assertEquals("רש״י › תורה", rashiTorah.label)
         assertEquals("ברכות", berakhot.label)

@@ -223,6 +223,8 @@ data class SearchPersistedState(
     // Several books and categories searched together (SearchScope.Multi)
     val fetchBookIds: List<Long> = emptyList(),
     val fetchCategoryIds: List<Long> = emptyList(),
+    // The categories searched (fetchCategoryId, fetchCategoryIds) in their base books alone
+    val fetchBaseOnlyCategoryIds: List<Long> = emptyList(),
 ) {
     /** The scope the search runs in: its fetch scope, else its view filter. */
     val scope: SearchScope
@@ -244,8 +246,9 @@ data class SearchPersistedState(
         get() =
             when {
                 fetchAuthorId > 0 -> SearchScope.Author(fetchAuthorId)
-                fetchBookIds.isNotEmpty() || fetchCategoryIds.isNotEmpty() -> SearchScope.Multi(fetchBookIds, fetchCategoryIds)
-                fetchCategoryId > 0 -> SearchScope.Category(fetchCategoryId)
+                fetchBookIds.isNotEmpty() || fetchCategoryIds.isNotEmpty() ->
+                    SearchScope.Multi(fetchBookIds, fetchCategoryIds, fetchBaseOnlyCategoryIds.filter { it in fetchCategoryIds })
+                fetchCategoryId > 0 -> SearchScope.Category(fetchCategoryId, baseBooksOnly = fetchCategoryId in fetchBaseOnlyCategoryIds)
                 else -> SearchScope.Global
             }
 
@@ -277,6 +280,15 @@ data class SearchPersistedState(
             fetchAuthorId = (scope as? SearchScope.Author)?.authorId ?: 0L,
             fetchBookIds = (scope as? SearchScope.Multi)?.bookIds.orEmpty(),
             fetchCategoryIds = (scope as? SearchScope.Multi)?.categoryIds.orEmpty(),
+            fetchBaseOnlyCategoryIds = scope.categoriesInBaseBooks(),
         )
     }
 }
+
+// The categories [this] searches in their base books alone
+private fun SearchScope.categoriesInBaseBooks(): List<Long> =
+    when (this) {
+        is SearchScope.Category -> if (baseBooksOnly) listOf(categoryId) else emptyList()
+        is SearchScope.Multi -> baseOnlyCategoryIds
+        else -> emptyList()
+    }
