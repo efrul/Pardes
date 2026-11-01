@@ -194,6 +194,9 @@ class AppPrefs(context: Context) {
         return CommentatorSelection(
             remembered = remembered,
             all = sp.getBoolean("$KEY_ALL_COMMENTATORS$bookId", false),
+            // A copy: the preferences' own set must not be kept
+            groups = sp.getStringSet("$KEY_COMMENTATOR_GROUPS$bookId", null)?.toSet().orEmpty(),
+            hiddenGroups = sp.getStringSet("$KEY_HIDDEN_COMMENTATOR_GROUPS$bookId", null)?.toSet().orEmpty(),
             excluded = idsOf(sp.getString("$KEY_EXCLUDED_COMMENTATORS$bookId", null)).orEmpty(),
         )
     }
@@ -201,6 +204,11 @@ class AppPrefs(context: Context) {
     fun setCommentatorSelection(bookId: Long, selection: CommentatorSelection) {
         val editor = sp.edit().putString("$KEY_COMMENTATORS$bookId", selection.remembered.joinToString(","))
         if (selection.all) editor.putBoolean("$KEY_ALL_COMMENTATORS$bookId", true) else editor.remove("$KEY_ALL_COMMENTATORS$bookId")
+        fun putOrRemove(key: String, value: Set<String>) {
+            if (value.isEmpty()) editor.remove(key) else editor.putStringSet(key, value)
+        }
+        putOrRemove("$KEY_COMMENTATOR_GROUPS$bookId", selection.groups)
+        putOrRemove("$KEY_HIDDEN_COMMENTATOR_GROUPS$bookId", selection.hiddenGroups)
         if (selection.excluded.isEmpty()) {
             editor.remove("$KEY_EXCLUDED_COMMENTATORS$bookId")
         } else {
@@ -420,8 +428,11 @@ class AppPrefs(context: Context) {
         // Android only.
         private const val KEY_NIKUD = "show_nikud"
         private const val KEY_COMMENTATORS = "commentators_"
-        // "כל המפרשים" kept for a book, and the commentators unchecked there since (CommentatorSelection)
+        // Whole groups checked for a book (CommentatorSelection): all of them ("כל המפרשים"), the groups checked, those
+        // unchecked while all of them were, and the commentators unchecked while their group was checked
         private const val KEY_ALL_COMMENTATORS = "commentators_all_"
+        private const val KEY_COMMENTATOR_GROUPS = "commentators_groups_"
+        private const val KEY_HIDDEN_COMMENTATOR_GROUPS = "commentators_hidden_groups_"
         private const val KEY_EXCLUDED_COMMENTATORS = "commentators_excluded_"
         private const val KEY_SCHEMA = "android_prefs_schema"
         private const val KEY_CATALOG_ROW_WIDTH = "home_catalog_row_width"
