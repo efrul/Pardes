@@ -638,19 +638,31 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
     }
 
     /**
-     * A line's list ([available]) now has [selected] checked: the change is the book's too (desktop). A line shows
-     * `commentators.shownOf(available)`, derived again for every line as desktop reapplies the book's on each selected
-     * line, so a line chosen for before neither keeps what was unchecked since elsewhere nor misses what was checked.
-     * Only what the list showed checked can have been unchecked there: a line with none of the book's commentators
-     * no longer makes the book forget them all when one of its own is checked.
+     * A line's list ([listed], its commentators with their groups) now has [selected] checked: the change is the
+     * book's too (desktop). A line shows `commentators.shownOf(listed)`, derived again for every line as desktop
+     * reapplies the book's on each selected line, so a line chosen for before neither keeps what was unchecked since
+     * elsewhere nor misses what was checked. Only what the list showed checked can have been unchecked there: a line
+     * with none of the book's commentators no longer makes the book forget them all when one of its own is checked.
      */
-    fun updateSelectedCommentators(selected: Set<Long>, available: Collection<Long>) {
-        updateCommentators { it.changed(previous = it.shownOf(available), selected = selected) }
+    fun updateSelectedCommentators(selected: Set<Long>, listed: Map<Long, String>) {
+        updateCommentators { it.changed(previous = it.shownOf(listed), selected = selected, listed = listed) }
     }
 
-    /** "כל המפרשים" checked or unchecked on a line whose list is [available] (desktop setAllCommentators). */
-    fun setAllCommentators(checked: Boolean, available: Collection<Long>) {
-        updateCommentators { if (checked) it.allChecked(available) else it.allUnchecked(available) }
+    /** "כל המפרשים" checked or unchecked (desktop setAllCommentators): all of them on every line, or none. */
+    fun setAllCommentators(checked: Boolean) {
+        updateCommentators { if (checked) it.allChecked() else it.allUnchecked() }
+    }
+
+    /**
+     * [group]'s checkbox ("ראשונים על התנ״ך") checked or unchecked on a line whose list is [listed] (desktop
+     * setCommentatorGroup): all of the group's commentators on every line, or none of them. The group's commentators
+     * the book remembers or hides that this line does not list count too.
+     */
+    fun setCommentatorGroup(group: String, checked: Boolean, listed: Map<Long, String>) = launchSafely("Commentator group $group") {
+        val before = _state.value.commentators
+        val elsewhere = (before.remembered + before.excluded) - listed.keys
+        val members = listed.filterValues { it == group }.keys + elsewhere.filter { lineConnections.groupOf(it) == group }
+        updateCommentators { if (checked) it.groupChecked(group, members) else it.groupUnchecked(group, members) }
     }
 
     private fun updateCommentators(change: (CommentatorSelection) -> CommentatorSelection) {
