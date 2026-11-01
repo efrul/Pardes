@@ -55,6 +55,9 @@ class SearchService(private val store: LibraryStore) {
     /** Book title / acronym lookup, or null when seforim.db.lookup.lucene is missing. */
     suspend fun lookup(): LuceneLookupSearchService? = open().lookup
 
+    /** The library's categories with their paths and books, read once from its catalog (the bar's, every search's). */
+    suspend fun categories(): LibraryCategories = LibraryCategories.load(store)
+
     /** Cheap check (no Lucene class is loaded) that the full-text index is installed. */
     suspend fun isTextSearchAvailable(): Boolean = withContext(Dispatchers.IO) { isIndex(File(store.libraryDir, TEXT_INDEX)) }
 

@@ -153,7 +153,7 @@ class HistoryStore(
                 when {
                     searchTocId != null && searchBookId != null -> SearchScope.Toc(bookId = searchBookId, tocId = searchTocId)
                     searchBookId != null -> SearchScope.Book(searchBookId)
-                    searchCategoryId != null -> SearchScope.Category(searchCategoryId)
+                    searchCategoryId != null -> SearchScope.Category(searchCategoryId, baseBooksOnly = baseBooksInKey(key))
                     // No column for an author or several books and categories: they are in the key only
                     else -> authorIdInKey(key)?.let(SearchScope::Author) ?: multiScopeInKey(key) ?: SearchScope.Global
                 },
@@ -168,14 +168,27 @@ class HistoryStore(
         val scopeKey =
             when (scope) {
                 SearchScope.Global -> "g"
-                is SearchScope.Category -> "c${scope.categoryId}"
+                is SearchScope.Category -> "c${scope.categoryId}" + if (scope.baseBooksOnly) BASE_BOOKS_KEY else ""
                 is SearchScope.Book -> "b${scope.bookId}"
                 is SearchScope.Toc -> "t${scope.tocId}"
                 is SearchScope.Author -> "$AUTHOR_KEY${scope.authorId}"
-                is SearchScope.Multi -> "$MULTI_KEY${scope.bookIds.joinToString(".")}_${scope.categoryIds.joinToString(".")}"
+                is SearchScope.Multi ->
+                    "$MULTI_KEY${scope.bookIds.joinToString(".")}_${scope.categoryIds.joinToString(".")}" +
+                        scope.baseOnlyCategoryIds
+                            .takeIf { it.isNotEmpty() }
+                            ?.joinToString(".", prefix = "_")
+                            .orEmpty()
             } + if (globalExtended) "x" else ""
         return "search:$scopeKey:$query"
     }
+
+    // `search:c12y:…` (or `c12yx`): category 12 in its base books alone
+    private fun baseBooksInKey(key: String): Boolean =
+        key
+            .removePrefix("$KIND_SEARCH:")
+            .substringBefore(':')
+            .removeSuffix("x")
+            .endsWith(BASE_BOOKS_KEY)
 
     // `search:a150:…` (or `a150x`) → 150
     private fun authorIdInKey(key: String): Long? =
@@ -185,7 +198,7 @@ class HistoryStore(
             ?.takeWhile(Char::isDigit)
             ?.toLongOrNull()
 
-    // `search:m12.34_56:…` (or `m12.34_56x`) → books 12 and 34, category 56
+    // `search:m12.34_56.78_78:…` (or `…x`) → books 12 and 34, categories 56 and 78, 78 in its base books alone
     private fun multiScopeInKey(key: String): SearchScope.Multi? {
         val scopeKey =
             key
@@ -193,10 +206,12 @@ class HistoryStore(
                 .takeIf { it != key }
                 ?.substringBefore(':')
                 ?.takeIf { it.startsWith(MULTI_KEY) } ?: return null
-        val body = scopeKey.removePrefix(MULTI_KEY).removeSuffix("x")
-        val bookIds = body.substringBefore('_').split('.').mapNotNull(String::toLongOrNull)
-        val categoryIds = body.substringAfter('_', "").split('.').mapNotNull(String::toLongOrNull)
-        return SearchScope.Multi(bookIds, categoryIds).takeIf { bookIds.isNotEmpty() || categoryIds.isNotEmpty() }
+        val parts = scopeKey.removePrefix(MULTI_KEY).removeSuffix("x").split('_')
+
+        fun ids(index: Int) = parts.getOrElse(index) { "" }.split('.').mapNotNull(String::toLongOrNull)
+        val bookIds = ids(0)
+        val categoryIds = ids(1)
+        return SearchScope.Multi(bookIds, categoryIds, ids(2)).takeIf { bookIds.isNotEmpty() || categoryIds.isNotEmpty() }
     }
 
     private companion object {
@@ -204,5 +219,6 @@ class HistoryStore(
         const val KIND_SEARCH = "search"
         const val AUTHOR_KEY = "a"
         const val MULTI_KEY = "m"
+        const val BASE_BOOKS_KEY = "y"
     }
 }

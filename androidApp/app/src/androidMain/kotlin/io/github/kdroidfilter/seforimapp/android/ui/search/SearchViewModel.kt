@@ -61,6 +61,9 @@ private const val DEFAULT_NEAR = 5
 /** No book has it: a filter on it finds nothing (desktop NO_BOOK_ID). */
 private const val NO_BOOK_ID = -1L
 
+// A category searched in its base books alone, on its name (desktop scope_base_books_label)
+private const val SCOPE_BASE_BOOKS_LABEL = "%s (ספרי יסוד)"
+
 /** Pages a restored search tab loads at most to come back to its place in the list. */
 private const val MAX_RESTORE_PAGES = 12
 
@@ -101,6 +104,12 @@ data class SearchUiState(
     val scopeAuthorName: String? = null,
     /** The category, or the books and categories, the search was scoped to, as the bar's chips name them. */
     val scopeLabel: String? = null,
+    /**
+     * Searched in a category holding base books and others: whether in its base books alone (the texts without their
+     * commentaries), with [scopeLabel] without that mark for the other choice; null in any other scope.
+     */
+    val scopeBaseBooksOnly: Boolean? = null,
+    val scopeAllBooksLabel: String? = null,
     val hasMore: Boolean = false,
     val isLoadingMore: Boolean = false,
     val progressCurrent: Int = 0,
@@ -194,7 +203,6 @@ class SearchViewModel(
 
     private val bookCache = HashMap<Long, Book?>()
     private val categoryPathCache = HashMap<Long, List<Category>>()
-    private val booksUnderCategory = HashMap<Long, Set<Long>>()
     private val tocIndexes = HashMap<Long, TocLineIndex>()
     private val bookDetailsLoader = BookDetailsLoader(repo)
 
@@ -217,21 +225,75 @@ class SearchViewModel(
      */
     private suspend fun scopeBookIds(scope: SearchScope = searchScope): List<Long>? = when (scope) {
         is SearchScope.Author -> authorScope(scope.authorId)?.bookIds.orEmpty().ifEmpty { listOf(NO_BOOK_ID) }
-        is SearchScope.Category -> booksUnder(scope.categoryId).toList().ifEmpty { listOf(NO_BOOK_ID) }
-        is SearchScope.Multi -> (scope.bookIds + scope.categoryIds.flatMap { booksUnder(it) }).distinct().ifEmpty { listOf(NO_BOOK_ID) }
-        else -> null
-    }
-
-    // The category's, or the books' and categories', names as the bar's chips show them (`ברכות, שבת, רש״י › תורה`)
-    private suspend fun scopeLabel(scope: SearchScope): String? = when (scope) {
-        is SearchScope.Category -> categoryLabel(scope.categoryId)
+        is SearchScope.Category -> booksUnder(scope.categoryId, scope.baseBooksOnly).ifEmpty { listOf(NO_BOOK_ID) }
         is SearchScope.Multi ->
-            (scope.bookIds.mapNotNull { book(it)?.title } + scope.categoryIds.mapNotNull { categoryLabel(it) }).joinToString(", ").ifBlank { null }
+            (scope.bookIds + scope.categoryIds.flatMap { booksUnder(it, it in scope.baseOnlyCategoryIds) }).distinct().ifEmpty { listOf(NO_BOOK_ID) }
         else -> null
     }
 
-    private suspend fun categoryLabel(categoryId: Long): String? =
-        readOrNull { categoryPath(categoryId) }?.takeIf { it.isNotEmpty() }?.let { path -> CategoryHit(categoryId, path.map { it.title }).label }
+    // The category's, or the books' and categories', names as the bar's chips show them (`ברכות, שבת, רש״י › תורה`), a
+    // category in its base books alone marked so (`תלמוד (ספרי יסוד)`)
+    private suspend fun scopeLabel(scope: SearchScope): String? = when (scope) {
+        is SearchScope.Category -> categoryLabel(scope.categoryId, scope.baseBooksOnly)
+        is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, scope.baseOnlyCategoryIds)
+        else -> null
+    }
+
+    private suspend fun multiScopeLabel(bookIds: List<Long>, categoryIds: List<Long>, baseOnlyCategoryIds: List<Long>): String? =
+        (bookIds.mapNotNull { book(it)?.title } + categoryIds.mapNotNull { categoryLabel(it, it in baseOnlyCategoryIds) })
+            .joinToString(", ")
+            .ifBlank { null }
+
+    private suspend fun categoryLabel(categoryId: Long, baseBooksOnly: Boolean = false): String? =
+        (readOrNull { service.categories().hit(categoryId)?.label }
+            ?: readOrNull { categoryPath(categoryId) }?.takeIf { it.isNotEmpty() }?.let { path -> CategoryHit(categoryId, path.map { it.title }).label })
+            ?.let { if (baseBooksOnly) SCOPE_BASE_BOOKS_LABEL.format(it) else it }
+
+    /**
+     * Where [scope] gives the choice between its categories' base books alone and all their books (a category of it
+     * holds both): whether in their base books alone, and the scope's name with all of them; null otherwise.
+     */
+    private suspend fun scopeBaseBooksChoice(scope: SearchScope): Pair<Boolean, String?>? {
+        val (categoryIds, baseOnlyIds) = when (scope) {
+            is SearchScope.Category -> listOf(scope.categoryId) to (if (scope.baseBooksOnly) listOf(scope.categoryId) else emptyList())
+            is SearchScope.Multi -> scope.categoryIds to scope.baseOnlyCategoryIds
+            else -> return null
+        }
+        val choosable = categoryIds.filter { hasBaseBooksAndOthers(it) }.ifEmpty { return null }
+        val baseOnly = choosable.all { it in baseOnlyIds }
+        val allBooksLabel = if (!baseOnly) null else when (scope) {
+            is SearchScope.Category -> categoryLabel(scope.categoryId)
+            is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, emptyList())
+            else -> null
+        }
+        return baseOnly to allBooksLabel
+    }
+
+    private suspend fun hasBaseBooksAndOthers(categoryId: Long): Boolean = readOrNull { service.categories().hasBaseBooksAndOthers(categoryId) } == true
+
+    private val _scopeChanges = MutableSharedFlow<SearchScope>(extraBufferCapacity = 1)
+
+    /** The scopes this search moves to by itself (the status line's choice of books), for its bar to show. */
+    val scopeChanges: SharedFlow<SearchScope> = _scopeChanges.asSharedFlow()
+
+    /**
+     * The status line's link in a category holding base books and others: its base books alone (the texts without
+     * their commentaries), or all its books, searched again (Pardes desktop SetScopeBaseBooksOnly). Its bar follows.
+     */
+    fun setScopeBaseBooksOnly(baseBooksOnly: Boolean) {
+        viewModelScope.launch {
+            val scope = when (val current = searchScope) {
+                is SearchScope.Category -> current.copy(baseBooksOnly = baseBooksOnly && hasBaseBooksAndOthers(current.categoryId))
+                is SearchScope.Multi ->
+                    current.copy(baseOnlyCategoryIds = if (baseBooksOnly) current.categoryIds.filter { hasBaseBooksAndOthers(it) } else emptyList())
+                else -> return@launch
+            }
+            val query = _state.value.executedQuery.ifBlank { _state.value.query }
+            if (query.isBlank()) return@launch
+            _scopeChanges.tryEmit(scope)
+            searchFromBar(query, scope, widen = false)
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -432,10 +494,12 @@ class SearchViewModel(
                 val authorBooks = scopeBookIds(scope)
                 val scopeAuthorName = (scope as? SearchScope.Author)?.let { authorScope(it.authorId)?.name }
                 val scopeLabel = scopeLabel(scope)
+                val baseBooksChoice = scopeBaseBooksChoice(scope)
                 tocCountsAcc.clear()
                 _state.update {
                     it.copy(
                         scopeBook = scopeBook, scopeTocId = fetchTocId, scopeAuthorName = scopeAuthorName, scopeLabel = scopeLabel,
+                        scopeBaseBooksOnly = baseBooksChoice?.first, scopeAllBooksLabel = baseBooksChoice?.second,
                         tocTree = null, tocCounts = emptyMap(), selectedTocIds = emptySet(),
                     )
                 }
@@ -807,9 +871,9 @@ class SearchViewModel(
     // failed or cancelled read is not kept: a category read as empty would show no result for its tab again
     private suspend fun book(id: Long): Book? = bookCache[id] ?: readOrNull { repo.getBookCore(id) }?.also { bookCache[id] = it }
 
-    private suspend fun booksUnder(categoryId: Long): Set<Long> =
-        booksUnderCategory[categoryId] ?: readOrNull { repo.getBooksUnderCategoryTree(categoryId).mapTo(HashSet()) { it.id } }
-            ?.also { booksUnderCategory[categoryId] = it }.orEmpty()
+    // A category's books, its subcategories' too, or its base books alone: from the library's catalog, read once for the app
+    private suspend fun booksUnder(categoryId: Long, baseBooksOnly: Boolean = false): List<Long> =
+        readOrNull { service.categories().bookIds(categoryId, baseBooksOnly) }.orEmpty()
 
     private suspend fun <T> readOrNull(read: suspend () -> T): T? = try {
         read()

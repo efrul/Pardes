@@ -62,6 +62,7 @@ class AuthorScopeSearchTest : SearchIntegrationTestBase() {
             historyStore = HistoryStore(UserSettingsDb(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create))),
             appSettings = testAppSettings(),
             lookup = mockk(relaxed = true),
+            libraryCategories = LibraryCategories(mockk { every { getCatalog() } returns null }, requireRepository()),
         )
     }
 

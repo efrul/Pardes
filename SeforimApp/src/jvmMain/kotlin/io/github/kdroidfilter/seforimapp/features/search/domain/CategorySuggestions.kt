@@ -2,11 +2,18 @@ package io.github.kdroidfilter.seforimapp.features.search.domain
 
 import androidx.compose.runtime.Immutable
 
-/** A category of the library the bar can search in, whole: its id and its path (from the root, itself last). */
+/**
+ * A category of the library the bar can search in, whole: its id and its path (from the root, itself last), or
+ * [baseBooksOnly] its base books alone.
+ */
 @Immutable
 data class CategoryHit(
     val id: Long,
     val path: List<String>,
+    /** Searched in its base books alone: the texts without their commentaries (תלמוד's tractates, תורה's five books). */
+    val baseBooksOnly: Boolean = false,
+    /** It holds base books and others: searched in its base books alone, it is another search (see [baseBooksOnly]). */
+    val hasBaseBooksAndOthers: Boolean = false,
 ) {
     val title: String get() = path.last()
 
@@ -35,7 +42,11 @@ object CategorySuggestions {
             "משנב" to listOf("משנה ברורה"),
         )
 
-    /** The categories [query] names, best first: its exact title, then the most of it in the title, then the shallowest. */
+    /**
+     * The categories [query] names, best first: its exact title, then the most of it in the title, then the shallowest.
+     * One that holds base books and others is followed by its base books alone ([CategoryHit.baseBooksOnly]): תלמוד,
+     * then תלמוד's tractates without their commentaries.
+     */
     fun match(
         query: String,
         categories: List<CategoryHit>,
@@ -50,8 +61,9 @@ object CategorySuggestions {
             .mapNotNull { category -> rank(key, choices, category)?.let { category to it } }
             .sortedWith(compareBy<Pair<CategoryHit, Rank>> { it.second })
             .take(limit)
-            .map { it.first }
-            .toList()
+            .flatMap { (category, _) ->
+                if (category.hasBaseBooksAndOthers) sequenceOf(category, category.copy(baseBooksOnly = true)) else sequenceOf(category)
+            }.toList()
     }
 
     private data class Rank(

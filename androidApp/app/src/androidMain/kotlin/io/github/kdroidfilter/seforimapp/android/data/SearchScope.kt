@@ -16,9 +16,12 @@ sealed interface SearchScope {
     @Serializable
     data object Global : SearchScope
 
-    /** All the books of one category and its subcategories, base books or not (`תלמוד`, `רש"י על התורה`). */
+    /**
+     * All the books of one category and its subcategories, base books or not (`תלמוד`, `רש"י על התורה`), or
+     * [baseBooksOnly] its base books alone: the texts without their commentaries (תלמוד's tractates).
+     */
     @Serializable
-    data class Category(val categoryId: Long) : SearchScope
+    data class Category(val categoryId: Long, val baseBooksOnly: Boolean = false) : SearchScope
 
     @Serializable
     data class Book(val bookId: Long) : SearchScope
@@ -30,7 +33,10 @@ sealed interface SearchScope {
     @Serializable
     data class Author(val authorId: Long) : SearchScope
 
-    /** Several books and categories together (each category with its subcategories), base books or not. */
+    /**
+     * Several books and categories together (each category with its subcategories), base books or not; those of
+     * [categoryIds] also in [baseOnlyCategoryIds] in their base books alone.
+     */
     @Serializable
-    data class Multi(val bookIds: List<Long>, val categoryIds: List<Long>) : SearchScope
+    data class Multi(val bookIds: List<Long>, val categoryIds: List<Long>, val baseOnlyCategoryIds: List<Long> = emptyList()) : SearchScope
 }

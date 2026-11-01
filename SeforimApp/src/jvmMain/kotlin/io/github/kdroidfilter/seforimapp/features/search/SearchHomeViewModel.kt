@@ -11,6 +11,7 @@ import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategorySuggestions
+import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItems
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
@@ -23,7 +24,6 @@ import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimapp.framework.session.SearchPersistedState
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedStateStore
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
-import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.Dispatchers
@@ -136,6 +136,8 @@ class SearchHomeViewModel(
     private val repository: SeforimRepository,
     private val lookup: LuceneLookupSearchService,
     private val appSettings: AppSettings,
+    // The library's categories with their paths and books, for the suggestions and the chips (the app's, every window's)
+    private val libraryCategories: LibraryCategories,
     // The home page's greeting needs the user's profile; a results tab's bar doesn't
     observeProfile: Boolean = true,
 ) : ViewModel() {
@@ -163,14 +165,10 @@ class SearchHomeViewModel(
     private var restoringAuthorId: Long? = null
 
     // The category a restored results tab searched in, while its path loads for the chip
-    private var restoringCategoryId: Long? = null
+    private var restoringCategory: SearchScope.Category? = null
 
     // The books and categories a restored results tab searched in, while they load for the chips
     private var restoringMultiScope: SearchScope.Multi? = null
-
-    // The library's categories with their paths, loaded once for the bar's suggestions
-    private var categories: List<CategoryHit>? = null
-    private val categoriesMutex = Mutex()
 
     private val referenceQuery = MutableStateFlow("")
     private val tocQuery = MutableStateFlow("")
@@ -464,7 +462,7 @@ class SearchHomeViewModel(
         showSuggestions: Boolean,
     ) {
         restoringAuthorId = null
-        restoringCategoryId = null
+        restoringCategory = null
         _uiState.value =
             _uiState.value.copy(
                 selectedScopeAuthor = author,
@@ -521,7 +519,7 @@ class SearchHomeViewModel(
             return
         }
         restoringAuthorId = null
-        restoringCategoryId = null
+        restoringCategory = null
         restoringMultiScope = null
         authorBooks = emptyList()
         // What was typed to find the item is gone from the bar: its suggestions too
@@ -547,29 +545,16 @@ class SearchHomeViewModel(
             )
     }
 
-    // The library's categories with their paths, for the suggestions: once, from the database
-    private suspend fun allCategories(): List<CategoryHit> =
-        categoriesMutex.withLock {
-            categories ?: runSuspendCatching { loadCategories() }.getOrDefault(emptyList()).also { loaded ->
-                if (loaded.isNotEmpty()) categories = loaded
-            }
-        }
+    // The library's categories with their paths, for the suggestions
+    private suspend fun allCategories(): List<CategoryHit> = runSuspendCatching { libraryCategories.categories() }.getOrDefault(emptyList())
 
-    private suspend fun loadCategories(): List<CategoryHit> {
-        val result = ArrayList<CategoryHit>()
-
-        suspend fun walk(
-            category: Category,
-            parentPath: List<String>,
-        ) {
-            currentCoroutineContext().ensureActive()
-            val path = parentPath + category.title
-            result += CategoryHit(category.id, path)
-            repository.getCategoryChildren(category.id).forEach { walk(it, path) }
-        }
-        repository.getRootCategories().forEach { walk(it, emptyList()) }
-        return result
-    }
+    // [categoryId]'s chip, whole or in its base books alone; null for a category the library doesn't have
+    private suspend fun categoryHit(
+        categoryId: Long,
+        baseBooksOnly: Boolean,
+    ): CategoryHit? =
+        runSuspendCatching { libraryCategories.hit(categoryId, baseBooksOnly) }.getOrNull()
+            ?: buildCategoryPathTitlesCached(categoryId).takeIf { it.isNotEmpty() }?.let { CategoryHit(categoryId, it, baseBooksOnly) }
 
     fun onClearAuthor() {
         restoringAuthorId = null
@@ -583,7 +568,7 @@ class SearchHomeViewModel(
         showSuggestions: Boolean = true,
     ) {
         restoringAuthorId = null
-        restoringCategoryId = null
+        restoringCategory = null
         restoringMultiScope = null
         authorBooks = emptyList()
         // Update synchronously first
@@ -712,7 +697,7 @@ class SearchHomeViewModel(
                     return
                 }
                 is SearchScope.Category -> {
-                    showCategoryScope(scope.categoryId)
+                    showCategoryScope(scope)
                     return
                 }
                 is SearchScope.Multi -> {
@@ -747,17 +732,18 @@ class SearchHomeViewModel(
         }
     }
 
-    private fun showCategoryScope(categoryId: Long) {
-        if (_uiState.value.selectedScopeCategory?.id == categoryId) return
+    private fun showCategoryScope(scope: SearchScope.Category) {
+        val shown = _uiState.value.selectedScopeCategory
+        if (shown?.id == scope.categoryId && shown.baseBooksOnly == scope.baseBooksOnly) return
         // The bar searches in its books at once, before its path is loaded for the chip
-        restoringCategoryId = categoryId
+        restoringCategory = scope
         viewModelScope.launch {
-            val path = buildCategoryPathTitlesCached(categoryId)
+            val hit = categoryHit(scope.categoryId, scope.baseBooksOnly)
             // Another scope picked meanwhile
-            if (restoringCategoryId != categoryId) return@launch
-            restoringCategoryId = null
-            if (path.isEmpty()) return@launch
-            applyScopeItems(listOf(ScopeItem.CategoryItem(CategoryHit(categoryId, path))), showSuggestions = false)
+            if (restoringCategory != scope) return@launch
+            restoringCategory = null
+            if (hit == null) return@launch
+            applyScopeItems(listOf(ScopeItem.CategoryItem(hit)), showSuggestions = false)
         }
     }
 
@@ -772,7 +758,7 @@ class SearchHomeViewModel(
                 }
             val categories =
                 scope.categoryIds.mapNotNull { id ->
-                    buildCategoryPathTitlesCached(id).takeIf { it.isNotEmpty() }?.let { ScopeItem.CategoryItem(CategoryHit(id, it)) }
+                    categoryHit(id, baseBooksOnly = id in scope.baseOnlyCategoryIds)?.let(ScopeItem::CategoryItem)
                 }
             // Another scope picked meanwhile
             if (restoringMultiScope != scope) return@launch
@@ -794,7 +780,7 @@ class SearchHomeViewModel(
             selected.scopeItems.isNotEmpty() -> ScopeItems.scopeOf(selected.scopeItems)
             else ->
                 restoringAuthorId?.let(SearchScope::Author)
-                    ?: restoringCategoryId?.let(SearchScope::Category)
+                    ?: restoringCategory
                     ?: restoringMultiScope
                     ?: SearchScope.Global
         }

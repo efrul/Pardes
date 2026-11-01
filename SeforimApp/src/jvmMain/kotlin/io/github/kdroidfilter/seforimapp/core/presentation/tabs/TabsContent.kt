@@ -292,6 +292,10 @@ private fun SearchTabContent(
     LaunchedEffect(barViewModel, tabsViewModel) {
         barViewModel.navigationEvents.collect { event -> navigate(event, tabsViewModel) }
     }
+    // The search moved by itself (a category's base books or all its books): its bar shows where it searches now
+    LaunchedEffect(barViewModel, viewModel) {
+        viewModel.scopeChanges.collect { scope -> barViewModel.showScope(scope) }
+    }
     val homeSearchCallbacks = rememberHomeSearchCallbacks(barViewModel) { destination.tabId }
     // The home bar here: its text search runs in this tab, where the bar says (its picked book or
     // category, else everywhere), in the base or all books as chosen (only Ctrl+Enter widens it)
@@ -454,6 +458,9 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
             onGlobalExtendedChange = { extended ->
                 viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetGlobalExtended(extended))
                 viewModel.onEvent(SearchResultViewModel.SearchResultEvents.ExecuteSearch)
+            },
+            onScopeBaseBooksChange = { baseBooksOnly ->
+                viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetScopeBaseBooksOnly(baseBooksOnly))
             },
             onScroll = { anchorId, anchorIndex, index, offset ->
                 viewModel.onEvent(

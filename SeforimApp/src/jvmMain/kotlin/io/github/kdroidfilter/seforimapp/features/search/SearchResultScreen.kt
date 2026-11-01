@@ -106,6 +106,8 @@ data class SearchShellActions(
     val onSubmit: (query: String) -> Unit,
     val onQueryChange: (String) -> Unit,
     val onGlobalExtendedChange: (Boolean) -> Unit,
+    // In a category holding base books and others: its base books alone (the texts without their commentaries), or all
+    val onScopeBaseBooksChange: (Boolean) -> Unit = {},
     val onScroll: (anchorId: Long, anchorIndex: Int, index: Int, offset: Int) -> Unit,
     val onCancelSearch: () -> Unit,
     val onOpenResult: (SearchResult, openInNewTab: Boolean) -> Unit,
@@ -435,7 +437,8 @@ private fun SearchResultContentMvi(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 SearchStatusLine(
-                                    // In one book or one category, where it searched: no base/all books choice there
+                                    // In one book, or books and categories picked, where it searched: no choice of the
+                                    // library's base books there, a category's own base books instead
                                     scope =
                                         if (oneBook) {
                                             state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle
@@ -447,6 +450,9 @@ private fun SearchResultContentMvi(
                                     globalExtended = state.globalExtended,
                                     baseBooksHadNoResults = state.baseBooksHadNoResults,
                                     onGlobalExtendedChange = actions.onGlobalExtendedChange,
+                                    scopeBaseBooksOnly = if (oneBook) null else state.scopeBaseBooksOnly,
+                                    scopeAllBooksLabel = state.scopeAllBooksLabel,
+                                    onScopeBaseBooksChange = actions.onScopeBaseBooksChange,
                                     modifier = Modifier.padding(end = 12.dp),
                                 )
 
@@ -1177,7 +1183,8 @@ private fun ColumnScope.EntityDetails(
 
 /**
  * Where the search looked and how many it found, with the other choice as a link: the base books
- * (the default) or all of them; when the base books had nothing, says so.
+ * (the default) or all of them; when the base books had nothing, says so. In a category holding base books and others
+ * ([scopeBaseBooksOnly] not null), the choice between its base books alone and all its books ([scopeAllBooksLabel]).
  */
 @Composable
 private fun SearchStatusLine(
@@ -1188,6 +1195,9 @@ private fun SearchStatusLine(
     baseBooksHadNoResults: Boolean,
     onGlobalExtendedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    scopeBaseBooksOnly: Boolean? = null,
+    scopeAllBooksLabel: String? = null,
+    onScopeBaseBooksChange: (Boolean) -> Unit = {},
 ) {
     val grey = readingSecondary()
     val count = remember(total) { NumberFormat.getIntegerInstance().format(total) }
@@ -1212,6 +1222,17 @@ private fun SearchStatusLine(
                 JewelTheme.globalColors.outlines.focused,
                 13.sp,
             ) { onGlobalExtendedChange(!globalExtended) }
+        } else if (!isLoading && scope != null && scopeBaseBooksOnly != null) {
+            Text("·", color = grey, fontSize = 13.sp)
+            ResultLink(
+                if (scopeBaseBooksOnly) {
+                    stringResource(Res.string.search_switch_scope_all, scopeAllBooksLabel ?: scope)
+                } else {
+                    stringResource(Res.string.search_switch_base)
+                },
+                JewelTheme.globalColors.outlines.focused,
+                13.sp,
+            ) { onScopeBaseBooksChange(!scopeBaseBooksOnly) }
         }
     }
 }
