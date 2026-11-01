@@ -1,6 +1,6 @@
 ---
 name: pardes-semantic-search
-description: Pardes desktop's open semantic search (Dicta's neodictabert-bilingual-embed, fine-tuned on the library's links, ONNX int8 + Lucene HNSW + RRF) and its model pipeline in semantic-model/ (export, benchmark, fine-tuning, distillation, Kaggle runs, vector index). Use for any task on semantic or hybrid search, the embedding model, ONNX, the tokenizer parity, the benchmark, training or distilling, Kaggle or Colab GPU runs, pardes.vec.lucene, "smart find", or the common sources line above the search results (שורת מקורות משותפים), even when the request doesn't name them (e.g. "the search doesn't find by meaning", "train the model again", "why is the vector index ignored").
+description: Pardes desktop's open semantic search (Dicta's neodictabert-bilingual-embed, fine-tuned on the library's links, ONNX int8 + Lucene HNSW + RRF) and its model pipeline in semantic-model/ (export, benchmark, fine-tuning, distillation, Kaggle runs, vector index). Use for any task on semantic or hybrid search, the embedding model, ONNX, the tokenizer parity, the benchmark or an outside evaluation set (crfh1672/search-queries), training or distilling, Kaggle or Colab GPU runs, pardes.vec.lucene, "smart find", or the common sources line above the search results (שורת מקורות משותפים), even when the request doesn't name them (e.g. "the search doesn't find by meaning", "train the model again", "why is the vector index ignored").
 ---
 
 # Pardes semantic search
@@ -92,3 +92,39 @@ Kaggle pitfalls already met:
   one zip named `<name>.zip.bin` (kept as is), downloaded from the file list, renamed to `.zip`.
 - transformers warns of an "incorrect regex pattern" in the model's tokenizer: a false alarm here (52k library lines
   and the benchmark's queries tokenize identically to Dicta's `tokenizer.json`, which the app's queries use).
+
+## Outside evaluation set: crfh1672/search-queries
+
+[crfh1672/search-queries](https://github.com/crfh1672/search-queries) (as of 2026-11-01; check its branches again)
+builds a test set for semantic search over Otzaria's books, to measure Otzaria's smart search against its regular one.
+A JSONL record holds a query (`conceptual` or `short`), the correct quote and a near miss from the same book (heading
+path, line), `split` and `verified_by_human`; each book pins its otzaria-library `.txt` by commit and SHA-256.
+- **Its data:** none on `main`. 422 drafts are on two unmerged PR branches, `add-berakhot-chagiga` and
+  `readd-existing-datasets` (`drafts/תלמוד בבלי/<tractate>/`): Berakhot 125, Megillah 106, Moed Katan 105, Chagiga 51,
+  Taanit 35. All are `test`, none is human-verified (`verifiers.txt` names no one), and they are probably model-written
+  (its `skill/` writes them: its rules, not ours). Questions in today's Hebrew on the Gemara's wording, median 8 words
+  (the 36 `short` ones 4, as real searches); a quarter share no word with their quote.
+- **Reading it:** it is public, so `add_repo` (read) answers that the proxy serves it. Clone with
+  `GIT_LFS_SKIP_SMUDGE=1`, fetch each branch by name, and `git archive origin/<branch> drafts | tar -x` into the
+  scratchpad.
+- **For measuring only, never for training:** all `test`, unverified, and 422 beside 150k pairs. What it adds is the
+  Hebrew → Aramaic bridge in the Bavli (`eval-v1` has 32 Bavli questions with a target), written outside this pipeline.
+- **Hold its lines out before building training data** (the Chavruta run of `TRAINING_PLAN.md` had not run on
+  2026-11-01): its targets and near misses, mapped to line ids, go into `train-v2/sample_targets.py`'s `held_out()`.
+  - Chavruta's pairs and the distillation texts then skip them and their `neighbors()`. `train-v2/build_pairs.py`
+    stops on the questions near them instead: drop those (likely t2-1373/1374, Chagiga 10b, in the sugya of one of
+    its questions).
+  - Otherwise its 297 questions outside Berakhot leak through Chavruta, whose Hebrew explanation of a Gemara line is
+    nearly a question on it. Berakhot is a benchmark book (`build_eval_set.py`), out of every training source already.
+  - The links' pairs don't read `held_out()` (`build_train_pairs.py` leaves out only the benchmark's books, and `tune`
+    reuses the first `--links` of `train`'s file), so every model since the first teacher may have met some of these
+    lines (8,220 of its pairs are Chavruta's). Filter them too if the set becomes a locked test.
+- **Its lines are not seforim.db's:** they number the physical lines of the pinned `.txt` (Sefaria's export,
+  `extraBooks/SefariaToOtzria/sefaria_export/…`), whose text the quotes match with niqqud and tags removed. Map each
+  record by its quotes within the tractate's lines.
+- **Measuring it:** one target per question, and a single target is too strict a measure (`TRAINING_PLAN.md`). Measure
+  within the tractate, where the near miss is the real competitor, and over all books only with graded judging
+  (`eval-real/pool.py`, `eval-v1/score_graded.py`). Its near misses are unverified and some answer the question
+  (`moedkatan-047`: "האם אבל נוהג ברגל" → "כל שהוא משום אבל — רגל מפסיקו").
+- **No license file:** its questions stay out of efrul/Pardes until its owners grant one. Fetch them when measuring,
+  and commit only their ids, our line ids and our results (as `eval-real` keeps the books' text out).
