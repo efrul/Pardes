@@ -172,17 +172,23 @@ class CatalogAccess private constructor(catalog: PrecomputedCatalog) {
 
         /** The catalog of the installed library, read once (desktop CatalogCache): off the main thread. */
         suspend fun load(store: LibraryStore): CatalogAccess = mutex.withLock {
-            val catalogFile = store.catalogFile
-            val stamp = "${catalogFile.path}:${catalogFile.length()}:${catalogFile.lastModified()}"
+            val stamp = catalogStamp(store)
             cached?.takeIf { it.first == stamp }?.let { return@withLock it.second }
-            val access = withContext(Dispatchers.IO) {
-                val catalog = runCatching {
-                    if (catalogFile.isFile) ProtoBuf.decodeFromByteArray(PrecomputedCatalog.serializer(), catalogFile.readBytes()) else null
-                }.onFailure { Log.w("CatalogAccess", "catalog.pb", it) }.getOrNull() ?: fromDatabase(store)
-                CatalogAccess(catalog)
-            }
+            val access = CatalogAccess(readCatalog(store))
             cached = stamp to access
             access
+        }
+
+        /** What tells the installed library's catalog apart from the one before it (an update, another library). */
+        fun catalogStamp(store: LibraryStore): String =
+            store.catalogFile.let { "${it.path}:${it.length()}:${it.lastModified()}" }
+
+        /** The installed library's catalog tree: catalog.pb, or the database's tree without it. Read anew each call. */
+        suspend fun readCatalog(store: LibraryStore): PrecomputedCatalog = withContext(Dispatchers.IO) {
+            val catalogFile = store.catalogFile
+            runCatching {
+                if (catalogFile.isFile) ProtoBuf.decodeFromByteArray(PrecomputedCatalog.serializer(), catalogFile.readBytes()) else null
+            }.onFailure { Log.w("CatalogAccess", "catalog.pb", it) }.getOrNull() ?: fromDatabase(store)
         }
 
         /** The catalog tree of the database, for a library without catalog.pb: categories, then each one's books in order. */

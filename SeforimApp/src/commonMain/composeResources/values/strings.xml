@@ -403,6 +403,12 @@
     <string name="search_text_row_in_book">חיפוש בתוך %2$s: %1$s</string>
     <string name="search_text_row_in_author">חיפוש בספרי %2$s: %1$s</string>
     <string name="search_text_row_in_category">חיפוש בכל ספרי %2$s: %1$s</string>
+    <!-- Books and categories picked, one at least in its base books alone (its chip says so) -->
+    <string name="search_text_row_in_scope">חיפוש ב%2$s: %1$s</string>
+    <!-- A category searched in its base books alone: the texts without their commentaries (its chip, the status line) -->
+    <string name="scope_base_books_label">%1$s (ספרי יסוד)</string>
+    <!-- The suggestion of a category in its base books alone, beside the same category whole -->
+    <string name="category_base_books_only">ספרי יסוד בלבד</string>
     <string name="search_by_category_or_book">חפש לפי קטגוריה או ספר</string>
     <string name="remove_selected_book">הסר ספר שנבחר</string>
 
@@ -728,6 +734,8 @@
     <string name="search_status_fallback">לא נמצא בספרי יסוד · מוצגות %1$s תוצאות מכל הספרים</string>
     <string name="search_switch_all">חיפוש בכל הספרים</string>
     <string name="search_switch_base">רק ספרי יסוד</string>
+    <!-- A category searched in its base books alone: back to all its books -->
+    <string name="search_switch_scope_all">בכל ספרי %1$s</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>

@@ -186,6 +186,24 @@ class SessionModelsTest {
     }
 
     @Test
+    fun `a category searched in its base books alone stays so, alone or with others, and from one of its books`() {
+        val talmud = SearchScope.Category(12L, baseBooksOnly = true)
+        val state = SearchPersistedState().withScope(talmud)
+        assertEquals(talmud, ProtoBuf.decodeFromByteArray<SearchPersistedState>(ProtoBuf.encodeToByteArray(state)).scope)
+        val narrowed =
+            state.withScope(SearchScope.Book(3L)).copy(
+                fetchCategoryId = state.fetchCategoryId,
+                fetchBaseOnlyCategoryIds = state.fetchBaseOnlyCategoryIds,
+            )
+        assertEquals(talmud, narrowed.wideScope)
+        val several = SearchScope.Multi(bookIds = listOf(3L), categoryIds = listOf(12L, 1142L), baseOnlyCategoryIds = listOf(12L))
+        val severalState = SearchPersistedState().withScope(several)
+        assertEquals(several, ProtoBuf.decodeFromByteArray<SearchPersistedState>(ProtoBuf.encodeToByteArray(severalState)).scope)
+        // All the books again
+        assertEquals(SearchScope.Category(12L), state.withScope(SearchScope.Category(12L)).scope)
+    }
+
+    @Test
     fun `a search narrowed to one book goes back to its category's or author's books`() {
         val narrowed = SearchPersistedState().withScope(SearchScope.Book(3L)).copy(fetchCategoryId = 7L)
         assertEquals(SearchScope.Book(3L), narrowed.scope)

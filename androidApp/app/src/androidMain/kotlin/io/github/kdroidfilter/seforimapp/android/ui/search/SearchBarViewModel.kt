@@ -22,7 +22,6 @@ import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchServ
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
-import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.CancellationException
@@ -121,12 +120,8 @@ class SearchBarViewModel(
     private var restoringAuthorId: Long? = null
 
     // The category, or the books and categories, a restored results tab searched in, while they load for the chips
-    private var restoringCategoryId: Long? = null
+    private var restoringCategory: SearchScope.Category? = null
     private var restoringMultiScope: SearchScope.Multi? = null
-
-    // The library's categories with their paths, loaded once for the suggestions
-    private var categories: List<CategoryHit>? = null
-    private val categoriesMutex = Mutex()
 
     private val referenceQuery = MutableStateFlow("")
     private val tocQuery = MutableStateFlow("")
@@ -297,24 +292,13 @@ class SearchBarViewModel(
         return books to categories
     }
 
-    // The library's categories with their paths, for the suggestions: once, from the database
-    private suspend fun allCategories(): List<CategoryHit> = categoriesMutex.withLock {
-        categories ?: catching { withContext(Dispatchers.IO) { loadCategories() } }.orEmpty().also { loaded ->
-            if (loaded.isNotEmpty()) categories = loaded
-        }
-    }
+    // The library's categories with their paths, for the suggestions (the app's, read once from its catalog)
+    private suspend fun allCategories(): List<CategoryHit> = catching { service.categories().categories() }.orEmpty()
 
-    private suspend fun loadCategories(): List<CategoryHit> {
-        val result = ArrayList<CategoryHit>()
-        suspend fun walk(category: Category, parentPath: List<String>) {
-            currentCoroutineContext().ensureActive()
-            val path = parentPath + category.title
-            result += CategoryHit(category.id, path)
-            repository.getCategoryChildren(category.id).forEach { walk(it, path) }
-        }
-        repository.getRootCategories().forEach { walk(it, emptyList()) }
-        return result
-    }
+    // [categoryId]'s chip, whole or in its base books alone; null for a category the library doesn't have
+    private suspend fun categoryHit(categoryId: Long, baseBooksOnly: Boolean): CategoryHit? =
+        catching { service.categories().hit(categoryId, baseBooksOnly) }
+            ?: buildCategoryPathTitlesCached(categoryId).takeIf { it.isNotEmpty() }?.let { CategoryHit(categoryId, it, baseBooksOnly) }
 
     // The TOC entries containing [q], best matches first
     private fun tocMatching(entries: List<TocSuggestionDto>, q: String): List<TocSuggestionDto> =
@@ -366,7 +350,7 @@ class SearchBarViewModel(
         showSuggestions: Boolean,
     ) {
         restoringAuthorId = null
-        restoringCategoryId = null
+        restoringCategory = null
         restoringMultiScope = null
         _uiState.value = _uiState.value.copy(
             selectedScopeAuthor = author,
@@ -412,7 +396,7 @@ class SearchBarViewModel(
             return
         }
         restoringAuthorId = null
-        restoringCategoryId = null
+        restoringCategory = null
         restoringMultiScope = null
         authorBooks = emptyList()
         // What was typed to find the item is gone from the bar: its suggestions too
@@ -449,7 +433,7 @@ class SearchBarViewModel(
         showSuggestions: Boolean = true,
     ) {
         restoringAuthorId = null
-        restoringCategoryId = null
+        restoringCategory = null
         restoringMultiScope = null
         authorBooks = emptyList()
         _uiState.value = _uiState.value.copy(
@@ -540,7 +524,7 @@ class SearchBarViewModel(
                 return
             }
             is SearchScope.Category -> {
-                showCategoryScope(scope.categoryId)
+                showCategoryScope(scope)
                 return
             }
             is SearchScope.Multi -> {
@@ -569,17 +553,18 @@ class SearchBarViewModel(
         }
     }
 
-    private fun showCategoryScope(categoryId: Long) {
-        if (_uiState.value.selectedScopeCategory?.id == categoryId) return
+    private fun showCategoryScope(scope: SearchScope.Category) {
+        val shown = _uiState.value.selectedScopeCategory
+        if (shown?.id == scope.categoryId && shown.baseBooksOnly == scope.baseBooksOnly) return
         // The bar searches in its books at once, before its path is loaded for the chip
-        restoringCategoryId = categoryId
+        restoringCategory = scope
         viewModelScope.launch {
-            val path = buildCategoryPathTitlesCached(categoryId)
+            val hit = categoryHit(scope.categoryId, scope.baseBooksOnly)
             // Another scope picked meanwhile
-            if (restoringCategoryId != categoryId) return@launch
-            restoringCategoryId = null
-            if (path.isEmpty()) return@launch
-            applyScopeItems(listOf(ScopeItem.CategoryItem(CategoryHit(categoryId, path))), showSuggestions = false)
+            if (restoringCategory != scope) return@launch
+            restoringCategory = null
+            if (hit == null) return@launch
+            applyScopeItems(listOf(ScopeItem.CategoryItem(hit)), showSuggestions = false)
         }
     }
 
@@ -590,7 +575,7 @@ class SearchBarViewModel(
         viewModelScope.launch {
             val books = scope.bookIds.mapNotNull { id -> catching { repository.getBookCore(id) }?.let(ScopeItem::BookItem) }
             val categories = scope.categoryIds.mapNotNull { id ->
-                buildCategoryPathTitlesCached(id).takeIf { it.isNotEmpty() }?.let { ScopeItem.CategoryItem(CategoryHit(id, it)) }
+                categoryHit(id, baseBooksOnly = id in scope.baseOnlyCategoryIds)?.let(ScopeItem::CategoryItem)
             }
             // Another scope picked meanwhile
             if (restoringMultiScope != scope) return@launch
@@ -611,7 +596,7 @@ class SearchBarViewModel(
             selected.selectedScopeAuthor != null -> SearchScope.Author(selected.selectedScopeAuthor.id)
             selected.scopeItems.isNotEmpty() -> ScopeItems.scopeOf(selected.scopeItems)
             else -> restoringAuthorId?.let(SearchScope::Author)
-                ?: restoringCategoryId?.let(SearchScope::Category)
+                ?: restoringCategory
                 ?: restoringMultiScope
                 ?: SearchScope.Global
         }
@@ -645,7 +630,7 @@ class SearchBarViewModel(
     /** The bar as a new one starts: nothing typed, no book, author or chapter picked, nothing suggested. */
     fun reset() {
         restoringAuthorId = null
-        restoringCategoryId = null
+        restoringCategory = null
         restoringMultiScope = null
         authorBooks = emptyList()
         referenceQuery.value = ""

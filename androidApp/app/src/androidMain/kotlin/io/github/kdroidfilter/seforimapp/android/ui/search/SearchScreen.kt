@@ -176,6 +176,8 @@ private const val SEARCH_STATUS_IN = "כ־%1\$s תוצאות ב%2\$s"
 private const val SEARCH_STATUS_FALLBACK = "לא נמצא בספרי יסוד · מוצגות %1\$s תוצאות מכל הספרים"
 private const val SEARCH_SWITCH_ALL = "חיפוש בכל הספרים"
 private const val SEARCH_SWITCH_BASE = "רק ספרי יסוד"
+// Pardes desktop: a category searched in its base books alone, back to all its books
+private const val SEARCH_SWITCH_SCOPE_ALL = "בכל ספרי %1\$s"
 private const val SEARCH_TAB_ALL = "הכל"
 private const val SEARCH_TABS_MORE = "עוד"
 private const val SEARCH_TABS_LESS = "פחות"
@@ -220,6 +222,8 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
     val vm: SearchViewModel = viewModel(key = "search-$tabId", factory = SearchViewModel.factory(repo, app.search, destination, restore))
     // The tab's own bar, opened where its search looked (desktop TabsContent "search-bar" + showScope)
     val barVm: SearchBarViewModel = viewModel(key = "search-bar-$tabId", factory = SearchBarViewModel.factory(repo, app.search, vm.searchScope))
+    // The search moved by itself (a category's base books or all its books): its bar shows where it searches now
+    LaunchedEffect(vm, barVm) { vm.scopeChanges.collect { barVm.showScope(it) } }
     val state by vm.state.collectAsState()
     val breadcrumbs by vm.breadcrumbs.collectAsState()
     val entity by vm.entity.collectAsState()
@@ -692,8 +696,8 @@ private fun StatusRow(state: SearchUiState, oneBook: Boolean, wide: Boolean, com
     val total = maxOf(loaded.toLong(), state.progressTotal ?: loaded.toLong())
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         // In one book, in an author's books, or in a category or the picked books and categories, where it searched: no
-        // base/all books choice there. Desktop 0.6.5 still offers it in an author's books, which are all searched
-        // whatever is chosen
+        // choice of the library's base books there (a category's own base books instead, Pardes desktop). Desktop 0.6.5
+        // still offers it in an author's books, which are all searched whatever is chosen
         val scopeName = if (oneBook) {
             state.scopeBook?.title ?: state.results.firstOrNull()?.bookTitle
         } else {
@@ -712,7 +716,12 @@ private fun StatusRow(state: SearchUiState, oneBook: Boolean, wide: Boolean, com
                 }
             }
         } else {
-            SearchStatusLine(scopeName, total, false, state.globalExtended, state.baseBooksHadNoResults, wide, compact, vm::setGlobalExtended, Modifier.weight(1f))
+            SearchStatusLine(
+                scopeName, total, false, state.globalExtended, state.baseBooksHadNoResults, wide, compact, vm::setGlobalExtended, Modifier.weight(1f),
+                scopeBaseBooksOnly = if (oneBook) null else state.scopeBaseBooksOnly,
+                scopeAllBooksLabel = state.scopeAllBooksLabel,
+                onScopeBaseBooksChange = vm::setScopeBaseBooksOnly,
+            )
         }
         // Space kept for the cancel button, so the line does not jump
         if (state.isLoading || !compact) {
@@ -729,8 +738,9 @@ private fun StatusRow(state: SearchUiState, oneBook: Boolean, wide: Boolean, com
 
 /**
  * Where the search looked and how many it found, with the other choice as a link: the base books (the default) or all
- * of them; when the base books had nothing, says so. Wraps on a narrow phone, where only the link keeps a touch
- * target's height and the text's line is as tall as the text. Desktop SearchStatusLine.
+ * of them; when the base books had nothing, says so. In a category holding base books and others ([scopeBaseBooksOnly]
+ * not null), the choice between its base books alone and all its books ([scopeAllBooksLabel]). Wraps on a narrow phone,
+ * where only the link keeps a touch target's height and the text's line is as tall as the text. Desktop SearchStatusLine.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -744,6 +754,9 @@ private fun SearchStatusLine(
     compact: Boolean,
     onGlobalExtendedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    scopeBaseBooksOnly: Boolean? = null,
+    scopeAllBooksLabel: String? = null,
+    onScopeBaseBooksChange: (Boolean) -> Unit = {},
 ) {
     val grey = readingSecondary()
     val count = formatCount(total)
@@ -764,6 +777,10 @@ private fun SearchStatusLine(
             ResultLink(if (globalExtended) SEARCH_SWITCH_BASE else SEARCH_SWITCH_ALL, Zayit.colors.accent, size, minHeight = rowHeight) {
                 onGlobalExtendedChange(!globalExtended)
             }
+        } else if (!isLoading && scope != null && scopeBaseBooksOnly != null) {
+            Box(Modifier.heightIn(min = textHeight), contentAlignment = Alignment.CenterStart) { Text("·", color = grey, fontSize = size) }
+            val label = if (scopeBaseBooksOnly) SEARCH_SWITCH_SCOPE_ALL.fill(scopeAllBooksLabel ?: scope) else SEARCH_SWITCH_BASE
+            ResultLink(label, Zayit.colors.accent, size, minHeight = rowHeight) { onScopeBaseBooksChange(!scopeBaseBooksOnly) }
         }
     }
 }

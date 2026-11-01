@@ -30,6 +30,7 @@ import io.github.kdroidfilter.seforimapp.core.settings.CategoryDisplaySettingsSt
 import io.github.kdroidfilter.seforimapp.core.shnayimmikra.ShnayimMikraStore
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeViewModel
+import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
 import io.github.kdroidfilter.seforimapp.framework.backup.UserDataBackup
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
@@ -261,6 +262,7 @@ object AppCoreBindings {
         lookup: LuceneLookupSearchService,
         appSettings: AppSettings,
         sessionManager: SessionManager,
+        libraryCategories: LibraryCategories,
     ): DesktopManager =
         DesktopManager(
             tabPersistedStateStore = tabPersistedStateStore,
@@ -274,6 +276,7 @@ object AppCoreBindings {
                     repository = repository,
                     lookup = lookup,
                     appSettings = appSettings,
+                    libraryCategories = libraryCategories,
                     observeProfile = observeProfile,
                 )
             },

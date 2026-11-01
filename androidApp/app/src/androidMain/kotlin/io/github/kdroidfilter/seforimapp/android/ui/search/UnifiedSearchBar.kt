@@ -171,6 +171,11 @@ private const val SEARCH_TEXT_ROW = "חיפוש במאגר: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_BOOK = "חיפוש בתוך %2\$s: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_AUTHOR = "חיפוש בספרי %2\$s: %1\$s"
 private const val SEARCH_TEXT_ROW_IN_CATEGORY = "חיפוש בכל ספרי %2\$s: %1\$s"
+// Pardes desktop: books and categories picked, one at least in its base books alone (its chip says so)
+private const val SEARCH_TEXT_ROW_IN_SCOPE = "חיפוש ב%2\$s: %1\$s"
+// Pardes desktop: a category in its base books alone (the texts without their commentaries), its suggestion and its chip
+private const val CATEGORY_BASE_BOOKS_ONLY = "ספרי יסוד בלבד"
+private const val SCOPE_BASE_BOOKS_LABEL = "%1\$s (ספרי יסוד)"
 private const val SEARCH_IN_BOOK_PLACEHOLDER = "מה לחפש בספר זה? פרק, סימן או כל מילה"
 private const val ROW_ACTION_OPEN = "פתיחה"
 private const val ROW_ACTION_SEARCH_INSIDE = "חיפוש בתוך"
@@ -252,8 +257,9 @@ private sealed interface CatBookRow {
  * opens Chullin on Enter; `שוע` puts the שולחן ערוך parts first; `תלמוד` searches the Talmud), the text search, then the
  * other authors, categories and books. Once books or categories are picked ([textSearchFirst]), the text search comes
  * first: Enter searches in them, and the books and categories listed are to add.
- * A title being typed past its first word (`בבא ק`) is no text search: with no book named exactly,
- * the first book whose title it begins comes before the text search too (desktop 0.6.2 fix 51463d23).
+ * A title being typed past its first word (`בבא ק`) is no text search: with no book or category named exactly,
+ * the first book whose title it begins comes before the text search too (desktop 0.6.2 fix 51463d23). A category's name
+ * is no title being typed (Pardes desktop): `משנה תורה` is the category, not the first of its books.
  */
 private fun catBookRows(
     query: String,
@@ -276,7 +282,7 @@ private fun catBookRows(
                 book.book.title
                     .searchKey()
                     .replace(",", "")
-            namedBooks.isEmpty() && ' ' in key && title.startsWith(key)
+            namedBooks.isEmpty() && exactCategories.isEmpty() && ' ' in key && title.startsWith(key)
         }
     val exactBooks = namedBooks + listOfNotNull(typedTitle)
     return buildList {
@@ -291,6 +297,21 @@ private fun catBookRows(
         otherBooks.filter { it !== typedTitle }.mapTo(this) { CatBookRow.BookRow(it) }
     }
 }
+
+/**
+ * In a book, the other books and categories [query] names, to add to its search: the categories named exactly as typed
+ * first (`משנה תורה`: the category, before the books whose titles begin so), then the books, then the other categories.
+ * Pardes desktop tocAddRows.
+ */
+private fun tocAddRowsOf(query: String, books: List<BookSuggestionDto>, categories: List<CategoryHit>): List<CatBookRow> {
+    val key = query.searchKey()
+    val (exactCategories, otherCategories) = categories.partition { it.title.searchKey() == key }
+    return exactCategories.map { CatBookRow.Category(it) } + books.map { CatBookRow.BookRow(it) } + otherCategories.map { CatBookRow.Category(it) }
+}
+
+/** A book's or category's name on its chip; a category in its base books alone is marked (`תלמוד (ספרי יסוד)`). */
+private fun ScopeItem.chipLabel(): String =
+    if (this is ScopeItem.CategoryItem && category.baseBooksOnly) SCOPE_BASE_BOOKS_LABEL.replace("%1\$s", label) else label
 
 /**
  * The one smart search bar (references, books, authors, texts) with its suggestions: the home page's, reused by the
@@ -417,7 +438,9 @@ fun UnifiedSearchBar(
     // The books and categories picked, as chips; one book alone is the bar's book (its own chip, its TOC)
     val scopeChips = if (isTocMode) emptyList() else ui.scopeItems
     // Once books or categories are picked, the text is searched in all of them; more of them are added
-    val textSearchInScope = scopeChips.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.label }
+    val textSearchInScope = scopeChips.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.chipLabel() }
+    // A category of them in its base books alone: not all its books
+    val textSearchInBaseBooks = scopeChips.any { it is ScopeItem.CategoryItem && it.category.baseBooksOnly }
     val adding = scopeChips.isNotEmpty()
     val query = field.text.trim()
     val hasUserText = field.text.isNotBlank()
@@ -430,8 +453,8 @@ fun UnifiedSearchBar(
         }
     }
     // In a book, the other books and categories the text names, to add to its search ("הוספה לחיפוש", Tab)
-    val tocAddRows = remember(ui.bookSuggestions, ui.categorySuggestions, isTocMode) {
-        if (isTocMode) ui.bookSuggestions.map { CatBookRow.BookRow(it) } + ui.categorySuggestions.map { CatBookRow.Category(it) } else emptyList()
+    val tocAddRows = remember(query, ui.bookSuggestions, ui.categorySuggestions, isTocMode) {
+        if (isTocMode) tocAddRowsOf(query, ui.bookSuggestions, ui.categorySuggestions) else emptyList()
     }
     val totalCatBook = rows.size
     // Keyboard navigation operates on the exact list the TOC panel renders, so the highlighted row is the one opened
@@ -918,6 +941,7 @@ fun UnifiedSearchBar(
                                 SuggestionRow(
                                     parts = row.hit.path,
                                     kind = SuggestionKind.CATEGORY,
+                                    detail = CATEGORY_BASE_BOOKS_ONLY.takeIf { row.hit.baseBooksOnly },
                                     highlighted = index == focusedIndex,
                                     wide = wide,
                                     keys = hardKeyboard,
@@ -991,7 +1015,9 @@ fun UnifiedSearchBar(
                                     if (textSearchInAuthor != null) {
                                         SEARCH_TEXT_ROW_IN_AUTHOR.replace("%2\$s", textSearchInAuthor).replace("%1\$s", q)
                                     } else if (textSearchInScope != null) {
-                                        SEARCH_TEXT_ROW_IN_CATEGORY.replace("%2\$s", textSearchInScope).replace("%1\$s", q)
+                                        (if (textSearchInBaseBooks) SEARCH_TEXT_ROW_IN_SCOPE else SEARCH_TEXT_ROW_IN_CATEGORY)
+                                            .replace("%2\$s", textSearchInScope)
+                                            .replace("%1\$s", q)
                                     } else {
                                         SEARCH_TEXT_ROW.replace("%1\$s", q)
                                     },
@@ -1038,6 +1064,7 @@ fun UnifiedSearchBar(
                             SuggestionRow(
                                 parts = row.hit.path,
                                 kind = SuggestionKind.CATEGORY,
+                                detail = CATEGORY_BASE_BOOKS_ONLY.takeIf { row.hit.baseBooksOnly },
                                 highlighted = focused,
                                 wide = wide,
                                 keys = hardKeyboard,
@@ -1555,7 +1582,7 @@ private fun ScopeChips(items: List<ScopeItem>, modifier: Modifier = Modifier, on
     LaunchedEffect(items.size) { scroll.animateScrollTo(scroll.maxValue) }
     Row(modifier.horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         items.forEach { item ->
-            SelectedChip(item.label, Modifier.widthIn(max = SCOPE_CHIP_MAX_WIDTH)) { onRemove(item) }
+            SelectedChip(item.chipLabel(), Modifier.widthIn(max = SCOPE_CHIP_MAX_WIDTH)) { onRemove(item) }
         }
     }
 }
