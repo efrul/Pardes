@@ -135,6 +135,10 @@ fun LineCommentsView(
     val providers = uiState.providers
     val primarySelectedLineId = contentState.primarySelectedLineId
     val selectedCommentatorIds = contentState.selectedCommentatorIds
+    // "כל המפרשים" checked: every line shows all of its commentators but the unchecked ones (CommentatorSelection)
+    val selectedBookId = uiState.navigation.selectedBook?.id
+    val allCommentators = selectedBookId != null && selectedBookId in contentState.allCommentatorsBooks
+    val excludedCommentatorIds = selectedBookId?.let { contentState.excludedCommentatorsByBook[it] }.orEmpty()
     // Shown in panes of their own, not in this one's grid
     val detachedCommentators = contentState.detachedCommentators
     val commentatorsListScrollIndex = contentState.commentatorsListScrollIndex
@@ -195,6 +199,8 @@ fun LineCommentsView(
                             providers = providers,
                             primarySelectedLineId = primarySelectedLineId,
                             selectedCommentatorIds = selectedCommentatorIds,
+                            allCommentators = allCommentators,
+                            excludedCommentatorIds = excludedCommentatorIds,
                             commentatorsListScrollIndex = commentatorsListScrollIndex,
                             commentatorsListScrollOffset = commentatorsListScrollOffset,
                             columnScroll = columnScroll,
@@ -214,6 +220,8 @@ fun LineCommentsView(
                             selectedLineId = selectedLine.id,
                             providers = providers,
                             selectedCommentatorIds = selectedCommentatorIds,
+                            allCommentators = allCommentators,
+                            excludedCommentatorIds = excludedCommentatorIds,
                             commentatorsListScrollIndex = commentatorsListScrollIndex,
                             commentatorsListScrollOffset = commentatorsListScrollOffset,
                             columnScroll = columnScroll,
@@ -409,6 +417,8 @@ private fun CommentariesContent(
     selectedLineId: Long,
     providers: Providers,
     selectedCommentatorIds: Set<Long>,
+    allCommentators: Boolean,
+    excludedCommentatorIds: Set<Long>,
     commentatorsListScrollIndex: Int,
     commentatorsListScrollOffset: Int,
     columnScroll: CommentariesColumnScroll,
@@ -444,14 +454,20 @@ private fun CommentariesContent(
             commentatorGroups.flatMap { group -> group.commentators.map(CommentatorItem::name) }
         }
 
-    // Manage selected commentators
+    // Manage selected commentators: once "כל המפרשים" is checked, all of the line's own but the unchecked ones, from
+    // its first frame (CommentatorSelection); else those the tab selected for it
+    val listedIds = remember(titleToIdMap) { titleToIdMap.values.toSet() }
+    val shownIds =
+        remember(allCommentators, excludedCommentatorIds, listedIds, selectedCommentatorIds) {
+            if (allCommentators) listedIds - excludedCommentatorIds else selectedCommentatorIds
+        }
     val selectedCommentators =
         rememberSelectedCommentators(
             availableCommentators = commentatorsInDisplayOrder,
-            initiallySelectedIds = selectedCommentatorIds,
+            initiallySelectedIds = shownIds,
             titleToIdMap = titleToIdMap,
             onSelectionChange = { ids ->
-                onEvent(BookContentEvent.SelectedCommentatorsChanged(selectedLineId, ids))
+                onEvent(BookContentEvent.SelectedCommentatorsChanged(selectedLineId, ids, listedIds))
             },
         )
 
@@ -476,6 +492,9 @@ private fun CommentariesContent(
                         } else {
                             selectedCommentators.value - names.toSet()
                         }
+                },
+                onAllChange = { checked ->
+                    onEvent(BookContentEvent.AllCommentatorsChanged(selectedLineId, checked, listedIds))
                 },
             )
         },
@@ -517,6 +536,8 @@ private fun MultiLineCommentariesContent(
     providers: Providers,
     primarySelectedLineId: Long?,
     selectedCommentatorIds: Set<Long>,
+    allCommentators: Boolean,
+    excludedCommentatorIds: Set<Long>,
     commentatorsListScrollIndex: Int,
     commentatorsListScrollOffset: Int,
     columnScroll: CommentariesColumnScroll,
@@ -550,13 +571,18 @@ private fun MultiLineCommentariesContent(
             commentatorGroups.flatMap { group -> group.commentators.map(CommentatorItem::name) }
         }
 
+    val listedIds = remember(titleToIdMap) { titleToIdMap.values.toSet() }
+    val shownIds =
+        remember(allCommentators, excludedCommentatorIds, listedIds, selectedCommentatorIds) {
+            if (allCommentators) listedIds - excludedCommentatorIds else selectedCommentatorIds
+        }
     val selectedCommentators =
         rememberSelectedCommentators(
             availableCommentators = commentatorsInDisplayOrder,
-            initiallySelectedIds = selectedCommentatorIds,
+            initiallySelectedIds = shownIds,
             titleToIdMap = titleToIdMap,
             onSelectionChange = { ids ->
-                onEvent(BookContentEvent.SelectedCommentatorsChanged(primaryLineId, ids))
+                onEvent(BookContentEvent.SelectedCommentatorsChanged(primaryLineId, ids, listedIds))
             },
         )
 
@@ -581,6 +607,9 @@ private fun MultiLineCommentariesContent(
                         } else {
                             selectedCommentators.value - names.toSet()
                         }
+                },
+                onAllChange = { checked ->
+                    onEvent(BookContentEvent.AllCommentatorsChanged(primaryLineId, checked, listedIds))
                 },
             )
         },
@@ -662,6 +691,8 @@ private fun CommentatorsList(
     onReattach: (String) -> Unit,
     // Checks or unchecks these commentators: one, a group's or all of them
     onSelectionChange: (Collection<String>, Boolean) -> Unit,
+    // "כל המפרשים" checked or unchecked, for the book's other lines too (CommentatorSelection)
+    onAllChange: (Boolean) -> Unit,
 ) {
     val currentOnScroll by rememberUpdatedState(onScroll)
     val allNames = remember(groups) { groups.flatMap { group -> group.commentators.map(CommentatorItem::name) } }
@@ -695,7 +726,10 @@ private fun CommentatorsList(
                                 text = stringResource(Res.string.commentators_select_all),
                                 names = allNames,
                                 selectedCommentators = selectedCommentators,
-                                onSelectionChange = onSelectionChange,
+                                onSelectionChange = { names, checked ->
+                                    onSelectionChange(names, checked)
+                                    onAllChange(checked)
+                                },
                                 fontWeight = FontWeight.Bold,
                             )
                         }

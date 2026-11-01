@@ -243,6 +243,10 @@ data class ContentState(
     // Business selections by line/book (kept for use cases)
     val selectedCommentatorsByLine: Map<Long, Set<Long>> = emptyMap(),
     val selectedCommentatorsByBook: Map<Long, Set<Long>> = emptyMap(),
+    // The books whose lines all show all their commentators ("כל המפרשים" checked), and the commentators unchecked
+    // there since (CommentatorSelection)
+    val allCommentatorsBooks: Set<Long> = emptySet(),
+    val excludedCommentatorsByBook: Map<Long, Set<Long>> = emptyMap(),
     val selectedLinkSourcesByLine: Map<Long, Set<Long>> = emptyMap(),
     val selectedLinkSourcesByBook: Map<Long, Set<Long>> = emptyMap(),
     // Bumped to hand the keyboard focus back to the text, e.g. when a breadcrumb popup closes (not persisted)
