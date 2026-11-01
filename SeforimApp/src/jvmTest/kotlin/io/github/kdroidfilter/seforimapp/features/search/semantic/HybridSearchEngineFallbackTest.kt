@@ -59,6 +59,57 @@ class HybridSearchEngineFallbackTest {
         override fun close() {}
     }
 
+    /** Finds lines 1 to [count], in that order, a page at a time. */
+    private class ManyWords(
+        private val count: Long,
+    ) : SearchEngine by Words() {
+        override fun openSession(
+            query: String,
+            near: Int,
+            bookFilter: Long?,
+            categoryFilter: Long?,
+            bookIds: Collection<Long>?,
+            lineIds: Collection<Long>?,
+            baseBookOnly: Boolean,
+        ): SearchSession =
+            object : SearchSession {
+                private var next = 1L
+
+                override suspend fun nextPage(
+                    limit: Int,
+                    snippets: Boolean,
+                ): SearchPage? {
+                    if (next > count) return null
+                    val ids = next..minOf(count, next + limit - 1)
+                    next = ids.last + 1
+                    return SearchPage(ids.map { LineHit(1, "", it, 0, "", 1f, "") }, totalHits = count, isLastPage = next > count)
+                }
+
+                override fun close() {}
+            }
+    }
+
+    @Test
+    fun `past the fused candidates the lexical results go on, each once, and the total is theirs`(): Unit =
+        runBlocking {
+            // No model: the fused list is the lexical side's first candidates, the rest come after them
+            val engine =
+                HybridSearchEngine(ManyWords(400), Path.of("unused"), { id, _ -> LineHit(1, "", id, 0, "", 0f, "") }, true) {
+                    throw UnsatisfiedLinkError("no onnxruntime in java.library.path")
+                }
+            val session = engine.openSession("שבת קודש", 5)!!
+            val ids = ArrayList<Long>()
+            val totals = HashSet<Long>()
+            while (true) {
+                val page = session.nextPage(25, snippets = false) ?: break
+                ids += page.hits.map { it.lineId }
+                totals += page.totalHits
+                if (page.isLastPage) break
+            }
+            assertEquals((1L..400L).toList(), ids)
+            assertEquals(setOf(400L), totals)
+        }
+
     @Test
     fun `a model that fails to load, with an Error too, leaves the search to its words`(): Unit =
         runBlocking {
