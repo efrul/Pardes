@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
+import io.github.kdroidfilter.seforimapp.android.data.CommentatorSelection
 import io.github.kdroidfilter.seforimapp.android.data.SqlVariableLimit
 import io.github.kdroidfilter.seforimapp.android.search.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
@@ -154,9 +155,11 @@ data class ReaderUiState(
     /** Lines (by index) of a passage to read, tinted, with an end mark (desktop MarkedRange). */
     val markedRange: IntRange? = null,
     val diacritics: DiacriticsMode = DiacriticsMode.All,
-    /** Commentators remembered for the book (desktop selectedCommentatorsByBook, sticky). */
-    val stickyCommentators: Set<Long> = emptySet(),
-    val commentatorsByLine: Map<Long, Set<Long>> = emptyMap(),
+    /**
+     * The commentators the book's lines show (desktop CommentatorSelection: selectedCommentatorsByBook, and "כל
+     * המפרשים" kept with the ones unchecked since). A line's own are derived from it, as desktop reapplies them.
+     */
+    val commentators: CommentatorSelection = CommentatorSelection(),
     val noteDraft: NoteDraftAnchor? = null,
     val find: FindState = FindState(),
     /** The search a result was opened from: its words stay highlighted (the engine's rule) while the bar shows it. */
@@ -291,7 +294,8 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
             catId = c.parentId
         }
         val diacritics = chain.firstOrNull()?.let { DiacriticsMode.fromStored(app.userData.categoryDiacritics(it.id)) } ?: DiacriticsMode.All
-        val sticky = app.prefs.selectedCommentators(bookId) ?: runCatching { repository.getDefaultCommentatorIdsForBook(bookId).toSet() }.getOrDefault(emptySet())
+        val commentators = app.prefs.commentatorSelection(bookId)
+            ?: CommentatorSelection(remembered = runCatching { repository.getDefaultCommentatorIdsForBook(bookId).toSet() }.getOrDefault(emptySet()))
         val requested = destination.lineId?.let { repository.getLine(it) }?.takeIf { it.bookId == bookId }
         // Opened plainly: the first TOC leaf's first line is selected (desktop loadBookData), its section when it heads one.
         val initial = requested ?: firstTocLine(book)
@@ -311,7 +315,7 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
                 categories = chain,
                 totalLines = book.totalLines,
                 diacritics = diacritics,
-                stickyCommentators = sticky,
+                commentators = commentators,
                 shnayimMikra = destination.shnayimMikra && book.isChumash,
                 markedRange = marked,
                 searchQuery = seeded,
@@ -633,25 +637,28 @@ class ReaderViewModel(private val app: ZayitApplication, private val destination
         LineConnectionsSnapshot()
     }
 
-    /** The commentators shown for [lineId] among [available]: those picked for the line, else the book's sticky ones. */
-    fun selectedCommentators(lineId: Long, available: Collection<Long>): Set<Long> {
-        val s = _state.value
-        val perLine = s.commentatorsByLine[lineId]
-        if (!perLine.isNullOrEmpty()) return perLine
-        val desired = available.filter { it in s.stickyCommentators }.toSet()
-        return desired.ifEmpty { s.stickyCommentators }
+    /**
+     * A line's list ([available]) now has [selected] checked: the change is the book's too (desktop). A line shows
+     * `commentators.shownOf(available)`, derived again for every line as desktop reapplies the book's on each selected
+     * line, so a line chosen for before neither keeps what was unchecked since elsewhere nor misses what was checked.
+     * Only what the list showed checked can have been unchecked there: a line with none of the book's commentators
+     * no longer makes the book forget them all when one of its own is checked.
+     */
+    fun updateSelectedCommentators(selected: Set<Long>, available: Collection<Long>) {
+        updateCommentators { it.changed(previous = it.shownOf(available), selected = selected) }
     }
 
-    /** The commentators list changed for [lineId]: the change also applies to the book's sticky set (desktop). */
-    fun updateSelectedCommentators(lineId: Long, selected: Set<Long>, available: Collection<Long>) {
+    /** "כל המפרשים" checked or unchecked on a line whose list is [available] (desktop setAllCommentators). */
+    fun setAllCommentators(checked: Boolean, available: Collection<Long>) {
+        updateCommentators { if (checked) it.allChecked(available) else it.allUnchecked(available) }
+    }
+
+    private fun updateCommentators(change: (CommentatorSelection) -> CommentatorSelection) {
         _state.update { s ->
-            val previous = selectedCommentators(lineId, available)
-            val sticky = s.stickyCommentators + (selected - previous) - (previous - selected)
-            app.prefs.setSelectedCommentators(bookId, sticky)
-            s.copy(
-                stickyCommentators = sticky,
-                commentatorsByLine = s.commentatorsByLine.toMutableMap().apply { if (selected.isEmpty()) remove(lineId) else put(lineId, selected) },
-            )
+            val commentators = change(s.commentators)
+            if (commentators == s.commentators) return@update s
+            app.prefs.setCommentatorSelection(bookId, commentators)
+            s.copy(commentators = commentators)
         }
     }
 

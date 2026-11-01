@@ -189,6 +189,12 @@ Ported on 2026-10-30 from Pardes desktop (`d85afee`, `5418012`, `574f3d5`, `d27e
 - **Tablet commentaries:** the pages side by side (`HorizontalPager`), turned by a sideways swipe or their dots, in a row above them. The phone kept its pages of one commentator each, with the chips as their indicator.
 - Not ported: a commentator split off into a pane of its own (desktop's dock of line panes has no counterpart here).
 
+## Pardes desktop's "כל המפרשים" kept from line to line
+
+Ported on 2026-11-01 from Pardes desktop (`3c6bae9`):
+- **"כל המפרשים" kept:** checked, every line shows all of its commentators, those a line is the first to have included, until it is unchecked (then none); a commentator unchecked meanwhile stays hidden on the other lines. Desktop's `CommentatorSelection` is `data/CommentatorSelection.kt`, saved by book in `AppPrefs` (`commentators_`, `commentators_all_`, `commentators_excluded_`); its test runs on the port (`androidUnitTest`).
+- **A line's commentators derived from the book's on every line**, as desktop reapplies them: the reader kept a line's own selection once something was changed there, without what was checked since on other lines. And a line where none of the book's commentators is listed took the whole remembered set for what it showed, so checking one of its commentators, or "כל המפרשים", replaced the book's commentators with that line's.
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)
