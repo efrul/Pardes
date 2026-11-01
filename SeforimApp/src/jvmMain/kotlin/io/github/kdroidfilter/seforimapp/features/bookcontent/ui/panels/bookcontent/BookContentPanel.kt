@@ -27,6 +27,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.listedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.*
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
@@ -188,18 +189,18 @@ private fun BookContentPanelContent(
         uiState.content.selectedCommentatorsByBook[selectedBook.id]
             .orEmpty()
             .ifEmpty { openCommentatorIds }
-    // "כל המפרשים": a line shows its own commentators, but the unchecked ones (CommentatorSelection)
+    // Whole groups checked ("כל המפרשים", "ראשונים על התנ״ך"): a line shows its own of them, but the unchecked ones
     val bookSelection = uiState.content.commentatorSelection(selectedBook.id)
-    LaunchedEffect(hoveredLine, bookCommentatorIds, bookSelection.all, bookSelection.excluded, uiState.content.showCommentaries) {
+    LaunchedEffect(hoveredLine, bookCommentatorIds, bookSelection, uiState.content.showCommentaries) {
         if (!uiState.content.showCommentaries) return@LaunchedEffect
-        if (!bookSelection.all && bookCommentatorIds.isEmpty()) return@LaunchedEffect
+        if (!bookSelection.showsGroups && bookCommentatorIds.isEmpty()) return@LaunchedEffect
         hoveredLine
             .filterNotNull()
             .debounce(HOVER_PREFETCH_DELAY)
             .collectLatest { lineId ->
                 val ids =
-                    if (bookSelection.all) {
-                        bookSelection.shownOf(providers.getAvailableCommentatorsForLine(lineId).values)
+                    if (bookSelection.showsGroups) {
+                        bookSelection.shownOf(providers.getCommentatorGroupsForLine(lineId).listedCommentators())
                     } else {
                         bookCommentatorIds
                     }

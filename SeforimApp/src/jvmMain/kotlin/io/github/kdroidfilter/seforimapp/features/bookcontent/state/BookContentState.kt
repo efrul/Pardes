@@ -243,9 +243,11 @@ data class ContentState(
     // Business selections by line/book (kept for use cases)
     val selectedCommentatorsByLine: Map<Long, Set<Long>> = emptyMap(),
     val selectedCommentatorsByBook: Map<Long, Set<Long>> = emptyMap(),
-    // The books whose lines all show all their commentators ("כל המפרשים" checked), and the commentators unchecked
-    // there since (CommentatorSelection)
+    // Whole groups checked by book (CommentatorSelection): all of them ("כל המפרשים"), the groups checked ("ראשונים על
+    // התנ״ך"), those unchecked while all of them were, and the commentators unchecked while their group was checked
     val allCommentatorsBooks: Set<Long> = emptySet(),
+    val commentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
+    val hiddenCommentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
     val excludedCommentatorsByBook: Map<Long, Set<Long>> = emptyMap(),
     val selectedLinkSourcesByLine: Map<Long, Set<Long>> = emptyMap(),
     val selectedLinkSourcesByBook: Map<Long, Set<Long>> = emptyMap(),

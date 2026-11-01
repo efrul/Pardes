@@ -67,9 +67,12 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedP
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorItem
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.Providers
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.listedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.EnhancedHorizontalSplitPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneHeader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.asStable
@@ -134,11 +137,11 @@ fun LineCommentsView(
     // recomposes on every scroll/paging churn of the book pane.
     val providers = uiState.providers
     val primarySelectedLineId = contentState.primarySelectedLineId
-    val selectedCommentatorIds = contentState.selectedCommentatorIds
-    // "כל המפרשים" checked: every line shows all of its commentators but the unchecked ones (CommentatorSelection)
-    val selectedBookId = uiState.navigation.selectedBook?.id
-    val allCommentators = selectedBookId != null && selectedBookId in contentState.allCommentatorsBooks
-    val excludedCommentatorIds = selectedBookId?.let { contentState.excludedCommentatorsByBook[it] }.orEmpty()
+    // The book's commentators: those checked one by one, and whole groups ("כל המפרשים", "ראשונים על התנ״ך")
+    val bookCommentators =
+        uiState.navigation.selectedBook
+            ?.id
+            ?.let { contentState.commentatorSelection(it) } ?: CommentatorSelection()
     // Shown in panes of their own, not in this one's grid
     val detachedCommentators = contentState.detachedCommentators
     val commentatorsListScrollIndex = contentState.commentatorsListScrollIndex
@@ -198,9 +201,7 @@ fun LineCommentsView(
                             selectedLineIds = selectedLineIds,
                             providers = providers,
                             primarySelectedLineId = primarySelectedLineId,
-                            selectedCommentatorIds = selectedCommentatorIds,
-                            allCommentators = allCommentators,
-                            excludedCommentatorIds = excludedCommentatorIds,
+                            bookCommentators = bookCommentators,
                             commentatorsListScrollIndex = commentatorsListScrollIndex,
                             commentatorsListScrollOffset = commentatorsListScrollOffset,
                             columnScroll = columnScroll,
@@ -219,9 +220,7 @@ fun LineCommentsView(
                         CommentariesContent(
                             selectedLineId = selectedLine.id,
                             providers = providers,
-                            selectedCommentatorIds = selectedCommentatorIds,
-                            allCommentators = allCommentators,
-                            excludedCommentatorIds = excludedCommentatorIds,
+                            bookCommentators = bookCommentators,
                             commentatorsListScrollIndex = commentatorsListScrollIndex,
                             commentatorsListScrollOffset = commentatorsListScrollOffset,
                             columnScroll = columnScroll,
@@ -416,9 +415,7 @@ private fun ReattachCommentatorButton(
 private fun CommentariesContent(
     selectedLineId: Long,
     providers: Providers,
-    selectedCommentatorIds: Set<Long>,
-    allCommentators: Boolean,
-    excludedCommentatorIds: Set<Long>,
+    bookCommentators: CommentatorSelection,
     commentatorsListScrollIndex: Int,
     commentatorsListScrollOffset: Int,
     columnScroll: CommentariesColumnScroll,
@@ -454,20 +451,16 @@ private fun CommentariesContent(
             commentatorGroups.flatMap { group -> group.commentators.map(CommentatorItem::name) }
         }
 
-    // Manage selected commentators: once "כל המפרשים" is checked, all of the line's own but the unchecked ones, from
-    // its first frame (CommentatorSelection); else those the tab selected for it
-    val listedIds = remember(titleToIdMap) { titleToIdMap.values.toSet() }
-    val shownIds =
-        remember(allCommentators, excludedCommentatorIds, listedIds, selectedCommentatorIds) {
-            if (allCommentators) listedIds - excludedCommentatorIds else selectedCommentatorIds
-        }
+    // Manage selected commentators: those of the line's own the book shows (CommentatorSelection), from its first frame
+    val listed = remember(commentatorGroups) { commentatorGroups.listedCommentators() }
+    val shownIds = remember(bookCommentators, listed) { bookCommentators.shownOf(listed) }
     val selectedCommentators =
         rememberSelectedCommentators(
             availableCommentators = commentatorsInDisplayOrder,
             initiallySelectedIds = shownIds,
             titleToIdMap = titleToIdMap,
             onSelectionChange = { ids ->
-                onEvent(BookContentEvent.SelectedCommentatorsChanged(selectedLineId, ids, listedIds))
+                onEvent(BookContentEvent.SelectedCommentatorsChanged(selectedLineId, ids, listed))
             },
         )
 
@@ -494,7 +487,10 @@ private fun CommentariesContent(
                         }
                 },
                 onAllChange = { checked ->
-                    onEvent(BookContentEvent.AllCommentatorsChanged(selectedLineId, checked, listedIds))
+                    onEvent(BookContentEvent.AllCommentatorsChanged(selectedLineId, checked, listed))
+                },
+                onGroupChange = { group, checked ->
+                    onEvent(BookContentEvent.CommentatorGroupChanged(selectedLineId, group, checked, listed))
                 },
             )
         },
@@ -535,9 +531,7 @@ private fun MultiLineCommentariesContent(
     selectedLineIds: ImmutableList<Long>,
     providers: Providers,
     primarySelectedLineId: Long?,
-    selectedCommentatorIds: Set<Long>,
-    allCommentators: Boolean,
-    excludedCommentatorIds: Set<Long>,
+    bookCommentators: CommentatorSelection,
     commentatorsListScrollIndex: Int,
     commentatorsListScrollOffset: Int,
     columnScroll: CommentariesColumnScroll,
@@ -571,18 +565,15 @@ private fun MultiLineCommentariesContent(
             commentatorGroups.flatMap { group -> group.commentators.map(CommentatorItem::name) }
         }
 
-    val listedIds = remember(titleToIdMap) { titleToIdMap.values.toSet() }
-    val shownIds =
-        remember(allCommentators, excludedCommentatorIds, listedIds, selectedCommentatorIds) {
-            if (allCommentators) listedIds - excludedCommentatorIds else selectedCommentatorIds
-        }
+    val listed = remember(commentatorGroups) { commentatorGroups.listedCommentators() }
+    val shownIds = remember(bookCommentators, listed) { bookCommentators.shownOf(listed) }
     val selectedCommentators =
         rememberSelectedCommentators(
             availableCommentators = commentatorsInDisplayOrder,
             initiallySelectedIds = shownIds,
             titleToIdMap = titleToIdMap,
             onSelectionChange = { ids ->
-                onEvent(BookContentEvent.SelectedCommentatorsChanged(primaryLineId, ids, listedIds))
+                onEvent(BookContentEvent.SelectedCommentatorsChanged(primaryLineId, ids, listed))
             },
         )
 
@@ -609,7 +600,10 @@ private fun MultiLineCommentariesContent(
                         }
                 },
                 onAllChange = { checked ->
-                    onEvent(BookContentEvent.AllCommentatorsChanged(primaryLineId, checked, listedIds))
+                    onEvent(BookContentEvent.AllCommentatorsChanged(primaryLineId, checked, listed))
+                },
+                onGroupChange = { group, checked ->
+                    onEvent(BookContentEvent.CommentatorGroupChanged(primaryLineId, group, checked, listed))
                 },
             )
         },
@@ -693,6 +687,8 @@ private fun CommentatorsList(
     onSelectionChange: (Collection<String>, Boolean) -> Unit,
     // "כל המפרשים" checked or unchecked, for the book's other lines too (CommentatorSelection)
     onAllChange: (Boolean) -> Unit,
+    // A group's checkbox checked or unchecked, for the book's other lines too (CommentatorSelection)
+    onGroupChange: (String, Boolean) -> Unit,
 ) {
     val currentOnScroll by rememberUpdatedState(onScroll)
     val allNames = remember(groups) { groups.flatMap { group -> group.commentators.map(CommentatorItem::name) } }
@@ -748,12 +744,15 @@ private fun CommentatorsList(
 
                         if (showGroupHeaders && group.label.isNotBlank()) {
                             item(key = "header-$groupIndex-${group.label}") {
-                                // The group's checkbox checks or unchecks all its commentators
+                                // The group's checkbox checks or unchecks all its commentators, on the other lines too
                                 CommentatorsCheckAllRow(
                                     text = group.label,
                                     names = group.commentators.map(CommentatorItem::name),
                                     selectedCommentators = selectedCommentators,
-                                    onSelectionChange = onSelectionChange,
+                                    onSelectionChange = { names, checked ->
+                                        onSelectionChange(names, checked)
+                                        onGroupChange(group.label, checked)
+                                    },
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             }
