@@ -28,20 +28,26 @@ sealed interface ScopeItem {
  * searched. One book alone is the bar's book, with its table of contents to pick from.
  */
 object ScopeItems {
-    fun add(items: List<ScopeItem>, item: ScopeItem): List<ScopeItem> = if (items.any { it.sameAs(item) }) items else items + item
+    /** [items] with [item] last; a category picked again, whole or in its base books alone, takes the new choice. */
+    fun add(items: List<ScopeItem>, item: ScopeItem): List<ScopeItem> {
+        val index = items.indexOfFirst { it.sameAs(item) }
+        return if (index < 0) items + item else items.toMutableList().also { it[index] = item }
+    }
 
     fun remove(items: List<ScopeItem>, item: ScopeItem): List<ScopeItem> = items.filterNot { it.sameAs(item) }
 
     /** Where [items] search: everywhere, one book, one category, or all of them together. */
     fun scopeOf(items: List<ScopeItem>): SearchScope {
         val single = items.singleOrNull()
+        val categories = items.filterIsInstance<ScopeItem.CategoryItem>().map { it.category }
         return when {
             items.isEmpty() -> SearchScope.Global
             single is ScopeItem.BookItem -> SearchScope.Book(single.book.id)
-            single is ScopeItem.CategoryItem -> SearchScope.Category(single.category.id)
+            single is ScopeItem.CategoryItem -> SearchScope.Category(single.category.id, single.category.baseBooksOnly)
             else -> SearchScope.Multi(
                 bookIds = items.filterIsInstance<ScopeItem.BookItem>().map { it.book.id },
-                categoryIds = items.filterIsInstance<ScopeItem.CategoryItem>().map { it.category.id },
+                categoryIds = categories.map { it.id },
+                baseOnlyCategoryIds = categories.filter { it.baseBooksOnly }.map { it.id },
             )
         }
     }

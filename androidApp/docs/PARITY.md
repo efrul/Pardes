@@ -189,6 +189,13 @@ Ported on 2026-10-30 from Pardes desktop (`d85afee`, `5418012`, `574f3d5`, `d27e
 - **Tablet commentaries:** the pages side by side (`HorizontalPager`), turned by a sideways swipe or their dots, in a row above them. The phone kept its pages of one commentator each, with the chips as their indicator.
 - Not ported: a commentator split off into a pane of its own (desktop's dock of line panes has no counterpart here).
 
+## Pardes desktop's categories in their base books alone, and the category named first
+
+Ported on 2026-11-01 from Pardes desktop, the same day:
+- **A category in its base books alone:** a category that holds base books and others (`תלמוד`, `תנ״ך`, `משנה`, `משנה תורה`, `שולחן ערוך`, `טור`) is suggested twice, whole and "ספרי יסוד בלבד": its texts without their commentaries (תלמוד's 76 tractates, not its 2,270 commentaries). Its chip says "(ספרי יסוד)", the status line switches between "רק ספרי יסוד" and "בכל ספרי …", and `SearchScope.Category.baseBooksOnly` / `SearchScope.Multi.baseOnlyCategoryIds` keep the choice in the tab and the history (key suffix `y`, as desktop). The suggestions' doubling is in desktop's `CategorySuggestions.kt`, built unchanged.
+- **A category's books from the catalog:** `search/LibraryCategories.kt` (desktop's `LibraryCategories`) reads every category's books, and its base books, once for the app from the catalog (`CatalogAccess.readCatalog`: catalog.pb, or the database's tree, which now reads `isBaseBook` too). A search in a category no longer loads its books whole from the database in each tab (four queries a book: 2,346 books for תלמוד).
+- **The category named as typed comes first:** `משנה תורה` suggests the category before the books whose titles begin so (it suggested `משנה תורה, מסירת תורה שבעל פה` first), and in a book the categories named as typed come before the other books to add.
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)
