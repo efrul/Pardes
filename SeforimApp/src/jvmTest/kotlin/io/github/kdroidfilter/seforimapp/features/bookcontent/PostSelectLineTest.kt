@@ -87,7 +87,13 @@ class PostSelectLineTest {
                     ),
                 titleUpdateManager = titleUpdateManager,
                 searchHomeViewModelFactory = {
-                    SearchHomeViewModel(TabPersistedStateStore(), mockk(relaxed = true), mockk(relaxed = true), testAppSettings())
+                    SearchHomeViewModel(
+                        TabPersistedStateStore(),
+                        mockk(relaxed = true),
+                        mockk(relaxed = true),
+                        testAppSettings(),
+                        mockk(relaxed = true),
+                    )
                 },
                 defaultDesktopName = "D1",
             )

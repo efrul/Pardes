@@ -27,7 +27,13 @@ class SettingsWindowViewModelTest {
                 ),
             titleUpdateManager = TabTitleUpdateManager(),
             searchHomeViewModelFactory = {
-                SearchHomeViewModel(TabPersistedStateStore(), mockk(relaxed = true), mockk(relaxed = true), testAppSettings())
+                SearchHomeViewModel(
+                    TabPersistedStateStore(),
+                    mockk(relaxed = true),
+                    mockk(relaxed = true),
+                    testAppSettings(),
+                    mockk(relaxed = true),
+                )
             },
             defaultDesktopName = "D1",
         )
