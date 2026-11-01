@@ -229,7 +229,7 @@ class LibraryStore(private val context: Context) {
     }
 
     /**
-     * Every book's id, title, category and place, by category in the order of its list (getBooksByCategory's): the
+     * Every book's id, title, category, place and base-book flag, by category in the order of its list (getBooksByCategory's): the
      * catalog of a library without catalog.pb in one query. That one reads whole rows, notes included (4.25 MB for one
      * book, 37 MB in all), and four more tables per book: 40,000 queries for the 7,900 books.
      */
@@ -238,11 +238,17 @@ class LibraryStore(private val context: Context) {
         val driver = driver ?: return@withContext emptyMap()
         driver.executeQuery(
             null,
-            "SELECT id, title, categoryId, orderIndex FROM book ORDER BY orderIndex, title",
+            "SELECT id, title, categoryId, orderIndex, isBaseBook FROM book ORDER BY orderIndex, title",
             { cursor ->
                 val books = ArrayList<CatalogBook>()
                 while (cursor.next().value) {
-                    books += CatalogBook(cursor.getLong(0)!!, cursor.getString(1)!!, cursor.getLong(2)!!, cursor.getLong(3)!!.toFloat())
+                    books += CatalogBook(
+                        id = cursor.getLong(0)!!,
+                        title = cursor.getString(1)!!,
+                        categoryId = cursor.getLong(2)!!,
+                        order = cursor.getLong(3)!!.toFloat(),
+                        isBaseBook = cursor.getLong(4) == 1L,
+                    )
                 }
                 QueryResult.Value(books)
             },
