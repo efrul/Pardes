@@ -460,7 +460,11 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
     }
     val groups = snapshot?.commentatorGroups.orEmpty()
     val available = remember(groups) { groups.flatMap { g -> g.commentators } }
-    val selectedIds = if (primary != null) vm.selectedCommentators(primary, available.map { it.bookId }) else emptySet()
+    val availableIds = remember(available) { available.mapTo(LinkedHashSet()) { it.bookId } }
+    // The book's commentators in this list: those remembered, or all but the unchecked ones ("כל המפרשים")
+    val selectedIds = remember(primary, state.commentators, availableIds) {
+        if (primary != null) state.commentators.shownOf(availableIds) else emptySet()
+    }
     val shown = remember(available, selectedIds) { available.filter { it.bookId in selectedIds } }
     var filterOpen by remember { mutableStateOf(false) }
     val pane = paneTextSize(textSize)
@@ -469,16 +473,22 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
     val passage = state.selectedPassage?.takeIf { selection is LinkSelection.Single && it.lineId == selection.lineId }
 
     fun toggle(id: Long) {
-        val p = primary ?: return
+        if (primary == null) return
         val next = if (id in selectedIds) selectedIds - id else selectedIds + id
-        vm.updateSelectedCommentators(p, next.filter { i -> available.any { it.bookId == i } }.toSet(), available.map { it.bookId })
+        vm.updateSelectedCommentators(next.filterTo(LinkedHashSet()) { it in availableIds }, availableIds)
     }
 
-    // A group's commentators, or all of them, checked or unchecked at once
+    // A group's commentators checked or unchecked at once
     fun setMany(ids: Collection<Long>, checked: Boolean) {
-        val p = primary ?: return
+        if (primary == null) return
         val next = if (checked) selectedIds + ids else selectedIds - ids.toSet()
-        vm.updateSelectedCommentators(p, next.filter { i -> available.any { it.bookId == i } }.toSet(), available.map { it.bookId })
+        vm.updateSelectedCommentators(next.filterTo(LinkedHashSet()) { it in availableIds }, availableIds)
+    }
+
+    // "כל המפרשים": for the book's other lines too, the commentators no line before had included (desktop)
+    fun setAll(checked: Boolean) {
+        if (primary == null) return
+        vm.setAllCommentators(checked, availableIds)
     }
 
     BoxWithConstraints(modifier) {
@@ -506,7 +516,7 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
                 else -> Row(Modifier.fillMaxSize()) {
                     if (listVisible) {
                         Column(Modifier.then(if (compact) Modifier.fillMaxSize() else Modifier.width(maxOf(150.dp, paneWidth * 0.22f)).fillMaxHeight()).verticalScroll(rememberScrollState())) {
-                            CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany)
+                            CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany, ::setAll)
                         }
                         if (!compact) Box(Modifier.width(1.dp).fillMaxHeight().background(Zayit.colors.divider))
                     }
@@ -527,7 +537,7 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
         ModalBottomSheet(onDismissRequest = { filterOpen = false }, sheetState = rememberModalBottomSheetState(), containerColor = Zayit.colors.panel) {
             WindowBackScope {
                 Text("מפרשים", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Zayit.colors.text, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany) }
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany, ::setAll) }
             }
         }
     }
@@ -542,13 +552,15 @@ private fun CommentatorChecklist(
     groups: List<CommentatorGroup>,
     selected: Set<Long>,
     onToggle: (Long) -> Unit,
-    // Checks or unchecks these commentators: a group's or all of them
+    // Checks or unchecks a group's commentators
     onSetMany: (Collection<Long>, Boolean) -> Unit,
+    // "כל המפרשים" checked or unchecked, for the book's other lines too (desktop CommentatorSelection)
+    onSetAll: (Boolean) -> Unit,
 ) {
     val c = Zayit.colors
     val all = remember(groups) { groups.flatMap { group -> group.commentators.map { it.bookId } } }
     if (all.size > 1) {
-        CheckAllRow("כל המפרשים", all, selected, FontWeight.Bold, onSetMany)
+        CheckAllRow("כל המפרשים", all, selected, FontWeight.Bold) { _, checked -> onSetAll(checked) }
         HorizontalDivider(color = c.divider)
     }
     groups.forEachIndexed { i, group ->

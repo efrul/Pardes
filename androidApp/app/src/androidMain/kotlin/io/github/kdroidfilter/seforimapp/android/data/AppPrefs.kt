@@ -188,12 +188,28 @@ class AppPrefs(context: Context) {
         this.city = city
     }
 
-    fun selectedCommentators(bookId: Long): Set<Long>? =
-        sp.getString("$KEY_COMMENTATORS$bookId", null)?.split(',')?.mapNotNull { it.toLongOrNull() }?.toSet()
-
-    fun setSelectedCommentators(bookId: Long, ids: Set<Long>) {
-        sp.edit().putString("$KEY_COMMENTATORS$bookId", ids.joinToString(",")).apply()
+    /** The book's commentators (desktop CommentatorSelection), null when none were ever chosen: its defaults then. */
+    fun commentatorSelection(bookId: Long): CommentatorSelection? {
+        val remembered = idsOf(sp.getString("$KEY_COMMENTATORS$bookId", null)) ?: return null
+        return CommentatorSelection(
+            remembered = remembered,
+            all = sp.getBoolean("$KEY_ALL_COMMENTATORS$bookId", false),
+            excluded = idsOf(sp.getString("$KEY_EXCLUDED_COMMENTATORS$bookId", null)).orEmpty(),
+        )
     }
+
+    fun setCommentatorSelection(bookId: Long, selection: CommentatorSelection) {
+        val editor = sp.edit().putString("$KEY_COMMENTATORS$bookId", selection.remembered.joinToString(","))
+        if (selection.all) editor.putBoolean("$KEY_ALL_COMMENTATORS$bookId", true) else editor.remove("$KEY_ALL_COMMENTATORS$bookId")
+        if (selection.excluded.isEmpty()) {
+            editor.remove("$KEY_EXCLUDED_COMMENTATORS$bookId")
+        } else {
+            editor.putString("$KEY_EXCLUDED_COMMENTATORS$bookId", selection.excluded.joinToString(","))
+        }
+        editor.apply()
+    }
+
+    private fun idsOf(stored: String?): Set<Long>? = stored?.split(',')?.mapNotNull { it.toLongOrNull() }?.toSet()
 
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
@@ -404,6 +420,9 @@ class AppPrefs(context: Context) {
         // Android only.
         private const val KEY_NIKUD = "show_nikud"
         private const val KEY_COMMENTATORS = "commentators_"
+        // "כל המפרשים" kept for a book, and the commentators unchecked there since (CommentatorSelection)
+        private const val KEY_ALL_COMMENTATORS = "commentators_all_"
+        private const val KEY_EXCLUDED_COMMENTATORS = "commentators_excluded_"
         private const val KEY_SCHEMA = "android_prefs_schema"
         private const val KEY_CATALOG_ROW_WIDTH = "home_catalog_row_width"
         private const val KEY_CATALOG_ROW_HEIGHT = "home_catalog_row_height"
