@@ -12,6 +12,10 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.listedCommentators
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.withCommentatorSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.withLine
 import io.github.kdroidfilter.seforimapp.pagination.CommentsForLineOrTocPagingSource
 import io.github.kdroidfilter.seforimapp.pagination.LineTargumPagingSource
 import io.github.kdroidfilter.seforimapp.pagination.MultiLineCommentsPagingSource
@@ -39,6 +43,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
@@ -57,6 +62,8 @@ class CommentariesUseCase(
     private val scope: CoroutineScope,
 ) {
     private val commentatorBookCache: MutableMap<Long, Book> = ConcurrentHashMap()
+    private val commentatorGroupCache: MutableMap<Long, String> = ConcurrentHashMap()
+    private val groupCategoryCache: MutableMap<Long, Category?> = Collections.synchronizedMap(mutableMapOf())
     private val defaultTargumCache: MutableMap<Long, List<Long>> = ConcurrentHashMap()
 
     // Memoizes the cached pager flows per (kind, line(s), commentator) so the SAME cachedIn flow
@@ -1034,8 +1041,8 @@ class CommentariesUseCase(
      */
     suspend fun applyDefaultCommentatorsForBook(bookId: Long) {
         val currentState = stateManager.state.first()
-        val existing = currentState.content.selectedCommentatorsByBook[bookId]
-        if (!existing.isNullOrEmpty()) return
+        // Commentators already chosen for the book, one by one or by whole groups ("כל המפרשים", "ראשונים על התנ״ך")
+        if (!currentState.content.commentatorSelection(bookId).isEmpty) return
 
         val defaults =
             runSuspendCatching {
@@ -1052,43 +1059,91 @@ class CommentariesUseCase(
     }
 
     /**
-     * Met à jour les commentateurs sélectionnés pour une ligne
+     * Met à jour les commentateurs sélectionnés pour une ligne, dont la liste montrait [listed] (chacun avec son groupe ;
+     * vide : inconnue)
      */
     suspend fun updateSelectedCommentators(
         lineId: Long,
         selectedIds: Set<Long>,
+        listed: Map<Long, String> = emptyMap(),
     ) {
         val currentState = stateManager.state.first()
         val currentContent = currentState.content
         val bookId = currentState.navigation.selectedBook?.id ?: return
 
-        val prevLineSelected = currentContent.selectedCommentatorsByLine[lineId] ?: emptySet()
-        val oldSticky = currentContent.selectedCommentatorsByBook[bookId] ?: emptySet()
-
-        val additions = selectedIds.minus(prevLineSelected)
-        val removals = prevLineSelected.minus(selectedIds)
-
-        val newSticky =
-            oldSticky
-                .plus(additions)
-                .minus(removals)
-
-        val byLine =
-            currentContent.selectedCommentatorsByLine.toMutableMap().apply {
-                if (selectedIds.isEmpty()) remove(lineId) else this[lineId] = selectedIds
-            }
-        val byBook =
-            currentContent.selectedCommentatorsByBook.toMutableMap().apply {
-                if (newSticky.isEmpty()) remove(bookId) else this[bookId] = newSticky
-            }
+        // What the line's list showed checked: a commentator remembered for it that the list did not show (a section's
+        // other lines, as its heading lists only its own) is not unchecked by it
+        val prevLineSelected =
+            currentContent.selectedCommentatorsByLine[lineId]
+                .orEmpty()
+                .let { if (listed.isEmpty()) it else it intersect listed.keys }
+        val selection = currentContent.commentatorSelection(bookId).changed(prevLineSelected, selectedIds, listed)
 
         stateManager.updateContent {
-            copy(
-                selectedCommentatorsByLine = byLine,
-                selectedCommentatorsByBook = byBook,
-            )
+            withCommentatorSelection(bookId, selection)
+                .copy(selectedCommentatorsByLine = selectedCommentatorsByLine.withLine(lineId, selectedIds))
         }
     }
+
+    /**
+     * "כל המפרשים" checked or unchecked on [lineId], whose list showed [listed]. Checked, every line of the book shows
+     * all of its commentators, those no line before had included; unchecked, none.
+     */
+    suspend fun setAllCommentators(
+        lineId: Long,
+        checked: Boolean,
+        listed: Map<Long, String>,
+    ) {
+        val bookId =
+            stateManager.state
+                .first()
+                .navigation.selectedBook
+                ?.id ?: return
+        stateManager.updateContent {
+            val after = if (checked) commentatorSelection(bookId).allChecked() else commentatorSelection(bookId).allUnchecked()
+            // Unchecked, none on any line: the lines' own selections, kept to show them again, go too
+            val byLine = if (checked) selectedCommentatorsByLine.withLine(lineId, after.shownOf(listed)) else emptyMap()
+            withCommentatorSelection(bookId, after).copy(selectedCommentatorsByLine = byLine)
+        }
+    }
+
+    /**
+     * [group]'s checkbox ("ראשונים על התנ״ך") checked or unchecked on [lineId], whose list showed [listed]. Checked,
+     * every line of the book shows all of the group's commentators, those no line before had included; unchecked,
+     * none of them. The group's commentators the book remembers or hides that this line does not list count too.
+     */
+    suspend fun setCommentatorGroup(
+        lineId: Long,
+        group: String,
+        checked: Boolean,
+        listed: Map<Long, String>,
+    ) {
+        val currentState = stateManager.state.first()
+        val bookId = currentState.navigation.selectedBook?.id ?: return
+        val before = currentState.content.commentatorSelection(bookId)
+        val elsewhere = (before.remembered + before.excluded) - listed.keys
+        val members = listed.filterValues { it == group }.keys + elsewhere.filter { commentatorGroupOf(it) == group }
+
+        stateManager.updateContent {
+            // Read again: the line's list may have reported its change meanwhile
+            val current = commentatorSelection(bookId)
+            val after = if (checked) current.groupChecked(group, members) else current.groupUnchecked(group, members)
+            withCommentatorSelection(bookId, after)
+                .copy(selectedCommentatorsByLine = selectedCommentatorsByLine.withLine(lineId, after.shownOf(listed)))
+        }
+    }
+
+    /**
+     * The group [commentatorId] is listed under in the commentaries pane (the label of its heading there): it depends
+     * on the commentator's categories alone, so it is the same on every line.
+     */
+    suspend fun commentatorGroupOf(commentatorId: Long): String =
+        commentatorGroupCache[commentatorId]
+            ?: resolveGroupLabel(loadBookMetadata(commentatorId, mutableMapOf()), groupCategoryCache)
+                .also { commentatorGroupCache[commentatorId] = it }
+
+    /** A line's commentators list (its groups') as [CommentatorSelection] reads it. */
+    suspend fun listedCommentators(lineId: Long): Map<Long, String> = getCommentatorGroups(lineId).listedCommentators()
 
     private suspend fun resolveBaseLineIds(lineId: Long): List<Long> = resolveBaseLineResolution(lineId).baseLineIds
 
@@ -1199,23 +1254,39 @@ class CommentariesUseCase(
     suspend fun reapplySelectedCommentators(line: Line) {
         val currentState = stateManager.state.first()
         val bookId = currentState.navigation.selectedBook?.id ?: line.bookId
-        val sticky = currentState.content.selectedCommentatorsByBook[bookId] ?: emptySet()
+        val selection = currentState.content.commentatorSelection(bookId)
 
-        if (sticky.isEmpty()) return
+        if (selection.isEmpty) return
 
         try {
-            val available = getAvailableCommentators(line.id)
-            if (available.isEmpty()) return
+            val listed = listedCommentators(line.id)
+            if (listed.isEmpty()) return
 
-            val desired = available.values.filter { it in sticky }
-
-            if (desired.isNotEmpty()) {
-                updateSelectedCommentatorsForLine(line.id, desired.toSet())
-            }
+            reapplyCommentators(bookId, line.id, listed)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
         }
+    }
+
+    /**
+     * Selects for [lineId] the commentators of [listed] (its list) that its book shows: those remembered, and all of
+     * the checked groups' ("כל המפרשים" all of them) but the unchecked ones.
+     */
+    private suspend fun reapplyCommentators(
+        bookId: Long,
+        lineId: Long,
+        listed: Map<Long, String>,
+    ) {
+        // Read again: the selection may have changed while the list was loading
+        val selection =
+            stateManager.state
+                .first()
+                .content
+                .commentatorSelection(bookId)
+        val desired = selection.shownOf(listed)
+        // Whole groups checked: the line follows the book's, also when all its own were unchecked
+        if (desired.isNotEmpty() || selection.showsGroups) updateSelectedCommentatorsForLine(lineId, desired)
     }
 
     suspend fun updateSelectedCommentatorsForLine(
@@ -1267,21 +1338,17 @@ class CommentariesUseCase(
         bookId: Long,
     ) {
         val currentState = stateManager.state.first()
-        val sticky = currentState.content.selectedCommentatorsByBook[bookId] ?: emptySet()
+        val selection = currentState.content.commentatorSelection(bookId)
 
         // Si aucun commentateur mémorisé, ne rien sélectionner (seul le targum par défaut)
-        if (sticky.isEmpty()) return
+        if (selection.isEmpty) return
 
         try {
             // Obtenir l'union des commentateurs disponibles pour toutes les lignes
-            val available = getAvailableCommentatorsForLines(lineIds)
-            if (available.isEmpty()) return
+            val listed = getCommentatorGroupsForLines(lineIds).listedCommentators()
+            if (listed.isEmpty()) return
 
-            val desired = available.values.filter { it in sticky }
-
-            if (desired.isNotEmpty()) {
-                updateSelectedCommentatorsForLine(primaryLineId, desired.toSet())
-            }
+            reapplyCommentators(bookId, primaryLineId, listed)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {

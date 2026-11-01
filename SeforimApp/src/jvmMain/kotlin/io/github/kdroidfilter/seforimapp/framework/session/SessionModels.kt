@@ -117,6 +117,12 @@ data class BookContentPersistedState(
     // The commentators shown in panes of their own, by name. Desktop 1.0.5 wrote them by slot, "" for a free one:
     // read here as the names alone (DetachedCommentators.names), and a plain list of names reads there as the first slots.
     val detachedCommentators: List<String> = emptyList(),
+    // The books whose lines all show all their commentators, and the commentators unchecked there (CommentatorSelection)
+    val allCommentatorsBooks: Set<Long> = emptySet(),
+    val excludedCommentatorsByBook: Map<Long, Set<Long>> = emptyMap(),
+    // The groups of commentators checked whole, and those unchecked while all of them were (CommentatorSelection)
+    val commentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
+    val hiddenCommentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
 )
 
 // -- Virtual desktops persistence models --

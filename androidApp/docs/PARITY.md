@@ -189,6 +189,12 @@ Ported on 2026-10-30 from Pardes desktop (`d85afee`, `5418012`, `574f3d5`, `d27e
 - **Tablet commentaries:** the pages side by side (`HorizontalPager`), turned by a sideways swipe or their dots, in a row above them. The phone kept its pages of one commentator each, with the chips as their indicator.
 - Not ported: a commentator split off into a pane of its own (desktop's dock of line panes has no counterpart here).
 
+## Pardes desktop's whole groups of commentators kept from line to line
+
+Ported on 2026-11-01 from Pardes desktop (`3c6bae9`, `49b456d`):
+- **"כל המפרשים" and each group's checkbox kept:** a group checked ("ראשונים על התנ״ך") shows on every line all of its commentators, those a line is the first to have included, until it is unchecked (then none of them, on any line); "כל המפרשים" does it for all of them, and unchecked leaves none. A commentator unchecked meanwhile stays hidden on the other lines. Desktop's `CommentatorSelection` is `data/CommentatorSelection.kt`, saved by book in `AppPrefs` (`commentators_`, `commentators_all_`, `commentators_groups_`, `commentators_hidden_groups_`, `commentators_excluded_`); its test runs on the port (`androidUnitTest`). A line's list is read with each commentator's group (`listedCommentators`); a group checked or unchecked counts its commentators of other lines that the book remembers or hides, their group found by `LineConnections.groupOf` (desktop `commentatorGroupOf`).
+- **A line's commentators derived from the book's on every line**, as desktop reapplies them: the reader kept a line's own selection once something was changed there, without what was checked since on other lines. And a line where none of the book's commentators is listed took the whole remembered set for what it showed, so checking one of its commentators, or "כל המפרשים", replaced the book's commentators with that line's.
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)
