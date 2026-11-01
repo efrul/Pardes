@@ -224,6 +224,8 @@ class HybridSearchEngine internal constructor(
         near: Int,
         bookIds: Collection<Long>?,
         baseOnly: Boolean,
+        // How many lines the lexical side finds in all, of which the fusion takes the first CANDIDATES
+        onLexicalTotal: (Long) -> Unit = {},
     ): List<FusedEntry> =
         coroutineScope {
             val dense =
@@ -240,7 +242,9 @@ class HybridSearchEngine internal constructor(
                 runSuspendCatching {
                     lexical
                         .openSession(query, near = near, bookIds = bookIds, baseBookOnly = baseOnly)
-                        ?.use { it.nextPage(CANDIDATES, snippets = false)?.hits }
+                        ?.use { it.nextPage(CANDIDATES, snippets = false) }
+                        ?.also { onLexicalTotal(it.totalHits) }
+                        ?.hits
                         .orEmpty()
                 }.getOrElse { e ->
                     Log.w(TAG, "Lexical search failed; using dense results.", e)
@@ -302,6 +306,11 @@ class HybridSearchEngine internal constructor(
         }
     }
 
+    /**
+     * The fused list first, then the lexical results past its candidates, in their order and without a line shown
+     * already: a search with many results reaches all of them, as without the dense side. Its total is the lexical
+     * side's (the facets' count), not the fused list's length.
+     */
     private inner class HybridSession(
         private val query: String,
         private val near: Int,
@@ -310,22 +319,54 @@ class HybridSearchEngine internal constructor(
     ) : SearchSession {
         private var fused: List<FusedEntry>? = null
         private var offset = 0
+        private var lexicalTotal = 0L
+
+        // The lexical results after the fused list's candidates, and the lines shown so far
+        private var rest: SearchSession? = null
+        private val shown = HashSet<Long>()
 
         override suspend fun nextPage(
             limit: Int,
             snippets: Boolean,
         ): SearchPage? {
-            val all = fused ?: fuse(query, near, bookIds, baseOnly).also { fused = it }
+            val all =
+                fused ?: fuse(query, near, bookIds, baseOnly) { lexicalTotal = it }.also { list ->
+                    fused = list
+                    list.mapTo(shown) { it.lineId }
+                }
+            val total = maxOf(all.size.toLong(), lexicalTotal)
+            val more = lexicalTotal > CANDIDATES
             while (offset < all.size) {
                 val end = minOf(offset + limit, all.size)
                 val entries = all.subList(offset, end)
                 offset = end
                 val page = resolvePage(entries, snippets)
                 if (page.isNotEmpty() || offset >= all.size) {
-                    return SearchPage(hits = page, totalHits = all.size.toLong(), isLastPage = offset >= all.size)
+                    return SearchPage(hits = page, totalHits = total, isLastPage = offset >= all.size && !more)
                 }
             }
-            return null
+            return if (more) restPage(limit, snippets, total) else null
+        }
+
+        private suspend fun restPage(
+            limit: Int,
+            snippets: Boolean,
+            total: Long,
+        ): SearchPage? {
+            val session =
+                rest ?: lexical
+                    .openSession(query, near = near, bookIds = bookIds, baseBookOnly = baseOnly)
+                    // Its first CANDIDATES are the fused list's lexical side
+                    ?.also { opened ->
+                        opened.nextPage(CANDIDATES, snippets = false)
+                        rest = opened
+                    } ?: return null
+            while (true) {
+                val page = session.nextPage(limit, snippets = false) ?: return null
+                val entries = page.hits.filter { shown.add(it.lineId) }.map { FusedEntry(it.lineId, it.score, it) }
+                val hits = resolvePage(entries, snippets)
+                if (hits.isNotEmpty() || page.isLastPage) return SearchPage(hits = hits, totalHits = total, isLastPage = page.isLastPage)
+            }
         }
 
         private suspend fun resolvePage(
@@ -364,7 +405,9 @@ class HybridSearchEngine internal constructor(
             }
         }
 
-        override fun close() {}
+        override fun close() {
+            rest?.close()
+        }
     }
 
     companion object {
