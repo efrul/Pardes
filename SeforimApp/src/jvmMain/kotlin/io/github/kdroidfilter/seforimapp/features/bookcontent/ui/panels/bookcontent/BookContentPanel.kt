@@ -26,6 +26,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePla
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.*
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
@@ -187,12 +188,23 @@ private fun BookContentPanelContent(
         uiState.content.selectedCommentatorsByBook[selectedBook.id]
             .orEmpty()
             .ifEmpty { openCommentatorIds }
-    LaunchedEffect(hoveredLine, bookCommentatorIds, uiState.content.showCommentaries) {
-        if (!uiState.content.showCommentaries || bookCommentatorIds.isEmpty()) return@LaunchedEffect
+    // "כל המפרשים": a line shows its own commentators, but the unchecked ones (CommentatorSelection)
+    val bookSelection = uiState.content.commentatorSelection(selectedBook.id)
+    LaunchedEffect(hoveredLine, bookCommentatorIds, bookSelection.all, bookSelection.excluded, uiState.content.showCommentaries) {
+        if (!uiState.content.showCommentaries) return@LaunchedEffect
+        if (!bookSelection.all && bookCommentatorIds.isEmpty()) return@LaunchedEffect
         hoveredLine
             .filterNotNull()
             .debounce(HOVER_PREFETCH_DELAY)
-            .collectLatest { lineId -> providers.prefetchCommentaries(lineId, bookCommentatorIds) }
+            .collectLatest { lineId ->
+                val ids =
+                    if (bookSelection.all) {
+                        bookSelection.shownOf(providers.getAvailableCommentatorsForLine(lineId).values)
+                    } else {
+                        bookCommentatorIds
+                    }
+                providers.prefetchCommentaries(lineId, ids)
+            }
     }
 
     val hasBottomPane = uiState.content.showCommentaries || uiState.content.showSources

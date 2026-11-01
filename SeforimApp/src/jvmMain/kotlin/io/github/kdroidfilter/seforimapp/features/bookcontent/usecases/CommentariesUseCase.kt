@@ -12,6 +12,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.withCommentatorSelection
 import io.github.kdroidfilter.seforimapp.pagination.CommentsForLineOrTocPagingSource
 import io.github.kdroidfilter.seforimapp.pagination.LineTargumPagingSource
 import io.github.kdroidfilter.seforimapp.pagination.MultiLineCommentsPagingSource
@@ -1035,7 +1037,8 @@ class CommentariesUseCase(
     suspend fun applyDefaultCommentatorsForBook(bookId: Long) {
         val currentState = stateManager.state.first()
         val existing = currentState.content.selectedCommentatorsByBook[bookId]
-        if (!existing.isNullOrEmpty()) return
+        // All of them are shown ("כל המפרשים"): the defaults would add nothing
+        if (!existing.isNullOrEmpty() || bookId in currentState.content.allCommentatorsBooks) return
 
         val defaults =
             runSuspendCatching {
@@ -1052,41 +1055,58 @@ class CommentariesUseCase(
     }
 
     /**
-     * Met à jour les commentateurs sélectionnés pour une ligne
+     * Met à jour les commentateurs sélectionnés pour une ligne, dont la liste montrait [availableIds] (vide : inconnue)
      */
     suspend fun updateSelectedCommentators(
         lineId: Long,
         selectedIds: Set<Long>,
+        availableIds: Set<Long> = emptySet(),
     ) {
         val currentState = stateManager.state.first()
         val currentContent = currentState.content
         val bookId = currentState.navigation.selectedBook?.id ?: return
 
-        val prevLineSelected = currentContent.selectedCommentatorsByLine[lineId] ?: emptySet()
-        val oldSticky = currentContent.selectedCommentatorsByBook[bookId] ?: emptySet()
-
-        val additions = selectedIds.minus(prevLineSelected)
-        val removals = prevLineSelected.minus(selectedIds)
-
-        val newSticky =
-            oldSticky
-                .plus(additions)
-                .minus(removals)
+        // What the line's list showed checked: a commentator remembered for it that the list did not show (a section's
+        // other lines, as its heading lists only its own) is not unchecked by it
+        val prevLineSelected =
+            currentContent.selectedCommentatorsByLine[lineId]
+                .orEmpty()
+                .let { if (availableIds.isEmpty()) it else it intersect availableIds }
+        val selection = currentContent.commentatorSelection(bookId).changed(prevLineSelected, selectedIds)
 
         val byLine =
             currentContent.selectedCommentatorsByLine.toMutableMap().apply {
                 if (selectedIds.isEmpty()) remove(lineId) else this[lineId] = selectedIds
             }
-        val byBook =
-            currentContent.selectedCommentatorsByBook.toMutableMap().apply {
-                if (newSticky.isEmpty()) remove(bookId) else this[bookId] = newSticky
-            }
 
         stateManager.updateContent {
-            copy(
-                selectedCommentatorsByLine = byLine,
-                selectedCommentatorsByBook = byBook,
-            )
+            withCommentatorSelection(bookId, selection).copy(selectedCommentatorsByLine = byLine)
+        }
+    }
+
+    /**
+     * "כל המפרשים" checked or unchecked on [lineId], whose list showed [availableIds]. Checked, every line of the book
+     * shows all of its commentators, those no line before had included; unchecked after that, none.
+     */
+    suspend fun setAllCommentators(
+        lineId: Long,
+        checked: Boolean,
+        availableIds: Set<Long>,
+    ) {
+        val currentState = stateManager.state.first()
+        val bookId = currentState.navigation.selectedBook?.id ?: return
+        val before = currentState.content.commentatorSelection(bookId)
+        val after = if (checked) before.allChecked(availableIds) else before.allUnchecked(availableIds)
+
+        stateManager.updateContent {
+            val byLine =
+                when {
+                    checked && availableIds.isNotEmpty() -> selectedCommentatorsByLine + (lineId to availableIds)
+                    // None on any line: the lines' own selections, kept to show them again, go too
+                    !checked && before.all -> emptyMap()
+                    else -> selectedCommentatorsByLine - lineId
+                }
+            withCommentatorSelection(bookId, after).copy(selectedCommentatorsByLine = byLine)
         }
     }
 
@@ -1199,23 +1219,39 @@ class CommentariesUseCase(
     suspend fun reapplySelectedCommentators(line: Line) {
         val currentState = stateManager.state.first()
         val bookId = currentState.navigation.selectedBook?.id ?: line.bookId
-        val sticky = currentState.content.selectedCommentatorsByBook[bookId] ?: emptySet()
+        val selection = currentState.content.commentatorSelection(bookId)
 
-        if (sticky.isEmpty()) return
+        if (!selection.all && selection.remembered.isEmpty()) return
 
         try {
             val available = getAvailableCommentators(line.id)
             if (available.isEmpty()) return
 
-            val desired = available.values.filter { it in sticky }
-
-            if (desired.isNotEmpty()) {
-                updateSelectedCommentatorsForLine(line.id, desired.toSet())
-            }
+            reapplyCommentators(bookId, line.id, available.values)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
         }
+    }
+
+    /**
+     * Selects for [lineId] the commentators of [available] (its list) that its book shows: those remembered, or all
+     * but the unchecked ones once "כל המפרשים" is checked.
+     */
+    private suspend fun reapplyCommentators(
+        bookId: Long,
+        lineId: Long,
+        available: Collection<Long>,
+    ) {
+        // Read again: the selection may have changed while the list was loading
+        val selection =
+            stateManager.state
+                .first()
+                .content
+                .commentatorSelection(bookId)
+        val desired = selection.shownOf(available)
+        // All of them: the line follows the book's, also when all its own were unchecked
+        if (desired.isNotEmpty() || selection.all) updateSelectedCommentatorsForLine(lineId, desired)
     }
 
     suspend fun updateSelectedCommentatorsForLine(
@@ -1267,21 +1303,17 @@ class CommentariesUseCase(
         bookId: Long,
     ) {
         val currentState = stateManager.state.first()
-        val sticky = currentState.content.selectedCommentatorsByBook[bookId] ?: emptySet()
+        val selection = currentState.content.commentatorSelection(bookId)
 
         // Si aucun commentateur mémorisé, ne rien sélectionner (seul le targum par défaut)
-        if (sticky.isEmpty()) return
+        if (!selection.all && selection.remembered.isEmpty()) return
 
         try {
             // Obtenir l'union des commentateurs disponibles pour toutes les lignes
             val available = getAvailableCommentatorsForLines(lineIds)
             if (available.isEmpty()) return
 
-            val desired = available.values.filter { it in sticky }
-
-            if (desired.isNotEmpty()) {
-                updateSelectedCommentatorsForLine(primaryLineId, desired.toSet())
-            }
+            reapplyCommentators(bookId, primaryLineId, available.values)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {

@@ -252,6 +252,15 @@ sealed interface BookContentEvent {
     data class SelectedCommentatorsChanged(
         val lineId: Long,
         val selectedIds: Set<Long>,
+        // The commentators the line's list showed: only those can have been unchecked there
+        val availableIds: Set<Long> = emptySet(),
+    ) : BookContentEvent
+
+    // "כל המפרשים" checked or unchecked on a line whose list showed availableIds (CommentatorSelection)
+    data class AllCommentatorsChanged(
+        val lineId: Long,
+        val checked: Boolean,
+        val availableIds: Set<Long>,
     ) : BookContentEvent
 
     // Targum events

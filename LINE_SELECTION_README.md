@@ -680,6 +680,15 @@ val uiState = stateManager.state.map { state ->
 }
 ```
 
+### All commentators ("כל המפרשים")
+
+The per-book list only shows, on a new line, the commentators already in it: one that a line is the first to have is
+not shown. Checking "כל המפרשים" therefore switches the book to all of them (`allCommentatorsBooks`): every line shows
+all of its commentators, until the box is unchecked (then none). A commentator unchecked meanwhile is kept in
+`excludedCommentatorsByBook` and stays hidden on the other lines. `CommentatorSelection` holds the rules; the
+commentaries pane derives a line's checkboxes from it from the line's first frame, and reports each change with the
+ids its list showed (`SelectedCommentatorsChanged.availableIds`), so that only those can be unchecked by it.
+
 ## Prefetching and Caching
 
 ### LineConnectionsSnapshot

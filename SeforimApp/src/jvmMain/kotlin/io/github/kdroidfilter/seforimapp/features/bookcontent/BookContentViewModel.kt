@@ -26,6 +26,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.MarkedRange
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.Providers
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.StateKeys
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.needsLineSelectionFor
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookContentUseCaseFactory
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.altTocIdOfSearchMatch
@@ -721,7 +722,10 @@ class BookContentViewModel(
                     }
 
                 is BookContentEvent.SelectedCommentatorsChanged ->
-                    commentariesUseCase.updateSelectedCommentators(event.lineId, event.selectedIds)
+                    commentariesUseCase.updateSelectedCommentators(event.lineId, event.selectedIds, event.availableIds)
+
+                is BookContentEvent.AllCommentatorsChanged ->
+                    commentariesUseCase.setAllCommentators(event.lineId, event.checked, event.availableIds)
 
                 is BookContentEvent.SelectedTargumSourcesChanged ->
                     commentariesUseCase.updateSelectedLinkSources(event.lineId, event.selectedIds)
@@ -1064,19 +1068,28 @@ class BookContentViewModel(
         val state = stateManager.state.value
         if (!state.content.showCommentaries) return
         val bookId = state.navigation.selectedBook?.id ?: line.bookId
-        val byBook = state.content.selectedCommentatorsByBook[bookId].orEmpty()
+        val selection = state.content.commentatorSelection(bookId)
+        val byBook = selection.remembered
 
         fun commentatorsFor(lineId: Long) =
             state.content.selectedCommentatorsByLine[lineId]
                 .orEmpty()
                 .ifEmpty { byBook }
-        if (commentatorsFor(line.id).isEmpty()) return
+
+        // "כל המפרשים": each line's own commentators, but the unchecked ones
+        suspend fun shownOn(lineId: Long): Set<Long> =
+            if (selection.all) {
+                selection.shownOf(commentariesUseCase.getAvailableCommentators(lineId).values)
+            } else {
+                commentatorsFor(lineId)
+            }
+        if (!selection.all && commentatorsFor(line.id).isEmpty()) return
         viewModelScope.launch {
-            commentariesUseCase.prefetchCommentaries(line.id, commentatorsFor(line.id))
+            commentariesUseCase.prefetchCommentaries(line.id, shownOn(line.id))
             listOfNotNull(
                 runSuspendCatching { repository.getNextLine(bookId, line.lineIndex) }.getOrNull(),
                 runSuspendCatching { repository.getPreviousLine(bookId, line.lineIndex) }.getOrNull(),
-            ).forEach { commentariesUseCase.prefetchCommentaries(it.id, commentatorsFor(it.id)) }
+            ).forEach { commentariesUseCase.prefetchCommentaries(it.id, shownOn(it.id)) }
         }
     }
 
