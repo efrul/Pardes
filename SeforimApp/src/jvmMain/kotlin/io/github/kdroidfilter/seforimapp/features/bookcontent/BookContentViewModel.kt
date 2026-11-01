@@ -722,10 +722,13 @@ class BookContentViewModel(
                     }
 
                 is BookContentEvent.SelectedCommentatorsChanged ->
-                    commentariesUseCase.updateSelectedCommentators(event.lineId, event.selectedIds, event.availableIds)
+                    commentariesUseCase.updateSelectedCommentators(event.lineId, event.selectedIds, event.listed)
 
                 is BookContentEvent.AllCommentatorsChanged ->
-                    commentariesUseCase.setAllCommentators(event.lineId, event.checked, event.availableIds)
+                    commentariesUseCase.setAllCommentators(event.lineId, event.checked, event.listed)
+
+                is BookContentEvent.CommentatorGroupChanged ->
+                    commentariesUseCase.setCommentatorGroup(event.lineId, event.group, event.checked, event.listed)
 
                 is BookContentEvent.SelectedTargumSourcesChanged ->
                     commentariesUseCase.updateSelectedLinkSources(event.lineId, event.selectedIds)
@@ -1076,14 +1079,14 @@ class BookContentViewModel(
                 .orEmpty()
                 .ifEmpty { byBook }
 
-        // "כל המפרשים": each line's own commentators, but the unchecked ones
+        // Whole groups checked ("כל המפרשים", "ראשונים על התנ״ך"): each line's own of them, but the unchecked ones
         suspend fun shownOn(lineId: Long): Set<Long> =
-            if (selection.all) {
-                selection.shownOf(commentariesUseCase.getAvailableCommentators(lineId).values)
+            if (selection.showsGroups) {
+                selection.shownOf(commentariesUseCase.listedCommentators(lineId))
             } else {
                 commentatorsFor(lineId)
             }
-        if (!selection.all && commentatorsFor(line.id).isEmpty()) return
+        if (!selection.showsGroups && commentatorsFor(line.id).isEmpty()) return
         viewModelScope.launch {
             commentariesUseCase.prefetchCommentaries(line.id, shownOn(line.id))
             listOfNotNull(

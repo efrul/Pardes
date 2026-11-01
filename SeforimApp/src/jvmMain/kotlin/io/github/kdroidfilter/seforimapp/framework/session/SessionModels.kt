@@ -120,6 +120,9 @@ data class BookContentPersistedState(
     // The books whose lines all show all their commentators, and the commentators unchecked there (CommentatorSelection)
     val allCommentatorsBooks: Set<Long> = emptySet(),
     val excludedCommentatorsByBook: Map<Long, Set<Long>> = emptyMap(),
+    // The groups of commentators checked whole, and those unchecked while all of them were (CommentatorSelection)
+    val commentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
+    val hiddenCommentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
 )
 
 // -- Virtual desktops persistence models --
