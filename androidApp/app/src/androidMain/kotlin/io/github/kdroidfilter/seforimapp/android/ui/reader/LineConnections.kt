@@ -19,6 +19,10 @@ data class CommentatorItem(val name: String, val bookId: Long)
 
 data class CommentatorGroup(val label: String, val commentators: List<CommentatorItem>)
 
+/** A line's commentators list as CommentatorSelection reads it: each commentator's group (desktop listedCommentators). */
+fun List<CommentatorGroup>.listedCommentators(): Map<Long, String> =
+    LinkedHashMap<Long, String>().also { listed -> forEach { group -> group.commentators.forEach { listed.putIfAbsent(it.bookId, group.label) } } }
+
 /**
  * What a line links to: its commentators by group and its targumim (name → book id, in SQL order). Its sources are the
  * places pane's (LinePlaces.Sources), as desktop 0.6.11's.
@@ -40,6 +44,7 @@ class LineConnections(private val repository: SeforimRepository, private val cur
     private val bookCache = ConcurrentHashMap<Long, Book>()
     private val defaultTargumCache = ConcurrentHashMap<Long, List<Long>>()
     private val grouping = CommentatorGrouping(repository)
+    private val groupCache = ConcurrentHashMap<Long, String>()
     private val mutex = Mutex()
     private val cache = object : LinkedHashMap<Long, LineConnectionsSnapshot>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, LineConnectionsSnapshot>?): Boolean = size > MAX_CACHED
@@ -106,6 +111,14 @@ class LineConnections(private val repository: SeforimRepository, private val cur
         fun merge(pick: (LineConnectionsSnapshot) -> Map<String, Long>) = LinkedHashMap<String, Long>().also { m -> snaps.forEach { s -> pick(s).forEach { (k, v) -> m.putIfAbsent(k, v) } } }
         return LineConnectionsSnapshot(groups, merge { it.targumSources })
     }
+
+    /**
+     * The group [commentatorId] is listed under (its heading in the commentators list, desktop commentatorGroupOf): it
+     * depends on the commentator alone, so it is the same on every line. One read at a time, as [load]'s.
+     */
+    suspend fun groupOf(commentatorId: Long): String =
+        groupCache[commentatorId] ?: mutex.withLock { withContext(Dispatchers.Default) { grouping.labelOf(book(commentatorId)) } }
+            .also { groupCache[commentatorId] = it }
 
     /** The base lines a selected line stands for: its section's (max 128 around it) when it heads one. */
     suspend fun baseLineIds(lineId: Long): List<Long> = resolve(lineId, HashMap(), HashMap()).baseLineIds

@@ -460,7 +460,11 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
     }
     val groups = snapshot?.commentatorGroups.orEmpty()
     val available = remember(groups) { groups.flatMap { g -> g.commentators } }
-    val selectedIds = if (primary != null) vm.selectedCommentators(primary, available.map { it.bookId }) else emptySet()
+    // Its commentators with their groups, and those of them the book shows (remembered, or whole groups checked)
+    val listed = remember(groups) { groups.listedCommentators() }
+    val selectedIds = remember(primary, state.commentators, listed) {
+        if (primary != null) state.commentators.shownOf(listed) else emptySet()
+    }
     val shown = remember(available, selectedIds) { available.filter { it.bookId in selectedIds } }
     var filterOpen by remember { mutableStateOf(false) }
     val pane = paneTextSize(textSize)
@@ -469,16 +473,20 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
     val passage = state.selectedPassage?.takeIf { selection is LinkSelection.Single && it.lineId == selection.lineId }
 
     fun toggle(id: Long) {
-        val p = primary ?: return
+        if (primary == null) return
         val next = if (id in selectedIds) selectedIds - id else selectedIds + id
-        vm.updateSelectedCommentators(p, next.filter { i -> available.any { it.bookId == i } }.toSet(), available.map { it.bookId })
+        vm.updateSelectedCommentators(next.filterTo(LinkedHashSet()) { it in listed }, listed)
     }
 
-    // A group's commentators, or all of them, checked or unchecked at once
-    fun setMany(ids: Collection<Long>, checked: Boolean) {
-        val p = primary ?: return
-        val next = if (checked) selectedIds + ids else selectedIds - ids.toSet()
-        vm.updateSelectedCommentators(p, next.filter { i -> available.any { it.bookId == i } }.toSet(), available.map { it.bookId })
+    // "כל המפרשים", or a group's checkbox: for the book's other lines too, those a line is the first to have included
+    fun setAll(checked: Boolean) {
+        if (primary == null) return
+        vm.setAllCommentators(checked)
+    }
+
+    fun setGroup(group: String, checked: Boolean) {
+        if (primary == null) return
+        vm.setCommentatorGroup(group, checked, listed)
     }
 
     BoxWithConstraints(modifier) {
@@ -506,7 +514,7 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
                 else -> Row(Modifier.fillMaxSize()) {
                     if (listVisible) {
                         Column(Modifier.then(if (compact) Modifier.fillMaxSize() else Modifier.width(maxOf(150.dp, paneWidth * 0.22f)).fillMaxHeight()).verticalScroll(rememberScrollState())) {
-                            CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany)
+                            CommentatorChecklist(groups, selectedIds, ::toggle, ::setGroup, ::setAll)
                         }
                         if (!compact) Box(Modifier.width(1.dp).fillMaxHeight().background(Zayit.colors.divider))
                     }
@@ -527,7 +535,7 @@ fun CommentariesPane(vm: ReaderViewModel, state: ReaderUiState, textSize: Float,
         ModalBottomSheet(onDismissRequest = { filterOpen = false }, sheetState = rememberModalBottomSheetState(), containerColor = Zayit.colors.panel) {
             WindowBackScope {
                 Text("מפרשים", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Zayit.colors.text, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { CommentatorChecklist(groups, selectedIds, ::toggle, ::setMany) }
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) { CommentatorChecklist(groups, selectedIds, ::toggle, ::setGroup, ::setAll) }
             }
         }
     }
@@ -542,20 +550,22 @@ private fun CommentatorChecklist(
     groups: List<CommentatorGroup>,
     selected: Set<Long>,
     onToggle: (Long) -> Unit,
-    // Checks or unchecks these commentators: a group's or all of them
-    onSetMany: (Collection<Long>, Boolean) -> Unit,
+    // A group's checkbox checked or unchecked, for the book's other lines too (desktop CommentatorSelection)
+    onSetGroup: (String, Boolean) -> Unit,
+    // "כל המפרשים" checked or unchecked, for the book's other lines too (desktop CommentatorSelection)
+    onSetAll: (Boolean) -> Unit,
 ) {
     val c = Zayit.colors
     val all = remember(groups) { groups.flatMap { group -> group.commentators.map { it.bookId } } }
     if (all.size > 1) {
-        CheckAllRow("כל המפרשים", all, selected, FontWeight.Bold, onSetMany)
+        CheckAllRow("כל המפרשים", all, selected, FontWeight.Bold, onSetAll)
         HorizontalDivider(color = c.divider)
     }
     groups.forEachIndexed { i, group ->
         if (group.commentators.isEmpty()) return@forEachIndexed
         if (i > 0) HorizontalDivider(color = c.divider)
         if (groups.size > 1 && group.label.isNotBlank()) {
-            CheckAllRow(group.label, group.commentators.map { it.bookId }, selected, FontWeight.SemiBold, onSetMany)
+            CheckAllRow(group.label, group.commentators.map { it.bookId }, selected, FontWeight.SemiBold) { onSetGroup(group.label, it) }
         }
         group.commentators.forEach { item -> ZCheckRow(item.name, item.bookId in selected, onToggle = { onToggle(item.bookId) }) }
     }
@@ -563,10 +573,10 @@ private fun CommentatorChecklist(
 
 /** A checkbox over several commentators ([ids]): checked when all are, half when some are; a tap checks or unchecks them all. */
 @Composable
-private fun CheckAllRow(text: String, ids: List<Long>, selected: Set<Long>, weight: FontWeight, onSetMany: (Collection<Long>, Boolean) -> Unit) {
+private fun CheckAllRow(text: String, ids: List<Long>, selected: Set<Long>, weight: FontWeight, onCheckedChange: (Boolean) -> Unit) {
     val c = Zayit.colors
     val state = commentatorsCheckState(ids, selected)
-    val onClick = { onSetMany(ids, state != ToggleableState.On) }
+    val onClick = { onCheckedChange(state != ToggleableState.On) }
     Row(
         Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Checkbox, onClick = onClick).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

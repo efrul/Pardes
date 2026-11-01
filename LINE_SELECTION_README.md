@@ -680,6 +680,22 @@ val uiState = stateManager.state.map { state ->
 }
 ```
 
+### Whole groups ("כל המפרשים", "ראשונים על התנ״ך")
+
+The per-book list only shows, on a new line, the commentators already in it: one that a line is the first to have is
+not shown. A group's checkbox therefore checks the whole group for the book (`commentatorGroupsByBook`, by the group's
+label, which depends on the commentator alone): every line shows all of that group's commentators, until it is
+unchecked (then none of them, on any line). "כל המפרשים" does the same for all of them (`allCommentatorsBooks`);
+unchecked, no line shows any, and a group unchecked meanwhile is kept in `hiddenCommentatorGroupsByBook`. A commentator
+unchecked while its group or all of them are checked is kept in `excludedCommentatorsByBook` and stays hidden on the
+other lines; the group's checkbox, or "כל המפרשים", brings it back.
+
+`CommentatorSelection` holds the rules. A line's list is read as its commentators with their groups
+(`listedCommentators`): the commentaries pane derives the line's checkboxes from it from the line's first frame, and
+reports each change with that list (`SelectedCommentatorsChanged.listed`), so that only the commentators it showed can
+be unchecked by it. A group checked or unchecked counts the group's commentators of other lines that the book remembers
+or hides too (`CommentariesUseCase.commentatorGroupOf`).
+
 ## Prefetching and Caching
 
 ### LineConnectionsSnapshot

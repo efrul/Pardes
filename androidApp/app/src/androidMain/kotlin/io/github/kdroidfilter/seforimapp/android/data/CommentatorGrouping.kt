@@ -37,6 +37,9 @@ class CommentatorGrouping(private val repository: SeforimRepository) {
             .map { it.first to it.second }
     }
 
+    /** The group a commentator's [book] is listed under, as [group] makes it: it depends on the book alone. */
+    suspend fun labelOf(book: Book?): String = resolveGroupLabel(book, categoryCache)
+
     private suspend fun runSuspendCatching(block: suspend () -> Category?): Result<Category?> =
         try {
             Result.success(block())
