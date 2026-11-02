@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
+import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.search.LineHit
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import io.github.kdroidfilter.seforimlibrary.search.SearchFacets
@@ -23,7 +24,8 @@ import kotlin.test.assertSame
 
 /**
  * The lines a hybrid search found by meaning alone, counted into its facets ([MeaningFacets], [plusBooks]): the category
- * tabs then cover every line its list shows, not only the lines its words found.
+ * tabs then cover every line its list shows, not only the lines its words found; and the library's other top categories
+ * offered after them ([otherTabCategories]).
  */
 class MeaningFacetsTest {
     private val root = createTempDirectory().toFile()
@@ -46,6 +48,21 @@ class MeaningFacetsTest {
             assertEquals(mapOf(1L to 2, 5L to 2, 2L to 3, 6L to 2), facets.categoryCounts)
             assertEquals(5L, facets.totalHits)
             assertSame(words, words.plusBooks(emptyMap()) { paths[it] })
+        }
+
+    @Test
+    fun `the library's other top categories come in its order, in the base books only those holding some`(): Unit =
+        runBlocking {
+            val roots =
+                listOf(
+                    Category(id = 3, title = "חסידות", order = 9),
+                    Category(id = 1, title = "תנ״ך", order = 1),
+                    Category(id = 2, title = "הלכה", order = 5),
+                )
+            val holdingBaseBooks = setOf(1L, 2L)
+
+            assertEquals(listOf(1L, 2L, 3L), otherTabCategories(roots, baseBooksOnly = false) { it in holdingBaseBooks }.map { it.id })
+            assertEquals(listOf(1L, 2L), otherTabCategories(roots, baseBooksOnly = true) { it in holdingBaseBooks }.map { it.id })
         }
 
     @Test
