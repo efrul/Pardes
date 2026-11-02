@@ -176,8 +176,9 @@ private const val SEARCH_STATUS_IN = "כ־%1\$s תוצאות ב%2\$s"
 private const val SEARCH_STATUS_FALLBACK = "לא נמצא בספרי יסוד · מוצגות %1\$s תוצאות מכל הספרים"
 private const val SEARCH_SWITCH_ALL = "חיפוש בכל הספרים"
 private const val SEARCH_SWITCH_BASE = "רק ספרי יסוד"
-// Pardes desktop: a category searched in its base books alone, back to all its books
-private const val SEARCH_SWITCH_SCOPE_ALL = "בכל ספרי %1\$s"
+// Pardes desktop: a category holding base books and others, in all its books (its commentaries too) or its base books alone
+private const val SEARCH_SWITCH_SCOPE_ALL = "חיפוש גם במפרשים"
+private const val SEARCH_SWITCH_SCOPE_BASE = "חיפוש בלי המפרשים"
 private const val SEARCH_TAB_ALL = "הכל"
 private const val SEARCH_TABS_MORE = "עוד"
 private const val SEARCH_TABS_LESS = "פחות"
@@ -719,7 +720,6 @@ private fun StatusRow(state: SearchUiState, oneBook: Boolean, wide: Boolean, com
             SearchStatusLine(
                 scopeName, total, false, state.globalExtended, state.baseBooksHadNoResults, wide, compact, vm::setGlobalExtended, Modifier.weight(1f),
                 scopeBaseBooksOnly = if (oneBook) null else state.scopeBaseBooksOnly,
-                scopeAllBooksLabel = state.scopeAllBooksLabel,
                 onScopeBaseBooksChange = vm::setScopeBaseBooksOnly,
             )
         }
@@ -739,7 +739,7 @@ private fun StatusRow(state: SearchUiState, oneBook: Boolean, wide: Boolean, com
 /**
  * Where the search looked and how many it found, with the other choice as a link: the base books (the default) or all
  * of them; when the base books had nothing, says so. In a category holding base books and others ([scopeBaseBooksOnly]
- * not null), the choice between its base books alone and all its books ([scopeAllBooksLabel]). Wraps on a narrow phone,
+ * not null), the choice between its base books alone and all its books, its commentaries too. Wraps on a narrow phone,
  * where only the link keeps a touch target's height and the text's line is as tall as the text. Desktop SearchStatusLine.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -755,7 +755,6 @@ private fun SearchStatusLine(
     onGlobalExtendedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     scopeBaseBooksOnly: Boolean? = null,
-    scopeAllBooksLabel: String? = null,
     onScopeBaseBooksChange: (Boolean) -> Unit = {},
 ) {
     val grey = readingSecondary()
@@ -779,7 +778,7 @@ private fun SearchStatusLine(
             }
         } else if (!isLoading && scope != null && scopeBaseBooksOnly != null) {
             Box(Modifier.heightIn(min = textHeight), contentAlignment = Alignment.CenterStart) { Text("·", color = grey, fontSize = size) }
-            val label = if (scopeBaseBooksOnly) SEARCH_SWITCH_SCOPE_ALL.fill(scopeAllBooksLabel ?: scope) else SEARCH_SWITCH_BASE
+            val label = if (scopeBaseBooksOnly) SEARCH_SWITCH_SCOPE_ALL else SEARCH_SWITCH_SCOPE_BASE
             ResultLink(label, Zayit.colors.accent, size, minHeight = rowHeight) { onScopeBaseBooksChange(!scopeBaseBooksOnly) }
         }
     }
