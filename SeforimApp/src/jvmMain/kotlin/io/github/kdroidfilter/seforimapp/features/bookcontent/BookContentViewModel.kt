@@ -627,6 +627,9 @@ class BookContentViewModel(
                 BookContentEvent.ToggleShnayimMikra ->
                     stateManager.updateContent { copy(shnayimMikra = !shnayimMikra) }
 
+                BookContentEvent.ToggleDafView ->
+                    stateManager.updateContent { copy(dafView = !dafView) }
+
                 BookContentEvent.ToggleSources ->
                     contentUseCase.toggleSources()
 

@@ -159,6 +159,9 @@ sealed interface BookContentEvent {
 
     data object ToggleShnayimMikra : BookContentEvent
 
+    /** Shows a Talmud tractate as its Vilna page (צורת הדף), or as its text again. */
+    data object ToggleDafView : BookContentEvent
+
     data object ToggleSources : BookContentEvent
 
     /** Shows or hides the pane of the places that refer to the selected line (its REFERENCE links). */

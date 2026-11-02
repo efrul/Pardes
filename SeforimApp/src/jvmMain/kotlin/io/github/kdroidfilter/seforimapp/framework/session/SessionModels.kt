@@ -123,6 +123,8 @@ data class BookContentPersistedState(
     // The groups of commentators checked whole, and those unchecked while all of them were (CommentatorSelection)
     val commentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
     val hiddenCommentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
+    // A Talmud tractate drawn as its Vilna page (ContentState.dafView)
+    val dafView: Boolean = false,
 )
 
 // -- Virtual desktops persistence models --
