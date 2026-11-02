@@ -35,6 +35,8 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchStatePersi
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchTocUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocLineIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
+import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
+import io.github.kdroidfilter.seforimapp.features.search.semantic.plusBooks
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
@@ -1232,7 +1234,7 @@ class SearchResultViewModel(
                             progressCurrent = results.size,
                             progressTotal = firstPage.totalHits,
                         )
-                    applyFacets(facets)
+                    applyFacets(withMeaningHits(facets, session))
                     refineSnippets(session, filteredHits)
 
                     // Update TOC counts for first page
@@ -1344,6 +1346,20 @@ class SearchResultViewModel(
             }
         val safeSession = session ?: return null
         return safeSession to tocAllowedLineIds
+    }
+
+    /**
+     * [facets] (the words' hits) with the lines [session] found by meaning alone, which its list shows too: without them
+     * a category only the meaning search found lines in has no tab, nor a book of it its "more" count.
+     */
+    private suspend fun withMeaningHits(
+        facets: SearchFacets?,
+        session: SearchSession,
+    ): SearchFacets? {
+        val books = (session as? MeaningFacets)?.let { runSuspendCatching { it.meaningBookCounts() }.getOrNull() }.orEmpty()
+        if (books.isEmpty()) return facets
+        return (facets ?: SearchFacets(totalHits = 0L, categoryCounts = emptyMap(), bookCounts = emptyMap()))
+            .plusBooks(books) { bookId -> runSuspendCatching { buildSearchTreeUseCase.categoryIdsOf(bookId) }.getOrNull() }
     }
 
     /** Shows the facet counts and builds the result tree from them. */
