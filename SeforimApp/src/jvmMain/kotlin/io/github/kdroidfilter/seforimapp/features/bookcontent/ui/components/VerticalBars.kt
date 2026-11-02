@@ -20,6 +20,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.VerticalLa
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.placesLines
@@ -155,6 +156,17 @@ fun EndVerticalBar(
                         icon = JournalText,
                         iconDescription = stringResource(Res.string.shnayim_mikra_mode),
                         label = stringResource(Res.string.shnayim_mikra_mode),
+                    )
+                }
+                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text
+                if (selectedBook.isBavli) {
+                    SelectableIconButtonWithToolip(
+                        toolTipText = stringResource(Res.string.daf_view_tooltip),
+                        onClick = { onEvent(BookContentEvent.ToggleDafView) },
+                        isSelected = uiState.content.dafView,
+                        icon = ColumnsGap,
+                        iconDescription = stringResource(Res.string.daf_view),
+                        label = stringResource(Res.string.daf_view),
                     )
                 }
             }

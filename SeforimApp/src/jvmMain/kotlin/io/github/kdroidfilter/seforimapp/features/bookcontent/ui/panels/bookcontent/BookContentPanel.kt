@@ -22,6 +22,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafReaderView
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePlaces
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
@@ -223,60 +225,70 @@ private fun BookContentPanelContent(
         // under them (see the window body), as the split panes had it.
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
-                BookContentView(
-                    bookId = selectedBook.id,
-                    lazyPagingItems = lazyPagingItems,
-                    selectedLineIds = uiState.content.selectedLineIds,
-                    primarySelectedLineId = uiState.content.primarySelectedLineId,
-                    selectedPassage = uiState.content.selectedPassage,
-                    // Only the passages of the commentators shown answer: the pane's page (none while it is hidden),
-                    // and those in panes of their own
-                    passageCommentatorIds =
-                        (if (uiState.content.showCommentaries) uiState.content.visibleCommentatorIds else emptySet()) +
-                            detachedCommentatorIds,
-                    isTocEntrySelection = uiState.content.isTocEntrySelection,
-                    markedLines =
-                        uiState.content.markedRange
-                            ?.takeIf { it.bookId == selectedBook.id }
-                            ?.let { it.first..it.last },
-                    // The Chumash's only: another book opened in the tab, by any way, reads as usual
-                    shnayimMikra = uiState.content.shnayimMikra && selectedBook.isChumash,
-                    onLineSelect = { line, isModifier ->
-                        onEvent(BookContentEvent.LineSelected(line, isModifier))
-                    },
-                    onEvent = onEvent,
-                    tabId = uiState.tabId,
-                    diacritics = diacritics,
-                    draftNote = noteDraft,
-                    modifier = paneCardModifier,
-                    preservedListState = bookListState,
-                    scrollIndex = uiState.content.scrollIndex,
-                    scrollOffset = uiState.content.scrollOffset,
-                    scrollToLineTimestamp = uiState.content.scrollToLineTimestamp,
-                    anchorId = uiState.content.anchorId,
-                    anchorIndex = uiState.content.anchorIndex,
-                    topAnchorLineId = uiState.content.topAnchorLineId,
-                    topAnchorTimestamp = uiState.content.topAnchorRequestTimestamp,
-                    onScroll = { bookId, anchorId, anchorIndex, scrollIndex, scrollOffset ->
-                        onEvent(
-                            BookContentEvent.ContentScrolled(
-                                bookId = bookId,
-                                anchorId = anchorId,
-                                anchorIndex = anchorIndex,
-                                scrollIndex = scrollIndex,
-                                scrollOffset = scrollOffset,
-                            ),
-                        )
-                    },
-                    altHeadingsByLineId = uiState.altToc.lineHeadingsByLineId.asStableAltHeadings(),
-                    lineConnections = connectionsCache,
-                    onPrefetchLineConnections = prefetchConnections,
-                    onLineHover = { hoveredLine.value = it },
-                    isSelected = isSelected,
-                    bookCharCounts = bookCharCounts,
-                    onPointerZoomInProgressChange = { isBookContentZoomInProgress = it },
-                    focusRequest = uiState.content.focusTextRequest,
-                )
+                // A Talmud tractate as its Vilna page, at the tab's line: the panes around it follow that line
+                if (uiState.content.dafView && selectedBook.isBavli) {
+                    DafReaderView(
+                        book = selectedBook,
+                        lineId = uiState.content.primarySelectedLineId ?: uiState.content.anchorId.takeIf { it > 0 },
+                        onEvent = onEvent,
+                        modifier = paneCardModifier,
+                    )
+                } else {
+                    BookContentView(
+                        bookId = selectedBook.id,
+                        lazyPagingItems = lazyPagingItems,
+                        selectedLineIds = uiState.content.selectedLineIds,
+                        primarySelectedLineId = uiState.content.primarySelectedLineId,
+                        selectedPassage = uiState.content.selectedPassage,
+                        // Only the passages of the commentators shown answer: the pane's page (none while it is hidden),
+                        // and those in panes of their own
+                        passageCommentatorIds =
+                            (if (uiState.content.showCommentaries) uiState.content.visibleCommentatorIds else emptySet()) +
+                                detachedCommentatorIds,
+                        isTocEntrySelection = uiState.content.isTocEntrySelection,
+                        markedLines =
+                            uiState.content.markedRange
+                                ?.takeIf { it.bookId == selectedBook.id }
+                                ?.let { it.first..it.last },
+                        // The Chumash's only: another book opened in the tab, by any way, reads as usual
+                        shnayimMikra = uiState.content.shnayimMikra && selectedBook.isChumash,
+                        onLineSelect = { line, isModifier ->
+                            onEvent(BookContentEvent.LineSelected(line, isModifier))
+                        },
+                        onEvent = onEvent,
+                        tabId = uiState.tabId,
+                        diacritics = diacritics,
+                        draftNote = noteDraft,
+                        modifier = paneCardModifier,
+                        preservedListState = bookListState,
+                        scrollIndex = uiState.content.scrollIndex,
+                        scrollOffset = uiState.content.scrollOffset,
+                        scrollToLineTimestamp = uiState.content.scrollToLineTimestamp,
+                        anchorId = uiState.content.anchorId,
+                        anchorIndex = uiState.content.anchorIndex,
+                        topAnchorLineId = uiState.content.topAnchorLineId,
+                        topAnchorTimestamp = uiState.content.topAnchorRequestTimestamp,
+                        onScroll = { bookId, anchorId, anchorIndex, scrollIndex, scrollOffset ->
+                            onEvent(
+                                BookContentEvent.ContentScrolled(
+                                    bookId = bookId,
+                                    anchorId = anchorId,
+                                    anchorIndex = anchorIndex,
+                                    scrollIndex = scrollIndex,
+                                    scrollOffset = scrollOffset,
+                                ),
+                            )
+                        },
+                        altHeadingsByLineId = uiState.altToc.lineHeadingsByLineId.asStableAltHeadings(),
+                        lineConnections = connectionsCache,
+                        onPrefetchLineConnections = prefetchConnections,
+                        onLineHover = { hoveredLine.value = it },
+                        isSelected = isSelected,
+                        bookCharCounts = bookCharCounts,
+                        onPointerZoomInProgressChange = { isBookContentZoomInProgress = it },
+                        focusRequest = uiState.content.focusTextRequest,
+                    )
+                }
             }
         }
     }
