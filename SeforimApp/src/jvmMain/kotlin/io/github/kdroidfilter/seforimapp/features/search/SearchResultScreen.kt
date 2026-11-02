@@ -451,7 +451,6 @@ private fun SearchResultContentMvi(
                                     baseBooksHadNoResults = state.baseBooksHadNoResults,
                                     onGlobalExtendedChange = actions.onGlobalExtendedChange,
                                     scopeBaseBooksOnly = if (oneBook) null else state.scopeBaseBooksOnly,
-                                    scopeAllBooksLabel = state.scopeAllBooksLabel,
                                     onScopeBaseBooksChange = actions.onScopeBaseBooksChange,
                                     modifier = Modifier.padding(end = 12.dp),
                                 )
@@ -1184,7 +1183,7 @@ private fun ColumnScope.EntityDetails(
 /**
  * Where the search looked and how many it found, with the other choice as a link: the base books
  * (the default) or all of them; when the base books had nothing, says so. In a category holding base books and others
- * ([scopeBaseBooksOnly] not null), the choice between its base books alone and all its books ([scopeAllBooksLabel]).
+ * ([scopeBaseBooksOnly] not null), the choice between its base books alone and all its books, its commentaries too.
  */
 @Composable
 private fun SearchStatusLine(
@@ -1196,7 +1195,6 @@ private fun SearchStatusLine(
     onGlobalExtendedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     scopeBaseBooksOnly: Boolean? = null,
-    scopeAllBooksLabel: String? = null,
     onScopeBaseBooksChange: (Boolean) -> Unit = {},
 ) {
     val grey = readingSecondary()
@@ -1225,11 +1223,7 @@ private fun SearchStatusLine(
         } else if (!isLoading && scope != null && scopeBaseBooksOnly != null) {
             Text("·", color = grey, fontSize = 13.sp)
             ResultLink(
-                if (scopeBaseBooksOnly) {
-                    stringResource(Res.string.search_switch_scope_all, scopeAllBooksLabel ?: scope)
-                } else {
-                    stringResource(Res.string.search_switch_base)
-                },
+                stringResource(if (scopeBaseBooksOnly) Res.string.search_switch_scope_all else Res.string.search_switch_scope_base),
                 JewelTheme.globalColors.outlines.focused,
                 13.sp,
             ) { onScopeBaseBooksChange(!scopeBaseBooksOnly) }
