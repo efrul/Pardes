@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
+import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.search.SearchFacets
 
 /**
@@ -37,3 +38,15 @@ suspend fun SearchFacets.plusBooks(
     }
     return SearchFacets(totalHits = totalHits + added, categoryCounts = categoryCounts, bookCounts = bookCounts)
 }
+
+/**
+ * The library's top categories ([roots]) offered as tabs after those of the results, in the library's order, when a
+ * search runs by meaning in the whole library: its list holds only the first lines found (the fused candidates), while a
+ * category searched alone finds its own closest lines, among them or not. In the base books alone ([baseBooksOnly]),
+ * only the categories that hold some ([hasBaseBooks]): in the others that search finds nothing.
+ */
+suspend fun otherTabCategories(
+    roots: List<Category>,
+    baseBooksOnly: Boolean,
+    hasBaseBooks: suspend (categoryId: Long) -> Boolean,
+): List<Category> = roots.sortedBy { it.order }.filter { !baseBooksOnly || hasBaseBooks(it.id) }
