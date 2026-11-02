@@ -89,9 +89,8 @@ data class SearchUiState(
     // The category, or the books and categories, searched in whole (CategoryHit.label, titles), null in any other scope
     val scopeLabel: String? = null,
     // Searched in a category holding base books and others: whether in its base books alone (the texts without their
-    // commentaries), with [scopeLabel] without that mark for the other choice; null in any other scope
+    // commentaries); null in any other scope
     val scopeBaseBooksOnly: Boolean? = null,
-    val scopeAllBooksLabel: String? = null,
     // Scroll/anchor persistence
     val scrollIndex: Int = 0,
     val scrollOffset: Int = 0,
@@ -739,14 +738,7 @@ class SearchResultViewModel(
             }
         val choosable = scopeCategoryIds(scope).filter { hasBaseBooksAndOthers(it) }
         val baseOnly = choosable.takeIf { it.isNotEmpty() }?.all { it in baseOnlyCategoryIds(scope) }
-        val allBooksLabel =
-            when {
-                baseOnly != true -> null
-                scope is SearchScope.Category -> categoryLabel(scope.categoryId)
-                scope is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, emptyList())
-                else -> null
-            }
-        _uiState.value = _uiState.value.copy(scopeLabel = label, scopeBaseBooksOnly = baseOnly, scopeAllBooksLabel = allBooksLabel)
+        _uiState.value = _uiState.value.copy(scopeLabel = label, scopeBaseBooksOnly = baseOnly)
     }
 
     // The categories [scope] searches, and those of them in their base books alone
