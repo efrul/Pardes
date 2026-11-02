@@ -95,6 +95,16 @@ class BuildSearchTreeUseCase(
         return buildTreeFromMaps(categoriesById, facetCategoryCounts, booksById, facetBookCounts)
     }
 
+    /** The ids of [bookId]'s category and of every category above it, the root first; null for a book that can't be read. */
+    suspend fun categoryIdsOf(bookId: Long): List<Long>? {
+        val book = bookCache[bookId] ?: repository.getBookCore(bookId)?.also { bookCache[bookId] = it } ?: return null
+        val path =
+            categoryPathCache[book.categoryId] ?: buildCategoryPath(book.categoryId).also {
+                categoryPathCache[book.categoryId] = it
+            }
+        return path.map { it.id }
+    }
+
     private fun buildTreeFromMaps(
         categoriesById: Map<Long, Category>,
         categoryCounts: Map<Long, Int>,
