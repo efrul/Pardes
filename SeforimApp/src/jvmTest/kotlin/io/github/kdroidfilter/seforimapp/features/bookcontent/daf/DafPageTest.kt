@@ -77,13 +77,24 @@ class DafPageTest {
                 DafPage(amud, gemara, rashi, Color.Black, Modifier.fillMaxWidth().background(Color.White))
             }
         try {
-            val png = assertNotNull(scene.render().encodeToData(EncodedImageFormat.PNG)).bytes
+            // The amud is laid out off the UI thread: frames until it is drawn
+            var png = ByteArray(0)
+            val until = System.nanoTime() + 20_000_000_000L
+            while (png.size <= DRAWN_PNG_BYTES && System.nanoTime() < until) {
+                Thread.sleep(50)
+                png = assertNotNull(scene.render(System.nanoTime()).encodeToData(EncodedImageFormat.PNG)).bytes
+            }
             val out = File("build/reports/daf/berakhot-35b.png")
             out.parentFile.mkdirs()
             out.writeBytes(png)
-            assertTrue(png.size > 10_000, "the page drew nearly nothing")
+            assertTrue(png.size > DRAWN_PNG_BYTES, "the page drew nearly nothing")
         } finally {
             scene.close()
         }
+    }
+
+    private companion object {
+        /** A white page of this size is some 12 KB of PNG, a drawn one some 880 KB. */
+        const val DRAWN_PNG_BYTES = 100_000
     }
 }
