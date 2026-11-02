@@ -15,6 +15,8 @@ import io.github.kdroidfilter.seforimapp.android.search.SearchService
 import io.github.kdroidfilter.seforimapp.android.search.countFacets
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
+import io.github.kdroidfilter.seforimapp.features.search.semantic.plusBooks
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
@@ -533,7 +535,7 @@ class SearchViewModel(
                 val tree = scopeBook?.let { b -> runCatching { tocIndex(b.id).tree }.onFailure { if (it is CancellationException) throw it }.getOrNull() }
                 if (tree != null) _state.update { it.copy(tocTree = tree) }
                 countTocHits(_state.value.results)
-                applyFacets(facets.await())
+                applyFacets(withMeaningHits(facets.await(), first.session))
             }
         }
     }
@@ -819,6 +821,19 @@ class SearchViewModel(
                 _state.update { state -> state.copy(results = state.results.map { r -> refined[r.lineId]?.let { r.copy(snippet = it) } ?: r }) }
             }
         }
+    }
+
+    /**
+     * [facets] (the words' hits) with the lines [session] found by meaning alone, which its list shows too (Pardes desktop
+     * withMeaningHits): without them a category only the meaning search found lines in has no tab, nor a book of it its
+     * "more" count. Read off the main thread, as the words may be asked which of those lines they find.
+     */
+    private suspend fun withMeaningHits(facets: SearchFacets?, session: SearchSession?): SearchFacets? {
+        val meaning = session as? MeaningFacets ?: return facets
+        val books = readOrNull { withContext(Dispatchers.IO + NonCancellable) { meaning.meaningBookCounts() } }.orEmpty()
+        if (books.isEmpty()) return facets
+        return (facets ?: SearchFacets(totalHits = 0L, categoryCounts = emptyMap(), bookCounts = emptyMap()))
+            .plusBooks(books) { bookId -> book(bookId)?.let { b -> readOrNull { categoryPath(b.categoryId) }?.map { it.id } } }
     }
 
     /** Shows the facet counts and builds the result tree from them (desktop applyFacets). */
