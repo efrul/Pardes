@@ -1,11 +1,8 @@
 package io.github.kdroidfilter.seforimapp.framework.search
 
-import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
-import io.github.kdroidfilter.seforimapp.testAppSettings
-import io.github.vinceglb.filekit.FileKit
+import io.github.kdroidfilter.seforimapp.framework.search.titles.appLookup
 import org.junit.Assume.assumeTrue
 import java.io.File
-import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -16,11 +13,8 @@ class BookSuggestionsE2ETest {
         System.getenv("SEFORIMAPP_DATABASE_PATH")
             ?: (System.getProperty("user.home") + "/Library/Application Support/io.github.kdroidfilter.seforimapp/databases/seforim.db")
 
-    private val lookup by lazy {
-        FileKit.init("io.github.kdroidfilter.seforimapp")
-        val settings = testAppSettings().apply { setDatabasePath(dbPath) }
-        LuceneLookupSearchService(Paths.get("$dbPath.lookup.lucene"), acronymCache = AcronymFrequencyCache(DatabasePathProvider(settings)))
-    }
+    // As the app builds it: the title index first
+    private val lookup by lazy { appLookup(dbPath) }
 
     private fun titles(query: String): List<String> {
         assumeTrue("No database at $dbPath", File(dbPath).exists())

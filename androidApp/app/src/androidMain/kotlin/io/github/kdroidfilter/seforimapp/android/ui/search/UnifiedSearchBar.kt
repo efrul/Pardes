@@ -187,6 +187,7 @@ private const val ROW_ACTION_SEARCH_ALL = "בכל הספרים"
 private const val AUTOCOMPLETE_NO_RESULTS = "לא נמצאו תוצאות"
 private const val AUTOCOMPLETE_LOADING = "טוען…"
 private const val AUTHOR_BOOKS_COUNT = "%1\$d ספרים"
+private const val AUTHOR_OF_BOOK = "מחבר %1\$s"
 private const val SEARCH_CLEAR = "ניקוי"
 private const val SEARCH_ICON_DESCRIPTION = "חיפוש"
 private const val REMOVE_SELECTED_BOOK = "הסר ספר שנבחר"
@@ -259,7 +260,8 @@ private sealed interface CatBookRow {
  * first: Enter searches in them, and the books and categories listed are to add.
  * A title being typed past its first word (`בבא ק`) is no text search: with no book or category named exactly,
  * the first book whose title it begins comes before the text search too (desktop 0.6.2 fix 51463d23). A category's name
- * is no title being typed (Pardes desktop): `משנה תורה` is the category, not the first of its books.
+ * is no title being typed (Pardes desktop): `משנה תורה` is the category, not the first of its books, and it comes before
+ * the books only an acronym names so (a library may call משנה תורה, הלכות שבת `משנה תורה`); a book's own title before it.
  */
 private fun catBookRows(
     query: String,
@@ -276,6 +278,7 @@ private fun catBookRows(
         listOfNotNull(author.name, AuthorNames.display(author.name), author.alias).any { it.searchKey() == key }
     }
     val (namedBooks, otherBooks) = books.partition { it.exactAcronym || it.book.title.searchKey() == key }
+    val (titledBooks, acronymBooks) = namedBooks.partition { it.book.title.searchKey() == key }
     val typedTitle =
         otherBooks.firstOrNull()?.takeIf { book ->
             val title =
@@ -284,12 +287,13 @@ private fun catBookRows(
                     .replace(",", "")
             namedBooks.isEmpty() && exactCategories.isEmpty() && ' ' in key && title.startsWith(key)
         }
-    val exactBooks = namedBooks + listOfNotNull(typedTitle)
     return buildList {
         if (textSearch && textSearchFirst) add(CatBookRow.TextSearch)
         jumps.mapTo(this) { CatBookRow.Jump(it) }
-        exactBooks.mapTo(this) { CatBookRow.BookRow(it) }
+        titledBooks.mapTo(this) { CatBookRow.BookRow(it) }
+        typedTitle?.let { add(CatBookRow.BookRow(it)) }
         exactCategories.mapTo(this) { CatBookRow.Category(it) }
+        acronymBooks.mapTo(this) { CatBookRow.BookRow(it) }
         exactAuthors.mapTo(this) { CatBookRow.Author(it) }
         if (textSearch && !textSearchFirst) add(CatBookRow.TextSearch)
         otherAuthors.mapTo(this) { CatBookRow.Author(it) }
@@ -1035,7 +1039,10 @@ fun UnifiedSearchBar(
                             )
                         }
                         is CatBookRow.Author -> SuggestionRow(
-                            parts = listOf(AuthorNames.display(row.hit.name) + row.hit.alias?.let { " ($it)" }.orEmpty()),
+                            parts = listOf(
+                                AuthorNames.display(row.hit.name) +
+                                    (row.hit.alias ?: row.hit.ofBook?.let { AUTHOR_OF_BOOK.replace("%1\$s", it) })?.let { " ($it)" }.orEmpty(),
+                            ),
                             kind = SuggestionKind.AUTHOR,
                             highlighted = focused,
                             wide = wide,

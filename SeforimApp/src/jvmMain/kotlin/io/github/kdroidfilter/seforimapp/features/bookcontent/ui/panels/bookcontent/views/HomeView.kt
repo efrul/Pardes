@@ -169,7 +169,8 @@ internal sealed interface CatBookRow {
  * text search, then the other authors, categories and books.
  * A title being typed past its first word (`בבא ק`) is no text search: with no book or category named exactly,
  * the first book whose title it begins comes before the text search too. A category's name is no title being typed:
- * `משנה תורה` is the category, not the first of its books (משנה תורה, מסירת תורה שבעל פה).
+ * `משנה תורה` is the category, not the first of its books (משנה תורה, מסירת תורה שבעל פה), and it comes before the
+ * books only an acronym names so (a library may call משנה תורה, הלכות שבת `משנה תורה`); a book's own title before it.
  */
 internal fun catBookRows(
     query: String,
@@ -188,6 +189,7 @@ internal fun catBookRows(
             listOfNotNull(author.name, AuthorNames.display(author.name), author.alias).any { it.searchKey() == key }
         }
     val (namedBooks, otherBooks) = books.partition { it.exactAcronym || it.book.title.searchKey() == key }
+    val (titledBooks, acronymBooks) = namedBooks.partition { it.book.title.searchKey() == key }
     val typedTitle =
         otherBooks.firstOrNull()?.takeIf { book ->
             val title =
@@ -196,12 +198,13 @@ internal fun catBookRows(
                     .replace(",", "")
             namedBooks.isEmpty() && exactCategories.isEmpty() && ' ' in key && title.startsWith(key)
         }
-    val exactBooks = namedBooks + listOfNotNull(typedTitle)
     return buildList {
         if (textSearch && textSearchFirst) add(CatBookRow.TextSearch)
         jumps.mapTo(this) { CatBookRow.Jump(it) }
-        exactBooks.mapTo(this) { CatBookRow.Book(it) }
+        titledBooks.mapTo(this) { CatBookRow.Book(it) }
+        typedTitle?.let { add(CatBookRow.Book(it)) }
         exactCategories.mapTo(this) { CatBookRow.Category(it) }
+        acronymBooks.mapTo(this) { CatBookRow.Book(it) }
         exactAuthors.mapTo(this) { CatBookRow.Author(it) }
         if (textSearch && !textSearchFirst) add(CatBookRow.TextSearch)
         otherAuthors.mapTo(this) { CatBookRow.Author(it) }
@@ -930,7 +933,7 @@ private fun SuggestionsPanel(
                                 parts =
                                     listOf(
                                         AuthorNames.display(row.hit.name) +
-                                            row.hit.alias
+                                            (row.hit.alias ?: row.hit.ofBook?.let { stringResource(Res.string.author_of_book, it) })
                                                 ?.let { " ($it)" }
                                                 .orEmpty(),
                                     ),

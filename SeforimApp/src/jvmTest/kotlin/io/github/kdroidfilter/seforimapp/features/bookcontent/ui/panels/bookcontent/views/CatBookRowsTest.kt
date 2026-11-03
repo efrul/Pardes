@@ -33,6 +33,50 @@ class CatBookRowsTest {
     }
 
     @Test
+    fun `a category named as typed comes before the books an acronym names so, a book's own title before it`() {
+        // A library where the books of משנה תורה are called so too, as their acronym
+        val byAcronym = books.map { it.copy(exactAcronym = true) }
+        val titled = BookSuggestion(Book(id = 3L, categoryId = 9L, sourceId = 1L, title = "משנה תורה"), listOf("משנה תורה"))
+        val rows =
+            catBookRows(
+                "משנה תורה",
+                emptyList(),
+                textSearch = true,
+                authors = emptyList(),
+                books = byAcronym + titled,
+                categories = categories,
+            )
+        assertEquals(
+            listOf(
+                CatBookRow.Book(titled),
+                CatBookRow.Category(categories[0]),
+                CatBookRow.Category(categories[1]),
+                CatBookRow.Book(byAcronym[0]),
+                CatBookRow.Book(byAcronym[1]),
+                CatBookRow.TextSearch,
+                CatBookRow.Category(kesefMishneh),
+            ),
+            rows,
+        )
+    }
+
+    @Test
+    fun `the books an acronym names come first when no category is named so`() {
+        val orachChaim = Book(id = 20L, categoryId = 30L, sourceId = 1L, title = "שולחן ערוך, אורח חיים")
+        val shulchanAruch = BookSuggestion(orachChaim, listOf("שולחן ערוך"), exactAcronym = true)
+        val rows =
+            catBookRows(
+                "שוע",
+                emptyList(),
+                textSearch = true,
+                authors = emptyList(),
+                books = listOf(shulchanAruch),
+                categories = listOf(kesefMishneh),
+            )
+        assertEquals(listOf(CatBookRow.Book(shulchanAruch), CatBookRow.TextSearch, CatBookRow.Category(kesefMishneh)), rows)
+    }
+
+    @Test
     fun `a title being typed comes first when no category is named so`() {
         val bavaKama = BookSuggestion(Book(id = 10L, categoryId = 17L, sourceId = 1L, title = "בבא קמא"), listOf("בבא קמא"))
         val rows = catBookRows("בבא ק", emptyList(), textSearch = true, authors = emptyList(), books = listOf(bavaKama))

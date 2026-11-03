@@ -42,11 +42,14 @@ import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.search.AcronymFrequencyCache
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimapp.framework.search.RepositorySnippetSourceProvider
+import io.github.kdroidfilter.seforimapp.framework.search.titles.BookTitleIndexHolder
+import io.github.kdroidfilter.seforimapp.framework.search.titles.BookTitleIndexLoader
 import io.github.kdroidfilter.seforimapp.framework.search.withSemanticSearch
 import io.github.kdroidfilter.seforimapp.framework.session.SessionManager
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedStateStore
 import io.github.kdroidfilter.seforimapp.framework.session.TabThumbnailStore
 import io.github.kdroidfilter.seforimapp.framework.update.AppUpdateService
+import io.github.kdroidfilter.seforimapp.logger.errorln
 import io.github.kdroidfilter.seforimapp.network.KtorConfig
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import io.github.kdroidfilter.seforimlibrary.search.LuceneSearchEngine
@@ -205,10 +208,17 @@ object AppCoreBindings {
     fun provideLuceneLookupSearchService(
         acronymCache: AcronymFrequencyCache,
         databasePathProvider: DatabasePathProvider,
+        catalogCache: CatalogCache,
     ): LuceneLookupSearchService {
         val dbPath = databasePathProvider.get()
         val indexPath = if (dbPath.endsWith(".db")) "$dbPath.lookup.lucene" else "$dbPath.lookupindex"
-        return LuceneLookupSearchService(Paths.get(indexPath), acronymCache = acronymCache)
+        // The books and authors by name, from the catalog, built ahead of the first letter typed
+        val titles =
+            BookTitleIndexHolder(onError = { errorln { "[BookTitleIndex] not built: $it" } }) {
+                catalogCache.getCatalog()?.let { BookTitleIndexLoader.load(it, dbPath) }
+            }
+        titles.warmUp()
+        return LuceneLookupSearchService(Paths.get(indexPath), acronymCache = acronymCache, titleIndex = titles::get)
     }
 
     @Provides
