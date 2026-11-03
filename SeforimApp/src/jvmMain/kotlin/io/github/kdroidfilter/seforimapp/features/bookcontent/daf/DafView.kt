@@ -527,6 +527,7 @@ private fun AmudItem(
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
+    val markUnsure by graph.appSettings.dafMarkUnsureFlow.collectAsState()
     // Laid out once, off the UI thread (some 160 lines measured), and kept while scrolled away
     val layout by produceState(layouts[amud], amud, layouts) {
         if (value == null) {
@@ -569,6 +570,7 @@ private fun AmudItem(
                         onContextWord = { word -> links?.segmentOf(word)?.let(onContextLine) },
                         onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
                         onPress = onPress,
+                        markUnsure = markUnsure,
                     )
                 }
             }
