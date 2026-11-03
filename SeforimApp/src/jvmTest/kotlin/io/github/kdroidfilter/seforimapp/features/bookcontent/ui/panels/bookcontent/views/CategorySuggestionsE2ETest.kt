@@ -5,15 +5,13 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategorie
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
 import io.github.kdroidfilter.seforimapp.framework.database.PersistentSqliteDriver
-import io.github.kdroidfilter.seforimapp.framework.search.AcronymFrequencyCache
-import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
+import io.github.kdroidfilter.seforimapp.framework.search.titles.appLookup
 import io.github.kdroidfilter.seforimapp.testAppSettings
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import io.github.vinceglb.filekit.FileKit
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import java.io.File
-import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -35,7 +33,7 @@ class CategorySuggestionsE2ETest {
     fun `the category typed by its name comes first, then its base books alone`() =
         runBlocking {
             assumeTrue("No database at $dbPath", File(dbPath).exists())
-            val lookup = LuceneLookupSearchService(Paths.get("$dbPath.lookup.lucene"), acronymCache = AcronymFrequencyCache(provider))
+            val lookup = appLookup(dbPath)
             for (name in listOf("משנה תורה", "שולחן ערוך", "תלמוד")) {
                 val books = lookup.suggestBooks(name, limit = 120).map { BookSuggestion(it.toBook(), listOf(it.title), it.exactAcronym) }
                 val found = CategorySuggestions.match(name, categories.categories(), limit = 4)

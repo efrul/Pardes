@@ -106,10 +106,9 @@ data class SearchUiState(
     val scopeLabel: String? = null,
     /**
      * Searched in a category holding base books and others: whether in its base books alone (the texts without their
-     * commentaries), with [scopeLabel] without that mark for the other choice; null in any other scope.
+     * commentaries); null in any other scope.
      */
     val scopeBaseBooksOnly: Boolean? = null,
-    val scopeAllBooksLabel: String? = null,
     val hasMore: Boolean = false,
     val isLoadingMore: Boolean = false,
     val progressCurrent: Int = 0,
@@ -251,22 +250,16 @@ class SearchViewModel(
 
     /**
      * Where [scope] gives the choice between its categories' base books alone and all their books (a category of it
-     * holds both): whether in their base books alone, and the scope's name with all of them; null otherwise.
+     * holds both): whether in their base books alone; null otherwise.
      */
-    private suspend fun scopeBaseBooksChoice(scope: SearchScope): Pair<Boolean, String?>? {
+    private suspend fun scopeBaseBooksChoice(scope: SearchScope): Boolean? {
         val (categoryIds, baseOnlyIds) = when (scope) {
             is SearchScope.Category -> listOf(scope.categoryId) to (if (scope.baseBooksOnly) listOf(scope.categoryId) else emptyList())
             is SearchScope.Multi -> scope.categoryIds to scope.baseOnlyCategoryIds
             else -> return null
         }
         val choosable = categoryIds.filter { hasBaseBooksAndOthers(it) }.ifEmpty { return null }
-        val baseOnly = choosable.all { it in baseOnlyIds }
-        val allBooksLabel = if (!baseOnly) null else when (scope) {
-            is SearchScope.Category -> categoryLabel(scope.categoryId)
-            is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, emptyList())
-            else -> null
-        }
-        return baseOnly to allBooksLabel
+        return choosable.all { it in baseOnlyIds }
     }
 
     private suspend fun hasBaseBooksAndOthers(categoryId: Long): Boolean = readOrNull { service.categories().hasBaseBooksAndOthers(categoryId) } == true
@@ -494,12 +487,12 @@ class SearchViewModel(
                 val authorBooks = scopeBookIds(scope)
                 val scopeAuthorName = (scope as? SearchScope.Author)?.let { authorScope(it.authorId)?.name }
                 val scopeLabel = scopeLabel(scope)
-                val baseBooksChoice = scopeBaseBooksChoice(scope)
+                val scopeBaseBooksOnly = scopeBaseBooksChoice(scope)
                 tocCountsAcc.clear()
                 _state.update {
                     it.copy(
                         scopeBook = scopeBook, scopeTocId = fetchTocId, scopeAuthorName = scopeAuthorName, scopeLabel = scopeLabel,
-                        scopeBaseBooksOnly = baseBooksChoice?.first, scopeAllBooksLabel = baseBooksChoice?.second,
+                        scopeBaseBooksOnly = scopeBaseBooksOnly,
                         tocTree = null, tocCounts = emptyMap(), selectedTocIds = emptySet(),
                     )
                 }

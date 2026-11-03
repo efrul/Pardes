@@ -13,7 +13,9 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.PointRangeQuery
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.QueryCachingPolicy
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.FSDirectory
 import java.nio.file.Path
@@ -49,7 +51,8 @@ fun main(args: Array<String>) {
         engine.warmUp()
         println("warmUp ${ms(w)} ms")
         printFilterCosts(indexPath, scopes, rounds)
-        printSearchTimes(engine, scopes, rounds)
+        printCategoryFieldTimes(indexPath, scopes, categories, rounds)
+        if (System.getenv("BENCH_SKIP_ENGINE") == null) printSearchTimes(engine, scopes, rounds)
     }
     engine.close()
 }
@@ -162,6 +165,88 @@ private suspend fun printSearchTimes(
             println("  %-36s hits=%8d facets %s  page %s".format(v.label, hits, stats(facetTimes), stats(pageTimes)))
         }
     }
+}
+
+// Words as the index splits them (`text`), searched as they are, for the filters alone to differ
+private val RAW_QUERIES = listOf(listOf("אמר", "רבא"), listOf("תפילין"), listOf("קל", "וחומר"), listOf("אמר", "רבי", "יוחנן"))
+
+/**
+ * A category by the field every line carries with its categories (`ancestor_category_ids`: its own and every one above
+ * it), one value as the base books' `is_base_book`, cached as the engine caches that one, against its books' ids (what
+ * the app passes, `book_id` in a set, built again for each search): the words alone, counted (the facets count every
+ * line) and their first page.
+ */
+private fun printCategoryFieldTimes(
+    indexPath: Path,
+    scopes: List<BenchScope>,
+    categories: List<Long>,
+    rounds: Int,
+) {
+    DirectoryReader.open(FSDirectory.open(indexPath)).use { reader ->
+        val searcher = IndexSearcher(reader).apply { queryCachingPolicy = EngineFilters }
+        val base = IntPoint.newExactQuery("is_base_book", 1)
+
+        fun ids(books: List<Long>) = IntPoint.newSetQuery("book_id", *books.map { it.toInt() }.toIntArray())
+
+        fun category(id: Long) = IntPoint.newExactQuery("ancestor_category_ids", id.toInt())
+
+        fun both(
+            a: Query,
+            b: Query,
+        ): Query =
+            BooleanQuery
+                .Builder()
+                .add(a, BooleanClause.Occur.FILTER)
+                .add(b, BooleanClause.Occur.FILTER)
+                .build()
+        val variants =
+            listOf<Pair<String, Query?>>("כל הספרייה" to null, "כל הספרייה, ספרי יסוד" to base) +
+                scopes.zip(categories).flatMap { (scope, id) ->
+                    listOf(
+                        "${scope.title}: book_id in ${scope.all.size}" to ids(scope.all),
+                        "${scope.title}: ancestor_category_ids = $id" to category(id),
+                        "${scope.title} יסוד: book_id in ${scope.base.size}" to ids(scope.base),
+                        "${scope.title} יסוד: ancestor = $id, is_base_book" to both(category(id), base),
+                    )
+                }
+        for (words in RAW_QUERIES) {
+            println("--- ${words.joinToString(" ")} (text)")
+            for ((label, filter) in variants) {
+                val query =
+                    BooleanQuery
+                        .Builder()
+                        .apply {
+                            words.forEach { add(TermQuery(Term("text", it)), BooleanClause.Occur.MUST) }
+                            add(TermQuery(Term("type", "line")), BooleanClause.Occur.FILTER)
+                            filter?.let { add(it, BooleanClause.Occur.FILTER) }
+                        }.build()
+                var hits = 0
+                val countTimes = ArrayList<Double>()
+                val pageTimes = ArrayList<Double>()
+                repeat(rounds) {
+                    val s = System.nanoTime()
+                    hits = searcher.count(query)
+                    countTimes += (System.nanoTime() - s) / 1_000_000.0
+                    val s2 = System.nanoTime()
+                    searcher.search(query, 25)
+                    pageTimes += (System.nanoTime() - s2) / 1_000_000.0
+                }
+                println("  %-44s hits=%8d count %s  page %s".format(label, hits, stats(countTimes), stats(pageTimes)))
+            }
+        }
+    }
+}
+
+// The engine's caching (SeforimLibrary's StableFiltersCachingPolicy), and the categories' field cached the same way
+private object EngineFilters : QueryCachingPolicy {
+    override fun onUse(query: Query) = Unit
+
+    override fun shouldCache(query: Query): Boolean =
+        when (query) {
+            is TermQuery -> query.term.field() == "type"
+            is PointRangeQuery -> query.field == "is_base_book" || query.field == "ancestor_category_ids"
+            else -> false
+        }
 }
 
 // Median and min, the first round (cold) left out when there are several

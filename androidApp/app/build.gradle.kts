@@ -47,13 +47,21 @@ val syncDesktopSemantic by tasks.registering(Sync::class) {
 }
 
 // Desktop's search-bar logic that compiles on Android unchanged (SeforimApp/src/jvmMain, as-is): the categories the typed
-// text names (CategorySuggestions, with the names' comparison key it uses). The bar's picked books and categories
-// (ScopeItems) have an Android variant in src/androidMain/.../android/search: they name Android's own SearchScope.
+// text names (CategorySuggestions, with the names' comparison key it uses), how authors' names are shown and matched
+// (AuthorNames), and the books and authors found by name (framework/search/titles: the title index, its reading of
+// names and acronyms, after Klei Kodesh's Kitvei Hakodesh, and its loader, given the library's rows by
+// android/search/TitleIndex.kt). The bar's picked books and categories (ScopeItems) have an Android variant in
+// src/androidMain/.../android/search: they name Android's own SearchScope.
 val syncDesktopSearch by tasks.registering(Sync::class) {
     from(desktopApp) {
         include(
             "io/github/kdroidfilter/seforimapp/features/search/domain/CategorySuggestions.kt",
             "io/github/kdroidfilter/seforimapp/features/search/domain/SearchKey.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt",
+            "io/github/kdroidfilter/seforimapp/framework/search/titles/TitleText.kt",
+            "io/github/kdroidfilter/seforimapp/framework/search/titles/TitleAbbreviations.kt",
+            "io/github/kdroidfilter/seforimapp/framework/search/titles/BookTitleIndex.kt",
+            "io/github/kdroidfilter/seforimapp/framework/search/titles/BookTitleIndexLoader.kt",
         )
     }
     into(layout.buildDirectory.dir("generated/desktopSearch"))
@@ -74,8 +82,9 @@ val syncDesktopSemanticTests by tasks.registering(Sync::class) {
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleasesTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PackFixtures.kt",
             "io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackPromptTest.kt",
-            // The search bar's category suggestions (syncDesktopSearch)
+            // The search bar's category suggestions, and its books and authors by name (syncDesktopSearch)
             "io/github/kdroidfilter/seforimapp/features/search/domain/CategorySuggestionsTest.kt",
+            "io/github/kdroidfilter/seforimapp/framework/search/titles/BookTitleIndexTest.kt",
         )
     }
     into(layout.buildDirectory.dir("generated/desktopSemanticTests"))

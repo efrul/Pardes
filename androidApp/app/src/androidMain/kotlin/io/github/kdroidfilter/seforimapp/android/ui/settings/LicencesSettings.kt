@@ -182,6 +182,13 @@ private val modelCredits = listOf(
 
 private val dataCredits = listOf(
     Credit(
+        "כתבי הקודש (כלי קודש)",
+        "Based on Klei Kodesh — https://kleikodesh.github.io/",
+        listOf(LicenceDoc("הפרויקט", url = "https://kleikodesh.github.io/")),
+        "חיפוש הספרים והמחברים לפי שמם, בשורת החיפוש ובספרייה, מבוסס על חיפוש הספרים של \"כתבי הקודש\" מפרויקט כלי קודש: " +
+            "כלליו, ובהם כתיב מלא וחסר וה״א הידיעה, ורשימת ראשי התיבות שלו, בשימוש באישורם.",
+    ),
+    Credit(
         "HYG Database v4.1",
         "David Nash (astronexus)",
         listOf(
