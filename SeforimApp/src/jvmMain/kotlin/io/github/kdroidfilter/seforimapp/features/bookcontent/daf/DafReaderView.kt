@@ -126,7 +126,15 @@ fun DafReaderView(
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
-    val layouts = remember(graph) { DafLayouts.of(LibraryLocation.currentDir(graph.appSettings)) }
+    // Next to the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another one
+    // than the settings)
+    val layouts =
+        remember(graph) {
+            val libraryDir =
+                runCatching { File(graph.databasePathProvider.get()).absoluteFile.parentFile }.getOrNull()
+                    ?: LibraryLocation.currentDir(graph.appSettings)
+            DafLayouts.of(libraryDir)
+        }
     // Bumped by an import, to read the folder again
     var imports by remember { mutableIntStateOf(0) }
     val load by produceState<DafLoad>(DafLoad.Loading, layouts, book.title, imports) {
