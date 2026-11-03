@@ -41,6 +41,7 @@ import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.search.AcronymFrequencyCache
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
+import io.github.kdroidfilter.seforimapp.framework.search.PardesLexicon
 import io.github.kdroidfilter.seforimapp.framework.search.RepositorySnippetSourceProvider
 import io.github.kdroidfilter.seforimapp.framework.search.titles.BookTitleIndexHolder
 import io.github.kdroidfilter.seforimapp.framework.search.titles.BookTitleIndexLoader
@@ -192,7 +193,8 @@ object AppCoreBindings {
     ): SearchEngine {
         val dbPath = databasePathProvider.get()
         val indexPath = Paths.get(if (dbPath.endsWith(".db")) "$dbPath.lucene" else "$dbPath.luceneindex")
-        val dictionaryPath = indexPath.resolveSibling("lexical.db")
+        // lexical.db with its empty bases dropped and each word's commonest forms first (PardesLexicon)
+        val dictionaryPath = PardesLexicon.dictionaryFor(indexPath.resolveSibling("lexical.db"), indexPath)
         val snippetProvider = RepositorySnippetSourceProvider(repository)
         val lexical = LuceneSearchEngine(indexPath, snippetProvider, dictionaryPath = dictionaryPath)
         return withSemanticSearch(lexical, indexPath, repository)
