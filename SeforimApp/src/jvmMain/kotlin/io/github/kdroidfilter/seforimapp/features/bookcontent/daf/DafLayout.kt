@@ -11,7 +11,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * The Vilna page (צורת הדף) of a tractate: for every amud, its lines of Gemara, Rashi and Tosafot, each with its
  * words as printed and its box on the page, in PDF points (the page's top left at 0,0). Made by pardes-rashi-ocr's
- * export_layout.py from Otzaria's Talmud scans (the lines' places) and Sefaria's text (their words).
+ * export_layout.py from Otzaria's Talmud scans (the lines' places) and the texts of the library (their words). In
+ * format 2, every line also names the library's lines its words belong to ([DafLine.u]), and [library] the library
+ * release those ids are of.
  */
 @Serializable
 data class DafLayoutFile(
@@ -19,6 +21,14 @@ data class DafLayoutFile(
     val tractate: String,
     val tractateHe: String,
     val amudim: List<DafAmud>,
+    val library: DafLibrary? = null,
+)
+
+/** The library a format-2 file's line ids are of: its [release] (release_info.txt) and its books, by column. */
+@Serializable
+data class DafLibrary(
+    val release: String? = null,
+    val books: Map<String, List<Long>> = emptyMap(),
 )
 
 /** One amud: [page] its size, [block] the box of its Gemara, Rashi and Tosafot (the margins are not drawn). */
@@ -32,8 +42,10 @@ data class DafAmud(
 
 /**
  * A printed line: [c] its column (G the Gemara, R Rashi, T Tosafot), [b] its box (x0, y0, x1, y1), [t] its words as
- * read, right to left, [s] 1 when the alignment is sure of its first and last words, and [d] the indices of the
- * words of [t] that are a dibbur hamatchil, bold as printed.
+ * read, right to left, [s] 1 when the alignment is sure of its first and last words, [d] the indices of the words of
+ * [t] that are a dibbur hamatchil, bold as printed, and [u] (format 2) the library's lines its words belong to:
+ * `[line id, first word, last word]`, the words counted in [t] from 0. A line often holds the end of one comment and
+ * the start of the next; a Gemara line, of one segment or two.
  */
 @Serializable
 data class DafLine(
@@ -42,8 +54,19 @@ data class DafLine(
     val t: String,
     val s: Int = 1,
     val d: List<Int> = emptyList(),
+    val u: List<List<Long>> = emptyList(),
 ) {
     val isGemara: Boolean get() = c == "G"
+
+    /** The library line the word [index] of [t] belongs to, or null (a format-1 file, or a word of none). */
+    fun lineIdAt(index: Int): Long? = u.firstOrNull { it.size == SPAN_SIZE && index.toLong() in it[1]..it[2] }?.get(0)
+
+    /** The library lines of this line's words, in the order they are printed. */
+    val lineIds: List<Long> get() = u.mapNotNull { it.firstOrNull() }.distinct()
+
+    private companion object {
+        const val SPAN_SIZE = 3
+    }
 }
 
 /**
@@ -127,14 +150,14 @@ class DafLayouts(
     private fun parse(file: File): DafLayoutFile? =
         runCatching { json.decodeFromString(DafLayoutFile.serializer(), file.readText()) }
             .getOrNull()
-            ?.takeIf { it.format == FORMAT }
+            ?.takeIf { it.format in FORMATS }
 
     companion object {
         /** The folder of the layouts, next to the library. */
         const val DIR_NAME = "pardes-daf"
 
-        /** The format this app reads (export_layout.py's). */
-        const val FORMAT = 1
+        /** The formats this app reads (export_layout.py's): 2 adds the library's lines to 1. */
+        val FORMATS = 1..2
 
         private const val KEPT = 3
         private const val LOAD_FACTOR = 0.75f
