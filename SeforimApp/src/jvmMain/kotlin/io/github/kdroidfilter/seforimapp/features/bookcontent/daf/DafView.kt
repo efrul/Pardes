@@ -1,6 +1,9 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
+import androidx.compose.foundation.ContextMenuState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +21,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.LocalTextContextMenu
+import androidx.compose.foundation.text.TextContextMenu
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -32,7 +38,19 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
@@ -42,6 +60,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Amud
@@ -324,8 +344,42 @@ private fun DafPages(
     val measurer = remember(resolver, density) { TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0) }
     val marked = if (isTocEntrySelection) emptySet() else selectedLineIds
     val passage = selectedPassage?.targetLineIds.orEmpty()
+    // The text selected on the page, one amud's at a time, copied with Ctrl or Cmd + C (the page takes the keys once
+    // pressed on)
+    var selection by remember(file) { mutableStateOf<Pair<String, DafRange>?>(null) }
+    val copyToClipboard = rememberCopyToClipboard()
+    val keys = remember { FocusRequester() }
+    // A line the page selected itself, by a click: where the pointer is, not to be scrolled to
+    var clicked by remember { mutableStateOf<Long?>(null) }
+    val selectLine: (Long, Boolean) -> Unit = { id, withModifier ->
+        clicked = id
+        onSelectLine(id, withModifier)
+    }
+    val selectPassage: (Long, Set<Long>, Set<Long>) -> Unit = { id, comments, books ->
+        clicked = id
+        onSelectPassage(id, comments, books)
+    }
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .focusRequester(keys)
+            .onKeyEvent { event ->
+                val (name, range) = selection ?: return@onKeyEvent false
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when {
+                    (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C -> {
+                        byName[name]?.let { copyToClipboard(it.textOf(range)) }
+                        true
+                    }
+                    event.key == Key.Escape -> {
+                        selection = null
+                        true
+                    }
+                    else -> false
+                }
+            }.focusable(),
+    ) {
         val viewport = constraints.maxWidth.toFloat()
         val padding = with(density) { PagePadding.toPx() }
         val base = minOf(viewport - 2 * padding, with(density) { MAX_PAGE_WIDTH.dp.toPx() }).coerceAtLeast(1f)
@@ -358,6 +412,10 @@ private fun DafPages(
         LaunchedEffect(lineId, scrollToLineTimestamp, places) {
             val id = lineId?.takeIf { it > 0 } ?: return@LaunchedEffect
             if (places.isEmpty()) return@LaunchedEffect
+            if (id == clicked && revealed) {
+                clicked = null
+                return@LaunchedEffect
+            }
             if (id !in places) {
                 // A line not printed in the layout (an amud it is missing): its amud, by the table of contents
                 val amud =
@@ -415,6 +473,9 @@ private fun DafPages(
                             AmudItem(
                                 book = book,
                                 amud = amud,
+                                range = selection?.takeIf { it.first == name }?.second,
+                                onRange = { range -> selection = range?.let { name to it } },
+                                onPress = { keys.requestFocus() },
                                 perPoint = perPoint,
                                 layouts = layouts,
                                 measurer = measurer,
@@ -425,8 +486,8 @@ private fun DafPages(
                                 color = focus,
                                 marked = marked,
                                 passage = passage,
-                                onSelectLine = onSelectLine,
-                                onSelectPassage = onSelectPassage,
+                                onSelectLine = selectLine,
+                                onSelectPassage = selectPassage,
                                 onContextLine = onContextLine,
                                 modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
                             )
@@ -441,11 +502,15 @@ private fun DafPages(
 /** A page up or down moves this much of the view. */
 private const val PAGE_STEP = 0.9f
 
+@OptIn(ExperimentalFoundationApi::class)
 @Suppress("ComposeUnstableCollections")
 @Composable
 private fun AmudItem(
     book: Book,
     amud: DafAmud,
+    range: DafRange?,
+    onRange: (DafRange?) -> Unit,
+    onPress: () -> Unit,
     perPoint: Float,
     layouts: LayoutCache,
     measurer: TextMeasurer,
@@ -474,6 +539,8 @@ private fun AmudItem(
     // The page's comments and the Gemara lines they are on, read once for the page
     val links by produceState<DafAmudLinks?>(null, book.id, amud) { value = loadLinks(graph.repository, book.id, amud) }
     val highlight = remember(links, marked, passage, color) { dafHighlight(links, marked, passage, color) }
+    val copyToClipboard = rememberCopyToClipboard()
+    val menuState = remember { ContextMenuState() }
     val width = (amud.block[2] - amud.block[0]) * perPoint
     val height = (amud.block[3] - amud.block[1]) * perPoint
     with(density) {
@@ -482,20 +549,54 @@ private fun AmudItem(
             if (laidOut == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else {
-                DafAmudText(
-                    layout = laidOut,
-                    k = perPoint / LAYOUT_SCALE,
-                    gemara = gemara,
-                    rashi = rashi,
-                    ink = ink,
-                    highlight = highlight,
-                    onWordClick = { word, withModifier -> links?.let { clickOn(it, word, withModifier, onSelectLine, onSelectPassage) } },
-                    onContextWord = { word -> links?.segmentOf(word)?.let(onContextLine) },
-                )
+                // The text's own menu (copy, copy with source, search, find in page…), on the amud's selection
+                val text = remember(amud, range) { range?.let { amud.textOf(it) }.orEmpty() }
+                val manager = remember(text, copyToClipboard) { dafTextManager(text, copyToClipboard) }
+                LocalTextContextMenu.current.Area(manager, menuState) {
+                    DafAmudText(
+                        layout = laidOut,
+                        k = perPoint / LAYOUT_SCALE,
+                        gemara = gemara,
+                        rashi = rashi,
+                        ink = ink,
+                        highlight = highlight,
+                        range = range,
+                        selectionColor = LocalTextSelectionColors.current.backgroundColor,
+                        onRange = onRange,
+                        onWordClick = { word, withModifier ->
+                            links?.let { clickOn(it, word, withModifier, onSelectLine, onSelectPassage) }
+                        },
+                        onContextWord = { word -> links?.segmentOf(word)?.let(onContextLine) },
+                        onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
+                        onPress = onPress,
+                    )
+                }
             }
         }
     }
 }
+
+/** What the text's menu takes of an amud's selection: its words, copied as they are. */
+@OptIn(ExperimentalFoundationApi::class)
+private fun dafTextManager(
+    text: String,
+    copyToClipboard: (String) -> Unit,
+): TextContextMenu.TextManager =
+    object : TextContextMenu.TextManager {
+        override val selectedText = AnnotatedString(text)
+        override val cut: TextContextMenu.Action? = null
+        override val copy: TextContextMenu.Action? =
+            text.takeIf { it.isNotEmpty() }?.let {
+                TextContextMenu.Action(
+                    true,
+                ) { copyToClipboard(it) }
+            }
+        override val paste: TextContextMenu.Action? = null
+        override val selectAll: TextContextMenu.Action? = null
+
+        // The page selects the word under a right-click itself, before the menu opens
+        override fun selectWordAtPositionIfNotAlreadySelected(offset: Offset) = Unit
+    }
 
 /** The last few amudim laid out, by amud. */
 private class LayoutCache(

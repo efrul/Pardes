@@ -148,6 +148,68 @@ class DafPageTest {
 
     @OptIn(ExperimentalComposeUiApi::class)
     @Test
+    fun aDragGoesDownAColumnFromOneOfItsBoxesToTheNext() {
+        val amud = amud()
+        val laidOut = layout(amud)
+        // A column of two boxes or more, one above the other (as Rashi above the Gemara, then beside it)
+        val column =
+            laidOut.runs
+                .filter { !it.isBig }
+                .groupBy { it.column }
+                .values
+                .first { it.size >= 2 }
+        val (upper, lower) = column.sortedBy { it.top }.let { it[0] to it[1] }
+        val ranges = mutableListOf<DafRange?>()
+        val scene =
+            ImageComposeScene(laidOut.width.toInt() + 1, laidOut.height.toInt() + 1, Density(1f), LayoutDirection.Rtl) {
+                DafAmudText(laidOut, 1f, gemara, rashi, Color.Black, onRange = { ranges += it })
+            }
+        try {
+            scene.render()
+            val from = upper.lines.indexOfFirst { it != null && it.words.size > 2 }
+            val first = upper.lines[from]!!
+            val start = Offset(upper.left + upper.width - first.indent - 3f, upper.top + upper.pitch * (from + 0.5f))
+            val to = lower.lines.indexOfFirst { it != null && it.words.size > 2 }
+            val second = lower.lines[to]!!
+            val end = Offset(lower.left + lower.width - second.indent - 3f, lower.top + lower.pitch * (to + 0.5f))
+            scene.sendPointerEvent(PointerEventType.Press, start, buttons = PointerButtons(isPrimaryPressed = true))
+            scene.sendPointerEvent(PointerEventType.Move, start + Offset(-20f, 0f), buttons = PointerButtons(isPrimaryPressed = true))
+            scene.sendPointerEvent(PointerEventType.Move, end, buttons = PointerButtons(isPrimaryPressed = true))
+            scene.sendPointerEvent(PointerEventType.Release, end)
+            scene.render()
+            val range = assertNotNull(ranges.lastOrNull())
+            assertEquals(DafWord(first.index, 0), range.first, "from the word the drag began on")
+            assertEquals(DafWord(second.index, 0), range.last, "to the word in the column's next box")
+            // All the lines between, of that column only
+            val text = amud.textOf(range)
+            assertTrue(text.startsWith(first.words.first()) && text.endsWith(second.words.first()))
+        } finally {
+            scene.close()
+        }
+    }
+
+    @Test
+    fun aRangeIsReadInTheAmudsOrderAndCopiedAsPrinted() {
+        val amud = amud()
+        val line = amud.lines.indexOfFirst { it.c == "R" }
+        val range = DafRange(DafWord(line + 1, 1), DafWord(line, 2))
+        assertEquals(DafWord(line, 2), range.first, "a drag back up is read from its top")
+        assertTrue(DafWord(line, 5) in range && DafWord(line + 1, 0) in range && DafWord(line + 1, 2) !in range)
+        val words =
+            amud.lines[line]
+                .t
+                .split(' ')
+                .filter { it.isNotEmpty() }
+        val next =
+            amud.lines[line + 1]
+                .t
+                .split(' ')
+                .filter { it.isNotEmpty() }
+        assertEquals((words.drop(2) + next.take(2)).joinToString(" "), amud.textOf(range))
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test
     fun drawsThePage() {
         val amud = amud()
         val laidOut = layout(amud)
