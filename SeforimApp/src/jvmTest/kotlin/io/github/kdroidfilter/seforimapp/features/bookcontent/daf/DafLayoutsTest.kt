@@ -56,6 +56,41 @@ class DafLayoutsTest {
     }
 
     @Test
+    fun formatTwoTiesEveryWordToALibraryLine() {
+        fixture.copyTo(File(dir, "b.json"))
+        val file = assertNotNull(DafLayouts(dir).tractate("ברכות"))
+        assertEquals(2, file.format)
+        assertEquals("20261012193827", file.library?.release)
+        assertEquals(listOf(103L), file.library?.books?.get("G"))
+        val lines = file.amudim.single().lines
+        for (line in lines) {
+            val words = line.t.split(' ').filter { it.isNotEmpty() }
+            for (i in words.indices) assertNotNull(line.lineIdAt(i), "a word of no library line: ${line.t}")
+            assertNull(line.lineIdAt(words.size))
+        }
+        // A line of Rashi that ends one comment and starts the next one
+        assertTrue(lines.any { it.c == "R" && it.lineIds.size == 2 })
+    }
+
+    @Test
+    fun aFormatOneFileStillOpens() {
+        File(dir, "old.json").writeText(
+            """{"format":1,"tractate":"Berakhot","tractateHe":"ברכות","amudim":[{"amud":"2a","page":[600,850],""" +
+                """"block":[0,0,10,10],"lines":[{"c":"G","b":[0,0,10,10],"t":"מאימתי קורין"}]}]}""",
+        )
+        val file = assertNotNull(DafLayouts(dir).tractate("Berakhot"))
+        assertEquals(1, file.format)
+        assertNull(file.library)
+        assertNull(
+            file.amudim
+                .single()
+                .lines
+                .single()
+                .lineIdAt(0),
+        )
+    }
+
+    @Test
     fun namesAmudim() {
         assertEquals("35b", amudOf("דף לה:"))
         assertEquals("35b", amudOf("ברכות לה:, א"))
