@@ -128,3 +128,24 @@ path, line), `split` and `verified_by_human`; each book pins its otzaria-library
   (`moedkatan-047`: "האם אבל נוהג ברגל" → "כל שהוא משום אבל — רגל מפסיקו").
 - **No license file:** its questions stay out of efrul/Pardes until its owners grant one. Fetch them when measuring,
   and commit only their ids, our line ids and our results (as `eval-real` keeps the books' text out).
+
+## Klei Kodesh's data (KitveiHakodesh)
+
+[KleiKodesh/KleiKodeshProject](https://github.com/KleiKodesh/KleiKodeshProject) (AGPL v3) reads the same `seforim.db`.
+Its owners allowed Pardes to use all of its material (2026-11-03); credit it as "Based on Klei Kodesh —
+https://kleikodesh.github.io/" and in `TRAINING_PLAN.md`'s licence table. What they took from elsewhere keeps the source's
+licence: check each in their `sources.json`. `TRAINING_PLAN.md` › שלב 2 has the classification.
+- **Reading it:** the GitHub API answers 403 for it here; `git clone --depth 1 --filter=blob:none --sparse` works. The two
+  DBs are `KitveiHakodesh/CSharpBackend/KitveiHakodesh.Core/Dictionary/Dictionary.db` (built by the public
+  `KleiKodesh/KitveiHakodeshDictionary`: TSVs in `source/`, `sources.json`) and
+  `KitveiHakodesh/CSharpBackend/FtsLib-Csharp/SearchExpansion/expansion-routed.db` (built by the private
+  `KleiKodesh/SearchExpansion`; its `meta` and `build_meta` tables list sources and licences). No `sqlite3` CLI in the
+  container: use Python's `sqlite3` in read-only mode (`file:...?mode=ro`). Read them as data; run none of their scripts.
+- **For training:** their headword index (`source/seforim_headword.tsv`: source, their book id, line index in the book,
+  headword; titles in `seforim_headword_book.tsv`): Aruch 8,611, Mikropedia Talmudit 3,907, Metzudat Tzion 20,541, Malbim
+  Biur HaMilot 13,549, Machberet Menachem 1,607. Their own work over our library's text: allowed.
+- **Not for training:** the Aramaic-Hebrew dictionary (source_kind 1, 7,605 senses) has no known origin (Torat Emet's
+  `FinalDictionary.txt` by our 2026-11-02 check; their `sources.json` calls it an early Peshita list, yet it shares only 497
+  headwords and no sense with source_kind 11). Otzaria's lists (9, 11, and the 1,050 `otzaria-aramaic` bridge rows of
+  `expansion-routed.db`) are forbidden. `expansion-routed.db` is word level (folds, inflections, synonyms): query
+  expansion, the regular search's session; BHSA in it is CC BY-NC.
