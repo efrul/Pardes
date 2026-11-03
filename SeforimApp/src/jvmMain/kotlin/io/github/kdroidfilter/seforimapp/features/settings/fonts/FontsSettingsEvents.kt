@@ -17,5 +17,13 @@ sealed interface FontsSettingsEvents {
         val code: String,
     ) : FontsSettingsEvents
 
+    data class SetDafGemaraFont(
+        val code: String,
+    ) : FontsSettingsEvents
+
+    data class SetDafCommentaryFont(
+        val code: String,
+    ) : FontsSettingsEvents
+
     data object ResetToDefaults : FontsSettingsEvents
 }

@@ -1,7 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
@@ -21,12 +20,11 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Berakhot 35b, a page whose every line the alignment is sure of, drawn from its layout: each line's words fill its
- * box from right to left, none past its edges. The drawing is written to build/reports/daf/ to look at.
+ * Berakhot 35b, a page whose every line the alignment is sure of, drawn from its layout: its lines in runs of a
+ * column, each run a text whose words a click finds. The drawing is written to build/reports/daf/ to look at.
  */
 class DafPageTest {
     private val fonts = File("src/commonMain/composeResources/font")
@@ -50,82 +48,98 @@ class DafPageTest {
         return file.amudim.single { it.amud == "35b" }
     }
 
-    @Test
-    fun everyLineFillsItsBoxWithoutPassingIt() {
-        val amud = amud()
+    private fun layout(amud: DafAmud): AmudLayout {
         val density = Density(1f)
         val measurer = TextMeasurer(createFontFamilyResolver(), density, LayoutDirection.Rtl)
-        val scale = 1200f / (amud.block[2] - amud.block[0])
-        val placed = layoutAmud(amud, scale, measurer, density, gemara, rashi, Color.Black)
-        assertEquals(133, placed.size)
-        for (line in placed) {
-            val right = line.xs[0] + line.words[0].size.width
-            val left = line.xs.last()
-            assertTrue(right <= line.boxRight + 0.5f, "a line ends past its box's right edge")
-            assertTrue(left >= line.boxLeft - 0.5f, "a line ends past its box's left edge")
-            for (i in 1 until line.words.size) {
-                // the words come from the right edge to the left one, none on another
-                assertTrue(line.xs[i] + line.words[i].size.width <= line.xs[i - 1] + 0.5f, "two words overlap")
+        return layoutAmud(amud, 1200f / (amud.block[2] - amud.block[0]), measurer, density, gemara, rashi)
+    }
+
+    @Test
+    fun everyLineIsInARunOfItsColumnEvenlySpaced() {
+        val amud = amud()
+        val laidOut = layout(amud)
+        val placed = laidOut.runs.flatMap { run -> run.lines.filterNotNull().map { it.index } }
+        assertEquals(
+            amud.lines.indices
+                .filter { amud.lines[it].t.isNotBlank() }
+                .sorted(),
+            placed.sorted(),
+            "every line once",
+        )
+        for (run in laidOut.runs) {
+            val column =
+                amud.lines[
+                    run.lines
+                        .filterNotNull()
+                        .first()
+                        .index,
+                ].c
+            assertTrue(run.lines.filterNotNull().all { amud.lines[it.index].c == column }, "a run is of one column")
+            for (line in run.lines.filterNotNull()) {
+                assertTrue(line.indent >= -0.5f, "a line starts inside its run")
+                assertTrue(line.size <= run.size + 0.01f, "a line's letters are its column's, or smaller to fit")
+            }
+        }
+        // The Gemara of this amud widens twice, as Tosafot and then Rashi end beside it: three boxes, no other column in
+        // any of them
+        val gemara = laidOut.runs.filter { it.isGemara && !it.isBig }
+        assertEquals(3, gemara.size)
+        for (run in laidOut.runs) {
+            for (other in laidOut.runs) {
+                if (other === run || other.isBig || run.isBig) continue
+                val across = minOf(run.left + run.width, other.left + other.width) - maxOf(run.left, other.left)
+                val bottom = minOf(run.top + run.pitch * run.lines.size, other.top + other.pitch * other.lines.size)
+                val down = bottom - maxOf(run.top, other.top)
+                assertTrue(across <= 1f || down <= run.pitch * 0.5f, "two runs' boxes overlap")
             }
         }
     }
 
     @Test
-    fun aPointOnAWordFindsThatWord() {
+    fun aRunsTextHasItsLinesWordsInOrderAndFindsThem() {
         val amud = amud()
-        val density = Density(1f)
-        val measurer = TextMeasurer(createFontFamilyResolver(), density, LayoutDirection.Rtl)
-        val placed = layoutAmud(amud, 1200f / (amud.block[2] - amud.block[0]), measurer, density, gemara, rashi, Color.Black)
-        for (line in placed) {
+        val run = layout(amud).runs.first { it.lines.filterNotNull().size > 3 }
+        val words = run.lines.filterNotNull().flatMap { it.words }
+        assertEquals(
+            words.joinToString(" "),
+            run.text
+                .split(' ')
+                .filter { it.isNotEmpty() }
+                .joinToString(" "),
+        )
+        run.lines.forEachIndexed { slot, line ->
+            if (line == null) return@forEachIndexed
             for (i in line.words.indices) {
-                val x = line.xs[i] + line.words[i].size.width / 2
-                val y = (line.boxTop + line.boxBottom) / 2
-                assertEquals(DafWord(line.index, i), placed.wordAt(x, y), "the middle of word $i of line ${line.index}")
+                val range = run.rangeOf(slot, i)
+                assertEquals(line.words[i], run.text.substring(range.first, range.last + 1))
+                assertEquals(DafWord(line.index, i), run.wordAt(range.first))
+                assertEquals(DafWord(line.index, i), run.wordAt(range.last))
             }
         }
-        assertNull(placed.wordAt(-50f, -50f))
     }
 
     @OptIn(ExperimentalComposeUiApi::class)
     @Test
-    fun thePointerOnAWordAndAClickOnItReachTheirCallbacks() {
+    fun aClickOnAWordReachesItsCallback() {
         val amud = amud()
-        val width = 1200
-        val height = ((amud.block[3] - amud.block[1]) * width / (amud.block[2] - amud.block[0])).toInt() + 1
-        val hovered = mutableListOf<DafWord?>()
+        val laidOut = layout(amud)
+        val width = laidOut.width.toInt() + 1
+        val height = laidOut.height.toInt() + 1
         val clicked = mutableListOf<DafWord>()
         val scene =
             ImageComposeScene(width, height, Density(1f), LayoutDirection.Rtl) {
-                DafPage(
-                    amud,
-                    gemara,
-                    rashi,
-                    Color.Black,
-                    Modifier.fillMaxWidth(),
-                    onWordClick = { word, _ -> clicked += word },
-                    onHover = { hovered += it },
-                )
+                DafAmudText(laidOut, 1f, gemara, rashi, Color.Black, onWordClick = { word, _ -> clicked += word })
             }
         try {
-            // Laid out off the UI thread: frames until it is
-            val density = Density(1f)
-            val measurer = TextMeasurer(createFontFamilyResolver(), density, LayoutDirection.Rtl)
-            val placed = layoutAmud(amud, width / (amud.block[2] - amud.block[0]), measurer, density, gemara, rashi, Color.Black)
-            val line = placed[placed.size / 2]
-            val at = Offset(line.xs[0] + line.words[0].size.width / 2, (line.boxTop + line.boxBottom) / 2)
-            val until = System.nanoTime() + 20_000_000_000L
-            var wiggle = 0f
-            while (hovered.isEmpty() && System.nanoTime() < until) {
-                Thread.sleep(50)
-                scene.render(System.nanoTime())
-                // A move to where the pointer already is sends nothing: a pixel either way
-                wiggle = 1f - wiggle
-                scene.sendPointerEvent(PointerEventType.Move, at + Offset(wiggle, 0f))
-            }
-            assertEquals(DafWord(line.index, 0), hovered.lastOrNull(), "the word under the pointer")
+            scene.render()
+            // The first word of a Gemara line: at its line's right end, in the line's middle
+            val run = laidOut.runs.first { it.isGemara && !it.isBig }
+            val slot = run.lines.indexOfFirst { it != null && it.words.size > 2 }
+            val line = run.lines[slot]!!
+            val at = Offset(run.left + run.width - line.indent - 3f, run.top + run.pitch * (slot + 0.5f))
             scene.sendPointerEvent(PointerEventType.Press, at, buttons = PointerButtons(isPrimaryPressed = true))
             scene.sendPointerEvent(PointerEventType.Release, at)
-            scene.render(System.nanoTime())
+            scene.render()
             assertEquals(listOf(DafWord(line.index, 0)), clicked)
         } finally {
             scene.close()
@@ -136,20 +150,13 @@ class DafPageTest {
     @Test
     fun drawsThePage() {
         val amud = amud()
-        val width = 1200
-        val height = ((amud.block[3] - amud.block[1]) * width / (amud.block[2] - amud.block[0])).toInt() + 1
+        val laidOut = layout(amud)
         val scene =
-            ImageComposeScene(width, height, Density(1f), LayoutDirection.Rtl) {
-                DafPage(amud, gemara, rashi, Color.Black, Modifier.fillMaxWidth().background(Color.White))
+            ImageComposeScene(laidOut.width.toInt() + 1, laidOut.height.toInt() + 1, Density(1f), LayoutDirection.Rtl) {
+                DafAmudText(laidOut, 1f, gemara, rashi, Color.Black, Modifier.background(Color.White))
             }
         try {
-            // The amud is laid out off the UI thread: frames until it is drawn
-            var png = ByteArray(0)
-            val until = System.nanoTime() + 20_000_000_000L
-            while (png.size <= DRAWN_PNG_BYTES && System.nanoTime() < until) {
-                Thread.sleep(50)
-                png = assertNotNull(scene.render(System.nanoTime()).encodeToData(EncodedImageFormat.PNG)).bytes
-            }
+            val png = assertNotNull(scene.render().encodeToData(EncodedImageFormat.PNG)).bytes
             val out = File("build/reports/daf/berakhot-35b.png")
             out.parentFile.mkdirs()
             out.writeBytes(png)

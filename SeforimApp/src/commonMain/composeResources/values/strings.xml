@@ -38,6 +38,8 @@
     <string name="settings_font_commentary_label">גופן למפרשים</string>
     <string name="settings_font_targum_label">גופן לתרגומים</string>
     <string name="settings_font_sources_label">גופן למקורות</string>
+    <string name="settings_font_daf_gemara_label">גופן לגמרא בצורת הדף</string>
+    <string name="settings_font_daf_commentary_label">גופן לרש״י ותוספות בצורת הדף</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>
@@ -308,8 +310,6 @@
     <string name="shnayim_mikra_mode_tooltip">שנים מקרא ואחד תרגום: כל פסוק פעמיים ואחריו התרגום</string>
     <string name="daf_view">צורת הדף</string>
     <string name="daf_view_tooltip">צורת הדף: הגמרא, רש״י ותוספות כפי שנדפסו בש״ס וילנא, שורה בשורה</string>
-    <string name="daf_previous_amud">העמוד הקודם</string>
-    <string name="daf_next_amud">העמוד הבא</string>
     <string name="daf_amud_missing">עמוד זה עוד חסר בצורת הדף</string>
     <string name="daf_missing">צורת הדף של מסכת %1$s עוד לא הוכנה</string>
     <string name="daf_missing_hint">קובץ צורת הדף של מסכת נטען מהתיקייה %1$s שליד הספרייה. אפשר לייבא אותו לשם מכאן.</string>
