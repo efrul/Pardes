@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,13 +37,16 @@ import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Amud
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.TocNumber
 import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
+import io.github.kdroidfilter.seforimlibrary.core.models.ConnectionType
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
+import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openFilePicker
@@ -117,12 +121,25 @@ private const val MAX_PAGE_WIDTH = 1100f
  * layout (its file in the library's pardes-daf folder), with its name and the previous and next amudim above it.
  * Going to another amud selects its first line, so the text and the line panes follow; with no layout for the
  * tractate, a word on it and a button to import one.
+ *
+ * The page answers as the text does, its panes the text's: a click on a Gemara word selects its segment
+ * ([onSelectLine]; with Ctrl or Cmd, adds it), or, inside words a comment's dibbur quotes, that passage
+ * ([onSelectPassage]: the segment and those comments, which the commentaries pane brings in view); a click on a comment
+ * selects it on its segment. The tab's selection ([selectedLineIds], [selectedPassage]) is marked on the page, with
+ * the comments on the selected segments and what a click under the pointer would select; not a table of contents'
+ * entry selected whole ([isTocEntrySelection], as going to an amud does), which would mark all of the page.
  */
+@Suppress("ComposeUnstableCollections") // the tab's selection, as the text view takes it
 @Composable
 fun DafReaderView(
     book: Book,
     lineId: Long?,
+    selectedLineIds: Set<Long>,
+    isTocEntrySelection: Boolean,
+    selectedPassage: SelectedPassage?,
     onEvent: (BookContentEvent) -> Unit,
+    onSelectLine: (lineId: Long, withModifier: Boolean) -> Unit,
+    onSelectPassage: (lineId: Long, commentIds: Set<Long>, commentBookIds: Set<Long>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
@@ -178,9 +195,26 @@ fun DafReaderView(
                 val current = shown ?: file.amudim.first().amud
                 val at = order.indexOf(current)
                 val textSize by graph.appSettings.textSizeFlow.collectAsState()
+                val amud = file.amudim.firstOrNull { it.amud == current }
+                // The page's comments and the Gemara lines they are on, read once for the page
+                val links by produceState<DafAmudLinks?>(null, book.id, amud) {
+                    value = amud?.let { loadLinks(graph.repository, book.id, it) }
+                }
+                var hovered by remember(amud) { mutableStateOf<DafWord?>(null) }
+                val focus = JewelTheme.globalColors.outlines.focused
+                val marked = if (isTocEntrySelection) emptySet() else selectedLineIds
+                val highlight =
+                    remember(links, marked, selectedPassage, hovered, focus) {
+                        dafHighlight(links, marked, selectedPassage?.targetLineIds.orEmpty(), hovered, focus)
+                    }
                 AmudPage(
                     title = "${file.tractateHe} ${amudTitle(current)}",
-                    amud = file.amudim.firstOrNull { it.amud == current },
+                    amud = amud,
+                    highlight = highlight,
+                    onWordClick = { word, withModifier ->
+                        links?.let { clickOn(it, word, withModifier, onSelectLine, onSelectPassage) }
+                    },
+                    onHover = { hovered = it },
                     previous = order.getOrNull(at - 1)?.takeIf { at > 0 },
                     next = order.getOrNull(at + 1)?.takeIf { at >= 0 },
                     maxWidth = (MAX_PAGE_WIDTH * textSize / AppSettings.DEFAULT_TEXT_SIZE).dp,
@@ -201,6 +235,9 @@ private fun AmudPage(
     previous: String?,
     next: String?,
     maxWidth: Dp,
+    highlight: DafHighlight,
+    onWordClick: (DafWord, Boolean) -> Unit,
+    onHover: (DafWord?) -> Unit,
     onGo: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -246,6 +283,9 @@ private fun AmudPage(
                     gemara = gemara,
                     rashi = rashi,
                     ink = ink,
+                    highlight = highlight,
+                    onWordClick = onWordClick,
+                    onHover = onHover,
                     modifier =
                         Modifier
                             .align(Alignment.TopCenter)
@@ -319,4 +359,93 @@ private sealed interface ImportProblem {
     data class OtherTractate(
         val tractate: String,
     ) : ImportProblem
+}
+
+/**
+ * The page's ties to the library: its comments' Gemara lines and books, in one read each. The Gemara lines are the
+ * comments' sources (the library's COMMENTARY links, read backward), one for each link: getSourcesForLines gives each
+ * Gemara line once, for the first comment on it.
+ */
+private suspend fun loadLinks(
+    repository: SeforimRepository,
+    bookId: Long,
+    amud: DafAmud,
+): DafAmudLinks {
+    val comments = DafAmudLinks.commentIdsOf(amud)
+    val bases =
+        runSuspendCatching { repository.getCommentarySummariesForLines(comments.toList(), includeSources = true) }
+            .getOrDefault(emptyList())
+            .map { it.link }
+            .filter { it.connectionType == ConnectionType.SOURCE && it.targetBookId == bookId }
+            .groupBy({ it.sourceLineId }, { it.targetLineId })
+            .mapValues { (_, ids) -> ids.toSet() }
+    val books = runSuspendCatching { repository.getLinesByIds(comments) }.getOrDefault(emptyList()).associate { it.id to it.bookId }
+    return withContext(Dispatchers.Default) { DafAmudLinks(amud, bases, books) }
+}
+
+/** How strong each mark is: the passage selected, the segments selected, under the pointer, the comments on them. */
+private const val PASSAGE_ALPHA = 0.32f
+private const val SELECTED_ALPHA = 0.18f
+private const val HOVER_ALPHA = 0.12f
+private const val RELATED_ALPHA = 0.08f
+
+/**
+ * The page's marks: the selected passage (its comments and the Gemara words they quote) strongest, then the selected
+ * segments, then what a click under the pointer would select ([hovered]), then the comments on the selected
+ * segments, lightest.
+ */
+internal fun dafHighlight(
+    links: DafAmudLinks?,
+    selected: Set<Long>,
+    passage: Set<Long>,
+    hovered: DafWord?,
+    color: Color,
+): DafHighlight {
+    if (links == null) return DafHighlight.NONE
+    val related = selected.flatMapTo(HashSet()) { links.commentsOn[it].orEmpty() }
+    val quotedWords = passage.flatMapTo(HashSet()) { links.quoted[it].orEmpty() }
+    val hoverPassage = hovered?.let { links.passageAt(it) }.orEmpty()
+    val hoverWords = hoverPassage.flatMapTo(HashSet()) { links.quoted[it].orEmpty() }
+    val hoverLine = hovered?.let { links.lineIdOf(it) }
+    val strong = color.copy(alpha = PASSAGE_ALPHA)
+    val selectedColor = color.copy(alpha = SELECTED_ALPHA)
+    val hoverColor = color.copy(alpha = HOVER_ALPHA)
+    val relatedColor = color.copy(alpha = RELATED_ALPHA)
+    return DafHighlight { word ->
+        val id = links.lineIdOf(word) ?: return@DafHighlight null
+        when {
+            id in passage || word in quotedWords -> strong
+            id in selected -> selectedColor
+            id in hoverPassage || word in hoverWords || (hoverPassage.isEmpty() && id == hoverLine) -> hoverColor
+            id in related -> relatedColor
+            else -> null
+        }
+    }
+}
+
+/**
+ * A click on [word]: a Gemara word inside words a dibbur quotes selects that passage, another one its segment (with a
+ * modifier, added to the selection); a comment's word selects the comment, on its segment.
+ */
+internal fun clickOn(
+    links: DafAmudLinks,
+    word: DafWord,
+    withModifier: Boolean,
+    onSelectLine: (Long, Boolean) -> Unit,
+    onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
+) {
+    val id = links.lineIdOf(word) ?: return
+    if (links.isGemara(word)) {
+        val passage = if (withModifier) emptySet() else links.passageAt(word)
+        if (passage.isEmpty()) {
+            onSelectLine(id, withModifier)
+        } else {
+            onSelectPassage(id, passage, passage.mapNotNullTo(HashSet()) { links.bookOf[it] })
+        }
+    } else {
+        // Its segment, the one printed on this page when it is on two
+        val bases = links.baseOf[id].orEmpty()
+        val base = bases.firstOrNull { it in links.wordsOf } ?: bases.firstOrNull() ?: return
+        onSelectPassage(base, setOf(id), setOfNotNull(links.bookOf[id]))
+    }
 }
