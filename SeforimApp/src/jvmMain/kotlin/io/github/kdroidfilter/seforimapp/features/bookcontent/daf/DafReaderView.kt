@@ -1,6 +1,9 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,10 +23,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
@@ -58,12 +70,15 @@ import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CircularProgressIndicator
+import org.jetbrains.jewel.ui.component.ContextMenuItemOption
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.IconButton
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.context_menu_copy_with_source
+import seforimapp.seforimapp.generated.resources.context_menu_search_selected_text
 import seforimapp.seforimapp.generated.resources.daf_amud_missing
 import seforimapp.seforimapp.generated.resources.daf_import
 import seforimapp.seforimapp.generated.resources.daf_import_not_layout
@@ -207,10 +222,41 @@ fun DafReaderView(
                     remember(links, marked, selectedPassage, hovered, focus) {
                         dafHighlight(links, marked, selectedPassage?.targetLineIds.orEmpty(), hovered, focus)
                     }
+                val copyToClipboard = rememberCopyToClipboard()
+                val scope = rememberCoroutineScope()
+                val copyLabel = stringResource(Res.string.context_menu_copy_with_source)
+                val searchLabel = stringResource(Res.string.context_menu_search_selected_text)
+                // A word's menu, as the text's: its comment or segment copied with its source, the word searched
+                val menuItems: (DafWord) -> List<ContextMenuItem> = { word ->
+                    val lineId = links?.lineIdOf(word)
+                    val query = amud?.wordText(word)?.let(::searchWord)
+                    buildList {
+                        if (lineId != null) {
+                            add(
+                                ContextMenuItemOption(icon = AllIconsKeys.Actions.Copy, label = copyLabel) {
+                                    scope.launch {
+                                        runSuspendCatching { graph.repository.getLine(lineId) }.getOrNull()?.let {
+                                            copyToClipboard(copyWithSource(it.content, it.heRef))
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                        if (!query.isNullOrEmpty()) {
+                            add(
+                                ContextMenuItemOption(icon = AllIconsKeys.Actions.Find, label = searchLabel) {
+                                    onEvent(BookContentEvent.SearchInDatabase(query))
+                                },
+                            )
+                        }
+                    }
+                }
                 AmudPage(
                     title = "${file.tractateHe} ${amudTitle(current)}",
                     amud = amud,
                     highlight = highlight,
+                    hovered = hovered,
+                    menuItems = menuItems,
                     onWordClick = { word, withModifier ->
                         links?.let { clickOn(it, word, withModifier, onSelectLine, onSelectPassage) }
                     },
@@ -236,12 +282,17 @@ private fun AmudPage(
     next: String?,
     maxWidth: Dp,
     highlight: DafHighlight,
+    hovered: DafWord?,
+    menuItems: (DafWord) -> List<ContextMenuItem>,
     onWordClick: (DafWord, Boolean) -> Unit,
     onHover: (DafWord?) -> Unit,
     onGo: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    // The page takes the arrows once clicked: the next amud on the side reading goes to
+    val focus = remember { FocusRequester() }
+    val currentHovered by rememberUpdatedState(hovered)
     val gemara = FontCatalog.familyFor("frankruehlclm")
     // A variable font: its bold is its weight axis at 700
     val rashiNormal = Font(Res.font.notorashihebrew, FontWeight.Normal)
@@ -270,7 +321,24 @@ private fun AmudPage(
         }
         // A new amud opens at its top
         val scroll = remember(amud) { ScrollState(0) }
-        Box(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .focusRequester(focus)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    val target =
+                        when (event.key) {
+                            Key.DirectionLeft -> if (rtl) next else previous
+                            Key.DirectionRight -> if (rtl) previous else next
+                            else -> return@onPreviewKeyEvent false
+                        }
+                    target?.let(onGo)
+                    true
+                }.verticalScroll(scroll),
+        ) {
             if (amud == null) {
                 Text(
                     stringResource(Res.string.daf_amud_missing),
@@ -278,21 +346,30 @@ private fun AmudPage(
                     color = JewelTheme.globalColors.text.info,
                 )
             } else {
-                DafPage(
-                    amud = amud,
-                    gemara = gemara,
-                    rashi = rashi,
-                    ink = ink,
-                    highlight = highlight,
-                    onWordClick = onWordClick,
-                    onHover = onHover,
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .widthIn(max = maxWidth)
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
-                )
+                Box(
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .widthIn(max = maxWidth)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                ) {
+                    // The menu of the word under the pointer when it opens
+                    ContextMenuArea(items = { currentHovered?.let(menuItems).orEmpty() }) {
+                        DafPage(
+                            amud = amud,
+                            gemara = gemara,
+                            rashi = rashi,
+                            ink = ink,
+                            highlight = highlight,
+                            onWordClick = { word, withModifier ->
+                                focus.requestFocus()
+                                onWordClick(word, withModifier)
+                            },
+                            onHover = onHover,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         }
     }
@@ -448,4 +525,32 @@ internal fun clickOn(
         val base = bases.firstOrNull { it in links.wordsOf } ?: bases.firstOrNull() ?: return
         onSelectPassage(base, setOf(id), setOfNotNull(links.bookOf[id]))
     }
+}
+
+/** The word [word] of this amud as printed, or null. */
+internal fun DafAmud.wordText(word: DafWord): String? =
+    lines
+        .getOrNull(word.line)
+        ?.t
+        ?.split(' ')
+        ?.filter { it.isNotEmpty() }
+        ?.getOrNull(word.word)
+
+/** A printed word to search for: without the print's period, colon or comma, its abbreviation marks kept. */
+internal fun searchWord(word: String): String = word.trim { !it.isLetter() && it !in "״׳\"'" }
+
+/** A library line copied with its source, as the text's "העתק עם מקור" does: its text, then (its place). */
+internal fun copyWithSource(
+    content: String,
+    heRef: String?,
+): String {
+    val text =
+        content
+            .replace(Regex("<[^>]+>"), " ")
+            .replace("&nbsp;", " ")
+            .replace("&quot;", "\"")
+            .replace("&amp;", "&")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    return if (heRef.isNullOrBlank()) text else "$text\n\n($heRef)"
 }
