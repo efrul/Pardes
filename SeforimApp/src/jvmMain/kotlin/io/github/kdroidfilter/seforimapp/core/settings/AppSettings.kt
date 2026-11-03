@@ -107,6 +107,13 @@ class AppSettings(
     private val _sourceFontCodeFlow = MutableStateFlow(getSourceFontCode())
     val sourceFontCodeFlow: StateFlow<String> = _sourceFontCodeFlow.asStateFlow()
 
+    // The daf view's fonts: the Gemara's, and Rashi's and Tosafot's
+    private val _dafGemaraFontCodeFlow = MutableStateFlow(getDafGemaraFontCode())
+    val dafGemaraFontCodeFlow: StateFlow<String> = _dafGemaraFontCodeFlow.asStateFlow()
+
+    private val _dafCommentaryFontCodeFlow = MutableStateFlow(getDafCommentaryFontCode())
+    val dafCommentaryFontCodeFlow: StateFlow<String> = _dafCommentaryFontCodeFlow.asStateFlow()
+
     // Find-in-page state (scoped per tab, not persisted)
     private val findQueryFlowByTab = mutableMapOf<String, MutableStateFlow<String>>()
     private val findBarOpenFlowByTab = mutableMapOf<String, MutableStateFlow<Boolean>>()
@@ -261,6 +268,20 @@ class AppSettings(
     fun setTargumFontCode(code: String) {
         settings[KEY_FONT_TARGUM] = code
         _targumFontCodeFlow.value = code
+    }
+
+    fun getDafGemaraFontCode(): String = settings[KEY_FONT_DAF_GEMARA, DEFAULT_DAF_GEMARA_FONT]
+
+    fun setDafGemaraFontCode(code: String) {
+        settings[KEY_FONT_DAF_GEMARA] = code
+        _dafGemaraFontCodeFlow.value = code
+    }
+
+    fun getDafCommentaryFontCode(): String = settings[KEY_FONT_DAF_COMMENTARY, DEFAULT_DAF_COMMENTARY_FONT]
+
+    fun setDafCommentaryFontCode(code: String) {
+        settings[KEY_FONT_DAF_COMMENTARY] = code
+        _dafCommentaryFontCodeFlow.value = code
     }
 
     fun getSourceFontCode(): String = settings[KEY_FONT_SOURCE, DEFAULT_SOURCE_FONT]
@@ -624,6 +645,8 @@ class AppSettings(
         _commentaryFontCodeFlow.value = DEFAULT_COMMENTARY_FONT
         _targumFontCodeFlow.value = DEFAULT_TARGUM_FONT
         _sourceFontCodeFlow.value = DEFAULT_SOURCE_FONT
+        _dafGemaraFontCodeFlow.value = DEFAULT_DAF_GEMARA_FONT
+        _dafCommentaryFontCodeFlow.value = DEFAULT_DAF_COMMENTARY_FONT
     }
 
     /** The preferences that follow the user to another machine (see [PORTABLE_KEYS]). */
@@ -653,6 +676,8 @@ class AppSettings(
                 KEY_FONT_COMMENTARY,
                 KEY_FONT_TARGUM,
                 KEY_FONT_SOURCE,
+                KEY_FONT_DAF_GEMARA,
+                KEY_FONT_DAF_COMMENTARY,
                 KEY_REGION_COUNTRY,
                 KEY_REGION_CITY,
                 KEY_USER_FIRST_NAME,
@@ -712,6 +737,10 @@ class AppSettings(
         const val DEFAULT_TARGUM_FONT = "taameyashkenaz"
         const val DEFAULT_SOURCE_FONT = "tinos"
 
+        // As the Vilna Shas prints them: a square letter for the Gemara, Rashi script for its commentaries
+        const val DEFAULT_DAF_GEMARA_FONT = "frankruehlclm"
+        const val DEFAULT_DAF_COMMENTARY_FONT = "notorashihebrew"
+
         // Tab display constants
         const val MAX_TAB_TITLE_LENGTH = 20
 
@@ -738,6 +767,8 @@ class AppSettings(
         private const val KEY_FONT_COMMENTARY = "font_commentary"
         private const val KEY_FONT_TARGUM = "font_targum"
         private const val KEY_FONT_SOURCE = "font_source"
+        private const val KEY_FONT_DAF_GEMARA = "font_daf_gemara"
+        private const val KEY_FONT_DAF_COMMENTARY = "font_daf_commentary"
         private const val KEY_SAVED_SESSION = "saved_session_json"
         private const val KEY_SAVED_SESSION_PARTS_COUNT = "saved_session_parts_count"
         private const val KEY_SAVED_SESSION_PART_PREFIX = "saved_session_part_"

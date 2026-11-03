@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views
 
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
@@ -130,14 +131,23 @@ data class ResolvedSelection(
 /** The [BookSelection] of the book view around the current SelectionContainer; null elsewhere (commentaries…). */
 val LocalBookSelection = staticCompositionLocalOf<BookSelection?> { null }
 
-/** A [SelectionContainer] whose lines record their presses in [selection], extend it on Shift+click, and copy it. */
+/**
+ * A [SelectionContainer] whose lines record their presses in [selection], extend it on Shift+click, and copy it. Not
+ * a container when [ownsSelection] is false, for a content that holds its own (the daf's runs of lines, each one): a
+ * container around them would take the focus from theirs on each press, and their selection with it.
+ */
 @Composable
 fun BookSelectionContainer(
     selection: BookSelection?,
     modifier: Modifier = Modifier,
+    ownsSelection: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val copyToClipboard = rememberCopyToClipboard()
+    if (!ownsSelection) {
+        CompositionLocalProvider(LocalBookSelection provides null) { Box(modifier) { content() } }
+        return
+    }
     CompositionLocalProvider(LocalBookSelection provides selection) {
         // On the container itself: its own Ctrl/Cmd+C would copy its (empty) selection
         SelectionContainer(

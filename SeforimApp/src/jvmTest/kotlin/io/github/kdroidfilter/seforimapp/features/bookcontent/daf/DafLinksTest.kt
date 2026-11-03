@@ -57,26 +57,14 @@ class DafLinksTest {
     }
 
     @Test
-    fun aWordsMenuCopiesItsLineWithItsSourceAndSearchesTheWord() {
-        assertEquals("ואברים", amud.wordText(DafWord(0, 2)))
-        assertNull(amud.wordText(DafWord(0, 9)))
-        assertEquals("קרבנות", searchWord("קרבנות:"))
-        assertEquals("א״כ", searchWord("א״כ."))
-        assertEquals(
-            "מצותן – להעלות כל הלילה & עד\n\n(רש\"י על ברכות ב., ה, ב)",
-            copyWithSource("<b>מצותן</b> – להעלות כל  הלילה &amp; עד", "רש\"י על ברכות ב., ה, ב"),
-        )
-    }
-
-    @Test
     fun thePassageIsMarkedStrongestThenTheSegmentThenItsComments() {
         val color = Color.Blue
-        val highlight = dafHighlight(links, setOf(gemara), setOf(second), null, color)
+        val highlight = dafHighlight(links, setOf(gemara), setOf(second), color)
         val passage = highlight.colorOf(DafWord(0, 3))
         val segment = highlight.colorOf(DafWord(0, 0))
         val related = highlight.colorOf(DafWord(1, 0))
         assertEquals(passage, highlight.colorOf(DafWord(1, 6)), "the selected comment as the words it quotes")
         assertTrue(passage!!.alpha > segment!!.alpha && segment.alpha > related!!.alpha)
-        assertNull(dafHighlight(links, emptySet(), emptySet(), null, color).colorOf(DafWord(0, 0)))
+        assertNull(dafHighlight(links, emptySet(), emptySet(), color).colorOf(DafWord(0, 0)))
     }
 }

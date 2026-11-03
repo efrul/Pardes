@@ -45,7 +45,8 @@ data class DafAmud(
  * read, right to left, [s] 1 when the alignment is sure of its first and last words, [d] the indices of the words of
  * [t] that are a dibbur hamatchil, bold as printed, and [u] (format 2) the library's lines its words belong to:
  * `[line id, first word, last word]`, the words counted in [t] from 0. A line often holds the end of one comment and
- * the start of the next; a Gemara line, of one segment or two.
+ * the start of the next; a Gemara line, of one segment or two. [big] is 1 for a column's first word printed big, two
+ * lines tall (each amud's Rashi and Tosafot start with one, as a chapter does): a line of its own, in its box.
  */
 @Serializable
 data class DafLine(
@@ -55,8 +56,11 @@ data class DafLine(
     val s: Int = 1,
     val d: List<Int> = emptyList(),
     val u: List<List<Long>> = emptyList(),
+    val big: Int = 0,
 ) {
     val isGemara: Boolean get() = c == "G"
+
+    val isBig: Boolean get() = big == 1
 
     /** The library line the word [index] of [t] belongs to, or null (a format-1 file, or a word of none). */
     fun lineIdAt(index: Int): Long? = u.firstOrNull { it.size == SPAN_SIZE && index.toLong() in it[1]..it[2] }?.get(0)

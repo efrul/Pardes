@@ -22,30 +22,22 @@ class FontsSettingsViewModel(
     private val commentaryFont = MutableStateFlow(appSettings.getCommentaryFontCode())
     private val targumFont = MutableStateFlow(appSettings.getTargumFontCode())
     private val sourceFont = MutableStateFlow(appSettings.getSourceFontCode())
+    private val dafGemaraFont = MutableStateFlow(appSettings.getDafGemaraFontCode())
+    private val dafCommentaryFont = MutableStateFlow(appSettings.getDafCommentaryFontCode())
+
+    private fun current() =
+        FontsSettingsState(
+            bookFontCode = bookFont.value,
+            commentaryFontCode = commentaryFont.value,
+            targumFontCode = targumFont.value,
+            sourceFontCode = sourceFont.value,
+            dafGemaraFontCode = dafGemaraFont.value,
+            dafCommentaryFontCode = dafCommentaryFont.value,
+        )
 
     val state =
-        combine(
-            bookFont,
-            commentaryFont,
-            targumFont,
-            sourceFont,
-        ) { b, c, t, s ->
-            FontsSettingsState(
-                bookFontCode = b,
-                commentaryFontCode = c,
-                targumFontCode = t,
-                sourceFontCode = s,
-            )
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            FontsSettingsState(
-                bookFontCode = bookFont.value,
-                commentaryFontCode = commentaryFont.value,
-                targumFontCode = targumFont.value,
-                sourceFontCode = sourceFont.value,
-            ),
-        )
+        combine(bookFont, commentaryFont, targumFont, sourceFont, dafGemaraFont, dafCommentaryFont) { current() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), current())
 
     fun onEvent(event: FontsSettingsEvents) {
         when (event) {
@@ -65,7 +57,19 @@ class FontsSettingsViewModel(
                 appSettings.setSourceFontCode(event.code)
                 sourceFont.value = event.code
             }
+            is FontsSettingsEvents.SetDafGemaraFont -> {
+                appSettings.setDafGemaraFontCode(event.code)
+                dafGemaraFont.value = event.code
+            }
+            is FontsSettingsEvents.SetDafCommentaryFont -> {
+                appSettings.setDafCommentaryFontCode(event.code)
+                dafCommentaryFont.value = event.code
+            }
             is FontsSettingsEvents.ResetToDefaults -> {
+                appSettings.setDafGemaraFontCode(AppSettings.DEFAULT_DAF_GEMARA_FONT)
+                appSettings.setDafCommentaryFontCode(AppSettings.DEFAULT_DAF_COMMENTARY_FONT)
+                dafGemaraFont.value = AppSettings.DEFAULT_DAF_GEMARA_FONT
+                dafCommentaryFont.value = AppSettings.DEFAULT_DAF_COMMENTARY_FONT
                 appSettings.setBookFontCode(AppSettings.DEFAULT_BOOK_FONT)
                 appSettings.setCommentaryFontCode(AppSettings.DEFAULT_COMMENTARY_FONT)
                 appSettings.setTargumFontCode(AppSettings.DEFAULT_TARGUM_FONT)

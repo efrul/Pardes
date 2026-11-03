@@ -26,7 +26,7 @@ import io.github.kdroidfilter.seforim.htmlparser.CommentAnchor
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
-import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafReaderView
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePlaces
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
@@ -237,32 +237,40 @@ private fun BookContentPanelContent(
             Box(modifier = Modifier.weight(1f)) {
                 // A Talmud tractate as its Vilna page, at the tab's line: its clicks select as the text's, and the
                 // panes around it (the text's, as they are, wherever they are docked) follow
-                if (uiState.content.dafView && selectedBook.isBavli) {
+                run {
                     val repository = LocalAppGraph.current.repository
                     val scope = rememberCoroutineScope()
                     val content by rememberUpdatedState(uiState.content)
-                    DafReaderView(
-                        book = selectedBook,
-                        lineId = uiState.content.primarySelectedLineId ?: uiState.content.anchorId.takeIf { it > 0 },
-                        selectedLineIds = uiState.content.selectedLineIds,
-                        isTocEntrySelection = uiState.content.isTocEntrySelection,
-                        selectedPassage = uiState.content.selectedPassage,
-                        onEvent = onEvent,
-                        onSelectLine = { lineId, withModifier ->
-                            scope.launch {
-                                runSuspendCatching { repository.getLine(lineId) }.getOrNull()?.let {
-                                    onEvent(BookContentEvent.LineSelected(it, withModifier))
-                                }
-                            }
-                        },
-                        onSelectPassage = { lineId, comments, commentBooks ->
-                            scope.launch {
-                                selectDafPassage(repository, providers, content, selectedBook.id, lineId, comments, commentBooks, onEvent)
-                            }
-                        },
-                        modifier = paneCardModifier,
-                    )
-                } else {
+                    // A Talmud tractate as its Vilna page: the same view, its items amudim
+                    val daf =
+                        if (uiState.content.dafView && selectedBook.isBavli) {
+                            DafMode(
+                                book = selectedBook,
+                                onSelectLine = { lineId, withModifier ->
+                                    scope.launch {
+                                        runSuspendCatching { repository.getLine(lineId) }.getOrNull()?.let {
+                                            onEvent(BookContentEvent.LineSelected(it, withModifier))
+                                        }
+                                    }
+                                },
+                                onSelectPassage = { lineId, comments, commentBooks ->
+                                    scope.launch {
+                                        selectDafPassage(
+                                            repository,
+                                            providers,
+                                            content,
+                                            selectedBook.id,
+                                            lineId,
+                                            comments,
+                                            commentBooks,
+                                            onEvent,
+                                        )
+                                    }
+                                },
+                            )
+                        } else {
+                            null
+                        }
                     BookContentView(
                         bookId = selectedBook.id,
                         lazyPagingItems = lazyPagingItems,
@@ -316,6 +324,7 @@ private fun BookContentPanelContent(
                         bookCharCounts = bookCharCounts,
                         onPointerZoomInProgressChange = { isBookContentZoomInProgress = it },
                         focusRequest = uiState.content.focusTextRequest,
+                        daf = daf,
                     )
                 }
             }
