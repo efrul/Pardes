@@ -212,6 +212,14 @@ Ported on 2026-11-03 from Pardes desktop (`67fe471`):
 - **Tested:** desktop's `BookTitleIndexTest` runs in the unit tests (`syncDesktopSemanticTests`); the cases measured on the October 2026 library are desktop's `TitleSearchE2ETest`.
 - This ends "Kept as desktop has it" for `ש"ך` above: the author is found, on both.
 
+## Pardes desktop's base books told apart by the commentary links
+
+Ported on 2026-11-03 from Pardes desktop (`19c9f92`):
+- **A category's base books where none is curated:** the library's isBaseBook marks 386 books of the great corpora alone, so `מהר״ל מפראג` (his 9 books and 9 books of notes on them, הרטמן's and "הערות ומקורות על תפארת ישראל") was never offered "ספרי יסוד בלבד". Desktop's `BaseBooks.kt`, built unchanged, tells them apart by the library's commentary links (one query, `BaseBooks.COMMENTARY_PAIRS_SQL`, through `LibraryStore.driver()`): a commentary is a book that comments on a book of the same category; the others are its base books, but for those titled הערות…, ביאור…, פירוש… or below a category named מפרשים. A category whose commentaries on its own books are under 5% of its books isn't offered so (שו״ת: one of 405). On the October 2026 library, 28 more categories are offered so: מהר״ל מפראג, קבלה › זהר (the זהר comments on the Torah, outside, so it is a base book there), ספר יצירה, הגדה, חובות הלבבות, משנה › אחרונים…
+- **The curated ones lose their notes:** הערות בובר על מדרש משלי, הערות ותיקונים על מדרש אגדה and those below a מפרשים (מאיר עין על סדר עולם רבה, חפץ חיים על ספרא) are no longer base books of מדרש.
+- **A category not offered so** searches all its books when a tab or the history still asks for its base books alone, not none.
+- `search/LibraryCategories.kt` reads the links with the catalog, once (`LibraryCategories.of(catalog, commented)`); desktop's `BaseBooksTest` runs on the port.
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)
