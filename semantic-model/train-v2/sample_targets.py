@@ -55,6 +55,28 @@ WORDS = (15, 120)
 NIQQUD = re.compile(r"[֑-ׇ]")
 
 
+# crfh1672/search-queries' tractates (the pardes-semantic-search skill): its drafts' lines are not mapped to line ids
+# yet, so the training sources that pair a Gemara line leave these tractates out whole, and the set stays an outside
+# measure of the Hebrew -> Aramaic bridge
+OUTSIDE_SET_TRACTATES = ("ברכות", "מגילה", "מועד קטן", "חגיגה", "תענית")
+
+
+def outside_set_books(con):
+    """The book ids of OUTSIDE_SET_TRACTATES (the Bavli's own, not the Yerushalmi's or the Mishnah's)."""
+    marks = ",".join("?" * len(OUTSIDE_SET_TRACTATES))
+    return {r[0] for r in con.execute(f"SELECT id FROM book WHERE isBaseBook = 1 AND title IN ({marks})",
+                                      OUTSIDE_SET_TRACTATES)}
+
+
+def held_book_texts(con, books):
+    """The cleaned texts of [books]' lines: the Gemara says a sentence again word for word in another tractate, and a
+    copy is the same text to the model, whatever its line id."""
+    texts = set()
+    for book in sorted(books):
+        texts |= {clean(r[0]) for r in con.execute("SELECT content FROM line WHERE bookId = ?", (book,))}
+    return texts
+
+
 def held_out(con):
     """The line ids the evaluations judge or target, and the refs patterns of eval-100's sources."""
     held = set()

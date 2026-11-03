@@ -7,7 +7,9 @@ questions). Distilling needs no answers, only texts:
   that start with a ruling word (מותר, אסור, צריך...) also as a question, half of the time ("האם מותר ...");
 - runs of 2-4 words from inside lines: keywords, a phrase half remembered;
 - the library's headings (tocText) of two words or more once their numbering is off ("סימן רמב - דיני הדלקת נר" gives
-  "דיני הדלקת נר").
+  "דיני הדלקת נר");
+- with --more, the anchors of other training pairs (build_chavruta_pairs.py's, build_dictionary_pairs.py's): a teacher
+  tuned on them embeds the Hebrew of a Gemara line near the line, and the student learns that only from such texts.
 
 Lines are drawn over the whole library (books by their length) and as many again from the halacha families. Niqqud,
 teamim, tags, numbering and what is in brackets are left out: a search has none of them.
@@ -18,10 +20,12 @@ source (train-v2/sample_targets.py), no heading of the benchmark's books (the co
 Shulchan Aruch), and no text that is an evaluation's query or a dev question (letters compared).
 
     python build_distill_queries.py --db seforim.db --out build/train/queries.txt [--openings 70000] [--seed 5810]
+        [--more build/train/chavruta.jsonl --more build/train/dictionary.jsonl]
 """
 
 import argparse
 import itertools
+import json
 import random
 import re
 import sqlite3
@@ -97,6 +101,8 @@ def main() -> None:
     ap.add_argument("--openings", type=int, default=70_000, help="lines drawn, half over the library, half halacha")
     ap.add_argument("--headings", type=int, default=40_000)
     ap.add_argument("--seed", type=int, default=5810)
+    ap.add_argument("--more", type=Path, action="append", default=[],
+                    help="pairs whose anchors are distilled on too (build_chavruta_pairs.py's); repeatable")
     args = ap.parse_args()
     rng = random.Random(args.seed)
     con = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
@@ -170,6 +176,11 @@ def main() -> None:
         if len(texts) - before >= args.headings:
             break
         add(h, "heading")
+    # The Hebrew a reader asks a Gemara line in, as the teacher learnt it from these pairs: the student must embed it
+    # as the teacher does, or the bridge is lost in the distillation
+    for path in args.more:
+        for line in path.open(encoding="utf-8"):
+            add(json.loads(line)["anchor"], path.stem)
 
     out = list(texts.values())
     rng.shuffle(out)

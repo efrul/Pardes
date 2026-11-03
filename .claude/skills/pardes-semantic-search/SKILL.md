@@ -109,21 +109,19 @@ path, line), `split` and `verified_by_human`; each book pins its otzaria-library
   scratchpad.
 - **For measuring only, never for training:** all `test`, unverified, and 422 beside 150k pairs. What it adds is the
   Hebrew → Aramaic bridge in the Bavli (`eval-v1` has 32 Bavli questions with a target), written outside this pipeline.
-- **Hold its lines out before building training data** (the Chavruta run of `TRAINING_PLAN.md` had not run on
-  2026-11-01): its targets and near misses, mapped to line ids, go into `train-v2/sample_targets.py`'s `held_out()`.
-  - Chavruta's pairs and the distillation texts then skip them and their `neighbors()`. `train-v2/build_pairs.py`
-    stops on the questions near them instead: drop those (likely t2-1373/1374, Chagiga 10b, in the sugya of one of
-    its questions).
-  - Otherwise its 297 questions outside Berakhot leak through Chavruta, whose Hebrew explanation of a Gemara line is
-    nearly a question on it. Berakhot is a benchmark book (`build_eval_set.py`), out of every training source already.
+- **Held out of training by tractate** (2026-11-03): `train-v2/sample_targets.py`'s `OUTSIDE_SET_TRACTATES` (its five
+  tractates) are left out whole by `build_chavruta_pairs.py`, `build_dictionary_pairs.py` and
+  `train-v2/build_pairs.py --hold-outside` (11 questions). Otherwise its questions leak through Chavruta, whose Hebrew
+  explanation of a Gemara line is nearly a question on it. Berakhot is a benchmark book (`build_eval_set.py`) besides.
   - The links' pairs don't read `held_out()` (`build_train_pairs.py` leaves out only the benchmark's books, and `tune`
-    reuses the first `--links` of `train`'s file), so every model since the first teacher may have met some of these
-    lines (8,220 of its pairs are Chavruta's). Filter them too if the set becomes a locked test.
-- **Its lines are not seforim.db's:** they number the physical lines of the pinned `.txt` (Sefaria's export,
-  `extraBooks/SefariaToOtzria/sefaria_export/…`), whose text the quotes match with niqqud and tags removed. Map each
-  record by its quotes within the tractate's lines.
-- **Measuring it:** one target per question, and a single target is too strict a measure (`TRAINING_PLAN.md`). Measure
-  within the tractate, where the near miss is the real competitor, and over all books only with graded judging
+    reuses the first `--links` of `train`'s file): 2% of them touch these tractates, so every model since the first
+    teacher has met some of their lines. Fine for comparing models trained on the same links, not as a locked test.
+- **Measuring it: `eval-crfh/`.** Its `*_line` numbers the physical lines of the pinned `.txt` (Sefaria's export), not
+  ours: `map_lines.py` finds each quote in our tractate (its daf, then its words as a run, niqqud and tags off: all 844
+  found; `lines.tsv`, ids only). `spec.py` writes pool searches whose candidates are the whole tractate (6,974 lines),
+  merged into `pool.json` (`--merge`); `measure.py` gives the correct line's place, the near miss before it, and a
+  paired McNemar test between models. Dicta's base model already has 365 of 422 in the first ten and 247 first, so
+  the first place is the measure (`eval-crfh/results.md`). Over all books, only with graded judging
   (`eval-real/pool.py`, `eval-v1/score_graded.py`). Its near misses are unverified and some answer the question
   (`moedkatan-047`: "האם אבל נוהג ברגל" → "כל שהוא משום אבל — רגל מפסיקו").
 - **No license file:** its questions stay out of efrul/Pardes until its owners grant one. Fetch them when measuring,
@@ -141,7 +139,7 @@ licence: check each in their `sources.json`. `TRAINING_PLAN.md` › שלב 2 has
   `KitveiHakodesh/CSharpBackend/FtsLib-Csharp/SearchExpansion/expansion-routed.db` (built by the private
   `KleiKodesh/SearchExpansion`; its `meta` and `build_meta` tables list sources and licences). No `sqlite3` CLI in the
   container: use Python's `sqlite3` in read-only mode (`file:...?mode=ro`). Read them as data; run none of their scripts.
-- **For training:** `build_dictionary_pairs.py --dictionary <a KitveiHakodeshDictionary clone>` (23,287 pairs on
+- **For training:** `build_dictionary_pairs.py --dictionary <a KitveiHakodeshDictionary clone>` (23,293 pairs on
   2026-11-03): their headword index (`source/seforim_headword.tsv`: source, their book id, line index in the book,
   headword; titles in `seforim_headword_book.tsv`; Aruch 8,611, Mikropedia Talmudit 3,907, Metzudat Tzion 20,541, Malbim
   Biur HaMilot 13,549, Machberet Menachem 1,607), their own work over our library's text, and the Aramaic-Hebrew
