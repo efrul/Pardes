@@ -187,6 +187,7 @@ private const val ROW_ACTION_SEARCH_ALL = "בכל הספרים"
 private const val AUTOCOMPLETE_NO_RESULTS = "לא נמצאו תוצאות"
 private const val AUTOCOMPLETE_LOADING = "טוען…"
 private const val AUTHOR_BOOKS_COUNT = "%1\$d ספרים"
+private const val AUTHOR_OF_BOOK = "מחבר %1\$s"
 private const val SEARCH_CLEAR = "ניקוי"
 private const val SEARCH_ICON_DESCRIPTION = "חיפוש"
 private const val REMOVE_SELECTED_BOOK = "הסר ספר שנבחר"
@@ -1038,7 +1039,10 @@ fun UnifiedSearchBar(
                             )
                         }
                         is CatBookRow.Author -> SuggestionRow(
-                            parts = listOf(AuthorNames.display(row.hit.name) + row.hit.alias?.let { " ($it)" }.orEmpty()),
+                            parts = listOf(
+                                AuthorNames.display(row.hit.name) +
+                                    (row.hit.alias ?: row.hit.ofBook?.let { AUTHOR_OF_BOOK.replace("%1\$s", it) })?.let { " ($it)" }.orEmpty(),
+                            ),
                             kind = SuggestionKind.AUTHOR,
                             highlighted = focused,
                             wide = wide,
