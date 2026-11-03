@@ -40,6 +40,8 @@
     <string name="settings_font_sources_label">גופן למקורות</string>
     <string name="settings_font_daf_gemara_label">גופן לגמרא בצורת הדף</string>
     <string name="settings_font_daf_commentary_label">גופן לרש״י ותוספות בצורת הדף</string>
+    <string name="settings_daf_mark_unsure">סימון בצבע בהיר של שורות לא ודאיות בצורת הדף</string>
+    <string name="settings_daf_mark_unsure_info">שורות שבהן ההתאמה בין הדפוס לנוסח שבספרייה לא בטוחה במילה הראשונה או האחרונה, וייתכן שמילה בהן אינה כבדפוס (כ־4% מהשורות). מועיל לבדיקת קובצי צורת הדף; כשזה כבוי, הדף אחיד כמו בדפוס.</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>

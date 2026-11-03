@@ -24,6 +24,7 @@ class FontsSettingsViewModel(
     private val sourceFont = MutableStateFlow(appSettings.getSourceFontCode())
     private val dafGemaraFont = MutableStateFlow(appSettings.getDafGemaraFontCode())
     private val dafCommentaryFont = MutableStateFlow(appSettings.getDafCommentaryFontCode())
+    private val dafMarkUnsure = MutableStateFlow(appSettings.isDafMarkUnsureEnabled())
 
     private fun current() =
         FontsSettingsState(
@@ -33,10 +34,20 @@ class FontsSettingsViewModel(
             sourceFontCode = sourceFont.value,
             dafGemaraFontCode = dafGemaraFont.value,
             dafCommentaryFontCode = dafCommentaryFont.value,
+            dafMarkUnsure = dafMarkUnsure.value,
         )
 
     val state =
-        combine(bookFont, commentaryFont, targumFont, sourceFont, dafGemaraFont, dafCommentaryFont) { current() }
+        // Its fonts' names and a switch: one state for any of them
+        combine<Any, FontsSettingsState>(
+            bookFont,
+            commentaryFont,
+            targumFont,
+            sourceFont,
+            dafGemaraFont,
+            dafCommentaryFont,
+            dafMarkUnsure,
+        ) { current() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), current())
 
     fun onEvent(event: FontsSettingsEvents) {
@@ -65,7 +76,13 @@ class FontsSettingsViewModel(
                 appSettings.setDafCommentaryFontCode(event.code)
                 dafCommentaryFont.value = event.code
             }
+            is FontsSettingsEvents.SetDafMarkUnsure -> {
+                appSettings.setDafMarkUnsureEnabled(event.enabled)
+                dafMarkUnsure.value = event.enabled
+            }
             is FontsSettingsEvents.ResetToDefaults -> {
+                appSettings.setDafMarkUnsureEnabled(false)
+                dafMarkUnsure.value = false
                 appSettings.setDafGemaraFontCode(AppSettings.DEFAULT_DAF_GEMARA_FONT)
                 appSettings.setDafCommentaryFontCode(AppSettings.DEFAULT_DAF_COMMENTARY_FONT)
                 dafGemaraFont.value = AppSettings.DEFAULT_DAF_GEMARA_FONT

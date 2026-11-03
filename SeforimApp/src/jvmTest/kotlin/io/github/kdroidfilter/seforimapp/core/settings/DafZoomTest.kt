@@ -6,7 +6,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** The daf's own zoom: the zoom keys, buttons and menu zoom a tab's daf while it shows one, else the text. */
+/**
+ * The daf's own settings: its zoom (the zoom keys, buttons and menu zoom a tab's daf while it shows one, else the
+ * text), and whether it marks the lines its alignment is not sure of.
+ */
 class DafZoomTest {
     private val settings = testAppSettings()
     private val tab = "tab"
@@ -57,6 +60,17 @@ class DafZoomTest {
         settings.dafHidden(tab)
         assertFalse(settings.showsDaf(tab))
         assertFalse(tab in settings.dafViewsFlow.value)
+    }
+
+    @Test
+    fun `the daf marks its unsure lines only when asked, and the reset turns it off`() {
+        assertFalse(settings.isDafMarkUnsureEnabled())
+        settings.setDafMarkUnsureEnabled(true)
+        assertTrue(settings.dafMarkUnsureFlow.value)
+
+        settings.clearAll()
+        assertFalse(settings.dafMarkUnsureFlow.value)
+        assertFalse(settings.isDafMarkUnsureEnabled())
     }
 
     @Test

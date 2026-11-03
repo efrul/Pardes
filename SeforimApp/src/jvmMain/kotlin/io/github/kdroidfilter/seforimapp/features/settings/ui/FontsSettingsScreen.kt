@@ -35,11 +35,14 @@ import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.CheckboxRow
 import org.jetbrains.jewel.ui.component.ListComboBox
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.settings_daf_mark_unsure
+import seforimapp.seforimapp.generated.resources.settings_daf_mark_unsure_info
 import seforimapp.seforimapp.generated.resources.settings_font_book_label
 import seforimapp.seforimapp.generated.resources.settings_font_commentary_label
 import seforimapp.seforimapp.generated.resources.settings_font_daf_commentary_label
@@ -121,6 +124,19 @@ private fun FontsSettingsView(
                 optionLabels = optionLabels,
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetDafCommentaryFont(code)) },
             )
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                CheckboxRow(
+                    text = stringResource(Res.string.settings_daf_mark_unsure),
+                    checked = state.dafMarkUnsure,
+                    onCheckedChange = { onEvent(FontsSettingsEvents.SetDafMarkUnsure(it)) },
+                )
+                Text(
+                    text = stringResource(Res.string.settings_daf_mark_unsure_info),
+                    fontSize = 12.sp,
+                    color = JewelTheme.globalColors.text.info,
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

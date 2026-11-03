@@ -142,11 +142,14 @@ internal class TextRun(
         return DafWord(line.index, line.firstWord + word)
     }
 
-    /** The text drawn [k] times its laid-out size, the [density] the run was laid out with. */
+    /**
+     * The text drawn [k] times its laid-out size, the [density] the run was laid out with; its lines the alignment is
+     * not sure of in [unsureInk], when given.
+     */
     fun annotated(
         k: Float,
         density: Density,
-        unsureInk: Color,
+        unsureInk: Color?,
     ): AnnotatedString =
         with(density) {
             val lineHeight = (pitch * k).toSp()
@@ -159,7 +162,7 @@ internal class TextRun(
                     addStyle(ParagraphStyle(textIndent = indent, lineHeight = lineHeight, lineHeightStyle = CENTERED), start, end)
                     if (line == null) return@forEachIndexed
                     if (abs(line.size - size) > SAME_SIZE) addStyle(SpanStyle(fontSize = (line.size * k).toSp()), start, end)
-                    if (line.unsure) addStyle(SpanStyle(color = unsureInk), start, end)
+                    if (line.unsure && unsureInk != null) addStyle(SpanStyle(color = unsureInk), start, end)
                     val starts = wordStarts[slot]
                     for (i in line.words.indices) {
                         val wordEnd = starts[i] + line.words[i].length
@@ -206,7 +209,7 @@ internal class AmudLayout(
     val runs: List<TextRun>,
 )
 
-/** A line the alignment is not sure of is drawn lighter: its words may not all be the print's. */
+/** A line the alignment is not sure of is drawn lighter, when asked: its words may not all be the print's. */
 internal const val UNSURE_INK = 0.55f
 
 /** A word's place in the order an amud is read: column by column, line by line, word by word. */
@@ -267,7 +270,8 @@ private const val SPAN = 3
  * word it starts on, a double click a word, a triple click the word's comment or segment, a Shift+click to a word;
  * [onRange] is given each change. A click on a word, not a drag, also goes to [onWordClick] (with Ctrl or Cmd held, as
  * the text's lines take them); a right-click selects the word under it unless it is in the selection, gives it to
- * [onContextWord] and opens the text's menu where it was ([onMenu]). [onPress] comes first on any press.
+ * [onContextWord] and opens the text's menu where it was ([onMenu]). [onPress] comes first on any press. With
+ * [markUnsure], the lines the alignment is not sure of are drawn lighter.
  */
 @Composable
 internal fun DafAmudText(
@@ -285,6 +289,7 @@ internal fun DafAmudText(
     onContextWord: (DafWord) -> Unit = {},
     onMenu: (Offset) -> Unit = {},
     onPress: () -> Unit = {},
+    markUnsure: Boolean = false,
 ) {
     val density = LocalDensity.current
     val currentRange by rememberUpdatedState(range)
@@ -293,7 +298,7 @@ internal fun DafAmudText(
     val currentOnContextWord by rememberUpdatedState(onContextWord)
     val currentOnMenu by rememberUpdatedState(onMenu)
     val currentOnPress by rememberUpdatedState(onPress)
-    val unsureInk = ink.copy(alpha = ink.alpha * UNSURE_INK)
+    val unsureInk = if (markUnsure) ink.copy(alpha = ink.alpha * UNSURE_INK) else null
     // Each run's text as laid out, and where it is (the page's pixels): what the pointer is on
     val results = remember(layout, k) { arrayOfNulls<TextLayoutResult>(layout.runs.size) }
 
