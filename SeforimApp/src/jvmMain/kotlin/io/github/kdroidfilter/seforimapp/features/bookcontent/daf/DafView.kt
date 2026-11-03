@@ -195,7 +195,7 @@ private sealed interface DafLoad {
     ) : DafLoad
 }
 
-/** The page's widest at the default text size (and no wider than the view); the text's zoom widens or narrows it. */
+/** The page's widest at the zoom's 1 (and no wider than the view); the zoom widens or narrows it. */
 private const val MAX_PAGE_WIDTH = 1100f
 
 /** Laid out at this many pixels a point, drawn at any width: the text's size is the zoom's, its places scaled. */
@@ -211,8 +211,8 @@ private val PagePadding = 24.dp
  * A Talmud tractate as printed in the Vilna Shas, inside the text view's own frame (its zoom, keys, selection and
  * menu): every amud of the tractate's layout (its file in the library's pardes-daf folder) one below the other, each
  * at its own height as printed, with its name above it; with no layout for the tractate, a word on it and a button to
- * import one. The pages are as wide as the view at the text's default size, at most [MAX_PAGE_WIDTH] dp, and the
- * text's zoom ([textSize]) makes them wider than the view, a sideways scroll showing the rest.
+ * import one. The pages are as wide as the view at a [zoom] of 1, at most [MAX_PAGE_WIDTH] dp: the daf's own zoom,
+ * from 0.3 (more of the pages in view) to 4 (wider than the view, a sideways scroll showing the rest).
  *
  * The page answers as the text does, its panes the text's: a click on a Gemara word selects its segment
  * ([onSelectLine]; with Ctrl or Cmd, adds it), or, inside words a comment's dibbur quotes, that passage
@@ -229,7 +229,7 @@ fun DafView(
     book: Book,
     listState: LazyListState,
     control: DafControl,
-    textSize: Float,
+    zoom: Float,
     lineId: Long?,
     selectedLineIds: Set<Long>,
     isTocEntrySelection: Boolean,
@@ -272,7 +272,7 @@ fun DafView(
                     file = state.file,
                     listState = listState,
                     control = control,
-                    textSize = textSize,
+                    zoom = zoom,
                     lineId = lineId,
                     selectedLineIds = selectedLineIds,
                     isTocEntrySelection = isTocEntrySelection,
@@ -302,7 +302,7 @@ private fun DafPages(
     file: DafLayoutFile,
     listState: LazyListState,
     control: DafControl,
-    textSize: Float,
+    zoom: Float,
     lineId: Long?,
     selectedLineIds: Set<Long>,
     isTocEntrySelection: Boolean,
@@ -383,7 +383,7 @@ private fun DafPages(
         val viewport = constraints.maxWidth.toFloat()
         val padding = with(density) { PagePadding.toPx() }
         val base = minOf(viewport - 2 * padding, with(density) { MAX_PAGE_WIDTH.dp.toPx() }).coerceAtLeast(1f)
-        val pageWidth = base * textSize / AppSettings.DEFAULT_TEXT_SIZE
+        val pageWidth = base * zoom
         val perPoint = pageWidth / blockWidth
         // As wide as the view, or as the page once the zoom makes it wider (a wider amud takes some of its margin)
         val contentWidth = maxOf(viewport, pageWidth + 2 * padding)
@@ -655,7 +655,9 @@ private fun Modifier.sidewaysPan(
                         panX += change.panOffset.x
                         panY += change.panOffset.y
                         if (abs(panX) <= abs(panY)) continue
-                        state.dispatchRawDelta(-sign * change.panOffset.x)
+                        // A pan's x is the way a scroll goes (the commentaries' pages turn by it): positive shows the
+                        // right side, the fingers moving left, as the page follows them
+                        state.dispatchRawDelta(sign * change.panOffset.x)
                         change.consume()
                     }
                     PointerEventType.Scroll -> {

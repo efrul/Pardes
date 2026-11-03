@@ -86,6 +86,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.normalizeQueryFo
 import io.github.kdroidfilter.seforimapp.core.presentation.text.noteDisplayRanges
 import io.github.kdroidfilter.seforimapp.core.presentation.text.withBackground
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafControl
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
@@ -106,6 +107,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.queryNarr
 import io.github.kdroidfilter.seforimapp.features.search.semantic.installedSemanticSearch
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.debugln
+import io.github.kdroidfilter.seforimapp.texteffects.rememberTextZoom
 import io.github.kdroidfilter.seforimlibrary.core.models.AltTocEntry
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.santimattius.structured.annotations.StructuredScope
@@ -199,6 +201,22 @@ fun BookContentView(
     // Ctrl/Cmd + wheel, a trackpad pinch or two fingers zoom the text
     val zoom = rememberAppTextZoom(onPointerZoomInProgressChange)
     val textSize = zoom.textSize
+    // The daf's own zoom, by the same gestures, in percent; the zoom keys, buttons and menu zoom it while it is shown
+    val dafZoomValue by appSettings.dafZoomFlow.collectAsState()
+    val dafZoom =
+        rememberTextZoom(
+            textSize = dafZoomValue * PERCENT,
+            minTextSize = AppSettings.MIN_DAF_ZOOM * PERCENT,
+            maxTextSize = AppSettings.MAX_DAF_ZOOM * PERCENT,
+            onTextSize = { appSettings.setDafZoom(it / PERCENT) },
+            animate = isTabSelected,
+            onZoomingChange = onPointerZoomInProgressChange,
+        )
+    val showsDaf = daf != null
+    DisposableEffect(tabId, showsDaf) {
+        if (showsDaf) appSettings.dafShown(tabId)
+        onDispose { if (showsDaf) appSettings.dafHidden(tabId) }
+    }
 
     // Collect line height from settings
     val rawLineHeight by appSettings.lineHeightFlow.collectAsState()
@@ -973,7 +991,7 @@ fun BookContentView(
             modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = contentAlpha } // Hide until positioned to prevent glitch
-                .then(zoom.modifier)
+                .then(if (showsDaf) dafZoom.modifier else zoom.modifier)
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent(previewKeyHandler)
                 .focusable(),
@@ -983,7 +1001,7 @@ fun BookContentView(
                 book = daf.book,
                 listState = dafListState,
                 control = dafControl,
-                textSize = textSize,
+                zoom = dafZoom.textSize / PERCENT,
                 lineId = primarySelectedLineId ?: anchorId.takeIf { it > 0 },
                 selectedLineIds = selectedLineIds,
                 isTocEntrySelection = isTocEntrySelection,
@@ -1319,6 +1337,9 @@ private const val HTML_PREFETCH_BEHIND = 8
 
 // Smart (embedding) find: max semantically-closest lines fetched per query for the current book.
 private const val SMART_FIND_LIMIT = 60
+
+// The daf's zoom as the text zoom's size: a hundred to its 1
+private const val PERCENT = 100f
 
 // Literal find: pause after the last keystroke before querying the index
 private val FIND_DEBOUNCE = 150.milliseconds

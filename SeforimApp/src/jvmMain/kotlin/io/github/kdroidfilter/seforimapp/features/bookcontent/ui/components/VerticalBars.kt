@@ -30,6 +30,7 @@ import io.github.kdroidfilter.seforimapp.icons.*
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import seforimapp.seforimapp.generated.resources.*
+import kotlin.math.roundToInt
 
 @Composable
 fun StartVerticalBar(
@@ -134,7 +135,7 @@ fun EndVerticalBar(
     VerticalLateralBar(
         position = VerticalLateralBarPosition.End,
         topContent = {
-            ZoomButtons()
+            ZoomButtons(tabId = uiState.tabId)
 
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
@@ -311,21 +312,29 @@ private data class LineResourceAvailability(
     val referencesAvailable: Boolean? = null,
 )
 
-/** The text's zoom in and out, shared by the reading screens' end bars. */
+/**
+ * The zoom in and out shared by the reading screens' end bars: of the daf when the reading view of [tabId] shows one,
+ * else of the text.
+ */
 @Composable
-fun ZoomButtons() {
+fun ZoomButtons(tabId: String = "") {
     val appSettings = LocalAppGraph.current.appSettings
     val rawTextSize by appSettings.textSizeFlow.collectAsState()
-    val canZoomIn = rawTextSize < AppSettings.MAX_TEXT_SIZE
-    val canZoomOut = rawTextSize > AppSettings.MIN_TEXT_SIZE
+    val dafZoom by appSettings.dafZoomFlow.collectAsState()
+    val dafViews by appSettings.dafViewsFlow.collectAsState()
+    val daf = tabId in dafViews
+    val canZoomIn = if (daf) dafZoom < AppSettings.MAX_DAF_ZOOM else rawTextSize < AppSettings.MAX_TEXT_SIZE
+    val canZoomOut = if (daf) dafZoom > AppSettings.MIN_DAF_ZOOM else rawTextSize > AppSettings.MIN_TEXT_SIZE
+    val maxHint = if (daf) "${(AppSettings.MAX_DAF_ZOOM * 100).roundToInt()}% max" else "${AppSettings.MAX_TEXT_SIZE.toInt()}sp max"
+    val minHint = if (daf) "${(AppSettings.MIN_DAF_ZOOM * 100).roundToInt()}% min" else "${AppSettings.MIN_TEXT_SIZE.toInt()}sp min"
     SelectableIconButtonWithToolip(
         toolTipText =
             if (canZoomIn) {
                 stringResource(Res.string.zoom_in_tooltip)
             } else {
-                stringResource(Res.string.zoom_in_tooltip) + " (${AppSettings.MAX_TEXT_SIZE.toInt()}sp max)"
+                stringResource(Res.string.zoom_in_tooltip) + " ($maxHint)"
             },
-        onClick = { appSettings.increaseTextSize() },
+        onClick = { appSettings.zoomIn(tabId) },
         isSelected = false,
         enabled = canZoomIn,
         icon = ZoomIn,
@@ -338,9 +347,9 @@ fun ZoomButtons() {
             if (canZoomOut) {
                 stringResource(Res.string.zoom_out_tooltip)
             } else {
-                stringResource(Res.string.zoom_out_tooltip) + " (${AppSettings.MIN_TEXT_SIZE.toInt()}sp min)"
+                stringResource(Res.string.zoom_out_tooltip) + " ($minHint)"
             },
-        onClick = { appSettings.decreaseTextSize() },
+        onClick = { appSettings.zoomOut(tabId) },
         isSelected = false,
         enabled = canZoomOut,
         icon = ZoomOut,
