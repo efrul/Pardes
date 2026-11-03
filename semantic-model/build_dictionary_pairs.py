@@ -3,7 +3,9 @@ rare word, in a line of the library, swapped for its Hebrew meaning. A user asks
 the prophets answer in their own words. Four kinds, each a "type" of its own:
 
 - DICT-ARAMAIC: a span of a Gemara line, its Aramaic words swapped for their meaning in Klei Kodesh's Aramaic-Hebrew
-  dictionary (source_kind 1; allowed by Klei Kodesh's owner, 2026-11-03), -> the Gemara line.
+  dictionary (source_kind 1), -> the Gemara line. Klei Kodesh's owner allowed it (2026-11-03), but whether their
+  permission covers data they took from elsewhere is still being checked, and its origin is not recorded: --aramaic 0
+  leaves it out, its file unread (TRAINING_PLAN.md, decision 2).
 - DICT-ARUCH: what Sefer HeAruch quotes from a tractate, its word swapped for the Aruch's explanation ("פי' ..."),
   -> the Gemara line it quotes, found by the quote within the cited daf.
 - DICT-METZUDAT: a verse, the words Metzudat Tzion explains swapped for its explanation ("כסלי. ענין בטחון"),
@@ -140,6 +142,8 @@ def bavli_books(con):
 
 
 def aramaic(con, guard, dictionary, rng, limit):
+    if limit <= 0:
+        return []
     senses = read_tsv(dictionary / "source" / "senses" / "source_01.tsv")
     gloss = {}
     for s in senses:
@@ -321,7 +325,7 @@ def main() -> None:
     ap.add_argument("--db", type=Path, required=True)
     ap.add_argument("--dictionary", type=Path, required=True, help="a clone of KleiKodesh/KitveiHakodeshDictionary")
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--aramaic", type=int, default=20_000, help="how many DICT-ARAMAIC pairs")
+    ap.add_argument("--aramaic", type=int, default=20_000, help="how many DICT-ARAMAIC pairs (0: none)")
     ap.add_argument("--seed", type=int, default=5821)
     args = ap.parse_args()
     rng = random.Random(args.seed)
