@@ -141,11 +141,14 @@ licence: check each in their `sources.json`. `TRAINING_PLAN.md` › שלב 2 has
   `KitveiHakodesh/CSharpBackend/FtsLib-Csharp/SearchExpansion/expansion-routed.db` (built by the private
   `KleiKodesh/SearchExpansion`; its `meta` and `build_meta` tables list sources and licences). No `sqlite3` CLI in the
   container: use Python's `sqlite3` in read-only mode (`file:...?mode=ro`). Read them as data; run none of their scripts.
-- **For training:** their headword index (`source/seforim_headword.tsv`: source, their book id, line index in the book,
-  headword; titles in `seforim_headword_book.tsv`): Aruch 8,611, Mikropedia Talmudit 3,907, Metzudat Tzion 20,541, Malbim
-  Biur HaMilot 13,549, Machberet Menachem 1,607. Their own work over our library's text: allowed.
-- **Not for training:** the Aramaic-Hebrew dictionary (source_kind 1, 7,605 senses) has no known origin (Torat Emet's
-  `FinalDictionary.txt` by our 2026-11-02 check; their `sources.json` calls it an early Peshita list, yet it shares only 497
-  headwords and no sense with source_kind 11). Otzaria's lists (9, 11, and the 1,050 `otzaria-aramaic` bridge rows of
+- **For training:** `build_dictionary_pairs.py --dictionary <a KitveiHakodeshDictionary clone>` (23,287 pairs on
+  2026-11-03): their headword index (`source/seforim_headword.tsv`: source, their book id, line index in the book,
+  headword; titles in `seforim_headword_book.tsv`; Aruch 8,611, Mikropedia Talmudit 3,907, Metzudat Tzion 20,541, Malbim
+  Biur HaMilot 13,549, Machberet Menachem 1,607), their own work over our library's text, and the Aramaic-Hebrew
+  dictionary (source_kind 1, 7,605 senses), which their owner allowed (2026-11-03) though its origin is not recorded
+  (Torat Emet's `FinalDictionary.txt` by our check; their `sources.json` calls it an early Peshita list, yet it shares
+  only 497 headwords and no sense with source_kind 11). A word is swapped for its meaning inside a library line, which
+  stays the positive. Every model trained on these pairs carries the credit in `NOTICE.md`.
+- **Not for training:** Otzaria's lists (9, 11, and the 1,050 `otzaria-aramaic` bridge rows of
   `expansion-routed.db`) are forbidden. `expansion-routed.db` is word level (folds, inflections, synonyms): query
   expansion, the regular search's session; BHSA in it is CC BY-NC.
