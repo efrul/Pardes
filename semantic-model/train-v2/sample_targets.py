@@ -61,6 +61,10 @@ def held_out(con):
     for path in (HERE.parent / "eval-real" / "grades.tsv", HERE.parent / "eval-v1" / "grades.tsv"):
         held |= {int(r["lineId"]) for r in csv.DictReader(open(path, encoding="utf-8"), delimiter="\t",
                                                           quoting=csv.QUOTE_NONE)}
+    # eval-v1's first batch was measured by its target line, not judged: its targets are in no grades.tsv
+    held |= {int(r["target_line"]) for r in csv.DictReader(open(HERE.parent / "eval-v1" / "queries.tsv",
+                                                                 encoding="utf-8"), delimiter="\t",
+                                                            quoting=csv.QUOTE_NONE) if r["target_line"].isdigit()}
     patterns = [re.compile(p) for ps in E.values() for p in ps]
     quotes = []
     for path in sorted((HERE.parent / "eval-real" / "quotes").glob("*.tsv")):
