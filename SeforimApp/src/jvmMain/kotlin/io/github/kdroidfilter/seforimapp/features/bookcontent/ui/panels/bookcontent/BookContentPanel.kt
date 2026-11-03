@@ -352,7 +352,7 @@ private suspend fun selectDafPassage(
     val shown = content.commentatorSelection(bookId).shownOf(listed)
     val missing = commentBooks.filter { it in listed && it !in shown }
     if (missing.isNotEmpty()) onEvent(BookContentEvent.SelectedCommentatorsChanged(lineId, shown + missing, listed))
-    if (!content.showCommentaries) onEvent(BookContentEvent.ToggleCommentaries)
+    // The commentaries pane is not opened for it: as on the text, a click selects, the pane is the reader's to open
     // Anchors of its own: a daf passage is none of the text's (the Bavli's text has no anchors)
     val anchors = comments.mapTo(HashSet()) { CommentAnchor(DAF_PASSAGE, it.toInt()) }
     onEvent(BookContentEvent.PassageSelected(line, SelectedPassage(lineId, anchors, comments, commentBooks)))

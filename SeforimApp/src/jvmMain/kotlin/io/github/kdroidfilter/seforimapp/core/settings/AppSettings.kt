@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import java.util.concurrent.ConcurrentHashMap
 import java.util.prefs.Preferences
 
@@ -34,6 +35,15 @@ class AppSettings(
     // StateFlow to observe text size changes
     private val _textSizeFlow = MutableStateFlow(getTextSize())
     val textSizeFlow: StateFlow<Float> = _textSizeFlow.asStateFlow()
+
+    // The daf's own zoom: its pages' width, over the view's at 1
+    private val _dafZoomFlow = MutableStateFlow(getDafZoom())
+    val dafZoomFlow: StateFlow<Float> = _dafZoomFlow.asStateFlow()
+
+    // The tabs whose reading view shows a daf now, each with its views' count (a tab dragged to another window is
+    // composed there before it leaves this one): the zoom keys, buttons and menu zoom their daf, not the text
+    private val _dafViewsFlow = MutableStateFlow(emptyMap<String, Int>())
+    val dafViewsFlow: StateFlow<Map<String, Int>> = _dafViewsFlow.asStateFlow()
 
     // StateFlow to observe line height changes
     private val _lineHeightFlow = MutableStateFlow(getLineHeight())
@@ -215,6 +225,48 @@ class AppSettings(
         val currentSize = getTextSize()
         val newSize = (currentSize - decrement).coerceAtLeast(MIN_TEXT_SIZE)
         setTextSize(newSize)
+    }
+
+    fun getDafZoom(): Float = settings[KEY_DAF_ZOOM, DEFAULT_DAF_ZOOM].coerceIn(MIN_DAF_ZOOM, MAX_DAF_ZOOM)
+
+    fun setDafZoom(zoom: Float) {
+        val value = zoom.coerceIn(MIN_DAF_ZOOM, MAX_DAF_ZOOM)
+        settings[KEY_DAF_ZOOM] = value
+        _dafZoomFlow.value = value
+    }
+
+    /** The reading view of [tabId] shows a daf, until [dafHidden]. */
+    fun dafShown(tabId: String) {
+        _dafViewsFlow.update { views -> views + (tabId to (views[tabId] ?: 0) + 1) }
+    }
+
+    fun dafHidden(tabId: String) {
+        _dafViewsFlow.update { views ->
+            val left = (views[tabId] ?: 0) - 1
+            if (left > 0) views + (tabId to left) else views - tabId
+        }
+    }
+
+    fun showsDaf(tabId: String): Boolean = tabId in _dafViewsFlow.value
+
+    /** Zooms in the reading view of [tabId]: its daf to the next of [DAF_ZOOM_LEVELS] when it shows one, else the text. */
+    fun zoomIn(tabId: String) {
+        if (showsDaf(tabId)) {
+            val zoom = getDafZoom()
+            setDafZoom(DAF_ZOOM_LEVELS.firstOrNull { it > zoom + ZOOM_LEVEL_SLACK } ?: MAX_DAF_ZOOM)
+        } else {
+            increaseTextSize()
+        }
+    }
+
+    /** Zooms out the reading view of [tabId], as [zoomIn]. */
+    fun zoomOut(tabId: String) {
+        if (showsDaf(tabId)) {
+            val zoom = getDafZoom()
+            setDafZoom(DAF_ZOOM_LEVELS.lastOrNull { it < zoom - ZOOM_LEVEL_SLACK } ?: MIN_DAF_ZOOM)
+        } else {
+            decreaseTextSize()
+        }
     }
 
     // Max commentators per commentaries page (0 = automatic). Stored value is clamped to the
@@ -631,6 +683,7 @@ class AppSettings(
     fun clearAll() {
         settings.clear()
         _textSizeFlow.value = DEFAULT_TEXT_SIZE
+        _dafZoomFlow.value = DEFAULT_DAF_ZOOM
         _lineHeightFlow.value = DEFAULT_LINE_HEIGHT
         _maxCommentatorsPerPageFlow.value = DEFAULT_MAX_COMMENTATORS_PER_PAGE
         _closeTreeOnNewBookFlow.value = false
@@ -665,6 +718,7 @@ class AppSettings(
         private val PORTABLE_KEYS =
             setOf(
                 KEY_TEXT_SIZE,
+                KEY_DAF_ZOOM,
                 KEY_LINE_HEIGHT,
                 KEY_MAX_COMMENTATORS_PER_PAGE,
                 KEY_CLOSE_TREE_ON_NEW_BOOK,
@@ -717,6 +771,16 @@ class AppSettings(
         const val MAX_TEXT_SIZE = 50f
         const val TEXT_SIZE_INCREMENT = 2f
 
+        // The daf's zoom: 1 is as wide as the view (at most the page's widest), the levels a browser's
+        const val DEFAULT_DAF_ZOOM = 1f
+        const val MIN_DAF_ZOOM = 0.3f
+        const val MAX_DAF_ZOOM = 4f
+        val DAF_ZOOM_LEVELS =
+            listOf(0.3f, 0.4f, 0.5f, 0.6f, 0.67f, 0.75f, 0.8f, 0.9f, 1f, 1.1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 3.5f, 4f)
+
+        // A zoom a pinch left this close to a level is at that level
+        private const val ZOOM_LEVEL_SLACK = 0.005f
+
         // Line height constants
         const val DEFAULT_LINE_HEIGHT = 1.5f
         const val MIN_LINE_HEIGHT = 1.0f
@@ -753,6 +817,7 @@ class AppSettings(
         private val WHITESPACE = Regex("\\s+")
 
         private const val KEY_TEXT_SIZE = "text_size"
+        private const val KEY_DAF_ZOOM = "daf_zoom"
         private const val KEY_LINE_HEIGHT = "line_height"
         private const val KEY_MAX_COMMENTATORS_PER_PAGE = "max_commentators_per_page"
         private const val KEY_CLOSE_TREE_ON_NEW_BOOK = "close_tree_on_new_book"
