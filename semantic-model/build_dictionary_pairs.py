@@ -11,7 +11,8 @@ the prophets answer in their own words. Four kinds, each a "type" of its own:
 - DICT-MIKROPEDIA: a concept of the Mikropedia Talmudit, by its name or its one-line definition, -> the entry's first
   paragraph.
 
-    python build_dictionary_pairs.py --db seforim.db --dictionary KitveiHakodeshDictionary --out build/train/dictionary.jsonl
+    python build_dictionary_pairs.py --db seforim.db --dictionary KitveiHakodeshDictionary \
+        --out build/train/dictionary.jsonl
 
 --dictionary is a clone of KleiKodesh/KitveiHakodeshDictionary: its source/senses/source_01.tsv and the headword index
 (source/seforim_headword.tsv, the line of each entry in the library's books) are read, as data. They stay out of this
@@ -20,7 +21,8 @@ repository.
 Nothing an evaluation measures is touched, as in build_chavruta_pairs.py: no line of the benchmark's books or of its
 Rambam halachot, no line an evaluation judges or targets or near one, none near a dev question's target, no line holding
 a quote's source or matching eval-100's sources; and no line of the five tractates of crfh1672/search-queries' drafts
-(the pardes-semantic-search skill), whose lines are not held out yet. An anchor is never an evaluation's query.
+(sample_targets.OUTSIDE_SET_TRACTATES), whose lines are not held out yet, nor a copy, word for word, of a line of a book
+held out. An anchor is never an evaluation's query.
 """
 
 import argparse
@@ -38,10 +40,8 @@ sys.path.insert(0, str(HERE / "train-v2"))
 from build_pairs import DEV_BATCHES, EVAL_QUERIES, letters, read_tsv  # noqa: E402
 from build_train_pairs import MAX_PASSAGE_WORDS, SPAN_WORDS, benchmark_held  # noqa: E402
 from pardes_semantic.clean import clean  # noqa: E402
-from sample_targets import held_out, neighbors  # noqa: E402
+from sample_targets import held_book_texts, held_out, neighbors, outside_set_books  # noqa: E402
 
-# crfh1672/search-queries' tractates: kept out until its lines are mapped into held_out()
-OUTSIDE_SET_TRACTATES = ("ברכות", "מגילה", "מועד קטן", "חגיגה", "תענית")
 MARKS = re.compile(r"[֑-ׇ]")
 TAGS = re.compile(r"<[^>]+>")
 HEB = re.compile(r"[^א-ת]")
@@ -108,12 +108,12 @@ class Guard:
     def __init__(self, con):
         self.con = con
         self.held_books, self.held_lines = benchmark_held(con)
-        marks = ",".join("?" * len(OUTSIDE_SET_TRACTATES))
-        self.held_books |= {r[0] for r in con.execute(
-            f"SELECT id FROM book WHERE isBaseBook = 1 AND title IN ({marks})", OUTSIDE_SET_TRACTATES)}
+        self.held_books |= outside_set_books(con)
+        self.held_texts = held_book_texts(con, self.held_books)
         judged, self.patterns, quotes = held_out(con)
         self.linked, self.near = neighbors(con, judged)
-        dev = {int(q["target_line"]) for q in read_tsv(HERE / "train-v2" / "questions.tsv") if q["batch"] in DEV_BATCHES}
+        dev = {int(q["target_line"]) for q in read_tsv(HERE / "train-v2" / "questions.tsv")
+               if q["batch"] in DEV_BATCHES}
         self.dev_linked, self.dev_near = neighbors(con, dev)
         self.quotes = [q for q in quotes if q]
         self.queries = {letters(r["query"]) for path in EVAL_QUERIES for r in read_tsv(path)}
@@ -125,7 +125,7 @@ class Guard:
                or (ref and any(p.search(ref) for p in self.patterns)))
         if not bad:
             text = " ".join(" ".join(plain(content)).split())
-            bad = any(q in text for q in self.quotes)
+            bad = any(q in text for q in self.quotes) or clean(content) in self.held_texts
         if bad:
             self.dropped[kind] += 1
         return not bad
@@ -203,7 +203,8 @@ def entries(con, dictionary, source):
 
 
 def line_at(con, book, index):
-    return con.execute("SELECT id, heRef, content FROM line WHERE bookId = ? AND lineIndex = ?", (book, index)).fetchone()
+    return con.execute("SELECT id, heRef, content FROM line WHERE bookId = ? AND lineIndex = ?",
+                       (book, index)).fetchone()
 
 
 def aruch(con, guard, dictionary):
@@ -292,8 +293,9 @@ def metzudat(con, guard, dictionary):
 def mikropedia(con, guard, dictionary):
     pairs = []
     for book, index, head in entries(con, dictionary, "micropedia"):
-        rows = con.execute("""SELECT id, lineIndex, heRef, content FROM line WHERE bookId = ? AND lineIndex BETWEEN ? AND ?
-                              ORDER BY lineIndex""", (book, index, index + 8)).fetchall()
+        rows = con.execute("""SELECT id, lineIndex, heRef, content FROM line
+                              WHERE bookId = ? AND lineIndex BETWEEN ? AND ? ORDER BY lineIndex""",
+                           (book, index, index + 8)).fetchall()
         if len(rows) < 3:
             continue
         name = " ".join(w for w in plain(rows[0][3]) if w)
