@@ -11,6 +11,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -20,24 +22,32 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
+import io.github.kdroidfilter.seforim.htmlparser.CommentAnchor
+import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafReaderView
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePlaces
+import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.ContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.Providers
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.listedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.*
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
+import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CircularProgressIndicator
@@ -225,12 +235,31 @@ private fun BookContentPanelContent(
         // under them (see the window body), as the split panes had it.
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
-                // A Talmud tractate as its Vilna page, at the tab's line: the panes around it follow that line
+                // A Talmud tractate as its Vilna page, at the tab's line: its clicks select as the text's, and the
+                // panes around it (the text's, as they are, wherever they are docked) follow
                 if (uiState.content.dafView && selectedBook.isBavli) {
+                    val repository = LocalAppGraph.current.repository
+                    val scope = rememberCoroutineScope()
+                    val content by rememberUpdatedState(uiState.content)
                     DafReaderView(
                         book = selectedBook,
                         lineId = uiState.content.primarySelectedLineId ?: uiState.content.anchorId.takeIf { it > 0 },
+                        selectedLineIds = uiState.content.selectedLineIds,
+                        isTocEntrySelection = uiState.content.isTocEntrySelection,
+                        selectedPassage = uiState.content.selectedPassage,
                         onEvent = onEvent,
+                        onSelectLine = { lineId, withModifier ->
+                            scope.launch {
+                                runSuspendCatching { repository.getLine(lineId) }.getOrNull()?.let {
+                                    onEvent(BookContentEvent.LineSelected(it, withModifier))
+                                }
+                            }
+                        },
+                        onSelectPassage = { lineId, comments, commentBooks ->
+                            scope.launch {
+                                selectDafPassage(repository, providers, content, selectedBook.id, lineId, comments, commentBooks, onEvent)
+                            }
+                        },
                         modifier = paneCardModifier,
                     )
                 } else {
@@ -293,6 +322,34 @@ private fun BookContentPanelContent(
         }
     }
 }
+
+/**
+ * A passage the daf view selected ([comments] on the Gemara line [lineId]): their commentators shown in the
+ * commentaries pane, as when checked in its list, and the pane open; then the passage, as a click on one in the text
+ * selects it (its line too), which the pane brings in view.
+ */
+private suspend fun selectDafPassage(
+    repository: SeforimRepository,
+    providers: Providers,
+    content: ContentState,
+    bookId: Long,
+    lineId: Long,
+    comments: Set<Long>,
+    commentBooks: Set<Long>,
+    onEvent: (BookContentEvent) -> Unit,
+) {
+    val line = runSuspendCatching { repository.getLine(lineId) }.getOrNull() ?: return
+    val listed = runSuspendCatching { providers.getCommentatorGroupsForLine(lineId).listedCommentators() }.getOrDefault(emptyMap())
+    val shown = content.commentatorSelection(bookId).shownOf(listed)
+    val missing = commentBooks.filter { it in listed && it !in shown }
+    if (missing.isNotEmpty()) onEvent(BookContentEvent.SelectedCommentatorsChanged(lineId, shown + missing, listed))
+    if (!content.showCommentaries) onEvent(BookContentEvent.ToggleCommentaries)
+    // Anchors of its own: a daf passage is none of the text's (the Bavli's text has no anchors)
+    val anchors = comments.mapTo(HashSet()) { CommentAnchor(DAF_PASSAGE, it.toInt()) }
+    onEvent(BookContentEvent.PassageSelected(line, SelectedPassage(lineId, anchors, comments, commentBooks)))
+}
+
+private const val DAF_PASSAGE = "daf"
 
 /** The breadcrumb under a book's text and its line panes; drawn by the window under its inner dock. */
 @Composable
