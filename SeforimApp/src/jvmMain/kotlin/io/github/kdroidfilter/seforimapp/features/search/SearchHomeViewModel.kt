@@ -277,9 +277,10 @@ class SearchHomeViewModel(
                             withContext(Dispatchers.Default) {
                                 coroutineScope {
                                     // Books: same acronym-aware suggestions as the book tree search
+                                    val bookHitsDeferred = async(Dispatchers.Default) { lookup.suggestBooks(q, limit = maxBookPredictive) }
                                     val booksDeferred =
                                         async(Dispatchers.Default) {
-                                            lookup.suggestBooks(q, limit = maxBookPredictive).map { hit ->
+                                            bookHitsDeferred.await().map { hit ->
                                                 val book = hit.toBook()
                                                 val catPath = buildCategoryPathTitlesCached(book.categoryId)
                                                 BookSuggestionDto(book, catPath + book.title, hit.exactAcronym)
@@ -289,15 +290,26 @@ class SearchHomeViewModel(
                                     val authorsDeferred =
                                         async(Dispatchers.IO) {
                                             if (addingScopes) return@async emptyList()
-                                            // More than shown: those not typed word by word are dropped (`בבא ב`)
-                                            lookup
-                                                .suggestAuthors(q, limit = MAX_AUTHOR_SUGGESTIONS * 3)
-                                                .mapNotNull { hit ->
-                                                    val aliases = authorAliases(hit.id)
-                                                    val names = listOf(hit.name, AuthorNames.display(hit.name)) + aliases
-                                                    if (!AuthorNames.typedAs(q, names, lookup::typedAsWordsOf)) return@mapNotNull null
-                                                    hit.copy(alias = AuthorNames.matchedAlias(q, hit.name, aliases))
-                                                }.take(MAX_AUTHOR_SUGGESTIONS)
+                                            // More than shown: those not typed word by word are dropped (`בבא ב`), unless the
+                                            // title index found them, which reads a name as typed already
+                                            val byName =
+                                                lookup
+                                                    .suggestAuthors(q, limit = MAX_AUTHOR_SUGGESTIONS * 3)
+                                                    .mapNotNull { hit ->
+                                                        if (hit.matchedByName) return@mapNotNull hit
+                                                        val aliases = authorAliases(hit.id)
+                                                        val names = listOf(hit.name, AuthorNames.display(hit.name)) + aliases
+                                                        if (!AuthorNames.typedAs(q, names, lookup::typedAsWordsOf)) return@mapNotNull null
+                                                        hit.copy(alias = AuthorNames.matchedAlias(q, hit.name, aliases))
+                                                    }
+                                            // A book's title typed: its author too, to open or to search in all their books
+                                            val ofBooks =
+                                                bookHitsDeferred
+                                                    .await()
+                                                    .filter { it.namesBook }
+                                                    .take(MAX_NAMED_BOOKS)
+                                                    .flatMap { book -> lookup.authorsOfBook(book.id).map { it.copy(ofBook = book.title) } }
+                                            AuthorNames.withAuthorsOfBooks(byName, ofBooks, MAX_AUTHOR_SUGGESTIONS) { it.id }
                                         }
 
                                     val jumpsDeferred =
@@ -1007,6 +1019,9 @@ private val ALT_TOC_LABELS =
     )
 
 private const val MAX_AUTHOR_SUGGESTIONS = 4
+
+// The books named by a query (its title typed, whole or begun) whose authors are offered too
+private const val MAX_NAMED_BOOKS = 2
 
 private const val MAX_CATEGORY_SUGGESTIONS = 4
 

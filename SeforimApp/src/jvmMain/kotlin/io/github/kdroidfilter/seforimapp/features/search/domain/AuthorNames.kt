@@ -95,6 +95,25 @@ object AuthorNames {
         return names.any { typedAsWordsOf(typed, it) }
     }
 
+    /**
+     * The authors found by name, then the authors of the books the query names ([ofBooks], each with the book), each
+     * author once, at most [max], room kept for two of the books' authors: `משנה ברורה` offers הרב ישראל מאיר הכהן,
+     * `חפץ חיים` offers him once, by his alias.
+     */
+    fun <A> withAuthorsOfBooks(
+        byName: List<A>,
+        ofBooks: List<A>,
+        max: Int,
+        id: (A) -> Long,
+    ): List<A> {
+        val named = byName.distinctBy(id)
+        val ids = named.mapTo(HashSet(), id)
+        val ofBooksOnly = ofBooks.distinctBy(id).filter { id(it) !in ids }.take(minOf(BOOK_AUTHORS_KEPT, max))
+        return named.take(max - ofBooksOnly.size) + ofBooksOnly
+    }
+
+    private const val BOOK_AUTHORS_KEPT = 2
+
     private val QUOTES_AND_GERESH = Regex("[\"'״׳]")
 
     // `רמב"ם`, `מהר"ם פדובה`; but not `יוסף בן משה באב"ד`, whose quote is in a later word

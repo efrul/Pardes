@@ -933,7 +933,7 @@ private fun SuggestionsPanel(
                                 parts =
                                     listOf(
                                         AuthorNames.display(row.hit.name) +
-                                            row.hit.alias
+                                            (row.hit.alias ?: row.hit.ofBook?.let { stringResource(Res.string.author_of_book, it) })
                                                 ?.let { " ($it)" }
                                                 .orEmpty(),
                                     ),

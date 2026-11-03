@@ -390,6 +390,7 @@
     <!-- Home Page View -->
     <string name="search_text_row">חיפוש במאגר: %1$s</string>
     <string name="author_books_count">%1$d ספרים</string>
+    <string name="author_of_book">מחבר %1$s</string>
     <string name="author_books">ספרים במאגר</string>
     <string name="author_info_era">תקופה</string>
     <string name="author_info_years">שנים</string>
