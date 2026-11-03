@@ -1,17 +1,14 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -21,13 +18,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
-import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -80,12 +78,13 @@ internal class RunLine(
 )
 
 /**
- * Lines of one column one below the other, [pitch] apart, from [top] down: drawn as one text, so a selection goes down
- * the column as it is read, each line a paragraph of its own (null, a line's place left empty). Its box is [left] and
+ * Lines of [column] one below the other, [pitch] apart, from [top] down: drawn as one text, each line a paragraph of its
+ * own (null, a line's place left empty). Its box is [left] and
  * [width] wide; [size] is its letters', [isGemara] whether they are the Gemara's (a square letter) or a commentary's,
  * [isBig] for a column's big first word. All in pixels at the scale the amud was laid out at.
  */
 internal class TextRun(
+    val column: String,
     val left: Float,
     val top: Float,
     val width: Float,
@@ -326,6 +325,7 @@ internal fun layoutAmud(
             val (size, extra) = fit(i, words, gemara, (b[3] - b[1]) * BIG_SIZE, b[2] - b[0])
             bigRuns +=
                 TextRun(
+                    column,
                     b[0],
                     b[1],
                     b[2] - b[0],
@@ -394,7 +394,7 @@ internal fun layoutAmud(
                         RunLine(it, words, lines[it].d.toSet(), s, right - b[2], extra, lines[it].s != 1)
                     }
                 }
-            runs += TextRun(left, top, right - left, pitch, size, isGemara, isBig = false, runLines)
+            runs += TextRun(column, left, top, right - left, pitch, size, isGemara, isBig = false, runLines)
             slots.clear()
         }
         var previous = -1
@@ -423,14 +423,66 @@ internal fun layoutAmud(
     return AmudLayout(amud, scale, (amud.block[2] - bx) * scale, (amud.block[3] - by) * scale, runs + bigRuns)
 }
 
+/** A word's place in the order an amud is read: column by column, line by line, word by word. */
+private val READING = compareBy<DafWord>({ it.line }, { it.word })
+
+/**
+ * A selection of an amud's words, from [anchor] (where it began) to [end], in the order they are read: down a column's
+ * lines from one part of it to the next (above the Gemara, beside it, below it), not into another column's.
+ */
+data class DafRange(
+    val anchor: DafWord,
+    val end: DafWord,
+) {
+    val first: DafWord get() = minOf(anchor, end, READING)
+    val last: DafWord get() = maxOf(anchor, end, READING)
+
+    operator fun contains(word: DafWord): Boolean = READING.compare(first, word) <= 0 && READING.compare(word, last) <= 0
+}
+
+/** The words of [range] as printed, one space between two, the lines' too. */
+internal fun DafAmud.textOf(range: DafRange): String {
+    val (first, last) = range.first to range.last
+    return (first.line..last.line)
+        .joinToString(" ") { i ->
+            val words = lines[i].t.split(' ').filter { it.isNotEmpty() }
+            val from = if (i == first.line) first.word else 0
+            val to = if (i == last.line) last.word else words.lastIndex
+            words.subList(from.coerceIn(0, words.size), (to + 1).coerceIn(0, words.size)).joinToString(" ")
+        }.trim()
+}
+
+/** The words of this amud's line of the library [word] is of, from its first to its last as printed here. */
+internal fun DafAmud.lineRangeOf(word: DafWord): DafRange? {
+    val id = lines.getOrNull(word.line)?.lineIdAt(word.word) ?: return DafRange(word, word)
+    val column = lines[word.line].c
+    var first: DafWord? = null
+    var last: DafWord? = null
+    lines.forEachIndexed { i, line ->
+        if (line.c != column) return@forEachIndexed
+        for (span in line.u) {
+            if (span.size != SPAN || span[0] != id) continue
+            val a = DafWord(i, span[1].toInt())
+            val b = DafWord(i, span[2].toInt())
+            if (first == null || READING.compare(a, first!!) < 0) first = a
+            if (last == null || READING.compare(b, last!!) > 0) last = b
+        }
+    }
+    return first?.let { DafRange(it, last!!) }
+}
+
+private const val SPAN = 3
+
 /**
  * An amud drawn from its [layout] at [k] times the size it was laid out at, in the text's own components: each run of
- * lines is a text (selectable, copied, given the text's menu, as the text view's lines are), its words in [gemara] (a
- * square letter) or [rashi] (Rashi script). [highlight] marks words behind them; a click on a word, not a drag that
- * selects, gives it to [onWordClick] (with Ctrl or Cmd held, as the text's lines take them), a right-click to
- * [onContextWord] first, as the menu opens.
+ * lines is a text, its words in [gemara] (a square letter) or [rashi] (Rashi script). [highlight] marks words behind
+ * them. The amud holds its own selection, [range], in the order a column is read (a container of Compose's would order
+ * its texts by their tops, and take a drag down one column into another's lines between): a drag selects from the
+ * word it starts on, a double click a word, a triple click the word's comment or segment, a Shift+click to a word;
+ * [onRange] is given each change. A click on a word, not a drag, also goes to [onWordClick] (with Ctrl or Cmd held, as
+ * the text's lines take them); a right-click selects the word under it unless it is in the selection, gives it to
+ * [onContextWord] and opens the text's menu where it was ([onMenu]). [onPress] comes first on any press.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun DafAmudText(
     layout: AmudLayout,
@@ -440,19 +492,131 @@ internal fun DafAmudText(
     ink: Color,
     modifier: Modifier = Modifier,
     highlight: DafHighlight = DafHighlight.NONE,
+    range: DafRange? = null,
+    selectionColor: Color = Color.Transparent,
+    onRange: (DafRange?) -> Unit = {},
     onWordClick: (word: DafWord, withModifier: Boolean) -> Unit = { _, _ -> },
     onContextWord: (DafWord) -> Unit = {},
+    onMenu: (Offset) -> Unit = {},
+    onPress: () -> Unit = {},
 ) {
     val density = LocalDensity.current
+    val currentRange by rememberUpdatedState(range)
+    val currentOnRange by rememberUpdatedState(onRange)
     val currentOnWordClick by rememberUpdatedState(onWordClick)
     val currentOnContextWord by rememberUpdatedState(onContextWord)
+    val currentOnMenu by rememberUpdatedState(onMenu)
+    val currentOnPress by rememberUpdatedState(onPress)
     val unsureInk = ink.copy(alpha = ink.alpha * UNSURE_INK)
+    // Each run's text as laid out, and where it is (the page's pixels): what the pointer is on
+    val results = remember(layout, k) { arrayOfNulls<TextLayoutResult>(layout.runs.size) }
+
+    fun spare(run: TextRun) = run.size * RUN_SPARE * k
+
+    fun originOf(i: Int): Offset {
+        val run = layout.runs[i]
+        return Offset((run.left * k - spare(run)).roundToInt().toFloat(), (run.top * k).roundToInt().toFloat())
+    }
+
+    // The word at [position], on its line (none between two columns or past a line's end)
+    fun wordAt(position: Offset): DafWord? {
+        for (i in layout.runs.indices.reversed()) {
+            val result = results[i] ?: continue
+            val local = position - originOf(i)
+            if (local.x < 0f || local.y < 0f || local.x > result.size.width || local.y > result.size.height) continue
+            val line = result.getLineForVerticalPosition(local.y)
+            if (local.x < result.getLineLeft(line) - HIT_SLACK || local.x > result.getLineRight(line) + HIT_SLACK) continue
+            return layout.runs[i].wordAt(result.getOffsetForPosition(local))
+        }
+        return null
+    }
+
+    // The word of [column] nearest to [position] (of any column when null): a drag goes on down its column whatever it
+    // passes over, and one begun beside the words (under a big first word, between two lines) begins at the nearest
+    fun nearestIn(
+        column: String?,
+        position: Offset,
+    ): DafWord? {
+        var best = -1
+        var bestDistance = Float.MAX_VALUE
+        for (i in layout.runs.indices) {
+            val run = layout.runs[i]
+            val result = results[i] ?: continue
+            if ((column != null && run.column != column) || run.isBig) continue
+            val local = position - originOf(i)
+            val dy = maxOf(0f, -local.y, local.y - result.size.height)
+            val dx = maxOf(0f, -local.x, local.x - result.size.width)
+            val distance = dy * VERTICAL_WEIGHT + dx
+            if (distance < bestDistance) {
+                bestDistance = distance
+                best = i
+            }
+        }
+        if (best < 0) return null
+        val result = results[best]!!
+        val local = position - originOf(best)
+        val clamped = Offset(local.x.coerceIn(0f, result.size.width.toFloat()), local.y.coerceIn(0f, result.size.height - 1f))
+        return layout.runs[best].wordAt(result.getOffsetForPosition(clamped))
+    }
+    val pointer =
+        Modifier.pointerInput(layout, k) {
+            var lastClickAt = 0L
+            var lastClickAt2 = Offset.Zero
+            var clicks = 0
+            awaitEachGesture {
+                val down = awaitPointerEvent(PointerEventPass.Main)
+                if (down.type != PointerEventType.Press) return@awaitEachGesture
+                val change = down.changes.first()
+                val at = change.position
+                currentOnPress()
+                if (down.buttons.isSecondaryPressed) {
+                    // The text's menu: on the selection when the pointer is in it, else on the word under it
+                    val word = wordAt(at)
+                    if (word != null && currentRange?.contains(word) != true) currentOnRange(DafRange(word, word))
+                    word?.let { currentOnContextWord(it) }
+                    currentOnMenu(at)
+                    change.consume()
+                    return@awaitEachGesture
+                }
+                val isTouch = change.type == PointerType.Touch
+                if (!down.buttons.isPrimaryPressed && !isTouch) return@awaitEachGesture
+                val word = wordAt(at)
+                val near = (at - lastClickAt2).getDistance() < viewConfiguration.touchSlop * 2
+                clicks = if (change.uptimeMillis - lastClickAt < viewConfiguration.doubleTapTimeoutMillis && near) clicks + 1 else 1
+                lastClickAt = change.uptimeMillis
+                lastClickAt2 = at
+                val withModifier = down.keyboardModifiers.isCtrlPressed || down.keyboardModifiers.isMetaPressed
+                val extend = down.keyboardModifiers.isShiftPressed && currentRange != null && word != null
+                if (extend) currentOnRange(DafRange(currentRange!!.anchor, word!!))
+                val anchor = if (extend) currentRange!!.anchor else word ?: nearestIn(null, at)
+                var dragging = false
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Main)
+                    val moved = event.changes.firstOrNull { it.id == change.id } ?: break
+                    if (!moved.pressed) break
+                    if (!dragging && (moved.position - at).getDistance() > viewConfiguration.touchSlop) dragging = true
+                    if (dragging && anchor != null) {
+                        nearestIn(layout.amud.lines[anchor.line].c, moved.position)?.let { currentOnRange(DafRange(anchor, it)) }
+                        moved.consume()
+                    }
+                }
+                if (dragging || extend || word == null) return@awaitEachGesture
+                when (clicks) {
+                    1 -> {
+                        currentOnRange(null)
+                        currentOnWordClick(word, withModifier)
+                    }
+                    2 -> currentOnRange(DafRange(word, word))
+                    else -> currentOnRange(layout.amud.lineRangeOf(word))
+                }
+            }
+        }
     // Each run where it is printed, as the page's coordinates go (left to right): a layout of its own, as a right to left
     // one mirrors a Box's offsets
     Layout(
-        modifier = with(density) { modifier.size((layout.width * k).toDp(), (layout.height * k).toDp()) },
+        modifier = with(density) { modifier.size((layout.width * k).toDp(), (layout.height * k).toDp()) }.then(pointer),
         content = {
-            for (run in layout.runs) {
+            layout.runs.forEachIndexed { i, run ->
                 val text = remember(run, k, density, unsureInk) { run.annotated(k, density, unsureInk) }
                 val style =
                     remember(run, k, density, ink, gemara, rashi) {
@@ -465,54 +629,34 @@ internal fun DafAmudText(
                         )
                     }
                 val marks = remember(run, highlight) { marksOf(run, highlight) }
+                val selected =
+                    remember(run, range, selectionColor) {
+                        range?.let { r -> marksOf(run) { word -> selectionColor.takeIf { word in r } } }.orEmpty()
+                    }
                 var textLayout by remember(run) { mutableStateOf<TextLayoutResult?>(null) }
-
-                fun wordAt(position: Offset): DafWord? {
-                    val result = textLayout ?: return null
-                    if (position.y < 0f || position.y > result.size.height) return null
-                    val line = result.getLineForVerticalPosition(position.y)
-                    if (position.x < result.getLineLeft(line) - HIT_SLACK || position.x > result.getLineRight(line) + HIT_SLACK) return null
-                    return run.wordAt(result.getOffsetForPosition(position))
-                }
-                // A selection of its own: Compose orders a container's texts by their tops, which would take a drag
-                // down one column into another's lines between
-                SelectionContainer {
-                    BasicText(
-                        text = text,
-                        style = style,
-                        softWrap = false,
-                        onTextLayout = { textLayout = it },
-                        modifier =
-                            Modifier
-                                .drawBehind { textLayout?.let { drawMarks(it, marks, run.pitch * k) } }
-                                .pointerInput(run) {
-                                    awaitEachGesture {
-                                        // A click, as the text's lines take it: a drag is the selection's, which consumes it
-                                        val down = awaitPointerEvent(PointerEventPass.Main)
-                                        val isTouch = down.changes.any { it.type == PointerType.Touch && it.pressed }
-                                        if (!down.buttons.isPrimaryPressed && !isTouch) return@awaitEachGesture
-                                        if (down.keyboardModifiers.isShiftPressed) return@awaitEachGesture
-                                        val withModifier = down.keyboardModifiers.isCtrlPressed || down.keyboardModifiers.isMetaPressed
-                                        val up = waitForUpOrCancellation() ?: return@awaitEachGesture
-                                        if (up.isConsumed) return@awaitEachGesture
-                                        if ((up.position - down.changes.first().position).getDistance() > viewConfiguration.touchSlop) {
-                                            return@awaitEachGesture
-                                        }
-                                        wordAt(up.position)?.let { currentOnWordClick(it, withModifier) }
-                                    }
-                                }.onPointerEvent(PointerEventType.Press) { event ->
-                                    if (event.buttons.isSecondaryPressed) {
-                                        wordAt(event.changes.first().position)?.let { currentOnContextWord(it) }
-                                    }
-                                },
-                    )
-                }
+                BasicText(
+                    text = text,
+                    style = style,
+                    softWrap = false,
+                    onTextLayout = {
+                        textLayout = it
+                        results[i] = it
+                    },
+                    modifier =
+                        Modifier
+                            .pointerHoverIcon(PointerIcon.Text)
+                            .drawBehind {
+                                textLayout?.let {
+                                    drawMarks(it, marks, run.pitch * k)
+                                    drawMarks(it, selected, run.pitch * k, rounded = false)
+                                }
+                            },
+                )
             }
         },
     ) { measurables, _ ->
         // Room to spare on the left for the space after each line but the last (a copy keeps it between two lines): a
         // text a line of which is wider than it is laid out as wide as that line, past its right edge
-        fun spare(run: TextRun) = run.size * RUN_SPARE * k
         val placeables =
             measurables.mapIndexed { i, measurable ->
                 val run = layout.runs[i]
@@ -521,12 +665,15 @@ internal fun DafAmudText(
             }
         layout((layout.width * k).roundToInt(), (layout.height * k).roundToInt()) {
             placeables.forEachIndexed { i, placeable ->
-                val run = layout.runs[i]
-                placeable.place((run.left * k - spare(run)).roundToInt(), (run.top * k).roundToInt())
+                val origin = originOf(i)
+                placeable.place(origin.x.roundToInt(), origin.y.roundToInt())
             }
         }
     }
 }
+
+/** A word above or below a run is this much farther from it than one beside it, for a drag's nearest word. */
+private const val VERTICAL_WEIGHT = 4f
 
 /** How far off a line a point still counts as on it (pixels), and the room to spare left of a run (to its letters). */
 private const val HIT_SLACK = 3f
@@ -538,6 +685,7 @@ private fun marksOf(
     highlight: DafHighlight,
 ): List<Pair<IntRange, Color>> {
     if (highlight === DafHighlight.NONE) return emptyList()
+    // (a lambda passes for a DafHighlight: the selection's marks are drawn by the same code)
     val out = ArrayList<Pair<IntRange, Color>>()
     run.lines.forEachIndexed { slot, line ->
         if (line == null) return@forEachIndexed
@@ -561,11 +709,15 @@ private fun marksOf(
 private const val MARK_PAD = 0.12f
 private const val MARK_INSET = 0.08f
 
-/** Marks behind a run's words: one rounded box for each run of words of one color, the spaces between them too. */
+/**
+ * Marks behind a run's words: one box for each run of words of one color, the spaces between them too, rounded (the
+ * page's marks) or square (a selection, as the text's).
+ */
 private fun DrawScope.drawMarks(
     layout: TextLayoutResult,
     marks: List<Pair<IntRange, Color>>,
     pitch: Float,
+    rounded: Boolean = true,
 ) {
     val pad = pitch * MARK_PAD
     for ((range, color) in marks) {
@@ -578,6 +730,7 @@ private fun DrawScope.drawMarks(
         val right = maxOf(first.right, last.right) + pad
         val top = layout.getLineTop(line) + pitch * MARK_INSET
         val bottom = layout.getLineBottom(line) - pitch * MARK_INSET
-        drawRoundRect(color, Offset(left, top), Size(right - left, bottom - top), CornerRadius(pad * 2, pad * 2))
+        val corner = if (rounded) CornerRadius(pad * 2, pad * 2) else CornerRadius.Zero
+        drawRoundRect(color, Offset(left, top), Size(right - left, bottom - top), corner)
     }
 }
