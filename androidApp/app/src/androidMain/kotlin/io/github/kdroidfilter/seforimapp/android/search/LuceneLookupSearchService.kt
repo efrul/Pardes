@@ -2,9 +2,12 @@
 // (tag v0.6.10: 0.6.1's with the 0.6.2 fixes 2126c238 and 90552dbc, its only changes since: book suggestions by title
 // tiers, words typed once each). Differences: the index is always opened with NIOFSDirectory (FSDirectory.open picks
 // MMapDirectory, which needs java.lang.foreign, absent on Android) and the query cache is smaller for a phone heap.
+// Since Pardes desktop's title index (framework/search/titles, compiled as-is): suggestBooks and suggestAuthors ask it
+// first, as there, and authorsOfBook gives a book's authors.
 package io.github.kdroidfilter.seforimapp.framework.search
 
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.framework.search.titles.BookTitleIndex
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.standard.StandardAnalyzer
@@ -28,6 +31,9 @@ class LuceneLookupSearchService(
     indexDir: Path,
     private val analyzer: Analyzer = StandardAnalyzer(),
     private val acronymCache: AcronymFrequencyCache? = null,
+    // The books and authors by name, in memory (null without a catalog, or before it is built): what suggestBooks and
+    // suggestAuthors find first, the index's own matches after
+    private val titleIndex: () -> BookTitleIndex? = { null },
 ) {
     // Open Lucene directory lazily to avoid any I/O at app startup.
     // Android: no MMapDirectory (it needs java.lang.foreign), so always NIOFSDirectory.
@@ -76,6 +82,10 @@ class LuceneLookupSearchService(
         val bookCount: Int,
         // The alias the query was found by, when not the name (חפץ חיים); set by the caller
         val alias: String? = null,
+        // Found by the title index, which read the query as a name already (spellings, typos, any word order)
+        val matchedByName: Boolean = false,
+        // Offered as the author of this book, its title typed (משנה ברורה: הרב ישראל מאיר הכהן)
+        val ofBook: String? = null,
     )
 
     data class BookHit(
@@ -96,6 +106,8 @@ class LuceneLookupSearchService(
         val matchedAcronyms: List<String>,
         // The query is one of the book's acronyms, whole (שוע for שולחן ערוך)
         val exactAcronym: Boolean = false,
+        // The query is the book's title, whole or begun, or one of its acronyms: its author is offered too
+        val namesBook: Boolean = false,
     ) {
         /** A lightweight [Book] for display; load the full one by [id] when opening it. */
         fun toBook(): Book =
@@ -161,6 +173,12 @@ class LuceneLookupSearchService(
         raw: String,
         limit: Int,
     ): List<AuthorHit> {
+        if (raw.trim().length < MIN_BOOK_QUERY_LENGTH) return emptyList()
+        titleIndex()?.let { index ->
+            return index.searchAuthors(raw, limit).map { m ->
+                AuthorHit(m.author.id, m.author.name, m.author.bookCount, alias = m.alias, matchedByName = true)
+            }
+        }
         // הרב is added on display only: a query typed as shown finds the bare name, else a stored one with it
         val bare = AuthorNames.withoutHonorific(raw)
         if (bare != raw && bare.isNotBlank()) authorsFor(bare, limit).takeIf { it.isNotEmpty() }?.let { return it }
@@ -242,8 +260,31 @@ class LuceneLookupSearchService(
     ): List<ScoredBookHit> {
         val q = raw.trim()
         if (q.length < MIN_BOOK_QUERY_LENGTH) return emptyList()
-        return searchBooksWithScoring(sanitizeHebrewForAcronym(q), limit)
+        val index = titleIndex() ?: return searchBooksWithScoring(sanitizeHebrewForAcronym(q), limit)
+        // The title index's books first, in its order; then those only the lookup index finds (a partly typed acronym)
+        val named =
+            index.searchBooks(q, limit).map { m ->
+                ScoredBookHit(
+                    id = m.book.id,
+                    categoryId = m.book.categoryId,
+                    title = m.book.title,
+                    isBaseBook = m.book.isBaseBook,
+                    orderIndex = m.book.order.toInt(),
+                    score = 0.0,
+                    matchedAcronyms = emptyList(),
+                    exactAcronym = m.exactAcronym,
+                    namesBook = m.tier >= BookTitleIndex.TIER_BEGUN,
+                )
+            }
+        if (named.size >= limit) return named
+        val ids = named.mapTo(HashSet()) { it.id }
+        val more = runCatching { searchBooksWithScoring(sanitizeHebrewForAcronym(q), limit) }.getOrDefault(emptyList())
+        return (named + more.filter { it.id !in ids }).take(limit)
     }
+
+    /** The authors of the book [bookId], with their number of books; empty without the title index. */
+    fun authorsOfBook(bookId: Long): List<AuthorHit> =
+        titleIndex()?.authorsOf(bookId).orEmpty().map { AuthorHit(it.id, it.name, it.bookCount, matchedByName = true) }
 
     /**
      * Search books with enhanced acronym scoring.

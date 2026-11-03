@@ -203,6 +203,15 @@ Ported on 2026-11-01 from Pardes desktop (`37d4fe6`):
 - **The category named as typed comes first:** `משנה תורה` suggests the category before the books whose titles begin so (it suggested `משנה תורה, מסירת תורה שבעל פה` first), and before the books only an acronym names so, in a library that calls the Rambam's books `משנה תורה` too (desktop `941bdfa`); a book's own title before it. In a book the categories named as typed come before the other books to add.
 - **The meaning search's count and its end:** with the semantic pack, the results go on past the fused candidates with the lexical ones, each once, and the count is every line found (the lexical total), not the candidates' (`כ־150`, `כ־299`), as desktop `6a1aa27`.
 
+## Pardes desktop's books and authors found by name
+
+Ported on 2026-11-03 from Pardes desktop (`67fe471`):
+- **The title index:** desktop's `framework/search/titles` (`TitleText`, `TitleAbbreviations`, `BookTitleIndex`, `BookTitleIndexLoader`) and `AuthorNames` are built unchanged (`syncDesktopSearch`; the vendored `search/AuthorNames.kt` is gone). `search/TitleIndex.kt` builds the index once a library, off the main thread, from `CatalogAccess.readCatalog` and three queries through `SplitDatabase`, and `search/SearchService.kt` hands it to the lookup. The rules are Klei Kodesh's Kitvei Hakodesh (credited in Settings › רישיונות): every word found as typed or as another spelling of it (the article, a vowel letter more or less), in the title, a category above the book or an author's name, the last one begun; acronyms with their list and the book's own; one typo a word when nothing else is found.
+- **Where:** the bar's book and author suggestions and the library tree's search (`ui/library/LibraryTree.kt`) call `suggestBooks`/`suggestAuthors` as before (`search/LuceneLookupSearchService.kt`, which asks the title index first, then its own index); the panel of what a search names (`search/SearchEntityFinder.kt`) ranks with it too.
+- **The author of the book typed:** `ui/search/SearchBarViewModel.kt` offers the authors of the first two books the query names (`מחבר משנה ברורה`, `ui/search/UnifiedSearchBar.kt`), after those found by name, each once.
+- **Tested:** desktop's `BookTitleIndexTest` runs in the unit tests (`syncDesktopSemanticTests`); the cases measured on the October 2026 library are desktop's `TitleSearchE2ETest`.
+- This ends "Kept as desktop has it" for `ש"ך` above: the author is found, on both.
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)

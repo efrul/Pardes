@@ -101,7 +101,11 @@ class SearchService(private val store: LibraryStore) {
             }
             val lookup = if (isIndex(lookupDir)) {
                 // When Lucene cannot load here this throws on every call (each keystroke on home): do not leak the cache.
-                runCatching { LuceneLookupSearchService(lookupDir.toPath(), acronymCache = acronyms) }.onFailure { acronyms?.close() }.getOrThrow()
+                // The books and authors by name (desktop's title index), built off the main thread from now on
+                val titles = TitleIndex.holder(store)
+                runCatching { LuceneLookupSearchService(lookupDir.toPath(), acronymCache = acronyms, titleIndex = titles::get) }
+                    .onFailure { acronyms?.close() }
+                    .getOrThrow()
             } else {
                 null
             }

@@ -49,6 +49,8 @@ data class BookSuggestionDto(
     val path: List<String>,
     // Typed as one of its acronyms, whole
     val exactAcronym: Boolean = false,
+    // Its title typed, whole or begun, or an acronym: its author is offered too
+    val namesBook: Boolean = false,
 )
 
 @Immutable
@@ -202,16 +204,24 @@ class SearchBarViewModel(
                                 val authorsDeferred = async(Dispatchers.IO) {
                                     if (addingScopes) return@async emptyList()
                                     catching {
-                                        // More than shown: those not typed word by word are dropped (`בבא ב`)
+                                        // More than shown: those not typed word by word are dropped (`בבא ב`), unless the
+                                        // title index found them, which reads a name as typed already
                                         lookup?.let { index ->
-                                            index
+                                            val byName = index
                                                 .suggestAuthors(q, limit = MAX_AUTHOR_SUGGESTIONS * 3)
                                                 .mapNotNull { hit ->
+                                                    if (hit.matchedByName) return@mapNotNull hit
                                                     val aliases = authorAliases(hit.id)
                                                     val names = listOf(hit.name, AuthorNames.display(hit.name)) + aliases
                                                     if (!AuthorNames.typedAs(q, names, index::typedAsWordsOf)) return@mapNotNull null
                                                     hit.copy(alias = AuthorNames.matchedAlias(q, hit.name, aliases))
-                                                }.take(MAX_AUTHOR_SUGGESTIONS)
+                                                }
+                                            // A book's title typed: its author too, to open or to search in all their books
+                                            val ofBooks = booksDeferred.await()
+                                                .filter { it.namesBook }
+                                                .take(MAX_NAMED_BOOKS)
+                                                .flatMap { book -> index.authorsOfBook(book.book.id).map { it.copy(ofBook = book.book.title) } }
+                                            AuthorNames.withAuthorsOfBooks(byName, ofBooks, MAX_AUTHOR_SUGGESTIONS) { it.id }
                                         }
                                     }.orEmpty()
                                 }
@@ -271,7 +281,7 @@ class SearchBarViewModel(
             catching { lookup.suggestBooks(q, limit = maxBookPredictive) }?.let { hits ->
                 return hits.map { hit ->
                     val book = hit.toBook()
-                    BookSuggestionDto(book, buildCategoryPathTitlesCached(book.categoryId) + book.title, hit.exactAcronym)
+                    BookSuggestionDto(book, buildCategoryPathTitlesCached(book.categoryId) + book.title, hit.exactAcronym, hit.namesBook)
                 }
             }
         }
@@ -681,6 +691,9 @@ class SearchBarViewModel(
 
     companion object {
         private const val MAX_AUTHOR_SUGGESTIONS = 4
+
+        // The books named by a query (its title typed, whole or begun) whose authors are offered too
+        private const val MAX_NAMED_BOOKS = 2
         private const val MAX_FALLBACK_BOOKS = 20
         private const val MAX_CATEGORY_SUGGESTIONS = 4
 
