@@ -33,7 +33,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -43,7 +42,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -65,7 +63,9 @@ fun interface DafHighlight {
 /**
  * A printed line in a run: the amud's line [index], its [words] (those in [bold] a dibbur hamatchil), its letters
  * [size] pixels, set [indent] pixels in from the run's right edge, with [extra] pixels more after each of its spaces so
- * that it fills its box, as printed. [unsure] when the alignment is not sure of its first or last word.
+ * that it fills its box, as printed, or [gaps] after each its own (a line on both sides of a big word: one of them
+ * the big word's width). [unsure] when the alignment is not sure of its first or last word. Its words are its line's
+ * from [firstWord] on (a line whose words are printed in two).
  */
 internal class RunLine(
     val index: Int,
@@ -75,6 +75,8 @@ internal class RunLine(
     val indent: Float,
     val extra: Float,
     val unsure: Boolean,
+    val gaps: FloatArray? = null,
+    val firstWord: Int = 0,
 )
 
 /**
@@ -137,7 +139,7 @@ internal class TextRun(
         val slot = lineStarts.binarySearchFloor(offset)
         val line = lines.getOrNull(slot) ?: return null
         val word = wordStarts[slot].binarySearchFloor(offset).coerceAtLeast(0)
-        return DafWord(line.index, word)
+        return DafWord(line.index, line.firstWord + word)
     }
 
     /** The text drawn [k] times its laid-out size, the [density] the run was laid out with. */
@@ -162,9 +164,9 @@ internal class TextRun(
                     for (i in line.words.indices) {
                         val wordEnd = starts[i] + line.words[i].length
                         if (i in line.bold) addStyle(SpanStyle(fontWeight = FontWeight.Bold), starts[i], wordEnd)
-                        if (i < line.words.lastIndex && line.extra != 0f) {
-                            addStyle(SpanStyle(letterSpacing = (line.extra * k).toSp()), wordEnd, wordEnd + 1)
-                        }
+                        if (i == line.words.lastIndex) continue
+                        val extra = line.gaps?.get(i) ?: line.extra
+                        if (extra != 0f) addStyle(SpanStyle(letterSpacing = (extra * k).toSp()), wordEnd, wordEnd + 1)
                     }
                 }
             }
@@ -204,224 +206,8 @@ internal class AmudLayout(
     val runs: List<TextRun>,
 )
 
-/** The size of a line's letters to its box's height: the box spans the letters' ascenders and descenders. */
-private const val GEMARA_SIZE = 0.92f
-private const val RASHI_SIZE = 0.95f
-private const val BIG_SIZE = 0.9f
-
-/** Below this a line's letters are not made smaller (pixels), and no more tries than this to make them fit. */
-private const val MIN_SIZE = 4f
-private const val MAX_TRIES = 3
-
-/** Each try after the first makes the letters at least this much smaller. */
-private const val FIT_STEP = 0.995f
-
-/** Two lines one below the other: their centres a line apart give or take this much of it, and across overlapping this. */
-private const val PITCH_SLACK = 0.3f
-private const val SAME_COLUMN = 0.4f
-
-/** A line's edge this near (points) to its run's is the run's: a run is a box as wide as its lines. */
-private const val EDGE_SLACK = 10f
-
-/** A column's lines are more than this apart, to their height, to be one below the other (and less than the most). */
-private const val LEAST_PITCH = 0.75f
-private const val MOST_PITCH = 1.8f
-
 /** A line the alignment is not sure of is drawn lighter: its words may not all be the print's. */
 internal const val UNSURE_INK = 0.55f
-
-/**
- * Lays out every line of [amud] at [scale] pixels a point, in runs of lines (a column's lines one below the other at
- * its pitch) that are each drawn as one text: one size of letters for a column (its usual line's), made smaller for a
- * line only while its words do not fit its box with a normal space between them, then spread so the line fills its
- * box, as printed. A column's big first word is a run of its own, in square letters as printed. [beforeEachLine] is
- * called before each line is measured, to stop the layout by throwing (a coroutine's ensureActive).
- */
-internal fun layoutAmud(
-    amud: DafAmud,
-    scale: Float,
-    measurer: TextMeasurer,
-    density: Density,
-    gemara: FontFamily,
-    rashi: FontFamily,
-    beforeEachLine: () -> Unit = {},
-): AmudLayout {
-    val bx = amud.block[0]
-    val by = amud.block[1]
-    val lines = amud.lines
-
-    fun box(i: Int) =
-        lines[i].b.let { floatArrayOf((it[0] - bx) * scale, (it[1] - by) * scale, (it[2] - bx) * scale, (it[3] - by) * scale) }
-
-    fun centre(i: Int) = box(i).let { (it[1] + it[3]) / 2f }
-
-    fun overlap(
-        a: Int,
-        b: Int,
-    ): Float {
-        val x = box(a)
-        val y = box(b)
-        val inter = minOf(x[2], y[2]) - maxOf(x[0], y[0])
-        return inter / maxOf(1e-3f, minOf(x[2] - x[0], y[2] - y[0]))
-    }
-
-    fun width(
-        words: List<String>,
-        bold: Set<Int>,
-        family: FontFamily,
-        size: Float,
-    ): Float {
-        val text =
-            buildAnnotatedString {
-                words.forEachIndexed { i, w ->
-                    if (i > 0) append(' ')
-                    if (i in bold) {
-                        pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-                        append(w)
-                        pop()
-                    } else {
-                        append(w)
-                    }
-                }
-            }
-        val style = TextStyle(fontFamily = family, fontSize = with(density) { size.toSp() })
-        val result = measurer.measure(text, style, softWrap = false, maxLines = 1, layoutDirection = LayoutDirection.Rtl, density = density)
-        return result.multiParagraph.getLineRight(0) - result.multiParagraph.getLineLeft(0)
-    }
-
-    // One line, measured at [size] and made to fit [boxWidth]: its letters' size and the extra after each space
-    fun fit(
-        i: Int,
-        words: List<String>,
-        family: FontFamily,
-        size: Float,
-        boxWidth: Float,
-    ): Pair<Float, Float> {
-        val bold = lines[i].d.toSet()
-        var s = size
-        var natural = width(words, bold, family, s)
-        var tries = 0
-        while (natural > boxWidth && s > MIN_SIZE && tries++ < MAX_TRIES) {
-            s = maxOf(MIN_SIZE, s * minOf(boxWidth / natural, FIT_STEP))
-            natural = width(words, bold, family, s)
-        }
-        val gaps = words.size - 1
-        return s to if (gaps > 0) (boxWidth - natural) / gaps else 0f
-    }
-
-    val runs = ArrayList<TextRun>()
-    // Drawn last, on top of the runs whose lines they stand beside
-    val bigRuns = ArrayList<TextRun>()
-    val edgeSlack = EDGE_SLACK * scale
-    for (column in listOf("G", "R", "T")) {
-        val indices = lines.indices.filter { lines[it].c == column && lines[it].t.isNotBlank() }
-        val isGemara = column == "G"
-        val family = if (isGemara) gemara else rashi
-        // A column's big first word: square letters, as printed, its box's height
-        for (i in indices.filter { lines[it].isBig }) {
-            beforeEachLine()
-            val b = box(i)
-            val words = lines[i].t.split(' ').filter { it.isNotEmpty() }
-            val (size, extra) = fit(i, words, gemara, (b[3] - b[1]) * BIG_SIZE, b[2] - b[0])
-            bigRuns +=
-                TextRun(
-                    column,
-                    b[0],
-                    b[1],
-                    b[2] - b[0],
-                    b[3] - b[1],
-                    size,
-                    isGemara = true,
-                    isBig = true,
-                    listOf(
-                        RunLine(
-                            i,
-                            words,
-                            lines[i].d.toSet(),
-                            size,
-                            0f,
-                            extra,
-                            lines[i].s != 1,
-                        ),
-                    ),
-                )
-        }
-        val normal = indices.filter { !lines[it].isBig }
-        if (normal.isEmpty()) continue
-        // The column's letters, from its usual line's height (its sure lines', those the alignment placed best)
-        val heights = (normal.filter { lines[it].s == 1 }.ifEmpty { normal }).map { box(it).let { b -> b[3] - b[1] } }.sorted()
-        val usual = heights[heights.size / 2]
-        val size = usual * if (isGemara) GEMARA_SIZE else RASHI_SIZE
-        // Its pitch: the usual distance between two of its lines one below the other
-        val gaps =
-            normal
-                .zipWithNext()
-                .map { (a, b) -> centre(b) - centre(a) }
-                .filter { it > LEAST_PITCH * usual && it < MOST_PITCH * usual }
-                .sorted()
-        val pitch = gaps.getOrNull(gaps.size / 2) ?: (usual / LEAST_PITCH)
-        // Runs: lines one below the other a line apart, or two with a line's place left empty between, all as wide
-        // (a run is a box no other column's lines are in: a commentary's lines above the Gemara, wider, are a run of
-        // their own); a line beside a big first word is as wide as the others with the big word
-        val bigBoxes = indices.filter { lines[it].isBig }.map { box(it) }
-        val slots = ArrayList<Int?>()
-        var runLeft = 0f
-        var runRight = 0f
-
-        fun besideBig(i: Int): Boolean {
-            val b = box(i)
-            return bigBoxes.any { big -> big[1] < b[3] && big[3] > b[1] && big[0] >= b[2] - edgeSlack }
-        }
-
-        fun asWide(i: Int): Boolean {
-            val b = box(i)
-            return abs(b[0] - runLeft) <= edgeSlack && (abs(b[2] - runRight) <= edgeSlack || (b[2] < runRight && besideBig(i)))
-        }
-
-        fun flush() {
-            val real = slots.filterNotNull()
-            if (real.isEmpty()) return
-            val left = real.minOf { box(it)[0] }
-            val right = maxOf(real.maxOf { box(it)[2] }, runRight)
-            val top = centre(real.first()) - pitch / 2f
-            val runLines =
-                slots.map { i ->
-                    i?.let {
-                        beforeEachLine()
-                        val b = box(it)
-                        val words = lines[it].t.split(' ').filter { w -> w.isNotEmpty() }
-                        val (s, extra) = fit(it, words, family, size, b[2] - b[0])
-                        RunLine(it, words, lines[it].d.toSet(), s, right - b[2], extra, lines[it].s != 1)
-                    }
-                }
-            runs += TextRun(column, left, top, right - left, pitch, size, isGemara, isBig = false, runLines)
-            slots.clear()
-        }
-        var previous = -1
-        for (i in normal) {
-            if (previous >= 0) {
-                val gap = centre(i) - centre(previous)
-                val n = (gap / pitch).roundToInt()
-                val below = n in 1..2 && abs(gap - n * pitch) < PITCH_SLACK * pitch && overlap(previous, i) > SAME_COLUMN
-                if (!below || !asWide(i)) {
-                    flush()
-                } else if (n == 2) {
-                    slots += null
-                }
-            }
-            if (slots.isEmpty()) {
-                // A run's edges are its first line's, but for a line beside a big word, its right edge the big word's
-                val b = box(i)
-                runLeft = b[0]
-                runRight = if (besideBig(i)) bigBoxes.filter { it[1] < b[3] && it[3] > b[1] }.maxOf { it[2] } else b[2]
-            }
-            slots += i
-            previous = i
-        }
-        flush()
-    }
-    return AmudLayout(amud, scale, (amud.block[2] - bx) * scale, (amud.block[3] - by) * scale, runs + bigRuns)
-}
 
 /** A word's place in the order an amud is read: column by column, line by line, word by word. */
 private val READING = compareBy<DafWord>({ it.line }, { it.word })
@@ -691,13 +477,13 @@ private fun marksOf(
         if (line == null) return@forEachIndexed
         var i = 0
         while (i < line.words.size) {
-            val color = highlight.colorOf(DafWord(line.index, i))
+            val color = highlight.colorOf(DafWord(line.index, line.firstWord + i))
             if (color == null) {
                 i++
                 continue
             }
             var j = i
-            while (j + 1 < line.words.size && highlight.colorOf(DafWord(line.index, j + 1)) == color) j++
+            while (j + 1 < line.words.size && highlight.colorOf(DafWord(line.index, line.firstWord + j + 1)) == color) j++
             out += (run.rangeOf(slot, i).first..run.rangeOf(slot, j).last) to color
             i = j + 1
         }
