@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -34,10 +35,13 @@ internal fun WidgetCard(
     )
 }
 
+/** The tag of [WidgetCardLoading], for the tests to wait on a card's content. */
+internal const val WIDGET_LOADING_TAG = "widget-loading"
+
 /** A card whose content is still being computed off the UI thread (see rememberOffMain). */
 @Composable
 internal fun WidgetCardLoading(modifier: Modifier = Modifier) {
-    PanelCard(modifier) {
+    PanelCard(modifier.testTag(WIDGET_LOADING_TAG)) {
         CircularProgressIndicator(Modifier.align(Alignment.Center))
     }
 }
