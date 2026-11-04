@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.android.data
 
+import android.content.res.AssetManager
 import android.util.Log
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
@@ -13,20 +14,61 @@ import java.util.concurrent.ConcurrentHashMap
 
 // Port of the data part of desktop 0.6.10 features/home/widgets/library/DictionaryWidget.kt: the library's dictionaries,
 // each parsed with its own rule, normalised and looked up as desktop does. Android adds a disk cache of the parsed
-// entries (v2), so a phone reads each dictionary book once per library, not once per launch.
+// entries (v3), so a phone reads each dictionary book once per library, not once per launch. With Pardes desktop's
+// dictionaries from Klei Kodesh's data (KleiKodeshDictionary.kt).
 
-/** A dictionary of the library, by its book's [bookTitle]; each one marks its words in its own way (see [parse]). */
+/**
+ * A dictionary: a book of the library, [bookTitle], each one marking its words in its own way (see [parse]); or, from
+ * Klei Kodesh's data ([KleiKodeshPack]), books of the library by their index of headwords, or words with their text
+ * ([attribution] names where it is from).
+ */
 internal enum class Dictionary(
     val bookTitle: String,
     val label: String,
+    val source: DictionarySource = DictionarySource.BOOK,
+    val attribution: String? = null,
 ) {
     ARUKH("ספר הערוך", "הערוך"),
     HAFLAAH("הפלאה שבערכין על ספר הערוך", "הפלאה שבערכין"),
     LAAZEI_RASHI("אוצר לעזי רש\"י", "לעזי רש״י"),
     SHORASHIM("ספר השרשים לרדק", "השרשים לרד״ק"),
+    METZUDAT("מצודת ציון על הנביאים והכתובים", "מצודת ציון", DictionarySource.INDEX),
+    MALBIM("מלבי״ם, ביאור המילות", "ביאור המילות", DictionarySource.INDEX),
+    MIKROPEDIA("מיקרופדיה תלמודית", "מיקרופדיה תלמודית", DictionarySource.INDEX),
+    MENACHEM("מחברת מנחם", "מחברת מנחם", DictionarySource.INDEX),
+    ARAMAIC(
+        "מילון ארמי־עברי",
+        "ארמית",
+        DictionarySource.TEXT,
+        attribution = "המילון הארמי־עברי של תורת אמת, מתוך נתוני כתבי הקודש (כלי קודש), ברשותם",
+    ),
+    WIKIPEDIA(
+        "ויקיפדיה העברית",
+        "ראשי תיבות",
+        DictionarySource.TEXT,
+        attribution = "מתוך ויקיפדיה העברית, בידי כותביה · CC BY-SA",
+    ),
+    MICHLOL(
+        "המכלול",
+        "המכלול",
+        DictionarySource.TEXT,
+        attribution = "מתוך המכלול, בידי תורמיו · CC BY-SA",
+    ),
+    ;
+
+    companion object {
+        /** The dictionary named [name], if it comes from [source]. */
+        fun of(
+            name: String?,
+            source: DictionarySource,
+        ) = entries.find { it.name == name && it.source == source }
+    }
 }
 
-/** A word of [dictionary], the start of its explanation, and its lines in the book, [first] to [last]. */
+/**
+ * A word of [dictionary], the start of its explanation, and its lines in the book, [first] to [last]; or, of no book
+ * ([bookId] -1), its whole [text].
+ */
 internal data class DictionaryEntry(
     val word: String,
     val gloss: String,
@@ -35,6 +77,7 @@ internal data class DictionaryEntry(
     val lineId: Long,
     val first: Int,
     val last: Int = first,
+    val text: String? = null,
 ) {
     val key = normalizeWord(word.replace(CORRECTED, ""))
 }
@@ -42,6 +85,15 @@ internal data class DictionaryEntry(
 private const val RESULT_LIMIT = 50
 private const val GLOSS_LENGTH = 160
 private const val PAGE_LINES = 300
+
+// Each text dictionary's entries take ids below -1 - its ordinal * this, apart from the others'
+private const val TEXT_ID_SPAN = 1_000_000L
+
+/** A title as Klei Kodesh's index spells it, and as a library may: באור or ביאור, " or ״. */
+internal fun titleVariants(title: String) =
+    listOf(title, title.replace("באור", "ביאור"), title.replace("ביאור", "באור"))
+        .flatMap { listOf(it, it.replace('"', '״'), it.replace('״', '"')) }
+        .distinct()
 
 private val TAG = Regex("<[^>]+>")
 
@@ -114,6 +166,8 @@ internal fun Dictionary.parse(
                     entry(line, root, body.firstOrNull()?.content.orEmpty()).copy(last = body.lastOrNull()?.lineIndex ?: line.lineIndex)
                 }
             }
+            // Klei Kodesh's: read by their index or from their text, not parsed
+            else -> emptyList()
         }
     return entries.filterNot { it.word.isEmpty() || NOT_A_WORD.containsMatchIn(it.word) }
 }
@@ -155,6 +209,7 @@ internal object DictionaryIndex {
     /** [dictionaries]' entries, each read once; one that fails to read is left out of the map, to be tried again. */
     suspend fun read(
         repository: SeforimRepository,
+        assets: AssetManager,
         cacheDir: File,
         dbFile: File,
         dictionaries: List<Dictionary>,
@@ -164,12 +219,20 @@ internal object DictionaryIndex {
             cache[dictionary]?.let { return@mapNotNull dictionary to it }
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val book = repository.getBookByTitle(dictionary.bookTitle) ?: return@withContext emptyList()
-                    val file = File(cacheDir, "dict_${dictionary.name}_v2.tsv")
-                    readCache(file, stamp, dictionary, book.id) ?: run {
-                        // Short pages: a book opened meanwhile waits for one page, not for the whole dictionary
-                        val lines = (0 until book.totalLines step PAGE_LINES).flatMap { start -> repository.getLines(book.id, start, start + PAGE_LINES - 1) }
-                        dictionary.parse(book.id, lines).also { writeCache(file, stamp, it) }
+                    val file = File(cacheDir, "dict_${dictionary.name}_v3.tsv")
+                    when (dictionary.source) {
+                        DictionarySource.BOOK -> {
+                            val book = repository.getBookByTitle(dictionary.bookTitle) ?: return@withContext emptyList()
+                            readCache(file, stamp, dictionary) ?: run {
+                                // Short pages: a book opened meanwhile waits for one page, not for the whole dictionary
+                                val lines = (0 until book.totalLines step PAGE_LINES).flatMap { start -> repository.getLines(book.id, start, start + PAGE_LINES - 1) }
+                                dictionary.parse(book.id, lines).also { writeCache(file, stamp, it) }
+                            }
+                        }
+                        DictionarySource.INDEX ->
+                            readCache(file, stamp, dictionary) ?: readIndexed(repository, KleiKodeshPack.shipped(assets), dictionary).also { writeCache(file, stamp, it) }
+                        DictionarySource.TEXT ->
+                            dictionary.textEntries(KleiKodeshPack.shipped(assets).texts[dictionary].orEmpty(), idBase = -1L - dictionary.ordinal * TEXT_ID_SPAN)
                     }
                 }
             }.onFailure {
@@ -179,14 +242,30 @@ internal object DictionaryIndex {
         }.toMap()
     }
 
-    private fun readCache(file: File, stamp: String, dictionary: Dictionary, bookId: Long): List<DictionaryEntry>? = runCatching {
+    /** [dictionary]'s books in the library, each entry of Klei Kodesh's index checked against its line. */
+    private suspend fun readIndexed(repository: SeforimRepository, pack: KleiKodeshPack, dictionary: Dictionary): List<DictionaryEntry> {
+        var dropped = 0
+        val entries = pack.books[dictionary].orEmpty().flatMap { (title, headwords) ->
+            val book = titleVariants(title).firstNotNullOfOrNull { repository.getBookByTitle(it) } ?: return@flatMap emptyList()
+            val lines = linesToRead(headwords)
+                .flatMap { range -> (range step PAGE_LINES).flatMap { repository.getLines(book.id, it, minOf(it + PAGE_LINES - 1, range.last)) } }
+                .associateBy { it.lineIndex }
+            val checked = dictionary.indexedEntries(book.id, title, headwords, lines)
+            dropped += checked.dropped
+            checked.entries
+        }
+        Log.i("DictionaryIndex", "${dictionary.name}: ${entries.size} entries matched the library, $dropped of Klei Kodesh's index did not")
+        return entries
+    }
+
+    private fun readCache(file: File, stamp: String, dictionary: Dictionary): List<DictionaryEntry>? = runCatching {
         if (!file.isFile) return null
         val rows = file.readLines()
         if (rows.firstOrNull() != stamp) return null
         rows.drop(1).mapNotNull { row ->
             val p = row.split('\t')
-            if (p.size < 5) return@mapNotNull null
-            DictionaryEntry(p[0], p[1], dictionary, bookId, p[2].toLong(), p[3].toInt(), p[4].toInt())
+            if (p.size < 6) return@mapNotNull null
+            DictionaryEntry(p[0], p[1], dictionary, p[5].toLong(), p[2].toLong(), p[3].toInt(), p[4].toInt())
         }
     }.getOrNull()
 
@@ -198,7 +277,7 @@ internal object DictionaryIndex {
                 w.newLine()
                 fun clean(s: String) = s.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
                 for (e in entries) {
-                    w.write("${clean(e.word)}\t${clean(e.gloss)}\t${e.lineId}\t${e.first}\t${e.last}")
+                    w.write("${clean(e.word)}\t${clean(e.gloss)}\t${e.lineId}\t${e.first}\t${e.last}\t${e.bookId}")
                     w.newLine()
                 }
             }

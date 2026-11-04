@@ -1,0 +1,14 @@
+dictionary.tsv.gz: data of the Home's dictionary card, packed from KleiKodesh/KitveiHakodeshDictionary
+(commit 994c4466d3647856838d431d0577901fe500c729) by scripts/kleikodesh_dictionary.py.
+
+Based on Klei Kodesh — https://kleikodesh.github.io/
+- Their index of the headwords of books in the library (Metzudat Tzion, Malbim's Biur HaMilot, the Mikropedia Talmudit,
+  Machberet Menachem) and their links between synonyms and between spellings of a word (checked by a model, not by a
+  person) are their work, used with their permission.
+- The acronyms (source_kind 2) come from Hebrew Wikipedia, by its contributors, under CC BY-SA
+  (https://creativecommons.org/licenses/by-sa/4.0/), and are distributed under the same licence.
+- The Aramaic-Hebrew dictionary (source_kind 1) is Torat Emet's: Klei Kodesh's developer says they had Torat Emet's
+  permission long ago (2026-11-04). Used with Klei Kodesh's permission, credited to both.
+- The definitions of HaMichlol (source_kind 5), by HaMichlol's contributors, under CC BY-SA as Klei Kodesh's
+  sources.json gives the site's licence (https://www.hamichlol.org.il); we did not check that licence ourselves.
+  Included at the user's decision (2026-11-04) and distributed under the same licence.
