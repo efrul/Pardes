@@ -492,9 +492,14 @@ fun SearchScreen(tabId: String, destination: Destination.Search, wide: Boolean, 
                         UnifiedSearchBar(vm = barVm, actions = barActions, wide = wide, modifier = Modifier.weight(1f), initialText = barText, autoFocus = false)
                     }
                     // Always there, as Google's, even with one category: "הכל" also undoes a kept filter
-                    if (state.tree.isNotEmpty()) {
+                    // The results' categories, then the library's others when the search runs by meaning (desktop tabCategoriesFlow)
+                    val tabCategories = remember(state.tree, state.otherCategories) {
+                        val shown = state.tree.mapTo(HashSet()) { it.category.id }
+                        state.tree + state.otherCategories.filter { it.category.id !in shown }
+                    }
+                    if (tabCategories.isNotEmpty()) {
                         Spacer(Modifier.height(if (compact) 8.dp else 10.dp))
-                        CategoryTabs(state.tree, state.selectedCategoryIds, compact, wide, vm::showOnlyCategory)
+                        CategoryTabs(tabCategories, state.selectedCategoryIds, compact, wide, vm::showOnlyCategory)
                     }
                     Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
                     // Inside one book: the way back to all the results
