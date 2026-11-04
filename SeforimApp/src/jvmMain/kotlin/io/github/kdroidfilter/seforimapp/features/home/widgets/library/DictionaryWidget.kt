@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -60,7 +61,9 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetTitle
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
 import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import io.github.kdroidfilter.seforimapp.logger.infoln
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
+import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -86,6 +89,8 @@ import seforimapp.seforimapp.generated.resources.home_dictionary_open_book
 import seforimapp.seforimapp.generated.resources.home_dictionary_options_title
 import seforimapp.seforimapp.generated.resources.home_dictionary_random
 import seforimapp.seforimapp.generated.resources.home_dictionary_retry
+import seforimapp.seforimapp.generated.resources.home_dictionary_spellings
+import seforimapp.seforimapp.generated.resources.home_dictionary_synonyms
 import seforimapp.seforimapp.generated.resources.home_widget_name_dictionary
 import seforimapp.seforimapp.generated.resources.home_widgets_options
 import java.util.UUID
@@ -94,18 +99,58 @@ import java.util.concurrent.ConcurrentHashMap
 // The library's dictionaries in one card: a word looked up in one of them or in all, its entry read in the card, and
 // opened in its book from there.
 
-/** A dictionary of the library, by its book's [bookTitle]; each one marks its words in its own way (see [parse]). */
+/**
+ * A dictionary: a book of the library, [bookTitle], each one marking its words in its own way (see [parse]); or, from
+ * Klei Kodesh's data ([KleiKodeshPack]), books of the library by their index of headwords, or words with their text
+ * ([attribution] names where it is from).
+ */
 internal enum class Dictionary(
     val bookTitle: String,
     val label: String,
+    val source: DictionarySource = DictionarySource.BOOK,
+    val attribution: String? = null,
 ) {
     ARUKH("ספר הערוך", "הערוך"),
     HAFLAAH("הפלאה שבערכין על ספר הערוך", "הפלאה שבערכין"),
     LAAZEI_RASHI("אוצר לעזי רש\"י", "לעזי רש״י"),
     SHORASHIM("ספר השרשים לרדק", "השרשים לרד״ק"),
+    METZUDAT("מצודת ציון על הנביאים והכתובים", "מצודת ציון", DictionarySource.INDEX),
+    MALBIM("מלבי״ם, ביאור המילות", "ביאור המילות", DictionarySource.INDEX),
+    MIKROPEDIA("מיקרופדיה תלמודית", "מיקרופדיה תלמודית", DictionarySource.INDEX),
+    MENACHEM("מחברת מנחם", "מחברת מנחם", DictionarySource.INDEX),
+    ARAMAIC(
+        "מילון ארמי־עברי",
+        "ארמית",
+        DictionarySource.TEXT,
+        attribution = "המילון הארמי־עברי של תורת אמת, מתוך נתוני כתבי הקודש (כלי קודש), ברשותם",
+    ),
+    WIKIPEDIA(
+        "ויקיפדיה העברית",
+        "ראשי תיבות",
+        DictionarySource.TEXT,
+        attribution = "מתוך ויקיפדיה העברית, בידי כותביה · CC BY-SA",
+    ),
+    MICHLOL(
+        "המכלול",
+        "המכלול",
+        DictionarySource.TEXT,
+        attribution = "מתוך המכלול, בידי תורמיו · CC BY-SA",
+    ),
+    ;
+
+    companion object {
+        /** The dictionary named [name], if it comes from [source]. */
+        fun of(
+            name: String?,
+            source: DictionarySource,
+        ) = entries.find { it.name == name && it.source == source }
+    }
 }
 
-/** A word of [dictionary], the start of its explanation, and its lines in the book, [first] to [last]. */
+/**
+ * A word of [dictionary], the start of its explanation, and its lines in the book, [first] to [last]; or, of no book
+ * ([bookId] -1), its whole [text].
+ */
 @Immutable
 internal data class DictionaryEntry(
     val word: String,
@@ -115,6 +160,7 @@ internal data class DictionaryEntry(
     val lineId: Long,
     val first: Int,
     val last: Int = first,
+    val text: String? = null,
 ) {
     val key = normalizeWord(word.replace(CORRECTED, ""))
 }
@@ -194,6 +240,8 @@ internal fun Dictionary.parse(
                     entry(line, root, body.firstOrNull()?.content.orEmpty()).copy(last = body.lastOrNull()?.lineIndex ?: line.lineIndex)
                 }
             }
+            // Klei Kodesh's: read by their index or from their text, not parsed
+            else -> emptyList()
         }
     return entries.filterNot { it.word.isEmpty() || NOT_A_WORD.containsMatchIn(it.word) }
 }
@@ -238,19 +286,15 @@ private suspend fun readDictionaries(
                 cache[dictionary]?.let { return@mapNotNull dictionary to it }
                 runCatching {
                     withContext(Dispatchers.Default) {
-                        // The repository opens the library DB: never while the card composes, so a DB missing fails here
-                        val repository = graph.repository
-                        repository
-                            .getBookByTitle(dictionary.bookTitle)
-                            ?.let { book ->
-                                // The library DB has one connection, held through each query: read in short
-                                // pages, so a book opened meanwhile waits for one page, not for the whole dictionary
-                                val lines =
-                                    (0 until book.totalLines step PAGE_LINES).flatMap { start ->
-                                        repository.getLines(book.id, start, start + PAGE_LINES - 1)
-                                    }
-                                dictionary.parse(book.id, lines)
-                            }.orEmpty()
+                        when (dictionary.source) {
+                            DictionarySource.BOOK -> readBook(graph.repository, dictionary)
+                            DictionarySource.INDEX -> readIndexed(graph.repository, dictionary)
+                            DictionarySource.TEXT ->
+                                dictionary.textEntries(
+                                    KleiKodeshPack.shipped.texts[dictionary].orEmpty(),
+                                    idBase = -1L - dictionary.ordinal * TEXT_ID_SPAN,
+                                )
+                        }
                     }
                 }.onFailure { if (it is CancellationException) throw it }
                     .getOrNull()
@@ -258,6 +302,51 @@ private suspend fun readDictionaries(
                     ?.let { dictionary to it }
             }.toMap()
     }
+
+// Each text dictionary's entries take ids below -1 - its ordinal * this, apart from the others'
+private const val TEXT_ID_SPAN = 1_000_000L
+
+/** [dictionary]'s book, parsed; none when the library has no such book. The repository opens the library DB. */
+private suspend fun readBook(
+    repository: SeforimRepository,
+    dictionary: Dictionary,
+): List<DictionaryEntry> {
+    val book = repository.getBookByTitle(dictionary.bookTitle) ?: return emptyList()
+    // The library DB has one connection, held through each query: read in short pages, so a book opened meanwhile
+    // waits for one page, not for the whole dictionary
+    val lines = (0 until book.totalLines step PAGE_LINES).flatMap { start -> repository.getLines(book.id, start, start + PAGE_LINES - 1) }
+    return dictionary.parse(book.id, lines)
+}
+
+/** A title as Klei Kodesh's index spells it, and as a library may: באור or ביאור, " or ״. */
+internal fun titleVariants(title: String) =
+    listOf(title, title.replace("באור", "ביאור"), title.replace("ביאור", "באור"))
+        .flatMap { listOf(it, it.replace('"', '״'), it.replace('״', '"')) }
+        .distinct()
+
+/** [dictionary]'s books in the library, each entry of Klei Kodesh's index checked against its line. */
+internal suspend fun readIndexed(
+    repository: SeforimRepository,
+    dictionary: Dictionary,
+): List<DictionaryEntry> {
+    var found = 0
+    var dropped = 0
+    val entries =
+        KleiKodeshPack.shipped.books[dictionary].orEmpty().flatMap { (title, headwords) ->
+            val book = titleVariants(title).firstNotNullOfOrNull { repository.getBookByTitle(it) } ?: return@flatMap emptyList()
+            val lines =
+                linesToRead(headwords)
+                    .flatMap { range ->
+                        (range step PAGE_LINES).flatMap { repository.getLines(book.id, it, minOf(it + PAGE_LINES - 1, range.last)) }
+                    }.associateBy { it.lineIndex }
+            val checked = dictionary.indexedEntries(book.id, title, headwords, lines)
+            found += checked.entries.size
+            dropped += checked.dropped
+            checked.entries
+        }
+    infoln { "[Dictionary] ${dictionary.name}: $found entries matched the library, $dropped of Klei Kodesh's index did not" }
+    return entries
+}
 
 internal object DictionarySettings : WidgetSettings(DictionaryWidget.id) {
     /** The dictionaries searched, ticked in the options page. */
@@ -328,15 +417,24 @@ internal object DictionaryWidget : HomeWidget {
         val failed = needed.filter { read != null && it !in read.orEmpty() }
         val pool = remember(read, needed) { needed.flatMap { read?.get(it).orEmpty() } }
         val query = rememberTextFieldState()
-        val results = remember(pool, query.text) { lookup(pool, query.text.toString()) }
         var opened by remember { mutableStateOf<DictionaryEntry?>(null) }
+        val results = remember(pool, query.text) { lookup(pool, query.text.toString()) }
+        // Klei Kodesh's synonyms and spellings, read with the first dictionary
+        val pack by produceState<KleiKodeshPack?>(null, read != null) {
+            if (read != null) value = withContext(Dispatchers.Default) { KleiKodeshPack.shipped }
+        }
+        val related = remember(pack, query.text) { pack?.related(query.text.toString()).orEmpty() }
+        val pickWord: (String) -> Unit = { word ->
+            query.setTextAndPlaceCursorAtEnd(word)
+            opened = null
+        }
         val accent = rememberAccentColor(JewelTheme.isDark)
         val allLabel = stringResource(Res.string.home_dictionary_all)
 
         PanelCard(modifier) {
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 opened?.let { entry ->
-                    EntryPage(entry, accent, onBack = { opened = null }) {
+                    EntryPage(entry, pack?.related(entry.word).orEmpty(), accent, onPickWord = pickWord, onBack = { opened = null }) {
                         state.openTab(
                             TabsDestination.BookContent(bookId = entry.bookId, tabId = UUID.randomUUID().toString(), lineId = entry.lineId),
                         )
@@ -390,6 +488,8 @@ internal object DictionaryWidget : HomeWidget {
                             }
                         },
                 )
+                // The word typed, as Klei Kodesh relates it to others: one clicked is looked up instead
+                if (related.isNotEmpty() && read != null) RelatedWords(related, pickWord)
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when {
                         read == null && !wanted -> AskRandomWord { wanted = true }
@@ -438,7 +538,7 @@ private fun DictionaryOptionsPage(state: HomeWidgetsState) {
                     modifier = Modifier.weight(1f).testTag("dictionary-option-${dictionary.name}"),
                 )
                 Text(
-                    dictionary.bookTitle,
+                    if (dictionary.source == DictionarySource.BOOK) dictionary.bookTitle else "${dictionary.bookTitle} · כלי קודש",
                     fontSize = 12.sp,
                     color = JewelTheme.globalColors.text.info,
                     maxLines = 1,
@@ -599,13 +699,17 @@ private fun EntryRow(
 @Composable
 private fun EntryPage(
     entry: DictionaryEntry,
+    related: List<RelatedWord>,
     accent: Color,
+    onPickWord: (String) -> Unit,
     onBack: () -> Unit,
     onOpenBook: () -> Unit,
 ) {
     val graph = LocalAppGraph.current
     val lines by produceState(emptyList<Line>(), entry) {
-        value = runCatching { graph.repository.getLines(entry.bookId, entry.first, entry.last) }.getOrDefault(emptyList())
+        if (entry.text == null) {
+            value = runCatching { graph.repository.getLines(entry.bookId, entry.first, entry.last) }.getOrDefault(emptyList())
+        }
     }
     // Back points to where reading came from: the start of the reading direction
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -620,8 +724,11 @@ private fun EntryPage(
             Text(entry.word, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = accent, maxLines = 1, modifier = Modifier.weight(1f))
             Tag(entry.dictionary.label)
         }
+        if (related.isNotEmpty()) RelatedWords(related, onPickWord)
         val textColor = JewelTheme.globalColors.text.normal
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            entry.text?.let { Text(it, fontSize = 14.sp, color = textColor, lineHeight = 22.sp) }
+            entry.dictionary.attribution?.let { Text(it, fontSize = 11.sp, color = JewelTheme.globalColors.text.info) }
             lines.forEach { line ->
                 Text(
                     buildAnnotatedFromHtml(line.content, baseTextSize = 14f, boldColor = accent),
@@ -631,8 +738,46 @@ private fun EntryPage(
                 )
             }
         }
-        OutlinedButton(onClick = onOpenBook, modifier = Modifier.align(Alignment.End)) {
-            Text(stringResource(Res.string.home_dictionary_open_book, entry.dictionary.label))
+        // A word of no book has none to open
+        if (entry.text == null) {
+            OutlinedButton(onClick = onOpenBook, modifier = Modifier.align(Alignment.End)) {
+                Text(stringResource(Res.string.home_dictionary_open_book, entry.dictionary.label))
+            }
+        }
+    }
+}
+
+/** A word's synonyms, then its other spellings, as tags in a row that scrolls; one clicked is looked up. */
+@Composable
+private fun RelatedWords(
+    related: List<RelatedWord>,
+    onPick: (String) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        related.groupBy { it.kind }.forEach { (kind, words) ->
+            Text(
+                stringResource(
+                    if (kind ==
+                        RelationKind.SYNONYM
+                    ) {
+                        Res.string.home_dictionary_synonyms
+                    } else {
+                        Res.string.home_dictionary_spellings
+                    },
+                ),
+                fontSize = 11.sp,
+                color = JewelTheme.globalColors.text.info,
+                modifier = Modifier.padding(horizontal = 2.dp),
+            )
+            words.forEach { related ->
+                Box(Modifier.clickable { onPick(related.word) }.pointerHoverIcon(PointerIcon.Hand).testTag("dictionary-related")) {
+                    Tag(related.word)
+                }
+            }
         }
     }
 }

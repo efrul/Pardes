@@ -352,7 +352,8 @@ abstract class LicenceAssets : DefaultTask() {
  * Desktop's own texts and data the app reads as they are, copied into the APK's assets rather than kept twice:
  * temple_count.txt, the Temple widget's counts explained (desktop composeResources/files, since 0.6.8), and
  * comment-anchors/, where each base book's commentary anchors lead (desktop jvmMain/resources, since 0.6.12: one
- * protobuf table per book, 4 MB in all, read by CommentAnchorTargets).
+ * protobuf table per book, 4 MB in all, read by CommentAnchorTargets), and kleikodesh/, Klei Kodesh's data for the
+ * dictionary card (Pardes desktop jvmMain/resources: dictionary.tsv.gz, 690 KB, read by KleiKodeshPack).
  */
 abstract class DesktopTextAssets : DefaultTask() {
     @get:InputFile
@@ -362,6 +363,10 @@ abstract class DesktopTextAssets : DefaultTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val commentAnchors: DirectoryProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val kleiKodesh: DirectoryProperty
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -373,6 +378,7 @@ abstract class DesktopTextAssets : DefaultTask() {
         dir.mkdirs()
         templeCount.get().asFile.copyTo(dir.resolve("temple_count.txt"))
         commentAnchors.get().asFile.copyRecursively(dir.resolve("comment-anchors"))
+        kleiKodesh.get().asFile.copyRecursively(dir.resolve("kleikodesh"))
     }
 }
 
@@ -388,6 +394,7 @@ androidComponents {
         val desktopTexts = tasks.register<DesktopTextAssets>("${variant.name}DesktopTextAssets") {
             templeCount.set(desktopRoot.resolve("SeforimApp/src/commonMain/composeResources/files/temple_count.txt"))
             commentAnchors.set(desktopRoot.resolve("SeforimApp/src/jvmMain/resources/comment-anchors"))
+            kleiKodesh.set(desktopRoot.resolve("SeforimApp/src/jvmMain/resources/kleikodesh"))
         }
         variant.sources.assets?.addGeneratedSourceDirectory(desktopTexts, DesktopTextAssets::outputDir)
     }
