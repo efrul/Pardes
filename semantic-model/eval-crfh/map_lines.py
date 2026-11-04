@@ -3,8 +3,8 @@ of its near miss, within the tractate (the pardes-semantic-search skill). Their 
 pinned Sefaria export, not ours, so each quote is found again in the tractate's lines, its daf first.
 
     GIT_LFS_SKIP_SMUDGE=1 git clone --filter=blob:none --no-checkout https://github.com/crfh1672/search-queries crfh
-    git -C crfh fetch origin add-berakhot-chagiga readd-existing-datasets
-    for b in add-berakhot-chagiga readd-existing-datasets; do git -C crfh archive origin/$b drafts | tar -x -C data; done
+    git -C crfh fetch origin <the two commits README.md pins>
+    for c in <the two commits>; do git -C crfh archive $c drafts | tar -x -C data; done
     python map_lines.py --db seforim.db --drafts data/drafts --out lines.tsv
 
 lines.tsv holds ids and line ids only: the set has no licence yet, so its questions and quotes stay out of this
