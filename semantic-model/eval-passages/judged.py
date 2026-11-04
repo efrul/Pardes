@@ -99,7 +99,7 @@ def score(spec_path: Path, ranks_paths: list[Path], tokens_path: Path | None) ->
                 only_line = sum(1 for k in ks if first_good(models["line"], k) and not first_good(ranks, k))
                 only_this = sum(1 for k in ks if first_good(ranks, k) and not first_good(models["line"], k))
                 bar = 2 * math.sqrt(only_line + only_this)
-                verdict = ("within the noise" if abs(only_this - only_line) < bar
+                verdict = ("within the noise" if abs(only_this - only_line) < bar or only_this == only_line
                            else "better" if only_this > only_line else "worse")
                 print(f"| {name} | {model} | {only_line} | {only_this} | {bar:.1f} | {verdict} |")
 
