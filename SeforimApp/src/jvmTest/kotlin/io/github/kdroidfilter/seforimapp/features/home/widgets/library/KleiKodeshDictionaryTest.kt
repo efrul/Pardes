@@ -50,7 +50,9 @@ class KleiKodeshDictionaryTest {
                 .flatMap { it.keys }
                 .none { it == "ספר הערוך" },
         )
-        assertTrue(pack.texts[Dictionary.WIKIPEDIA].orEmpty().size > 600)
+        assertEquals(673, pack.texts[Dictionary.WIKIPEDIA].orEmpty().size)
+        assertEquals(7_605, pack.texts[Dictionary.ARAMAIC].orEmpty().size)
+        assertEquals(5_597, pack.texts[Dictionary.MICHLOL].orEmpty().size)
         assertTrue(pack.related("כעס").any { it.kind == RelationKind.SYNONYM })
     }
 

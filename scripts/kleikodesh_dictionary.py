@@ -1,7 +1,7 @@
 """Packs Klei Kodesh's dictionary data (Based on Klei Kodesh - https://kleikodesh.github.io/) for the Home's dictionary
 card: SeforimApp/src/jvmMain/resources/kleikodesh/dictionary.tsv.gz, which Android copies into its assets.
 
-    python3 -I scripts/kleikodesh_dictionary.py <clone of KleiKodesh/KitveiHakodeshDictionary> [--michlol]
+    python3 -I scripts/kleikodesh_dictionary.py <clone of KleiKodesh/KitveiHakodeshDictionary>
 
 Read as data, none of the clone's scripts run. What it takes (its owners allowed Pardes to use their material):
 - their headword index of books our library has (source/seforim_headword.tsv, titles in seforim_headword_book.tsv):
@@ -10,15 +10,18 @@ Read as data, none of the clone's scripts run. What it takes (its owners allowed
   its own library's line and drops the ones that don't match (KleiKodeshDictionary.kt).
 - their links between words of kind 1 (נרדף) and 2 (כתיב), checked by a model, not by a person; the ones to a word
   they no longer have are left out.
-- the acronyms of Hebrew Wikipedia (source_kind 2, CC BY-SA, Hebrew Wikipedia contributors) and, with --michlol, the
-  definitions of HaMichlol (source_kind 5, CC BY-SA by their sources.json, not re-checked). Nothing of Otzaria's lists
-  or of a source whose origin is unknown. HaMichlol waits for its licence to be checked (2026-11-04): the shipped pack
-  is made without --michlol (resources/kleikodesh/NOTICE.txt says what adding it takes).
+- their Aramaic-Hebrew dictionary (source_kind 1, 7,605 senses; its origin is not recorded, and their permission covers
+  it: the user's word, 2026-11-04).
+- the acronyms of Hebrew Wikipedia (source_kind 2, CC BY-SA, Hebrew Wikipedia contributors) and the definitions of
+  HaMichlol (source_kind 5, CC BY-SA by their sources.json, HaMichlol contributors; included at the user's word,
+  2026-11-04, with Klei Kodesh's permission). Nothing of Otzaria's lists (source_kind 9, 11) nor of the other sources
+  whose origin is unknown (3, 4, 6, 7, 8, 10).
 
 Rows, tab separated, by their first field:
   B  dictionary  book title                  (the books, numbered from 0 in their order)
   E  book number  line index  headword        (an entry of a book's line)
-  S  dictionary  headword  text               (an entry with its own text, of no book)
+  S  dictionary  headword  text               (an entry with its own text, of no book; the headword with its
+                                                 niqqud when the source gives it)
   L  kind  word  target                       (1: synonym, 2: another spelling or form)
 """
 
@@ -32,7 +35,7 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent.parent / "SeforimApp/src/jvmMain/resources/kleikodesh/dictionary.tsv.gz"
 SOURCES = {"metzudat": "METZUDAT", "malbim": "MALBIM", "micropedia": "MIKROPEDIA", "menachem": "MENACHEM"}
-SENSES = {"source_02.tsv": "WIKIPEDIA", "source_05.tsv": "MICHLOL"}
+SENSES = {"source_01.tsv": "ARAMAIC", "source_02.tsv": "WIKIPEDIA", "source_05.tsv": "MICHLOL"}
 KINDS = {"1", "2"}
 
 csv.field_size_limit(sys.maxsize)
@@ -50,7 +53,6 @@ def field(text):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("clone", type=Path)
-    p.add_argument("--michlol", action="store_true", help="HaMichlol's definitions too")
     p.add_argument("--out", type=Path, default=OUT)
     a = p.parse_args()
     src = a.clone / "source"
@@ -73,10 +75,8 @@ def main():
         counts[dictionary[book]] += 1
 
     for name, key in SENSES.items():
-        if key == "MICHLOL" and not a.michlol:
-            continue
         for r in read(src / "senses" / name):
-            word, text = field(r["headword"]), field(r["text"])
+            word, text = field(r["nikud"]) or field(r["headword"]), field(r["text"])
             if word and text:
                 rows.append(("S", key, word, text))
                 counts[key] += 1
