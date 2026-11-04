@@ -44,7 +44,16 @@ model for Pardes; the app loads the legacy model only when `SEFORIM_MODEL_DIR` p
   through `Eval.kt`/`Cands.kt` and `eval-real/level_order.py` (BENCHMARK.md, section 7). The HNSW graph misses about a
   quarter of the exact first ten in searches over all books with short queries (0.99 over the base books): known, not
   fixed by a larger k, `SeededKnnVectorQuery` or M 32. An ideal index (`ExactCands.kt`) does not improve the judged
-  pages, and finds 2% more of the held-out questions' targets.
+  pages, and finds 2% more of the held-out questions' targets. A cause found on 2026-11-04: identical lines (a heading
+  repeated hundreds of times, "הפרדס לרש"י הלכ' שבת" in קובץ שיטות קמאי, "סעיף קטן נח" in כף החיים) share one vector,
+  each the others' neighbors, and a walk that enters such a cluster can't leave it: `vec` returns 33 of 150 for "שבת",
+  "יין נסך" and "חמץ בפסח" (all identical). With a books filter Lucene then falls back to an exact search of the whole
+  filter (0.4 to 1 s in תלמוד or הלכה). The fix is an index with each text once (SEMANTIC_SEARCH.md, known limitations).
+- A filtered search keeping few vectors (at most `EXACT_LIMIT` and one in `EXACT_SHARE` of the field's) is exact in
+  `IndependentSemanticSearch.searchField`: Lucene's filtered graph search is slower there and misses some. Lucene's own
+  exact search needs `--add-modules jdk.incubator.vector` for SIMD (3 to 5 times faster); the app's JVM doesn't pass it.
+- Java in the cloud container reads Hebrew command-line arguments as `?` (POSIX locale): give a harness its queries in a
+  file, and `-Dstdout.encoding=UTF-8` for its output.
 - The lexical side throws `TooManyNestedClauses` on some long queries (a 12-word Gemara quote, 5 held-out
   questions): `Cands.kt` and `ExactCands.kt` record it in `errors`; `Eval.kt` stops there.
 - Publishing a pack: `package_pack.py` (SeforimLibrary's bundle format, so the app's `BundleManifest` and
