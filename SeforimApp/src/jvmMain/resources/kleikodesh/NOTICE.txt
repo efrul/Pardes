@@ -7,8 +7,8 @@ Based on Klei Kodesh — https://kleikodesh.github.io/
   person) are their work, used with their permission.
 - The acronyms (source_kind 2) come from Hebrew Wikipedia, by its contributors, under CC BY-SA
   (https://creativecommons.org/licenses/by-sa/4.0/), and are distributed under the same licence.
-
-Not in it: HaMichlol's definitions (source_kind 5, 5,597), until their licence is checked (the user's decision,
-2026-11-04: their sources.json says CC BY-SA, not re-checked, and HaMichlol may reserve its editors' own text). Once it
-is, pack with --michlol and add MICHLOL to Dictionary (DictionarySource.TEXT, with its attribution) on desktop and
-Android, and credit it in the licences.
+- The Aramaic-Hebrew dictionary (source_kind 1) is Torat Emet's: Klei Kodesh's developer says they had Torat Emet's
+  permission long ago (2026-11-04). Used with Klei Kodesh's permission, credited to both.
+- The definitions of HaMichlol (source_kind 5), by HaMichlol's contributors, under CC BY-SA as Klei Kodesh's
+  sources.json gives the site's licence (https://www.hamichlol.org.il); we did not check that licence ourselves.
+  Included at the user's decision (2026-11-04) and distributed under the same licence.

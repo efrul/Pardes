@@ -356,7 +356,7 @@ abstract class LicenceAssets : DefaultTask() {
  * temple_count.txt, the Temple widget's counts explained (desktop composeResources/files, since 0.6.8), and
  * comment-anchors/, where each base book's commentary anchors lead (desktop jvmMain/resources, since 0.6.12: one
  * protobuf table per book, 4 MB in all, read by CommentAnchorTargets), and kleikodesh/, Klei Kodesh's data for the
- * dictionary card (Pardes desktop jvmMain/resources: dictionary.tsv.gz, 400 KB, read by KleiKodeshPack).
+ * dictionary card (Pardes desktop jvmMain/resources: dictionary.tsv.gz, 690 KB, read by KleiKodeshPack).
  */
 abstract class DesktopTextAssets : DefaultTask() {
     @get:InputFile

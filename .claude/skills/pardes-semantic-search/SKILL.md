@@ -137,9 +137,11 @@ path, line), `split` and `verified_by_human`; each book pins its otzaria-library
 
 [KleiKodesh/KleiKodeshProject](https://github.com/KleiKodesh/KleiKodeshProject) (AGPL v3) reads the same `seforim.db`.
 Its owners allowed Pardes to use its material (2026-11-03); credit it as "Based on Klei Kodesh —
-https://kleikodesh.github.io/" and in `TRAINING_PLAN.md`'s licence table. Whether that covers what they took from
-elsewhere is still being checked (the user asks them): until then such data keeps the source's licence, so check each
-in their `sources.json`. `TRAINING_PLAN.md` › שלב 2 has the classification.
+https://kleikodesh.github.io/" and in `TRAINING_PLAN.md`'s licence table. Their Aramaic-Hebrew dictionary is Torat
+Emet's: by what Klei Kodesh's developer wrote (2026-11-04), Klei Kodesh received Torat Emet's permission long ago, a
+permission given to Klei Kodesh and not said to extend to others, and the user decided to train on it (credit both,
+`NOTICE.md`). Anything else they took from elsewhere keeps its source's licence, so check each in their
+`sources.json`. `TRAINING_PLAN.md` › שלב 2 has the classification.
 - **Reading it:** the GitHub API answers 403 for it here; `git clone --depth 1 --filter=blob:none --sparse` works. The two
   DBs are `KitveiHakodesh/CSharpBackend/KitveiHakodesh.Core/Dictionary/Dictionary.db` (built by the public
   `KleiKodesh/KitveiHakodeshDictionary`: TSVs in `source/`, `sources.json`) and
@@ -150,11 +152,11 @@ in their `sources.json`. `TRAINING_PLAN.md` › שלב 2 has the classification.
   2026-11-03): their headword index (`source/seforim_headword.tsv`: source, their book id, line index in the book,
   headword; titles in `seforim_headword_book.tsv`; Aruch 8,611, Mikropedia Talmudit 3,907, Metzudat Tzion 20,541, Malbim
   Biur HaMilot 13,549, Machberet Menachem 1,607), their own work over our library's text, and the Aramaic-Hebrew
-  dictionary (source_kind 1, 7,605 senses). Its owner allowed the dictionary (2026-11-03), but its origin is not recorded
-  (Torat Emet's `FinalDictionary.txt` by our check; their `sources.json` calls it an early Peshita list, yet it shares
-  only 497 headwords and no sense with source_kind 11), and whether their permission covers it is being checked:
-  until then its `DICT-ARAMAIC` pairs stay out of a run (`--aramaic 0`: 9,786 pairs instead of 23,293). A word is swapped for its meaning inside a library line, which
-  stays the positive. Every model trained on these pairs carries the credit in `NOTICE.md`.
+  dictionary (source_kind 1, 7,605 senses), Torat Emet's `FinalDictionary.txt` (our check, and Klei Kodesh's developer
+  on 2026-11-04; their `sources.json` calls it an early Peshita list, yet it shares only 497 headwords and no sense with
+  source_kind 11): by the user's decision (2026-11-04) its 13,507 `DICT-ARAMAIC` pairs go into run 3 (`--aramaic 0`
+  leaves them out: 9,786 pairs instead of 23,293). A word is swapped for its meaning inside a library line, which stays
+  the positive. Every model trained on these pairs carries the credit in `NOTICE.md`.
 - **Not for training:** Otzaria's lists (9, 11, and the 1,050 `otzaria-aramaic` bridge rows of
   `expansion-routed.db`) are forbidden. `expansion-routed.db` is word level (folds, inflections, synonyms): query
   expansion, the regular search's session; BHSA in it is CC BY-NC.
