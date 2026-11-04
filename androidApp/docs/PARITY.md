@@ -229,6 +229,14 @@ Ported on 2026-11-03 from Pardes desktop (`722af18`, docs/LEXICON.md):
 - **When:** desktop's warm-up waits for the build; here the engine opens on the first search, so `search/SearchService.kt` asks for the file before it reads the library key, which holds the file's inode: after a library install or update the first searches read lexical.db while the copy is built in the background, and the first search after it ends reopens the engine with it.
 - **Not tested on a device:** compiled only (the container had no room for the emulator next to the library); the derivation is desktop's, tested there (`PardesLexiconTest`) and measured on the October 2026 library.
 
+## Pardes desktop's dictionaries from Klei Kodesh's data
+
+Ported on 2026-11-04 from Pardes desktop (`66ae16e`):
+- **Five more dictionaries in the card:** מצודת ציון (31 books), ביאור המילות of the Malbim (15 books), the מיקרופדיה תלמודית and מחברת מנחם, by Klei Kodesh's index of their headwords in the library's books; and Hebrew Wikipedia's acronyms (673, CC BY-SA, credited in the entry and in Settings › רישיונות), words with their text and no book to open. Each indexed entry is checked against the line of the library it names (the index was built on another Otzaria library): one whose line doesn't hold its headword is left out, and counted in the log (`DictionaryIndex`).
+- **A word's synonyms and other spellings** (Klei Kodesh's links of kind נרדף and כתיב, checked by a model) above the results for the word typed and in its entry, as tags; one tapped is looked up.
+- **The data:** desktop's `resources/kleikodesh/dictionary.tsv.gz` (400 KB, packed by `scripts/kleikodesh_dictionary.py`), copied into the APK's assets by `DesktopTextAssets`, not kept twice. `data/KleiKodeshDictionary.kt` ports desktop's `KleiKodeshDictionary.kt` but for reading the pack from the assets; the parsed entries go to the disk cache with the others (v3, which keeps each entry's book).
+- **Tested:** `data/KleiKodeshDictionaryTest.kt`, as desktop's.
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)
