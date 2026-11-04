@@ -81,7 +81,7 @@ Or `colab.ipynb`. Measure every candidate with `embed_corpus.py --corpus` + `eva
 the same benchmark, and on the real searches with `push pool` (`semantic-model/eval-pool/`), before choosing; export the
 chosen one with its `--hybrid-dense-weight`.
 
-The next run (teacher 3 and student 3: two teachers, Chavruta, the dictionary, chosen by `eval-crfh/`) is planned in
+The next run (teacher 3 and student 3: one teacher on Chavruta and the dictionary, judged by `eval-crfh/`) is planned in
 `semantic-model/RUN3_PLAN.md`, with its commands; `eval-pool/kernel_spec.py` takes the last `pool.json` out of the pool
 kernel's script (`kaggle kernels pull`).
 
