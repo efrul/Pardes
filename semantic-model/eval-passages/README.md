@@ -49,7 +49,9 @@ python eval-passages/judged.py score build/passages/judged.json build/passages/j
 python eval-passages/quotes.py score build/passages/quotes.json build/passages/quotes/ranks-*.json
 ```
 
-הכול במעבד. כאן, ב־4 ליבות: crfh בשתי דקות, השורות השפוטות והציטוטים בדקות ספורות עד כחצי שעה, לפי אורך השורות.
+הכול במעבד. כאן, ב־4 ליבות: crfh בשתי דקות, המדגם של `lengths.py` בשבע דקות, השורות השפוטות בכחצי שעה (69,158 טקסטים,
+רובם משפטים), והציטוטים בשעתיים (99,614 טקסטים: המצטטים הם שורות ארוכות). הסריקה של `quotes.py spec` עוברת על כל
+הספרייה פעם אחת, בכרבע שעה.
 
 **התוצאות:** [`results.md`](results.md).
 
