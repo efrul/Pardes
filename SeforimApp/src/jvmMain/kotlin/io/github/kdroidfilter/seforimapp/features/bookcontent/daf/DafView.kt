@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.LocalTextContextMenu
 import androidx.compose.foundation.text.TextContextMenu
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
@@ -71,12 +72,15 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocalLocatedSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocatedSelection
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Amud
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.TocNumber
@@ -252,6 +256,7 @@ fun DafView(
     onSelectPassage: (lineId: Long, commentIds: Set<Long>, commentBookIds: Set<Long>) -> Unit,
     onContextLine: (lineId: Long) -> Unit,
     modifier: Modifier = Modifier,
+    onWordInText: (DafAnchor) -> Unit = {},
 ) {
     val graph = LocalAppGraph.current
     // Next to the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another one
@@ -295,6 +300,7 @@ fun DafView(
                     onSelectLine = onSelectLine,
                     onSelectPassage = onSelectPassage,
                     onContextLine = onContextLine,
+                    onWordInText = onWordInText,
                 )
         }
     }
@@ -326,6 +332,7 @@ private fun DafPages(
     onSelectLine: (Long, Boolean) -> Unit,
     onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
     onContextLine: (Long) -> Unit,
+    onWordInText: (DafAnchor) -> Unit,
 ) {
     val graph = LocalAppGraph.current
     val density = LocalDensity.current
@@ -522,6 +529,7 @@ private fun DafPages(
                                 review = review,
                                 onMark = onMark,
                                 onOpenReviews = onOpenReviews,
+                                onWordInText = onWordInText,
                                 modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
                             )
                         }
@@ -560,6 +568,7 @@ private fun AmudItem(
     review: DafReviewFile?,
     onMark: (DafMark) -> Unit,
     onOpenReviews: () -> Unit,
+    onWordInText: (DafAnchor) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
@@ -579,10 +588,45 @@ private fun AmudItem(
     // The page's comments and the Gemara lines they are on, read once for the page
     val links by produceState<DafAmudLinks?>(null, book.id, shown) { value = loadLinks(graph.repository, book.id, shown) }
     val reviewed = remember(amud, review) { review?.let { reviewColors(amud, it) }.orEmpty() }
+    // The user's highlights and notes, kept in the library's text, on the words they are on (DafAnchors.kt): the
+    // highlights of the page's books, the notes of the main book (the text's notes are its own)
+    val highlightStore = graph.highlightStore
+    val noteStore = graph.noteStore
+    val anchorBooks =
+        remember(links) {
+            links
+                ?.anchors
+                ?.values
+                ?.mapTo(HashSet()) { it.bookId }
+                .orEmpty()
+        }
+    LaunchedEffect(anchorBooks) { anchorBooks.forEach { highlightStore.loadBook(it) } }
+    LaunchedEffect(book.id) { noteStore.loadBook(book.id) }
+    val highlightsByBook by highlightStore.highlightsByBook.collectAsState()
+    val notesByBook by noteStore.notesByBook.collectAsState()
+    val userColors =
+        remember(links, highlightsByBook) { links?.let { highlightedWords(it.anchors, highlightsByBook, USER_HIGHLIGHT_ALPHA) }.orEmpty() }
+    val noted =
+        remember(links, notesByBook, book.id) { links?.let { notedWords(it.anchors, notesByBook[book.id].orEmpty(), book.id) }.orEmpty() }
     val highlight =
-        remember(links, marked, passage, color, reviewed) {
+        remember(links, marked, passage, color, reviewed, userColors) {
             val selected = dafHighlight(links, marked, passage, color)
-            if (reviewed.isEmpty()) selected else DafHighlight { word -> selected.colorOf(word) ?: reviewed[word.line] }
+            if (reviewed.isEmpty() && userColors.isEmpty()) {
+                selected
+            } else {
+                DafHighlight { word -> selected.colorOf(word) ?: userColors[word] ?: reviewed[word.line] }
+            }
+        }
+    // The selection located in the library, for the text's menu: its highlights, its note and its link
+    val currentRange by rememberUpdatedState(range)
+    val currentLinks by rememberUpdatedState(links)
+    val located: () -> LocatedSelection? =
+        remember(shown, book.id) {
+            {
+                val r = currentRange
+                val l = currentLinks
+                if (r == null || l == null) null else locate(shown, r, l.anchors, book.id) { w -> l.segmentOf(w) }
+            }
         }
     val copyToClipboard = rememberCopyToClipboard()
     val menuState = remember { ContextMenuState() }
@@ -607,28 +651,36 @@ private fun AmudItem(
                         if (review == null || line == null) emptyList() else reviewItems(amud, line, review, labels, onMark, onOpenReviews)
                     },
                 ) {
-                    LocalTextContextMenu.current.Area(manager, menuState) {
-                        DafAmudText(
-                            layout = laidOut,
-                            k = perPoint / LAYOUT_SCALE,
-                            gemara = gemara,
-                            rashi = rashi,
-                            ink = ink,
-                            highlight = highlight,
-                            range = range,
-                            selectionColor = LocalTextSelectionColors.current.backgroundColor,
-                            onRange = onRange,
-                            onWordClick = { word, withModifier ->
-                                links?.let { clickOn(it, word, withModifier, onSelectLine, onSelectPassage) }
-                            },
-                            onContextWord = { word ->
-                                contextLine = word.line
-                                links?.segmentOf(word)?.let(onContextLine)
-                            },
-                            onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
-                            onPress = onPress,
-                            markUnsure = markUnsure,
-                        )
+                    CompositionLocalProvider(LocalLocatedSelection provides located) {
+                        LocalTextContextMenu.current.Area(manager, menuState) {
+                            DafAmudText(
+                                layout = laidOut,
+                                k = perPoint / LAYOUT_SCALE,
+                                gemara = gemara,
+                                rashi = rashi,
+                                ink = ink,
+                                highlight = highlight,
+                                range = range,
+                                selectionColor = LocalTextSelectionColors.current.backgroundColor,
+                                onRange = onRange,
+                                onWordClick = { word, withModifier ->
+                                    links?.let { l ->
+                                        clickOn(l, word, withModifier, onSelectLine, onSelectPassage)
+                                        // The word itself in the text, where it is in its line
+                                        l.anchors[word]?.takeIf { it.bookId == book.id }?.let(onWordInText)
+                                    }
+                                },
+                                onContextWord = { word ->
+                                    contextLine = word.line
+                                    links?.segmentOf(word)?.let(onContextLine)
+                                },
+                                onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
+                                onPress = onPress,
+                                markUnsure = markUnsure,
+                                underlined = noted,
+                                underlineColor = JewelTheme.globalColors.text.info,
+                            )
+                        }
                     }
                 }
             }
@@ -908,9 +960,26 @@ private suspend fun loadLinks(
             .filter { it.connectionType == ConnectionType.SOURCE && it.targetBookId == bookId }
             .groupBy({ it.sourceLineId }, { it.targetLineId })
             .mapValues { (_, ids) -> ids.toSet() }
-    val books = runSuspendCatching { repository.getLinesByIds(comments) }.getOrDefault(emptyList()).associate { it.id to it.bookId }
-    return withContext(Dispatchers.Default) { DafAmudLinks(amud, bases, books) }
+    // The page's library lines, the Gemara's and the comments', for the comments' books and the words' places in them
+    val lines =
+        runSuspendCatching {
+            repository.getLinesByIds(
+                amud.lines.flatMapTo(LinkedHashSet()) { it.lineIds },
+            )
+        }.getOrDefault(emptyList())
+    val books = lines.filter { it.id in comments }.associate { it.id to it.bookId }
+    return withContext(Dispatchers.Default) {
+        val texts =
+            lines.associate { line ->
+                line.id to
+                    LibraryLine(line.bookId, line.lineIndex, buildAnnotatedFromHtml(line.content, baseTextSize = 16f, boldScale = 1f).text)
+            }
+        DafAmudLinks(amud, bases, books, anchorsOf(amud, texts))
+    }
 }
+
+/** How strong a user's highlight is behind the daf's words, as behind the text's (applyUserHighlights). */
+private const val USER_HIGHLIGHT_ALPHA = 0.4f
 
 /** How strong each mark is: the passage selected, the segments selected, the comments on them. */
 private const val PASSAGE_ALPHA = 0.32f

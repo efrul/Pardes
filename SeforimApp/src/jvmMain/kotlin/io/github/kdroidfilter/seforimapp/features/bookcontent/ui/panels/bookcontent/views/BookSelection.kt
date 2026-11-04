@@ -36,6 +36,8 @@ import io.github.kdroidfilter.seforim.htmlparser.HtmlImageContentBuilder
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.core.annotations.LineHighlightRange
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
+import io.github.kdroidfilter.seforimapp.core.presentation.text.createOriginalToStrippedMap
+import io.github.kdroidfilter.seforimapp.core.presentation.text.mapOriginalToStripped
 import io.github.kdroidfilter.seforimapp.core.presentation.text.stripNikudTeamimWithMap
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
@@ -93,6 +95,13 @@ class BookSelection {
 
     fun clear() {
         range = null
+        resolved = null
+    }
+
+    /** Pardes: selects [range], as a press at its start and a Shift+press at its end would (the daf's word clicked). */
+    fun select(range: ClosedRange<TextPoint>) {
+        pressedAt = range.start
+        this.range = range
         resolved = null
     }
 
@@ -326,6 +335,29 @@ fun highlightRangesOf(
         val to = toOriginal.getOrElse(selected.last + 1) { original.length }
         if (to > from) LineHighlightRange(line.id, from until to) else null
     }
+
+/**
+ * Pardes: selects the characters [start] until [end] of [line] (its plain text with diacritics, as highlights are
+ * kept), at the offsets of its text as displayed in [diacritics]: the daf's word clicked, in the text.
+ */
+suspend fun BookSelection.selectInLine(
+    line: Line,
+    start: Int,
+    end: Int,
+    diacritics: DiacriticsMode,
+) {
+    val (from, to) =
+        withContext(Dispatchers.Default) {
+            if (diacritics == DiacriticsMode.All) {
+                start to end
+            } else {
+                val original = buildAnnotatedFromHtml(line.content, baseTextSize = 16f, boldScale = 1f).text
+                val map = createOriginalToStrippedMap(original, diacritics)
+                mapOriginalToStripped(start, map) to mapOriginalToStripped(end, map)
+            }
+        }
+    if (to > from) select(TextPoint(line.lineIndex, from)..TextPoint(line.lineIndex, to))
+}
 
 /** The text of a line as the book view displays it, which a selection's offsets index. */
 internal fun displayedLineText(
