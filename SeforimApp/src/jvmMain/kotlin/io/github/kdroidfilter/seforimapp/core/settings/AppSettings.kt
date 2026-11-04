@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import java.util.concurrent.ConcurrentHashMap
 import java.util.prefs.Preferences
 
@@ -34,6 +35,23 @@ class AppSettings(
     // StateFlow to observe text size changes
     private val _textSizeFlow = MutableStateFlow(getTextSize())
     val textSizeFlow: StateFlow<Float> = _textSizeFlow.asStateFlow()
+
+    // The daf's own zoom: its pages' width, over the view's at 1
+    private val _dafZoomFlow = MutableStateFlow(getDafZoom())
+    val dafZoomFlow: StateFlow<Float> = _dafZoomFlow.asStateFlow()
+
+    // Whether the daf draws lighter the lines its alignment is not sure of (to check the layouts; off, as printed)
+    private val _dafMarkUnsureFlow = MutableStateFlow(isDafMarkUnsureEnabled())
+    val dafMarkUnsureFlow: StateFlow<Boolean> = _dafMarkUnsureFlow.asStateFlow()
+
+    // The daf's review: its lines marked right or wrong, for pardes-rashi-ocr (DafReview.kt)
+    private val _dafReviewFlow = MutableStateFlow(isDafReviewEnabled())
+    val dafReviewFlow: StateFlow<Boolean> = _dafReviewFlow.asStateFlow()
+
+    // The tabs whose reading view shows a daf now, each with its views' count (a tab dragged to another window is
+    // composed there before it leaves this one): the zoom keys, buttons and menu zoom their daf, not the text
+    private val _dafViewsFlow = MutableStateFlow(emptyMap<String, Int>())
+    val dafViewsFlow: StateFlow<Map<String, Int>> = _dafViewsFlow.asStateFlow()
 
     // StateFlow to observe line height changes
     private val _lineHeightFlow = MutableStateFlow(getLineHeight())
@@ -66,6 +84,10 @@ class AppSettings(
     // StateFlow for the automatic update check setting
     private val _autoUpdateCheckFlow = MutableStateFlow(isAutoUpdateCheckEnabled())
     val autoUpdateCheckFlow: StateFlow<Boolean> = _autoUpdateCheckFlow.asStateFlow()
+
+    // Pardes: feedback mode, the search results' grade buttons (SearchFeedbackStore)
+    private val _searchFeedbackFlow = MutableStateFlow(isSearchFeedbackEnabled())
+    val searchFeedbackFlow: StateFlow<Boolean> = _searchFeedbackFlow.asStateFlow()
 
     private val _homeWidgetsLayoutFlow = MutableStateFlow(settings.getStringOrNull(KEY_HOME_WIDGETS_LAYOUT))
     val homeWidgetsLayoutFlow: StateFlow<String?> = _homeWidgetsLayoutFlow.asStateFlow()
@@ -106,6 +128,13 @@ class AppSettings(
 
     private val _sourceFontCodeFlow = MutableStateFlow(getSourceFontCode())
     val sourceFontCodeFlow: StateFlow<String> = _sourceFontCodeFlow.asStateFlow()
+
+    // The daf view's fonts: the Gemara's, and Rashi's and Tosafot's
+    private val _dafGemaraFontCodeFlow = MutableStateFlow(getDafGemaraFontCode())
+    val dafGemaraFontCodeFlow: StateFlow<String> = _dafGemaraFontCodeFlow.asStateFlow()
+
+    private val _dafCommentaryFontCodeFlow = MutableStateFlow(getDafCommentaryFontCode())
+    val dafCommentaryFontCodeFlow: StateFlow<String> = _dafCommentaryFontCodeFlow.asStateFlow()
 
     // Find-in-page state (scoped per tab, not persisted)
     private val findQueryFlowByTab = mutableMapOf<String, MutableStateFlow<String>>()
@@ -210,6 +239,62 @@ class AppSettings(
         setTextSize(newSize)
     }
 
+    fun getDafZoom(): Float = settings[KEY_DAF_ZOOM, DEFAULT_DAF_ZOOM].coerceIn(MIN_DAF_ZOOM, MAX_DAF_ZOOM)
+
+    fun setDafZoom(zoom: Float) {
+        val value = zoom.coerceIn(MIN_DAF_ZOOM, MAX_DAF_ZOOM)
+        settings[KEY_DAF_ZOOM] = value
+        _dafZoomFlow.value = value
+    }
+
+    fun isDafMarkUnsureEnabled(): Boolean = settings[KEY_DAF_MARK_UNSURE, false]
+
+    fun setDafMarkUnsureEnabled(enabled: Boolean) {
+        settings[KEY_DAF_MARK_UNSURE] = enabled
+        _dafMarkUnsureFlow.value = enabled
+    }
+
+    fun isDafReviewEnabled(): Boolean = settings[KEY_DAF_REVIEW, false]
+
+    fun setDafReviewEnabled(enabled: Boolean) {
+        settings[KEY_DAF_REVIEW] = enabled
+        _dafReviewFlow.value = enabled
+    }
+
+    /** The reading view of [tabId] shows a daf, until [dafHidden]. */
+    fun dafShown(tabId: String) {
+        _dafViewsFlow.update { views -> views + (tabId to (views[tabId] ?: 0) + 1) }
+    }
+
+    fun dafHidden(tabId: String) {
+        _dafViewsFlow.update { views ->
+            val left = (views[tabId] ?: 0) - 1
+            if (left > 0) views + (tabId to left) else views - tabId
+        }
+    }
+
+    fun showsDaf(tabId: String): Boolean = tabId in _dafViewsFlow.value
+
+    /** Zooms in the reading view of [tabId]: its daf to the next of [DAF_ZOOM_LEVELS] when it shows one, else the text. */
+    fun zoomIn(tabId: String) {
+        if (showsDaf(tabId)) {
+            val zoom = getDafZoom()
+            setDafZoom(DAF_ZOOM_LEVELS.firstOrNull { it > zoom + ZOOM_LEVEL_SLACK } ?: MAX_DAF_ZOOM)
+        } else {
+            increaseTextSize()
+        }
+    }
+
+    /** Zooms out the reading view of [tabId], as [zoomIn]. */
+    fun zoomOut(tabId: String) {
+        if (showsDaf(tabId)) {
+            val zoom = getDafZoom()
+            setDafZoom(DAF_ZOOM_LEVELS.lastOrNull { it < zoom - ZOOM_LEVEL_SLACK } ?: MIN_DAF_ZOOM)
+        } else {
+            decreaseTextSize()
+        }
+    }
+
     // Max commentators per commentaries page (0 = automatic). Stored value is clamped to the
     // supported range so a stale or out-of-range persisted value can never break the grid.
     fun getMaxCommentatorsPerPage(): Int =
@@ -263,6 +348,20 @@ class AppSettings(
         _targumFontCodeFlow.value = code
     }
 
+    fun getDafGemaraFontCode(): String = settings[KEY_FONT_DAF_GEMARA, DEFAULT_DAF_GEMARA_FONT]
+
+    fun setDafGemaraFontCode(code: String) {
+        settings[KEY_FONT_DAF_GEMARA] = code
+        _dafGemaraFontCodeFlow.value = code
+    }
+
+    fun getDafCommentaryFontCode(): String = settings[KEY_FONT_DAF_COMMENTARY, DEFAULT_DAF_COMMENTARY_FONT]
+
+    fun setDafCommentaryFontCode(code: String) {
+        settings[KEY_FONT_DAF_COMMENTARY] = code
+        _dafCommentaryFontCodeFlow.value = code
+    }
+
     fun getSourceFontCode(): String = settings[KEY_FONT_SOURCE, DEFAULT_SOURCE_FONT]
 
     fun setSourceFontCode(code: String) {
@@ -308,6 +407,14 @@ class AppSettings(
 
     fun setSemanticPackPromptEnabled(enabled: Boolean) {
         settings[KEY_SEMANTIC_PACK_PROMPT] = enabled
+    }
+
+    // Pardes: whether each search result shows the buttons that grade it, for training the semantic search (off at first)
+    fun isSearchFeedbackEnabled(): Boolean = settings[KEY_SEARCH_FEEDBACK, false]
+
+    fun setSearchFeedbackEnabled(enabled: Boolean) {
+        settings[KEY_SEARCH_FEEDBACK] = enabled
+        _searchFeedbackFlow.value = enabled
     }
 
     /** Writes the settings to disk now (Java preferences do it within 30 s otherwise), before a step that relies on them. */
@@ -610,6 +717,9 @@ class AppSettings(
     fun clearAll() {
         settings.clear()
         _textSizeFlow.value = DEFAULT_TEXT_SIZE
+        _dafZoomFlow.value = DEFAULT_DAF_ZOOM
+        _dafMarkUnsureFlow.value = false
+        _dafReviewFlow.value = false
         _lineHeightFlow.value = DEFAULT_LINE_HEIGHT
         _maxCommentatorsPerPageFlow.value = DEFAULT_MAX_COMMENTATORS_PER_PAGE
         _closeTreeOnNewBookFlow.value = false
@@ -624,6 +734,8 @@ class AppSettings(
         _commentaryFontCodeFlow.value = DEFAULT_COMMENTARY_FONT
         _targumFontCodeFlow.value = DEFAULT_TARGUM_FONT
         _sourceFontCodeFlow.value = DEFAULT_SOURCE_FONT
+        _dafGemaraFontCodeFlow.value = DEFAULT_DAF_GEMARA_FONT
+        _dafCommentaryFontCodeFlow.value = DEFAULT_DAF_COMMENTARY_FONT
     }
 
     /** The preferences that follow the user to another machine (see [PORTABLE_KEYS]). */
@@ -642,6 +754,9 @@ class AppSettings(
         private val PORTABLE_KEYS =
             setOf(
                 KEY_TEXT_SIZE,
+                KEY_DAF_ZOOM,
+                KEY_DAF_MARK_UNSURE,
+                KEY_DAF_REVIEW,
                 KEY_LINE_HEIGHT,
                 KEY_MAX_COMMENTATORS_PER_PAGE,
                 KEY_CLOSE_TREE_ON_NEW_BOOK,
@@ -653,6 +768,8 @@ class AppSettings(
                 KEY_FONT_COMMENTARY,
                 KEY_FONT_TARGUM,
                 KEY_FONT_SOURCE,
+                KEY_FONT_DAF_GEMARA,
+                KEY_FONT_DAF_COMMENTARY,
                 KEY_REGION_COUNTRY,
                 KEY_REGION_CITY,
                 KEY_USER_FIRST_NAME,
@@ -692,6 +809,16 @@ class AppSettings(
         const val MAX_TEXT_SIZE = 50f
         const val TEXT_SIZE_INCREMENT = 2f
 
+        // The daf's zoom: 1 is as wide as the view (at most the page's widest), the levels a browser's
+        const val DEFAULT_DAF_ZOOM = 1f
+        const val MIN_DAF_ZOOM = 0.3f
+        const val MAX_DAF_ZOOM = 4f
+        val DAF_ZOOM_LEVELS =
+            listOf(0.3f, 0.4f, 0.5f, 0.6f, 0.67f, 0.75f, 0.8f, 0.9f, 1f, 1.1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 3.5f, 4f)
+
+        // A zoom a pinch left this close to a level is at that level
+        private const val ZOOM_LEVEL_SLACK = 0.005f
+
         // Line height constants
         const val DEFAULT_LINE_HEIGHT = 1.5f
         const val MIN_LINE_HEIGHT = 1.0f
@@ -712,6 +839,10 @@ class AppSettings(
         const val DEFAULT_TARGUM_FONT = "taameyashkenaz"
         const val DEFAULT_SOURCE_FONT = "tinos"
 
+        // As the Vilna Shas prints them: a square letter for the Gemara, Rashi script for its commentaries
+        const val DEFAULT_DAF_GEMARA_FONT = "frankruehlclm"
+        const val DEFAULT_DAF_COMMENTARY_FONT = "notorashihebrew"
+
         // Tab display constants
         const val MAX_TAB_TITLE_LENGTH = 20
 
@@ -724,12 +855,16 @@ class AppSettings(
         private val WHITESPACE = Regex("\\s+")
 
         private const val KEY_TEXT_SIZE = "text_size"
+        private const val KEY_DAF_ZOOM = "daf_zoom"
+        private const val KEY_DAF_MARK_UNSURE = "daf_mark_unsure"
+        private const val KEY_DAF_REVIEW = "daf_review"
         private const val KEY_LINE_HEIGHT = "line_height"
         private const val KEY_MAX_COMMENTATORS_PER_PAGE = "max_commentators_per_page"
         private const val KEY_CLOSE_TREE_ON_NEW_BOOK = "close_tree_on_new_book"
         private const val KEY_DATABASE_PATH = "database_path"
         private const val KEY_LIBRARY_INSTALL_DIR = "library_install_dir"
         private const val KEY_SEMANTIC_PACK_PROMPT = "semantic_pack_prompt"
+        private const val KEY_SEARCH_FEEDBACK = "search_feedback"
         private const val KEY_PERSIST_SESSION = "persist_session"
         private const val KEY_KEEP_SCREEN_AWAKE_ON_BOOK = "keep_screen_awake_on_book"
         private const val KEY_ERROR_REPORTING = "error_reporting"
@@ -738,6 +873,8 @@ class AppSettings(
         private const val KEY_FONT_COMMENTARY = "font_commentary"
         private const val KEY_FONT_TARGUM = "font_targum"
         private const val KEY_FONT_SOURCE = "font_source"
+        private const val KEY_FONT_DAF_GEMARA = "font_daf_gemara"
+        private const val KEY_FONT_DAF_COMMENTARY = "font_daf_commentary"
         private const val KEY_SAVED_SESSION = "saved_session_json"
         private const val KEY_SAVED_SESSION_PARTS_COUNT = "saved_session_parts_count"
         private const val KEY_SAVED_SESSION_PART_PREFIX = "saved_session_part_"

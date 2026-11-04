@@ -75,6 +75,10 @@ class FontsSettingsEventsTest {
                 FontsSettingsEvents.SetCommentaryFont("b"),
                 FontsSettingsEvents.SetTargumFont("c"),
                 FontsSettingsEvents.SetSourceFont("d"),
+                FontsSettingsEvents.SetDafGemaraFont("e"),
+                FontsSettingsEvents.SetDafCommentaryFont("f"),
+                FontsSettingsEvents.SetDafMarkUnsure(true),
+                FontsSettingsEvents.SetDafReview(true),
                 FontsSettingsEvents.ResetToDefaults,
             )
 
@@ -84,6 +88,10 @@ class FontsSettingsEventsTest {
                 is FontsSettingsEvents.SetCommentaryFont -> assertEquals("b", event.code)
                 is FontsSettingsEvents.SetTargumFont -> assertEquals("c", event.code)
                 is FontsSettingsEvents.SetSourceFont -> assertEquals("d", event.code)
+                is FontsSettingsEvents.SetDafGemaraFont -> assertEquals("e", event.code)
+                is FontsSettingsEvents.SetDafCommentaryFont -> assertEquals("f", event.code)
+                is FontsSettingsEvents.SetDafMarkUnsure -> assertEquals(true, event.enabled)
+                is FontsSettingsEvents.SetDafReview -> assertEquals(true, event.enabled)
                 FontsSettingsEvents.ResetToDefaults -> { /* ok */ }
             }
         }

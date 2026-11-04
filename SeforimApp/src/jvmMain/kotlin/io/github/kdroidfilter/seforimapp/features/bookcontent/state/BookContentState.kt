@@ -210,6 +210,8 @@ data class ContentState(
     val showReferences: Boolean = false,
     // Each verse twice, then its targum
     val shnayimMikra: Boolean = false,
+    // A Talmud tractate drawn as its Vilna page (צורת הדף) in place of its text
+    val dafView: Boolean = false,
     // Scroll positions
     val paragraphScrollPosition: Int = 0,
     val chapterScrollPosition: Int = 0,

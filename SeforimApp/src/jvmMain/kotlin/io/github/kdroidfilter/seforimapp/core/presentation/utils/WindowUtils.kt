@@ -60,19 +60,19 @@ fun processKeyShortcuts(
                 return true
             }
             Key.Plus, Key.NumPadAdd -> {
-                debugln { "[DEBUG_LOG] Detected Plus or NumPadAdd key, increasing text size" }
-                appSettings.increaseTextSize()
+                debugln { "[DEBUG_LOG] Detected Plus or NumPadAdd key, zooming in" }
+                appSettings.zoomIn(tabId)
                 return true
             }
             // Handle Equals key too: many layouts send '=' for zoom-in (with or without Shift)
             Key.Equals -> {
-                debugln { "[DEBUG_LOG] Detected Equals key, increasing text size" }
-                appSettings.increaseTextSize()
+                debugln { "[DEBUG_LOG] Detected Equals key, zooming in" }
+                appSettings.zoomIn(tabId)
                 return true
             }
             Key.Minus, Key.NumPadSubtract -> {
-                debugln { "[DEBUG_LOG] Detected Minus or NumPadSubtract key, decreasing text size" }
-                appSettings.decreaseTextSize()
+                debugln { "[DEBUG_LOG] Detected Minus or NumPadSubtract key, zooming out" }
+                appSettings.zoomOut(tabId)
                 return true
             }
         }

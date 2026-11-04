@@ -86,7 +86,12 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.normalizeQueryFo
 import io.github.kdroidfilter.seforimapp.core.presentation.text.noteDisplayRanges
 import io.github.kdroidfilter.seforimapp.core.presentation.text.withBackground
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafAnchor
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafControl
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafView
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.AnchorTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentAnchorIndex
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentSegment
@@ -103,6 +108,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.queryNarr
 import io.github.kdroidfilter.seforimapp.features.search.semantic.installedSemanticSearch
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.debugln
+import io.github.kdroidfilter.seforimapp.texteffects.rememberTextZoom
 import io.github.kdroidfilter.seforimlibrary.core.models.AltTocEntry
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.santimattius.structured.annotations.StructuredScope
@@ -167,6 +173,8 @@ fun BookContentView(
     onPointerZoomInProgressChange: (Boolean) -> Unit = {},
     // Bumped to take the keyboard focus back (a breadcrumb popup closed)
     focusRequest: Int = 0,
+    // A Talmud tractate shown as its Vilna page, in this view's frame (its zoom, keys, selection, menu and find bar)
+    daf: DafMode? = null,
 ) {
     val appSettings = LocalAppGraph.current.appSettings
     // Don't use the saved scroll position initially if we have an anchor
@@ -176,6 +184,11 @@ fun BookContentView(
             initialFirstVisibleItemIndex = if (anchorId != -1L) 0 else scrollIndex,
             initialFirstVisibleItemScrollOffset = if (anchorId != -1L) 0 else scrollOffset,
         )
+
+    // The daf's own list (its items are amudim, not lines), and what the keys and the find bar ask of it
+    val dafListState = remember(bookId) { LazyListState() }
+    val dafControl = remember(bookId) { DafControl() }
+    val currentDaf by rememberUpdatedState(daf)
 
     // Layout-width of the first rendered line's Text, captured once via `onTextLayout`
     // from `result.layoutInput.constraints.maxWidth`. Includes all the nested padding
@@ -189,6 +202,22 @@ fun BookContentView(
     // Ctrl/Cmd + wheel, a trackpad pinch or two fingers zoom the text
     val zoom = rememberAppTextZoom(onPointerZoomInProgressChange)
     val textSize = zoom.textSize
+    // The daf's own zoom, by the same gestures, in percent; the zoom keys, buttons and menu zoom it while it is shown
+    val dafZoomValue by appSettings.dafZoomFlow.collectAsState()
+    val dafZoom =
+        rememberTextZoom(
+            textSize = dafZoomValue * PERCENT,
+            minTextSize = AppSettings.MIN_DAF_ZOOM * PERCENT,
+            maxTextSize = AppSettings.MAX_DAF_ZOOM * PERCENT,
+            onTextSize = { appSettings.setDafZoom(it / PERCENT) },
+            animate = isTabSelected,
+            onZoomingChange = onPointerZoomInProgressChange,
+        )
+    val showsDaf = daf != null
+    DisposableEffect(tabId, showsDaf) {
+        if (showsDaf) appSettings.dafShown(tabId)
+        onDispose { if (showsDaf) appSettings.dafHidden(tabId) }
+    }
 
     // Collect line height from settings
     val rawLineHeight by appSettings.lineHeightFlow.collectAsState()
@@ -231,7 +260,8 @@ fun BookContentView(
         isInitialBookOpen &&
             !hasRestored &&
             (hasTopAnchorRequest || (topAnchorTimestamp == 0L && hasSavedInitialPosition))
-    val contentAlpha = if (needsInitialPositioning) 0f else 1f
+    // Not the daf's: the lines' list it waits on is not laid out there (its scrolls wait for its first layout)
+    val contentAlpha = if (needsInitialPositioning && daf == null) 0f else 1f
     if (E2e.enabled) SideEffect { E2eReader.bookShown(bookId, listState, visible = contentAlpha == 1f) }
 
     // selectedLineId is now passed as a parameter for stability
@@ -796,6 +826,11 @@ fun BookContentView(
                             ?.let { matches.nextAfterLine(if (next) it - 1 else it, forward = next) }
                         ?: return@launch
                 currentMatch = match
+                // On the daf: the match's line brought into view, where it is printed
+                if (currentDaf != null) {
+                    dafControl.scrollToLine(match.lineId)
+                    return@launch
+                }
 
                 // A match already on screen moves only if hidden by the find bar or at the very bottom
                 awaitNextLayout() // let its line recompose and publish where the match sits
@@ -832,6 +867,10 @@ fun BookContentView(
         end: Boolean,
         @StructuredScope scope: CoroutineScope,
     ) {
+        if (currentDaf != null) {
+            scope.launch { dafControl.scrollToEdge(end) }
+            return
+        }
         val lineIndex = if (end) (bookLineCount ?: return) - 1 else 0
         scope.launch {
             val index = loadLine(lineIndex) ?: return@launch
@@ -851,6 +890,10 @@ fun BookContentView(
         forward: Boolean,
         @StructuredScope scope: CoroutineScope,
     ) {
+        if (currentDaf != null) {
+            scope.launch { dafControl.scrollPage(forward) }
+            return
+        }
         val visibleItems = listState.layoutInfo.visibleItemsInfo
         if (visibleItems.isEmpty()) return
         val targetIndex =
@@ -941,281 +984,317 @@ fun BookContentView(
     // Both ends of a Shift+click selection, to copy the lines between them Compose never composed (not in shnayim
     // mikra, whose items are more than their line). Its offsets index the text as displayed: new for another diacritics mode
     val bookSelection = remember(bookId, shnayimMikra, diacritics) { if (shnayimMikra) null else BookSelection() }
+    // Pardes: a word clicked on the daf selected in the text, where it is in its line, for when the text is shown
+    val repository = LocalAppGraph.current.repository
+    val wordScope = rememberCoroutineScope()
+    val selectWordInText: (DafAnchor) -> Unit = { anchor ->
+        bookSelection?.let { selection ->
+            wordScope.launch {
+                val line = runSuspendCatching { repository.getLine(anchor.lineId) }.getOrNull() ?: return@launch
+                selection.selectInLine(line, anchor.start, anchor.end, diacritics)
+            }
+        }
+    }
     BookSelectionContainer(
-        selection = bookSelection,
+        // The daf's words are not the book's lines' text: its runs' own selections, copied as selected
+        selection = if (daf != null) null else bookSelection,
+        ownsSelection = daf == null,
         modifier =
             modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = contentAlpha } // Hide until positioned to prevent glitch
-                .then(zoom.modifier)
+                .then(if (showsDaf) dafZoom.modifier else zoom.modifier)
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent(previewKeyHandler)
                 .focusable(),
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(bottom = 8.dp)) {
-            LazyColumn(
-                state = listState,
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(end = 16.dp)
-                        .onGloballyPositioned {
-                            findMatchLocator.list = it
-                            if (E2e.enabled) E2eReader.bookList = it
-                        },
-            ) {
-                items(
-                    count = lazyPagingItems.itemCount,
-                    key = lazyPagingItems.itemKey { it.id },
-                    contentType = { "line" }, // Optimization: specify content type
-                ) { index ->
-                    val line = lazyPagingItems[index]
+        if (daf != null) {
+            DafView(
+                book = daf.book,
+                listState = dafListState,
+                control = dafControl,
+                zoom = dafZoom.textSize / PERCENT,
+                lineId = primarySelectedLineId ?: anchorId.takeIf { it > 0 },
+                selectedLineIds = selectedLineIds,
+                isTocEntrySelection = isTocEntrySelection,
+                selectedPassage = selectedPassage,
+                scrollToLineTimestamp = scrollToLineTimestamp,
+                onSelectLine = daf.onSelectLine,
+                onSelectPassage = daf.onSelectPassage,
+                // The menu acts on the right-clicked word's segment, as on a right-clicked line of the text
+                onContextLine = { id ->
+                    selectionContext.setCurrentLineId(id)
+                    selectionContext.setActiveCommentaryColumn(emptyList())
+                },
+                modifier = Modifier.fillMaxSize().padding(bottom = 8.dp),
+                onWordInText = selectWordInText,
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxSize().padding(bottom = 8.dp)) {
+                LazyColumn(
+                    state = listState,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(end = 16.dp)
+                            .onGloballyPositioned {
+                                findMatchLocator.list = it
+                                if (E2e.enabled) E2eReader.bookList = it
+                            },
+                ) {
+                    items(
+                        count = lazyPagingItems.itemCount,
+                        key = lazyPagingItems.itemKey { it.id },
+                        contentType = { "line" }, // Optimization: specify content type
+                    ) { index ->
+                        val line = lazyPagingItems[index]
 
-                    if (line != null) {
-                        // Smart find: the line is highlighted as a search result is (see LineItem)
-                        val isSmartMatch = showFind && smartModeEnabled && line.id in semanticFindIds
-                        val altHeadings = altHeadingsByLineId[line.id]
-                        val isCurrentSelected = line.id in selectedLineIds
-                        val useThickBar = shouldUseThickBar(line.id, primarySelectedLineId, isTocEntrySelection)
-                        val nextLineId = if (index < lazyPagingItems.itemCount - 1) lazyPagingItems.peek(index + 1)?.id else null
-                        val nextUseThickBar = shouldUseThickBar(nextLineId ?: -1, primarySelectedLineId, isTocEntrySelection)
-                        val isNextSelected =
-                            shouldExtendToNext(isCurrentSelected, nextLineId, selectedLineIds, useThickBar, nextUseThickBar)
+                        if (line != null) {
+                            // Smart find: the line is highlighted as a search result is (see LineItem)
+                            val isSmartMatch = showFind && smartModeEnabled && line.id in semanticFindIds
+                            val altHeadings = altHeadingsByLineId[line.id]
+                            val isCurrentSelected = line.id in selectedLineIds
+                            val useThickBar = shouldUseThickBar(line.id, primarySelectedLineId, isTocEntrySelection)
+                            val nextLineId = if (index < lazyPagingItems.itemCount - 1) lazyPagingItems.peek(index + 1)?.id else null
+                            val nextUseThickBar = shouldUseThickBar(nextLineId ?: -1, primarySelectedLineId, isTocEntrySelection)
+                            val isNextSelected =
+                                shouldExtendToNext(isCurrentSelected, nextLineId, selectedLineIds, useThickBar, nextUseThickBar)
 
-                        val prevLineId =
-                            if (index > 0) lazyPagingItems.peek(index - 1)?.id else null
-                        val isPrevSelected =
-                            prevLineId != null && prevLineId in selectedLineIds
-                        // Alt headings go inside the selection bar only when
-                        // the previous line is also selected (consecutive selection).
-                        val altHeadingsInsideBar =
-                            shouldPlaceAltHeadingsInsideBar(isCurrentSelected, isPrevSelected, altHeadings.isNotEmpty())
+                            val prevLineId =
+                                if (index > 0) lazyPagingItems.peek(index - 1)?.id else null
+                            val isPrevSelected =
+                                prevLineId != null && prevLineId in selectedLineIds
+                            // Alt headings go inside the selection bar only when
+                            // the previous line is also selected (consecutive selection).
+                            val altHeadingsInsideBar =
+                                shouldPlaceAltHeadingsInsideBar(isCurrentSelected, isPrevSelected, altHeadings.isNotEmpty())
 
-                        val borderColor =
-                            if (isCurrentSelected) {
-                                if (useThickBar) {
-                                    JewelTheme.globalColors.outlines.focused
+                            val borderColor =
+                                if (isCurrentSelected) {
+                                    if (useThickBar) {
+                                        JewelTheme.globalColors.outlines.focused
+                                    } else {
+                                        JewelTheme.globalColors.borders.normal
+                                    }
                                 } else {
-                                    JewelTheme.globalColors.borders.normal
+                                    Color.Transparent
                                 }
-                            } else {
-                                Color.Transparent
-                            }
 
-                        // Alt headings outside the selection bar when line is
-                        // selected alone or is the first in a consecutive selection
-                        if (altHeadings.isNotEmpty() && !altHeadingsInsideBar) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 8.dp).padding(start = 12.dp),
-                            ) {
-                                altHeadings.forEach { entry ->
-                                    AltHeadingItem(
-                                        entryId = entry.id,
-                                        level = entry.level,
-                                        text = entry.text,
-                                        onClick = { onLineSelect(line, false) },
-                                        baseTextSize = textSize,
-                                    )
-                                }
-                            }
-                        }
-
-                        val isMarked = markedLines?.contains(line.lineIndex) == true
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .then(if (isMarked) Modifier.background(markedTint()) else Modifier)
-                                    .padding(horizontal = 8.dp)
-                                    .selectionBar(
-                                        isSelected = isCurrentSelected,
-                                        isNextSelected = isNextSelected,
-                                        color = borderColor,
-                                        isPrimary = useThickBar,
-                                    ),
-                        ) {
-                            Spacer(modifier = Modifier.width(SelectionBarWidth + 8.dp))
-                            Column(
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                if (altHeadingsInsideBar) {
-                                    Column {
-                                        altHeadings.forEach { entry ->
-                                            AltHeadingItem(
-                                                entryId = entry.id,
-                                                level = entry.level,
-                                                text = entry.text,
-                                                onClick = { onLineSelect(line, false) },
-                                                baseTextSize = textSize,
-                                            )
-                                        }
+                            // Alt headings outside the selection bar when line is
+                            // selected alone or is the first in a consecutive selection
+                            if (altHeadings.isNotEmpty() && !altHeadingsInsideBar) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 8.dp).padding(start = 12.dp),
+                                ) {
+                                    altHeadings.forEach { entry ->
+                                        AltHeadingItem(
+                                            entryId = entry.id,
+                                            level = entry.level,
+                                            text = entry.text,
+                                            onClick = { onLineSelect(line, false) },
+                                            baseTextSize = textSize,
+                                        )
                                     }
                                 }
-                                Box(modifier = Modifier.padding(vertical = LineItemVerticalPaddingPerSide)) {
-                                    // Stable per-line list: unhighlighted lines get the emptyList()
-                                    // singleton, so only lines whose highlights changed recompose.
-                                    val lineHighlights = highlightsByLine[line.id] ?: emptyList()
-                                    val lineNotes = notesByLine[line.id] ?: emptyList()
-                                    LineItem(
-                                        lineId = line.id,
-                                        lineIndex = line.lineIndex,
-                                        lineContent = line.content,
-                                        userHighlights = lineHighlights,
-                                        userNotes = lineNotes,
-                                        fontFamily = hebrewFontFamily,
-                                        onClick = { isModifier -> onLineSelect(line, isModifier) },
-                                        selectedAnchors = selectedPassage?.takeIf { it.lineId == line.id }?.anchors,
-                                        anchorTargets = anchorIndex.of(line.id),
-                                        anchorCommentators = anchorIndex.commentators,
-                                        passageBooks = passageCommentatorIds,
-                                        onPassageClick = { passage -> onEvent(BookContentEvent.PassageSelected(line, passage)) },
-                                        onHover = { onLineHover(line.id) },
-                                        isSelected = isCurrentSelected,
-                                        isPrimary = useThickBar,
-                                        baseTextSize = textSize,
-                                        lineHeight = lineHeight,
-                                        boldScale = boldScaleForPlatform,
-                                        // Simple mode: the literal query; smart mode: the search's highlighting
-                                        highlightQuery = findState.text.toString().takeIf { showFind && !smartModeEnabled },
-                                        smartQuery = persistedFindQuery.takeIf { isSmartMatch && it.length >= 2 },
-                                        currentMatchOrdinal =
-                                            liveMatch?.takeIf { showFind && it.lineId == line.id }?.ordinal,
-                                        findMatchLocator =
-                                            findMatchLocator.takeIf { showFind && liveMatch?.lineId == line.id },
-                                        annotatedCache = stableAnnotatedCache,
-                                        diacritics = diacritics,
-                                        onLayoutWidthMeasure = { width ->
-                                            if (textLayoutWidthPx == 0 && width > 0) {
-                                                textLayoutWidthPx = width
+                            }
+
+                            val isMarked = markedLines?.contains(line.lineIndex) == true
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .then(if (isMarked) Modifier.background(markedTint()) else Modifier)
+                                        .padding(horizontal = 8.dp)
+                                        .selectionBar(
+                                            isSelected = isCurrentSelected,
+                                            isNextSelected = isNextSelected,
+                                            color = borderColor,
+                                            isPrimary = useThickBar,
+                                        ),
+                            ) {
+                                Spacer(modifier = Modifier.width(SelectionBarWidth + 8.dp))
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    if (altHeadingsInsideBar) {
+                                        Column {
+                                            altHeadings.forEach { entry ->
+                                                AltHeadingItem(
+                                                    entryId = entry.id,
+                                                    level = entry.level,
+                                                    text = entry.text,
+                                                    onClick = { onLineSelect(line, false) },
+                                                    baseTextSize = textSize,
+                                                )
                                             }
-                                        },
-                                        onContextClick = {
-                                            selectionContext.setCurrentLineId(line.id)
-                                            // Drop any stale comments-pane anchor so a main-pane
-                                            // highlight never lands on a commentary line.
-                                            selectionContext.setActiveCommentaryColumn(emptyList())
-                                        },
-                                    )
-                                }
-                                // The verse read again, then its targum (headings have no reference)
-                                if (shnayimMikra && !line.heRef.isNullOrBlank()) {
+                                        }
+                                    }
                                     Box(modifier = Modifier.padding(vertical = LineItemVerticalPaddingPerSide)) {
+                                        // Stable per-line list: unhighlighted lines get the emptyList()
+                                        // singleton, so only lines whose highlights changed recompose.
+                                        val lineHighlights = highlightsByLine[line.id] ?: emptyList()
+                                        val lineNotes = notesByLine[line.id] ?: emptyList()
                                         LineItem(
                                             lineId = line.id,
                                             lineIndex = line.lineIndex,
                                             lineContent = line.content,
-                                            userHighlights = highlightsByLine[line.id] ?: emptyList(),
-                                            userNotes = notesByLine[line.id] ?: emptyList(),
+                                            userHighlights = lineHighlights,
+                                            userNotes = lineNotes,
                                             fontFamily = hebrewFontFamily,
                                             onClick = { isModifier -> onLineSelect(line, isModifier) },
+                                            selectedAnchors = selectedPassage?.takeIf { it.lineId == line.id }?.anchors,
+                                            anchorTargets = anchorIndex.of(line.id),
+                                            anchorCommentators = anchorIndex.commentators,
+                                            passageBooks = passageCommentatorIds,
+                                            onPassageClick = { passage -> onEvent(BookContentEvent.PassageSelected(line, passage)) },
                                             onHover = { onLineHover(line.id) },
                                             isSelected = isCurrentSelected,
                                             isPrimary = useThickBar,
                                             baseTextSize = textSize,
                                             lineHeight = lineHeight,
                                             boldScale = boldScaleForPlatform,
+                                            // Simple mode: the literal query; smart mode: the search's highlighting
+                                            highlightQuery = findState.text.toString().takeIf { showFind && !smartModeEnabled },
+                                            smartQuery = persistedFindQuery.takeIf { isSmartMatch && it.length >= 2 },
+                                            currentMatchOrdinal =
+                                                liveMatch?.takeIf { showFind && it.lineId == line.id }?.ordinal,
+                                            findMatchLocator =
+                                                findMatchLocator.takeIf { showFind && liveMatch?.lineId == line.id },
                                             annotatedCache = stableAnnotatedCache,
                                             diacritics = diacritics,
-                                            // The context menu acts on this verse, as from its first reading
+                                            onLayoutWidthMeasure = { width ->
+                                                if (textLayoutWidthPx == 0 && width > 0) {
+                                                    textLayoutWidthPx = width
+                                                }
+                                            },
                                             onContextClick = {
                                                 selectionContext.setCurrentLineId(line.id)
+                                                // Drop any stale comments-pane anchor so a main-pane
+                                                // highlight never lands on a commentary line.
                                                 selectionContext.setActiveCommentaryColumn(emptyList())
                                             },
                                         )
                                     }
-                                    shnayimMikraTargum.targumOf(line.heRef)?.let {
-                                        ShnayimMikraTargum(it, targumFontFamily, textSize, lineHeight, diacritics)
+                                    // The verse read again, then its targum (headings have no reference)
+                                    if (shnayimMikra && !line.heRef.isNullOrBlank()) {
+                                        Box(modifier = Modifier.padding(vertical = LineItemVerticalPaddingPerSide)) {
+                                            LineItem(
+                                                lineId = line.id,
+                                                lineIndex = line.lineIndex,
+                                                lineContent = line.content,
+                                                userHighlights = highlightsByLine[line.id] ?: emptyList(),
+                                                userNotes = notesByLine[line.id] ?: emptyList(),
+                                                fontFamily = hebrewFontFamily,
+                                                onClick = { isModifier -> onLineSelect(line, isModifier) },
+                                                onHover = { onLineHover(line.id) },
+                                                isSelected = isCurrentSelected,
+                                                isPrimary = useThickBar,
+                                                baseTextSize = textSize,
+                                                lineHeight = lineHeight,
+                                                boldScale = boldScaleForPlatform,
+                                                annotatedCache = stableAnnotatedCache,
+                                                diacritics = diacritics,
+                                                // The context menu acts on this verse, as from its first reading
+                                                onContextClick = {
+                                                    selectionContext.setCurrentLineId(line.id)
+                                                    selectionContext.setActiveCommentaryColumn(emptyList())
+                                                },
+                                            )
+                                        }
+                                        shnayimMikraTargum.targumOf(line.heRef)?.let {
+                                            ShnayimMikraTargum(it, targumFontFamily, textSize, lineHeight, diacritics)
+                                        }
                                     }
+                                    if (markedLines?.last == line.lineIndex) MarkedEnd(if (shnayimMikra) "סוף הקריאה" else "סוף הלימוד")
                                 }
-                                if (markedLines?.last == line.lineIndex) MarkedEnd(if (shnayimMikra) "סוף הקריאה" else "סוף הלימוד")
+                            }
+                        } else {
+                            // Placeholder while loading
+                            LoadingPlaceholder()
+                        }
+                    }
+
+                    // Show loading indicators
+                    lazyPagingItems.apply {
+                        when {
+                            // Avoid flicker: only show full loader on refresh if we have no items yet
+                            loadState.refresh is LoadState.Loading && itemCount == 0 -> {
+                                item(contentType = "loading") {
+                                    LoadingIndicator()
+                                }
+                            }
+
+                            // Keep small loader for pagination append
+                            loadState.append is LoadState.Loading -> {
+                                item(contentType = "loading") {
+                                    LoadingIndicator(isSmall = true)
+                                }
+                            }
+
+                            loadState.refresh is LoadState.Error -> {
+                                val error = (loadState.refresh as LoadState.Error).error
+                                item(contentType = "error") {
+                                    ErrorIndicator(message = "Error: ${error.message}")
+                                }
+                            }
+
+                            loadState.append is LoadState.Error -> {
+                                val error = (loadState.append as LoadState.Error).error
+                                item(contentType = "error") {
+                                    ErrorIndicator(message = "Error loading more: ${error.message}")
+                                }
                             }
                         }
-                    } else {
-                        // Placeholder while loading
-                        LoadingPlaceholder()
                     }
                 }
 
-                // Show loading indicators
-                lazyPagingItems.apply {
-                    when {
-                        // Avoid flicker: only show full loader on refresh if we have no items yet
-                        loadState.refresh is LoadState.Loading && itemCount == 0 -> {
-                            item(contentType = "loading") {
-                                LoadingIndicator()
-                            }
-                        }
-
-                        // Keep small loader for pagination append
-                        loadState.append is LoadState.Loading -> {
-                            item(contentType = "loading") {
-                                LoadingIndicator(isSmall = true)
-                            }
-                        }
-
-                        loadState.refresh is LoadState.Error -> {
-                            val error = (loadState.refresh as LoadState.Error).error
-                            item(contentType = "error") {
-                                ErrorIndicator(message = "Error: ${error.message}")
-                            }
-                        }
-
-                        loadState.append is LoadState.Error -> {
-                            val error = (loadState.append as LoadState.Error).error
-                            item(contentType = "error") {
-                                ErrorIndicator(message = "Error loading more: ${error.message}")
-                            }
+                // Content-aware scrollbar overlay. Lives inside the same Box as the LazyColumn
+                // so it floats over the 16dp end gutter reserved by the column padding.
+                //
+                // All three pixel-space inputs are deterministic and exact: `capacity` is
+                // measured by `TextMeasurer` against the captured text-layout width, the
+                // font settings and font family — so it never drifts during scroll. The
+                // scrollbar itself no longer averages visible items' sizes: that was the
+                // root cause of the thumb resizing, since per-item padding and item-mix
+                // variation broke the `Σ size / Σ lineCount` assumption.
+                val textMeasurer = rememberTextMeasurer()
+                val lineHeightPx = with(density) { (textSize * lineHeight).sp.toPx() }
+                val paddingPerItemPx = with(density) { (LineItemVerticalPaddingPerSide * 2).toPx() }
+                val capacity by remember(textLayoutWidthPx, textSize, lineHeight, hebrewFontFamily) {
+                    derivedStateOf {
+                        if (textLayoutWidthPx <= 0) {
+                            0
+                        } else {
+                            val result =
+                                textMeasurer.measure(
+                                    text = AnnotatedString(CAPACITY_REFERENCE),
+                                    style =
+                                        TextStyle(
+                                            fontSize = textSize.sp,
+                                            fontFamily = hebrewFontFamily,
+                                            lineHeight = (textSize * lineHeight).sp,
+                                        ),
+                                    constraints = Constraints(maxWidth = textLayoutWidthPx),
+                                )
+                            (CAPACITY_REFERENCE.length / result.lineCount.coerceAtLeast(1))
+                                .coerceAtLeast(1)
                         }
                     }
                 }
+                ContentScrollbar(
+                    listState = listState,
+                    lazyPagingItems = lazyPagingItems,
+                    bookCharCounts = bookCharCounts,
+                    capacity = capacity,
+                    lineHeightPx = lineHeightPx,
+                    paddingPerItemPx = paddingPerItemPx,
+                    onScrollToLineIndex = { idx -> onEvent(BookContentEvent.ContentScrollToLineIndex(idx)) },
+                    modifier =
+                        Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 4.dp),
+                )
             }
-
-            // Content-aware scrollbar overlay. Lives inside the same Box as the LazyColumn
-            // so it floats over the 16dp end gutter reserved by the column padding.
-            //
-            // All three pixel-space inputs are deterministic and exact: `capacity` is
-            // measured by `TextMeasurer` against the captured text-layout width, the
-            // font settings and font family — so it never drifts during scroll. The
-            // scrollbar itself no longer averages visible items' sizes: that was the
-            // root cause of the thumb resizing, since per-item padding and item-mix
-            // variation broke the `Σ size / Σ lineCount` assumption.
-            val textMeasurer = rememberTextMeasurer()
-            val lineHeightPx = with(density) { (textSize * lineHeight).sp.toPx() }
-            val paddingPerItemPx = with(density) { (LineItemVerticalPaddingPerSide * 2).toPx() }
-            val capacity by remember(textLayoutWidthPx, textSize, lineHeight, hebrewFontFamily) {
-                derivedStateOf {
-                    if (textLayoutWidthPx <= 0) {
-                        0
-                    } else {
-                        val result =
-                            textMeasurer.measure(
-                                text = AnnotatedString(CAPACITY_REFERENCE),
-                                style =
-                                    TextStyle(
-                                        fontSize = textSize.sp,
-                                        fontFamily = hebrewFontFamily,
-                                        lineHeight = (textSize * lineHeight).sp,
-                                    ),
-                                constraints = Constraints(maxWidth = textLayoutWidthPx),
-                            )
-                        (CAPACITY_REFERENCE.length / result.lineCount.coerceAtLeast(1))
-                            .coerceAtLeast(1)
-                    }
-                }
-            }
-            ContentScrollbar(
-                listState = listState,
-                lazyPagingItems = lazyPagingItems,
-                bookCharCounts = bookCharCounts,
-                capacity = capacity,
-                lineHeightPx = lineHeightPx,
-                paddingPerItemPx = paddingPerItemPx,
-                onScrollToLineIndex = { idx -> onEvent(BookContentEvent.ContentScrollToLineIndex(idx)) },
-                modifier =
-                    Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 4.dp),
-            )
         }
 
         // Find-in-page bar overlay, top end as in browsers
@@ -1271,6 +1350,9 @@ private const val HTML_PREFETCH_BEHIND = 8
 
 // Smart (embedding) find: max semantically-closest lines fetched per query for the current book.
 private const val SMART_FIND_LIMIT = 60
+
+// The daf's zoom as the text zoom's size: a hundred to its 1
+private const val PERCENT = 100f
 
 // Literal find: pause after the last keystroke before querying the index
 private val FIND_DEBOUNCE = 150.milliseconds
