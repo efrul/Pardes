@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforim.tabs.TabTitleUpdateManager
+import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedbackStore
 import io.github.kdroidfilter.seforimapp.core.history.HistoryStore
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.StateKeys
@@ -60,6 +61,10 @@ class AuthorScopeSearchTest : SearchIntegrationTestBase() {
             titleUpdateManager = TabTitleUpdateManager(),
             desktopManager = desktopManager,
             historyStore = HistoryStore(UserSettingsDb(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create))),
+            feedbackStore =
+                SearchFeedbackStore(
+                    UserSettingsDb(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create)),
+                ),
             appSettings = testAppSettings(),
             lookup = mockk(relaxed = true),
             libraryCategories = LibraryCategories(mockk { every { getCatalog() } returns null }, requireRepository(), mockk()),

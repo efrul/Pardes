@@ -332,6 +332,7 @@ private fun SearchTabContent(
     val selectedCategoryIds by viewModel.selectedCategoryIdsFlow.collectAsState()
     val bookFilterIds by viewModel.selectedBookIdsFlow.collectAsState()
     val entity by viewModel.entityFlow.collectAsState()
+    val feedback by viewModel.feedbackFlow.collectAsState()
 
     SearchResultInBookShellMvi(
         bookUiState = bcUiState,
@@ -351,6 +352,7 @@ private fun SearchTabContent(
         preview = preview,
         actions = actions,
         tabUi = tabUi(tabOwner),
+        feedback = feedback,
     )
 }
 
@@ -498,6 +500,7 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
             onMoreFromBook = viewModel::showMoreFromBook,
             onBackFromBook = viewModel::backFromBook,
             onOpenAuthor = viewModel::openAuthor,
+            onGrade = { result, grade -> viewModel.onEvent(SearchResultViewModel.SearchResultEvents.Grade(result, grade)) },
         )
     }
 
