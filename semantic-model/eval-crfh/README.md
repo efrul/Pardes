@@ -9,7 +9,11 @@
 
 **מגבלות:** אף שאלה לא נבדקה בידי אדם, וכנראה מודל כתב אותן. גם חלק מה"כמעט־נכונים" עונים על השאלה. לכן המדד הוא מקום
 הציטוט הנכון בתוך המסכת, ובהשוואה בין מודלים, לא ציון מוחלט. ולמערך **אין רישיון**: השאלות והציטוטים נשארים מחוץ לריפו,
-ונקראים מהענפים בזמן המדידה. בריפו נשמרים רק המזהים שלהם, מזהי השורות שלנו והתוצאות.
+ונקראים מהמאגר שלו בכל מדידה. בריפו נשמרים רק המזהים שלהם, מזהי השורות שלנו והתוצאות. הוחלט לא לבקש רישיון (2026-11-04).
+
+**אותן שאלות בכל מדידה:** `lines.tsv` נבנה מהקומיטים `cdf229e` (`add-berakhot-chagiga`) ו־`b8540e8`
+(`readd-existing-datasets`), ולכן מורידים אותם לפי הקומיט, לא לפי הענף. אם הענפים ישתנו, הקומיטים האלה עדיין ניתנים
+להורדה כל עוד הם במאגר. אם יימחקו, אי אפשר יהיה למדוד שוב על אותן שאלות, ותוצאות על נוסח אחר לא ניתנות להשוואה.
 
 **ללא דליפה:** חמש המסכתות מחוץ לחברותא, למילון ולשאלות האימון (`sample_targets.OUTSIDE_SET_TRACTATES`, ו־`build_pairs.py
 --hold-outside`). זוגות הקישורים, שהמורה למד מהם מאז האימון הראשון, לא סוננו: כ־2% מהם נוגעים במסכתות האלה. לכן המספרים
@@ -30,8 +34,8 @@
 
 ```
 GIT_LFS_SKIP_SMUDGE=1 git clone --filter=blob:none --no-checkout https://github.com/crfh1672/search-queries crfh
-git -C crfh fetch origin add-berakhot-chagiga readd-existing-datasets
-mkdir data; for b in add-berakhot-chagiga readd-existing-datasets; do git -C crfh archive origin/$b drafts | tar -x -C data; done
+git -C crfh fetch origin cdf229e2fcdb69698f10b0936431b13fe15d5696 b8540e85e38d6111807ce4ff4b59b0f6df6bb735
+mkdir data; for c in cdf229e2fcdb69698f10b0936431b13fe15d5696 b8540e85e38d6111807ce4ff4b59b0f6df6bb735; do git -C crfh archive $c drafts | tar -x -C data; done
 python map_lines.py --db seforim.db --drafts data/drafts --out lines.tsv
 python spec.py --db seforim.db --drafts data/drafts --out crfh.json --merge pool.json
 python ../kaggle_run.py push pool --spec crfh.json --release v3-20261012193827

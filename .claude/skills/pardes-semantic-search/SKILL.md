@@ -128,8 +128,10 @@ path, line), `split` and `verified_by_human`; each book pins its otzaria-library
   the first place is the measure (`eval-crfh/results.md`). Over all books, only with graded judging
   (`eval-real/pool.py`, `eval-v1/score_graded.py`). Its near misses are unverified and some answer the question
   (`moedkatan-047`: "האם אבל נוהג ברגל" → "כל שהוא משום אבל — רגל מפסיקו").
-- **No license file:** its questions stay out of efrul/Pardes until its owners grant one. Fetch them when measuring,
-  and commit only their ids, our line ids and our results (as `eval-real` keeps the books' text out).
+- **No license file, and none asked for** (the user's decision, 2026-11-04): its questions stay out of efrul/Pardes.
+  Fetch them for every measurement at the two commits `eval-crfh/README.md` pins (`git fetch origin <sha>` works), not
+  the branches, so that every run is measured on the same questions; commit only their ids, our line ids and our
+  results (as `eval-real` keeps the books' text out).
 
 ## Klei Kodesh's data (KitveiHakodesh)
 
