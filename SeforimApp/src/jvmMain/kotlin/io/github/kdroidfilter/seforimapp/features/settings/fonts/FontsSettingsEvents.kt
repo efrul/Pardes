@@ -29,5 +29,9 @@ sealed interface FontsSettingsEvents {
         val enabled: Boolean,
     ) : FontsSettingsEvents
 
+    data class SetDafReview(
+        val enabled: Boolean,
+    ) : FontsSettingsEvents
+
     data object ResetToDefaults : FontsSettingsEvents
 }

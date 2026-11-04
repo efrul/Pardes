@@ -89,6 +89,9 @@ class DafLayouts(
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<File, Pair<Long, DafLayoutFile>>?) = size > KEPT
         }
 
+    /** The readers' reviews of these layouts (DafReview.kt), in the folder's feedback/. */
+    val reviews: DafReviews by lazy { DafReviews(dir) }
+
     /** Whether there is a layout for the tractate named [name], in English or in Hebrew. */
     @Synchronized
     fun has(name: String): Boolean = fileFor(name) != null

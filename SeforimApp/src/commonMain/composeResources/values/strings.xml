@@ -42,6 +42,16 @@
     <string name="settings_font_daf_commentary_label">גופן לרש״י ותוספות בצורת הדף</string>
     <string name="settings_daf_mark_unsure">סימון בצבע בהיר של שורות לא ודאיות בצורת הדף</string>
     <string name="settings_daf_mark_unsure_info">שורות שבהן ההתאמה בין הדפוס לנוסח שבספרייה לא בטוחה במילה הראשונה או האחרונה, וייתכן שמילה בהן אינה כבדפוס (כ־4% מהשורות). מועיל לבדיקת קובצי צורת הדף; כשזה כבוי, הדף אחיד כמו בדפוס.</string>
+    <string name="settings_daf_review">בדיקת השורות של צורת הדף, כדי לשלוח משוב על הזיהוי</string>
+    <string name="settings_daf_review_info">לחיצה ימנית על שורה בצורת הדף מוסיפה לתפריט: השורה נכונה, השורה שגויה, והזזה של המילה הראשונה או האחרונה שלה לשורה הסמוכה. ההזזה נראית מיד בדף. הסימונים נשמרים בתיקייה feedback שליד קובצי צורת הדף, קובץ לכל מסכת, ואת הקבצים האלה שולחים.</string>
+    <string name="daf_review_ok">השורה נכונה</string>
+    <string name="daf_review_wrong">השורה שגויה</string>
+    <string name="daf_review_first_to_previous">המילה הראשונה שייכת לשורה הקודמת</string>
+    <string name="daf_review_previous_last_here">המילה האחרונה של השורה הקודמת שייכת לכאן</string>
+    <string name="daf_review_last_to_next">המילה האחרונה שייכת לשורה הבאה</string>
+    <string name="daf_review_next_first_here">המילה הראשונה של השורה הבאה שייכת לכאן</string>
+    <string name="daf_review_clear">ביטול הסימון של השורה</string>
+    <string name="daf_review_open_folder">פתיחת תיקיית המשוב</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>

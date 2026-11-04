@@ -74,6 +74,17 @@ class DafZoomTest {
     }
 
     @Test
+    fun `the daf's review is off until asked, and the reset turns it off`() {
+        assertFalse(settings.isDafReviewEnabled())
+        settings.setDafReviewEnabled(true)
+        assertTrue(settings.dafReviewFlow.value)
+
+        settings.clearAll()
+        assertFalse(settings.dafReviewFlow.value)
+        assertFalse(settings.isDafReviewEnabled())
+    }
+
+    @Test
     fun `the daf's zoom is kept, and reset with the other settings`() {
         settings.setDafZoom(2f)
         assertEquals(2f, settings.getDafZoom())

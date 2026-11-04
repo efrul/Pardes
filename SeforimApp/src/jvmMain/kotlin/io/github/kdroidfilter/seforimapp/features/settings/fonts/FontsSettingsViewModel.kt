@@ -25,6 +25,7 @@ class FontsSettingsViewModel(
     private val dafGemaraFont = MutableStateFlow(appSettings.getDafGemaraFontCode())
     private val dafCommentaryFont = MutableStateFlow(appSettings.getDafCommentaryFontCode())
     private val dafMarkUnsure = MutableStateFlow(appSettings.isDafMarkUnsureEnabled())
+    private val dafReview = MutableStateFlow(appSettings.isDafReviewEnabled())
 
     private fun current() =
         FontsSettingsState(
@@ -35,6 +36,7 @@ class FontsSettingsViewModel(
             dafGemaraFontCode = dafGemaraFont.value,
             dafCommentaryFontCode = dafCommentaryFont.value,
             dafMarkUnsure = dafMarkUnsure.value,
+            dafReview = dafReview.value,
         )
 
     val state =
@@ -47,6 +49,7 @@ class FontsSettingsViewModel(
             dafGemaraFont,
             dafCommentaryFont,
             dafMarkUnsure,
+            dafReview,
         ) { current() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), current())
 
@@ -80,9 +83,15 @@ class FontsSettingsViewModel(
                 appSettings.setDafMarkUnsureEnabled(event.enabled)
                 dafMarkUnsure.value = event.enabled
             }
+            is FontsSettingsEvents.SetDafReview -> {
+                appSettings.setDafReviewEnabled(event.enabled)
+                dafReview.value = event.enabled
+            }
             is FontsSettingsEvents.ResetToDefaults -> {
                 appSettings.setDafMarkUnsureEnabled(false)
                 dafMarkUnsure.value = false
+                appSettings.setDafReviewEnabled(false)
+                dafReview.value = false
                 appSettings.setDafGemaraFontCode(AppSettings.DEFAULT_DAF_GEMARA_FONT)
                 appSettings.setDafCommentaryFontCode(AppSettings.DEFAULT_DAF_COMMENTARY_FONT)
                 dafGemaraFont.value = AppSettings.DEFAULT_DAF_GEMARA_FONT

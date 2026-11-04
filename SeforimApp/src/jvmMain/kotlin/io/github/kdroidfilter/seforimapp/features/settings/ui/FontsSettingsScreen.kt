@@ -43,6 +43,8 @@ import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.settings_daf_mark_unsure
 import seforimapp.seforimapp.generated.resources.settings_daf_mark_unsure_info
+import seforimapp.seforimapp.generated.resources.settings_daf_review
+import seforimapp.seforimapp.generated.resources.settings_daf_review_info
 import seforimapp.seforimapp.generated.resources.settings_font_book_label
 import seforimapp.seforimapp.generated.resources.settings_font_commentary_label
 import seforimapp.seforimapp.generated.resources.settings_font_daf_commentary_label
@@ -133,6 +135,19 @@ private fun FontsSettingsView(
                 )
                 Text(
                     text = stringResource(Res.string.settings_daf_mark_unsure_info),
+                    fontSize = 12.sp,
+                    color = JewelTheme.globalColors.text.info,
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                CheckboxRow(
+                    text = stringResource(Res.string.settings_daf_review),
+                    checked = state.dafReview,
+                    onCheckedChange = { onEvent(FontsSettingsEvents.SetDafReview(it)) },
+                )
+                Text(
+                    text = stringResource(Res.string.settings_daf_review_info),
                     fontSize = 12.sp,
                     color = JewelTheme.globalColors.text.info,
                 )

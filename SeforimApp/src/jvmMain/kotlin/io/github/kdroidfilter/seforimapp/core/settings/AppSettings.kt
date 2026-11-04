@@ -44,6 +44,10 @@ class AppSettings(
     private val _dafMarkUnsureFlow = MutableStateFlow(isDafMarkUnsureEnabled())
     val dafMarkUnsureFlow: StateFlow<Boolean> = _dafMarkUnsureFlow.asStateFlow()
 
+    // The daf's review: its lines marked right or wrong, for pardes-rashi-ocr (DafReview.kt)
+    private val _dafReviewFlow = MutableStateFlow(isDafReviewEnabled())
+    val dafReviewFlow: StateFlow<Boolean> = _dafReviewFlow.asStateFlow()
+
     // The tabs whose reading view shows a daf now, each with its views' count (a tab dragged to another window is
     // composed there before it leaves this one): the zoom keys, buttons and menu zoom their daf, not the text
     private val _dafViewsFlow = MutableStateFlow(emptyMap<String, Int>())
@@ -244,6 +248,13 @@ class AppSettings(
     fun setDafMarkUnsureEnabled(enabled: Boolean) {
         settings[KEY_DAF_MARK_UNSURE] = enabled
         _dafMarkUnsureFlow.value = enabled
+    }
+
+    fun isDafReviewEnabled(): Boolean = settings[KEY_DAF_REVIEW, false]
+
+    fun setDafReviewEnabled(enabled: Boolean) {
+        settings[KEY_DAF_REVIEW] = enabled
+        _dafReviewFlow.value = enabled
     }
 
     /** The reading view of [tabId] shows a daf, until [dafHidden]. */
@@ -696,6 +707,7 @@ class AppSettings(
         _textSizeFlow.value = DEFAULT_TEXT_SIZE
         _dafZoomFlow.value = DEFAULT_DAF_ZOOM
         _dafMarkUnsureFlow.value = false
+        _dafReviewFlow.value = false
         _lineHeightFlow.value = DEFAULT_LINE_HEIGHT
         _maxCommentatorsPerPageFlow.value = DEFAULT_MAX_COMMENTATORS_PER_PAGE
         _closeTreeOnNewBookFlow.value = false
@@ -732,6 +744,7 @@ class AppSettings(
                 KEY_TEXT_SIZE,
                 KEY_DAF_ZOOM,
                 KEY_DAF_MARK_UNSURE,
+                KEY_DAF_REVIEW,
                 KEY_LINE_HEIGHT,
                 KEY_MAX_COMMENTATORS_PER_PAGE,
                 KEY_CLOSE_TREE_ON_NEW_BOOK,
@@ -832,6 +845,7 @@ class AppSettings(
         private const val KEY_TEXT_SIZE = "text_size"
         private const val KEY_DAF_ZOOM = "daf_zoom"
         private const val KEY_DAF_MARK_UNSURE = "daf_mark_unsure"
+        private const val KEY_DAF_REVIEW = "daf_review"
         private const val KEY_LINE_HEIGHT = "line_height"
         private const val KEY_MAX_COMMENTATORS_PER_PAGE = "max_commentators_per_page"
         private const val KEY_CLOSE_TREE_ON_NEW_BOOK = "close_tree_on_new_book"

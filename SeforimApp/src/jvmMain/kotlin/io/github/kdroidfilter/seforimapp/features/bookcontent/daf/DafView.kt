@@ -1,5 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
+import androidx.compose.foundation.ContextMenuDataProvider
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ContextMenuState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
@@ -96,6 +98,7 @@ import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CircularProgressIndicator
+import org.jetbrains.jewel.ui.component.ContextMenuDivider
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
@@ -105,8 +108,18 @@ import seforimapp.seforimapp.generated.resources.daf_import_not_layout
 import seforimapp.seforimapp.generated.resources.daf_import_other_tractate
 import seforimapp.seforimapp.generated.resources.daf_missing
 import seforimapp.seforimapp.generated.resources.daf_missing_hint
+import seforimapp.seforimapp.generated.resources.daf_review_clear
+import seforimapp.seforimapp.generated.resources.daf_review_first_to_previous
+import seforimapp.seforimapp.generated.resources.daf_review_last_to_next
+import seforimapp.seforimapp.generated.resources.daf_review_next_first_here
+import seforimapp.seforimapp.generated.resources.daf_review_ok
+import seforimapp.seforimapp.generated.resources.daf_review_open_folder
+import seforimapp.seforimapp.generated.resources.daf_review_previous_last_here
+import seforimapp.seforimapp.generated.resources.daf_review_wrong
 import seforimapp.seforimapp.generated.resources.notorashihebrew
+import java.awt.Desktop
 import java.io.File
+import java.time.Instant
 import kotlin.math.abs
 
 /** Whether [this] is a tractate of the Babylonian Talmud, whose page the daf view draws. */
@@ -270,6 +283,7 @@ fun DafView(
                 DafPages(
                     book = book,
                     file = state.file,
+                    reviews = layouts.reviews,
                     listState = listState,
                     control = control,
                     zoom = zoom,
@@ -300,6 +314,7 @@ private fun dafFamily(code: String): FontFamily {
 private fun DafPages(
     book: Book,
     file: DafLayoutFile,
+    reviews: DafReviews,
     listState: LazyListState,
     control: DafControl,
     zoom: Float,
@@ -349,6 +364,21 @@ private fun DafPages(
     var selection by remember(file) { mutableStateOf<Pair<String, DafRange>?>(null) }
     val copyToClipboard = rememberCopyToClipboard()
     val keys = remember { FocusRequester() }
+    // The reader's review of the tractate (DafReview.kt), while the settings' review is on: its moves made on the
+    // pages, its marks and actions in the menu
+    val reviewOn by graph.appSettings.dafReviewFlow.collectAsState()
+    var review by remember(file) { mutableStateOf<DafReviewFile?>(null) }
+    LaunchedEffect(file, reviewOn) { review = if (reviewOn) withContext(Dispatchers.IO) { reviews.of(file) } else null }
+    val scope = rememberCoroutineScope()
+    val onMark: (DafMark) -> Unit = { mark -> scope.launch { review = withContext(Dispatchers.IO) { reviews.mark(file, mark) } } }
+    val onOpenReviews: () -> Unit = {
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                reviews.folder.mkdirs()
+                Desktop.getDesktop().open(reviews.folder)
+            }
+        }
+    }
     // A line the page selected itself, by a click: where the pointer is, not to be scrolled to
     var clicked by remember { mutableStateOf<Long?>(null) }
     val selectLine: (Long, Boolean) -> Unit = { id, withModifier ->
@@ -489,6 +519,9 @@ private fun DafPages(
                                 onSelectLine = selectLine,
                                 onSelectPassage = selectPassage,
                                 onContextLine = onContextLine,
+                                review = review,
+                                onMark = onMark,
+                                onOpenReviews = onOpenReviews,
                                 modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
                             )
                         }
@@ -524,24 +557,38 @@ private fun AmudItem(
     onSelectLine: (Long, Boolean) -> Unit,
     onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
     onContextLine: (Long) -> Unit,
+    review: DafReviewFile?,
+    onMark: (DafMark) -> Unit,
+    onOpenReviews: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
     val markUnsure by graph.appSettings.dafMarkUnsureFlow.collectAsState()
+    // The amud as the review has it: its moves made (as printed), the lines it marked tinted
+    val shown = remember(amud, review) { review?.let { amud.withMarks(it.marks) } ?: amud }
     // Laid out once, off the UI thread (some 160 lines measured), and kept while scrolled away
-    val layout by produceState(layouts[amud], amud, layouts) {
+    val layout by produceState(layouts[shown], shown, layouts) {
+        value = layouts[shown]
         if (value == null) {
             value =
                 withContext(Dispatchers.Default) {
-                    layoutAmud(amud, LAYOUT_SCALE, measurer, density, gemara, rashi, beforeEachLine = { ensureActive() })
-                }.also { layouts[amud] = it }
+                    layoutAmud(shown, LAYOUT_SCALE, measurer, density, gemara, rashi, beforeEachLine = { ensureActive() })
+                }.also { layouts[shown] = it }
         }
     }
     // The page's comments and the Gemara lines they are on, read once for the page
-    val links by produceState<DafAmudLinks?>(null, book.id, amud) { value = loadLinks(graph.repository, book.id, amud) }
-    val highlight = remember(links, marked, passage, color) { dafHighlight(links, marked, passage, color) }
+    val links by produceState<DafAmudLinks?>(null, book.id, shown) { value = loadLinks(graph.repository, book.id, shown) }
+    val reviewed = remember(amud, review) { review?.let { reviewColors(amud, it) }.orEmpty() }
+    val highlight =
+        remember(links, marked, passage, color, reviewed) {
+            val selected = dafHighlight(links, marked, passage, color)
+            if (reviewed.isEmpty()) selected else DafHighlight { word -> selected.colorOf(word) ?: reviewed[word.line] }
+        }
     val copyToClipboard = rememberCopyToClipboard()
     val menuState = remember { ContextMenuState() }
+    // The line a right-click was on, for the review's actions
+    var contextLine by remember(amud) { mutableStateOf<Int?>(null) }
+    val labels = reviewLabels()
     val width = (amud.block[2] - amud.block[0]) * perPoint
     val height = (amud.block[3] - amud.block[1]) * perPoint
     with(density) {
@@ -550,31 +597,128 @@ private fun AmudItem(
             if (laidOut == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else {
-                // The text's own menu (copy, copy with source, search, find in page…), on the amud's selection
-                val text = remember(amud, range) { range?.let { amud.textOf(it) }.orEmpty() }
+                // The text's own menu (copy, copy with source, search, find in page…), on the amud's selection, and
+                // the review's actions on the line right-clicked, while the review is on
+                val text = remember(shown, range) { range?.let { shown.textOf(it) }.orEmpty() }
                 val manager = remember(text, copyToClipboard) { dafTextManager(text, copyToClipboard) }
-                LocalTextContextMenu.current.Area(manager, menuState) {
-                    DafAmudText(
-                        layout = laidOut,
-                        k = perPoint / LAYOUT_SCALE,
-                        gemara = gemara,
-                        rashi = rashi,
-                        ink = ink,
-                        highlight = highlight,
-                        range = range,
-                        selectionColor = LocalTextSelectionColors.current.backgroundColor,
-                        onRange = onRange,
-                        onWordClick = { word, withModifier ->
-                            links?.let { clickOn(it, word, withModifier, onSelectLine, onSelectPassage) }
-                        },
-                        onContextWord = { word -> links?.segmentOf(word)?.let(onContextLine) },
-                        onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
-                        onPress = onPress,
-                        markUnsure = markUnsure,
-                    )
+                ContextMenuDataProvider(
+                    items = {
+                        val line = contextLine
+                        if (review == null || line == null) emptyList() else reviewItems(amud, line, review, labels, onMark, onOpenReviews)
+                    },
+                ) {
+                    LocalTextContextMenu.current.Area(manager, menuState) {
+                        DafAmudText(
+                            layout = laidOut,
+                            k = perPoint / LAYOUT_SCALE,
+                            gemara = gemara,
+                            rashi = rashi,
+                            ink = ink,
+                            highlight = highlight,
+                            range = range,
+                            selectionColor = LocalTextSelectionColors.current.backgroundColor,
+                            onRange = onRange,
+                            onWordClick = { word, withModifier ->
+                                links?.let { clickOn(it, word, withModifier, onSelectLine, onSelectPassage) }
+                            },
+                            onContextWord = { word ->
+                                contextLine = word.line
+                                links?.segmentOf(word)?.let(onContextLine)
+                            },
+                            onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
+                            onPress = onPress,
+                            markUnsure = markUnsure,
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+/** The review's actions, in the menu's language. */
+private class ReviewLabels(
+    val ok: String,
+    val wrong: String,
+    val firstToPrevious: String,
+    val previousLastHere: String,
+    val lastToNext: String,
+    val nextFirstHere: String,
+    val clear: String,
+    val openFolder: String,
+)
+
+@Composable
+private fun reviewLabels() =
+    ReviewLabels(
+        ok = stringResource(Res.string.daf_review_ok),
+        wrong = stringResource(Res.string.daf_review_wrong),
+        firstToPrevious = stringResource(Res.string.daf_review_first_to_previous),
+        previousLastHere = stringResource(Res.string.daf_review_previous_last_here),
+        lastToNext = stringResource(Res.string.daf_review_last_to_next),
+        nextFirstHere = stringResource(Res.string.daf_review_next_first_here),
+        clear = stringResource(Res.string.daf_review_clear),
+        openFolder = stringResource(Res.string.daf_review_open_folder),
+    )
+
+/** The tint of each line of [amud] the [review] marked, by its index: right, wrong, or only a word moved. */
+internal fun reviewColors(
+    amud: DafAmud,
+    review: DafReviewFile,
+): Map<Int, Color> =
+    review.marks
+        .filter { it.amud == amud.amud && amud.lines.getOrNull(it.i)?.t == it.t }
+        .associate { mark ->
+            mark.i to
+                when (mark.ok) {
+                    true -> REVIEW_OK
+                    false -> REVIEW_WRONG
+                    null -> REVIEW_MOVED
+                }
+        }
+
+private val REVIEW_OK = Color(0x3328A745)
+private val REVIEW_WRONG = Color(0x40DC3545)
+private val REVIEW_MOVED = Color(0x40E0A000)
+
+/**
+ * The review's actions on the line [index] of [amud] (as the layout has it, before the review's moves): it is right
+ * or wrong; its first word is the line before's, or the line before's last word its own; its last word is the next
+ * line's, or the next line's first word its own; its mark taken away; the reviews' folder opened, to send them.
+ */
+private fun reviewItems(
+    amud: DafAmud,
+    index: Int,
+    review: DafReviewFile,
+    labels: ReviewLabels,
+    onMark: (DafMark) -> Unit,
+    onOpenReviews: () -> Unit,
+): List<ContextMenuItem> {
+    val line = amud.lines.getOrNull(index)?.takeIf { !it.isBig } ?: return emptyList()
+
+    fun markOf(i: Int): DafMark {
+        val l = amud.lines[i]
+        return review.marks.firstOrNull { it.amud == amud.amud && it.i == i && it.t == l.t } ?: DafMark(amud.amud, l.c, i, l.t)
+    }
+    val mine = markOf(index)
+    val before = amud.lineBefore(index)
+    val after = amud.lineAfter(index)
+    val now = { Instant.now().toString() }
+    return buildList {
+        add(ContextMenuDivider)
+        add(ContextMenuItem(labels.ok) { onMark(mine.copy(c = line.c, ok = true, at = now())) })
+        add(ContextMenuItem(labels.wrong) { onMark(mine.copy(c = line.c, ok = false, at = now())) })
+        if (before != null) {
+            add(ContextMenuItem(labels.firstToPrevious) { onMark(mine.copy(cut = mine.cut + 1, at = now())) })
+            add(ContextMenuItem(labels.previousLastHere) { onMark(mine.copy(cut = mine.cut - 1, at = now())) })
+        }
+        if (after != null) {
+            val next = markOf(after)
+            add(ContextMenuItem(labels.lastToNext) { onMark(next.copy(cut = next.cut - 1, at = now())) })
+            add(ContextMenuItem(labels.nextFirstHere) { onMark(next.copy(cut = next.cut + 1, at = now())) })
+        }
+        if (!mine.isEmpty) add(ContextMenuItem(labels.clear) { onMark(mine.copy(ok = null, cut = 0, at = now())) })
+        add(ContextMenuItem(labels.openFolder, onOpenReviews))
     }
 }
 
