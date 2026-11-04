@@ -36,11 +36,23 @@ internal enum class Dictionary(
     MALBIM("מלבי״ם, ביאור המילות", "ביאור המילות", DictionarySource.INDEX),
     MIKROPEDIA("מיקרופדיה תלמודית", "מיקרופדיה תלמודית", DictionarySource.INDEX),
     MENACHEM("מחברת מנחם", "מחברת מנחם", DictionarySource.INDEX),
+    ARAMAIC(
+        "מילון ארמי־עברי",
+        "ארמית",
+        DictionarySource.TEXT,
+        attribution = "המילון הארמי־עברי של תורת אמת, מתוך נתוני כתבי הקודש (כלי קודש), ברשותם",
+    ),
     WIKIPEDIA(
         "ויקיפדיה העברית",
         "ראשי תיבות",
         DictionarySource.TEXT,
         attribution = "מתוך ויקיפדיה העברית, בידי כותביה · CC BY-SA",
+    ),
+    MICHLOL(
+        "המכלול",
+        "המכלול",
+        DictionarySource.TEXT,
+        attribution = "מתוך המכלול, בידי תורמיו · CC BY-SA",
     ),
     ;
 

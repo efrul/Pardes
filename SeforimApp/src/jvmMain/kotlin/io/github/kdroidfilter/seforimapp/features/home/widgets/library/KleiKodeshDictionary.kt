@@ -4,8 +4,9 @@ import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import java.util.zip.GZIPInputStream
 
 // Klei Kodesh's dictionary data (Based on Klei Kodesh - https://kleikodesh.github.io/), packed by
-// scripts/kleikodesh_dictionary.py into resources/kleikodesh/dictionary.tsv.gz (400 KB): their index of the headwords of
-// books our library has, Hebrew Wikipedia's acronyms, and their synonyms and spellings of words.
+// scripts/kleikodesh_dictionary.py into resources/kleikodesh/dictionary.tsv.gz (690 KB): their index of the headwords of
+// books our library has, their Aramaic-Hebrew dictionary, Hebrew Wikipedia's acronyms, HaMichlol's definitions, and
+// their synonyms and spellings of words.
 
 /** Where a dictionary's entries come from. */
 internal enum class DictionarySource {
