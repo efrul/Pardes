@@ -10,11 +10,11 @@ Read as data, none of the clone's scripts run. What it takes (its owners allowed
   its own library's line and drops the ones that don't match (KleiKodeshDictionary.kt).
 - their links between words of kind 1 (נרדף) and 2 (כתיב), checked by a model, not by a person; the ones to a word
   they no longer have are left out.
-- their Aramaic-Hebrew dictionary (source_kind 1, 7,605 senses; its origin is not recorded, and their permission covers
-  it: the user's word, 2026-11-04).
+- the Aramaic-Hebrew dictionary (source_kind 1, 7,605 senses), Torat Emet's: Klei Kodesh's developer says they had
+  Torat Emet's permission long ago (2026-11-04).
 - the acronyms of Hebrew Wikipedia (source_kind 2, CC BY-SA, Hebrew Wikipedia contributors) and the definitions of
-  HaMichlol (source_kind 5, CC BY-SA by their sources.json, HaMichlol contributors; included at the user's word,
-  2026-11-04, with Klei Kodesh's permission). Nothing of Otzaria's lists (source_kind 9, 11) nor of the other sources
+  HaMichlol (source_kind 5, CC BY-SA as their sources.json gives the site's licence, not checked by us; HaMichlol
+  contributors; included at the user's decision, 2026-11-04). Nothing of Otzaria's lists (source_kind 9, 11) nor of the other sources
   whose origin is unknown (3, 4, 6, 7, 8, 10).
 
 Rows, tab separated, by their first field:

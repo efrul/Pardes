@@ -122,7 +122,7 @@ internal enum class Dictionary(
         "מילון ארמי־עברי",
         "ארמית",
         DictionarySource.TEXT,
-        attribution = "מתוך המילון הארמי־עברי של כתבי הקודש (כלי קודש), בשימוש באישורם",
+        attribution = "המילון הארמי־עברי של תורת אמת, מתוך נתוני כתבי הקודש (כלי קודש), ברשותם",
     ),
     WIKIPEDIA(
         "ויקיפדיה העברית",
@@ -134,7 +134,7 @@ internal enum class Dictionary(
         "המכלול",
         "המכלול",
         DictionarySource.TEXT,
-        attribution = "מתוך המכלול, בידי כותביו · CC BY-SA",
+        attribution = "מתוך המכלול, בידי תורמיו · CC BY-SA",
     ),
     ;
 
