@@ -210,8 +210,9 @@ class HybridSearchEngine internal constructor(
         near: Int,
         bookIds: Collection<Long>?,
         baseOnly: Boolean,
-        // How many lines the lexical side finds in all, of which the fusion takes the first CANDIDATES
-        onLexicalTotal: (Long) -> Unit = {},
+        // How many lines the lexical side finds in all, of which the fusion takes the first CANDIDATES, and how many the
+        // whole list holds ([listTotal]); null when nobody counts them (a smart find takes the first lines alone)
+        onTotals: ((lexical: Long, list: Long) -> Unit)? = null,
     ): List<FusedEntry> =
         coroutineScope {
             val dense =
@@ -222,14 +223,29 @@ class HybridSearchEngine internal constructor(
                         .getOrNull()
                 }
 
+            // The lexical side's lines among the dense ones, for the list's total ([listTotal]): counted as soon as the
+            // dense side answers, beside the lexical candidates (a count restricted to 150 lines, 6 to 30 ms)
+            val lexicalAmongDense =
+                onTotals?.let {
+                    async(Dispatchers.Default) {
+                        val ids = dense.await()?.map { it.lineId }
+                        if (ids.isNullOrEmpty()) return@async null
+                        runCatching {
+                            lexical.computeFacets(query, near, bookIds = bookIds, lineIds = ids, baseBookOnly = baseOnly)?.totalHits
+                        }.onFailure { warnln(it) { "[HybridSearchEngine] The dense lines' count failed; the lexical total instead." } }
+                            .getOrNull()
+                    }
+                }
+
             // A lexical failure must not sink the search either: a long query's dictionary expansions can pass Lucene's
             // 1024 clauses (IndexSearcher.TooManyNestedClauses), and the dense side alone still answers it
+            var lexicalTotal = 0L
             val lexHits =
                 runSuspendCatching {
                     lexical
                         .openSession(query, near = near, bookIds = bookIds, baseBookOnly = baseOnly)
                         ?.use { it.nextPage(CANDIDATES, snippets = false) }
-                        ?.also { onLexicalTotal(it.totalHits) }
+                        ?.also { lexicalTotal = it.totalHits }
                         ?.hits
                         .orEmpty()
                 }.getOrElse { e ->
@@ -239,8 +255,10 @@ class HybridSearchEngine internal constructor(
 
             val denseHits = dense.await()
             if (denseHits.isNullOrEmpty()) {
+                onTotals?.invoke(lexicalTotal, maxOf(lexicalTotal, lexHits.size.toLong()))
                 return@coroutineScope lexHits.map { FusedEntry(it.lineId, it.score, it) }
             }
+            onTotals?.invoke(lexicalTotal, listTotal(lexicalTotal, lexHits, denseHits, lexicalAmongDense?.await()))
 
             val rrf = HashMap<Long, Double>()
             lexHits.forEachIndexed { rank, hit ->
@@ -294,8 +312,8 @@ class HybridSearchEngine internal constructor(
 
     /**
      * The fused list first, then the lexical results past its candidates, in their order and without a line shown
-     * already: a search with many results reaches all of them, as without the dense side. Its total is the lexical
-     * side's (the facets' count), not the fused list's length.
+     * already: a search with many results reaches all of them, as without the dense side. Its total is the whole list's
+     * ([listTotal]): every line the lexical side finds and the dense side's others.
      */
     private inner class HybridSession(
         private val query: String,
@@ -306,6 +324,7 @@ class HybridSearchEngine internal constructor(
         private var fused: List<FusedEntry>? = null
         private var offset = 0
         private var lexicalTotal = 0L
+        private var listTotal = 0L
 
         // The lexical results after the fused list's candidates, and the lines shown so far
         private var rest: SearchSession? = null
@@ -316,11 +335,14 @@ class HybridSearchEngine internal constructor(
             snippets: Boolean,
         ): SearchPage? {
             val all =
-                fused ?: fuse(query, near, bookIds, baseOnly) { lexicalTotal = it }.also { list ->
+                fused ?: fuse(query, near, bookIds, baseOnly) { lexical, list ->
+                    lexicalTotal = lexical
+                    listTotal = list
+                }.also { list ->
                     fused = list
                     list.mapTo(shown) { it.lineId }
                 }
-            val total = maxOf(all.size.toLong(), lexicalTotal)
+            val total = maxOf(all.size.toLong(), listTotal)
             val more = lexicalTotal > CANDIDATES
             while (offset < all.size) {
                 val end = minOf(offset + limit, all.size)
@@ -400,6 +422,30 @@ class HybridSearchEngine internal constructor(
         private const val RRF_K = 60
         private const val SMART_FIND_NEAR = 5
         private const val CANDIDATES = 150
+
+        /**
+         * How many lines a search's list holds ([HybridSession]): every line the lexical side finds ([lexicalTotal], of
+         * which [lexHits] are the first) and the dense side's lines ([denseHits]) it doesn't find. A dense line past the
+         * lexical side's candidates is one it finds too, shown once, in the fused list: [lexicalAmongDense] is how many
+         * of [denseHits] the lexical side finds (null when it couldn't count them, and the total is then its own).
+         * Without it ("אתרוג": 301 lexical lines, and 35 of the dense side's lines past them) the list ran past the total
+         * it showed (336 lines under 301).
+         */
+        internal fun listTotal(
+            lexicalTotal: Long,
+            lexHits: List<LineHit>,
+            denseHits: List<DenseHit>,
+            lexicalAmongDense: Long?,
+        ): Long {
+            val total = maxOf(lexicalTotal, lexHits.size.toLong())
+            // Every lexical line is a candidate: the dense side's others are the new lines
+            if (total <= lexHits.size) {
+                val lexIds = lexHits.mapTo(HashSet()) { it.lineId }
+                return total + denseHits.count { it.lineId !in lexIds }
+            }
+            val among = lexicalAmongDense ?: return total
+            return total + (denseHits.size - among).coerceIn(0, denseHits.size.toLong())
+        }
 
         /** The places (0-based) the lexical side's first two hits are moved up to at worst: 2 and 4. */
         private val LEXICAL_PLACES = intArrayOf(1, 3)
