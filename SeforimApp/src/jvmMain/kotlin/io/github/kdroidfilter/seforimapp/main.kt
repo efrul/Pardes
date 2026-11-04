@@ -67,6 +67,7 @@ import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.framework.search.AcronymFrequencyCache
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
+import io.github.kdroidfilter.seforimapp.framework.search.PardesLexicon
 import io.github.kdroidfilter.seforimapp.framework.search.withSemanticSearch
 import io.github.kdroidfilter.seforimapp.logger.isDevEnv
 import io.github.kdroidfilter.seforimapp.logger.warnln
@@ -517,10 +518,16 @@ private fun warmCatalog(graph: AppGraph) {
     }, "catalog-warmup").apply { isDaemon = true }.start()
 }
 
+private const val LEXICON_WAIT_MS = 120_000L
+
 private fun warmSearch(graph: AppGraph) {
     Thread({
-        runCatching { runBlocking { graph.searchEngine.warmUp() } }
-            .onFailure { warnln(it) { "Search warm-up failed" } }
+        runCatching {
+            val engine = graph.searchEngine
+            // After a library install or update Pardes's dictionary is rebuilt first: the warm-up's searches open it
+            PardesLexicon.awaitBuild(LEXICON_WAIT_MS)
+            runBlocking { engine.warmUp() }
+        }.onFailure { warnln(it) { "Search warm-up failed" } }
     }, "search-warmup")
         .apply {
             isDaemon = true
