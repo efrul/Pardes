@@ -26,8 +26,8 @@ import kotlinx.coroutines.withContext
  * The desktop search on the installed library: the same prebuilt Lucene indexes and dictionary that the desktop app
  * keeps next to seforim.db (wired like Pardes desktop's AppCoreBindings provideSearchEngine, withSemanticSearch and
  * provideLuceneLookupSearchService), with Pardes's semantic search fused in when its pack is beside the library and the
- * device runs it ([SemanticSearchSupport]). Nothing is built on the device; when the files are missing, [engine] and
- * [lookup] return null and the UI explains how to get them.
+ * device runs it ([SemanticSearchSupport]). No index is built on the device, only Pardes's fixed copy of lexical.db
+ * ([PardesLexicon]); when the files are missing, [engine] and [lookup] return null and the UI explains how to get them.
  */
 class SearchService(private val store: LibraryStore) {
     data class Part(val name: String, val present: Boolean, val bytes: Long)
@@ -80,6 +80,9 @@ class SearchService(private val store: LibraryStore) {
     private suspend fun open(): Opened = withContext(Dispatchers.IO) {
         mutex.withLock {
             val dir = store.libraryDir
+            // Pardes's dictionary (PardesLexicon): rebuilt in the background after a library install or update, before
+            // the key is read, so the first search after the build reopens the engine with it
+            val dictionary = PardesLexicon.dictionaryFor(File(dir, DICTIONARY), File(dir, TEXT_INDEX))
             val key = libraryKey(dir)
             opened?.let { if (it.key == key) return@withLock it }
             // The library was replaced (reinstall, files pushed from a computer): drop handles on the old files.
@@ -90,7 +93,7 @@ class SearchService(private val store: LibraryStore) {
             val engine = if (isIndex(text)) {
                 // The repository is looked up per page: the installer closes and reopens it when it replaces the library.
                 val snippets = SnippetProvider { lines -> RepositorySnippetSourceProvider(store.repository()).getSnippetSources(lines) }
-                withSemanticSearch(LuceneSearchEngine(text.toPath(), snippets, dictionaryPath = File(dir, DICTIONARY).toPath()), text)
+                withSemanticSearch(LuceneSearchEngine(text.toPath(), snippets, dictionaryPath = dictionary.toPath()), text)
             } else {
                 null
             }
@@ -146,7 +149,8 @@ class SearchService(private val store: LibraryStore) {
         fun inode(file: File) = runCatching { Os.stat(file.path).st_ino }.getOrDefault(-1L)
         val model = File(dir, "${IndependentSemanticSearch.OPEN_MODEL_DIR_NAME}/pardes-model.json")
         return listOf(
-            dir.path, segments(TEXT_INDEX), segments(LOOKUP_INDEX), inode(File(dir, DICTIONARY)), inode(store.databaseFile),
+            dir.path, segments(TEXT_INDEX), segments(LOOKUP_INDEX), inode(File(dir, DICTIONARY)), inode(File(dir, PardesLexicon.FILE)),
+            inode(store.databaseFile),
             segments(VectorIndexBuilder.DIR_NAME), inode(model),
         ).joinToString("|")
     }
