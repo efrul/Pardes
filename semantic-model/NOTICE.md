@@ -10,9 +10,12 @@ Changes by the Pardes project: when `pardes-model.json` says `"derived": true`, 
 it; in every case converted to ONNX (mean pooling and L2 normalisation added to the graph) and its weights quantized to
 int8. The vectors of the Pardes semantic index were computed with this model.
 
-A model trained on pairs made from Klei Kodesh's index of the library's reference works (Sefer HeAruch, Mikropedia
-Talmudit, Metzudat Tzion), their own work, used with its owners' permission, and from their Aramaic-Hebrew dictionary,
-used with permission given on 2026-11-04: Based on Klei Kodesh — https://kleikodesh.github.io/.
+Models trained from run 3 on also learn from pairs made from:
+- Klei Kodesh's index of the library's reference works (Sefer HeAruch, Mikropedia Talmudit, Metzudat Tzion), their own
+  work, used with its owners' permission. Based on Klei Kodesh — https://kleikodesh.github.io/
+- the Aramaic-Hebrew dictionary of the Torat Emet (תורת אמת) software, as Klei Kodesh's dictionary carries it. By what
+  Klei Kodesh's developer wrote (2026-11-04), Klei Kodesh received Torat Emet's permission long ago; that permission was
+  given to Klei Kodesh.
 
 Dicta does not endorse Pardes or this conversion. The model is provided as is, without warranties.
 
