@@ -222,13 +222,6 @@ Ported on 2026-11-03 from Pardes desktop (`19c9f92`):
 - **A category not offered so** searches all its books when a tab or the history still asks for its base books alone, not none.
 - `search/LibraryCategories.kt` reads the links with the catalog, once (`LibraryCategories.of(catalog, commented)`); desktop's `BaseBooksTest` runs on the port.
 
-## Pardes desktop's fixed copy of lexical.db
-
-Ported on 2026-11-03 from Pardes desktop (`722af18`, docs/LEXICON.md):
-- **The dictionary the search reads:** `search/PardesLexicon.kt`, desktop's `PardesLexicon` (same derivation, same fingerprint, `pardes-lexical.db` next to lexical.db): lexical.db without its 4,711 bases that no form points to, which hid the paradigm of ברכות, הלכות, לאכול, תפלין, and with each base's forms numbered by the lines of the text index that hold them, so the 32 a word keeps are the common ones (שלוש keeps שלש). The platform SQLite instead of JDBC, NIOFSDirectory for the index; no Lucene index is built on the device.
-- **When:** desktop's warm-up waits for the build; here the engine opens on the first search, so `search/SearchService.kt` asks for the file before it reads the library key, which holds the file's inode: after a library install or update the first searches read lexical.db while the copy is built in the background, and the first search after it ends reopens the engine with it.
-- **Not tested on a device:** compiled only (the container had no room for the emulator next to the library); the derivation is desktop's, tested there (`PardesLexiconTest`) and measured on the October 2026 library.
-
 ## Pardes desktop's dictionaries from Klei Kodesh's data
 
 Ported on 2026-11-04 from Pardes desktop (`66ae16e`):
@@ -236,6 +229,13 @@ Ported on 2026-11-04 from Pardes desktop (`66ae16e`):
 - **A word's synonyms and other spellings** (Klei Kodesh's links of kind נרדף and כתיב, checked by a model) above the results for the word typed and in its entry, as tags; one tapped is looked up.
 - **The data:** desktop's `resources/kleikodesh/dictionary.tsv.gz` (400 KB, packed by `scripts/kleikodesh_dictionary.py`), copied into the APK's assets by `DesktopTextAssets`, not kept twice. `data/KleiKodeshDictionary.kt` ports desktop's `KleiKodeshDictionary.kt` but for reading the pack from the assets; the parsed entries go to the disk cache with the others (v3, which keeps each entry's book).
 - **Tested:** `data/KleiKodeshDictionaryTest.kt`, as desktop's.
+
+## Pardes desktop's fixed copy of lexical.db
+
+Ported on 2026-11-03 from Pardes desktop (`722af18`, docs/LEXICON.md):
+- **The dictionary the search reads:** `search/PardesLexicon.kt`, desktop's `PardesLexicon` (same derivation, same fingerprint, `pardes-lexical.db` next to lexical.db): lexical.db without its 4,711 bases that no form points to, which hid the paradigm of ברכות, הלכות, לאכול, תפלין, and with each base's forms numbered by the lines of the text index that hold them, so the 32 a word keeps are the common ones (שלוש keeps שלש). The platform SQLite instead of JDBC, NIOFSDirectory for the index; no Lucene index is built on the device.
+- **When:** desktop's warm-up waits for the build; here the engine opens on the first search, so `search/SearchService.kt` asks for the file before it reads the library key, which holds the file's inode: after a library install or update the first searches read lexical.db while the copy is built in the background, and the first search after it ends reopens the engine with it.
+- **Not tested on a device:** compiled only (the container had no room for the emulator next to the library); the derivation is desktop's, tested there (`PardesLexiconTest`) and measured on the October 2026 library.
 
 ## Engine and data
 
