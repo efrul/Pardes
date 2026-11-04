@@ -2,7 +2,7 @@
 build_train_pairs.py cleans the links' passages, in the same jsonl (anchor, positive, type) train_model.py reads.
 
     python build_pairs.py --db seforim.db --out build/train/questions.jsonl [--negatives negatives.tsv]
-        [--hold-benchmark] [--hold-dev]
+        [--hold-benchmark] [--hold-dev] [--hold-outside]
 
 With --negatives, each pair also carries its question's hard negatives (mine_negatives.py's lines graded 0 or 1),
 cleaned the same way, as "negatives": a list, short or empty for a question with fewer.
@@ -16,7 +16,8 @@ Before writing, it checks that the evaluations stay clean, and stops when one ch
 With --hold-benchmark, the questions whose target is in what ../build_eval_set.py's benchmark measures are left out, and
 such negatives, as build_train_pairs.py leaves out such links: a training run that measures on that benchmark trains
 with no line of it. With --hold-dev, the questions of the dev batches (DEV_BATCHES) are left out: a run trained without
-them is measured on them (eval-pool's dev searches).
+them is measured on them (eval-pool's dev searches). With --hold-outside, those on crfh1672/search-queries' tractates
+(sample_targets.OUTSIDE_SET_TRACTATES), whose lines are not held out yet: the set then measures the Bavli untouched.
 The pairs can be appended to build_train_pairs.py's (cat): the question's style is in type, as "question-K".
 """
 
@@ -34,7 +35,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 from build_train_pairs import MAX_PASSAGE_WORDS, benchmark_held  # noqa: E402
 from pardes_semantic.clean import clean  # noqa: E402
-from sample_targets import held_out, neighbors  # noqa: E402
+from sample_targets import OUTSIDE_SET_TRACTATES, held_out, neighbors, outside_set_books  # noqa: E402
 
 EVAL_QUERIES = [HERE.parent / "eval-real" / "queries.tsv", HERE.parent / "eval-v1" / "queries.tsv",
                 HERE.parent / "eval-100" / "queries.tsv", *sorted((HERE.parent / "eval-real" / "quotes").glob("*.tsv"))]
@@ -58,6 +59,8 @@ def main() -> None:
     ap.add_argument("--negatives", type=Path, help="mine_negatives.py's negatives.tsv")
     ap.add_argument("--hold-benchmark", action="store_true", help="leave out the benchmark's lines (build_eval_set.py)")
     ap.add_argument("--hold-dev", action="store_true", help="leave out the dev batches' questions (DEV_BATCHES)")
+    ap.add_argument("--hold-outside", action="store_true",
+                    help="leave out crfh1672/search-queries' tractates (sample_targets.OUTSIDE_SET_TRACTATES)")
     args = ap.parse_args()
     con = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     questions = read_tsv(args.questions)
@@ -87,6 +90,21 @@ def main() -> None:
             negatives[qid] = [line for line in lines if not benchmark(line)]
             dropped += len(lines) - len(negatives[qid])
         print(f"the benchmark's lines held out: {len(questions) - len(kept)} questions, {dropped} negatives")
+        questions = kept
+    if args.hold_outside:
+        outside = outside_set_books(con)
+
+        def in_outside(line):
+            row = con.execute("SELECT bookId FROM line WHERE id = ?", (line,)).fetchone()
+            return row is not None and row[0] in outside
+
+        kept = [q for q in questions if not in_outside(int(q["target_line"]))]
+        dropped = 0
+        for qid, lines in negatives.items():
+            negatives[qid] = [line for line in lines if not in_outside(line)]
+            dropped += len(lines) - len(negatives[qid])
+        print(f"{', '.join(OUTSIDE_SET_TRACTATES)} held out: {len(questions) - len(kept)} questions, "
+              f"{dropped} negatives")
         questions = kept
     if args.hold_dev:
         kept = [q for q in questions if q["batch"] not in DEV_BATCHES]
