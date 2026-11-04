@@ -77,6 +77,7 @@ val syncDesktopSemanticTests by tasks.registering(Sync::class) {
         include(
             "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineKeepLeadersTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineFallbackTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineDenseTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/LevelPrecedenceTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/PassagesTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt",
