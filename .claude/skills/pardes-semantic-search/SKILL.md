@@ -52,6 +52,10 @@ model for Pardes; the app loads the legacy model only when `SEFORIM_MODEL_DIR` p
 - A filtered search keeping few vectors (at most `EXACT_LIMIT` and one in `EXACT_SHARE` of the field's) is exact in
   `IndependentSemanticSearch.searchField`: Lucene's filtered graph search is slower there and misses some. Lucene's own
   exact search needs `--add-modules jdk.incubator.vector` for SIMD (3 to 5 times faster); the app's JVM doesn't pass it.
+- The results list with the pack is the fused list alone, as Zayit's: the lexical side's first 150 and the dense side's
+  150, its total its length (the user's decision, 2026-11-04, after `6a1aa27` had it go on past the candidates). Quoted
+  queries and a TOC section are lexical, whole, as in Zayit; a search the dense side answers nothing for is lexical,
+  whole (Zayit stops at 150 there). The facets' counts (the tree, "עוד N תוצאות מ...") stay lexical, as in Zayit.
 - Java in the cloud container reads Hebrew command-line arguments as `?` (POSIX locale): give a harness its queries in a
   file, and `-Dstdout.encoding=UTF-8` for its output.
 - The lexical side throws `TooManyNestedClauses` on some long queries (a 12-word Gemara quote, 5 held-out
