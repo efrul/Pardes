@@ -81,6 +81,10 @@ Or `colab.ipynb`. Measure every candidate with `embed_corpus.py --corpus` + `eva
 the same benchmark, and on the real searches with `push pool` (`semantic-model/eval-pool/`), before choosing; export the
 chosen one with its `--hybrid-dense-weight`.
 
+The next run (teacher 3 and student 3: one teacher on Chavruta and the dictionary, judged by `eval-crfh/`) is planned in
+`semantic-model/RUN3_PLAN.md`, with its commands; `eval-pool/kernel_spec.py` takes the last `pool.json` out of the pool
+kernel's script (`kaggle kernels pull`).
+
 Kaggle pitfalls already met:
 - The Kaggle account's name never goes into this public repository, its workflows or their logs (it was scrubbed from
   the history on 2026-10-28): name datasets and kernels without their owner (`pardes-semantic-pack-2`, `<user>/…` in
@@ -109,22 +113,48 @@ path, line), `split` and `verified_by_human`; each book pins its otzaria-library
   scratchpad.
 - **For measuring only, never for training:** all `test`, unverified, and 422 beside 150k pairs. What it adds is the
   Hebrew → Aramaic bridge in the Bavli (`eval-v1` has 32 Bavli questions with a target), written outside this pipeline.
-- **Hold its lines out before building training data** (the Chavruta run of `TRAINING_PLAN.md` had not run on
-  2026-11-01): its targets and near misses, mapped to line ids, go into `train-v2/sample_targets.py`'s `held_out()`.
-  - Chavruta's pairs and the distillation texts then skip them and their `neighbors()`. `train-v2/build_pairs.py`
-    stops on the questions near them instead: drop those (likely t2-1373/1374, Chagiga 10b, in the sugya of one of
-    its questions).
-  - Otherwise its 297 questions outside Berakhot leak through Chavruta, whose Hebrew explanation of a Gemara line is
-    nearly a question on it. Berakhot is a benchmark book (`build_eval_set.py`), out of every training source already.
+- **Held out of training by tractate** (2026-11-03): `train-v2/sample_targets.py`'s `OUTSIDE_SET_TRACTATES` (its five
+  tractates) are left out whole by `build_chavruta_pairs.py`, `build_dictionary_pairs.py` and
+  `train-v2/build_pairs.py --hold-outside` (11 questions). Otherwise its questions leak through Chavruta, whose Hebrew
+  explanation of a Gemara line is nearly a question on it. Berakhot is a benchmark book (`build_eval_set.py`) besides.
   - The links' pairs don't read `held_out()` (`build_train_pairs.py` leaves out only the benchmark's books, and `tune`
-    reuses the first `--links` of `train`'s file), so every model since the first teacher may have met some of these
-    lines (8,220 of its pairs are Chavruta's). Filter them too if the set becomes a locked test.
-- **Its lines are not seforim.db's:** they number the physical lines of the pinned `.txt` (Sefaria's export,
-  `extraBooks/SefariaToOtzria/sefaria_export/…`), whose text the quotes match with niqqud and tags removed. Map each
-  record by its quotes within the tractate's lines.
-- **Measuring it:** one target per question, and a single target is too strict a measure (`TRAINING_PLAN.md`). Measure
-  within the tractate, where the near miss is the real competitor, and over all books only with graded judging
+    reuses the first `--links` of `train`'s file): 2% of them touch these tractates, so every model since the first
+    teacher has met some of their lines. Fine for comparing models trained on the same links, not as a locked test.
+- **Measuring it: `eval-crfh/`.** Its `*_line` numbers the physical lines of the pinned `.txt` (Sefaria's export), not
+  ours: `map_lines.py` finds each quote in our tractate (its daf, then its words as a run, niqqud and tags off: all 844
+  found; `lines.tsv`, ids only). `spec.py` writes pool searches whose candidates are the whole tractate (6,974 lines),
+  merged into `pool.json` (`--merge`); `measure.py` gives the correct line's place, the near miss before it, and a
+  paired McNemar test between models. Dicta's base model already has 365 of 422 in the first ten and 247 first, so
+  the first place is the measure (`eval-crfh/results.md`). Over all books, only with graded judging
   (`eval-real/pool.py`, `eval-v1/score_graded.py`). Its near misses are unverified and some answer the question
   (`moedkatan-047`: "האם אבל נוהג ברגל" → "כל שהוא משום אבל — רגל מפסיקו").
-- **No license file:** its questions stay out of efrul/Pardes until its owners grant one. Fetch them when measuring,
-  and commit only their ids, our line ids and our results (as `eval-real` keeps the books' text out).
+- **No license file, and none asked for** (the user's decision, 2026-11-04): its questions stay out of efrul/Pardes.
+  Fetch them for every measurement at the two commits `eval-crfh/README.md` pins (`git fetch origin <sha>` works), not
+  the branches, so that every run is measured on the same questions; commit only their ids, our line ids and our
+  results (as `eval-real` keeps the books' text out).
+
+## Klei Kodesh's data (KitveiHakodesh)
+
+[KleiKodesh/KleiKodeshProject](https://github.com/KleiKodesh/KleiKodeshProject) (AGPL v3) reads the same `seforim.db`.
+Its owners allowed Pardes to use its material (2026-11-03); credit it as "Based on Klei Kodesh —
+https://kleikodesh.github.io/" and in `TRAINING_PLAN.md`'s licence table. Whether that covers what they took from
+elsewhere is still being checked (the user asks them): until then such data keeps the source's licence, so check each
+in their `sources.json`. `TRAINING_PLAN.md` › שלב 2 has the classification.
+- **Reading it:** the GitHub API answers 403 for it here; `git clone --depth 1 --filter=blob:none --sparse` works. The two
+  DBs are `KitveiHakodesh/CSharpBackend/KitveiHakodesh.Core/Dictionary/Dictionary.db` (built by the public
+  `KleiKodesh/KitveiHakodeshDictionary`: TSVs in `source/`, `sources.json`) and
+  `KitveiHakodesh/CSharpBackend/FtsLib-Csharp/SearchExpansion/expansion-routed.db` (built by the private
+  `KleiKodesh/SearchExpansion`; its `meta` and `build_meta` tables list sources and licences). No `sqlite3` CLI in the
+  container: use Python's `sqlite3` in read-only mode (`file:...?mode=ro`). Read them as data; run none of their scripts.
+- **For training:** `build_dictionary_pairs.py --dictionary <a KitveiHakodeshDictionary clone>` (23,293 pairs on
+  2026-11-03): their headword index (`source/seforim_headword.tsv`: source, their book id, line index in the book,
+  headword; titles in `seforim_headword_book.tsv`; Aruch 8,611, Mikropedia Talmudit 3,907, Metzudat Tzion 20,541, Malbim
+  Biur HaMilot 13,549, Machberet Menachem 1,607), their own work over our library's text, and the Aramaic-Hebrew
+  dictionary (source_kind 1, 7,605 senses). Its owner allowed the dictionary (2026-11-03), but its origin is not recorded
+  (Torat Emet's `FinalDictionary.txt` by our check; their `sources.json` calls it an early Peshita list, yet it shares
+  only 497 headwords and no sense with source_kind 11), and whether their permission covers it is being checked:
+  until then its `DICT-ARAMAIC` pairs stay out of a run (`--aramaic 0`: 9,786 pairs instead of 23,293). A word is swapped for its meaning inside a library line, which
+  stays the positive. Every model trained on these pairs carries the credit in `NOTICE.md`.
+- **Not for training:** Otzaria's lists (9, 11, and the 1,050 `otzaria-aramaic` bridge rows of
+  `expansion-routed.db`) are forbidden. `expansion-routed.db` is word level (folds, inflections, synonyms): query
+  expansion, the regular search's session; BHSA in it is CC BY-NC.

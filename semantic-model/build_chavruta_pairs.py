@@ -13,7 +13,8 @@ not drown the rest.
 Nothing an evaluation measures is touched, as in build_train_pairs.py and train-v2/build_pairs.py: no line of the
 benchmark's tractates or of its Rambam halachot, no line an evaluation judges or targets or near one (both sides), no
 Gemara line holding a quote's source or matching eval-100's sources, and none near a dev question's target
-(train-v2's DEV_BATCHES).
+(train-v2's DEV_BATCHES); nor any line of crfh1672/search-queries' tractates (sample_targets.OUTSIDE_SET_TRACTATES),
+nor a copy, word for word, of a line of a book held out.
 """
 
 import argparse
@@ -30,7 +31,7 @@ sys.path.insert(0, str(HERE / "train-v2"))
 from build_pairs import DEV_BATCHES, read_tsv  # noqa: E402
 from build_train_pairs import MAX_PASSAGE_WORDS, MIN_WORDS, SPAN_WORDS, benchmark_held  # noqa: E402
 from pardes_semantic.clean import clean  # noqa: E402
-from sample_targets import held_out, neighbors  # noqa: E402
+from sample_targets import OUTSIDE_SET_TRACTATES, held_book_texts, held_out, neighbors, outside_set_books  # noqa: E402
 
 PER_LINE = 3
 BOLD = re.compile(r"<b>.*?</b>|<small>.*?</small>", re.S)
@@ -51,6 +52,8 @@ def main() -> None:
     con = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
 
     held_books, held_lines = benchmark_held(con)
+    held_books |= outside_set_books(con)
+    held_texts = held_book_texts(con, held_books)
     judged, patterns, quotes = held_out(con)
     linked, near = neighbors(con, judged)
     dev = {int(q["target_line"]) for q in read_tsv(HERE / "train-v2" / "questions.tsv") if q["batch"] in DEV_BATCHES}
@@ -59,8 +62,8 @@ def main() -> None:
     chavruta = {r[0] for r in con.execute("SELECT id FROM book WHERE title LIKE 'חברותא על %'")}
     bavli = {r[0] for r in con.execute("""SELECT id FROM book WHERE isBaseBook = 1 AND categoryId IN
                                           (SELECT descendantId FROM category_closure WHERE ancestorId = 13)""")}
-    print(f"{len(chavruta)} Chavruta books, {len(bavli)} tractates ({len(bavli & held_books)} of the benchmark's)",
-          file=sys.stderr)
+    print(f"{len(chavruta)} Chavruta books, {len(bavli)} tractates ({len(bavli & held_books)} held out: "
+          f"the benchmark's and {', '.join(OUTSIDE_SET_TRACTATES)})", file=sys.stderr)
 
     rows = con.execute(f"""SELECT k.sourceLineId, k.targetLineId, k.sourceBookId, k.targetBookId FROM link k
                            JOIN connection_type ct ON ct.id = k.connectionTypeId WHERE ct.name = 'COMMENTARY'
@@ -90,6 +93,9 @@ def main() -> None:
             dropped += 1
             continue
         if rg[2] and any(p.search(rg[2]) for p in patterns):
+            dropped += 1
+            continue
+        if clean(rg[3]) in held_texts:
             dropped += 1
             continue
         gemara = " ".join(clean(rg[3]).split()[:MAX_PASSAGE_WORDS])

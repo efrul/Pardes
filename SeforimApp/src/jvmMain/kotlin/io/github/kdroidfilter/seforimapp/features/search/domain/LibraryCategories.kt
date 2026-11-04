@@ -17,10 +17,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The library's categories, for the search: each with its path (what the bar suggests) and the books it searches, all
- * those under it or its base books alone (the texts without their commentaries: תלמוד's tractates, תורה's five books).
+ * those under it or its base books alone (the texts without their commentaries: תלמוד's tractates, the מהר״ל's books
+ * without the notes on them; [BaseBooks] tells them apart).
  *
- * Read once for the app, every window and tab, from the catalog the library comes with (catalog.pb, in memory): a
- * category's books cost no query. Without a catalog, from the database: the categories once, a category's books once
+ * Read once for the app, every window and tab, from the catalog the library comes with (catalog.pb, in memory) and the
+ * library's commentary links (one query, under a second): a category's books cost no query. Without a catalog, from the database: the categories once, a category's books once
  * each, and no category is offered in its base books alone.
  */
 @Inject
@@ -28,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 class LibraryCategories(
     private val catalogCache: CatalogCache,
     private val repository: SeforimRepository,
+    private val commentaryLinks: CommentaryLinks,
 ) {
     // One category: as the bar shows it, and the books under it (its subcategories' too), null without a catalog
     private class Entry(
@@ -78,38 +80,26 @@ class LibraryCategories(
 
     private suspend fun entries(): Map<Long, Entry> =
         entries ?: mutex.withLock {
-            entries ?: withContext(Dispatchers.Default) {
+            entries ?: withContext(Dispatchers.IO) {
                 val roots = catalogCache.getCatalog()?.rootCategories
                 if (roots.isNullOrEmpty()) fromDatabase() else fromCatalog(roots)
             }.also { built -> if (built.isNotEmpty()) entries = built }
         }
 
     private fun fromCatalog(roots: List<CatalogCategory>): Map<Long, Entry> {
+        val books = BaseBooks.of(roots, commentaryLinks.read())
         val result = LinkedHashMap<Long, Entry>()
 
-        // Lists [category] before its subcategories, and returns the books under it: all of them, and the base ones
+        // Lists [category] before its subcategories
         fun walk(
             category: CatalogCategory,
             parentPath: List<String>,
-        ): Pair<LongArray, LongArray> {
+        ) {
             val path = parentPath + category.title
-            // Its place, before its subcategories; filled once their books are known
-            result[category.id] = Entry(CategoryHit(category.id, path), null, null)
-            val all = ArrayList<Long>()
-            val base = ArrayList<Long>()
-            category.books.forEach { book ->
-                all += book.id
-                if (book.isBaseBook) base += book.id
-            }
-            category.subcategories.forEach { child ->
-                val (childAll, childBase) = walk(child, path)
-                childAll.forEach { all += it }
-                childBase.forEach { base += it }
-            }
-            val books = all.toLongArray() to base.toLongArray()
-            val mixed = books.second.isNotEmpty() && books.second.size < books.first.size
-            result[category.id] = Entry(CategoryHit(category.id, path, hasBaseBooksAndOthers = mixed), books.first, books.second)
-            return books
+            val its = books[category.id]
+            result[category.id] =
+                Entry(CategoryHit(category.id, path, hasBaseBooksAndOthers = its?.hasBaseBooksAndOthers == true), its?.all, its?.base)
+            category.subcategories.forEach { walk(it, path) }
         }
         roots.forEach { walk(it, emptyList()) }
         return result

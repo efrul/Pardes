@@ -1,0 +1,423 @@
+id	tractate	type	correct_line	correct_how	near_miss_line	near_miss_how
+berakhot-001	ברכות	conceptual	28957	start8	29366	exact
+berakhot-002	ברכות	conceptual	28974	exact	29321	exact
+berakhot-003	ברכות	conceptual	28997	exact	29017	exact
+berakhot-004	ברכות	conceptual	29036	exact	29044	exact
+berakhot-005	ברכות	conceptual	29046	exact	29034	exact
+berakhot-006	ברכות	conceptual	29062	exact	29337	exact
+berakhot-007	ברכות	conceptual	29091	exact	31692	exact
+berakhot-008	ברכות	conceptual	29124	exact	29105	exact
+berakhot-009	ברכות	conceptual	29151	start8	29173	exact
+berakhot-010	ברכות	conceptual	29197	start8	30402	exact
+berakhot-011	ברכות	conceptual	29207	start5	29792	exact
+berakhot-012	ברכות	conceptual	29244	exact	30426	exact
+berakhot-013	ברכות	conceptual	29277	exact	29149	exact
+berakhot-014	ברכות	conceptual	29304	exact	31422	exact
+berakhot-015	ברכות	conceptual	29341	start8	28961	exact
+berakhot-016	ברכות	conceptual	29366	exact	28957	exact
+berakhot-017	ברכות	conceptual	29391	start8	29258	exact
+berakhot-018	ברכות	conceptual	29425	start8	29416	exact
+berakhot-019	ברכות	conceptual	29466	exact	29459	exact
+berakhot-020	ברכות	conceptual	29502	exact	29488	exact
+berakhot-021	ברכות	conceptual	29531	exact	29512	exact
+berakhot-022	ברכות	conceptual	29559	exact	29595	exact
+berakhot-023	ברכות	conceptual	29582	exact	29572	exact
+berakhot-024	ברכות	conceptual	29613	exact	29590	exact
+berakhot-025	ברכות	conceptual	29650	start8	30274	exact
+berakhot-026	ברכות	conceptual	29688	exact	29658	exact
+berakhot-027	ברכות	conceptual	29696	exact	29603	exact
+berakhot-028	ברכות	conceptual	29746	exact	29697	exact
+berakhot-029	ברכות	conceptual	29762	exact	31045	exact
+berakhot-030	ברכות	conceptual	29790	exact	29800	exact
+berakhot-031	ברכות	conceptual	29810	exact	31826	exact
+berakhot-032	ברכות	conceptual	29817	exact	31827	exact
+berakhot-033	ברכות	conceptual	29846	exact	29872	exact
+berakhot-034	ברכות	conceptual	29856	exact	29003	exact
+berakhot-035	ברכות	conceptual	29874	start8	31788	exact
+berakhot-036	ברכות	conceptual	29893	exact	29874	exact
+berakhot-037	ברכות	conceptual	29913	exact	30487	exact
+berakhot-038	ברכות	conceptual	29922	start8	30995	exact
+berakhot-039	ברכות	conceptual	29950	exact	30133	exact
+berakhot-040	ברכות	conceptual	29963	exact	29959	exact
+berakhot-041	ברכות	conceptual	29989	exact	30110	exact
+berakhot-042	ברכות	conceptual	30023	exact	30126	exact
+berakhot-043	ברכות	conceptual	30036	exact	30051	exact
+berakhot-044	ברכות	short	30051	exact	30036	exact
+berakhot-045	ברכות	conceptual	30074	exact	31086	exact
+berakhot-046	ברכות	conceptual	30100	exact	30415	exact
+berakhot-047	ברכות	conceptual	30125	exact	30021	exact
+berakhot-048	ברכות	conceptual	30164	exact	30143	exact
+berakhot-049	ברכות	conceptual	30189	start8	30197	exact
+berakhot-050	ברכות	conceptual	30200	exact	30485	exact
+berakhot-051	ברכות	conceptual	30224	exact	30206	exact
+berakhot-052	ברכות	conceptual	30244	exact	30256	exact
+berakhot-053	ברכות	conceptual	30262	start8	30249	exact
+berakhot-054	ברכות	conceptual	30281	start8	29808	exact
+berakhot-055	ברכות	conceptual	30311	exact	30285	exact
+berakhot-056	ברכות	conceptual	30328	exact	30371	exact
+berakhot-057	ברכות	conceptual	30347	exact	30373	exact
+berakhot-058	ברכות	conceptual	30373	exact	30362	exact
+berakhot-059	ברכות	conceptual	30418	exact	30615	exact
+berakhot-060	ברכות	conceptual	30427	start8	30418	exact
+berakhot-061	ברכות	conceptual	30464	start8	30490	exact
+berakhot-062	ברכות	conceptual	30484	exact	29956	exact
+berakhot-063	ברכות	conceptual	30525	exact	30317	exact
+berakhot-064	ברכות	conceptual	30568	exact	30587	exact
+berakhot-065	ברכות	conceptual	30590	exact	30573	exact
+berakhot-066	ברכות	conceptual	30602	exact	30291	exact
+berakhot-067	ברכות	conceptual	30634	exact	30827	exact
+berakhot-068	ברכות	conceptual	30657	exact	31207	exact
+berakhot-069	ברכות	short	30684	exact	30745	exact
+berakhot-070	ברכות	short	30718	exact	30697	exact
+berakhot-071	ברכות	conceptual	30727	exact	30722	exact
+berakhot-072	ברכות	conceptual	30746	exact	30756	exact
+berakhot-073	ברכות	short	30763	exact	30745	exact
+berakhot-074	ברכות	short	30776	exact	30797	exact
+berakhot-075	ברכות	conceptual	30792	exact	30781	exact
+berakhot-076	ברכות	conceptual	30806	exact	30774	exact
+berakhot-077	ברכות	conceptual	30817	exact	31036	exact
+berakhot-078	ברכות	conceptual	30834	exact	30865	exact
+berakhot-079	ברכות	conceptual	30859	exact	30875	exact
+berakhot-080	ברכות	conceptual	30876	exact	30888	exact
+berakhot-081	ברכות	conceptual	30882	start8	30957	exact
+berakhot-082	ברכות	conceptual	30896	exact	30889	exact
+berakhot-083	ברכות	conceptual	30918	exact	30927	exact
+berakhot-084	ברכות	conceptual	30928	exact	31580	exact
+berakhot-085	ברכות	conceptual	30960	exact	30738	exact
+berakhot-086	ברכות	conceptual	30965	exact	30954	exact
+berakhot-087	ברכות	conceptual	30996	exact	31161	exact
+berakhot-088	ברכות	conceptual	31017	exact	31009	exact
+berakhot-089	ברכות	conceptual	31036	exact	30817	exact
+berakhot-090	ברכות	conceptual	31055	exact	30917	exact
+berakhot-091	ברכות	conceptual	31073	exact	30997	exact
+berakhot-092	ברכות	conceptual	31086	exact	30937	exact
+berakhot-093	ברכות	conceptual	31104	exact	31084	exact
+berakhot-094	ברכות	conceptual	31115	exact	31048	exact
+berakhot-095	ברכות	conceptual	31130	exact	30960	exact
+berakhot-096	ברכות	conceptual	31153	exact	30328	exact
+berakhot-097	ברכות	conceptual	31186	exact	31163	exact
+berakhot-098	ברכות	conceptual	31203	exact	31241	exact
+berakhot-099	ברכות	conceptual	31251	exact	31212	exact
+berakhot-100	ברכות	conceptual	31241	exact	31226	exact
+berakhot-101	ברכות	conceptual	31261	exact	31245	exact
+berakhot-102	ברכות	conceptual	31297	exact	31247	exact
+berakhot-103	ברכות	conceptual	31317	exact	31250	exact
+berakhot-104	ברכות	conceptual	31355	exact	31313	exact
+berakhot-105	ברכות	conceptual	31384	exact	31560	exact
+berakhot-106	ברכות	conceptual	31412	exact	31576	exact
+berakhot-107	ברכות	conceptual	31441	exact	31462	exact
+berakhot-108	ברכות	short	31462	exact	31441	exact
+berakhot-109	ברכות	conceptual	31466	exact	31486	exact
+berakhot-110	ברכות	conceptual	31487	exact	31465	exact
+berakhot-111	ברכות	short	31514	exact	31530	exact
+berakhot-112	ברכות	conceptual	31532	exact	31514	exact
+berakhot-113	ברכות	conceptual	31554	exact	31571	exact
+berakhot-114	ברכות	conceptual	31576	exact	31386	exact
+berakhot-115	ברכות	short	31595	exact	31593	exact
+berakhot-116	ברכות	conceptual	31605	exact	31385	exact
+berakhot-117	ברכות	conceptual	31636	exact	31387	exact
+berakhot-118	ברכות	conceptual	31656	exact	31643	exact
+berakhot-119	ברכות	conceptual	31668	exact	31697	exact
+berakhot-120	ברכות	conceptual	31704	exact	30281	exact
+berakhot-121	ברכות	conceptual	31713	exact	31652	exact
+berakhot-122	ברכות	conceptual	31743	start8	29048	exact
+berakhot-123	ברכות	conceptual	31784	start8	31794	exact
+berakhot-124	ברכות	conceptual	31810	exact	31821	exact
+berakhot-125	ברכות	conceptual	31823	start8	29813	exact
+chagiga-001	חגיגה	conceptual	53090	exact	53091	exact
+chagiga-002	חגיגה	conceptual	53101	exact	53100	exact
+chagiga-003	חגיגה	conceptual	53114	exact	53117	exact
+chagiga-004	חגיגה	short	53138	exact	53103	exact
+chagiga-005	חגיגה	conceptual	53151	exact	53130	exact
+chagiga-006	חגיגה	conceptual	53161	exact	53183	exact
+chagiga-007	חגיגה	conceptual	53176	exact	53172	exact
+chagiga-008	חגיגה	conceptual	53202	exact	53449	exact
+chagiga-009	חגיגה	conceptual	53221	start8	53223	exact
+chagiga-010	חגיגה	conceptual	53231	exact	53158	exact
+chagiga-011	חגיגה	short	53247	start5	53296	exact
+chagiga-012	חגיגה	short	53267	exact	53277	exact
+chagiga-013	חגיגה	conceptual	53283	exact	53660	exact
+chagiga-014	חגיגה	conceptual	53290	exact	53589	exact
+chagiga-015	חגיגה	conceptual	53308	exact	53309	exact
+chagiga-016	חגיגה	conceptual	53333	exact	53494	exact
+chagiga-017	חגיגה	conceptual	53347	exact	53383	exact
+chagiga-018	חגיגה	conceptual	53369	exact	53242	exact
+chagiga-019	חגיגה	conceptual	53383	exact	53344	exact
+chagiga-020	חגיגה	conceptual	53416	exact	53465	exact
+chagiga-021	חגיגה	conceptual	53425	exact	53433	exact
+chagiga-022	חגיגה	conceptual	53446	exact	53439	exact
+chagiga-023	חגיגה	short	53463	exact	53464	exact
+chagiga-024	חגיגה	conceptual	53479	exact	53477	exact
+chagiga-025	חגיגה	conceptual	53496	exact	53129	exact
+chagiga-026	חגיגה	conceptual	53509	exact	53464	exact
+chagiga-027	חגיגה	conceptual	53520	exact	53508	exact
+chagiga-028	חגיגה	conceptual	53544	exact	53543	exact
+chagiga-029	חגיגה	conceptual	53551	exact	53249	exact
+chagiga-030	חגיגה	conceptual	53581	exact	53371	exact
+chagiga-031	חגיגה	conceptual	53592	exact	53317	exact
+chagiga-032	חגיגה	conceptual	53600	exact	53590	exact
+chagiga-033	חגיגה	conceptual	53615	exact	53314	exact
+chagiga-034	חגיגה	conceptual	53623	exact	53640	exact
+chagiga-035	חגיגה	conceptual	53647	exact	53771	exact
+chagiga-036	חגיגה	conceptual	53664	exact	53634	exact
+chagiga-037	חגיגה	conceptual	53674	exact	53755	exact
+chagiga-038	חגיגה	conceptual	53686	exact	53845	exact
+chagiga-039	חגיגה	conceptual	53697	exact	53694	exact
+chagiga-040	חגיגה	conceptual	53703	exact	53708	exact
+chagiga-041	חגיגה	short	53721	exact	53805	exact
+chagiga-042	חגיגה	conceptual	53732	exact	53217	exact
+chagiga-043	חגיגה	conceptual	53751	exact	53807	exact
+chagiga-044	חגיגה	conceptual	53769	exact	53739	exact
+chagiga-045	חגיגה	conceptual	53783	exact	53784	exact
+chagiga-046	חגיגה	conceptual	53798	exact	53802	exact
+chagiga-047	חגיגה	conceptual	53808	exact	53654	exact
+chagiga-048	חגיגה	conceptual	53815	start8	53738	exact
+chagiga-049	חגיגה	short	53836	exact	53837	exact
+chagiga-050	חגיגה	conceptual	53855	exact	53851	exact
+chagiga-051	חגיגה	conceptual	53872	exact	53871	exact
+megillah-001	מגילה	conceptual	50732	exact	50864	exact
+megillah-002	מגילה	conceptual	50762	exact	51468	exact
+megillah-003	מגילה	conceptual	50778	exact	50817	exact
+megillah-004	מגילה	conceptual	50785	exact	51046	exact
+megillah-005	מגילה	conceptual	50787	exact	50785	exact
+megillah-006	מגילה	conceptual	50809	exact	50802	exact
+megillah-007	מגילה	conceptual	50813	exact	51864	exact
+megillah-008	מגילה	conceptual	50826	exact	50806	exact
+megillah-009	מגילה	conceptual	50829	exact	51521	exact
+megillah-010	מגילה	conceptual	50857	exact	50967	exact
+megillah-011	מגילה	conceptual	50860	exact	50817	exact
+megillah-012	מגילה	conceptual	50879	exact	51972	exact
+megillah-013	מגילה	conceptual	50884	start8	50886	exact
+megillah-014	מגילה	conceptual	50898	exact	50902	exact
+megillah-015	מגילה	conceptual	50913	exact	50914	exact
+megillah-016	מגילה	conceptual	50920	exact	50923	exact
+megillah-017	מגילה	conceptual	50922	exact	50923	exact
+megillah-018	מגילה	conceptual	50950	exact	50951	exact
+megillah-019	מגילה	conceptual	50976	exact	50977	exact
+megillah-020	מגילה	conceptual	50978	exact	51525	exact
+megillah-021	מגילה	conceptual	50998	exact	51070	exact
+megillah-022	מגילה	conceptual	50993	exact	50996	exact
+megillah-023	מגילה	conceptual	51017	exact	51018	exact
+megillah-024	מגילה	conceptual	51030	exact	51043	exact
+megillah-025	מגילה	conceptual	51046	exact	51051	exact
+megillah-026	מגילה	conceptual	51055	exact	51051	exact
+megillah-027	מגילה	conceptual	51057	exact	51056	exact
+megillah-028	מגילה	conceptual	51077	exact	51074	exact
+megillah-029	מגילה	conceptual	51088	exact	51089	exact
+megillah-030	מגילה	conceptual	51138	exact	51142	exact
+megillah-031	מגילה	short	51119	exact	51138	exact
+megillah-032	מגילה	conceptual	51146	exact	51157	exact
+megillah-033	מגילה	short	51160	exact	51145	exact
+megillah-034	מגילה	conceptual	51173	exact	51172	exact
+megillah-035	מגילה	conceptual	51194	exact	51195	exact
+megillah-036	מגילה	conceptual	51177	exact	50976	exact
+megillah-037	מגילה	conceptual	51198	exact	51194	exact
+megillah-038	מגילה	conceptual	51201	exact	51199	exact
+megillah-039	מגילה	conceptual	51241	exact	51888	exact
+megillah-040	מגילה	conceptual	51248	exact	51247	exact
+megillah-041	מגילה	conceptual	51250	exact	51249	exact
+megillah-042	מגילה	conceptual	51273	exact	51247	exact
+megillah-043	מגילה	conceptual	51283	exact	51284	exact
+megillah-044	מגילה	short	51285	exact	51286	exact
+megillah-045	מגילה	conceptual	51307	exact	51308	exact
+megillah-046	מגילה	conceptual	51326	exact	51328	exact
+megillah-047	מגילה	conceptual	51333	exact	51335	exact
+megillah-048	מגילה	conceptual	51329	exact	51328	exact
+megillah-049	מגילה	conceptual	51353	exact	51356	exact
+megillah-050	מגילה	conceptual	51371	exact	51372	exact
+megillah-051	מגילה	conceptual	51386	exact	51394	exact
+megillah-052	מגילה	conceptual	51399	exact	51400	exact
+megillah-053	מגילה	conceptual	51392	exact	51393	exact
+megillah-054	מגילה	conceptual	51419	exact	51415	exact
+megillah-055	מגילה	conceptual	51440	exact	51441	exact
+megillah-056	מגילה	conceptual	51444	exact	51437	exact
+megillah-057	מגילה	short	51460	exact	51461	exact
+megillah-058	מגילה	conceptual	51467	exact	51444	exact
+megillah-059	מגילה	conceptual	51482	exact	51481	exact
+megillah-060	מגילה	conceptual	51486	exact	51482	exact
+megillah-061	מגילה	conceptual	51491	exact	51636	exact
+megillah-062	מגילה	conceptual	51505	exact	51506	exact
+megillah-063	מגילה	conceptual	51503	exact	51500	exact
+megillah-064	מגילה	conceptual	51517	exact	51536	exact
+megillah-065	מגילה	conceptual	51521	exact	51536	exact
+megillah-066	מגילה	conceptual	51537	exact	51525	exact
+megillah-067	מגילה	conceptual	51550	exact	51548	exact
+megillah-068	מגילה	conceptual	51553	exact	51649	exact
+megillah-069	מגילה	conceptual	51555	exact	51543	exact
+megillah-070	מגילה	conceptual	51574	exact	51649	exact
+megillah-071	מגילה	conceptual	51575	exact	51652	exact
+megillah-072	מגילה	conceptual	51599	exact	51600	exact
+megillah-073	מגילה	conceptual	51613	exact	51614	exact
+megillah-074	מגילה	conceptual	51619	exact	51620	exact
+megillah-075	מגילה	conceptual	51630	exact	51631	exact
+megillah-076	מגילה	conceptual	51638	exact	51637	exact
+megillah-077	מגילה	conceptual	51653	exact	51574	exact
+megillah-078	מגילה	conceptual	51675	exact	51674	exact
+megillah-079	מגילה	conceptual	51693	exact	51692	exact
+megillah-080	מגילה	conceptual	51713	exact	51708	exact
+megillah-081	מגילה	conceptual	51732	exact	51729	exact
+megillah-082	מגילה	conceptual	51734	exact	51735	exact
+megillah-083	מגילה	conceptual	51752	exact	51798	exact
+megillah-084	מגילה	conceptual	51764	exact	52002	exact
+megillah-085	מגילה	conceptual	51768	exact	51767	exact
+megillah-086	מגילה	conceptual	51771	exact	51732	exact
+megillah-087	מגילה	conceptual	51795	exact	51736	exact
+megillah-088	מגילה	conceptual	51816	exact	51824	exact
+megillah-089	מגילה	conceptual	51824	exact	51817	exact
+megillah-090	מגילה	conceptual	51840	exact	51846	exact
+megillah-091	מגילה	conceptual	51845	exact	51843	exact
+megillah-092	מגילה	conceptual	51861	exact	51371	exact
+megillah-093	מגילה	conceptual	51867	exact	51868	exact
+megillah-094	מגילה	conceptual	51880	exact	51881	exact
+megillah-095	מגילה	conceptual	51888	exact	51242	exact
+megillah-096	מגילה	conceptual	51891	exact	51892	exact
+megillah-097	מגילה	conceptual	51923	exact	51917	exact
+megillah-098	מגילה	conceptual	51938	exact	51939	exact
+megillah-099	מגילה	conceptual	51950	exact	51968	exact
+megillah-100	מגילה	conceptual	51942	exact	51944	exact
+megillah-101	מגילה	conceptual	51957	exact	51955	exact
+megillah-102	מגילה	conceptual	51969	exact	51972	exact
+megillah-103	מגילה	conceptual	51972	exact	51969	exact
+megillah-104	מגילה	conceptual	51974	exact	51975	exact
+megillah-105	מגילה	short	51994	exact	51993	exact
+megillah-106	מגילה	conceptual	52003	exact	50826	exact
+moedkatan-001	מועד קטן	conceptual	52007	exact	52189	exact
+moedkatan-002	מועד קטן	conceptual	52009	exact	52010	exact
+moedkatan-003	מועד קטן	conceptual	52025	exact	52048	exact
+moedkatan-004	מועד קטן	conceptual	52040	exact	52039	exact
+moedkatan-005	מועד קטן	conceptual	52050	exact	52067	exact
+moedkatan-006	מועד קטן	conceptual	52070	exact	52071	exact
+moedkatan-007	מועד קטן	conceptual	52082	exact	52084	exact
+moedkatan-008	מועד קטן	conceptual	52100	exact	52103	exact
+moedkatan-009	מועד קטן	short	52105	exact	52008	exact
+moedkatan-010	מועד קטן	conceptual	52119	exact	52123	exact
+moedkatan-011	מועד קטן	conceptual	52122	exact	52123	exact
+moedkatan-012	מועד קטן	conceptual	52144	exact	52147	exact
+moedkatan-013	מועד קטן	conceptual	52148	exact	52171	exact
+moedkatan-014	מועד קטן	short	52149	exact	52153	exact
+moedkatan-015	מועד קטן	conceptual	52171	exact	52172	exact
+moedkatan-016	מועד קטן	conceptual	52182	exact	52181	exact
+moedkatan-017	מועד קטן	conceptual	52186	exact	52188	exact
+moedkatan-018	מועד קטן	conceptual	52189	exact	52254	exact
+moedkatan-019	מועד קטן	conceptual	52199	exact	52203	exact
+moedkatan-020	מועד קטן	conceptual	52203	exact	52199	exact
+moedkatan-021	מועד קטן	conceptual	52206	exact	52351	exact
+moedkatan-022	מועד קטן	conceptual	52219	exact	52220	exact
+moedkatan-023	מועד קטן	conceptual	52228	exact	52227	exact
+moedkatan-024	מועד קטן	conceptual	52226	start8	52237	exact
+moedkatan-025	מועד קטן	conceptual	52250	exact	52253	exact
+moedkatan-026	מועד קטן	conceptual	52255	exact	52254	exact
+moedkatan-027	מועד קטן	short	52257	exact	52254	exact
+moedkatan-028	מועד קטן	conceptual	52269	exact	52267	exact
+moedkatan-029	מועד קטן	conceptual	52288	start8	52292	exact
+moedkatan-030	מועד קטן	conceptual	52293	exact	52292	exact
+moedkatan-031	מועד קטן	conceptual	52313	exact	52314	exact
+moedkatan-032	מועד קטן	conceptual	52315	exact	52316	exact
+moedkatan-033	מועד קטן	conceptual	52332	exact	52331	exact
+moedkatan-034	מועד קטן	conceptual	52334	exact	52335	exact
+moedkatan-035	מועד קטן	conceptual	52348	exact	52260	exact
+moedkatan-036	מועד קטן	conceptual	52367	exact	52368	exact
+moedkatan-037	מועד קטן	conceptual	52371	exact	52372	exact
+moedkatan-038	מועד קטן	conceptual	52381	exact	52382	exact
+moedkatan-039	מועד קטן	conceptual	52399	exact	52401	exact
+moedkatan-040	מועד קטן	conceptual	52402	exact	52404	exact
+moedkatan-041	מועד קטן	conceptual	52422	exact	52428	exact
+moedkatan-042	מועד קטן	conceptual	52438	exact	52440	exact
+moedkatan-043	מועד קטן	short	52445	exact	52447	exact
+moedkatan-044	מועד קטן	conceptual	52443	exact	52440	exact
+moedkatan-045	מועד קטן	conceptual	52464	exact	52463	exact
+moedkatan-046	מועד קטן	conceptual	52475	exact	52481	exact
+moedkatan-047	מועד קטן	short	52485	exact	52715	exact
+moedkatan-048	מועד קטן	short	52498	exact	52502	exact
+moedkatan-049	מועד קטן	conceptual	52502	exact	52504	exact
+moedkatan-050	מועד קטן	conceptual	52501	exact	52500	exact
+moedkatan-051	מועד קטן	short	52527	exact	52528	exact
+moedkatan-052	מועד קטן	conceptual	52530	exact	52531	exact
+moedkatan-053	מועד קטן	conceptual	52547	exact	52550	exact
+moedkatan-054	מועד קטן	conceptual	52570	exact	52567	exact
+moedkatan-055	מועד קטן	conceptual	52570	exact	52566	exact
+moedkatan-056	מועד קטן	conceptual	52599	exact	52601	exact
+moedkatan-057	מועד קטן	conceptual	52603	exact	52601	exact
+moedkatan-058	מועד קטן	conceptual	52630	exact	52629	exact
+moedkatan-059	מועד קטן	conceptual	52642	exact	52646	exact
+moedkatan-060	מועד קטן	conceptual	52647	exact	52648	exact
+moedkatan-061	מועד קטן	conceptual	52659	exact	52662	exact
+moedkatan-062	מועד קטן	conceptual	52686	exact	52687	exact
+moedkatan-063	מועד קטן	conceptual	52687	exact	52690	exact
+moedkatan-064	מועד קטן	conceptual	52690	exact	52687	exact
+moedkatan-065	מועד קטן	conceptual	52697	exact	52698	exact
+moedkatan-066	מועד קטן	conceptual	52701	exact	52716	exact
+moedkatan-067	מועד קטן	conceptual	52703	exact	52706	exact
+moedkatan-068	מועד קטן	conceptual	52715	exact	52703	exact
+moedkatan-069	מועד קטן	conceptual	52730	exact	52736	exact
+moedkatan-070	מועד קטן	conceptual	52734	exact	52736	exact
+moedkatan-071	מועד קטן	short	52749	exact	52754	exact
+moedkatan-072	מועד קטן	conceptual	52753	exact	52751	exact
+moedkatan-073	מועד קטן	short	52757	exact	52527	exact
+moedkatan-074	מועד קטן	conceptual	52771	exact	52770	exact
+moedkatan-075	מועד קטן	conceptual	52769	exact	52770	exact
+moedkatan-076	מועד קטן	conceptual	52790	exact	52785	exact
+moedkatan-077	מועד קטן	conceptual	52792	exact	52791	exact
+moedkatan-078	מועד קטן	conceptual	52805	exact	52804	exact
+moedkatan-079	מועד קטן	conceptual	52826	exact	52825	exact
+moedkatan-080	מועד קטן	conceptual	52829	exact	52828	exact
+moedkatan-081	מועד קטן	conceptual	52830	exact	52831	exact
+moedkatan-082	מועד קטן	short	52839	exact	52852	exact
+moedkatan-083	מועד קטן	conceptual	52844	exact	52845	exact
+moedkatan-084	מועד קטן	conceptual	52852	exact	52839	exact
+moedkatan-085	מועד קטן	conceptual	52854	exact	52857	exact
+moedkatan-086	מועד קטן	conceptual	52872	start8	52874	exact
+moedkatan-087	מועד קטן	conceptual	52882	exact	52884	exact
+moedkatan-088	מועד קטן	conceptual	52885	exact	52882	exact
+moedkatan-089	מועד קטן	conceptual	52887	exact	52886	exact
+moedkatan-090	מועד קטן	conceptual	52909	exact	52907	exact
+moedkatan-091	מועד קטן	short	52911	exact	52910	exact
+moedkatan-092	מועד קטן	short	52925	exact	52954	exact
+moedkatan-093	מועד קטן	conceptual	52926	exact	52928	exact
+moedkatan-094	מועד קטן	conceptual	52956	exact	52957	exact
+moedkatan-095	מועד קטן	conceptual	52955	exact	52954	exact
+moedkatan-096	מועד קטן	conceptual	52980	exact	52524	exact
+moedkatan-097	מועד קטן	conceptual	53001	exact	53005	exact
+moedkatan-098	מועד קטן	conceptual	53005	exact	53002	exact
+moedkatan-099	מועד קטן	conceptual	53022	exact	53018	exact
+moedkatan-100	מועד קטן	conceptual	53029	exact	53030	exact
+moedkatan-101	מועד קטן	conceptual	53028	exact	53027	exact
+moedkatan-102	מועד קטן	conceptual	53052	exact	53051	exact
+moedkatan-103	מועד קטן	conceptual	53078	exact	53080	exact
+moedkatan-104	מועד קטן	conceptual	53081	exact	53084	exact
+moedkatan-105	מועד קטן	conceptual	53084	exact	53085	exact
+taanit-001	תענית	conceptual	49788	exact	50040	exact
+taanit-002	תענית	conceptual	49825	exact	49797	exact
+taanit-003	תענית	conceptual	49841	exact	49848	exact
+taanit-004	תענית	conceptual	49896	exact	50070	exact
+taanit-005	תענית	conceptual	49930	exact	49777	exact
+taanit-006	תענית	conceptual	49958	exact	50004	exact
+taanit-007	תענית	conceptual	50002	exact	50007	exact
+taanit-008	תענית	short	50015	exact	50351	exact
+taanit-009	תענית	conceptual	50060	exact	50055	exact
+taanit-010	תענית	conceptual	50077	exact	50079	exact
+taanit-011	תענית	conceptual	50102	exact	50094	exact
+taanit-012	תענית	conceptual	50151	exact	50152	exact
+taanit-013	תענית	conceptual	50177	exact	50167	exact
+taanit-014	תענית	conceptual	50201	exact	50242	exact
+taanit-015	תענית	conceptual	50226	exact	50225	exact
+taanit-016	תענית	conceptual	50258	exact	50589	exact
+taanit-017	תענית	conceptual	50286	exact	50628	exact
+taanit-018	תענית	conceptual	50315	exact	50394	exact
+taanit-019	תענית	conceptual	50364	exact	49950	exact
+taanit-020	תענית	conceptual	50382	exact	50369	exact
+taanit-021	תענית	conceptual	50417	exact	50519	exact
+taanit-022	תענית	conceptual	50473	exact	50503	exact
+taanit-023	תענית	short	50509	exact	50546	exact
+taanit-024	תענית	conceptual	50525	exact	50523	exact
+taanit-025	תענית	short	50574	exact	50575	exact
+taanit-026	תענית	conceptual	50607	exact	50562	exact
+taanit-027	תענית	conceptual	50645	exact	50559	exact
+taanit-028	תענית	conceptual	50663	exact	50674	exact
+taanit-029	תענית	conceptual	50709	exact	50663	exact
+taanit-030	תענית	short	50728	exact	50046	exact
+taanit-031	תענית	conceptual	49794	exact	49815	exact
+taanit-032	תענית	conceptual	49878	exact	50331	exact
+taanit-033	תענית	short	50435	exact	50433	exact
+taanit-034	תענית	conceptual	50400	exact	50215	exact
+taanit-035	תענית	conceptual	50546	exact	50507	exact

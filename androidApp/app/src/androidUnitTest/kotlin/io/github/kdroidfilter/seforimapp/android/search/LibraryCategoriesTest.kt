@@ -36,7 +36,8 @@ class LibraryCategoriesTest {
         assertEquals(listOf(1L, 2L, 3L), categories.bookIds(12L))
         assertEquals(listOf(1L, 2L), categories.bookIds(12L, baseBooksOnly = true))
         assertEquals(listOf(3L), categories.bookIds(212L))
-        assertEquals(emptyList(), categories.bookIds(212L, baseBooksOnly = true))
+        // Not offered in its base books alone: a choice kept from before searches all of it, not nothing
+        assertEquals(listOf(3L), categories.bookIds(212L, baseBooksOnly = true))
         assertEquals(emptyList(), categories.bookIds(999L))
     }
 
