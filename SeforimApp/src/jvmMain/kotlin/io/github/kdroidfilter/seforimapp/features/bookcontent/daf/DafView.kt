@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.TextContextMenu
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
@@ -75,6 +76,8 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.core.presentation.text.CurrentFindMatchColor
+import io.github.kdroidfilter.seforimapp.core.presentation.text.SearchHighlightColor
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
@@ -257,6 +260,7 @@ fun DafView(
     onContextLine: (lineId: Long) -> Unit,
     modifier: Modifier = Modifier,
     onWordInText: (DafAnchor) -> Unit = {},
+    find: DafFind = DafFind.NONE,
 ) {
     val graph = LocalAppGraph.current
     // Next to the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another one
@@ -301,6 +305,7 @@ fun DafView(
                     onSelectPassage = onSelectPassage,
                     onContextLine = onContextLine,
                     onWordInText = onWordInText,
+                    find = find,
                 )
         }
     }
@@ -333,6 +338,7 @@ private fun DafPages(
     onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
     onContextLine: (Long) -> Unit,
     onWordInText: (DafAnchor) -> Unit,
+    find: DafFind,
 ) {
     val graph = LocalAppGraph.current
     val density = LocalDensity.current
@@ -530,6 +536,7 @@ private fun DafPages(
                                 onMark = onMark,
                                 onOpenReviews = onOpenReviews,
                                 onWordInText = onWordInText,
+                                find = find,
                                 modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
                             )
                         }
@@ -569,6 +576,7 @@ private fun AmudItem(
     onMark: (DafMark) -> Unit,
     onOpenReviews: () -> Unit,
     onWordInText: (DafAnchor) -> Unit,
+    find: DafFind,
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
@@ -608,13 +616,23 @@ private fun AmudItem(
         remember(links, highlightsByBook) { links?.let { highlightedWords(it.anchors, highlightsByBook, USER_HIGHLIGHT_ALPHA) }.orEmpty() }
     val noted =
         remember(links, notesByBook, book.id) { links?.let { notedWords(it.anchors, notesByBook[book.id].orEmpty(), book.id) }.orEmpty() }
+    // The find in page's matches, as the text view finds them in the library's lines, the current one strongest
+    val found =
+        remember(links, find) {
+            val l = links
+            when {
+                l == null -> emptyMap()
+                find.query != null -> foundWords(l.anchors, l.texts, find.query, find.current, SearchHighlightColor, CurrentFindMatchColor)
+                else -> wordsOfLines(l.anchors, find.lines, SearchHighlightColor)
+            }
+        }
     val highlight =
-        remember(links, marked, passage, color, reviewed, userColors) {
+        remember(links, marked, passage, color, reviewed, userColors, found) {
             val selected = dafHighlight(links, marked, passage, color)
-            if (reviewed.isEmpty() && userColors.isEmpty()) {
+            if (reviewed.isEmpty() && userColors.isEmpty() && found.isEmpty()) {
                 selected
             } else {
-                DafHighlight { word -> selected.colorOf(word) ?: userColors[word] ?: reviewed[word.line] }
+                DafHighlight { word -> found[word] ?: selected.colorOf(word) ?: userColors[word] ?: reviewed[word.line] }
             }
         }
     // The selection located in the library, for the text's menu: its highlights, its note and its link
@@ -974,7 +992,22 @@ private suspend fun loadLinks(
                 line.id to
                     LibraryLine(line.bookId, line.lineIndex, buildAnnotatedFromHtml(line.content, baseTextSize = 16f, boldScale = 1f).text)
             }
-        DafAmudLinks(amud, bases, books, anchorsOf(amud, texts))
+        DafAmudLinks(amud, bases, books, anchorsOf(amud, texts), texts.mapValues { it.value.text })
+    }
+}
+
+/**
+ * The find in page's state on the daf: the literal [query] (null with none, or in the smart mode), its [current]
+ * match (its library line and its rank in the line), and the smart mode's [lines], whole.
+ */
+@Immutable
+data class DafFind(
+    val query: String?,
+    val current: Pair<Long, Int>?,
+    val lines: Set<Long>,
+) {
+    companion object {
+        val NONE = DafFind(null, null, emptySet())
     }
 }
 
