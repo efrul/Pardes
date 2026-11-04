@@ -3,9 +3,9 @@ rare word, in a line of the library, swapped for its Hebrew meaning. A user asks
 the prophets answer in their own words. Four kinds, each a "type" of its own:
 
 - DICT-ARAMAIC: a span of a Gemara line, its Aramaic words swapped for their meaning in Klei Kodesh's Aramaic-Hebrew
-  dictionary (source_kind 1), -> the Gemara line. Klei Kodesh's owner allowed it (2026-11-03), but whether their
-  permission covers data they took from elsewhere is still being checked, and its origin is not recorded: --aramaic 0
-  leaves it out, its file unread (TRAINING_PLAN.md, decision 2).
+  dictionary (source_kind 1), -> the Gemara line. Klei Kodesh's owner allowed it (2026-11-03), and training on it
+  was allowed on 2026-11-04 (TRAINING_PLAN.md, decision 2), though its origin is not recorded: --aramaic 0 leaves it
+  out, its file unread.
 - DICT-ARUCH: what Sefer HeAruch quotes from a tractate, its word swapped for the Aruch's explanation ("פי' ..."),
   -> the Gemara line it quotes, found by the quote within the cited daf.
 - DICT-METZUDAT: a verse, the words Metzudat Tzion explains swapped for its explanation ("כסלי. ענין בטחון"),
