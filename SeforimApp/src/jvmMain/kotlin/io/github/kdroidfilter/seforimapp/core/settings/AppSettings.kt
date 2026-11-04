@@ -67,6 +67,10 @@ class AppSettings(
     private val _autoUpdateCheckFlow = MutableStateFlow(isAutoUpdateCheckEnabled())
     val autoUpdateCheckFlow: StateFlow<Boolean> = _autoUpdateCheckFlow.asStateFlow()
 
+    // Pardes: feedback mode, the search results' grade buttons (SearchFeedbackStore)
+    private val _searchFeedbackFlow = MutableStateFlow(isSearchFeedbackEnabled())
+    val searchFeedbackFlow: StateFlow<Boolean> = _searchFeedbackFlow.asStateFlow()
+
     private val _homeWidgetsLayoutFlow = MutableStateFlow(settings.getStringOrNull(KEY_HOME_WIDGETS_LAYOUT))
     val homeWidgetsLayoutFlow: StateFlow<String?> = _homeWidgetsLayoutFlow.asStateFlow()
 
@@ -308,6 +312,14 @@ class AppSettings(
 
     fun setSemanticPackPromptEnabled(enabled: Boolean) {
         settings[KEY_SEMANTIC_PACK_PROMPT] = enabled
+    }
+
+    // Pardes: whether each search result shows the buttons that grade it, for training the semantic search (off at first)
+    fun isSearchFeedbackEnabled(): Boolean = settings[KEY_SEARCH_FEEDBACK, false]
+
+    fun setSearchFeedbackEnabled(enabled: Boolean) {
+        settings[KEY_SEARCH_FEEDBACK] = enabled
+        _searchFeedbackFlow.value = enabled
     }
 
     /** Writes the settings to disk now (Java preferences do it within 30 s otherwise), before a step that relies on them. */
@@ -730,6 +742,7 @@ class AppSettings(
         private const val KEY_DATABASE_PATH = "database_path"
         private const val KEY_LIBRARY_INSTALL_DIR = "library_install_dir"
         private const val KEY_SEMANTIC_PACK_PROMPT = "semantic_pack_prompt"
+        private const val KEY_SEARCH_FEEDBACK = "search_feedback"
         private const val KEY_PERSIST_SESSION = "persist_session"
         private const val KEY_KEEP_SCREEN_AWAKE_ON_BOOK = "keep_screen_awake_on_book"
         private const val KEY_ERROR_REPORTING = "error_reporting"

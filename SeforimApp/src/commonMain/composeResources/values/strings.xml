@@ -230,6 +230,13 @@
     <string name="semantic_pack_offline_label">בלי אינטרנט:</string>
     <string name="semantic_pack_offline">מורידים מ־%1$s, גם במחשב אחר, את %2$s ואת %3$s, ולוחצים "ייבוא&#160;מקבצים…".</string>
     <string name="semantic_pack_prompt">לפתוח את המסך הזה בכל הפעלה, עד שהחיפוש לפי משמעות מותקן</string>
+    <!-- Pardes: feedback mode, the grades of search results (SearchFeedbackStore) -->
+    <string name="search_feedback_setting">משוב על תוצאות החיפוש</string>
+    <string name="search_feedback_setting_hint">מתחת לכל תוצאת חיפוש יופיעו שלושה כפתורים: בדיוק זה, רלוונטי, לא רלוונטי. לחיצה נוספת על הכפתור שנבחר מבטלת אותו. הציונים נשמרים במחשב הזה, יחד עם היסטוריית החיפושים, ומשמשים לשיפור החיפוש לפי משמעות.</string>
+    <string name="search_feedback_count">ציונים שנשמרו עד עכשיו: %1$d</string>
+    <string name="search_feedback_exact">בדיוק זה</string>
+    <string name="search_feedback_relevant">רלוונטי</string>
+    <string name="search_feedback_not_relevant">לא רלוונטי</string>
     <string name="semantic_pack_no_library">צריך להתקין קודם את הספרייה.</string>
     <string name="semantic_pack_download">הורדה והתקנה</string>
     <string name="semantic_pack_update">עדכון לגרסה %1$s</string>
