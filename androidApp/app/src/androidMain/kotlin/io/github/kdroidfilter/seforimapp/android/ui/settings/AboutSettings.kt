@@ -39,6 +39,8 @@ private val ABOUT_MD = """
 
 > התכנים שלפניכם נאספו, מוינו, סוננו ונערכו בעמל רב ובמסירות על ידי צוות פרויקט 'אוצריא' ([otzaria.org](https://otzaria.org)).
 
+לפרויקט כלי קודש, על חיפוש הספרים של [כתבי הקודש](https://kleikodesh.github.io/): חיפוש הספרים והמחברים לפי שמם, בשורת החיפוש ובספרייה, מבוסס על הכללים שלו ועל רשימת ראשי התיבות שלו, בשימוש באישורם. ⁦Based on Klei Kodesh — https://kleikodesh.github.io/⁩
+
 לקרן Apache על Lucene, מנוע החיפוש, ול־JetBrains ול־Google על Kotlin ו־Compose.
 
 אייקון היד הכותבת: Emoji One, ברישיון [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

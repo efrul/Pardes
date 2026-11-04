@@ -54,7 +54,7 @@ class CategoryScopeSearchTest : SearchIntegrationTestBase() {
             skipIfNoIndex()
             val repository = requireRepository()
             // No catalog here: the categories' books come from the database
-            val categories = LibraryCategories(mockk { every { getCatalog() } returns null }, repository)
+            val categories = LibraryCategories(mockk { every { getCatalog() } returns null }, repository, mockk())
             val tractates = categories.bookIds(TALMUD, baseBooksOnly = true).toSet()
             assertTrue(tractates.isNotEmpty())
 
