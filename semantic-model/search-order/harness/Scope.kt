@@ -19,6 +19,7 @@ import java.util.Properties
 //         all    = the regular search with the commentaries ("extended")
 //         cat:ID = the bar's category scope (all books under the category, baseBookOnly = false)
 //         tab:ID = the category tab above the results (books under the category, baseBookOnly = true)
+//         book:ID = one book, picked in the bar or from its results (baseBookOnly = false)
 // args: seforim.db queries.txt scopes(comma separated) out.tsv [maxList]
 fun main(args: Array<String>): Unit =
     runBlocking {
@@ -73,6 +74,7 @@ fun main(args: Array<String>): Unit =
                         scope == "all" -> null to false
                         scope.startsWith("cat:") -> booksUnder(scope.substringAfter(':').toLong()) to false
                         scope.startsWith("tab:") -> booksUnder(scope.substringAfter(':').toLong()) to true
+                        scope.startsWith("book:") -> listOf(scope.substringAfter(':').toLong()) to false
                         else -> error(scope)
                     }
                 for (query in queries) {

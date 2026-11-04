@@ -87,20 +87,7 @@ class HybridSearchEngineDenseTest {
         }
     }
 
-    @Test
-    fun `the list's total, all the lexical lines among the candidates, past them, and without the dense lines' count`() {
-        fun hits(ids: LongRange) = ids.map { LineHit(1, "", it, 0, "", 1f, "") }
-
-        fun dense(vararg ids: Long) = ids.map { DenseHit(it, 1f) }
-        // All the lexical lines are candidates: the dense side's others are new lines, whatever the count says
-        assertEquals(5, HybridSearchEngine.listTotal(3, hits(1L..3L), dense(2, 4, 5), lexicalAmongDense = null))
-        // Past the candidates: of the dense lines 100, 390 and 1000, the lexical side finds 100 and 390
-        assertEquals(401, HybridSearchEngine.listTotal(400, hits(1L..150L), dense(100, 390, 1000), lexicalAmongDense = 2))
-        // No count: the lexical total
-        assertEquals(400, HybridSearchEngine.listTotal(400, hits(1L..150L), dense(390, 1000), lexicalAmongDense = null))
-    }
-
-    /** Finds lines 1 to [count], in that order, a page at a time; counts the lines of a line filter it finds. */
+    /** Finds lines 1 to [count], in that order, a page at a time. */
     private class Numbered(
         private val count: Long,
     ) : SearchEngine {
@@ -137,7 +124,7 @@ class HybridSearchEngineDenseTest {
             bookIds: Collection<Long>?,
             lineIds: Collection<Long>?,
             baseBookOnly: Boolean,
-        ): SearchFacets = SearchFacets(lineIds?.count { it in 1..count }?.toLong() ?: count, emptyMap(), emptyMap())
+        ): SearchFacets = SearchFacets(count, emptyMap(), emptyMap())
 
         override fun searchBooksByTitlePrefix(
             query: String,
@@ -153,10 +140,24 @@ class HybridSearchEngineDenseTest {
         override fun close() {}
     }
 
+    /** Every line of [session], page after page, and the totals its pages gave. */
+    private suspend fun pageThrough(session: SearchSession): Pair<List<Long>, Set<Long>> {
+        val ids = ArrayList<Long>()
+        val totals = HashSet<Long>()
+        while (true) {
+            val page = session.nextPage(25, snippets = false) ?: break
+            ids += page.hits.map { it.lineId }
+            totals += page.totalHits
+            if (page.isLastPage) break
+        }
+        return ids to totals
+    }
+
     @Test
-    fun `the total is the list's, every line the words find and the others found by meaning`(): Unit =
+    fun `with lines by meaning the list is the fused one, as Zayit's, and without any the words' whole list`(): Unit =
         runBlocking {
-            // The words find lines 1 to 400; by meaning, 390 to 410 (11 the words find past their first 150) and 1000 to 1010
+            // The words find lines 1 to 400; by meaning, in book 1, 390 to 410 (11 the words find past their first 150) and
+            // 1000 to 1010
             val dense = (390L..410L).map { Line(it, 1, (it - 389).toInt()) } + (1000L..1010L).map { Line(it, 1, (it - 970).toInt()) }
             val dir = index(dense)
             val engine =
@@ -168,17 +169,15 @@ class HybridSearchEngineDenseTest {
                     library = null,
                     openSemantic = { IndependentSemanticSearch(dir, Query, hybridWeight = 3.0) },
                 )
-            val session = engine.openSession("שבת", 5)!!
-            val ids = ArrayList<Long>()
-            val totals = HashSet<Long>()
-            while (true) {
-                val page = session.nextPage(25, snippets = false) ?: break
-                ids += page.hits.map { it.lineId }
-                totals += page.totalHits
-                if (page.isLastPage) break
-            }
-            assertEquals(400 + 10 + 11, ids.size)
-            assertEquals(ids.size, ids.toSet().size)
-            assertEquals(setOf(421L), totals)
+            // The words' first 150 and the 32 by meaning, each once; the total is the list's length
+            val (fused, fusedTotals) = pageThrough(engine.openSession("שבת", 5)!!)
+            assertEquals(150 + 32, fused.size)
+            assertEquals(fused.size, fused.toSet().size)
+            assertEquals((1L..150L).toSet() + (390L..410L) + (1000L..1010L), fused.toSet())
+            assertEquals(setOf(182L), fusedTotals)
+            // In book 2, without a line by meaning: all 400 lines the words find, each once
+            val (words, wordsTotals) = pageThrough(engine.openSession("שבת", 5, bookIds = listOf(2L))!!)
+            assertEquals((1L..400L).toList(), words)
+            assertEquals(setOf(400L), wordsTotals)
         }
 }
