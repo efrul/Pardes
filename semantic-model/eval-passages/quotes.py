@@ -109,7 +109,7 @@ def score(spec_path: Path, ranks_paths: list[Path]) -> None:
             only_line = sum(1 for k in keys if place(models["line"], k) == 1 and place(ranks, k) != 1)
             only_this = sum(1 for k in keys if place(ranks, k) == 1 and place(models["line"], k) != 1)
             bar = 2 * math.sqrt(only_line + only_this)
-            verdict = ("within the noise" if abs(only_this - only_line) < bar
+            verdict = ("within the noise" if abs(only_this - only_line) < bar or only_this == only_line
                        else "better" if only_this > only_line else "worse")
             print(f"| all | {model} | {only_line} | {only_this} | {bar:.1f} | {verdict} |")
 
