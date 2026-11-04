@@ -84,6 +84,9 @@ class UserDataStore(context: Context) {
     /** Shnayim mikra ticks (desktop ShnayimMikraStore). */
     val shnayimMikra = ShnayimMikraStore(db)
 
+    /** How long each book was read, per day (Pardes's own, for the Home's learning split). */
+    val readingTime = ReadingTimeStore(db)
+
     /** The latest notes, newest first (the Home notes widget; desktop NoteStore.recent). */
     suspend fun recentNotes(limit: Int): List<UserNote> = withContext(Dispatchers.IO) {
         db.userNotesQueries.selectRecent(limit.toLong()).executeAsList().map { it.toNote() }

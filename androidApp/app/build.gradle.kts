@@ -428,7 +428,12 @@ sqldelight {
             // v0.6.1), vendored: notes, highlights, visit history, favorites and shnayim mikra, so a desktop file
             // imported with --with-notes is read as is.
             // sqldelight-user-legacy: the two UPSERTs as Android 8-10's SQLite can run them (no schema of its own).
-            srcDirs.setFrom(file("src/androidMain/sqldelight-user"), file("src/androidMain/sqldelight-user-legacy"))
+            // sqldelight-user-pardes: Pardes's own tables, beside desktop's (the reading time).
+            srcDirs.setFrom(
+                file("src/androidMain/sqldelight-user"),
+                file("src/androidMain/sqldelight-user-legacy"),
+                file("src/androidMain/sqldelight-user-pardes"),
+            )
         }
     }
 }

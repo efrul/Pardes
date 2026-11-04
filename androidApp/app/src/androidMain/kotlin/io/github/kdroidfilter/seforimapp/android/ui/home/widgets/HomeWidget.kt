@@ -107,6 +107,7 @@ val availableHomeWidgets: List<HomeWidget> by lazy {
         DictionaryWidget,
         FavoritesWidget,
         HistoryWidget,
+        LearningSplitWidget,
         NotesWidget,
         LimudWidget,
         MoladWidget,

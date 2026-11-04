@@ -1,0 +1,20 @@
+-- Pardes's own (not in desktop's schema): the seconds each book was read, per day (an epoch day), for the Home's
+-- learning split. Written by data/ReadingTime.kt in two statements, as Android 8-10's SQLite has no UPSERT.
+CREATE TABLE IF NOT EXISTS reading_time (
+    bookId INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    seconds INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (bookId, day)
+);
+
+insertDay:
+INSERT OR IGNORE INTO reading_time(bookId, day, seconds) VALUES (:bookId, :day, 0);
+
+addSeconds:
+UPDATE reading_time SET seconds = seconds + :seconds WHERE bookId = :bookId AND day = :day;
+
+totalsSince:
+SELECT bookId, SUM(seconds) AS seconds FROM reading_time WHERE day >= :fromDay GROUP BY bookId;
+
+deleteAll:
+DELETE FROM reading_time;
