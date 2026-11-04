@@ -18,6 +18,8 @@
 
 > התכנים שלפניכם נאספו, מוינו, סוננו ונערכו בעמל רב ובמסירות על ידי צוות פרויקט 'אוצריא' ([otzaria.org](https://otzaria.org)).
 
+לפרויקט כלי קודש, על חיפוש הספרים של [כתבי הקודש](https://kleikodesh.github.io/): חיפוש הספרים והמחברים לפי שמם, בשורת החיפוש ובעץ הספרים, מבוסס על הכללים שלו, ובהם כתיב מלא וחסר וה״א הידיעה, ועל רשימת ראשי התיבות שלו, בשימוש באישורם. ⁦Based on Klei Kodesh — https://kleikodesh.github.io/⁩
+
 ל־JetBrains על Kotlin, ל־Google על מסגרת העבודה Compose, ול־JetBrains על התאמתה לסביבת הדסקטופ ועל Jewel; לקרן Apache על Lucene, מנוע החיפוש; ולכל מפתחי הספריות שבהן היישום עושה שימוש.
 
 ל[פרויקט הקולמוס](https://culmus.sourceforge.io/) וליורם גנת על הגופנים העבריים, גופני הטעמים וכתר ארם צובא, ולמפתחי הגופנים Noto, Frank Ruhl Libre, Miriam Libre, Cardo, Tinos, Libertinus, Bona Nova ו־Open Sans. כל גופן כפוף לרישיון משלו.

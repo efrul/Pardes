@@ -82,6 +82,7 @@ Powered by the technologies that drive Zayit — https://zayitapp.com/
 
 ### נתונים ותמונות
 
+- **כתבי הקודש (כלי קודש)**: Based on Klei Kodesh — https://kleikodesh.github.io/. חיפוש הספרים והמחברים לפי שמם מבוסס על כללי חיפוש הספרים שלו ועל רשימת ראשי התיבות שלו (SeforimDbCatalogAbbreviations.cs), בשימוש באישורם.
 - **HYG Database v4.1**. David Nash (astronexus). CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/ (המאגר: https://github.com/astronexus/HYG-Database). הכוכבים של ווידג'ט השמיים עד בהירות 4 (מיקום, בהירות וצבע) הם קטע מהמאגר, ומופצים גם הם ברישיון CC BY-SA 4.0.
 - **מודל השמיים** של ווידג'ט השמיים: לפי wwwtyro/glsl-atmosphere (נחלת הכלל), עם הקבועים של sebh/UnrealEngineSkyAtmosphere (Copyright (c) 2020 Epic Games, Inc., MIT: [UnrealEngineSkyAtmosphere-LICENSE.txt](UnrealEngineSkyAtmosphere-LICENSE.txt)), ובעקבות Stellarium ו־Stellarium Web Engine. הפירוט ב־Sky-CREDITS.md.
 - **השמש, כדור הארץ והירח**: הדגמים של NASA (science.nasa.gov), נחלת הכלל; המרקמים קודדו מחדש.
