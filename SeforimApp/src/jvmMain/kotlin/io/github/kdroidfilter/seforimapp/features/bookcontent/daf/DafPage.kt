@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -290,6 +291,8 @@ internal fun DafAmudText(
     onMenu: (Offset) -> Unit = {},
     onPress: () -> Unit = {},
     markUnsure: Boolean = false,
+    underlined: Set<DafWord> = emptySet(),
+    underlineColor: Color = Color.Unspecified,
 ) {
     val density = LocalDensity.current
     val currentRange by rememberUpdatedState(range)
@@ -424,6 +427,10 @@ internal fun DafAmudText(
                     remember(run, range, selectionColor) {
                         range?.let { r -> marksOf(run) { word -> selectionColor.takeIf { word in r } } }.orEmpty()
                     }
+                val underlines =
+                    remember(run, underlined, underlineColor) {
+                        if (underlined.isEmpty()) emptyList() else marksOf(run) { word -> underlineColor.takeIf { word in underlined } }
+                    }
                 var textLayout by remember(run) { mutableStateOf<TextLayoutResult?>(null) }
                 BasicText(
                     text = text,
@@ -440,6 +447,7 @@ internal fun DafAmudText(
                                 textLayout?.let {
                                     drawMarks(it, marks, run.pitch * k)
                                     drawMarks(it, selected, run.pitch * k, rounded = false)
+                                    drawUnderlines(it, underlines, run.pitch * k)
                                 }
                             },
                 )
@@ -494,6 +502,31 @@ private fun marksOf(
         }
     }
     return out
+}
+
+/** A dotted line under each run of [marks]' words (the words a note is on), as the text draws a note's. */
+private fun DrawScope.drawUnderlines(
+    layout: TextLayoutResult,
+    marks: List<Pair<IntRange, Color>>,
+    pitch: Float,
+) {
+    if (marks.isEmpty()) return
+    val stroke = density
+    val dash = PathEffect.dashPathEffect(floatArrayOf(2f * stroke, 3f * stroke), 0f)
+    for ((range, color) in marks) {
+        if (range.last >= layout.layoutInput.text.length) continue
+        val line = layout.getLineForOffset(range.first)
+        val first = layout.getBoundingBox(range.first)
+        val last = layout.getBoundingBox(range.last)
+        val y = layout.getLineBottom(line) - pitch * MARK_INSET
+        drawLine(
+            color = color,
+            start = Offset(minOf(first.left, last.left), y),
+            end = Offset(maxOf(first.right, last.right), y),
+            strokeWidth = stroke,
+            pathEffect = dash,
+        )
+    }
 }
 
 /** How far a mark reaches past its words, to the line's height, and how much of the line's height it leaves. */

@@ -88,6 +88,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.withBackground
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafAnchor
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafControl
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafView
@@ -983,6 +984,17 @@ fun BookContentView(
     // Both ends of a Shift+click selection, to copy the lines between them Compose never composed (not in shnayim
     // mikra, whose items are more than their line). Its offsets index the text as displayed: new for another diacritics mode
     val bookSelection = remember(bookId, shnayimMikra, diacritics) { if (shnayimMikra) null else BookSelection() }
+    // Pardes: a word clicked on the daf selected in the text, where it is in its line, for when the text is shown
+    val repository = LocalAppGraph.current.repository
+    val wordScope = rememberCoroutineScope()
+    val selectWordInText: (DafAnchor) -> Unit = { anchor ->
+        bookSelection?.let { selection ->
+            wordScope.launch {
+                val line = runSuspendCatching { repository.getLine(anchor.lineId) }.getOrNull() ?: return@launch
+                selection.selectInLine(line, anchor.start, anchor.end, diacritics)
+            }
+        }
+    }
     BookSelectionContainer(
         // The daf's words are not the book's lines' text: its runs' own selections, copied as selected
         selection = if (daf != null) null else bookSelection,
@@ -1015,6 +1027,7 @@ fun BookContentView(
                     selectionContext.setActiveCommentaryColumn(emptyList())
                 },
                 modifier = Modifier.fillMaxSize().padding(bottom = 8.dp),
+                onWordInText = selectWordInText,
             )
         } else {
             Box(modifier = Modifier.fillMaxSize().padding(bottom = 8.dp)) {

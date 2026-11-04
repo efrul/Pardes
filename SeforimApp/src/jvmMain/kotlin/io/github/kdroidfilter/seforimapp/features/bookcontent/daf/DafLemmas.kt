@@ -24,7 +24,7 @@ private val ELLIPSES = setOf("וכו", "כו", "וגו", "וגומר")
 private val MARKERS = setOf("גמ", "גמרא", "מתני", "מתניתין")
 
 /** An abbreviation as printed: its marks (א״כ, כר׳, ק"ש). */
-private val ABBREVIATION_MARKS = setOf('״', '"', '׳', '\'')
+internal val ABBREVIATION_MARKS = setOf('״', '"', '׳', '\'')
 
 private const val PREFIXED = 0.9f
 private const val SPELLED_OTHERWISE = 0.85f
@@ -45,8 +45,8 @@ private const val MAX_ABBREVIATED = 3
 private const val ONE_WORD_SCORE = 0.9f
 private const val PHRASE_SCORE = 0.7f
 
-/** How alike a lemma's word and a word of the Gemara are, from 0 to 1. */
-private fun alike(
+/** How alike a lemma's word and a word of the Gemara are, from 0 to 1 (both [dafKey]s). */
+internal fun alike(
     lemma: String,
     text: String,
 ): Float {
@@ -86,7 +86,7 @@ private fun levenshtein(
 }
 
 /** Whether the abbreviation's letters [abbreviation] are, in order, the starts of each of [words] (א״כ: אם, כן). */
-private fun abbreviates(
+internal fun abbreviates(
     abbreviation: String,
     words: List<String>,
 ): Boolean {
