@@ -75,6 +75,7 @@ class BookContentStateManager(
                     showSources = persisted.showSources,
                     showReferences = persisted.showReferences,
                     shnayimMikra = persisted.shnayimMikra,
+                    dafView = persisted.dafView,
                     scrollIndex = persisted.contentScrollIndex,
                     scrollOffset = persisted.contentScrollOffset,
                     // A restored tab with no saved position opens on its selected line: its pager is
@@ -282,6 +283,7 @@ class BookContentStateManager(
                 showSources = currentState.content.showSources,
                 showReferences = currentState.content.showReferences,
                 shnayimMikra = currentState.content.shnayimMikra,
+                dafView = currentState.content.dafView,
                 paragraphScrollPosition = currentState.content.paragraphScrollPosition,
                 chapterScrollPosition = currentState.content.chapterScrollPosition,
                 selectedChapter = currentState.content.selectedChapter,

@@ -38,6 +38,20 @@
     <string name="settings_font_commentary_label">גופן למפרשים</string>
     <string name="settings_font_targum_label">גופן לתרגומים</string>
     <string name="settings_font_sources_label">גופן למקורות</string>
+    <string name="settings_font_daf_gemara_label">גופן לגמרא בצורת הדף</string>
+    <string name="settings_font_daf_commentary_label">גופן לרש״י ותוספות בצורת הדף</string>
+    <string name="settings_daf_mark_unsure">סימון בצבע בהיר של שורות לא ודאיות בצורת הדף</string>
+    <string name="settings_daf_mark_unsure_info">שורות שבהן ההתאמה בין הדפוס לנוסח שבספרייה לא בטוחה במילה הראשונה או האחרונה, וייתכן שמילה בהן אינה כבדפוס (כ־4% מהשורות). מועיל לבדיקת קובצי צורת הדף; כשזה כבוי, הדף אחיד כמו בדפוס.</string>
+    <string name="settings_daf_review">בדיקת השורות של צורת הדף, כדי לשלוח משוב על הזיהוי</string>
+    <string name="settings_daf_review_info">לחיצה ימנית על שורה בצורת הדף מוסיפה לתפריט: השורה נכונה, השורה שגויה, והזזה של המילה הראשונה או האחרונה שלה לשורה הסמוכה. ההזזה נראית מיד בדף. הסימונים נשמרים בתיקייה feedback שליד קובצי צורת הדף, קובץ לכל מסכת, ואת הקבצים האלה שולחים.</string>
+    <string name="daf_review_ok">השורה נכונה</string>
+    <string name="daf_review_wrong">השורה שגויה</string>
+    <string name="daf_review_first_to_previous">המילה הראשונה שייכת לשורה הקודמת</string>
+    <string name="daf_review_previous_last_here">המילה האחרונה של השורה הקודמת שייכת לכאן</string>
+    <string name="daf_review_last_to_next">המילה האחרונה שייכת לשורה הבאה</string>
+    <string name="daf_review_next_first_here">המילה הראשונה של השורה הבאה שייכת לכאן</string>
+    <string name="daf_review_clear">ביטול הסימון של השורה</string>
+    <string name="daf_review_open_folder">פתיחת תיקיית המשוב</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>
@@ -230,6 +244,13 @@
     <string name="semantic_pack_offline_label">בלי אינטרנט:</string>
     <string name="semantic_pack_offline">מורידים מ־%1$s, גם במחשב אחר, את %2$s ואת %3$s, ולוחצים "ייבוא&#160;מקבצים…".</string>
     <string name="semantic_pack_prompt">לפתוח את המסך הזה בכל הפעלה, עד שהחיפוש לפי משמעות מותקן</string>
+    <!-- Pardes: feedback mode, the grades of search results (SearchFeedbackStore) -->
+    <string name="search_feedback_setting">משוב על תוצאות החיפוש</string>
+    <string name="search_feedback_setting_hint">מתחת לכל תוצאת חיפוש יופיעו שלושה כפתורים: בדיוק זה, רלוונטי, לא רלוונטי. לחיצה נוספת על הכפתור שנבחר מבטלת אותו. הציונים נשמרים במחשב הזה, יחד עם היסטוריית החיפושים, ומשמשים לשיפור החיפוש לפי משמעות.</string>
+    <string name="search_feedback_count">ציונים שנשמרו עד עכשיו: %1$d</string>
+    <string name="search_feedback_exact">בדיוק זה</string>
+    <string name="search_feedback_relevant">רלוונטי</string>
+    <string name="search_feedback_not_relevant">לא רלוונטי</string>
     <string name="semantic_pack_no_library">צריך להתקין קודם את הספרייה.</string>
     <string name="semantic_pack_download">הורדה והתקנה</string>
     <string name="semantic_pack_update">עדכון לגרסה %1$s</string>
@@ -306,6 +327,14 @@
     <string name="toggle_diacritics">ניקוד</string>
     <string name="shnayim_mikra_mode">שנים מקרא</string>
     <string name="shnayim_mikra_mode_tooltip">שנים מקרא ואחד תרגום: כל פסוק פעמיים ואחריו התרגום</string>
+    <string name="daf_view">צורת הדף</string>
+    <string name="daf_view_tooltip">צורת הדף: הגמרא, רש״י ותוספות כפי שנדפסו בש״ס וילנא, שורה בשורה</string>
+    <string name="daf_amud_missing">עמוד זה עוד חסר בצורת הדף</string>
+    <string name="daf_missing">צורת הדף של מסכת %1$s עוד לא הוכנה</string>
+    <string name="daf_missing_hint">קובץ צורת הדף של מסכת נטען מהתיקייה %1$s שליד הספרייה. אפשר לייבא אותו לשם מכאן.</string>
+    <string name="daf_import">ייבוא קובץ צורת הדף…</string>
+    <string name="daf_import_not_layout">הקובץ שנבחר אינו קובץ צורת הדף</string>
+    <string name="daf_import_other_tractate">הקובץ יובא, אבל הוא של מסכת %1$s</string>
     <string name="show_diacritics_tooltip">הצג ניקוד וטעמים</string>
     <string name="hide_diacritics_tooltip">הסתר ניקוד וטעמים</string>
     <string name="hide_teamim_tooltip">הסתר טעמים</string>

@@ -1,0 +1,1048 @@
+package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
+
+import androidx.compose.foundation.ContextMenuDataProvider
+import androidx.compose.foundation.ContextMenuItem
+import androidx.compose.foundation.ContextMenuState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.LocalTextContextMenu
+import androidx.compose.foundation.text.TextContextMenu
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
+import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
+import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
+import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocalLocatedSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocatedSelection
+import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Amud
+import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
+import io.github.kdroidfilter.seforimapp.features.search.domain.reference.TocNumber
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
+import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import io.github.kdroidfilter.seforimlibrary.core.models.Book
+import io.github.kdroidfilter.seforimlibrary.core.models.ConnectionType
+import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
+import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.path
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.Font
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.CircularProgressIndicator
+import org.jetbrains.jewel.ui.component.ContextMenuDivider
+import org.jetbrains.jewel.ui.component.OutlinedButton
+import org.jetbrains.jewel.ui.component.Text
+import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.daf_amud_missing
+import seforimapp.seforimapp.generated.resources.daf_import
+import seforimapp.seforimapp.generated.resources.daf_import_not_layout
+import seforimapp.seforimapp.generated.resources.daf_import_other_tractate
+import seforimapp.seforimapp.generated.resources.daf_missing
+import seforimapp.seforimapp.generated.resources.daf_missing_hint
+import seforimapp.seforimapp.generated.resources.daf_review_clear
+import seforimapp.seforimapp.generated.resources.daf_review_first_to_previous
+import seforimapp.seforimapp.generated.resources.daf_review_last_to_next
+import seforimapp.seforimapp.generated.resources.daf_review_next_first_here
+import seforimapp.seforimapp.generated.resources.daf_review_ok
+import seforimapp.seforimapp.generated.resources.daf_review_open_folder
+import seforimapp.seforimapp.generated.resources.daf_review_previous_last_here
+import seforimapp.seforimapp.generated.resources.daf_review_wrong
+import seforimapp.seforimapp.generated.resources.notorashihebrew
+import java.awt.Desktop
+import java.io.File
+import java.time.Instant
+import kotlin.math.abs
+
+/** Whether [this] is a tractate of the Babylonian Talmud, whose page the daf view draws. */
+internal val Book.isBavli: Boolean
+    get() = categoryId in CatalogPresets.Ids.Categories.BAVLI_ZERAIM..CatalogPresets.Ids.Categories.BAVLI_TAHAROT
+
+/** The amud (`35b`) that a table of contents' entry or a line's reference names (`דף לה:`, `ברכות לה:, א`), else null. */
+internal fun amudOf(text: String): String? =
+    text.split(' ', ',').firstNotNullOfOrNull { token ->
+        TocNumber.of(token)?.takeIf { it.amud != null }?.let { "${it.value}${if (it.amud == Amud.B) 'b' else 'a'}" }
+    }
+
+/** The order of amudim: 2a, 2b, 3a… */
+internal fun amudIndex(amud: String): Int =
+    amud.dropLast(1).toIntOrNull()?.let { it * 2 + if (amud.endsWith('b')) 1 else 0 } ?: Int.MAX_VALUE
+
+/** [amud] as cited: `לה:` for 35b, `לה.` for 35a. */
+internal fun amudTitle(amud: String): String =
+    amud.dropLast(1).toIntOrNull()?.let { ReferenceParser.hebrewNumeral(it) + if (amud.endsWith('b')) ":" else "." } ?: amud
+
+/** The first line of every amud, from a book's table of contents. */
+internal fun firstLines(toc: List<TocEntry>): Map<String, Long> {
+    val lines = HashMap<String, Long>()
+    for (entry in toc) {
+        val lineId = entry.lineId ?: continue
+        amudOf(entry.text)?.let { lines.putIfAbsent(it, lineId) }
+    }
+    return lines
+}
+
+/**
+ * Where each Gemara line of the library is printed first: its amud's place in [order] and the top of its first printed
+ * line (points, from the amud's block's top).
+ */
+internal fun placesOfLines(
+    file: DafLayoutFile,
+    order: List<String>,
+): Map<Long, Pair<Int, Float>> {
+    val places = HashMap<Long, Pair<Int, Float>>()
+    val at = order.withIndex().associate { (i, amud) -> amud to i }
+    for (amud in file.amudim) {
+        val index = at[amud.amud] ?: continue
+        for (line in amud.lines) {
+            if (!line.isGemara) continue
+            for (id in line.lineIds) places.putIfAbsent(id, index to line.b[1] - amud.block[1])
+        }
+    }
+    return places
+}
+
+/**
+ * A tab's tractate shown as its Vilna page in the text view ([book]), and what a click on a word selects: a segment
+ * ([onSelectLine], with whether Ctrl or Cmd was held), or a passage ([onSelectPassage]: the segment, the comments, their
+ * books).
+ */
+class DafMode(
+    val book: Book,
+    val onSelectLine: (lineId: Long, withModifier: Boolean) -> Unit,
+    val onSelectPassage: (lineId: Long, commentIds: Set<Long>, commentBookIds: Set<Long>) -> Unit,
+)
+
+/**
+ * What the reader's keys and its find bar ask of the daf: a page up or down, the tractate's first or last amud, a
+ * line of the library brought into view. Set by [DafView] while it is shown.
+ */
+@Stable
+class DafControl {
+    internal var page: suspend (forward: Boolean) -> Unit = {}
+    internal var edge: suspend (end: Boolean) -> Unit = {}
+    internal var toLine: suspend (lineId: Long) -> Unit = {}
+
+    suspend fun scrollPage(forward: Boolean) = page(forward)
+
+    suspend fun scrollToEdge(end: Boolean) = edge(end)
+
+    suspend fun scrollToLine(lineId: Long) = toLine(lineId)
+}
+
+private sealed interface DafLoad {
+    data object Loading : DafLoad
+
+    data object Missing : DafLoad
+
+    data class Ready(
+        val file: DafLayoutFile,
+    ) : DafLoad
+}
+
+/** The page's widest at the zoom's 1 (and no wider than the view); the zoom widens or narrows it. */
+private const val MAX_PAGE_WIDTH = 1100f
+
+/** Laid out at this many pixels a point, drawn at any width: the text's size is the zoom's, its places scaled. */
+private const val LAYOUT_SCALE = 2f
+
+/** The amudim kept laid out, scrolled away from and back to. */
+private const val KEPT_LAYOUTS = 12
+
+private val TitleHeight = 36.dp
+private val PagePadding = 24.dp
+
+/**
+ * A Talmud tractate as printed in the Vilna Shas, inside the text view's own frame (its zoom, keys, selection and
+ * menu): every amud of the tractate's layout (its file in the library's pardes-daf folder) one below the other, each
+ * at its own height as printed, with its name above it; with no layout for the tractate, a word on it and a button to
+ * import one. The pages are as wide as the view at a [zoom] of 1, at most [MAX_PAGE_WIDTH] dp: the daf's own zoom,
+ * from 0.3 (more of the pages in view) to 4 (wider than the view, a sideways scroll showing the rest).
+ *
+ * The page answers as the text does, its panes the text's: a click on a Gemara word selects its segment
+ * ([onSelectLine]; with Ctrl or Cmd, adds it), or, inside words a comment's dibbur quotes, that passage
+ * ([onSelectPassage]: the segment and those comments, which the commentaries pane brings in view); a click on a comment
+ * selects it on its segment. A drag selects the text, to copy or for the text's menu, which a right-click on a word
+ * opens on its line ([onContextLine]). The tab's selection ([selectedLineIds], [selectedPassage]) is marked on the
+ * page, with the comments on the selected segments; not a table of contents' entry selected whole
+ * ([isTocEntrySelection]), which would mark a whole page. The tab's line ([lineId]) is brought into view whenever it
+ * changes or the tab asks ([scrollToLineTimestamp]), as the text does.
+ */
+@Suppress("ComposeUnstableCollections") // the tab's selection, as the text view takes it
+@Composable
+fun DafView(
+    book: Book,
+    listState: LazyListState,
+    control: DafControl,
+    zoom: Float,
+    lineId: Long?,
+    selectedLineIds: Set<Long>,
+    isTocEntrySelection: Boolean,
+    selectedPassage: SelectedPassage?,
+    scrollToLineTimestamp: Long,
+    onSelectLine: (lineId: Long, withModifier: Boolean) -> Unit,
+    onSelectPassage: (lineId: Long, commentIds: Set<Long>, commentBookIds: Set<Long>) -> Unit,
+    onContextLine: (lineId: Long) -> Unit,
+    modifier: Modifier = Modifier,
+    onWordInText: (DafAnchor) -> Unit = {},
+) {
+    val graph = LocalAppGraph.current
+    // Next to the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another one
+    // than the settings)
+    val layouts =
+        remember(graph) {
+            val libraryDir =
+                runCatching { File(graph.databasePathProvider.get()).absoluteFile.parentFile }.getOrNull()
+                    ?: LibraryLocation.currentDir(graph.appSettings)
+            DafLayouts.of(libraryDir)
+        }
+    // Bumped by an import, to read the folder again
+    var imports by remember { mutableIntStateOf(0) }
+    val load by produceState<DafLoad>(DafLoad.Loading, layouts, book.title, imports) {
+        val file = withContext(Dispatchers.IO) { layouts.tractate(book.title) }
+        value = file?.takeIf { it.amudim.isNotEmpty() }?.let { DafLoad.Ready(it) } ?: DafLoad.Missing
+    }
+    Box(modifier.fillMaxSize()) {
+        when (val state = load) {
+            DafLoad.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+            DafLoad.Missing ->
+                MissingLayout(
+                    book = book,
+                    layouts = layouts,
+                    onImport = { imports++ },
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            is DafLoad.Ready ->
+                DafPages(
+                    book = book,
+                    file = state.file,
+                    reviews = layouts.reviews,
+                    listState = listState,
+                    control = control,
+                    zoom = zoom,
+                    lineId = lineId,
+                    selectedLineIds = selectedLineIds,
+                    isTocEntrySelection = isTocEntrySelection,
+                    selectedPassage = selectedPassage,
+                    scrollToLineTimestamp = scrollToLineTimestamp,
+                    onSelectLine = onSelectLine,
+                    onSelectPassage = onSelectPassage,
+                    onContextLine = onContextLine,
+                    onWordInText = onWordInText,
+                )
+        }
+    }
+}
+
+/** A font of the daf by its settings' code: Noto Rashi Hebrew a variable font, its bold its weight axis at 700. */
+@Composable
+private fun dafFamily(code: String): FontFamily {
+    if (code != AppSettings.DEFAULT_DAF_COMMENTARY_FONT) return FontCatalog.familyFor(code)
+    val normal = Font(Res.font.notorashihebrew, FontWeight.Normal)
+    val bold = Font(Res.font.notorashihebrew, FontWeight.Bold)
+    return remember(normal, bold) { FontFamily(normal, bold) }
+}
+
+@Suppress("ComposeUnstableCollections")
+@Composable
+private fun DafPages(
+    book: Book,
+    file: DafLayoutFile,
+    reviews: DafReviews,
+    listState: LazyListState,
+    control: DafControl,
+    zoom: Float,
+    lineId: Long?,
+    selectedLineIds: Set<Long>,
+    isTocEntrySelection: Boolean,
+    selectedPassage: SelectedPassage?,
+    scrollToLineTimestamp: Long,
+    onSelectLine: (Long, Boolean) -> Unit,
+    onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
+    onContextLine: (Long) -> Unit,
+    onWordInText: (DafAnchor) -> Unit,
+) {
+    val graph = LocalAppGraph.current
+    val density = LocalDensity.current
+    val resolver = LocalFontFamilyResolver.current
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val gemaraCode by graph.appSettings.dafGemaraFontCodeFlow.collectAsState()
+    val commentaryCode by graph.appSettings.dafCommentaryFontCodeFlow.collectAsState()
+    val gemara = dafFamily(gemaraCode)
+    val rashi = dafFamily(commentaryCode)
+    val ink = JewelTheme.globalColors.text.normal
+    val focus = JewelTheme.globalColors.outlines.focused
+
+    // The amudim in order, those of the table of contents the layout has not too (drawn as missing)
+    val amudLines by produceState(emptyMap<String, Long>(), book.id) {
+        value = runSuspendCatching { firstLines(graph.repository.getTocEntriesForBook(book.id)) }.getOrDefault(emptyMap())
+    }
+    val order = remember(file, amudLines) { (file.amudim.map { it.amud } + amudLines.keys).distinct().sortedBy(::amudIndex) }
+    val byName = remember(file) { file.amudim.associateBy { it.amud } }
+    val places by produceState(emptyMap<Long, Pair<Int, Float>>(), file, order) {
+        value = withContext(Dispatchers.Default) { placesOfLines(file, order) }
+    }
+    // The tractate's usual block: one scale for all its amudim, each as tall as printed
+    val blockWidth =
+        remember(file) {
+            file.amudim
+                .map { it.block[2] - it.block[0] }
+                .sorted()
+                .let { it[it.size / 2] }
+        }
+    val layouts = remember(file, gemara, rashi, density) { LayoutCache(KEPT_LAYOUTS) }
+    val measurer = remember(resolver, density) { TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0) }
+    val marked = if (isTocEntrySelection) emptySet() else selectedLineIds
+    val passage = selectedPassage?.targetLineIds.orEmpty()
+    // The text selected on the page, one amud's at a time, copied with Ctrl or Cmd + C (the page takes the keys once
+    // pressed on)
+    var selection by remember(file) { mutableStateOf<Pair<String, DafRange>?>(null) }
+    val copyToClipboard = rememberCopyToClipboard()
+    val keys = remember { FocusRequester() }
+    // The reader's review of the tractate (DafReview.kt), while the settings' review is on: its moves made on the
+    // pages, its marks and actions in the menu
+    val reviewOn by graph.appSettings.dafReviewFlow.collectAsState()
+    var review by remember(file) { mutableStateOf<DafReviewFile?>(null) }
+    LaunchedEffect(file, reviewOn) { review = if (reviewOn) withContext(Dispatchers.IO) { reviews.of(file) } else null }
+    val scope = rememberCoroutineScope()
+    val onMark: (DafMark) -> Unit = { mark -> scope.launch { review = withContext(Dispatchers.IO) { reviews.mark(file, mark) } } }
+    val onOpenReviews: () -> Unit = {
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                reviews.folder.mkdirs()
+                Desktop.getDesktop().open(reviews.folder)
+            }
+        }
+    }
+    // A line the page selected itself, by a click: where the pointer is, not to be scrolled to
+    var clicked by remember { mutableStateOf<Long?>(null) }
+    val selectLine: (Long, Boolean) -> Unit = { id, withModifier ->
+        clicked = id
+        onSelectLine(id, withModifier)
+    }
+    val selectPassage: (Long, Set<Long>, Set<Long>) -> Unit = { id, comments, books ->
+        clicked = id
+        onSelectPassage(id, comments, books)
+    }
+
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .focusRequester(keys)
+            .onKeyEvent { event ->
+                val (name, range) = selection ?: return@onKeyEvent false
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when {
+                    (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C -> {
+                        byName[name]?.let { copyToClipboard(it.textOf(range)) }
+                        true
+                    }
+                    event.key == Key.Escape -> {
+                        selection = null
+                        true
+                    }
+                    else -> false
+                }
+            }.focusable(),
+    ) {
+        val viewport = constraints.maxWidth.toFloat()
+        val padding = with(density) { PagePadding.toPx() }
+        val base = minOf(viewport - 2 * padding, with(density) { MAX_PAGE_WIDTH.dp.toPx() }).coerceAtLeast(1f)
+        val pageWidth = base * zoom
+        val perPoint = pageWidth / blockWidth
+        // As wide as the view, or as the page once the zoom makes it wider (a wider amud takes some of its margin)
+        val contentWidth = maxOf(viewport, pageWidth + 2 * padding)
+        val titleHeight = with(density) { TitleHeight.toPx() }
+        val viewportHeight = constraints.maxHeight.toFloat()
+        val currentPlaces by rememberUpdatedState(places)
+        val currentPerPoint by rememberUpdatedState(perPoint)
+
+        // Brings the line of the library [id] into view, a little below the view's top, unless it is in view
+        suspend fun reveal(
+            id: Long,
+            always: Boolean,
+        ) {
+            val (index, top) = currentPlaces[id] ?: return
+            val y = titleHeight + top * currentPerPoint
+            val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+            val shown = item != null && item.offset + y >= 0 && item.offset + y + titleHeight <= listState.layoutInfo.viewportEndOffset
+            if (always || !shown) listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
+        }
+        control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
+        control.edge = { end -> listState.scrollToItem(if (end) (order.size - 1).coerceAtLeast(0) else 0) }
+        control.toLine = { id -> reveal(id, always = false) }
+
+        // The tab's line in view: once the places are known, then whenever it changes or the tab asks
+        var revealed by remember(file) { mutableStateOf(false) }
+        LaunchedEffect(lineId, scrollToLineTimestamp, places) {
+            val id = lineId?.takeIf { it > 0 } ?: return@LaunchedEffect
+            if (places.isEmpty()) return@LaunchedEffect
+            if (id == clicked && revealed) {
+                clicked = null
+                return@LaunchedEffect
+            }
+            if (id !in places) {
+                // A line not printed in the layout (an amud it is missing): its amud, by the table of contents
+                val amud =
+                    runSuspendCatching {
+                        graph.repository
+                            .getTocEntryForLine(id)
+                            ?.text
+                            ?.let(::amudOf)
+                            ?: graph.repository
+                                .getLine(id)
+                                ?.heRef
+                                ?.let(::amudOf)
+                    }.getOrNull()
+                val index = amud?.let(order::indexOf) ?: -1
+                if (index >= 0 && (!revealed || listState.layoutInfo.visibleItemsInfo.none { it.index == index })) {
+                    listState.scrollToItem(index)
+                }
+            } else {
+                reveal(id, always = !revealed)
+            }
+            revealed = true
+        }
+
+        val hScroll = rememberScrollState()
+        Box(
+            Modifier
+                .fillMaxSize()
+                .horizontalScroll(hScroll)
+                .sidewaysPan(hScroll, rtl),
+        ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.width(with(density) { contentWidth.toDp() }).fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                itemsIndexed(order, key = { _, amud -> amud }) { _, name ->
+                    val amud = byName[name]
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.fillMaxWidth().height(TitleHeight), contentAlignment = Alignment.BottomCenter) {
+                            Text(
+                                "${file.tractateHe} ${amudTitle(name)}",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = JewelTheme.globalColors.text.info,
+                            )
+                        }
+                        if (amud == null) {
+                            Text(
+                                stringResource(Res.string.daf_amud_missing),
+                                Modifier.padding(vertical = 48.dp),
+                                color = JewelTheme.globalColors.text.info,
+                            )
+                        } else {
+                            AmudItem(
+                                book = book,
+                                amud = amud,
+                                range = selection?.takeIf { it.first == name }?.second,
+                                onRange = { range -> selection = range?.let { name to it } },
+                                onPress = { keys.requestFocus() },
+                                perPoint = perPoint,
+                                layouts = layouts,
+                                measurer = measurer,
+                                density = density,
+                                gemara = gemara,
+                                rashi = rashi,
+                                ink = ink,
+                                color = focus,
+                                marked = marked,
+                                passage = passage,
+                                onSelectLine = selectLine,
+                                onSelectPassage = selectPassage,
+                                onContextLine = onContextLine,
+                                review = review,
+                                onMark = onMark,
+                                onOpenReviews = onOpenReviews,
+                                onWordInText = onWordInText,
+                                modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A page up or down moves this much of the view. */
+private const val PAGE_STEP = 0.9f
+
+@OptIn(ExperimentalFoundationApi::class)
+@Suppress("ComposeUnstableCollections")
+@Composable
+private fun AmudItem(
+    book: Book,
+    amud: DafAmud,
+    range: DafRange?,
+    onRange: (DafRange?) -> Unit,
+    onPress: () -> Unit,
+    perPoint: Float,
+    layouts: LayoutCache,
+    measurer: TextMeasurer,
+    density: Density,
+    gemara: FontFamily,
+    rashi: FontFamily,
+    ink: Color,
+    color: Color,
+    marked: Set<Long>,
+    passage: Set<Long>,
+    onSelectLine: (Long, Boolean) -> Unit,
+    onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
+    onContextLine: (Long) -> Unit,
+    review: DafReviewFile?,
+    onMark: (DafMark) -> Unit,
+    onOpenReviews: () -> Unit,
+    onWordInText: (DafAnchor) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val graph = LocalAppGraph.current
+    val markUnsure by graph.appSettings.dafMarkUnsureFlow.collectAsState()
+    // The amud as the review has it: its moves made (as printed), the lines it marked tinted
+    val shown = remember(amud, review) { review?.let { amud.withMarks(it.marks) } ?: amud }
+    // Laid out once, off the UI thread (some 160 lines measured), and kept while scrolled away
+    val layout by produceState(layouts[shown], shown, layouts) {
+        value = layouts[shown]
+        if (value == null) {
+            value =
+                withContext(Dispatchers.Default) {
+                    layoutAmud(shown, LAYOUT_SCALE, measurer, density, gemara, rashi, beforeEachLine = { ensureActive() })
+                }.also { layouts[shown] = it }
+        }
+    }
+    // The page's comments and the Gemara lines they are on, read once for the page
+    val links by produceState<DafAmudLinks?>(null, book.id, shown) { value = loadLinks(graph.repository, book.id, shown) }
+    val reviewed = remember(amud, review) { review?.let { reviewColors(amud, it) }.orEmpty() }
+    // The user's highlights and notes, kept in the library's text, on the words they are on (DafAnchors.kt): the
+    // highlights of the page's books, the notes of the main book (the text's notes are its own)
+    val highlightStore = graph.highlightStore
+    val noteStore = graph.noteStore
+    val anchorBooks =
+        remember(links) {
+            links
+                ?.anchors
+                ?.values
+                ?.mapTo(HashSet()) { it.bookId }
+                .orEmpty()
+        }
+    LaunchedEffect(anchorBooks) { anchorBooks.forEach { highlightStore.loadBook(it) } }
+    LaunchedEffect(book.id) { noteStore.loadBook(book.id) }
+    val highlightsByBook by highlightStore.highlightsByBook.collectAsState()
+    val notesByBook by noteStore.notesByBook.collectAsState()
+    val userColors =
+        remember(links, highlightsByBook) { links?.let { highlightedWords(it.anchors, highlightsByBook, USER_HIGHLIGHT_ALPHA) }.orEmpty() }
+    val noted =
+        remember(links, notesByBook, book.id) { links?.let { notedWords(it.anchors, notesByBook[book.id].orEmpty(), book.id) }.orEmpty() }
+    val highlight =
+        remember(links, marked, passage, color, reviewed, userColors) {
+            val selected = dafHighlight(links, marked, passage, color)
+            if (reviewed.isEmpty() && userColors.isEmpty()) {
+                selected
+            } else {
+                DafHighlight { word -> selected.colorOf(word) ?: userColors[word] ?: reviewed[word.line] }
+            }
+        }
+    // The selection located in the library, for the text's menu: its highlights, its note and its link
+    val currentRange by rememberUpdatedState(range)
+    val currentLinks by rememberUpdatedState(links)
+    val located: () -> LocatedSelection? =
+        remember(shown, book.id) {
+            {
+                val r = currentRange
+                val l = currentLinks
+                if (r == null || l == null) null else locate(shown, r, l.anchors, book.id) { w -> l.segmentOf(w) }
+            }
+        }
+    val copyToClipboard = rememberCopyToClipboard()
+    val menuState = remember { ContextMenuState() }
+    // The line a right-click was on, for the review's actions
+    var contextLine by remember(amud) { mutableStateOf<Int?>(null) }
+    val labels = reviewLabels()
+    val width = (amud.block[2] - amud.block[0]) * perPoint
+    val height = (amud.block[3] - amud.block[1]) * perPoint
+    with(density) {
+        Box(modifier.width(width.toDp()).height(height.toDp())) {
+            val laidOut = layout
+            if (laidOut == null) {
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
+            } else {
+                // The text's own menu (copy, copy with source, search, find in page…), on the amud's selection, and
+                // the review's actions on the line right-clicked, while the review is on
+                val text = remember(shown, range) { range?.let { shown.textOf(it) }.orEmpty() }
+                val manager = remember(text, copyToClipboard) { dafTextManager(text, copyToClipboard) }
+                ContextMenuDataProvider(
+                    items = {
+                        val line = contextLine
+                        if (review == null || line == null) emptyList() else reviewItems(amud, line, review, labels, onMark, onOpenReviews)
+                    },
+                ) {
+                    CompositionLocalProvider(LocalLocatedSelection provides located) {
+                        LocalTextContextMenu.current.Area(manager, menuState) {
+                            DafAmudText(
+                                layout = laidOut,
+                                k = perPoint / LAYOUT_SCALE,
+                                gemara = gemara,
+                                rashi = rashi,
+                                ink = ink,
+                                highlight = highlight,
+                                range = range,
+                                selectionColor = LocalTextSelectionColors.current.backgroundColor,
+                                onRange = onRange,
+                                onWordClick = { word, withModifier ->
+                                    links?.let { l ->
+                                        clickOn(l, word, withModifier, onSelectLine, onSelectPassage)
+                                        // The word itself in the text, where it is in its line
+                                        l.anchors[word]?.takeIf { it.bookId == book.id }?.let(onWordInText)
+                                    }
+                                },
+                                onContextWord = { word ->
+                                    contextLine = word.line
+                                    links?.segmentOf(word)?.let(onContextLine)
+                                },
+                                onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
+                                onPress = onPress,
+                                markUnsure = markUnsure,
+                                underlined = noted,
+                                underlineColor = JewelTheme.globalColors.text.info,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The review's actions, in the menu's language. */
+private class ReviewLabels(
+    val ok: String,
+    val wrong: String,
+    val firstToPrevious: String,
+    val previousLastHere: String,
+    val lastToNext: String,
+    val nextFirstHere: String,
+    val clear: String,
+    val openFolder: String,
+)
+
+@Composable
+private fun reviewLabels() =
+    ReviewLabels(
+        ok = stringResource(Res.string.daf_review_ok),
+        wrong = stringResource(Res.string.daf_review_wrong),
+        firstToPrevious = stringResource(Res.string.daf_review_first_to_previous),
+        previousLastHere = stringResource(Res.string.daf_review_previous_last_here),
+        lastToNext = stringResource(Res.string.daf_review_last_to_next),
+        nextFirstHere = stringResource(Res.string.daf_review_next_first_here),
+        clear = stringResource(Res.string.daf_review_clear),
+        openFolder = stringResource(Res.string.daf_review_open_folder),
+    )
+
+/** The tint of each line of [amud] the [review] marked, by its index: right, wrong, or only a word moved. */
+internal fun reviewColors(
+    amud: DafAmud,
+    review: DafReviewFile,
+): Map<Int, Color> =
+    review.marks
+        .filter { it.amud == amud.amud && amud.lines.getOrNull(it.i)?.t == it.t }
+        .associate { mark ->
+            mark.i to
+                when (mark.ok) {
+                    true -> REVIEW_OK
+                    false -> REVIEW_WRONG
+                    null -> REVIEW_MOVED
+                }
+        }
+
+private val REVIEW_OK = Color(0x3328A745)
+private val REVIEW_WRONG = Color(0x40DC3545)
+private val REVIEW_MOVED = Color(0x40E0A000)
+
+/**
+ * The review's actions on the line [index] of [amud] (as the layout has it, before the review's moves): it is right
+ * or wrong; its first word is the line before's, or the line before's last word its own; its last word is the next
+ * line's, or the next line's first word its own; its mark taken away; the reviews' folder opened, to send them.
+ */
+private fun reviewItems(
+    amud: DafAmud,
+    index: Int,
+    review: DafReviewFile,
+    labels: ReviewLabels,
+    onMark: (DafMark) -> Unit,
+    onOpenReviews: () -> Unit,
+): List<ContextMenuItem> {
+    val line = amud.lines.getOrNull(index)?.takeIf { !it.isBig } ?: return emptyList()
+
+    fun markOf(i: Int): DafMark {
+        val l = amud.lines[i]
+        return review.marks.firstOrNull { it.amud == amud.amud && it.i == i && it.t == l.t } ?: DafMark(amud.amud, l.c, i, l.t)
+    }
+    val mine = markOf(index)
+    val before = amud.lineBefore(index)
+    val after = amud.lineAfter(index)
+    val now = { Instant.now().toString() }
+    return buildList {
+        add(ContextMenuDivider)
+        add(ContextMenuItem(labels.ok) { onMark(mine.copy(c = line.c, ok = true, at = now())) })
+        add(ContextMenuItem(labels.wrong) { onMark(mine.copy(c = line.c, ok = false, at = now())) })
+        if (before != null) {
+            add(ContextMenuItem(labels.firstToPrevious) { onMark(mine.copy(cut = mine.cut + 1, at = now())) })
+            add(ContextMenuItem(labels.previousLastHere) { onMark(mine.copy(cut = mine.cut - 1, at = now())) })
+        }
+        if (after != null) {
+            val next = markOf(after)
+            add(ContextMenuItem(labels.lastToNext) { onMark(next.copy(cut = next.cut - 1, at = now())) })
+            add(ContextMenuItem(labels.nextFirstHere) { onMark(next.copy(cut = next.cut + 1, at = now())) })
+        }
+        if (!mine.isEmpty) add(ContextMenuItem(labels.clear) { onMark(mine.copy(ok = null, cut = 0, at = now())) })
+        add(ContextMenuItem(labels.openFolder, onOpenReviews))
+    }
+}
+
+/** What the text's menu takes of an amud's selection: its words, copied as they are. */
+@OptIn(ExperimentalFoundationApi::class)
+private fun dafTextManager(
+    text: String,
+    copyToClipboard: (String) -> Unit,
+): TextContextMenu.TextManager =
+    object : TextContextMenu.TextManager {
+        override val selectedText = AnnotatedString(text)
+        override val cut: TextContextMenu.Action? = null
+        override val copy: TextContextMenu.Action? =
+            text.takeIf { it.isNotEmpty() }?.let {
+                TextContextMenu.Action(
+                    true,
+                ) { copyToClipboard(it) }
+            }
+        override val paste: TextContextMenu.Action? = null
+        override val selectAll: TextContextMenu.Action? = null
+
+        // The page selects the word under a right-click itself, before the menu opens
+        override fun selectWordAtPositionIfNotAlreadySelected(offset: Offset) = Unit
+    }
+
+/** The last few amudim laid out, by amud. */
+private class LayoutCache(
+    private val kept: Int,
+) {
+    private val map =
+        object : LinkedHashMap<DafAmud, AmudLayout>(kept + 1, LOAD_FACTOR, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<DafAmud, AmudLayout>?) = size > kept
+        }
+
+    @Synchronized
+    operator fun get(amud: DafAmud): AmudLayout? = map[amud]
+
+    @Synchronized
+    operator fun set(
+        amud: DafAmud,
+        layout: AmudLayout,
+    ) {
+        map[amud] = layout
+    }
+
+    private companion object {
+        const val LOAD_FACTOR = 0.75f
+    }
+}
+
+/** A wheel notch sideways, in pixels. */
+private const val WHEEL_PX = 48f
+
+/**
+ * Scrolls [state] sideways, as the commentaries' pages turn (pageSwipe): a touchpad's sideways swipe with two fingers
+ * (a pan on Windows), a tilt wheel or Shift + wheel; not with Ctrl or Cmd held (the zoom's). In the initial pass, ahead
+ * of the pages' list, which would take Shift + wheel as its own scroll down.
+ */
+private fun Modifier.sidewaysPan(
+    state: ScrollState,
+    rtl: Boolean,
+): Modifier =
+    pointerInput(state, rtl) {
+        awaitPointerEventScope {
+            var panX = 0f
+            var panY = 0f
+            // Right to left, the sideways scroll's 0 is the right edge: a move right is back toward it
+            val sign = if (rtl) -1f else 1f
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.firstOrNull() ?: continue
+                if (event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed) continue
+                when (event.type) {
+                    PointerEventType.PanStart -> {
+                        panX = 0f
+                        panY = 0f
+                    }
+                    // Two fingers on a touchpad come as a pan (Windows), in px; an up-and-down one is the list's scroll
+                    PointerEventType.PanMove -> {
+                        panX += change.panOffset.x
+                        panY += change.panOffset.y
+                        if (abs(panX) <= abs(panY)) continue
+                        // A pan's x is the way a scroll goes (the commentaries' pages turn by it): positive shows the
+                        // right side, the fingers moving left, as the page follows them
+                        state.dispatchRawDelta(sign * change.panOffset.x)
+                        change.consume()
+                    }
+                    PointerEventType.Scroll -> {
+                        val delta = change.scrollDelta
+                        val by =
+                            when {
+                                // Shift + wheel (the platform may give it as either axis): on along the reading, as
+                                // the wheel down goes on
+                                event.keyboardModifiers.isShiftPressed -> if (delta.x != 0f) delta.x else delta.y
+                                // A tilt wheel or a touchpad: toward the side it moves to
+                                abs(delta.x) > abs(delta.y) -> sign * delta.x
+                                else -> continue
+                            }
+                        if (by == 0f) continue
+                        state.dispatchRawDelta(by * WHEEL_PX * density)
+                        change.consume()
+                    }
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+@Composable
+private fun MissingLayout(
+    book: Book,
+    layouts: DafLayouts,
+    onImport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    // What became of the last import, when it did not bring this tractate
+    var problem by remember(book.id) { mutableStateOf<ImportProblem?>(null) }
+    Column(
+        modifier.widthIn(max = 520.dp).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            stringResource(Res.string.daf_missing, book.title),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            stringResource(Res.string.daf_missing_hint, DafLayouts.DIR_NAME),
+            color = JewelTheme.globalColors.text.info,
+            textAlign = TextAlign.Center,
+        )
+        OutlinedButton(onClick = {
+            scope.launch {
+                // Off the GTK event-loop thread, as the data screen's pickers
+                val picked =
+                    withContext(Dispatchers.IO) { FileKit.openFilePicker(type = FileKitType.File(extensions = setOf("json"))) }
+                        ?: return@launch
+                problem =
+                    withContext(Dispatchers.IO) {
+                        val layout = runSuspendCatching { layouts.import(File(picked.path)) }.getOrNull()
+                        when {
+                            layout == null -> ImportProblem.NotLayout
+                            !layouts.has(book.title) -> ImportProblem.OtherTractate(layout.tractateHe)
+                            else -> null
+                        }
+                    }
+                onImport()
+            }
+        }) {
+            Text(stringResource(Res.string.daf_import))
+        }
+        when (val p = problem) {
+            ImportProblem.NotLayout -> Text(stringResource(Res.string.daf_import_not_layout), color = JewelTheme.globalColors.text.error)
+            is ImportProblem.OtherTractate ->
+                Text(stringResource(Res.string.daf_import_other_tractate, p.tractate), color = JewelTheme.globalColors.text.error)
+            null -> Unit
+        }
+    }
+}
+
+private sealed interface ImportProblem {
+    data object NotLayout : ImportProblem
+
+    data class OtherTractate(
+        val tractate: String,
+    ) : ImportProblem
+}
+
+/**
+ * The page's ties to the library: its comments' Gemara lines and books, in one read each. The Gemara lines are the
+ * comments' sources (the library's COMMENTARY links, read backward), one for each link: getSourcesForLines gives each
+ * Gemara line once, for the first comment on it.
+ */
+private suspend fun loadLinks(
+    repository: SeforimRepository,
+    bookId: Long,
+    amud: DafAmud,
+): DafAmudLinks {
+    val comments = DafAmudLinks.commentIdsOf(amud)
+    val bases =
+        runSuspendCatching { repository.getCommentarySummariesForLines(comments.toList(), includeSources = true) }
+            .getOrDefault(emptyList())
+            .map { it.link }
+            .filter { it.connectionType == ConnectionType.SOURCE && it.targetBookId == bookId }
+            .groupBy({ it.sourceLineId }, { it.targetLineId })
+            .mapValues { (_, ids) -> ids.toSet() }
+    // The page's library lines, the Gemara's and the comments', for the comments' books and the words' places in them
+    val lines =
+        runSuspendCatching {
+            repository.getLinesByIds(
+                amud.lines.flatMapTo(LinkedHashSet()) { it.lineIds },
+            )
+        }.getOrDefault(emptyList())
+    val books = lines.filter { it.id in comments }.associate { it.id to it.bookId }
+    return withContext(Dispatchers.Default) {
+        val texts =
+            lines.associate { line ->
+                line.id to
+                    LibraryLine(line.bookId, line.lineIndex, buildAnnotatedFromHtml(line.content, baseTextSize = 16f, boldScale = 1f).text)
+            }
+        DafAmudLinks(amud, bases, books, anchorsOf(amud, texts))
+    }
+}
+
+/** How strong a user's highlight is behind the daf's words, as behind the text's (applyUserHighlights). */
+private const val USER_HIGHLIGHT_ALPHA = 0.4f
+
+/** How strong each mark is: the passage selected, the segments selected, the comments on them. */
+private const val PASSAGE_ALPHA = 0.32f
+private const val SELECTED_ALPHA = 0.18f
+private const val RELATED_ALPHA = 0.08f
+
+/**
+ * The page's marks: the selected passage (its comments and the Gemara words they quote) strongest, then the selected
+ * segments, then the comments on the selected segments, lightest. Nothing follows the pointer: the page reads as
+ * the text does, where only a selection is marked.
+ */
+internal fun dafHighlight(
+    links: DafAmudLinks?,
+    selected: Set<Long>,
+    passage: Set<Long>,
+    color: Color,
+): DafHighlight {
+    if (links == null || (selected.isEmpty() && passage.isEmpty())) return DafHighlight.NONE
+    val related = selected.flatMapTo(HashSet()) { links.commentsOn[it].orEmpty() }
+    val quotedWords = passage.flatMapTo(HashSet()) { links.quoted[it].orEmpty() }
+    val strong = color.copy(alpha = PASSAGE_ALPHA)
+    val selectedColor = color.copy(alpha = SELECTED_ALPHA)
+    val relatedColor = color.copy(alpha = RELATED_ALPHA)
+    return DafHighlight { word ->
+        val id = links.lineIdOf(word) ?: return@DafHighlight null
+        when {
+            id in passage || word in quotedWords -> strong
+            id in selected -> selectedColor
+            id in related -> relatedColor
+            else -> null
+        }
+    }
+}
+
+/**
+ * A click on [word]: a Gemara word inside words a dibbur quotes selects that passage, another one its segment (with a
+ * modifier, added to the selection); a comment's word selects the comment, on its segment.
+ */
+internal fun clickOn(
+    links: DafAmudLinks,
+    word: DafWord,
+    withModifier: Boolean,
+    onSelectLine: (Long, Boolean) -> Unit,
+    onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
+) {
+    val id = links.lineIdOf(word) ?: return
+    if (links.isGemara(word)) {
+        val passage = if (withModifier) emptySet() else links.passageAt(word)
+        if (passage.isEmpty()) {
+            onSelectLine(id, withModifier)
+        } else {
+            onSelectPassage(id, passage, passage.mapNotNullTo(HashSet()) { links.bookOf[it] })
+        }
+    } else {
+        val base = links.segmentOf(word) ?: return
+        onSelectPassage(base, setOf(id), setOfNotNull(links.bookOf[id]))
+    }
+}
+
+/** The Gemara segment of [word]: its own line, or for a comment's word the segment it is on (the one on this page). */
+internal fun DafAmudLinks.segmentOf(word: DafWord): Long? {
+    val id = lineIdOf(word) ?: return null
+    if (isGemara(word)) return id
+    val bases = baseOf[id].orEmpty()
+    return bases.firstOrNull { it in wordsOf } ?: bases.firstOrNull()
+}

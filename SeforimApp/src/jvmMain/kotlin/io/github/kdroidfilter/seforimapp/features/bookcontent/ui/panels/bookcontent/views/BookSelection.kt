@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views
 
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
@@ -35,6 +36,8 @@ import io.github.kdroidfilter.seforim.htmlparser.HtmlImageContentBuilder
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.core.annotations.LineHighlightRange
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
+import io.github.kdroidfilter.seforimapp.core.presentation.text.createOriginalToStrippedMap
+import io.github.kdroidfilter.seforimapp.core.presentation.text.mapOriginalToStripped
 import io.github.kdroidfilter.seforimapp.core.presentation.text.stripNikudTeamimWithMap
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
@@ -95,6 +98,13 @@ class BookSelection {
         resolved = null
     }
 
+    /** Pardes: selects [range], as a press at its start and a Shift+press at its end would (the daf's word clicked). */
+    fun select(range: ClosedRange<TextPoint>) {
+        pressedAt = range.start
+        this.range = range
+        resolved = null
+    }
+
     /** The offsets of [lineIndex]'s displayed text ([length] chars) inside the Shift+click selection. */
     fun selectedRangeOf(
         lineIndex: Int,
@@ -130,14 +140,23 @@ data class ResolvedSelection(
 /** The [BookSelection] of the book view around the current SelectionContainer; null elsewhere (commentaries…). */
 val LocalBookSelection = staticCompositionLocalOf<BookSelection?> { null }
 
-/** A [SelectionContainer] whose lines record their presses in [selection], extend it on Shift+click, and copy it. */
+/**
+ * A [SelectionContainer] whose lines record their presses in [selection], extend it on Shift+click, and copy it. Not
+ * a container when [ownsSelection] is false, for a content that holds its own (the daf's runs of lines, each one): a
+ * container around them would take the focus from theirs on each press, and their selection with it.
+ */
 @Composable
 fun BookSelectionContainer(
     selection: BookSelection?,
     modifier: Modifier = Modifier,
+    ownsSelection: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val copyToClipboard = rememberCopyToClipboard()
+    if (!ownsSelection) {
+        CompositionLocalProvider(LocalBookSelection provides null) { Box(modifier) { content() } }
+        return
+    }
     CompositionLocalProvider(LocalBookSelection provides selection) {
         // On the container itself: its own Ctrl/Cmd+C would copy its (empty) selection
         SelectionContainer(
@@ -316,6 +335,29 @@ fun highlightRangesOf(
         val to = toOriginal.getOrElse(selected.last + 1) { original.length }
         if (to > from) LineHighlightRange(line.id, from until to) else null
     }
+
+/**
+ * Pardes: selects the characters [start] until [end] of [line] (its plain text with diacritics, as highlights are
+ * kept), at the offsets of its text as displayed in [diacritics]: the daf's word clicked, in the text.
+ */
+suspend fun BookSelection.selectInLine(
+    line: Line,
+    start: Int,
+    end: Int,
+    diacritics: DiacriticsMode,
+) {
+    val (from, to) =
+        withContext(Dispatchers.Default) {
+            if (diacritics == DiacriticsMode.All) {
+                start to end
+            } else {
+                val original = buildAnnotatedFromHtml(line.content, baseTextSize = 16f, boldScale = 1f).text
+                val map = createOriginalToStrippedMap(original, diacritics)
+                mapOriginalToStripped(start, map) to mapOriginalToStripped(end, map)
+            }
+        }
+    if (to > from) select(TextPoint(line.lineIndex, from)..TextPoint(line.lineIndex, to))
+}
 
 /** The text of a line as the book view displays it, which a selection's offsets index. */
 internal fun displayedLineText(
