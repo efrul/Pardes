@@ -56,6 +56,10 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.android.data.Dictionary
 import io.github.kdroidfilter.seforimapp.android.data.DictionaryEntry
 import io.github.kdroidfilter.seforimapp.android.data.DictionaryIndex
+import io.github.kdroidfilter.seforimapp.android.data.DictionarySource
+import io.github.kdroidfilter.seforimapp.android.data.KleiKodeshPack
+import io.github.kdroidfilter.seforimapp.android.data.RelatedWord
+import io.github.kdroidfilter.seforimapp.android.data.RelationKind
 import io.github.kdroidfilter.seforimapp.android.data.lookup
 import io.github.kdroidfilter.seforimapp.android.ui.ToolKind
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
@@ -67,7 +71,8 @@ import kotlinx.coroutines.withContext
 
 // Port of the widget part of desktop 0.6.10 features/home/widgets/library/DictionaryWidget.kt: the library's
 // dictionaries in one card, a word looked up in one of them or in all, its entry read in the card, and opened in its
-// book from there. The tool page shows the same card full size.
+// book from there. The tool page shows the same card full size. With Pardes desktop's dictionaries of Klei Kodesh's data,
+// and the word's synonyms and other spellings above the results and in its entry, a tap looking one up.
 
 private const val HOME_DICTIONARY_ALL = "כל המילונים"
 private const val HOME_DICTIONARY_NOT_FOUND = "המילה לא נמצאה"
@@ -78,6 +83,8 @@ private const val HOME_DICTIONARY_FAILED = "חלק מהמילונים לא נט�
 private const val HOME_DICTIONARY_RETRY = "לנסות שוב"
 private const val HOME_DICTIONARY_OPTIONS_TITLE = "המילונים לחיפוש"
 private const val HOME_DICTIONARY_NONE = "אין בספרייה את %1\$s"
+private const val HOME_DICTIONARY_SYNONYMS = "נרדפות:"
+private const val HOME_DICTIONARY_SPELLINGS = "כתיב אחר:"
 
 internal object DictionarySettings : WidgetSettings(DictionaryWidget.id) {
     /** The dictionaries searched, ticked in the options page. */
@@ -147,7 +154,7 @@ internal fun DictionaryCard(
         value = DictionaryIndex.cached(needed)
         if (wanted || value != null) {
             // The library folder and the database's stamp are file system calls: not on the UI thread
-            value = withContext(Dispatchers.IO) { DictionaryIndex.read(app.libraryStore.repository(), app.cacheDir, app.libraryStore.databaseFile, needed) }
+            value = withContext(Dispatchers.IO) { DictionaryIndex.read(app.libraryStore.repository(), app.assets, app.cacheDir, app.libraryStore.databaseFile, needed) }
         }
     }
     val failed = needed.filter { read != null && it !in read.orEmpty() }
@@ -155,6 +162,15 @@ internal fun DictionaryCard(
     var query by remember { mutableStateOf("") }
     val results = remember(pool, query) { lookup(pool, query) }
     var opened by remember { mutableStateOf<DictionaryEntry?>(null) }
+    // Klei Kodesh's synonyms and spellings, read with the first dictionary
+    val pack by produceState<KleiKodeshPack?>(null, read != null) {
+        if (read != null) value = withContext(Dispatchers.IO) { KleiKodeshPack.shipped(app.assets) }
+    }
+    val related = remember(pack, query) { pack?.related(query).orEmpty() }
+    val pickWord: (String) -> Unit = { word ->
+        query = word
+        opened = null
+    }
     val open = rememberOpenBookAt(state)
     // Android's Back leaves an entry for the search, as its arrow does
     BackHandler(enabled = opened != null) { opened = null }
@@ -162,7 +178,7 @@ internal fun DictionaryCard(
     PanelCard(modifier) {
         Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             opened?.let { entry ->
-                EntryPage(state, entry, onBack = { opened = null }) { open(entry.bookId, entry.lineId) }
+                EntryPage(state, entry, pack?.related(entry.word).orEmpty(), pickWord, onBack = { opened = null }) { open(entry.bookId, entry.lineId) }
                 return@Column
             }
             WidgetTitle("מילון") {
@@ -185,6 +201,8 @@ internal fun DictionaryCard(
                 onSubmit = { results.firstOrNull()?.let { opened = it } },
                 onFocus = { wanted = true },
             )
+            // The word typed, as Klei Kodesh relates it to others: one tapped is looked up instead
+            if (related.isNotEmpty() && read != null) RelatedWords(related, pickWord)
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 when {
                     read == null && !wanted -> AskRandomWord { wanted = true }
@@ -253,7 +271,8 @@ private fun DictionaryOptionsPage(state: HomeWidgetsState) {
         Dictionary.entries.forEach { dictionary ->
             val ticked = dictionary in options.shown
             // The search needs one dictionary at least
-            OptionCheckRow(dictionary.label, dictionary.bookTitle, ticked, enabled = !ticked || options.shown.size > 1) { on ->
+            val from = if (dictionary.source == DictionarySource.BOOK) dictionary.bookTitle else "${dictionary.bookTitle} · כלי קודש"
+            OptionCheckRow(dictionary.label, from, ticked, enabled = !ticked || options.shown.size > 1) { on ->
                 state[DictionarySettings.shown] = (if (on) options.shown + dictionary else options.shown - dictionary).toSet()
             }
         }
@@ -370,12 +389,16 @@ private fun EntryRow(
 private fun EntryPage(
     state: HomeWidgetsState,
     entry: DictionaryEntry,
+    related: List<RelatedWord>,
+    onPickWord: (String) -> Unit,
     onBack: () -> Unit,
     onOpenBook: () -> Unit,
 ) {
     val c = Zayit.colors
     val lines by produceState(emptyList<Line>(), entry) {
-        value = runCatching { state.app.libraryStore.repository().getLines(entry.bookId, entry.first, entry.last) }.getOrDefault(emptyList())
+        if (entry.text == null) {
+            value = runCatching { state.app.libraryStore.repository().getLines(entry.bookId, entry.first, entry.last) }.getOrDefault(emptyList())
+        }
     }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -384,12 +407,38 @@ private fun EntryPage(
             Text(entry.word, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = c.accent, maxLines = 1, modifier = Modifier.weight(1f))
             Tag(entry.dictionary.label)
         }
+        if (related.isNotEmpty()) RelatedWords(related, onPickWord)
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            entry.text?.let { Text(it, fontSize = 14.sp, color = c.text, lineHeight = 22.sp) }
+            entry.dictionary.attribution?.let { Text(it, fontSize = 11.sp, color = c.textSecondary) }
             lines.forEach { line ->
                 Text(buildAnnotatedFromHtml(line.content, baseTextSize = 14f, boldColor = c.accent, linkColor = c.accent), fontSize = 14.sp, color = c.text, lineHeight = 22.sp)
             }
         }
-        io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton("פתיחה ב${entry.dictionary.label}", onOpenBook, Modifier.align(Alignment.End))
+        // A word of no book has none to open
+        if (entry.text == null) {
+            io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton("פתיחה ב${entry.dictionary.label}", onOpenBook, Modifier.align(Alignment.End))
+        }
+    }
+}
+
+/** A word's synonyms, then its other spellings, as tags in a row that scrolls; one tapped is looked up. */
+@Composable
+private fun RelatedWords(
+    related: List<RelatedWord>,
+    onPick: (String) -> Unit,
+) {
+    val c = Zayit.colors
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        related.groupBy { it.kind }.forEach { (kind, words) ->
+            Text(if (kind == RelationKind.SYNONYM) HOME_DICTIONARY_SYNONYMS else HOME_DICTIONARY_SPELLINGS, fontSize = 11.sp, color = c.textSecondary, modifier = Modifier.padding(horizontal = 2.dp))
+            words.forEach { word ->
+                // A finger's height to tap, the tag as small as desktop's
+                Box(Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button) { onPick(word.word) }, contentAlignment = Alignment.Center) {
+                    Tag(word.word)
+                }
+            }
+        }
     }
 }
 

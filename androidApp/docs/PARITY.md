@@ -220,6 +220,14 @@ Ported on 2026-11-03 from Pardes desktop (`19c9f92`):
 - **A category not offered so** searches all its books when a tab or the history still asks for its base books alone, not none.
 - `search/LibraryCategories.kt` reads the links with the catalog, once (`LibraryCategories.of(catalog, commented)`); desktop's `BaseBooksTest` runs on the port.
 
+## Pardes desktop's dictionaries from Klei Kodesh's data
+
+Ported on 2026-11-04 from Pardes desktop (`66ae16e`):
+- **Five more dictionaries in the card:** מצודת ציון (31 books), ביאור המילות of the Malbim (15 books), the מיקרופדיה תלמודית and מחברת מנחם, by Klei Kodesh's index of their headwords in the library's books; and Hebrew Wikipedia's acronyms (673, CC BY-SA, credited in the entry and in Settings › רישיונות), words with their text and no book to open. Each indexed entry is checked against the line of the library it names (the index was built on another Otzaria library): one whose line doesn't hold its headword is left out, and counted in the log (`DictionaryIndex`).
+- **A word's synonyms and other spellings** (Klei Kodesh's links of kind נרדף and כתיב, checked by a model) above the results for the word typed and in its entry, as tags; one tapped is looked up.
+- **The data:** desktop's `resources/kleikodesh/dictionary.tsv.gz` (400 KB, packed by `scripts/kleikodesh_dictionary.py`), copied into the APK's assets by `DesktopTextAssets`, not kept twice. `data/KleiKodeshDictionary.kt` ports desktop's `KleiKodeshDictionary.kt` but for reading the pack from the assets; the parsed entries go to the disk cache with the others (v3, which keeps each entry's book).
+- **Tested:** `data/KleiKodeshDictionaryTest.kt`, as desktop's.
+
 ## Engine and data
 
 - [x] **H** Snippets and search-term highlighting still come from the pre-0.6.1 engine (wrong window, bolds unrelated dictionary variants and 4-gram fragments)
