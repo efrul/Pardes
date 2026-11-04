@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.annotations.NoteStore
 import io.github.kdroidfilter.seforimapp.core.catalog.CatalogAccess
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
 import io.github.kdroidfilter.seforimapp.core.favorites.FavoritesStore
+import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedbackStore
 import io.github.kdroidfilter.seforimapp.core.history.HistoryStore
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.selection.DefaultSelectionContext
@@ -159,6 +160,10 @@ object AppCoreBindings {
     @Provides
     @SingleIn(AppScope::class)
     fun provideHistoryStore(database: UserSettingsDb): HistoryStore = HistoryStore(database)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSearchFeedbackStore(database: UserSettingsDb): SearchFeedbackStore = SearchFeedbackStore(database)
 
     @Provides
     @SingleIn(AppScope::class)

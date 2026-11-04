@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
+import io.github.kdroidfilter.seforimapp.core.feedback.FeedbackGrade
 import io.github.kdroidfilter.seforimapp.core.presentation.components.FindInPageBar
 import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberAppTextZoom
 import io.github.kdroidfilter.seforimapp.core.presentation.components.syncFindField
@@ -83,6 +84,7 @@ import io.github.kdroidfilter.seforimlibrary.core.models.SearchResult
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -124,6 +126,8 @@ data class SearchShellActions(
     val onMoreFromBook: (bookId: Long) -> Unit = {},
     val onBackFromBook: () -> Unit = {},
     val onOpenAuthor: (Long) -> Unit = {},
+    // Pardes: feedback mode, a grade given to a result (again: taken back)
+    val onGrade: (SearchResult, FeedbackGrade) -> Unit = { _, _ -> },
 )
 
 /**
@@ -155,6 +159,8 @@ fun SearchResultInBookShellMvi(
     preview: SearchResultViewModel.PassagePreview?,
     actions: SearchShellActions,
     tabUi: BookTabUi,
+    // Pardes: the grades given to the results shown, in feedback mode
+    feedback: ImmutableMap<Long, FeedbackGrade> = persistentMapOf(),
 ) {
     val tabId = bookUiState.tabId
     val currentOnEvent by rememberUpdatedState(onEvent)
@@ -190,6 +196,7 @@ fun SearchResultInBookShellMvi(
                 preview = preview,
                 actions = actions,
                 tabId = tabId,
+                feedback = feedback,
             )
         }
     }
@@ -212,8 +219,11 @@ private fun SearchResultContentMvi(
     preview: SearchResultViewModel.PassagePreview?,
     actions: SearchShellActions,
     tabId: String,
+    feedback: ImmutableMap<Long, FeedbackGrade> = persistentMapOf(),
 ) {
     val appSettings = LocalAppGraph.current.appSettings
+    // Pardes: feedback mode (Settings), each result's grade buttons
+    val feedbackOn by appSettings.searchFeedbackFlow.collectAsState()
     val listState = rememberLazyListState()
     // A flat list by relevance, as on Google: at most two passages of a book in a row
     // Narrowed to a book ("more from it"), or searched in one from the start (home's book / TOC scope):
@@ -540,6 +550,9 @@ private fun SearchResultContentMvi(
                                                 },
                                                 onOpen = { result -> openResult(result) },
                                                 onMoreInBook = { actions.onMoreFromBook(item.hit.bookId) },
+                                                feedbackOn = feedbackOn,
+                                                grade = feedback[item.hit.lineId],
+                                                onGrade = { grade -> actions.onGrade(item.hit, grade) },
                                             )
                                         }
                                         // Loading indicator at the end of the list (only for lazy loading)
@@ -736,6 +749,9 @@ private fun ResultView(
     onClick: (SearchResult) -> Unit,
     onOpen: (SearchResult) -> Unit,
     onMoreInBook: () -> Unit,
+    feedbackOn: Boolean = false,
+    grade: FeedbackGrade? = null,
+    onGrade: (FeedbackGrade) -> Unit = {},
 ) {
     val hit = item.hit
     val currentOnRequestBreadcrumb by rememberUpdatedState(onRequestBreadcrumb)
@@ -747,7 +763,11 @@ private fun ResultView(
     ResultRow(selected = selected, onClick = { onClick(hit) }, onDoubleClick = { onOpen(hit) }) {
         ResultTitle(hit.bookTitle, place)
         Snippet(hit, findQuery, bookFontCode)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = if (feedbackOn) Modifier.fillMaxWidth() else Modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             if (item.more > 0) {
                 ResultLink(
                     stringResource(Res.string.search_more_from_book, item.more, hit.bookTitle),
@@ -755,6 +775,11 @@ private fun ResultView(
                     resultSp(11f),
                     onClick = onMoreInBook,
                 )
+            }
+            // Pardes: feedback mode, at the row's end
+            if (feedbackOn) {
+                Spacer(Modifier.weight(1f))
+                SearchFeedbackButtons(grade, onGrade)
             }
         }
     }
