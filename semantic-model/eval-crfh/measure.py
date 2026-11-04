@@ -68,7 +68,7 @@ def main() -> None:
             only_a = sum(1 for qid in common if within(a, qid) and not within(b, qid))
             only_b = sum(1 for qid in common if within(b, qid) and not within(a, qid))
             bar = 2 * math.sqrt(only_a + only_b)
-            verdict = ("within the noise" if abs(only_a - only_b) < bar
+            verdict = ("within the noise" if abs(only_a - only_b) < bar or only_a == only_b
                        else f"{a} better" if only_a > only_b else f"{b} better")
             pairs.append([f"{a} / {b}", f"@{k}", only_a, only_b, f"{bar:.1f}", verdict])
     if args.md:

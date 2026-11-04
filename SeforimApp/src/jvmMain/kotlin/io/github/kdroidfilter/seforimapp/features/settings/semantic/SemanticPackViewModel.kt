@@ -7,6 +7,7 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedbackStore
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
@@ -28,13 +29,15 @@ import java.io.File
 /**
  * Settings › ניהול נתונים: Pardes's semantic search, the pack beside the library ([InstalledPack]), the newest pack for
  * the library installed ([SemanticPackReleases]), and installing one, downloaded or from files the user downloaded
- * ([SemanticPackInstaller]); it goes in at the next start ([PendingSemanticPack]).
+ * ([SemanticPackInstaller]); it goes in at the next start ([PendingSemanticPack]). And feedback mode, the search results'
+ * grade buttons that train it ([SearchFeedbackStore]).
  */
 @ContributesIntoMap(AppScope::class)
 @ViewModelKey
 @Inject
 class SemanticPackViewModel(
     private val appSettings: AppSettings,
+    private val feedbackStore: SearchFeedbackStore,
 ) : ViewModel() {
     sealed interface Available {
         data object Checking : Available
@@ -79,12 +82,19 @@ class SemanticPackViewModel(
         val startFailure: String? = null,
         /** Whether a start without a pack in use opens the settings on the card ([SemanticPackPrompt]). */
         val promptAtStart: Boolean = true,
+        /** Feedback mode: whether each search result shows its grade buttons. */
+        val feedback: Boolean = false,
+        /** How many results are graded so far, null until read. */
+        val feedbackGrades: Long? = null,
     ) {
         val busy: Boolean get() = work is Work.Downloading || work is Work.Unpacking
     }
 
     private val releases = SemanticPackReleases()
-    private val _state = MutableStateFlow(State(promptAtStart = appSettings.isSemanticPackPromptEnabled()))
+    private val _state =
+        MutableStateFlow(
+            State(promptAtStart = appSettings.isSemanticPackPromptEnabled(), feedback = appSettings.isSearchFeedbackEnabled()),
+        )
     val state: StateFlow<State> = _state.asStateFlow()
     private var job: Job? = null
 
@@ -94,6 +104,10 @@ class SemanticPackViewModel(
             _state.update { it.copy(startFailure = PendingSemanticPack.takeFailure(), work = if (ready) Work.Ready else it.work) }
         }
         refresh()
+        viewModelScope.launch(Dispatchers.IO) {
+            runSuspendCatching { feedbackStore.refreshCount() }
+            feedbackStore.count.collect { count -> _state.update { it.copy(feedbackGrades = count) } }
+        }
     }
 
     fun refresh() {
@@ -151,6 +165,11 @@ class SemanticPackViewModel(
     fun setPromptAtStart(enabled: Boolean) {
         appSettings.setSemanticPackPromptEnabled(enabled)
         _state.update { it.copy(promptAtStart = enabled) }
+    }
+
+    fun setFeedback(enabled: Boolean) {
+        appSettings.setSearchFeedbackEnabled(enabled)
+        _state.update { it.copy(feedback = enabled) }
     }
 
     private fun launchInstall(block: suspend (SemanticPackInstaller) -> Unit) {

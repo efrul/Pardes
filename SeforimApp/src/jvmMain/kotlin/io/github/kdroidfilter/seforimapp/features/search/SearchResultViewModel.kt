@@ -16,6 +16,9 @@ import dev.zacsweers.metrox.viewmodel.ViewModelAssistedFactory
 import dev.zacsweers.metrox.viewmodel.ViewModelAssistedFactoryKey
 import io.github.kdroidfilter.seforim.tabs.*
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.core.feedback.FeedbackGrade
+import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedback
+import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedbackStore
 import io.github.kdroidfilter.seforimapp.core.history.HistoryStore
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.StateKeys
@@ -37,12 +40,15 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.TocLineIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
 import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
 import io.github.kdroidfilter.seforimapp.features.search.semantic.otherTabCategories
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.plusBooks
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimapp.framework.session.SearchPersistedState
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedStateStore
+import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
@@ -116,6 +122,7 @@ class SearchResultViewModel(
     private val titleUpdateManager: TabTitleUpdateManager,
     private val desktopManager: DesktopManager,
     private val historyStore: HistoryStore,
+    private val feedbackStore: SearchFeedbackStore,
     private val appSettings: AppSettings,
     lookup: LuceneLookupSearchService,
     private val libraryCategories: LibraryCategories,
@@ -245,6 +252,12 @@ class SearchResultViewModel(
         data class SetScopeBaseBooksOnly(
             val baseBooksOnly: Boolean,
         ) : SearchResultEvents()
+
+        // Pardes: feedback mode, a grade given to a result (again: taken back)
+        data class Grade(
+            val result: SearchResult,
+            val grade: FeedbackGrade,
+        ) : SearchResultEvents()
     }
 
     fun onEvent(event: SearchResultEvents) {
@@ -318,6 +331,8 @@ class SearchResultViewModel(
             }
 
             is SearchResultEvents.SetScopeBaseBooksOnly -> setScopeBaseBooksOnly(event.baseBooksOnly)
+
+            is SearchResultEvents.Grade -> grade(event.result, event.grade)
         }
     }
 
@@ -371,6 +386,77 @@ class SearchResultViewModel(
 
     // Whether the Search UI is currently visible/active. Used to gate heavy flows at startup.
     private val _uiVisible = MutableStateFlow(false)
+
+    // Pardes: feedback mode (Settings), the grades given to the results shown, which feedbackStore keeps
+    private val _feedback = MutableStateFlow<ImmutableMap<Long, FeedbackGrade>>(persistentMapOf())
+    val feedbackFlow: StateFlow<ImmutableMap<Long, FeedbackGrade>> = _feedback.asStateFlow()
+    private val feedbackWrites = Mutex()
+
+    // The semantic model the search runs with, recorded with each grade: the pack beside the library, read once
+    private val feedbackModel by lazy {
+        (InstalledPack.read(LibraryLocation.currentDir(appSettings)) as? InstalledPack.InUse)?.model
+    }
+
+    init {
+        // The grades of the search shown: read again when another search is shown, or when the mode is turned on
+        viewModelScope.launch {
+            combine(appSettings.searchFeedbackFlow, uiState) { on, state -> if (on) feedbackKey(state) else null }
+                .distinctUntilChanged()
+                .collectLatest { key ->
+                    _feedback.value =
+                        if (key == null) {
+                            persistentMapOf()
+                        } else {
+                            runSuspendCatching { feedbackStore.grades(key) }.getOrDefault(emptyMap()).toImmutableMap()
+                        }
+                }
+        }
+    }
+
+    /** The search the results shown are of, keyed as the history keys it; null before there are any. */
+    private fun feedbackKey(state: SearchUiState): String? {
+        val query = state.executedQuery.takeIf { it.isNotBlank() } ?: return null
+        val persisted = persistedSearchState()
+        return historyStore.searchKey(query, persisted.scope, persisted.globalExtended)
+    }
+
+    /** Gives [result] the [grade], or takes it back when it has it already: shown at once, saved in order. */
+    private fun grade(
+        result: SearchResult,
+        grade: FeedbackGrade,
+    ) {
+        val state = _uiState.value
+        val key = feedbackKey(state) ?: return
+        val again = _feedback.value[result.lineId] == grade
+        _feedback.value =
+            (if (again) _feedback.value - result.lineId else _feedback.value + (result.lineId to grade)).toImmutableMap()
+        val persisted = persistedSearchState()
+        val rank = state.results.indexOfFirst { it.lineId == result.lineId }
+        viewModelScope.launch {
+            feedbackWrites.withLock {
+                runSuspendCatching {
+                    if (again) {
+                        feedbackStore.clear(key, result.lineId)
+                    } else {
+                        feedbackStore.save(
+                            SearchFeedback(
+                                searchKey = key,
+                                query = state.executedQuery,
+                                lineId = result.lineId,
+                                bookId = result.bookId,
+                                grade = grade,
+                                rank = rank,
+                                scope = persisted.scope,
+                                extended = persisted.globalExtended,
+                                model = withContext(Dispatchers.IO) { feedbackModel },
+                                gradedAt = System.currentTimeMillis(),
+                            ),
+                        )
+                    }
+                }.onFailure { warnln { "[SearchResultViewModel] A grade was not saved: ${it.message}" } }
+            }
+        }
+    }
 
     // Allowed sets computed only when scope changes (Debounce 300ms on scope)
     private val scopeBookIdFlow = uiState.map { it.scopeBook?.id }.distinctUntilChanged()
