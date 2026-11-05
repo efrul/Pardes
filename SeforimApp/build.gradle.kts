@@ -159,6 +159,7 @@ kotlin {
         jvmTest.dependencies {
             implementation(libs.mockk)
             implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
 
         jvmMain.dependencies {
@@ -391,6 +392,10 @@ buildConfig {
         providers.environmentVariable("GOOGLE_DRIVE_CLIENT_SECRET").orElse(driveProperty("drive.clientSecret")).orElse("")
     buildConfigField("GOOGLE_DRIVE_CLIENT_ID", driveClientId)
     buildConfigField("GOOGLE_DRIVE_CLIENT_SECRET", driveClientSecret)
+    // Pardes's feedback service (feedback-service/, a Cloudflare Worker); without it feedback is only saved to files
+    val feedbackUrl =
+        providers.environmentVariable("PARDES_FEEDBACK_URL").orElse(driveProperty("feedback.url")).orElse("")
+    buildConfigField("FEEDBACK_URL", feedbackUrl)
 }
 
 // Jewel's icons-api pulls IntelliJ's coroutines fork, which duplicates kotlinx-coroutines-core-jvm classes

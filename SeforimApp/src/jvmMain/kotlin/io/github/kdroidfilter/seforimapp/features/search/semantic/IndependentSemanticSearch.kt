@@ -23,6 +23,8 @@ import java.util.PriorityQueue
 data class DenseHit(
     val lineId: Long,
     val score: Float,
+    // The line's book, as the index stores it (VectorIndexBuilder); -1 when it doesn't
+    val bookId: Long = -1L,
 )
 
 class IndependentSemanticSearch(
@@ -68,10 +70,10 @@ class IndependentSemanticSearch(
         // and a smart find in a book)
         val storedFields: StoredFields = reader.storedFields()
         for (entry in sorted) {
-            val doc = storedFields.document(entry.key, LINE_ID_ONLY)
+            val doc = storedFields.document(entry.key, LINE_AND_BOOK)
             val lineId = doc.get("line_id")?.toLongOrNull() ?: continue
             if (seenLineIds.add(lineId)) {
-                hits.add(DenseHit(lineId, entry.value))
+                hits.add(DenseHit(lineId, entry.value, doc.get("book_id")?.toLongOrNull() ?: -1L))
             }
         }
 
@@ -226,7 +228,7 @@ class IndependentSemanticSearch(
         /** The open model's folder name next to the databases (or `PARDES_MODEL_DIR` / `-Dpardes.model.dir`). */
         const val OPEN_MODEL_DIR_NAME = "pardes-model"
 
-        private val LINE_ID_ONLY = setOf("line_id")
+        private val LINE_AND_BOOK = setOf("line_id", "book_id")
 
         private const val FIELD_VEC = "vec"
         private const val FIELD_VEC_BASE = "vec_base"

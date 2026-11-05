@@ -15,6 +15,9 @@ import io.github.kdroidfilter.seforimapp.android.search.SearchService
 import io.github.kdroidfilter.seforimapp.android.search.countFacets
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
+import io.github.kdroidfilter.seforimapp.features.search.semantic.otherTabCategories
+import io.github.kdroidfilter.seforimapp.features.search.semantic.plusBooks
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
@@ -117,6 +120,8 @@ data class SearchUiState(
     val bookCounts: Map<Long, Int> = emptyMap(),
     /** The results' categories with counts (facets), the roots of which are the category tabs. */
     val tree: List<SearchTreeCategory> = emptyList(),
+    /** The library's other top categories, tabs after the tree's when the search runs by meaning (Pardes desktop). */
+    val otherCategories: List<SearchTreeCategory> = emptyList(),
     val selectedCategoryIds: Set<Long> = emptySet(),
     /** The books the results were narrowed to ("more from this book"). */
     val bookFilterIds: Set<Long> = emptySet(),
@@ -468,7 +473,7 @@ class SearchViewModel(
             _state.update {
                 it.copy(
                     isLoading = true, results = emptyList(), hasMore = false, isLoadingMore = false, progressCurrent = 0, progressTotal = null,
-                    baseBooksHadNoResults = false, failure = null, bookCounts = emptyMap(), tree = emptyList(), isFiltering = false,
+                    baseBooksHadNoResults = false, failure = null, bookCounts = emptyMap(), tree = emptyList(), otherCategories = emptyList(), isFiltering = false,
                     scrollTarget = ScrollTarget(stamp = System.nanoTime()),
                 )
             }
@@ -533,9 +538,24 @@ class SearchViewModel(
                 val tree = scopeBook?.let { b -> runCatching { tocIndex(b.id).tree }.onFailure { if (it is CancellationException) throw it }.getOrNull() }
                 if (tree != null) _state.update { it.copy(tocTree = tree) }
                 countTocHits(_state.value.results)
-                applyFacets(facets.await())
+                applyFacets(withMeaningHits(facets.await(), first.session))
+                showOtherCategories(q, scope, engine)
             }
         }
+    }
+
+    /**
+     * Offers the library's other top categories as tabs, after those of the results, when [query] runs by meaning in the
+     * whole library ([scope]): its list holds only the first lines found, while a tab searches its category again, where
+     * the meaning search finds its own closest lines. In the base books, the categories that hold some. By the words
+     * alone, a category without their hits has none (Pardes desktop showOtherCategories).
+     */
+    private suspend fun showOtherCategories(query: String, scope: SearchScope, engine: SearchEngine) {
+        if (scope != SearchScope.Global || !engine.highlightsByMeaning(query)) return
+        val roots = readOrNull { repo.getRootCategories() }.orEmpty()
+        val others = otherTabCategories(roots, baseBooksOnly = !_state.value.globalExtended) { id -> booksUnder(id, baseBooksOnly = true).isNotEmpty() }
+            .map { category -> SearchTreeCategory(category, count = 0, children = emptyList()) }
+        _state.update { it.copy(otherCategories = others) }
     }
 
     private class First(val session: SearchSession?, val page: SearchPage?)
@@ -819,6 +839,19 @@ class SearchViewModel(
                 _state.update { state -> state.copy(results = state.results.map { r -> refined[r.lineId]?.let { r.copy(snippet = it) } ?: r }) }
             }
         }
+    }
+
+    /**
+     * [facets] (the words' hits) with the lines [session] found by meaning alone, which its list shows too (Pardes desktop
+     * withMeaningHits): without them a category only the meaning search found lines in has no tab, nor a book of it its
+     * "more" count. Read off the main thread, as the words may be asked which of those lines they find.
+     */
+    private suspend fun withMeaningHits(facets: SearchFacets?, session: SearchSession?): SearchFacets? {
+        val meaning = session as? MeaningFacets ?: return facets
+        val books = readOrNull { withContext(Dispatchers.IO + NonCancellable) { meaning.meaningBookCounts() } }.orEmpty()
+        if (books.isEmpty()) return facets
+        return (facets ?: SearchFacets(totalHits = 0L, categoryCounts = emptyMap(), bookCounts = emptyMap()))
+            .plusBooks(books) { bookId -> book(bookId)?.let { b -> readOrNull { categoryPath(b.categoryId) }?.map { it.id } } }
     }
 
     /** Shows the facet counts and builds the result tree from them (desktop applyFacets). */

@@ -1,0 +1,124 @@
+name: Feedback service
+
+# Deploys Pardes's feedback service (feedback-service/README.md): the Cloudflare Worker that receives the feedback
+# packages users send from the app, with its D1 database. The first run makes the database; every run tests the Worker,
+# applies the database's new migrations, deploys, and sets the maintainer's token. Runs by hand (Actions › Feedback
+# service › Run workflow), and on main when feedback-service/ changes.
+#
+# Secrets: CLOUDFLARE_API_TOKEN (an API token of the account, with Workers Scripts: Edit and D1: Edit),
+# CLOUDFLARE_ACCOUNT_ID, and FEEDBACK_ADMIN_TOKEN (a long random string, which semantic-model/feedback/fetch.py sends to
+# download the packages). The account is never named in the log: its workers.dev subdomain and the database's id are
+# masked before anything prints them.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'feedback-service/**'
+      - '.github/workflows/feedback-service.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feedback-service
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: feedback-service
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: feedback-service/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # In Miniflare, Cloudflare's runtime: before anything reaches the account
+      - name: Test
+        run: npm test
+
+      # Without them, a push only tests: the service is set up by hand once (feedback-service/README.md)
+      - name: Check the secrets
+        id: secrets
+        env:
+          FEEDBACK_ADMIN_TOKEN: ${{ secrets.FEEDBACK_ADMIN_TOKEN }}
+        run: |
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID FEEDBACK_ADMIN_TOKEN; do
+            if [ -z "${!name}" ]; then
+              if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+                echo "::error::The $name secret is not set (feedback-service/README.md)"
+                exit 1
+              fi
+              echo "::notice::The $name secret is not set: tested, not deployed (feedback-service/README.md)"
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      # wrangler prints the Worker's address, whose workers.dev subdomain names the account; and an error could print
+      # the account's name, by default its owner's email ("<email>'s Account"), or the token's user
+      - name: Mask the account's names
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          api() { curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/$1"; }
+          name=$(api "accounts/$CLOUDFLARE_ACCOUNT_ID" | jq -r '.result.name // empty') || true
+          if [ -n "$name" ]; then
+            echo "::add-mask::$name"
+            case "$name" in *"'s Account") echo "::add-mask::${name%"'s Account"}" ;; esac
+          fi
+          # A user's token only: an account's own token has no user
+          email=$(api user 2>/dev/null | jq -r '.result.email // empty') || true
+          if [ -n "$email" ]; then echo "::add-mask::$email"; fi
+          subdomain=$(api "accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty') || true
+          if [ -z "$subdomain" ]; then
+            echo "::error::The account has no workers.dev subdomain yet: Workers & Pages in the Cloudflare dashboard (feedback-service/README.md)"
+            exit 1
+          fi
+          echo "::add-mask::$subdomain"
+
+      # Its id goes in wrangler.toml for this run only; the repository holds zeros
+      - name: The database, made the first time
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          id_of() { npx wrangler d1 list --json | jq -r '.[] | select(.name == "pardes-feedback") | .uuid'; }
+          id=$(id_of)
+          if [ -z "$id" ]; then
+            npx wrangler d1 create pardes-feedback > /dev/null
+            id=$(id_of)
+          fi
+          if [ -z "$id" ]; then
+            echo "::error::No pardes-feedback database, and none could be made"
+            exit 1
+          fi
+          echo "::add-mask::$id"
+          sed -i "s/00000000-0000-0000-0000-000000000000/$id/" wrangler.toml
+
+      - name: Apply the migrations
+        if: steps.secrets.outputs.ready == 'true'
+        run: npx wrangler d1 migrations apply pardes-feedback --remote
+
+      - name: Deploy
+        if: steps.secrets.outputs.ready == 'true'
+        run: npx wrangler deploy
+
+      - name: The maintainer's token
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          FEEDBACK_ADMIN_TOKEN: ${{ secrets.FEEDBACK_ADMIN_TOKEN }}
+        run: printf '%s' "$FEEDBACK_ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN

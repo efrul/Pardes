@@ -25,8 +25,9 @@ val syncPatchTables by tasks.registering(Sync::class) {
 }
 
 // Pardes desktop's semantic search files that compile on Android unchanged (SeforimApp/src/jvmMain, as-is): the query
-// cleaner, the passages, the precedence of the earlier level, the embedding interface, the pack's names and manifest
-// fields, and the helpers they use (runSuspendCatching, the bundle's part names and manifest). Their Android variants
+// cleaner, the passages, the precedence of the earlier level, the embedding interface, the lines found by meaning alone
+// counted into the facets (MeaningFacets), the pack's names and manifest fields, and the helpers they use
+// (runSuspendCatching, the bundle's part names and manifest). Their Android variants
 // (same packages and class names) are in src/androidMain/.../android/search/semantic, each with a header naming its
 // changes.
 val desktopApp = rootDir.resolve("../SeforimApp/src/jvmMain/kotlin")
@@ -37,6 +38,7 @@ val syncDesktopSemantic by tasks.registering(Sync::class) {
             "io/github/kdroidfilter/seforimapp/features/search/semantic/Passages.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/LevelPrecedence.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/EmbeddingProvider.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacets.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPack.kt",
             "io/github/kdroidfilter/seforimapp/core/coroutines/CoroutineUtils.kt",
             "io/github/kdroidfilter/seforimapp/features/onboarding/extract/BundleParts.kt",
@@ -69,8 +71,8 @@ val syncDesktopSearch by tasks.registering(Sync::class) {
 }
 
 // Desktop's semantic tests that run on the port unchanged (SeforimApp/src/jvmTest): the fusion's leaders and quotes, the
-// precedence by level, the passages, the fallback to words alone, the swap of a staged pack at the next start, and the
-// choice of the pack among the releases.
+// precedence by level, the passages, the fallback to words alone, the lines found by meaning alone in the facets, the
+// swap of a staged pack at the next start, and the choice of the pack among the releases.
 val desktopTests = rootDir.resolve("../SeforimApp/src/jvmTest/kotlin")
 val syncDesktopSemanticTests by tasks.registering(Sync::class) {
     from(desktopTests) {
@@ -78,6 +80,7 @@ val syncDesktopSemanticTests by tasks.registering(Sync::class) {
             "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineKeepLeadersTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineFallbackTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineDenseTest.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacetsTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/LevelPrecedenceTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/PassagesTest.kt",
             "io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt",
@@ -426,7 +429,12 @@ sqldelight {
             // v0.6.1), vendored: notes, highlights, visit history, favorites and shnayim mikra, so a desktop file
             // imported with --with-notes is read as is.
             // sqldelight-user-legacy: the two UPSERTs as Android 8-10's SQLite can run them (no schema of its own).
-            srcDirs.setFrom(file("src/androidMain/sqldelight-user"), file("src/androidMain/sqldelight-user-legacy"))
+            // sqldelight-user-pardes: Pardes's own tables, beside desktop's (the reading time).
+            srcDirs.setFrom(
+                file("src/androidMain/sqldelight-user"),
+                file("src/androidMain/sqldelight-user-legacy"),
+                file("src/androidMain/sqldelight-user-pardes"),
+            )
         }
     }
 }

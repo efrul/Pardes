@@ -294,18 +294,18 @@ fun AppNativeMenuBar(
 
             Separator()
 
-            // Text zoom
+            // Zoom: of the selected tab's daf when it shows one, else of the text
             Item(
                 text = menuZoomIn,
                 icon = NsMenuItemImage.SystemSymbol(SFSymbolTextFormatting.TEXTFORMAT_SIZE_LARGER),
             ) {
-                appSettings.increaseTextSize()
+                appSettings.zoomIn(selectedTabId(tabsViewModel))
             }
             Item(
                 text = menuZoomOut,
                 icon = NsMenuItemImage.SystemSymbol(SFSymbolTextFormatting.TEXTFORMAT_SIZE_SMALLER),
             ) {
-                appSettings.decreaseTextSize()
+                appSettings.zoomOut(selectedTabId(tabsViewModel))
             }
 
             Separator()
@@ -430,3 +430,10 @@ fun AppNativeMenuBar(
 private const val RECENT_VISITS_IN_MENU = 40
 private const val MENU_TITLE_MAX_LENGTH = 50
 private const val MENU_RECENT_NOTES = 10
+
+private fun selectedTabId(tabsViewModel: TabsViewModel): String =
+    tabsViewModel.tabs.value
+        .getOrNull(tabsViewModel.selectedTabIndex.value)
+        ?.destination
+        ?.tabId
+        .orEmpty()

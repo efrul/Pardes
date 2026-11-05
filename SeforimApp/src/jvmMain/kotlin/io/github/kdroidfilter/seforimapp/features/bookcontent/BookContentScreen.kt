@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.core.annotations.HighlightColors
 import io.github.kdroidfilter.seforimapp.core.annotations.HighlightStore
+import io.github.kdroidfilter.seforimapp.core.annotations.LineHighlightRange
 import io.github.kdroidfilter.seforimapp.core.annotations.resolveHighlightRangesForSelection
 import io.github.kdroidfilter.seforimapp.core.bookErrorReportMailto
 import io.github.kdroidfilter.seforimapp.core.buildCopyWithSourcePayload
@@ -57,6 +58,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.BookContentPanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocalBookSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocalLocatedSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.highlightRangesOf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveComposeSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveRange
@@ -495,6 +497,9 @@ fun BookTextMenus(
                     val appSettings = LocalAppGraph.current.appSettings
                     val repository = LocalAppGraph.current.repository
                     val copyToClipboard = rememberCopyToClipboard()
+                    // Pardes: a selection its content located in the library itself (the daf's), for the highlights,
+                    // the note and the link, in place of a search of the selected text in the book's lines
+                    val locatedByContent = LocalLocatedSelection.current
                     // The book view's selection located in the book (Compose's from the press it started at, or the
                     // Shift+click one read from the database): what the copies, highlights and sources take, the AWT
                     // shortcuts included through the SelectionContext
@@ -505,10 +510,18 @@ fun BookTextMenus(
                     // keyboard dispatcher can read it without touching Compose state directly.
                     // A new Compose selection (a drag) replaces the Shift+click one; a Shift+click leaves Compose's as is
                     LaunchedEffect(rawText) { if (rawText.isNotEmpty()) bookSelection?.clear() }
+                    // What this area wrote last: an area with nothing selected clears the tab's selection only if it is
+                    // its own (the daf has an area an amud, and one composed while another amud holds the selection
+                    // wiped it)
+                    var written by remember { mutableStateOf("") }
                     LaunchedEffect(rawText, shiftRange, diacritics) {
                         bookSelection?.resolved = null
                         // A Shift+click selection is not Compose's, still drawn from an earlier drag: nothing until read
-                        selectionContext.setSelectedText(tabId, if (shiftRange != null) "" else rawText)
+                        val text = if (shiftRange != null) "" else rawText
+                        if (text.isNotEmpty() || selectionContext.selectedTextIn(tabId) == written) {
+                            selectionContext.setSelectedText(tabId, text)
+                            written = text
+                        }
                         val pressedAt = bookSelection?.pressedAt
                         val resolved =
                             when {
@@ -544,6 +557,7 @@ fun BookTextMenus(
                         items = {
                             val query = normalizeSearchQuery(textManager.selectedText.text)
                             val selectedText = textManager.selectedText.text
+                            val locatedNow = locatedByContent?.invoke()
                             // What the copies take: the Shift+click selection, beyond the lines composed
                             val copiedText = owned?.text ?: selectedText
                             buildList {
@@ -605,7 +619,9 @@ fun BookTextMenus(
                                             label = copyLinkLabel,
                                         ) {
                                             val lineId =
-                                                if (resolved != null) {
+                                                if (locatedByContent != null) {
+                                                    locatedNow?.lineId ?: selectionContext.currentLineId.value.takeIf { it > 0 }
+                                                } else if (resolved != null) {
                                                     resolved.first.id
                                                 } else if (selectedText.isNotBlank()) {
                                                     resolveLineRangeFromSelection(
@@ -649,11 +665,15 @@ fun BookTextMenus(
                                 )
                                 // Add note (main pane only): anchors a note to the selected text,
                                 // or to the whole right-clicked line when nothing is selected.
-                                if (bookId > 0 &&
-                                    selectionContext.activeCommentaryColumn.value
-                                        .isEmpty() &&
-                                    (selectedText.isNotBlank() || selectionContext.currentLineId.value > 0)
-                                ) {
+                                val notable =
+                                    if (locatedByContent != null) {
+                                        locatedNow?.note != null
+                                    } else {
+                                        selectionContext.activeCommentaryColumn.value
+                                            .isEmpty() &&
+                                            (selectedText.isNotBlank() || selectionContext.currentLineId.value > 0)
+                                    }
+                                if (bookId > 0 && notable) {
                                     add(
                                         ContextMenuItemOptionWithKeybinding(
                                             icon = AllIconsKeys.Actions.Annotate,
@@ -661,7 +681,9 @@ fun BookTextMenus(
                                         ) {
                                             val lines = selectionContext.visibleLines.value.lines
                                             val draft =
-                                                if (selectedText.isNotBlank()) {
+                                                if (locatedByContent != null) {
+                                                    locatedNow?.note
+                                                } else if (selectedText.isNotBlank()) {
                                                     resolveNoteDraft(selectedText, lines, diacritics)
                                                 } else {
                                                     resolveWholeLineNoteDraft(selectionContext.currentLineId.value, lines)
@@ -703,14 +725,27 @@ fun BookTextMenus(
                                 }
                                 // Highlight color picker (last item): persists a position-based
                                 // highlight for the selected text on its resolved line.
-                                if (copiedText.isNotBlank() && bookId > 0) {
+                                val highlightable =
+                                    if (locatedByContent != null) locatedNow?.ranges?.isNotEmpty() == true else copiedText.isNotBlank()
+                                if (highlightable && bookId > 0) {
                                     add(
                                         ContextMenuHighlightColorPicker(
                                             colors = HighlightColors.allWithClear,
                                             onColorSelected = { color ->
                                                 // Located in the book: exactly the selected characters, computed off the UI thread
                                                 val selection = resolved
-                                                if (selection != null) {
+                                                if (locatedByContent != null) {
+                                                    // Each line's part in its own book (a comment's in its commentary's)
+                                                    locatedNow?.ranges?.groupBy { it.bookId }?.forEach { (ofBook, ranges) ->
+                                                        persistHighlights(
+                                                            ofBook,
+                                                            ranges.map { LineHighlightRange(it.lineId, it.start until it.end) },
+                                                            color,
+                                                            highlightStore,
+                                                            highlightScope,
+                                                        )
+                                                    }
+                                                } else if (selection != null) {
                                                     highlightScope.launch {
                                                         val located =
                                                             withContext(Dispatchers.Default) {

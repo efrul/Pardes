@@ -217,6 +217,8 @@ class HybridSearchEngine internal constructor(
         val lineId: Long,
         val score: Float,
         val lexical: LineHit?,
+        // The line's book: the lexical hit's, else the dense hit's (-1 when the vector index doesn't store it)
+        val bookId: Long = lexical?.bookId ?: -1L,
     )
 
     private suspend fun fuse(
@@ -270,6 +272,7 @@ class HybridSearchEngine internal constructor(
             }
 
             val lexById = lexHits.associateBy { it.lineId }
+            val denseBooks = denseHits.associate { it.lineId to it.bookId }
             val order = rrf.entries.sortedByDescending { it.value }.map { it.key }
             // The lexical side's first hits that hold the query as a quote keep a place on the first page; the others rank
             // as fused. On real searches the lexical first hit was mostly a long line the query's words are scattered in:
@@ -285,7 +288,10 @@ class HybridSearchEngine internal constructor(
             val page = keepLeaders(order, leaders)
             // Within one book every line has the same level: no line to put first
             (if (bookIds?.size == 1) page else withPrecedence(page, query))
-                .map { lineId -> FusedEntry(lineId, rrf.getValue(lineId).toFloat(), lexById[lineId]) }
+                .map { lineId ->
+                    val lexicalHit = lexById[lineId]
+                    FusedEntry(lineId, rrf.getValue(lineId).toFloat(), lexicalHit, lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L)
+                }
         }
 
     /**
@@ -313,7 +319,8 @@ class HybridSearchEngine internal constructor(
     /**
      * The fused list, as Zayit's: the lexical side's first CANDIDATES and the dense side's, some 300 lines at most, its
      * total their number, the list's length. A quoted query or a table of contents' section never comes here
-     * ([openSession]): the lexical side's whole list, as in Zayit.
+     * ([openSession]): the lexical side's whole list, as in Zayit. The books of the lines it found by meaning alone,
+     * which the facets don't count, are its [meaningBookCounts]: the category tabs count them too.
      *
      * A search the dense side doesn't answer (its model failed to load, no vector in the scope) is the lexical side's
      * whole list: its candidates, then its results past them, in their order and each once, its total theirs, as a search
@@ -324,7 +331,8 @@ class HybridSearchEngine internal constructor(
         private val near: Int,
         private val bookIds: Collection<Long>?,
         private val baseOnly: Boolean,
-    ) : SearchSession {
+    ) : SearchSession,
+        MeaningFacets {
         private var fused: List<FusedEntry>? = null
         private var offset = 0
         private var lexicalTotal = 0L
@@ -404,6 +412,26 @@ class HybridSearchEngine internal constructor(
             val text = SnippetSources.clean(hit.rawText)
             return hit.copy(rawText = text, lineStart = 0, lineEnd = text.length)
         }
+
+        override suspend fun meaningBookCounts(): Map<Long, Int> {
+            val meaningOnly = fused.orEmpty().filter { it.lexical == null && it.bookId > 0 }
+            if (meaningOnly.isEmpty()) return emptyMap()
+            // Past the fused list's CANDIDATES the words find more lines, which their facets count already: those of these
+            // lines the words find too are not the meaning search's own
+            val alsoWords = if (lexicalTotal > CANDIDATES) wordHitsAmong(meaningOnly.map { it.lineId }) else emptySet()
+            return meaningOnly.filterNot { it.lineId in alsoWords }.groupingBy { it.bookId }.eachCount()
+        }
+
+        // Which of [lineIds] the words find, where this session searches; none when the lexical side fails
+        private suspend fun wordHitsAmong(lineIds: List<Long>): Set<Long> =
+            runSuspendCatching {
+                lexical
+                    .openSession(query, near = near, bookIds = bookIds, lineIds = lineIds, baseBookOnly = baseOnly)
+                    ?.use { it.nextPage(lineIds.size, snippets = false) }
+                    ?.hits
+                    .orEmpty()
+                    .mapTo(HashSet()) { it.lineId }
+            }.getOrDefault(emptySet())
 
         override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> {
             val shown = hits.filter { it.rawText.isNotBlank() && it.lineEnd > it.lineStart }

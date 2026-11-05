@@ -8,6 +8,10 @@ data class FontsSettingsState(
     val commentaryFontCode: String = "frankruhllibre",
     val targumFontCode: String = "taameyashkenaz",
     val sourceFontCode: String = "frankruhllibre",
+    val dafGemaraFontCode: String = "frankruehlclm",
+    val dafCommentaryFontCode: String = "notorashihebrew",
+    val dafMarkUnsure: Boolean = false,
+    val dafReview: Boolean = false,
 ) {
     companion object {
         val preview =
