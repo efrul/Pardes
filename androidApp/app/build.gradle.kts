@@ -97,7 +97,7 @@ val syncDesktopSemanticTests by tasks.registering(Sync::class) {
     into(layout.buildDirectory.dir("generated/desktopSemanticTests"))
 }
 
-// Desktop's tokenizer parity fixtures (semantic-model/make_parity_fixtures.py), read by the on-device parity test.
+// Desktop's tokenizer parity fixtures (pardes-semantic/make_parity_fixtures.py), read by the on-device parity test.
 val syncParityFixtures by tasks.registering(Sync::class) {
     from(rootDir.resolve("../SeforimApp/src/jvmTest/resources")) { include("semantic/*.gz") }
     into(layout.buildDirectory.dir("generated/parityFixtures"))

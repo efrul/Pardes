@@ -23,9 +23,9 @@
 
 ## המדידה
 
-הצד הרגיל בלבד ([`eval-100/harness/Cands.kt`](../semantic-model/eval-100/harness/Cands.kt) עם `nodense`, היקף אוטומטי כמו
+הצד הרגיל בלבד ([`eval-100/harness/Cands.kt`](https://github.com/efrul/pardes-semantic/blob/main/eval-100/harness/Cands.kt) עם `nodense`, היקף אוטומטי כמו
 באפליקציה), על 95 השאילתות של eval-100 עם מקור ועל 153 החיפושים של eval-real. 250 השורות החדשות שהגרסאות העלו לשלוש
-הראשונות נשפטו (Claude, כמו שאר [`grades.tsv`](../semantic-model/eval-real/grades.tsv)) ונוספו ל־`grades.tsv`.
+הראשונות נשפטו (Claude, כמו שאר [`grades.tsv`](https://github.com/efrul/pardes-semantic/blob/main/eval-real/grades.tsv)) ונוספו ל־`grades.tsv`.
 
 | גרסה של המילון | eval-100: המקור בעשר הראשונות | eval-real: טובה בראשונה | טובה בשלוש | nDCG@3 |
 |---|---|---|---|---|
@@ -56,8 +56,8 @@
 
 ## להריץ שוב
 
-הכלים ב־[`semantic-model/lexicon/`](../semantic-model/lexicon/), עם הבנייה של
-[`search-order/build.sh`](../semantic-model/search-order/build.sh) (ו־`Cands.kt` מקומפל עם אותו classpath):
+הכלים ב־[`pardes-semantic/lexicon/`](https://github.com/efrul/pardes-semantic/tree/main/lexicon/), עם הבנייה של
+[`search-order/build.sh`](https://github.com/efrul/pardes-semantic/blob/main/search-order/build.sh) (ו־`Cands.kt` מקומפל עם אותו classpath):
 1. `kkforms.py` ו־`Coverage.kt`: הצורות של כל מילה בשאילתות, היום ועם הנתונים של כלי קודש, וכמה שורות הן מוצאות.
 2. `terms.py lexical.db expansion-routed.db Dictionary.db terms.txt`: כל הצורות, ו־`Df.kt <index> terms.txt df.tsv` למספר השורות של כל אחת באינדקס (`df.tsv`).
 3. `build_lex.py lexical.db expansion-routed.db Dictionary.db df.tsv out.db [--orphans] [--order] [--kk <מקורות>] [--entry] [--ketiv]`:

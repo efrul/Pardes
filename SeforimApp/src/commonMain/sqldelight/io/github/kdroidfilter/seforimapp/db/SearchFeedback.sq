@@ -1,5 +1,5 @@
 -- Pardes: the user's grades of search results, given in feedback mode (Settings), to train and measure the semantic
--- search with (semantic-model/feedback/). One row per (search, line), the search keyed as visit_history keys it (query,
+-- search with (pardes-semantic/feedback/). One row per (search, line), the search keyed as visit_history keys it (query,
 -- scope and extension, HistoryStore.searchKey). The grade is on the evaluations' scale: 3 exactly what was looked for
 -- (the source), 2 answers it, 0 not relevant; clicking the given grade again removes the row.
 CREATE TABLE IF NOT EXISTS search_feedback (

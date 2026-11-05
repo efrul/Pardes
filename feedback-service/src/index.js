@@ -1,7 +1,7 @@
 /**
  * Pardes's feedback service, a Cloudflare Worker with a D1 database (README.md). It receives the packages users send
  * from Pardes (Settings › ניהול נתונים › שליחת משוב, FeedbackPackage.kt), keeps each as it came, and gives them to the
- * maintainer (semantic-model/feedback/fetch.py). Of a request it keeps nothing but the package: no IP address, user
+ * maintainer (pardes-semantic/feedback/fetch.py). Of a request it keeps nothing but the package: no IP address, user
  * agent or other header is stored or logged. The address only keys the rate limit, in Cloudflare's memory.
  *
  * POST   /v1/packages        a package (JSON, at most MAX_BYTES) -> 201 {"id"}
