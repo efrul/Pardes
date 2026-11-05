@@ -138,12 +138,17 @@ class DafReviews(
     /** The folder of the reviews. */
     val folder: File get() = File(dir, FOLDER)
 
-    /** The review of [layout]'s tractate, or an empty one. */
+    /**
+     * The review of [layout]'s tractate, or an empty one. A file that cannot be read is set aside under another name
+     * (`<name>.unreadable-<time>.json`), so that the next mark does not write over the reader's former marks.
+     */
     @Synchronized
     fun of(layout: DafLayoutFile): DafReviewFile =
         read.getOrPut(layout.tractate) {
             fileOf(layout.tractate).takeIf { it.isFile }?.let { file ->
-                runCatching { json.decodeFromString(DafReviewFile.serializer(), file.readText()) }.getOrNull()
+                runCatching { json.decodeFromString(DafReviewFile.serializer(), file.readText()) }
+                    .onFailure { file.renameTo(File(file.parentFile, "${file.nameWithoutExtension}.unreadable-${System.currentTimeMillis()}.json")) }
+                    .getOrNull()
             } ?: DafReviewFile(tractate = layout.tractate, tractateHe = layout.tractateHe, library = layout.library?.release)
         }
 
@@ -156,13 +161,17 @@ class DafReviews(
         val review = of(layout)
         val others = review.marks.filterNot { it.amud == mark.amud && it.i == mark.i }
         val next = review.copy(marks = if (mark.isEmpty) others else others + mark)
-        write(next)
+        write(layout.tractate, next)
         read[layout.tractate] = next
         return next
     }
 
-    private fun write(review: DafReviewFile) {
-        val target = fileOf(review.tractate)
+    /** [review] written to the file [of] reads for [tractate] (the layout's name: the review's own may differ). */
+    private fun write(
+        tractate: String,
+        review: DafReviewFile,
+    ) {
+        val target = fileOf(tractate)
         target.parentFile.mkdirs()
         val part = File(target.parentFile, "${target.name}.part")
         part.writeText(json.encodeToString(DafReviewFile.serializer(), review))
