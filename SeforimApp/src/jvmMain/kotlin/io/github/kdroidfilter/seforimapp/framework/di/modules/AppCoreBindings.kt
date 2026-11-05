@@ -32,6 +32,7 @@ import io.github.kdroidfilter.seforimapp.core.shnayimmikra.ShnayimMikraStore
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeViewModel
 import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
+import io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackService
 import io.github.kdroidfilter.seforimapp.framework.backup.UserDataBackup
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
@@ -165,6 +166,11 @@ object AppCoreBindings {
     @Provides
     @SingleIn(AppScope::class)
     fun provideSearchFeedbackStore(database: UserSettingsDb): SearchFeedbackStore = SearchFeedbackStore(database)
+
+    /** Pardes's feedback service, at the build's FEEDBACK_URL (none without it: feedback is then only saved to files). */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideFeedbackService(client: HttpClient): FeedbackService = FeedbackService(client, BuildConfig.FEEDBACK_URL)
 
     @Provides
     @SingleIn(AppScope::class)

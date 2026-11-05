@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.features.settings.feedback
 
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafLayouts
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMark
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafReviewFile
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafReviews
 import kotlinx.serialization.Serializable
@@ -145,6 +146,73 @@ internal fun markedAt(at: String): Long? = runCatching { Instant.parse(at).toEpo
 /** The package as the receiver and collect.py read it. */
 fun FeedbackPackage.toJson(): String = feedbackJson.encodeToString(FeedbackPackage.serializer(), this)
 
+/** The JSON a part of a package holds at most: the service takes 1,000,000 bytes (feedback-service/src/package.js). */
+const val PART_BYTES = 900_000
+
+/**
+ * The package in parts whose JSON holds at most [maxBytes] each, each a package itself with the same sender and time:
+ * the grades, the searches and the daf's marks shared out in their order, a tractate's review over as many parts as
+ * its marks need (the receiver keeps one mark a line, whichever part brought it). One part when it is small enough.
+ */
+fun FeedbackPackage.parts(maxBytes: Int = PART_BYTES): List<FeedbackPackage> {
+    val shell = copy(grades = emptyList(), searches = emptyList(), daf = emptyList())
+    if (bytes(toJson()) <= maxBytes) return listOf(this)
+    val room = maxBytes - bytes(shell.toJson())
+    val parts = mutableListOf<FeedbackPackage>()
+    var part = Part()
+
+    // A row's bytes in [part], into it, or into a new part when it would not hold them
+    fun add(
+        size: (Part) -> Int,
+        put: (Part) -> Unit,
+    ) {
+        if (!part.isEmpty && part.size + size(part) > room) {
+            parts += part.toPackage(shell)
+            part = Part()
+        }
+        part.size += size(part)
+        put(part)
+    }
+    grades.forEach { row ->
+        val size = bytes(feedbackJson.encodeToString(GradeRow.serializer(), row)) + 1
+        add({ size }) { it.grades += row }
+    }
+    searches.forEach { row ->
+        val size = bytes(feedbackJson.encodeToString(SearchRow.serializer(), row)) + 1
+        add({ size }) { it.searches += row }
+    }
+    daf.forEach { review ->
+        val head = bytes(feedbackJson.encodeToString(DafReviewFile.serializer(), review.copy(marks = emptyList()))) + 1
+        review.marks.forEach { mark ->
+            val size = bytes(feedbackJson.encodeToString(DafMark.serializer(), mark)) + 1
+            // A tractate's first mark in a part brings its review's head
+            add({ p -> size + if (p.daf.lastOrNull()?.tractate == review.tractate) 0 else head }) { p ->
+                val last = p.daf.lastOrNull()
+                if (last?.tractate == review.tractate) {
+                    p.daf[p.daf.lastIndex] = last.copy(marks = last.marks + mark)
+                } else {
+                    p.daf += review.copy(marks = listOf(mark))
+                }
+            }
+        }
+    }
+    if (!part.isEmpty) parts += part.toPackage(shell)
+    return parts
+}
+
+/** A part being filled, and the bytes its rows take. */
+private class Part {
+    var size = 0
+    val grades = mutableListOf<GradeRow>()
+    val searches = mutableListOf<SearchRow>()
+    val daf = mutableListOf<DafReviewFile>()
+    val isEmpty: Boolean get() = grades.isEmpty() && searches.isEmpty() && daf.isEmpty()
+
+    fun toPackage(shell: FeedbackPackage) = shell.copy(grades = grades.toList(), searches = searches.toList(), daf = daf.toList())
+}
+
+private fun bytes(text: String): Int = text.toByteArray(Charsets.UTF_8).size
+
 private val feedbackJson =
     Json {
         encodeDefaults = true
@@ -179,7 +247,7 @@ class FeedbackSource(
             }
         val searches =
             queries.searchesSince(sent.searches).executeAsList().mapNotNull { row ->
-                val query = row.searchQuery?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val query = row.searchQuery.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 SearchRow(
                     query = query,
                     categoryId = row.searchCategoryId,

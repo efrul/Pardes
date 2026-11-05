@@ -95,6 +95,38 @@ class FeedbackSendCardUiTest {
         }
 
     @Test
+    fun `with the service, sending now, the automatic sending, and deleting what was sent once the user says yes`() =
+        runDesktopComposeUiTest(width = 640, height = 1000) {
+            var sends = 0
+            var deletes = 0
+            val auto = mutableListOf<Boolean>()
+            setContent {
+                IntUiTheme(isDark = false) {
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        FeedbackSendCardContent(
+                            state =
+                                FeedbackSendViewModel.State(
+                                    contents = contents,
+                                    sender = "s",
+                                    online = true,
+                                    lastSent = 1_762_336_800_000,
+                                ),
+                            actions = FeedbackSendActions(send = { sends++ }, auto = { auto += it }, deleteSent = { deletes++ }),
+                        )
+                    }
+                }
+            }
+            onNodeWithText("שליחה עכשיו").performClick()
+            onNodeWithText("שליחה אוטומטית, בכל הפעלה ובכל חיבור לרשת").performClick()
+            onNodeWithText("מחיקת מה ששלחתי מהשרת").performClick()
+            onNodeWithText("אי אפשר לבטל את זה", substring = true).assertIsDisplayed()
+            onNodeWithText("מחיקה").performClick()
+            waitForIdle()
+            assertEquals(listOf(1, 1), listOf(sends, deletes))
+            assertEquals(listOf(true), auto)
+        }
+
+    @Test
     fun `nothing new since the last package says when it was`() =
         runDesktopComposeUiTest(width = 640, height = 600) {
             setContent {
@@ -107,8 +139,8 @@ class FeedbackSendCardUiTest {
                     }
                 }
             }
-            onNodeWithText("אין משוב חדש מאז הקובץ הקודם", substring = true).assertIsDisplayed()
-            onNodeWithText("הכל מההתחלה, לא רק מה שחדש מאז הקובץ הקודם").assertIsDisplayed()
+            onNodeWithText("אין משוב חדש מאז הפעם הקודמת", substring = true).assertIsDisplayed()
+            onNodeWithText("הכל מההתחלה, לא רק מה שחדש מאז הפעם הקודמת").assertIsDisplayed()
             onNodeWithText("שמירה לקובץ…").assertIsNotEnabled()
         }
 }

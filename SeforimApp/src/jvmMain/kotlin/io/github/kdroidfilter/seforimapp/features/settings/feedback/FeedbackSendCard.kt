@@ -43,21 +43,34 @@ import org.jetbrains.jewel.ui.component.CheckboxRow
 import org.jetbrains.jewel.ui.component.DefaultButton
 import org.jetbrains.jewel.ui.component.InlineErrorBanner
 import org.jetbrains.jewel.ui.component.InlineSuccessBanner
+import org.jetbrains.jewel.ui.component.InlineWarningBanner
 import org.jetbrains.jewel.ui.component.Link
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.feedback_send_all
+import seforimapp.seforimapp.generated.resources.feedback_send_auto
+import seforimapp.seforimapp.generated.resources.feedback_send_auto_hint
 import seforimapp.seforimapp.generated.resources.feedback_send_daf
+import seforimapp.seforimapp.generated.resources.feedback_send_delete
+import seforimapp.seforimapp.generated.resources.feedback_send_delete_no
+import seforimapp.seforimapp.generated.resources.feedback_send_delete_warning
+import seforimapp.seforimapp.generated.resources.feedback_send_delete_yes
+import seforimapp.seforimapp.generated.resources.feedback_send_deleted
 import seforimapp.seforimapp.generated.resources.feedback_send_description
 import seforimapp.seforimapp.generated.resources.feedback_send_failed
 import seforimapp.seforimapp.generated.resources.feedback_send_grades
 import seforimapp.seforimapp.generated.resources.feedback_send_nothing
 import seforimapp.seforimapp.generated.resources.feedback_send_nothing_new
+import seforimapp.seforimapp.generated.resources.feedback_send_now
+import seforimapp.seforimapp.generated.resources.feedback_send_offline
+import seforimapp.seforimapp.generated.resources.feedback_send_offline_auto
 import seforimapp.seforimapp.generated.resources.feedback_send_open_folder
 import seforimapp.seforimapp.generated.resources.feedback_send_privacy
+import seforimapp.seforimapp.generated.resources.feedback_send_privacy_online
 import seforimapp.seforimapp.generated.resources.feedback_send_reading
+import seforimapp.seforimapp.generated.resources.feedback_send_refused
 import seforimapp.seforimapp.generated.resources.feedback_send_renew
 import seforimapp.seforimapp.generated.resources.feedback_send_review
 import seforimapp.seforimapp.generated.resources.feedback_send_review_hint
@@ -67,16 +80,21 @@ import seforimapp.seforimapp.generated.resources.feedback_send_saving
 import seforimapp.seforimapp.generated.resources.feedback_send_searches
 import seforimapp.seforimapp.generated.resources.feedback_send_searches_hint
 import seforimapp.seforimapp.generated.resources.feedback_send_sender
+import seforimapp.seforimapp.generated.resources.feedback_send_sending
+import seforimapp.seforimapp.generated.resources.feedback_send_sent
 import seforimapp.seforimapp.generated.resources.feedback_send_title
+import seforimapp.seforimapp.generated.resources.feedback_send_too_many
 import java.awt.Desktop
 import java.io.File
+import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
  * Settings › ניהול נתונים: sending the feedback given, the search results' grades (feedback mode), the searches made,
- * and the daf view's line review. The user sees what there is, keeps what they want of it, and saves it to a file.
+ * and the daf view's line review. The user sees what there is, keeps what they want of it, and sends it to Pardes's
+ * service or saves it to a file; turns the automatic sending (FeedbackAutoSender) on or off, and deletes what was sent.
  */
 @Composable
 fun FeedbackSendCard() {
@@ -96,6 +114,9 @@ fun FeedbackSendCard() {
                 query = viewModel::setQuery,
                 all = viewModel::setAll,
                 renewSender = viewModel::renewSender,
+                auto = viewModel::setAuto,
+                send = viewModel::send,
+                deleteSent = viewModel::deleteSent,
                 save = {
                     scope.launch {
                         // Off the GTK event-loop thread, as the data screen's other pickers (see pickDatabaseParts)
@@ -119,6 +140,10 @@ internal class FeedbackSendActions(
     val query: (String, Boolean) -> Unit = { _, _ -> },
     val all: (Boolean) -> Unit = {},
     val renewSender: () -> Unit = {},
+    // The automatic sending on or off
+    val auto: (Boolean) -> Unit = {},
+    val send: () -> Unit = {},
+    val deleteSent: () -> Unit = {},
     val save: () -> Unit = {},
     val openFolder: (File) -> Unit = {},
 )
@@ -143,10 +168,11 @@ internal fun FeedbackSendCardContent(
         Text(text = stringResource(Res.string.feedback_send_title), fontSize = 15.sp)
         Hint(stringResource(Res.string.feedback_send_description))
         val contents = state.contents
-        when {
-            contents == null -> Text(text = stringResource(Res.string.feedback_send_reading), fontSize = 13.sp)
-            contents.isEmpty -> Text(text = nothingText(state), fontSize = 13.sp)
-            else -> Kinds(contents, state.choice, actions)
+        if (contents == null) {
+            Text(text = stringResource(Res.string.feedback_send_reading), fontSize = 13.sp)
+        } else {
+            Kinds(contents, state.choice, actions)
+            if (contents.isEmpty) Text(text = nothingText(state), fontSize = 13.sp)
         }
         // Once a package was made: the next one holds what is newer, unless the user wants all again
         if (state.lastSent > 0 && contents != null) {
@@ -157,13 +183,50 @@ internal fun FeedbackSendCardContent(
                 enabled = !state.busy,
             )
         }
-        Privacy(state.sender, actions)
-        WorkStatus(state.work)
+        if (state.online) Auto(state.auto, actions)
+        Privacy(state.sender, state.online, actions)
+        WorkStatus(state)
         Buttons(state, actions)
+        if (state.online && state.lastSent > 0) DeleteSent(state.busy, actions)
     }
 }
 
-/** Each kind there is, with its count and whether it goes in the package, and the queries to look over. */
+/** The automatic sending: what is new, at every start and connection of the network, of the kinds checked above. */
+@Composable
+private fun Auto(
+    on: Boolean,
+    actions: FeedbackSendActions,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        CheckboxRow(text = stringResource(Res.string.feedback_send_auto), checked = on, onCheckedChange = actions.auto)
+        Hint(stringResource(Res.string.feedback_send_auto_hint))
+    }
+}
+
+/** Deleting from the service what this sender sent, once the user says yes. */
+@Composable
+private fun DeleteSent(
+    busy: Boolean,
+    actions: FeedbackSendActions,
+) {
+    var asking by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!asking) {
+            Link(text = stringResource(Res.string.feedback_send_delete), onClick = { asking = true }, enabled = !busy)
+        } else {
+            InlineWarningBanner(text = stringResource(Res.string.feedback_send_delete_warning), modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DefaultButton(onClick = {
+                    asking = false
+                    actions.deleteSent()
+                }) { Text(stringResource(Res.string.feedback_send_delete_yes)) }
+                OutlinedButton(onClick = { asking = false }) { Text(stringResource(Res.string.feedback_send_delete_no)) }
+            }
+        }
+    }
+}
+
+/** Each kind, whether it is sent (by the card and by itself) and how much of it is new, and the queries to look over. */
 @Composable
 private fun Kinds(
     contents: FeedbackContents,
@@ -173,28 +236,22 @@ private fun Kinds(
     // What each kind would send, the queries left out gone, whether it is on or not
     val offered = remember(contents, choice.leftOut) { contents.kept(FeedbackChoice(leftOut = choice.leftOut, searches = true)) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (contents.grades.isNotEmpty()) {
-            CheckboxRow(
-                text = stringResource(Res.string.feedback_send_grades, offered.grades.size, offered.grades.distinctBy { it.search }.size),
-                checked = choice.grades,
-                onCheckedChange = actions.grades,
-            )
-        }
-        if (contents.searches.isNotEmpty()) {
-            CheckboxRow(
-                text = stringResource(Res.string.feedback_send_searches, offered.searches.size),
-                checked = choice.searches,
-                onCheckedChange = actions.searches,
-            )
-            Hint(stringResource(Res.string.feedback_send_searches_hint))
-        }
-        if (contents.dafMarks > 0) {
-            CheckboxRow(
-                text = stringResource(Res.string.feedback_send_daf, contents.dafMarks, contents.daf.size),
-                checked = choice.daf,
-                onCheckedChange = actions.daf,
-            )
-        }
+        CheckboxRow(
+            text = stringResource(Res.string.feedback_send_grades, offered.grades.size, offered.grades.distinctBy { it.search }.size),
+            checked = choice.grades,
+            onCheckedChange = actions.grades,
+        )
+        CheckboxRow(
+            text = stringResource(Res.string.feedback_send_searches, offered.searches.size),
+            checked = choice.searches,
+            onCheckedChange = actions.searches,
+        )
+        Hint(stringResource(Res.string.feedback_send_searches_hint))
+        CheckboxRow(
+            text = stringResource(Res.string.feedback_send_daf, contents.dafMarks, contents.daf.size),
+            checked = choice.daf,
+            onCheckedChange = actions.daf,
+        )
         Review(contents, choice, actions)
     }
 }
@@ -248,10 +305,12 @@ private fun QueryList(
 @Composable
 private fun Privacy(
     sender: String,
+    online: Boolean,
     actions: FeedbackSendActions,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Hint(stringResource(Res.string.feedback_send_privacy))
+        if (online) Hint(stringResource(Res.string.feedback_send_privacy_online))
         if (sender.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 SelectionContainer {
@@ -268,21 +327,35 @@ private fun Privacy(
 }
 
 @Composable
-private fun WorkStatus(work: FeedbackSendViewModel.Work) {
+private fun WorkStatus(state: FeedbackSendViewModel.State) {
+    val work = state.work
+    val wide = Modifier.fillMaxWidth()
     when (work) {
         is FeedbackSendViewModel.Work.Saved ->
-            InlineSuccessBanner(
-                text = stringResource(Res.string.feedback_send_saved, isolatedPath(work.file.name)),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        is FeedbackSendViewModel.Work.Failed ->
-            InlineErrorBanner(
-                text = stringResource(Res.string.feedback_send_failed, isolatedPath(work.problem.message ?: work.problem.toString())),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        FeedbackSendViewModel.Work.Idle, FeedbackSendViewModel.Work.Saving -> Unit
+            InlineSuccessBanner(text = stringResource(Res.string.feedback_send_saved, isolatedPath(work.file.name)), modifier = wide)
+        is FeedbackSendViewModel.Work.Sending -> Hint(stringResource(Res.string.feedback_send_sending, work.part, work.parts))
+        is FeedbackSendViewModel.Work.Sent ->
+            InlineSuccessBanner(text = stringResource(Res.string.feedback_send_sent, dateOf(work.at)), modifier = wide)
+        is FeedbackSendViewModel.Work.Deleted ->
+            InlineSuccessBanner(text = stringResource(Res.string.feedback_send_deleted, work.packages), modifier = wide)
+        is FeedbackSendViewModel.Work.Failed -> InlineErrorBanner(text = problemText(work.problem, state.auto), modifier = wide)
+        FeedbackSendViewModel.Work.Idle, FeedbackSendViewModel.Work.Saving, FeedbackSendViewModel.Work.Deleting -> Unit
     }
 }
+
+/** Why the feedback was not sent, saved or deleted; without a network, whether it will be sent by itself ([auto]). */
+@Composable
+private fun problemText(
+    problem: Throwable,
+    auto: Boolean,
+): String =
+    when {
+        problem is IOException ->
+            stringResource(if (auto) Res.string.feedback_send_offline_auto else Res.string.feedback_send_offline)
+        problem is FeedbackServiceProblem && problem.tooMany -> stringResource(Res.string.feedback_send_too_many)
+        problem is FeedbackServiceProblem -> stringResource(Res.string.feedback_send_refused, isolatedPath(problem.reason))
+        else -> stringResource(Res.string.feedback_send_failed, isolatedPath(problem.message ?: problem.toString()))
+    }
 
 @Composable
 private fun Buttons(
@@ -291,9 +364,14 @@ private fun Buttons(
 ) {
     val contents = state.contents
     val any = contents != null && !contents.kept(state.choice).isEmpty
+    val saving = state.work == FeedbackSendViewModel.Work.Saving
+    val saveLabel = stringResource(if (saving) Res.string.feedback_send_saving else Res.string.feedback_send_save)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        DefaultButton(onClick = actions.save, enabled = any && !state.busy) {
-            Text(stringResource(if (state.busy) Res.string.feedback_send_saving else Res.string.feedback_send_save))
+        if (state.online) {
+            DefaultButton(onClick = actions.send, enabled = any && !state.busy) { Text(stringResource(Res.string.feedback_send_now)) }
+            OutlinedButton(onClick = actions.save, enabled = any && !state.busy) { Text(saveLabel) }
+        } else {
+            DefaultButton(onClick = actions.save, enabled = any && !state.busy) { Text(saveLabel) }
         }
         (state.work as? FeedbackSendViewModel.Work.Saved)?.let { saved ->
             OutlinedButton(onClick = { actions.openFolder(saved.file) }) { Text(stringResource(Res.string.feedback_send_open_folder)) }

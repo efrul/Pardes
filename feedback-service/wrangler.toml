@@ -1,0 +1,22 @@
+# Pardes's feedback service (README.md). Deployed by .github/workflows/feedback-service.yml, which puts the account's
+# own D1 database id in place of the zeros; `npm run dev` runs it here, with a local database.
+name = "pardes-feedback"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# No request logs: nothing of who sent a package is kept
+[observability]
+enabled = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pardes-feedback"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# At most 20 requests a minute from one address (in Cloudflare's memory, not kept)
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1601"
+simple = { limit = 20, period = 60 }

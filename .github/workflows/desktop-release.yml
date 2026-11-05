@@ -193,6 +193,9 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
+      # The feedback service's address (feedback-service/README.md), a secret so that its workers.dev subdomain, which
+      # names the account, stays out of the log; without it the app only saves feedback to files
+      PARDES_FEEDBACK_URL: ${{ secrets.PARDES_FEEDBACK_URL }}
     steps:
       # SeforimLibrary only: the desktop build compiles its core, dao, search, cli, generator-common and delta-updater.
       # Not recursive: SeforimAcronymizer and SeforimLibrary's own submodules are not part of the app.

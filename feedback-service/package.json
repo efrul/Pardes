@@ -1,0 +1,18 @@
+{
+  "name": "pardes-feedback",
+  "private": true,
+  "description": "Pardes's feedback service: the packages users send from Settings › ניהול נתונים › שליחת משוב (README.md)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "node --test test/*.test.js",
+    "deploy": "wrangler deploy"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "miniflare": "5.20261019.0-beta",
+    "wrangler": "4.151.2"
+  }
+}
