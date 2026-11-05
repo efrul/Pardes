@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { after, before, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { MAX_BYTES, MAX_PER_DAY } from "../src/package.js";
+import { MAX_BYTES, MAX_PER_DAY, MAX_QUERY } from "../src/package.js";
 
 const SRC = fileURLToPath(new URL("../src/", import.meta.url));
 const MIGRATION = new URL("../migrations/0001_packages.sql", import.meta.url);
@@ -122,7 +122,15 @@ describe("the feedback service", () => {
     assert.deepEqual(await refused(pkg(A, { format: 2 })), [400, "unknown format"]);
     assert.deepEqual(await refused(pkg("not-a-uuid")), [400, "no sender id"]);
     assert.deepEqual(await refused(pkg(A, { grades: [], searches: [], daf: [] })), [400, "nothing in the package"]);
-    assert.deepEqual(await refused(pkg(A, { grades: [{ query: "x", grade: 5 }] })), [400, "a grade is not one"]);
+    assert.deepEqual(await refused(pkg(A, { grades: [{ query: "x", grade: 5 }] })), [400, "grade 1 is not one (search)"]);
+    // A passage pasted in to find its source is a search too, up to MAX_QUERY
+    const passage = "א".repeat(1500);
+    assert.equal((await post(mf, pkg(A, { searches: [{ query: passage, lastAt: 1793800000000 }] }))).status, 201);
+    const tooLong = { query: "א".repeat(MAX_QUERY + 1), lastAt: 1793800000000 };
+    assert.deepEqual(await refused(pkg(A, { searches: [pkg(A).searches[0], tooLong] })),
+      [400, `search 2 is not one (query: ${MAX_QUERY + 1} characters, at most ${MAX_QUERY})`]);
+    const badMark = { ...pkg(A).daf[0], marks: [{ amud: "2a", c: "g", i: -1, t: "" }] };
+    assert.deepEqual(await refused(pkg(A, { daf: [badMark] })), [400, "daf review 1 is not one (mark 1: i)"]);
     assert.deepEqual(await refused(pkg(A, { searches: "all" })), [400, "searches is not a list"]);
     const big = pkg(A, { searches: [{ query: "א".repeat(900), lastAt: 1 }] });
     big.searches = Array.from({ length: Math.ceil(MAX_BYTES / 1800) + 1 }, () => big.searches[0]);

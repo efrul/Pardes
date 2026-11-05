@@ -219,6 +219,14 @@ private val feedbackJson =
         explicitNulls = false
     }
 
+/**
+ * A search's query at most, a grade's too, as the feedback service takes them (feedback-service/src/package.js,
+ * MAX_QUERY): a longer one is left out, rather than sent to have the whole package refused.
+ */
+const val MAX_QUERY_CHARS = 20_000
+
+private fun sendable(query: String?): String? = query?.takeIf { it.isNotBlank() && it.length <= MAX_QUERY_CHARS }
+
 /** What there is to send since [sent]: read from the user database and the daf reviews' folder. */
 class FeedbackSource(
     private val database: UserSettingsDb,
@@ -229,9 +237,11 @@ class FeedbackSource(
     fun read(sent: FeedbackSent): FeedbackContents {
         val queries = database.searchFeedbackQueries
         val grades =
-            queries.gradesSince(sent.grades).executeAsList().map { row ->
+            queries.gradesSince(sent.grades).executeAsList().mapNotNull { row ->
+                val query = sendable(row.query) ?: return@mapNotNull null
+                if (row.searchKey.isEmpty() || row.searchKey.length > MAX_QUERY_CHARS + 1000) return@mapNotNull null
                 GradeRow(
-                    query = row.query,
+                    query = query,
                     search = row.searchKey,
                     lineId = row.lineId,
                     bookId = row.bookId,
@@ -247,7 +257,7 @@ class FeedbackSource(
             }
         val searches =
             queries.searchesSince(sent.searches).executeAsList().mapNotNull { row ->
-                val query = row.searchQuery.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val query = sendable(row.searchQuery) ?: return@mapNotNull null
                 SearchRow(
                     query = query,
                     categoryId = row.searchCategoryId,
