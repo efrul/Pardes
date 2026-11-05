@@ -564,7 +564,11 @@ private fun acrossOf(
     edgeSlack: Float,
 ): FloatArray? {
     fun overlap(big: FloatArray) = minOf(big[3], b[3]) - maxOf(big[1], b[1])
+    // Across it, not above or below it: a big word is about two lines tall, and the line above or below its own
+    // overlaps its box too, but its middle is outside it (144 such lines were pushed aside)
+    val middle = (b[1] + b[3]) / 2
     return bigBoxes
-        .filter { big -> overlap(big) > ACROSS * (b[3] - b[1]) && big[0] < b[2] - edgeSlack && big[2] > b[0] }
-        .maxByOrNull(::overlap)
+        .filter { big ->
+            overlap(big) > ACROSS * (b[3] - b[1]) && middle in big[1]..big[3] && big[0] < b[2] - edgeSlack && big[2] > b[0]
+        }.maxByOrNull(::overlap)
 }

@@ -510,10 +510,18 @@ fun BookTextMenus(
                     // keyboard dispatcher can read it without touching Compose state directly.
                     // A new Compose selection (a drag) replaces the Shift+click one; a Shift+click leaves Compose's as is
                     LaunchedEffect(rawText) { if (rawText.isNotEmpty()) bookSelection?.clear() }
+                    // What this area wrote last: an area with nothing selected clears the tab's selection only if it is
+                    // its own (the daf has an area an amud, and one composed while another amud holds the selection
+                    // wiped it)
+                    var written by remember { mutableStateOf("") }
                     LaunchedEffect(rawText, shiftRange, diacritics) {
                         bookSelection?.resolved = null
                         // A Shift+click selection is not Compose's, still drawn from an earlier drag: nothing until read
-                        selectionContext.setSelectedText(tabId, if (shiftRange != null) "" else rawText)
+                        val text = if (shiftRange != null) "" else rawText
+                        if (text.isNotEmpty() || selectionContext.selectedTextIn(tabId) == written) {
+                            selectionContext.setSelectedText(tabId, text)
+                            written = text
+                        }
                         val pressedAt = bookSelection?.pressedAt
                         val resolved =
                             when {

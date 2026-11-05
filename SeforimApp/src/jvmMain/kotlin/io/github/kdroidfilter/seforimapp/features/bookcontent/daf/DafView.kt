@@ -112,6 +112,7 @@ import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_amud_missing
 import seforimapp.seforimapp.generated.resources.daf_import
+import seforimapp.seforimapp.generated.resources.daf_import_failed
 import seforimapp.seforimapp.generated.resources.daf_import_not_layout
 import seforimapp.seforimapp.generated.resources.daf_import_other_tractate
 import seforimapp.seforimapp.generated.resources.daf_missing
@@ -946,8 +947,11 @@ private fun MissingLayout(
                         ?: return@launch
                 problem =
                     withContext(Dispatchers.IO) {
-                        val layout = runSuspendCatching { layouts.import(File(picked.path)) }.getOrNull()
+                        // A file that could not be read or copied is not "not a layout file": its error is said
+                        val imported = runSuspendCatching { layouts.import(File(picked.path)) }
+                        val layout = imported.getOrNull()
                         when {
+                            imported.isFailure -> ImportProblem.Failed(imported.exceptionOrNull()?.message.orEmpty())
                             layout == null -> ImportProblem.NotLayout
                             !layouts.has(book.title) -> ImportProblem.OtherTractate(layout.tractateHe)
                             else -> null
@@ -962,6 +966,8 @@ private fun MissingLayout(
             ImportProblem.NotLayout -> Text(stringResource(Res.string.daf_import_not_layout), color = JewelTheme.globalColors.text.error)
             is ImportProblem.OtherTractate ->
                 Text(stringResource(Res.string.daf_import_other_tractate, p.tractate), color = JewelTheme.globalColors.text.error)
+            is ImportProblem.Failed ->
+                Text(stringResource(Res.string.daf_import_failed, p.message), color = JewelTheme.globalColors.text.error)
             null -> Unit
         }
     }
@@ -972,6 +978,10 @@ private sealed interface ImportProblem {
 
     data class OtherTractate(
         val tractate: String,
+    ) : ImportProblem
+
+    data class Failed(
+        val message: String,
     ) : ImportProblem
 }
 

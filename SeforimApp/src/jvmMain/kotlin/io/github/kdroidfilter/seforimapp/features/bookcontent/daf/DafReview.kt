@@ -147,7 +147,7 @@ class DafReviews(
         read.getOrPut(layout.tractate) {
             fileOf(layout.tractate).takeIf { it.isFile }?.let { file ->
                 runCatching { json.decodeFromString(DafReviewFile.serializer(), file.readText()) }
-                    .onFailure { file.renameTo(File(file.parentFile, "${file.nameWithoutExtension}.unreadable-${System.currentTimeMillis()}.json")) }
+                    .onFailure { file.renameTo(asideOf(file)) }
                     .getOrNull()
             } ?: DafReviewFile(tractate = layout.tractate, tractateHe = layout.tractateHe, library = layout.library?.release)
         }
@@ -179,6 +179,9 @@ class DafReviews(
     }
 
     private fun fileOf(tractate: String): File = File(folder, "${tractate.replace(UNSAFE_NAME, "_")}.json")
+
+    private fun asideOf(file: File): File =
+        File(file.parentFile, "${file.nameWithoutExtension}.unreadable-${System.currentTimeMillis()}.json")
 
     companion object {
         const val FOLDER = "feedback"
