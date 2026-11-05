@@ -48,8 +48,12 @@ class FeedbackAutoSenderTest {
             delay(200)
             assertTrue(service.received.isEmpty())
 
-            auto.answer(true, FeedbackChoice(searches = true))
+            assertTrue(auto.buttonsOffered())
+            auto.answer(true, FeedbackChoice(searches = true), buttons = true)
             eventually { service.received.size == 1 }
+            // The grade buttons on, as the user asked
+            assertTrue(settings.isSearchFeedbackEnabled())
+            assertFalse(auto.buttonsOffered())
             assertEquals(listOf("שנים אוחזין"), service.received[0].grades.map { it.query })
             assertFalse(auto.askVisible.value)
             assertTrue(settings.isFeedbackAsked() && settings.isFeedbackAutoSend())
@@ -76,10 +80,11 @@ class FeedbackAutoSenderTest {
             val (_, auto) = autoSender()
             val job = running(auto)
             withTimeout(10_000) { auto.askVisible.first { it } }
-            auto.answer(false, FeedbackChoice())
+            auto.answer(false, FeedbackChoice(), buttons = true)
             connect()
             delay(300)
             assertTrue(service.received.isEmpty())
+            assertFalse(settings.isSearchFeedbackEnabled())
             assertTrue(settings.isFeedbackAsked())
             assertFalse(settings.isFeedbackAutoSend())
             job.cancelAndJoin()

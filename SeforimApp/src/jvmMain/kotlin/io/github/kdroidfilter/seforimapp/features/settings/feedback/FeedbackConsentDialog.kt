@@ -37,6 +37,8 @@ import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.feedback_consent_agree
+import seforimapp.seforimapp.generated.resources.feedback_consent_buttons
+import seforimapp.seforimapp.generated.resources.feedback_consent_buttons_hint
 import seforimapp.seforimapp.generated.resources.feedback_consent_daf
 import seforimapp.seforimapp.generated.resources.feedback_consent_daf_hint
 import seforimapp.seforimapp.generated.resources.feedback_consent_decline
@@ -60,7 +62,7 @@ fun NucleusApplicationScope.FeedbackConsentDialog(autoSender: FeedbackAutoSender
         styling = ThemeUtils.buildComponentStyling(),
     ) {
         val dialogState =
-            rememberDialogState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(540.dp, 520.dp))
+            rememberDialogState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(560.dp, 600.dp))
         JewelDecoratedDialog(
             onCloseRequest = autoSender::dismiss,
             title = stringResource(Res.string.feedback_consent_title),
@@ -75,19 +77,28 @@ fun NucleusApplicationScope.FeedbackConsentDialog(autoSender: FeedbackAutoSender
             ) {
                 Text(stringResource(Res.string.feedback_consent_title))
             }
-            FeedbackConsentContent(initial = remember { autoSender.choice() }, onAnswer = autoSender::answer)
+            FeedbackConsentContent(
+                initial = remember { autoSender.choice() },
+                onAnswer = autoSender::answer,
+                offerButtons = remember { autoSender.buttonsOffered() },
+            )
         }
     }
 }
 
-/** The question's content: the kinds, checked as [initial], and the answer, given to [onAnswer] with the kinds checked. */
+/**
+ * The question's content: the kinds, checked as [initial], and, when [offerButtons] (the user has them off), the grade
+ * buttons under the search results, checked; the answer goes to [onAnswer] with the kinds checked and the buttons.
+ */
 @Composable
 internal fun FeedbackConsentContent(
     initial: FeedbackChoice,
-    onAnswer: (Boolean, FeedbackChoice) -> Unit,
+    onAnswer: (agree: Boolean, choice: FeedbackChoice, buttons: Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    offerButtons: Boolean = true,
 ) {
     var choice by remember { mutableStateOf(initial) }
+    var buttons by remember { mutableStateOf(offerButtons) }
     val info = JewelTheme.globalColors.text.info
     Column(
         modifier =
@@ -103,6 +114,23 @@ internal fun FeedbackConsentContent(
         Kind(Res.string.feedback_consent_grades, Res.string.feedback_consent_grades_hint, choice.grades) {
             choice = choice.copy(grades = it)
         }
+        // Grades come from the buttons: offered with them, under them
+        if (offerButtons) {
+            Column(Modifier.padding(start = 28.dp)) {
+                CheckboxRow(
+                    text = stringResource(Res.string.feedback_consent_buttons),
+                    checked = buttons && choice.grades,
+                    onCheckedChange = { buttons = it },
+                    enabled = choice.grades,
+                )
+                Text(
+                    stringResource(Res.string.feedback_consent_buttons_hint),
+                    fontSize = 12.sp,
+                    color = info,
+                    modifier = Modifier.padding(start = 28.dp),
+                )
+            }
+        }
         Kind(Res.string.feedback_consent_searches, Res.string.feedback_consent_searches_hint, choice.searches) {
             choice = choice.copy(searches = it)
         }
@@ -112,9 +140,12 @@ internal fun FeedbackConsentContent(
         Text(stringResource(Res.string.feedback_consent_privacy), fontSize = 12.sp, color = info)
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            OutlinedButton(onClick = { onAnswer(false, choice) }) { Text(stringResource(Res.string.feedback_consent_decline)) }
+            OutlinedButton(onClick = { onAnswer(false, choice, false) }) { Text(stringResource(Res.string.feedback_consent_decline)) }
             // Agreeing to send nothing is saying no
-            DefaultButton(onClick = { onAnswer(true, choice) }, enabled = choice.grades || choice.searches || choice.daf) {
+            DefaultButton(
+                onClick = { onAnswer(true, choice, offerButtons && buttons && choice.grades) },
+                enabled = choice.grades || choice.searches || choice.daf,
+            ) {
                 Text(stringResource(Res.string.feedback_consent_agree))
             }
         }

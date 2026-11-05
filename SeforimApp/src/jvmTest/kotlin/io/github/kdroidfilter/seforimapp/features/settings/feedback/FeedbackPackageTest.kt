@@ -119,9 +119,9 @@ class FeedbackPackageTest {
         val contents = source.read(FeedbackSent())
         val choice = FeedbackChoice(searches = true, leftOut = setOf("כל כתבי הקודש"))
         assertEquals(listOf("שנים אוחזין", "כל כתבי הקודש", "מאימתי"), contents.queries(choice))
-        // The searches off, as at first: the queries of the grades; neither kind, none
-        assertEquals(listOf("שנים אוחזין", "כל כתבי הקודש"), contents.queries(FeedbackChoice()))
-        assertEquals(emptyList(), contents.queries(FeedbackChoice(grades = false)))
+        // The searches off: the queries of the grades; neither kind, none
+        assertEquals(listOf("שנים אוחזין", "כל כתבי הקודש"), contents.queries(FeedbackChoice(searches = false)))
+        assertEquals(emptyList(), contents.queries(FeedbackChoice(grades = false, searches = false)))
 
         val made = feedbackPackage(contents, choice, "sender-1", "1.0.7", "v1", Instant.parse("2026-11-05T12:00:00Z"))
         assertEquals(listOf("שנים אוחזין"), made.grades.map { it.query })
@@ -136,8 +136,8 @@ class FeedbackPackageTest {
         assertFalse("כל כתבי הקודש" in json)
         assertEquals(made, Json.decodeFromString(FeedbackPackage.serializer(), json))
 
-        // The searches are off at first, and a kind turned off sends nothing
-        val defaults = feedbackPackage(contents, FeedbackChoice(daf = false), "sender-1", null, null)
+        // A kind turned off sends nothing
+        val defaults = feedbackPackage(contents, FeedbackChoice(searches = false, daf = false), "sender-1", null, null)
         assertEquals(2, defaults.grades.size)
         assertTrue(defaults.searches.isEmpty() && defaults.daf.isEmpty())
         assertFalse("\"searches\":[{" in defaults.toJson())

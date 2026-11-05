@@ -43,6 +43,9 @@ class FeedbackSendViewModelTest {
             database.search("שנים אוחזין", at = 150)
             val viewModel = viewModel()
             assertEquals(2, viewModel.read().grades.size)
+            // Every kind is sent at first; the searches turned off here
+            assertTrue(viewModel.state.value.choice.searches)
+            viewModel.setSearches(false)
 
             viewModel.setQuery("מה שלא נשלח", kept = false)
             viewModel.saveTo(folder)
@@ -115,8 +118,9 @@ class FeedbackSendViewModelTest {
         runBlocking {
             database.search("שנים אוחזין", at = 150)
             val viewModel = viewModel()
-            // Only searches, and they are off at first
+            // Only searches, turned off
             assertEquals(1, viewModel.read().searches.size)
+            viewModel.setSearches(false)
             viewModel.saveTo(folder)
             assertEquals(FeedbackSendViewModel.Work.Idle, viewModel.state.value.work)
             assertTrue(folder.listFiles()!!.isEmpty())
