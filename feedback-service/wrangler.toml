@@ -9,6 +9,12 @@ workers_dev = true
 [observability]
 enabled = false
 
+# The maintainer's page (src/admin.js): its files as text, served as they are, never run in the Worker
+[[rules]]
+type = "Text"
+globs = ["**/admin/*.html", "**/admin/*.css", "**/admin/*.js"]
+fallthrough = false
+
 [[d1_databases]]
 binding = "DB"
 database_name = "pardes-feedback"

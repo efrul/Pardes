@@ -18,7 +18,11 @@ async function service(limit = 1000) {
   const mf = new Miniflare(
     convertV4MiniflareOptions({
       modulesRoot: SRC,
-      modules: ["index.js", "package.js"].map((name) => ({ type: "ESModule", path: `${SRC}${name}` })),
+      modules: [
+        ...["index.js", "package.js", "admin.js"].map((name) => ({ type: "ESModule", path: `${SRC}${name}` })),
+        // As wrangler.toml's rules upload them: text, never run
+        ...["admin/index.html", "admin/app.js", "admin/style.css"].map((name) => ({ type: "Text", path: `${SRC}${name}` })),
+      ],
       compatibilityDate: "2026-10-01",
       d1Databases: { DB: "test" },
       bindings: { ADMIN_TOKEN: TOKEN },
@@ -99,6 +103,48 @@ describe("the feedback service", () => {
     const body = await admin(mf, `/v1/packages/${id}`);
     assert.equal(body.status, 200);
     assert.equal(await body.text(), sent);
+  });
+
+  test("gives the maintainer the packages with their bodies, a few at a time", async () => {
+    const sent = pkg(A, { searches: [{ query: "<img src=x onerror=alert(1)>", lastAt: 1793800000001 }] });
+    const { id } = await (await post(mf, sent)).json();
+    assert.equal((await admin(mf, "/v1/packages?bodies=1", "wrong")).status, 401);
+    const listed = await (await admin(mf, `/v1/packages?bodies=1&after=${id - 1}`)).json();
+    assert.deepEqual(listed.packages[0].package, sent);
+    assert.equal(listed.packages[0].id, id);
+    assert.equal(listed.packages[0].body, undefined);
+    // Without bodies=1 the list holds none
+    const plain = await (await admin(mf, `/v1/packages?after=${id - 1}`)).json();
+    assert.equal(plain.packages[0].package, undefined);
+    for (let i = 0; i < 51; i++) await post(mf, pkg(B));
+    const capped = await (await admin(mf, "/v1/packages?bodies=1&limit=1000")).json();
+    assert.equal(capped.packages.length, 50);
+    assert.equal(capped.more, true);
+  });
+
+  test("serves the maintainer's page, with no data in it, and runs no script but its own", async () => {
+    await post(mf, pkg(A, { searches: [{ query: "סוד שלא בדף", lastAt: 1793800000002 }] }));
+    const page = await mf.dispatchFetch("http://feedback.test/admin");
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get("content-type"), /^text\/html/);
+    const csp = page.headers.get("content-security-policy");
+    assert.match(csp, /script-src 'self';/);
+    assert.match(csp, /default-src 'none'/);
+    assert.match(csp, /frame-ancestors 'none'/);
+    assert.equal(page.headers.get("cache-control"), "no-store");
+    const html = await page.text();
+    assert.match(html, /קוד המנהל/);
+    assert.doesNotMatch(html, /סוד שלא בדף/);
+    assert.doesNotMatch(html, /<script>/);
+    const script = await mf.dispatchFetch("http://feedback.test/admin/app.js");
+    assert.match(script.headers.get("content-type"), /^text\/javascript/);
+    assert.equal(await script.text(), await readFile(new URL("../src/admin/app.js", import.meta.url), "utf8"));
+    // Every text of a package reaches the page as text: the script builds no markup from strings
+    assert.doesNotMatch(await readFile(new URL("../src/admin/app.js", import.meta.url), "utf8"), /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
+    const style = await mf.dispatchFetch("http://feedback.test/admin/style.css");
+    assert.match(style.headers.get("content-type"), /^text\/css/);
+    assert.equal((await mf.dispatchFetch("http://feedback.test/admin/other")).status, 404);
+    assert.equal((await mf.dispatchFetch("http://feedback.test/admin", { method: "POST" })).status, 404);
   });
 
   test("pages the list after an id", async () => {
