@@ -54,6 +54,8 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.detectTouchMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.hasFindInPage
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.processKeyShortcuts
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
+import io.github.kdroidfilter.seforimapp.core.reading.LastInput
+import io.github.kdroidfilter.seforimapp.core.reading.noteInput
 import io.github.kdroidfilter.seforimapp.core.selectionCopyShortcut
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
@@ -341,7 +343,10 @@ fun NucleusApplicationScope.MainAppWindow(
                         .fillMaxSize()
                         .e2eCapture(openWindow.id)
                         .detectTouchMode { isTouchMode = it }
+                        // The reading time counts while the user is there (ReadingTimeStore)
+                        .noteInput()
                         .onPreviewKeyEvent { keyEvent ->
+                            LastInput.now()
                             // Copy without nikud / with source: before the focused text, which would copy it as is
                             val selectionCopy =
                                 selectionCopyShortcut(
