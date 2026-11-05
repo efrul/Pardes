@@ -78,7 +78,7 @@ class FeedbackSendCardUiTest {
             onNodeWithText("סימונים של שורות בצורת הדף: 1 (במסכתות: 1)").assertIsDisplayed()
             onNodeWithText("שמירה לקובץ…").assertIsEnabled()
 
-            // The searches are off at first: the queries to look over are those of the grades
+            // The queries to look over: the grades' and the searches', each once
             onNodeWithText("עיון בחיפושים שיישלחו (2 מתוך 2)").performClick()
             onNodeWithText("שנים אוחזין").performClick()
             onNodeWithText("ציונים לתוצאות החיפוש: 1 (בחיפושים: 1)").assertIsDisplayed()

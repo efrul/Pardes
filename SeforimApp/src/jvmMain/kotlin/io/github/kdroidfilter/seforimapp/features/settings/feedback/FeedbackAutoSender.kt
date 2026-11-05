@@ -87,12 +87,20 @@ class FeedbackAutoSender(
         kick()
     }
 
-    /** The user's answer: [agree] to send [choice]'s kinds by itself, or not. Either way, not asked again. */
+    /** Whether the question offers the grade buttons checked: yes, unless the user has them already. */
+    fun buttonsOffered(): Boolean = !appSettings.isSearchFeedbackEnabled()
+
+    /**
+     * The user's answer: [agree] to send [choice]'s kinds by itself, or not, and with a yes, [buttons] to show the grade
+     * buttons under the search results (feedback mode) from now on. Either way, not asked again.
+     */
     fun answer(
         agree: Boolean,
         choice: FeedbackChoice,
+        buttons: Boolean = false,
     ) {
         if (agree) sender.keep(choice)
+        if (agree && buttons && choice.grades) appSettings.setSearchFeedbackEnabled(true)
         appSettings.setFeedbackAutoSend(agree)
         appSettings.setFeedbackAsked(true)
         appSettings.flush()
