@@ -107,7 +107,7 @@ data class FeedbackContents(
 /** Which kinds go out, and the queries the user left out of them. */
 data class FeedbackChoice(
     val grades: Boolean = true,
-    val searches: Boolean = false,
+    val searches: Boolean = true,
     val daf: Boolean = true,
     val leftOut: Set<String> = emptySet(),
 )

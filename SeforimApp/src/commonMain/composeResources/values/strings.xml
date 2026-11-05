@@ -259,7 +259,7 @@
     <string name="feedback_send_nothing_new">אין משוב חדש מאז הפעם הקודמת, מ־%1$s.</string>
     <string name="feedback_send_grades">ציונים לתוצאות החיפוש: %1$d (בחיפושים: %2$d)</string>
     <string name="feedback_send_searches">היסטוריית החיפושים: %1$d</string>
-    <string name="feedback_send_searches_hint">כל החיפושים שעשיתם, גם אלה שלא נתתם להם ציון: הם מראים מה מחפשים. כבוי כברירת מחדל.</string>
+    <string name="feedback_send_searches_hint">כל החיפושים שעשיתם, גם אלה שלא נתתם להם ציון: הם מראים מה מחפשים.</string>
     <string name="feedback_send_daf">סימונים של שורות בצורת הדף: %1$d (במסכתות: %2$d)</string>
     <string name="feedback_send_review">עיון בחיפושים שיישלחו (%1$d מתוך %2$d)</string>
     <string name="feedback_send_review_hint">חיפוש שמורידים ממנו את הסימון לא יישלח, לא הציונים שלו ולא ההיסטוריה שלו.</string>
@@ -290,11 +290,13 @@
     <!-- Pardes: the question at start whether to send feedback by itself, and which (FeedbackConsentDialog) -->
     <string name="feedback_consent_title">שליחת משוב לשיפור פרדס</string>
     <string name="feedback_consent_question">לשלוח לפרדס את המשוב שלכם, כדי לשפר את החיפוש ואת צורת הדף?</string>
-    <string name="feedback_consent_explain">אם תאשרו, פרדס ישלח בכל הפעלה ובכל חיבור לרשת את מה שחדש מאז הפעם הקודמת, מהסוגים שתסמנו:</string>
+    <string name="feedback_consent_explain">אם תאשרו, פרדס ישלח מהסוגים שתסמנו את כל מה שנשמר עד עכשיו, ואחר כך, בכל הפעלה ובכל חיבור לרשת, את מה שחדש מאז הפעם הקודמת:</string>
     <string name="feedback_consent_grades">הציונים שנתתם לתוצאות החיפוש</string>
-    <string name="feedback_consent_grades_hint">במצב המשוב, שמדליקים בהגדרות › ניהול נתונים › חיפוש לפי משמעות.</string>
+    <string name="feedback_consent_grades_hint">שנותנים בכפתורי המשוב שמתחת לתוצאות החיפוש.</string>
+    <string name="feedback_consent_buttons">להציג מעכשיו מתחת לכל תוצאת חיפוש את כפתורי המשוב</string>
+    <string name="feedback_consent_buttons_hint">בדיוק זה, רלוונטי, לא רלוונטי: הציונים עוזרים יותר מכל דבר אחר לשפר את החיפוש. אפשר לכבות אותם בהגדרות › ניהול נתונים › חיפוש לפי משמעות.</string>
     <string name="feedback_consent_searches">היסטוריית החיפושים</string>
-    <string name="feedback_consent_searches_hint">מה חיפשתם, באיזה היקף וכמה פעמים, גם בלי ציון. זה הכי אישי, ולכן לא מסומן מראש.</string>
+    <string name="feedback_consent_searches_hint">מה חיפשתם, באיזה היקף וכמה פעמים, גם בלי ציון: הם מראים מה מחפשים.</string>
     <string name="feedback_consent_daf">הסימונים של שורות בצורת הדף</string>
     <string name="feedback_consent_daf_hint">במצב הבדיקה של צורת הדף, שמדליקים בהגדרות › גופנים.</string>
     <string name="feedback_consent_privacy">לא נשלחים ההערות, ההדגשות, המועדפים, הספרים שפתחתם, ושום דבר שמזהה אתכם או את המחשב, והשרת שומר את המשוב בלי כתובת ה־IP. בהגדרות › ניהול נתונים › שליחת משוב אפשר לשנות את הבחירה, לעצור את השליחה ולמחוק את מה שנשלח.</string>

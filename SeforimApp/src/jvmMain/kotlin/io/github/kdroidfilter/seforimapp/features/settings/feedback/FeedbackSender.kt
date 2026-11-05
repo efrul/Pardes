@@ -61,11 +61,11 @@ class FeedbackSender(
     /** The last sending's, by the card or by itself. */
     val status: StateFlow<Status> = _status.asStateFlow()
 
-    /** The kinds the user sends, as the settings keep them: the grades and the daf's marks, at first. */
+    /** The kinds the user sends, as the settings keep them: all three, at first. */
     fun choice(): FeedbackChoice =
         FeedbackChoice(
             grades = appSettings.isFeedbackKindSent(GRADES, true),
-            searches = appSettings.isFeedbackKindSent(SEARCHES, false),
+            searches = appSettings.isFeedbackKindSent(SEARCHES, true),
             daf = appSettings.isFeedbackKindSent(DAF, true),
         )
 
