@@ -85,4 +85,37 @@ class DafReviewTest {
         assertEquals(listOf(3), DafReviews(dir).of(layout).marks.map { it.i })
         dir.deleteRecursively()
     }
+
+    @Test
+    fun `a mark is written to the file the review was read from, whatever tractate the file names`() {
+        val dir = Files.createTempDirectory("daf-review").toFile()
+        val layout = DafLayoutFile(format = 2, tractate = "Bava Batra", tractateHe = "בבא בתרא", amudim = listOf(amud))
+        val feedback = dir.resolve("feedback").apply { mkdirs() }
+        val mark = """{"amud": "2a", "c": "R", "i": 1, "t": "אמר רבי יוחנן", "ok": true}"""
+        feedback.resolve("Bava Batra.json").writeText("""{"tractate": "BavaBatra", "tractateHe": "בבא בתרא", "marks": [$mark]}""")
+        DafReviews(dir).mark(layout, DafMark("2a", "R", 3, "מאי טעמא דהכא כתיב", ok = false))
+
+        assertEquals(listOf(1, 3), DafReviews(dir).of(layout).marks.map { it.i }.sorted())
+        assertEquals(listOf("Bava Batra.json"), feedback.list()!!.toList())
+        dir.deleteRecursively()
+    }
+
+    @Test
+    fun `a review file that cannot be read is set aside, not written over`() {
+        val dir = Files.createTempDirectory("daf-review").toFile()
+        val layout = DafLayoutFile(format = 2, tractate = "Bava Batra", tractateHe = "בבא בתרא", amudim = listOf(amud))
+        val feedback = dir.resolve("feedback").apply { mkdirs() }
+        feedback.resolve("Bava Batra.json").writeText("{\"tractate\": \"Bava Batra\", \"marks\": [")
+        val reviews = DafReviews(dir)
+
+        assertTrue(reviews.of(layout).marks.isEmpty())
+        val aside = feedback.list()!!.filter { it.startsWith("Bava Batra.unreadable-") }
+        assertEquals(1, aside.size)
+        assertEquals("{\"tractate\": \"Bava Batra\", \"marks\": [", feedback.resolve(aside[0]).readText())
+
+        reviews.mark(layout, DafMark("2a", "R", 3, "מאי טעמא דהכא כתיב", ok = false))
+        assertEquals(listOf(3), DafReviews(dir).of(layout).marks.map { it.i })
+        assertEquals(2, feedback.list()!!.size)
+        dir.deleteRecursively()
+    }
 }
