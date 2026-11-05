@@ -71,15 +71,23 @@ jobs:
           done
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
-      # wrangler prints the Worker's address, whose workers.dev subdomain names the account
-      - name: Mask the account's subdomain
+      # wrangler prints the Worker's address, whose workers.dev subdomain names the account; and an error could print
+      # the account's name, by default its owner's email ("<email>'s Account"), or the token's user
+      - name: Mask the account's names
         if: steps.secrets.outputs.ready == 'true'
         run: |
-          subdomain=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
-            | jq -r '.result.subdomain // empty')
+          api() { curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/$1"; }
+          name=$(api "accounts/$CLOUDFLARE_ACCOUNT_ID" | jq -r '.result.name // empty') || true
+          if [ -n "$name" ]; then
+            echo "::add-mask::$name"
+            case "$name" in *"'s Account") echo "::add-mask::${name%"'s Account"}" ;; esac
+          fi
+          # A user's token only: an account's own token has no user
+          email=$(api user 2>/dev/null | jq -r '.result.email // empty') || true
+          if [ -n "$email" ]; then echo "::add-mask::$email"; fi
+          subdomain=$(api "accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty') || true
           if [ -z "$subdomain" ]; then
-            echo "::error::The account has no workers.dev subdomain yet: open Workers & Pages in the Cloudflare dashboard once (feedback-service/README.md)"
+            echo "::error::The account has no workers.dev subdomain yet: Workers & Pages in the Cloudflare dashboard (feedback-service/README.md)"
             exit 1
           fi
           echo "::add-mask::$subdomain"

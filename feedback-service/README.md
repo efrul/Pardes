@@ -34,19 +34,24 @@ Worker של Cloudflare עם מסד D1. הוא מקבל את חבילות המש�
 
 ## ההקמה, פעם אחת
 
-1. **חשבון Cloudflare.** החינמי מספיק: 100,000 בקשות ביום ו־5GB ב־D1. פותחים פעם אחת את Workers & Pages בלוח הבקרה, ושם נוצר
-   תת־הדומיין של workers.dev. הוא חלק מהכתובת שהאפליקציה שולחת אליה, ולכן כדאי לבחור שם שלא מזהה אתכם.
-2. **API token:** My Profile › API Tokens › Create Token. בוחרים בתבנית "Edit Cloudflare Workers", ומוסיפים לה הרשאה
-   Account › D1 › Edit.
-3. **שלושה סודות** ב־Settings › Secrets and variables › Actions של הריפו:
-   - `CLOUDFLARE_API_TOKEN`: הטוקן מהשלב הקודם.
-   - `CLOUDFLARE_ACCOUNT_ID`: מזהה החשבון, מלוח הבקרה, בצד של Workers & Pages.
-   - `FEEDBACK_ADMIN_TOKEN`: מחרוזת אקראית ארוכה, למשל הפלט של `openssl rand -hex 32`.
-4. **פרסום:** Actions › Feedback service › Run workflow. הוא בודק את ה־Worker, יוצר את המסד בפעם הראשונה, מחיל את
-   ה־migrations, מפרסם, וקובע את הטוקן. שם החשבון לא מופיע ביומן: תת־הדומיין ומזהה המסד מוסתרים.
-5. **הכתובת:** כתובת ה־Worker, `https://pardes-feedback.<תת-הדומיין>.workers.dev`, מופיעה בלוח הבקרה. שמים אותה בסוד
-   `PARDES_FEEDBACK_URL`, ומשם היא נכנסת לגרסאות של פרדס למחשב (`desktop-release.yml`). גרסה שנבנתה בלי הכתובת לא שואלת
-   ולא שולחת, ורק שומרת משוב לקובץ.
+1. **חשבון Cloudflare:** ‏`dash.cloudflare.com/sign-up`, דוא"ל וסיסמה, ואישור בקישור שנשלח בדוא"ל. החינמי מספיק: 100,000 בקשות
+   ביום ו־5GB ב־D1. אין צורך בדומיין.
+2. **שם החשבון:** כברירת מחדל הוא הדוא"ל ("…'s Account"). כדאי לשנות אותו לשם שלא מזהה אתכם: Configurations › Account Name ›
+   Change Name.
+3. **תת־הדומיין של workers.dev:** ב־Workers & Pages, ליד Your subdomain. הוא חלק מהכתובת שהאפליקציה שולחת אליה. אם הוא מזהה
+   אתכם, או שעוד אין כזה, בוחרים ב־Change שם שלא מזהה.
+4. **API token:** ‏Manage Account › API Tokens (או My Profile › API Tokens) › Create Token › התבנית Edit Cloudflare Workers. לתבנית
+   מוסיפים שורה: Account › D1 › Edit. אחר כך Continue to summary › Create Token. הטוקן מוצג פעם אחת בלבד.
+5. **מזהה החשבון:** ב־Workers & Pages, תחת Account Details, ליד Account ID.
+6. **שלושה סודות** ב־Settings › Secrets and variables › Actions של הריפו:
+   - `CLOUDFLARE_API_TOKEN`: הטוקן.
+   - `CLOUDFLARE_ACCOUNT_ID`: מזהה החשבון.
+   - `FEEDBACK_ADMIN_TOKEN`: מחרוזת אקראית ארוכה, שגם נשמרת אצלכם, כי `fetch.py` צריך אותה.
+7. **פרסום:** Actions › Feedback service › Run workflow. הוא בודק את ה־Worker, יוצר את המסד בפעם הראשונה, מחיל את
+   ה־migrations, מפרסם, וקובע את הטוקן. שם החשבון, הדוא"ל שבו, תת־הדומיין ומזהה המסד מוסתרים ביומן.
+8. **הכתובת:** ב־Workers & Pages › pardes-feedback מופיעה `https://pardes-feedback.<תת-הדומיין>.workers.dev`. כשפותחים אותה
+   בדפדפן, היא עונה "Pardes feedback service". את הכתובת שמים בסוד `PARDES_FEEDBACK_URL`, ומשם היא נכנסת לגרסאות של פרדס
+   למחשב (`desktop-release.yml`). גרסה שנבנתה בלי הכתובת לא שואלת ולא שולחת, ורק שומרת משוב לקובץ.
 
 אחרי זה, כל שינוי ב־`feedback-service/` שנכנס ל־main מתפרסם לבד. שינוי במסד נכנס כ־migration חדש ב־`migrations/`.
 
