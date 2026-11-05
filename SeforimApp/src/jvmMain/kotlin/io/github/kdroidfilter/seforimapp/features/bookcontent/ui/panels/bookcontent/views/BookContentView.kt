@@ -90,6 +90,7 @@ import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafAnchor
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafControl
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFind
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafView
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.AnchorTarget
@@ -1028,6 +1029,13 @@ fun BookContentView(
                 },
                 modifier = Modifier.fillMaxSize().padding(bottom = 8.dp),
                 onWordInText = selectWordInText,
+                // The find in page's matches drawn on the daf too, the current one strongest
+                find =
+                    DafFind(
+                        query = persistedFindQuery.takeIf { showFind && !smartModeEnabled && it.length >= 2 },
+                        current = liveMatch?.let { it.lineId to it.ordinal },
+                        lines = if (showFind && smartModeEnabled) semanticFindIds else emptySet(),
+                    ),
             )
         } else {
             Box(modifier = Modifier.fillMaxSize().padding(bottom = 8.dp)) {
