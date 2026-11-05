@@ -131,5 +131,8 @@ and comment voice. Then ask of the result:
   Pardes's own scopes for Pardes's own trees: `android`, `semantic`, `daf`, `branding`, `site`, `feedback`,
   `release`, `skills`, `map` (the change map). Body as his, signed off, as efrul (CLAUDE.md › Authorship).
 - **Branches**: `feat/<topic>`, `fix/<topic>` when you choose the name; a session's designated branch wins.
-- **PRs inside efrul/Pardes**: what changed, the modules touched, screenshots for UI, how to verify, and the
-  change map's entries for the files touched. Never a PR to Zayit (`docs/PARDES_PLAN.md` › Compatibility).
+- **PRs inside efrul/Pardes** target `main`, its default branch (Zayit's `CLAUDE.md` line about `master` is Zayit's
+  own). They say what changed, the modules touched, how to verify, with screenshots for UI and the change map's
+  entries for the files touched. Never a PR to Zayit (`docs/PARDES_PLAN.md` › Compatibility).
+- **Documents**: Zayit's documents for developers are in English (`README_HE.md` and the store listing, for users,
+  are Hebrew). The same holds for Pardes's; texts for users (the app, the site, the changelogs) are Hebrew.
