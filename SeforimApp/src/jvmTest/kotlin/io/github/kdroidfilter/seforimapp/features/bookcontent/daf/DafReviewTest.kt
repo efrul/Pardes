@@ -95,7 +95,14 @@ class DafReviewTest {
         feedback.resolve("Bava Batra.json").writeText("""{"tractate": "BavaBatra", "tractateHe": "בבא בתרא", "marks": [$mark]}""")
         DafReviews(dir).mark(layout, DafMark("2a", "R", 3, "מאי טעמא דהכא כתיב", ok = false))
 
-        assertEquals(listOf(1, 3), DafReviews(dir).of(layout).marks.map { it.i }.sorted())
+        assertEquals(
+            listOf(1, 3),
+            DafReviews(dir)
+                .of(layout)
+                .marks
+                .map { it.i }
+                .sorted(),
+        )
         assertEquals(listOf("Bava Batra.json"), feedback.list()!!.toList())
         dir.deleteRecursively()
     }
