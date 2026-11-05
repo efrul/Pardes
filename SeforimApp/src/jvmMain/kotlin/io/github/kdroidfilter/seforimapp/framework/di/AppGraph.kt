@@ -54,6 +54,7 @@ abstract class AppGraph : ViewModelGraph {
     abstract val categoryDisplaySettingsStore: CategoryDisplaySettingsStore
     abstract val highlightStore: HighlightStore
     abstract val historyStore: HistoryStore
+    abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore
     abstract val favoritesStore: FavoritesStore
     abstract val shnayimMikraStore: ShnayimMikraStore
     abstract val noteStore: NoteStore

@@ -1,0 +1,18 @@
+-- Pardes: the seconds each book was read, per day (an epoch day), for the Home's learning split (LearningSplitWidget),
+-- as androidApp's table of the same name. Written by core/reading/ReadingTimeStore.kt while a book's tab is in front.
+CREATE TABLE IF NOT EXISTS reading_time (
+    bookId INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    seconds INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (bookId, day)
+);
+
+addSeconds:
+INSERT INTO reading_time(bookId, day, seconds) VALUES (:bookId, :day, :seconds)
+ON CONFLICT(bookId, day) DO UPDATE SET seconds = seconds + excluded.seconds;
+
+totalsSince:
+SELECT bookId, SUM(seconds) AS seconds FROM reading_time WHERE day >= :fromDay GROUP BY bookId;
+
+deleteAll:
+DELETE FROM reading_time;

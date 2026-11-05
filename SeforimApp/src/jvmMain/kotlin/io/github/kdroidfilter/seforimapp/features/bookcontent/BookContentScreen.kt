@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.LocalTextContextMenu
 import androidx.compose.foundation.text.TextContextMenu
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
@@ -71,6 +73,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -864,6 +867,16 @@ fun BookContentScreen(
     }
     DisposableEffect(tabId, selectionContext) {
         onDispose { selectionContext.clearActiveBookIfOwnedBy(tabId) }
+    }
+
+    // The book's reading time, while its tab is in front and its window focused (the Home's learning split). The
+    // focus is read as a flow: a window out of sight draws no frame to recompose on
+    val readingTime = LocalAppGraph.current.readingTimeStore
+    val windowInfo = LocalWindowInfo.current
+    LaunchedEffect(selectedBook?.id, isSelected, windowInfo, readingTime) {
+        val bookId = selectedBook?.id ?: return@LaunchedEffect
+        if (!isSelected) return@LaunchedEffect
+        snapshotFlow { windowInfo.isWindowFocused }.collectLatest { focused -> if (focused) readingTime.track(bookId) }
     }
 
     DisposableEffect(Unit) {
