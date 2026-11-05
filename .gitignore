@@ -33,7 +33,7 @@ model/
 standalone_semantic/
 staging/
 
-# Python (semantic-model)
+# Python
 __pycache__/
 *.pyc
 .venv/

@@ -20,7 +20,7 @@ import java.util.HexFormat
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/** Small packs as semantic-model/package_pack.py and semantic-release.yml make them, and a library to put them beside. */
+/** Small packs as pardes-semantic/package_pack.py and semantic-release.yml make them, and a library to put them beside. */
 internal object PackFixtures {
     const val MODEL = "student@test/pardes-clean-1"
     const val DIMENSION = 4

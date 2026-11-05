@@ -458,7 +458,7 @@ class HybridSearchEngine internal constructor(
          * [fused] with each of [leaders] (lexical hits, in order, each with its place) moved up to that place, or left
          * where it is when the fusion ranks it higher; a leader whose place an earlier one took comes right after it.
          * With the dense side weighing 3, a line only the words find scores 1/61 at best, below each of the first 121
-         * dense hits: an exact quote the model misses would never reach the first page (semantic-model/eval-100).
+         * dense hits: an exact quote the model misses would never reach the first page (pardes-semantic/eval-100).
          */
         internal fun <T> keepLeaders(
             fused: List<T>,

@@ -7,7 +7,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * [HybridSearchEngine.keepLeaders] (places 2 and 4, as semantic-model/eval-100/fusions.py measures it) and the quote
+ * [HybridSearchEngine.keepLeaders] (places 2 and 4, as pardes-semantic/eval-100/fusions.py measures it) and the quote
  * test that decides which lexical hits it keeps ([HybridSearchEngine.holdsQuote]).
  */
 class HybridSearchEngineKeepLeadersTest {
