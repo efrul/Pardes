@@ -4,8 +4,8 @@
 
 Worker של Cloudflare עם מסד D1. הוא מקבל את חבילות המשוב שמשתמשים שולחים מפרדס למחשב: מהכרטיס "שליחת משוב" שבהגדרות ›
 ניהול נתונים, ומהשליחה האוטומטית שהם מאשרים בשאלה שנפתחת בהפעלה. את החבילות הוא נותן למתחזק
-([`semantic-model/feedback/fetch.py`](../semantic-model/feedback/fetch.py)). מבנה החבילה מתואר ב־
-[`semantic-model/feedback/README.md`](../semantic-model/feedback/README.md).
+([`pardes-semantic/feedback/fetch.py`](https://github.com/efrul/pardes-semantic/blob/main/feedback/fetch.py)). מבנה החבילה מתואר ב־
+[`pardes-semantic/feedback/README.md`](https://github.com/efrul/pardes-semantic/blob/main/feedback/README.md).
 
 ## מה נשמר, ומה לא
 

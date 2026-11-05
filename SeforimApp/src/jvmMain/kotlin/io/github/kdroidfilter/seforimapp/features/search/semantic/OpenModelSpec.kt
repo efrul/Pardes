@@ -6,7 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * The open model as semantic-model/export_onnx.py describes it in `pardes-model.json`, next to the ONNX file.
+ * The open model as pardes-semantic/export_onnx.py describes it in `pardes-model.json`, next to the ONNX file.
  *
  * [id] names the weights and the cleaner, the two things a query must share with the corpus: the vector index
  * records the id it was embedded with ([VectorIndexBuilder]) and is only searched with a model of the same id.
@@ -23,7 +23,7 @@ data class OpenModelSpec(
     val queryMaxTokens: Int,
     val cleaner: String,
     val attribution: String,
-    /** The dense side's weight in the hybrid's RRF: measured per model (semantic-model/BENCHMARK.md), 1 when unset. */
+    /** The dense side's weight in the hybrid's RRF: measured per model (pardes-semantic/BENCHMARK.md), 1 when unset. */
     val hybridDenseWeight: Double = 1.0,
     /** What precedes a document's text when the model embeds it (the corpus, a found line's passages). */
     val documentPrefix: String = "",

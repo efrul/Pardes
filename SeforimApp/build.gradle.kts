@@ -433,7 +433,7 @@ dependencies {
     add("kspJvm", project(":widgetprocessor"))
 }
 
-// The open semantic model's vector index (pardes.vec.lucene) from semantic-model/embed_corpus.py's vectors:
+// The open semantic model's vector index (pardes.vec.lucene) from pardes-semantic/embed_corpus.py's vectors:
 // ./gradlew :SeforimApp:buildVectorIndex -Pvectors=<dir> -Pdb=<seforim.db> -Pout=<pardes.vec.lucene>
 tasks.register<JavaExec>("buildVectorIndex") {
     group = "application"

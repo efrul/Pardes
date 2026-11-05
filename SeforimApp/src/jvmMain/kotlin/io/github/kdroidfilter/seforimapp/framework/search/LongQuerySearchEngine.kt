@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
  * SeforimLibrary's LuceneSearchEngine adds, for each word, its dictionary forms (up to 32) and ranking clauses over
  * them. Past about ten words they can pass Lucene's 1,024 clauses: the first page then throws
  * [IndexSearcher.TooManyNestedClauses], and the search shows nothing (8 of the 34 queries of 11 words or more in
- * semantic-model/eval-v1). Its facets, built from the required clauses only, still count.
+ * pardes-semantic/eval-v1). Its facets, built from the required clauses only, still count.
  *
  * Such a query asks for all its words within five of each other, so it is in practice a pasted quote. Searched as
  * one exact phrase (in double quotes, without the dictionary forms), it finds that quote in a single clause. A

@@ -15,7 +15,7 @@ import java.time.Instant
  * one JSON document: the grades given to search results in feedback mode, the searches made (only when the user
  * includes them), and the daf view's line review, with the versions they were made on. Nothing else from the user
  * database (notes, highlights, favorites, books opened) and nothing that names the user or the computer: [sender] is a
- * random id the user can renew, for asking to delete what was sent and for telling sends apart. semantic-model/feedback/
+ * random id the user can renew, for asking to delete what was sent and for telling sends apart. pardes-semantic/feedback/
  * collect.py reads it; the daf part is pardes-rashi-ocr's review files as they are.
  */
 @Serializable

@@ -16,13 +16,13 @@
 
 - **ההיסטוריה**: 444 החיפושים השונים מה־`visit_history` של זית ושל פרדס למחשב (546 רשומות, עד 27.10.2026), כל אחד בהיקף
   שבו נעשה: 189 בספר שנבחר, 88 בספרי יסוד, 125 בכל הספרים, 42 במעבר אוטומטי. בלי ציונים: מה שנספר הוא ממה הרשימה בנויה.
-- **ציונים**: [`eval-real`](../semantic-model/eval-real/) ‏(155 חיפושים, `grades.tsv`) ו־[`eval-100`](../semantic-model/eval-100/)
+- **ציונים**: [`eval-real`](https://github.com/efrul/pardes-semantic/tree/main/eval-real/) ‏(155 חיפושים, `grades.tsv`) ו־[`eval-100`](https://github.com/efrul/pardes-semantic/tree/main/eval-100/)
   (100 שאלות, `expected.py`), דרך `Eval.kt`. ההרצה משחזרת את המספרים שפורסמו: eval-real ‏51 / 69 / 43, ‏eval-100 ‏33 / 12,
   ציטוטים 9, ואפס שורות לא שפוטות. ה־nDCG@3 של היום ב־eval-real הוא 0.547 ולא 0.585 כמו ב־README שלו, כי מאז נשפטו עוד שורות
   והאידיאל זז.
 - **הספרייה**: ה־`release_info.txt` של הספרייה שנמדדה אומר 20261011223929, אבל כל 1,277 ה־lineId ב־`grades.tsv` מצביעים בה
   על אותה הפניה כמו ב־`v3-20261012193827`.
-- **הכלים**: [`semantic-model/search-order`](../semantic-model/search-order/) (איך בונים ומריצים: ה־README שם). כל מספר כאן
+- **הכלים**: [`pardes-semantic/search-order`](https://github.com/efrul/pardes-semantic/tree/main/search-order/) (איך בונים ומריצים: ה־README שם). כל מספר כאן
   יוצא מאחד מהם.
 
 eval-real בטבלאות: ראשון טוב / טוב בשלוש הראשונות / המקור בשלוש הראשונות / nDCG@3, ובסוגריים שורות לא שפוטות בשלוש
@@ -180,7 +180,7 @@ eval-100 ו־eval-real.
 
 **הצעות.** וקטור לכל קטע של שורה ארוכה (`Passages.kt` כבר חותך שורות לקטעים בשביל ההדגשה). עדיפות למקור על המפרש שלו.
 
-**נמדד (2026-11-04, [`semantic-model/eval-passages`](../semantic-model/eval-passages/results.md)):** ההצעה לא פותרת
+**נמדד (2026-11-04, [`pardes-semantic/eval-passages`](https://github.com/efrul/pardes-semantic/blob/main/eval-passages/results.md)):** ההצעה לא פותרת
 את זה.
 - **המקורות קצרים:** משנה בחציון 60 טוקנים, גמרא 35, פסוק 22. גם ב"ב ג, א היא 120. מה שעוקף אותם הן שורות של 12–15 טוקנים
   שהן כמעט רק הציטוט: דיבור המתחיל, כותרת. זו בעיה 1.

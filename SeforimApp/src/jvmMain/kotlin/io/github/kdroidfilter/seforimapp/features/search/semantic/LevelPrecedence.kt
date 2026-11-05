@@ -18,7 +18,7 @@ internal object LevelPrecedence {
 
     /**
      * [page] (the fused order) with the earlier level ([levelOf], [BookLevels]) first among its lines that hold
-     * [query] as a sentence ([textOf], [holdsPhrase]), as semantic-model/eval-real/results-level-order.md measured it:
+     * [query] as a sentence ([textOf], [holdsPhrase]), as pardes-semantic/eval-real/results-level-order.md measured it:
      * - a query of [SENTENCE_WORDS] words or more: its holders, spelling apart, trade the places holders take in the
      *   first [LEVEL_PLACES] ([byLevel]), and the earliest takes the first place too when its level is earlier than
      *   that of the line there: the Gemara before the Acharonim quoting it, the verse before the Midrash;
