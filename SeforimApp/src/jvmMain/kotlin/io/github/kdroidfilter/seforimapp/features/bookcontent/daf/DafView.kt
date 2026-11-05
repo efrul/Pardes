@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -412,7 +413,8 @@ private fun DafPages(
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when {
                     (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C -> {
-                        byName[name]?.let { copyToClipboard(it.textOf(range)) }
+                        // The amud as it is shown: the range is the shown amud's, with the review's moves made
+                        byName[name]?.let { a -> copyToClipboard((review?.let { a.withMarks(it.marks) } ?: a).textOf(range)) }
                         true
                     }
                     event.key == Key.Escape -> {
@@ -447,7 +449,16 @@ private fun DafPages(
             if (always || !shown) listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
         }
         control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
-        control.edge = { end -> listState.scrollToItem(if (end) (order.size - 1).coerceAtLeast(0) else 0) }
+        control.edge = { end ->
+            if (end) {
+                // The last amud's end, not its top: the list stops scrolling there (an amud is a few thousand
+                // pixels tall at most, far less than this)
+                listState.scrollToItem((order.size - 1).coerceAtLeast(0))
+                listState.scrollBy(1_000_000f)
+            } else {
+                listState.scrollToItem(0)
+            }
+        }
         control.toLine = { id -> reveal(id, always = false) }
 
         // The tab's line in view: once the places are known, then whenever it changes or the tab asks
@@ -693,7 +704,11 @@ private fun AmudItem(
                                     links?.segmentOf(word)?.let(onContextLine)
                                 },
                                 onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
-                                onPress = onPress,
+                                // A press anywhere forgets the line of the last right-click: one off a word has none
+                                onPress = {
+                                    contextLine = null
+                                    onPress()
+                                },
                                 markUnsure = markUnsure,
                                 underlined = noted,
                                 underlineColor = JewelTheme.globalColors.text.info,
