@@ -3,7 +3,7 @@ name: Feedback service
 # Deploys Pardes's feedback service (feedback-service/README.md): the Cloudflare Worker that receives the feedback
 # packages users send from the app, with its D1 database. The first run makes the database; every run tests the Worker,
 # applies the database's new migrations, deploys, and sets the maintainer's token. Runs by hand (Actions › Feedback
-# service › Run workflow), and on master when feedback-service/ changes.
+# service › Run workflow), and on main when feedback-service/ changes.
 #
 # Secrets: CLOUDFLARE_API_TOKEN (an API token of the account, with Workers Scripts: Edit and D1: Edit),
 # CLOUDFLARE_ACCOUNT_ID, and FEEDBACK_ADMIN_TOKEN (a long random string, which semantic-model/feedback/fetch.py sends to
@@ -13,7 +13,7 @@ name: Feedback service
 on:
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - 'feedback-service/**'
       - '.github/workflows/feedback-service.yml'

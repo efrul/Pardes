@@ -48,7 +48,7 @@ Worker של Cloudflare עם מסד D1. הוא מקבל את חבילות המש�
    `PARDES_FEEDBACK_URL`, ומשם היא נכנסת לגרסאות של פרדס למחשב (`desktop-release.yml`). גרסה שנבנתה בלי הכתובת לא שואלת
    ולא שולחת, ורק שומרת משוב לקובץ.
 
-אחרי זה, כל שינוי ב־`feedback-service/` שנכנס ל־master מתפרסם לבד. שינוי במסד נכנס כ־migration חדש ב־`migrations/`.
+אחרי זה, כל שינוי ב־`feedback-service/` שנכנס ל־main מתפרסם לבד. שינוי במסד נכנס כ־migration חדש ב־`migrations/`.
 
 ## מקומית
 
