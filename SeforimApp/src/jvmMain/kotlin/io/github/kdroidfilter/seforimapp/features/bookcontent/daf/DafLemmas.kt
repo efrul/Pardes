@@ -161,8 +161,9 @@ private fun bestPlace(
                         }
                     }
                 }
-                // A word the lemma has not, inside the quote
-                if (i > 1 && score[i][j - 1] > none) offer(score[i][j - 1] + SKIP, start[i][j - 1])
+                // A word the lemma has not, inside the quote (after its first word: i > 1 forbade one between its
+                // first and second words)
+                if (i >= 1 && score[i][j - 1] > none) offer(score[i][j - 1] + SKIP, start[i][j - 1])
                 // An abbreviation printed for several of the lemma's words
                 if (word.isAbbreviation) {
                     for (k in 2..minOf(MAX_ABBREVIATED, i)) {

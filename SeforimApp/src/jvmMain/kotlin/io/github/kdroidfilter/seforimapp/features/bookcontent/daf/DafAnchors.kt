@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 import androidx.compose.ui.graphics.Color
 import io.github.kdroidfilter.seforimapp.core.annotations.UserHighlight
 import io.github.kdroidfilter.seforimapp.core.annotations.UserNote
+import io.github.kdroidfilter.seforimapp.core.presentation.text.findAllMatchesOriginal
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocatedRange
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocatedSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
@@ -190,6 +191,41 @@ internal fun highlightedWords(
     }
     return out
 }
+
+/**
+ * The words of the amud the find in page's [query] is on, its matches found in each library line's text ([texts], by
+ * id) as the text view finds them (without regard to diacritics, each line's in order), in [color]; the [current]
+ * match (its line and its rank in the line) in [currentColor]. Found by the anchors, the matches of the library's
+ * words are on the words printed for them (אמר רבי on א״ר).
+ */
+internal fun foundWords(
+    anchors: Map<DafWord, DafAnchor>,
+    texts: Map<Long, String>,
+    query: String,
+    current: Pair<Long, Int>?,
+    color: Color,
+    currentColor: Color,
+): Map<DafWord, Color> {
+    val byLine = anchors.entries.groupBy({ it.value.lineId }, { it.key to it.value })
+    val out = HashMap<DafWord, Color>()
+    for ((lineId, words) in byLine) {
+        val text = texts[lineId] ?: continue
+        findAllMatchesOriginal(text, query).forEachIndexed { rank, match ->
+            val shade = if (current?.first == lineId && current.second == rank) currentColor else color
+            for ((word, a) in words) {
+                if (a.start <= match.last && a.end > match.first && out[word] != currentColor) out[word] = shade
+            }
+        }
+    }
+    return out
+}
+
+/** The words of the amud's library lines [lineIds] (the smart find's lines, whole), in [color]. */
+internal fun wordsOfLines(
+    anchors: Map<DafWord, DafAnchor>,
+    lineIds: Set<Long>,
+    color: Color,
+): Map<DafWord, Color> = if (lineIds.isEmpty()) emptyMap() else anchors.filterValues { it.lineId in lineIds }.mapValues { color }
 
 /** The words of the amud a note of book [bookId] ([notes], NoteStore's) is on. */
 internal fun notedWords(

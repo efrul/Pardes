@@ -14,6 +14,8 @@ internal class DafAmudLinks(
     val bookOf: Map<Long, Long>,
     /** Where each printed word is in its library line (DafAnchors.kt), for the user's highlights and notes. */
     val anchors: Map<DafWord, DafAnchor> = emptyMap(),
+    /** Each library line's plain text with diacritics, the anchors' offsets', for the find in page's matches. */
+    val texts: Map<Long, String> = emptyMap(),
 ) {
     /** The comments on each Gemara line of the page, in the order they are printed. */
     val commentsOn: Map<Long, List<Long>>

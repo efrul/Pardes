@@ -83,7 +83,7 @@ class DafLayouts(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private var scannedAt = Long.MIN_VALUE
-    private var files: Map<String, File> = emptyMap()
+    private var files: Map<String, List<File>> = emptyMap()
     private val read =
         object : LinkedHashMap<File, Pair<Long, DafLayoutFile>>(KEPT + 1, LOAD_FACTOR, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<File, Pair<Long, DafLayoutFile>>?) = size > KEPT
@@ -94,15 +94,22 @@ class DafLayouts(
 
     /** Whether there is a layout for the tractate named [name], in English or in Hebrew. */
     @Synchronized
-    fun has(name: String): Boolean = fileFor(name) != null
+    fun has(name: String): Boolean = filesFor(name).isNotEmpty()
 
     /** The tractate named [name], in English or in Hebrew, or null when no file is for it or it cannot be read. */
     @Synchronized
     fun tractate(name: String): DafLayoutFile? {
-        val file = fileFor(name) ?: return null
-        val modified = file.lastModified()
-        read[file]?.takeIf { it.first == modified }?.let { return it.second }
-        return parse(file)?.also { read[file] = modified to it }
+        // The first of its files that can be read: a copy left half-written ("Berakhot (1).json") sorts before
+        // "Berakhot.json", and its header names the tractate too
+        for (file in filesFor(name)) {
+            val modified = file.lastModified()
+            read[file]?.takeIf { it.first == modified }?.let { return it.second }
+            parse(file)?.let { layout ->
+                read[file] = modified to layout
+                return layout
+            }
+        }
+        return null
     }
 
     /**
@@ -112,34 +119,35 @@ class DafLayouts(
     @Synchronized
     fun import(source: File): DafLayoutFile? {
         val layout = parse(source) ?: return null
-        // The tractate's former file, under another name, would be found before the new one
-        val former = fileFor(layout.tractate) ?: fileFor(layout.tractateHe)
+        // The tractate's former files, under other names, would be found before the new one
+        val former = filesFor(layout.tractate).ifEmpty { filesFor(layout.tractateHe) }
         dir.mkdirs()
         val target = File(dir, "${layout.tractate.replace(UNSAFE_NAME, "_")}.json").absoluteFile
         val part = File(dir, "${target.name}.part")
         source.copyTo(part, overwrite = true)
         Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        former?.absoluteFile?.takeIf { it != target }?.delete()
+        // Not the file just written, though its name differs: on a volume blind to case it may be the same file
+        for (file in former) if (file.exists() && !Files.isSameFile(file.toPath(), target.toPath())) file.delete()
         scannedAt = Long.MIN_VALUE
         return layout
     }
 
-    private fun fileFor(name: String): File? {
+    private fun filesFor(name: String): List<File> {
         val modified = dir.lastModified()
         if (modified != scannedAt) {
             scannedAt = modified
             files = scan()
         }
-        return files[key(name)]
+        return files[key(name)].orEmpty()
     }
 
     /** Every tractate's file, by its names: read from the head of each file, or the whole file when not there. */
-    private fun scan(): Map<String, File> {
-        val found = HashMap<String, File>()
+    private fun scan(): Map<String, List<File>> {
+        val found = HashMap<String, MutableList<File>>()
         val jsons = dir.listFiles { f -> f.isFile && f.extension == "json" }.orEmpty().sortedBy { it.name }
         for (file in jsons) {
             val names = headerNames(file) ?: parse(file)?.let { listOf(it.tractate, it.tractateHe) } ?: continue
-            for (name in names) found.putIfAbsent(key(name), file)
+            for (k in names.map { key(it) }.distinct()) found.getOrPut(k) { mutableListOf() }.add(file)
         }
         return found
     }

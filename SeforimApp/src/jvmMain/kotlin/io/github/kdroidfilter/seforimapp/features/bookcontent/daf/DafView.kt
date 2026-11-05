@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.foundation.text.TextContextMenu
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
@@ -75,6 +77,8 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.core.presentation.text.CurrentFindMatchColor
+import io.github.kdroidfilter.seforimapp.core.presentation.text.SearchHighlightColor
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
@@ -108,6 +112,7 @@ import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_amud_missing
 import seforimapp.seforimapp.generated.resources.daf_import
+import seforimapp.seforimapp.generated.resources.daf_import_failed
 import seforimapp.seforimapp.generated.resources.daf_import_not_layout
 import seforimapp.seforimapp.generated.resources.daf_import_other_tractate
 import seforimapp.seforimapp.generated.resources.daf_missing
@@ -257,6 +262,7 @@ fun DafView(
     onContextLine: (lineId: Long) -> Unit,
     modifier: Modifier = Modifier,
     onWordInText: (DafAnchor) -> Unit = {},
+    find: DafFind = DafFind.NONE,
 ) {
     val graph = LocalAppGraph.current
     // Next to the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another one
@@ -301,6 +307,7 @@ fun DafView(
                     onSelectPassage = onSelectPassage,
                     onContextLine = onContextLine,
                     onWordInText = onWordInText,
+                    find = find,
                 )
         }
     }
@@ -333,6 +340,7 @@ private fun DafPages(
     onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
     onContextLine: (Long) -> Unit,
     onWordInText: (DafAnchor) -> Unit,
+    find: DafFind,
 ) {
     val graph = LocalAppGraph.current
     val density = LocalDensity.current
@@ -406,7 +414,8 @@ private fun DafPages(
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when {
                     (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C -> {
-                        byName[name]?.let { copyToClipboard(it.textOf(range)) }
+                        // The amud as it is shown: the range is the shown amud's, with the review's moves made
+                        byName[name]?.let { a -> copyToClipboard((review?.let { a.withMarks(it.marks) } ?: a).textOf(range)) }
                         true
                     }
                     event.key == Key.Escape -> {
@@ -441,7 +450,16 @@ private fun DafPages(
             if (always || !shown) listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
         }
         control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
-        control.edge = { end -> listState.scrollToItem(if (end) (order.size - 1).coerceAtLeast(0) else 0) }
+        control.edge = { end ->
+            if (end) {
+                // The last amud's end, not its top: the list stops scrolling there (an amud is a few thousand
+                // pixels tall at most, far less than this)
+                listState.scrollToItem((order.size - 1).coerceAtLeast(0))
+                listState.scrollBy(1_000_000f)
+            } else {
+                listState.scrollToItem(0)
+            }
+        }
         control.toLine = { id -> reveal(id, always = false) }
 
         // The tab's line in view: once the places are known, then whenever it changes or the tab asks
@@ -530,6 +548,7 @@ private fun DafPages(
                                 onMark = onMark,
                                 onOpenReviews = onOpenReviews,
                                 onWordInText = onWordInText,
+                                find = find,
                                 modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
                             )
                         }
@@ -569,6 +588,7 @@ private fun AmudItem(
     onMark: (DafMark) -> Unit,
     onOpenReviews: () -> Unit,
     onWordInText: (DafAnchor) -> Unit,
+    find: DafFind,
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
@@ -608,13 +628,23 @@ private fun AmudItem(
         remember(links, highlightsByBook) { links?.let { highlightedWords(it.anchors, highlightsByBook, USER_HIGHLIGHT_ALPHA) }.orEmpty() }
     val noted =
         remember(links, notesByBook, book.id) { links?.let { notedWords(it.anchors, notesByBook[book.id].orEmpty(), book.id) }.orEmpty() }
+    // The find in page's matches, as the text view finds them in the library's lines, the current one strongest
+    val found =
+        remember(links, find) {
+            val l = links
+            when {
+                l == null -> emptyMap()
+                find.query != null -> foundWords(l.anchors, l.texts, find.query, find.current, SearchHighlightColor, CurrentFindMatchColor)
+                else -> wordsOfLines(l.anchors, find.lines, SearchHighlightColor)
+            }
+        }
     val highlight =
-        remember(links, marked, passage, color, reviewed, userColors) {
+        remember(links, marked, passage, color, reviewed, userColors, found) {
             val selected = dafHighlight(links, marked, passage, color)
-            if (reviewed.isEmpty() && userColors.isEmpty()) {
+            if (reviewed.isEmpty() && userColors.isEmpty() && found.isEmpty()) {
                 selected
             } else {
-                DafHighlight { word -> selected.colorOf(word) ?: userColors[word] ?: reviewed[word.line] }
+                DafHighlight { word -> found[word] ?: selected.colorOf(word) ?: userColors[word] ?: reviewed[word.line] }
             }
         }
     // The selection located in the library, for the text's menu: its highlights, its note and its link
@@ -675,7 +705,11 @@ private fun AmudItem(
                                     links?.segmentOf(word)?.let(onContextLine)
                                 },
                                 onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
-                                onPress = onPress,
+                                // A press anywhere forgets the line of the last right-click: one off a word has none
+                                onPress = {
+                                    contextLine = null
+                                    onPress()
+                                },
                                 markUnsure = markUnsure,
                                 underlined = noted,
                                 underlineColor = JewelTheme.globalColors.text.info,
@@ -913,8 +947,11 @@ private fun MissingLayout(
                         ?: return@launch
                 problem =
                     withContext(Dispatchers.IO) {
-                        val layout = runSuspendCatching { layouts.import(File(picked.path)) }.getOrNull()
+                        // A file that could not be read or copied is not "not a layout file": its error is said
+                        val imported = runSuspendCatching { layouts.import(File(picked.path)) }
+                        val layout = imported.getOrNull()
                         when {
+                            imported.isFailure -> ImportProblem.Failed(imported.exceptionOrNull()?.message.orEmpty())
                             layout == null -> ImportProblem.NotLayout
                             !layouts.has(book.title) -> ImportProblem.OtherTractate(layout.tractateHe)
                             else -> null
@@ -929,6 +966,8 @@ private fun MissingLayout(
             ImportProblem.NotLayout -> Text(stringResource(Res.string.daf_import_not_layout), color = JewelTheme.globalColors.text.error)
             is ImportProblem.OtherTractate ->
                 Text(stringResource(Res.string.daf_import_other_tractate, p.tractate), color = JewelTheme.globalColors.text.error)
+            is ImportProblem.Failed ->
+                Text(stringResource(Res.string.daf_import_failed, p.message), color = JewelTheme.globalColors.text.error)
             null -> Unit
         }
     }
@@ -939,6 +978,10 @@ private sealed interface ImportProblem {
 
     data class OtherTractate(
         val tractate: String,
+    ) : ImportProblem
+
+    data class Failed(
+        val message: String,
     ) : ImportProblem
 }
 
@@ -974,7 +1017,22 @@ private suspend fun loadLinks(
                 line.id to
                     LibraryLine(line.bookId, line.lineIndex, buildAnnotatedFromHtml(line.content, baseTextSize = 16f, boldScale = 1f).text)
             }
-        DafAmudLinks(amud, bases, books, anchorsOf(amud, texts))
+        DafAmudLinks(amud, bases, books, anchorsOf(amud, texts), texts.mapValues { it.value.text })
+    }
+}
+
+/**
+ * The find in page's state on the daf: the literal [query] (null with none, or in the smart mode), its [current]
+ * match (its library line and its rank in the line), and the smart mode's [lines], whole.
+ */
+@Immutable
+data class DafFind(
+    val query: String?,
+    val current: Pair<Long, Int>?,
+    val lines: Set<Long>,
+) {
+    companion object {
+        val NONE = DafFind(null, null, emptySet())
     }
 }
 
