@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds harness/*.kt (and eval-100/harness/Eval.kt) with a standalone Kotlin compiler, outside Gradle: SeforimLibrary's
-# search sources, the app's semantic package, LongQuerySearchEngine and CoroutineUtils, eval-100's LoggerStub, and a
+# search sources, the app's semantic package, LongQuerySearchEngine, PardesLexicon and CoroutineUtils, eval-100's LoggerStub, and a
 # copy of LuceneSearchEngine.kt changed by harness/bm25-knob.patch (for Bm25.kt; the other programs never set the knob,
 # so they search as the app does).
 #
@@ -65,7 +65,7 @@ fetch org.jetbrains.kotlinx kotlinx-coroutines-core-jvm 1.8.0 "$out/kotlinc"
 app="$repo/SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp"
 cp "$repo"/SeforimLibrary/search/src/jvmMain/kotlin/io/github/kdroidfilter/seforimlibrary/search/*.kt "$out/src/"
 cp "$app"/features/search/semantic/*.kt "$out/src/"
-cp "$app/framework/search/LongQuerySearchEngine.kt" "$app/core/coroutines/CoroutineUtils.kt" "$out/src/"
+cp "$app/framework/search/LongQuerySearchEngine.kt" "$app/framework/search/PardesLexicon.kt" "$app/core/coroutines/CoroutineUtils.kt" "$out/src/"
 cp "$repo/semantic-model/eval-100/harness/LoggerStub.kt" "$repo/semantic-model/eval-100/harness/Eval.kt" "$out/src/"
 cp "$here"/harness/*.kt "$out/src/"
 # The checkout may have CRLF line endings, the patch has LF

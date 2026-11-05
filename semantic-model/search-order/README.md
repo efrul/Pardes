@@ -15,6 +15,8 @@
 | [`harness/Trace.kt`](harness/Trace.kt) | איפה שורות מסוימות עומדות בחיפוש אחד: ברגיל, בסמנטי וברשימה |
 | [`harness/Terms.kt`](harness/Terms.kt) | הצורות של מילה במילון, ו־32 שהחיפוש הרגיל שומר מהן |
 | [`harness/Embed.kt`](harness/Embed.kt) | הדמיון של שאילתה לטקסטים, כמו שהאפליקציה מטמיעה אותם |
+| [`harness/Scope.kt`](harness/Scope.kt) | חיפושים בהיקפים של האפליקציה (ספרי יסוד, כל הספרים, קטגוריה מהשורה, לשונית של קטגוריה): המספר שמוצג, אורך הרשימה עד סופה, ממה העמוד הראשון בנוי והזמן של כל צד |
+| [`harness/Knn.kt`](harness/Knn.kt) | החיפוש לפי משמעות עם מסנן של קטגוריה, בכל שדה: בלי מסנן, החיפוש המסונן של Lucene, ובדיקה של כל השורות (הזמן, וכמה מ־150 הקרובות באמת נמצאו) |
 | [`build.sh`](build.sh) | בונה את כל אלה (וגם את [`Eval.kt`](../eval-100/harness/Eval.kt)) בלי Gradle |
 | [`history.py`](history.py) | מוציא את החיפושים מ־`user_settings.db` של זית ושל פרדס ל־`history.tsv` |
 | [`analyze.py`](analyze.py) | ממה בנויה הרשימה בכל היקף, ודוח של כל חיפוש (`--report`) |
@@ -55,6 +57,11 @@ JAVA=<JDK 21>/bin/java bash build.sh <תיקייה>
 `1.2,0.75,1;1.2,0.75,0;0.6,0.75,1;2.0,0.75,1;1.2,0,1;1.2,0.4,1;1.2,1.0,1;0.6,0.4,1;0.6,1.0,1;2.0,0.4,1;2.0,1.0,1;0.6,0,1;2.0,0,1;1.2,0.75,1,1;1.2,1.0,1,1;1.2,0.75,1,1,1`.
 1. `"$JAVA" -cp "$CP" Bm25Kt seforim.db real.jsonl "<הגדרות>" bm25_real.jsonl > /dev/null`, וכך על `e100.jsonl`.
 2. `python bm25score.py real.jsonl e100.jsonl bm25_real.jsonl bm25_e100.jsonl seforim.db`.
+
+**היקפים וקטגוריות** (בעיה 11, ו־`IndependentSemanticSearch.searchField`): השאילתות בקובץ, שורה לכל אחת (Java בקונטיינר קורא עברית בארגומנטים כ־`?`).
+- `"$JAVA" -cp "$CP" ScopeKt seforim.db queries.txt base,all,cat:13,tab:13 out.tsv 2500`: היקף `cat:<קטגוריה>` הוא קטגוריה שנבחרה בשורה (כל הספרים שבה),
+  ו־`tab:<קטגוריה>` הוא הלשונית שלה מעל התוצאות (ספרי היסוד שבה). המספר האחרון הוא כמה תוצאות לטעון לכל היותר.
+- `"$JAVA" -cp "$CP" KnnKt seforim.db queries.txt 432,63,1,44,13`: הקטגוריות לפי המזהה שלהן ב־`category`. עם `--add-modules jdk.incubator.vector` Lucene משתמש ב־SIMD.
 
 **שורה אחת** (בעיות 2 עד 4):
 - `"$JAVA" -cp "$CP" TraceKt seforim.db <lineIds> queries.txt`, שורה לכל חיפוש: `base:<שאילתה>` או `all:<שאילתה>`.
