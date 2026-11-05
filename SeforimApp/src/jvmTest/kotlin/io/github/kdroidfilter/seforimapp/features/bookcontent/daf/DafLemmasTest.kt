@@ -42,6 +42,13 @@ class DafLemmasTest {
     }
 
     @Test
+    fun aPrintWordBetweenTheLemmasFirstAndSecondWords() {
+        // Kiddushin 2a: a lemma that leaves out the Gemara's second word
+        val gemara = words("האשה נקנית בשלש דרכים וקונה את עצמה בשתי דרכים")
+        assertEquals(0..3, matchLemmas(gemara, listOf(words("האשה בשלש דרכים.")))[0])
+    }
+
+    @Test
     fun anEllipsisSpansFromTheFirstWordsToTheLast() {
         assertEquals(0..3, matchLemmas(segment, listOf(words("הקטר חלבים וכו' מצותן")))[0])
     }
