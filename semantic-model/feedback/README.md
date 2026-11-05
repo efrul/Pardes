@@ -47,16 +47,37 @@
 לא מתקדם. החבילה הבאה מחזיקה רק מה שחדש יותר, ו"הכל מההתחלה" שולח שוב את הכל. ציון שניתן שוב נשלח שוב, והאיסוף שומר את
 החדש. ציון שבוטל אחרי שנשלח נשאר אצל האוסף, כי החבילה נושאת רק מה שחדש.
 
-**השליחה עצמה:** בינתיים שומרים לקובץ ושולחים אותו. כשייבחר שירות שמקבל את החבילות, הכפתור ישלח את אותו JSON.
+**לאן:** לשירות המשוב, [`feedback-service/`](../../feedback-service/README.md): Worker של Cloudflare עם D1, בכתובת שהגרסה
+נבנתה איתה (`PARDES_FEEDBACK_URL`). חבילה גדולה מ־900,000 בתים נשלחת בחלקים. גרסה שנבנתה בלי הכתובת רק שומרת לקובץ.
 
-הקוד: `features/settings/feedback/` (`FeedbackPackage.kt`, ‏`FeedbackSendViewModel.kt`, ‏`FeedbackSendCard.kt`).
+**השאלה בהפעלה, והשליחה האוטומטית:** בגרסה שיש בה שירות, בהפעלה הראשונה נפתחת שאלה אם לשלוח משוב ואילו סוגים. היא נפתחת
+אחרי חלון העדכון ואחרי ההגדרות, אם נפתחו בהפעלה. אחרי אישור, מה שחדש נשלח לבד בכל הפעלה ובכל חיבור לרשת. בלי רשת הוא נשלח
+בחיבור הבא, או שוב אחרי רבע שעה. סגירה בלי תשובה שואלת שוב בהפעלה הבאה, ו"לא, תודה" לא שואלת שוב. בכרטיס אפשר:
+- לשנות את הסוגים (הם משותפים לשליחה האוטומטית);
+- לעצור את השליחה האוטומטית או להדליק אותה;
+- לשלוח עכשיו;
+- לשמור לקובץ;
+- למחוק מהשרת את מה שנשלח.
+
+הקוד: `features/settings/feedback/`:
+- `FeedbackPackage.kt`: החבילה והחלקים;
+- `FeedbackSender.kt`: הקריאה, השליחה והשמירה;
+- `FeedbackService.kt`: הלקוח של השירות;
+- `FeedbackAutoSender.kt`: השאלה, והשליחה בהפעלה ובחיבור לרשת;
+- `FeedbackConsentDialog.kt`: חלון השאלה;
+- `FeedbackSendViewModel.kt` ו־`FeedbackSendCard.kt`: הכרטיס.
 
 ## האיסוף: [`collect.py`](collect.py)
 
 ```
+PARDES_FEEDBACK_ADMIN_TOKEN=... python feedback/fetch.py --url https://pardes-feedback.<...>.workers.dev --inbox build/feedback/inbox
+python feedback/collect.py --packages build/feedback/inbox --db build/library/seforim.db --out build/feedback
 python feedback/collect.py --settings user_settings.db --db build/library/seforim.db --out build/feedback
-python feedback/collect.py --packages inbox/ --db build/library/seforim.db --out build/feedback
 ```
+
+[`fetch.py`](fetch.py) מוריד מהשירות את החבילות שהגיעו מאז ההורדה הקודמת (`index.json` שבתיקייה זוכר עד איפה), כל אחת
+כמו שהגיעה. הטוקן הוא `FEEDBACK_ADMIN_TOKEN` של השירות, והוא נקרא רק מהסביבה, לא משורת הפקודה. שולח שביקש למחוק את מה
+ששלח: גם העותקים שלו בתיקייה נמחקים.
 
 הציונים באים מ־`user_settings.db` של משתמש (`--settings`), מהחבילות שמשתמשים שלחו (`--packages`: קבצים, או תיקיות של
 `pardes-feedback-*.json`), או משניהם. לכל שולח החיפושים שלו, ושורה שקיבלה ציון שוב שומרת את החדש. חבילה פגומה, או שאינה

@@ -144,6 +144,42 @@ class FeedbackPackageTest {
     }
 
     @Test
+    fun `a big package goes in parts under the limit, every row in one of them, in order`() {
+        val grades = (1..400).map { GradeRow("שאילתה $it", "search::שאילתה $it", it.toLong(), 7, 2, 0, gradedAt = it.toLong()) }
+        val searches = (1..300).map { SearchRow("חיפוש $it", lastAt = it.toLong()) }
+        val marks = (1..500).map { mark(it, "2026-11-01T09:00:00Z") }
+        val reviews =
+            listOf(
+                DafReviewFile(tractate = "Berakhot", tractateHe = "ברכות", library = "v1", marks = marks.take(300)),
+                DafReviewFile(tractate = "Shabbat", tractateHe = "שבת", library = "v1", marks = marks.drop(300)),
+            )
+        val made =
+            FeedbackPackage(
+                sender = "sender-1",
+                sentAt = "2026-11-05T12:00:00Z",
+                grades = grades,
+                searches = searches,
+                daf = reviews,
+            )
+        val limit = 20_000
+        val parts = made.parts(limit)
+        assertTrue(parts.size > 3)
+        for (part in parts) {
+            assertTrue(part.toJson().toByteArray().size <= limit)
+            assertEquals("sender-1", part.sender)
+            assertEquals(made.sentAt, part.sentAt)
+        }
+        assertEquals(grades, parts.flatMap { it.grades })
+        assertEquals(searches, parts.flatMap { it.searches })
+        assertEquals(marks, parts.flatMap { it.daf }.flatMap { it.marks })
+        // A tractate's review over the parts its marks need, each with its names
+        val berakhot = parts.flatMap { it.daf }.filter { it.tractate == "Berakhot" }
+        assertTrue(berakhot.size > 1 && berakhot.all { it.tractateHe == "ברכות" && it.library == "v1" })
+        // Small enough: itself
+        assertEquals(listOf(made), made.parts())
+    }
+
+    @Test
     fun `the package says what it is, and a grade says its search, its line, its place and its model`() {
         grade("שנים אוחזין", 11, 0, at = 200)
         val made = feedbackPackage(source.read(FeedbackSent()), FeedbackChoice(), "sender-1", "1.0.7", "v1")

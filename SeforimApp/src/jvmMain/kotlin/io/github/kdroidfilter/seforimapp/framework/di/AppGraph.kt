@@ -76,4 +76,7 @@ abstract class AppGraph : ViewModelGraph {
     abstract val appUpdateService: AppUpdateService
     abstract val crashReporting: CrashReporting
     abstract val toolWindows: ToolWindows
+
+    /** The question at start whether to send feedback, and the sending by itself (FeedbackConsentDialog). */
+    abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender
 }

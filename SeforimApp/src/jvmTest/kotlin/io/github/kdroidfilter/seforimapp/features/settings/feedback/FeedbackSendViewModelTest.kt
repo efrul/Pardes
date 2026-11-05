@@ -1,7 +1,5 @@
 package io.github.kdroidfilter.seforimapp.features.settings.feedback
 
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.testAppSettings
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -14,36 +12,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-/** Saving the feedback: the package in a file, and the next one holding only what is newer. */
+/** Sending and saving the feedback: the package sent or in a file, and the next one holding only what is newer. */
 class FeedbackSendViewModelTest {
-    private val database = UserSettingsDb(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create))
+    private val database = feedbackDatabase()
     private val settings =
         testAppSettings().apply { setDatabasePath(File(createTempDirectory("feedback-library").toFile(), "seforim.db").path) }
     private val folder = createTempDirectory("feedback-out").toFile()
+    private val service = ServiceDouble()
 
-    private fun grade(
-        query: String,
-        lineId: Long,
-        at: Long,
-    ) = database.searchFeedbackQueries.upsertGrade(
-        "search::$query",
-        query,
-        lineId,
-        7,
-        2,
-        0,
-        null,
-        null,
-        null,
-        false,
-        null,
-        at,
-    )
-
-    private fun search(
-        query: String,
-        at: Long,
-    ) = database.visitHistoryQueries.upsertVisit("search:$query", "search", null, query, query, at, null, null, null, null, null, false)
+    private fun viewModel(double: ServiceDouble = ServiceDouble(url = null)): FeedbackSendViewModel {
+        val sender = FeedbackSender(settings, database, double.service)
+        return FeedbackSendViewModel(settings, sender, FeedbackAutoSender(settings, sender))
+    }
 
     private suspend fun FeedbackSendViewModel.read(): FeedbackContents {
         withTimeout(10_000) { refresh().join() }
@@ -58,10 +38,10 @@ class FeedbackSendViewModelTest {
     @Test
     fun `a package holds what the user kept, and the next one only what came after it`() =
         runBlocking {
-            grade("שנים אוחזין", 10, at = 100)
-            grade("מה שלא נשלח", 11, at = 200)
-            search("שנים אוחזין", at = 150)
-            val viewModel = FeedbackSendViewModel(settings, database)
+            database.grade("שנים אוחזין", 10, at = 100)
+            database.grade("מה שלא נשלח", 11, at = 200)
+            database.search("שנים אוחזין", at = 150)
+            val viewModel = viewModel()
             assertEquals(2, viewModel.read().grades.size)
 
             viewModel.setQuery("מה שלא נשלח", kept = false)
@@ -75,11 +55,11 @@ class FeedbackSendViewModelTest {
             assertEquals(settings.getFeedbackSender(), made.sender)
 
             // The grades are sent up to the newest read, the one left out too; the searches, off, are not
-            assertEquals(200, settings.getFeedbackSentAt(FeedbackSendViewModel.GRADES))
-            assertEquals(0, settings.getFeedbackSentAt(FeedbackSendViewModel.SEARCHES))
-            assertTrue(settings.getFeedbackSentAt(FeedbackSendViewModel.LAST) > 0)
+            assertEquals(200, settings.getFeedbackSentAt(FeedbackSender.GRADES))
+            assertEquals(0, settings.getFeedbackSentAt(FeedbackSender.SEARCHES))
+            assertTrue(settings.getFeedbackSentAt(FeedbackSender.LAST) > 0)
 
-            grade("מאימתי", 12, at = 300)
+            database.grade("מאימתי", 12, at = 300)
             val next = viewModel.read()
             assertEquals(listOf("מאימתי"), next.grades.map { it.query })
             assertEquals(listOf("שנים אוחזין"), next.searches.map { it.query })
@@ -90,10 +70,51 @@ class FeedbackSendViewModelTest {
         }
 
     @Test
+    fun `sent to the service in the kinds the user keeps, which the automatic sending keeps too`() =
+        runBlocking {
+            database.grade("שנים אוחזין", 10, at = 100)
+            database.search("שנים אוחזין", at = 150)
+            val viewModel = viewModel(service)
+            assertTrue(viewModel.state.value.online)
+            viewModel.read()
+            viewModel.setSearches(true)
+            assertTrue(settings.isFeedbackKindSent(FeedbackSender.SEARCHES, false))
+
+            viewModel.send()
+            eventually { viewModel.state.value.work is FeedbackSendViewModel.Work.Sent }
+            val sent = service.received.single()
+            assertEquals(listOf("שנים אוחזין"), sent.grades.map { it.query })
+            assertEquals(listOf("שנים אוחזין"), sent.searches.map { it.query })
+            assertEquals(150, settings.getFeedbackSentAt(FeedbackSender.SEARCHES))
+            eventually {
+                viewModel.state.value.contents
+                    ?.isEmpty == true
+            }
+
+            // And deleted
+            viewModel.deleteSent()
+            eventually { viewModel.state.value.work == FeedbackSendViewModel.Work.Deleted(1) }
+            assertEquals(listOf(settings.getFeedbackSender()), service.deleted.toList())
+        }
+
+    @Test
+    fun `without a network nothing is marked sent, and the card says why`() =
+        runBlocking {
+            database.grade("שנים אוחזין", 10, at = 100)
+            service.offline = true
+            val viewModel = viewModel(service)
+            viewModel.read()
+            viewModel.send()
+            eventually { viewModel.state.value.work is FeedbackSendViewModel.Work.Failed }
+            assertTrue((viewModel.state.value.work as FeedbackSendViewModel.Work.Failed).problem is java.io.IOException)
+            assertEquals(0, settings.getFeedbackSentAt(FeedbackSender.GRADES))
+        }
+
+    @Test
     fun `nothing kept, nothing saved`() =
         runBlocking {
-            search("שנים אוחזין", at = 150)
-            val viewModel = FeedbackSendViewModel(settings, database)
+            database.search("שנים אוחזין", at = 150)
+            val viewModel = viewModel()
             // Only searches, and they are off at first
             assertEquals(1, viewModel.read().searches.size)
             viewModel.saveTo(folder)
@@ -105,7 +126,7 @@ class FeedbackSendViewModelTest {
     fun `the sender's id stays until it is renewed`() {
         val first = settings.getFeedbackSender()
         assertEquals(first, settings.getFeedbackSender())
-        val viewModel = FeedbackSendViewModel(settings, database)
+        val viewModel = viewModel()
         viewModel.renewSender()
         assertNotEquals(first, settings.getFeedbackSender())
         assertEquals(settings.getFeedbackSender(), viewModel.state.value.sender)

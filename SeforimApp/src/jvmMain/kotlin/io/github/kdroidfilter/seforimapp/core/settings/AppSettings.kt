@@ -427,7 +427,33 @@ class AppSettings(
         return sender
     }
 
-    // Up to when a kind of feedback (FeedbackSendViewModel's kinds) went in a package, epoch millis, 0 for never
+    // Whether the user answered the question to send feedback by itself (FeedbackAutoSender), and agreed to
+    fun isFeedbackAsked(): Boolean = settings[KEY_FEEDBACK_ASKED, false]
+
+    fun setFeedbackAsked(asked: Boolean) {
+        settings[KEY_FEEDBACK_ASKED] = asked
+    }
+
+    fun isFeedbackAutoSend(): Boolean = settings[KEY_FEEDBACK_AUTO_SEND, false]
+
+    fun setFeedbackAutoSend(enabled: Boolean) {
+        settings[KEY_FEEDBACK_AUTO_SEND] = enabled
+    }
+
+    // Whether a kind of feedback (FeedbackSender's kinds) is sent, [default] until the user says
+    fun isFeedbackKindSent(
+        kind: String,
+        default: Boolean,
+    ): Boolean = settings[KEY_FEEDBACK_KIND_PREFIX + kind, default]
+
+    fun setFeedbackKindSent(
+        kind: String,
+        sent: Boolean,
+    ) {
+        settings[KEY_FEEDBACK_KIND_PREFIX + kind] = sent
+    }
+
+    // Up to when a kind of feedback (FeedbackSender's kinds) went in a package, epoch millis, 0 for never
     fun getFeedbackSentAt(kind: String): Long = settings[KEY_FEEDBACK_SENT_PREFIX + kind, 0L]
 
     fun setFeedbackSentAt(
@@ -887,6 +913,9 @@ class AppSettings(
         private const val KEY_SEARCH_FEEDBACK = "search_feedback"
         private const val KEY_FEEDBACK_SENDER = "feedback_sender"
         private const val KEY_FEEDBACK_SENT_PREFIX = "feedback_sent_"
+        private const val KEY_FEEDBACK_ASKED = "feedback_asked"
+        private const val KEY_FEEDBACK_AUTO_SEND = "feedback_auto_send"
+        private const val KEY_FEEDBACK_KIND_PREFIX = "feedback_kind_"
         private const val KEY_PERSIST_SESSION = "persist_session"
         private const val KEY_KEEP_SCREEN_AWAKE_ON_BOOK = "keep_screen_awake_on_book"
         private const val KEY_ERROR_REPORTING = "error_reporting"
