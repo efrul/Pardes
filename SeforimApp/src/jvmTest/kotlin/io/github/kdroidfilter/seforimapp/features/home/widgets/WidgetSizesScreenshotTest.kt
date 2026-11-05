@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.LayoutDirection
@@ -125,6 +126,11 @@ class WidgetSizesScreenshotTest {
                 }
             }
             waitForIdle()
+            // A card read or computed off the UI thread (the lists' stores, the day's limudim) shows its loading card
+            // until its content comes, sooner or later than a pause: waited for
+            waitUntil("${widget.id} ${w}x$h loaded", OFF_MAIN_TIMEOUT_MS) {
+                onAllNodesWithTag(WIDGET_LOADING_TAG).fetchSemanticsNodes().isEmpty()
+            }
             // ponytail: the lists read their stores on Dispatchers.IO, which waitForIdle doesn't wait for; a pause
             // lets them land. A wait on the store's result if it ever proves too short
             Thread.sleep(STORE_READ_MS)
@@ -183,6 +189,7 @@ class WidgetSizesScreenshotTest {
         // a month of six weeks and a Rosh Chodesh
         val SHOWN_DATE: LocalDate = LocalDate.of(2026, 10, 11)
         const val STORE_READ_MS = 150L
+        const val OFF_MAIN_TIMEOUT_MS = 10_000L
 
         // As long as real entries: a book, its part and its chapter
         val TITLES =

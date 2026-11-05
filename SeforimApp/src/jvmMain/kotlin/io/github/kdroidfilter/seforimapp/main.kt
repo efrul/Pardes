@@ -55,6 +55,7 @@ import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSe
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackConsentDialog
 import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
 import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackPrompt
 import io.github.kdroidfilter.seforimapp.features.siddur.installedSiddur
@@ -83,6 +84,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -381,7 +383,9 @@ fun main(args: Array<String>) {
                             if (!E2e.enabled) warmSearch(appGraph)
                         }
 
-                        // A library whose semantic search has no pack opens the settings on it (SemanticPackPrompt)
+                        // A library whose semantic search has no pack opens the settings on it (SemanticPackPrompt). Then,
+                        // once that and an update dialog are closed, the question whether to send feedback, if not
+                        // answered yet, and the feedback sent by itself while the user agrees (FeedbackAutoSender)
                         LaunchedEffect(Unit) {
                             if (!E2e.enabled) {
                                 SemanticPackPrompt.openAtStart(
@@ -390,6 +394,12 @@ fun main(args: Array<String>) {
                                     desktopManager,
                                     appGraph.appUpdateService.dialogVisible,
                                 ) { settingsWindowViewModel.onEvent(SettingsWindowEvents.OnOpenTo(SettingsDestination.Data)) }
+                                appGraph.feedbackAutoSender.run {
+                                    snapshotFlow { sessionRestored }.first { it }
+                                    desktopManager.windows.first { it.isNotEmpty() }
+                                    appGraph.appUpdateService.dialogVisible.first { !it }
+                                    settingsWindowViewModel.state.first { !it.isVisible }
+                                }
                             }
                         }
 
@@ -442,6 +452,8 @@ fun main(args: Array<String>) {
                                 onClose = { appGraph.appUpdateService.closeDialog() },
                             )
                         }
+                        val feedbackAskVisible by appGraph.feedbackAutoSender.askVisible.collectAsState()
+                        if (feedbackAskVisible) FeedbackConsentDialog(appGraph.feedbackAutoSender)
 
                         ToolWindowsHost()
 

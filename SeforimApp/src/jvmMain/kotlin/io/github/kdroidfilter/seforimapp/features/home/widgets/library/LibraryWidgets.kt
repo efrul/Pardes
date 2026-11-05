@@ -47,6 +47,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidget
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HoverBox
 import io.github.kdroidfilter.seforimapp.features.home.widgets.PanelCard
+import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetCardLoading
 import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetTitle
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -98,7 +99,9 @@ internal object HistoryWidget : HomeWidget {
     ) {
         val store = LocalAppGraph.current.historyStore
         val revision by store.revision.collectAsState()
-        val entries by produceState(emptyList<VisitEntry>(), revision) { value = store.query("", LIST_LIMIT) }
+        // null until read: loading, not "empty", meanwhile (a write reads it again, the former list shown until then)
+        val read by produceState<List<VisitEntry>?>(null, revision) { value = store.query("", LIST_LIMIT) }
+        val entries = read ?: return WidgetCardLoading(modifier)
         val yesterday = stringResource(Res.string.history_yesterday)
         ListCard(
             title = stringResource(Res.string.home_widget_name_history),
@@ -134,10 +137,14 @@ internal object FavoritesWidget : HomeWidget {
     ) {
         val store = LocalAppGraph.current.favoritesStore
         val revision by store.revision.collectAsState()
-        val entries by produceState(emptyList<FavoriteEntry>(), revision) { value = store.query() }
-        val folders by produceState(emptyList<FavoriteFolder>(), revision) { value = store.folders() }
+        // null until read, as the history's
+        val readEntries by produceState<List<FavoriteEntry>?>(null, revision) { value = store.query() }
+        val readFolders by produceState<List<FavoriteFolder>?>(null, revision) { value = store.folders() }
         // null: every favorite
         var folder by remember { mutableStateOf<Long?>(null) }
+        val entries = readEntries
+        val folders = readFolders
+        if (entries == null || folders == null) return WidgetCardLoading(modifier)
         val shown = entries.filter { folder == null || it.folderId == folder }
         val accent = rememberAccentColor(JewelTheme.isDark)
         ListCard(
@@ -213,7 +220,8 @@ internal object NotesWidget : HomeWidget {
         val graph = LocalAppGraph.current
         // Its per-book cache changes on every write: the cue to read the latest again
         val written by graph.noteStore.notesByBook.collectAsState()
-        val notes by produceState(emptyList<Pair<BookNote, String>>(), written) {
+        // null until read, as the history's
+        val read by produceState<List<Pair<BookNote, String>>?>(null, written) {
             // One hop off the UI thread for the notes and all their books, not one per book
             value =
                 withContext(Dispatchers.IO) {
@@ -227,6 +235,7 @@ internal object NotesWidget : HomeWidget {
                 }
         }
         val accent = rememberAccentColor(JewelTheme.isDark)
+        val notes = read ?: return WidgetCardLoading(modifier)
         ListCard(
             title = stringResource(Res.string.home_widget_name_notes),
             onShowAll = { state.openTab(TabsDestination.Notes(UUID.randomUUID().toString())) },

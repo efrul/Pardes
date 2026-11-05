@@ -1,0 +1,54 @@
+-- Pardes: the user's grades of search results, given in feedback mode (Settings), to train and measure the semantic
+-- search with (semantic-model/feedback/). One row per (search, line), the search keyed as visit_history keys it (query,
+-- scope and extension, HistoryStore.searchKey). The grade is on the evaluations' scale: 3 exactly what was looked for
+-- (the source), 2 answers it, 0 not relevant; clicking the given grade again removes the row.
+CREATE TABLE IF NOT EXISTS search_feedback (
+    searchKey TEXT NOT NULL,
+    query TEXT NOT NULL,
+    lineId INTEGER NOT NULL,
+    bookId INTEGER NOT NULL,
+    grade INTEGER NOT NULL,
+    -- The result's place among the search's results, from 0, in the order the engine gave them
+    rank INTEGER NOT NULL,
+    searchCategoryId INTEGER,
+    searchBookId INTEGER,
+    searchTocId INTEGER,
+    searchExtended INTEGER AS kotlin.Boolean NOT NULL DEFAULT 0,
+    -- The semantic model in use (pardes-model.json's id), null when the search ran without one
+    model TEXT,
+    gradedAt INTEGER NOT NULL,
+    PRIMARY KEY (searchKey, lineId)
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_feedback_time ON search_feedback(gradedAt);
+
+upsertGrade:
+INSERT INTO search_feedback(searchKey, query, lineId, bookId, grade, rank, searchCategoryId, searchBookId, searchTocId,
+    searchExtended, model, gradedAt)
+VALUES (:searchKey, :query, :lineId, :bookId, :grade, :rank, :searchCategoryId, :searchBookId, :searchTocId,
+    :searchExtended, :model, :gradedAt)
+ON CONFLICT(searchKey, lineId) DO UPDATE SET
+    grade = excluded.grade,
+    rank = excluded.rank,
+    model = excluded.model,
+    gradedAt = excluded.gradedAt;
+
+deleteGrade:
+DELETE FROM search_feedback WHERE searchKey = :searchKey AND lineId = :lineId;
+
+gradesForSearch:
+SELECT lineId, grade FROM search_feedback WHERE searchKey = :searchKey;
+
+countGrades:
+SELECT COUNT(*) FROM search_feedback;
+
+deleteAll:
+DELETE FROM search_feedback;
+
+-- For sending feedback (Settings › ניהול נתונים): the grades given, and the searches made, since a time
+gradesSince:
+SELECT * FROM search_feedback WHERE gradedAt > :since ORDER BY gradedAt;
+
+searchesSince:
+SELECT searchQuery, searchCategoryId, searchBookId, searchTocId, searchExtended, visitCount, visitedAt FROM visit_history
+WHERE kind = 'search' AND searchQuery IS NOT NULL AND visitedAt > :since ORDER BY visitedAt;

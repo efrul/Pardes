@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.annotations.NoteStore
 import io.github.kdroidfilter.seforimapp.core.catalog.CatalogAccess
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
 import io.github.kdroidfilter.seforimapp.core.favorites.FavoritesStore
+import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedbackStore
 import io.github.kdroidfilter.seforimapp.core.history.HistoryStore
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.selection.DefaultSelectionContext
@@ -31,6 +32,7 @@ import io.github.kdroidfilter.seforimapp.core.shnayimmikra.ShnayimMikraStore
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeViewModel
 import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
+import io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackService
 import io.github.kdroidfilter.seforimapp.framework.backup.UserDataBackup
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
@@ -160,6 +162,15 @@ object AppCoreBindings {
     @Provides
     @SingleIn(AppScope::class)
     fun provideHistoryStore(database: UserSettingsDb): HistoryStore = HistoryStore(database)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSearchFeedbackStore(database: UserSettingsDb): SearchFeedbackStore = SearchFeedbackStore(database)
+
+    /** Pardes's feedback service, at the build's FEEDBACK_URL (none without it: feedback is then only saved to files). */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideFeedbackService(client: HttpClient): FeedbackService = FeedbackService(client, BuildConfig.FEEDBACK_URL)
 
     @Provides
     @SingleIn(AppScope::class)

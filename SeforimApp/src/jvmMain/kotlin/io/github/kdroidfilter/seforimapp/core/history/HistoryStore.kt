@@ -160,7 +160,7 @@ class HistoryStore(
             searchGlobalExtended = searchExtended,
         )
 
-    private fun searchKey(
+    internal fun searchKey(
         query: String,
         scope: SearchScope,
         globalExtended: Boolean,
