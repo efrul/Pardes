@@ -44,3 +44,11 @@ SELECT COUNT(*) FROM search_feedback;
 
 deleteAll:
 DELETE FROM search_feedback;
+
+-- For sending feedback (Settings › ניהול נתונים): the grades given, and the searches made, since a time
+gradesSince:
+SELECT * FROM search_feedback WHERE gradedAt > :since ORDER BY gradedAt;
+
+searchesSince:
+SELECT searchQuery, searchCategoryId, searchBookId, searchTocId, searchExtended, visitCount, visitedAt FROM visit_history
+WHERE kind = 'search' AND searchQuery IS NOT NULL AND visitedAt > :since ORDER BY visitedAt;

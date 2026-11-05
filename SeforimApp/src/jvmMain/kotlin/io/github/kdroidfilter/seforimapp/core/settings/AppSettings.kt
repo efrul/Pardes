@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.prefs.Preferences
 
@@ -415,6 +416,25 @@ class AppSettings(
     fun setSearchFeedbackEnabled(enabled: Boolean) {
         settings[KEY_SEARCH_FEEDBACK] = enabled
         _searchFeedbackFlow.value = enabled
+    }
+
+    // Pardes: sending feedback (FeedbackSendCard). The sender's id, random, made at first use and renewed on request.
+    fun getFeedbackSender(): String = settings.getStringOrNull(KEY_FEEDBACK_SENDER)?.takeIf { it.isNotBlank() } ?: renewFeedbackSender()
+
+    fun renewFeedbackSender(): String {
+        val sender = UUID.randomUUID().toString()
+        settings[KEY_FEEDBACK_SENDER] = sender
+        return sender
+    }
+
+    // Up to when a kind of feedback (FeedbackSendViewModel's kinds) went in a package, epoch millis, 0 for never
+    fun getFeedbackSentAt(kind: String): Long = settings[KEY_FEEDBACK_SENT_PREFIX + kind, 0L]
+
+    fun setFeedbackSentAt(
+        kind: String,
+        at: Long,
+    ) {
+        settings[KEY_FEEDBACK_SENT_PREFIX + kind] = at
     }
 
     /** Writes the settings to disk now (Java preferences do it within 30 s otherwise), before a step that relies on them. */
@@ -865,6 +885,8 @@ class AppSettings(
         private const val KEY_LIBRARY_INSTALL_DIR = "library_install_dir"
         private const val KEY_SEMANTIC_PACK_PROMPT = "semantic_pack_prompt"
         private const val KEY_SEARCH_FEEDBACK = "search_feedback"
+        private const val KEY_FEEDBACK_SENDER = "feedback_sender"
+        private const val KEY_FEEDBACK_SENT_PREFIX = "feedback_sent_"
         private const val KEY_PERSIST_SESSION = "persist_session"
         private const val KEY_KEEP_SCREEN_AWAKE_ON_BOOK = "keep_screen_awake_on_book"
         private const val KEY_ERROR_REPORTING = "error_reporting"
