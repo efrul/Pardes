@@ -100,6 +100,9 @@ The `SeforimLibrary` composite build provides the core functionality for Jewish 
 ### Pardes, the Android app (`androidApp/`)
 Pardes (פרדס, app id `io.github.efrul.pardes`) is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it. Until 2026-10-15 it was "זית לאנדרואיד"; at his request it has its own name and icon, so never call it Zayit/זית. Every text that says who made the app (in the app, README, docs and release images) must say so; see the name and authorship rules in the `zayit-android` skill. A separate Gradle build (Android 8.0+, minSdk 26) that reuses SeforimLibrary core/dao unchanged and redraws the desktop UI in Jetpack Compose. Build with `cd androidApp && ./gradlew :app:assembleRelease`. See `androidApp/README.md`, `androidApp/docs/DEVELOPMENT.md`, and the `zayit-android` skill (`.claude/skills/zayit-android/`) for the emulator, screenshot and desktop-comparison workflow. Never edit desktop sources for Android; keep Android changes under `androidApp/`.
 
+### Pardes stays Zayit: the change map
+Pardes aims to be as identical to Zayit as possible, written as Elie Gambache writes it. Before adding, changing or deleting any file, read the `zayit-fidelity` skill (`.claude/skills/zayit-fidelity/`): the smallest change, in his style (his own guidelines are `AGENTS.md`, `CONTRIBUTING.md`, this file's conventions, `.editorconfig`, `detekt.yml` and `SeforimLibrary/AGENTS.md`), committed as he commits (`type(scope): summary`), and every file that differs from Zayit described with all its details in `docs/ZAYIT_CHANGE_MAP.md`, in the same commit. `python3 .claude/skills/zayit-fidelity/scripts/check_change_map.py` must pass; CI runs it on every push.
+
 ### Multi-Window & Virtual Desktops
 The app is multi-window (Chrome-style tabs + drag & drop between windows). A virtual
 desktop = a user-curated set of tabs in 1..n windows; several desktops can be open at

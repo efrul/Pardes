@@ -52,7 +52,7 @@ Dark theme.
 2. **Port it** under `app/src/androidMain/kotlin/.../android/`, and say in a KDoc which desktop class each file mirrors.
 3. **Build** `./gradlew :app:assembleRelease` and install it on the API-33 emulator, and on the older ones (API 26, 28 and 30) when the change touches a platform API ([Android 8 to 12](#android-8-to-12)).
 4. **Screenshot** at phone, Jelly Star (`wm size 480x854`, density 320) and tablet (`wm size 1920x1200`, density 240: 1280dp) sizes. Compare side by side with desktop and fix the differences.
-5. **Commit** as `androidApp: <change>`.
+5. **Commit** as Zayit does, `feat(android): <change>` or `fix(android): <change>`, with the files' rows in `docs/ZAYIT_CHANGE_MAP.md` (the `zayit-fidelity` skill).
 
 ## Working on Windows
 
