@@ -11,14 +11,20 @@ import android.util.Log
 import org.apache.lucene.document.IntPoint
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.StoredFields
+import org.apache.lucene.search.ConjunctionUtils
+import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.KnnByteVectorQuery
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.ScoreDoc
+import org.apache.lucene.search.ScoreMode
+import org.apache.lucene.search.Weight
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.store.NIOFSDirectory
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.PriorityQueue
 
 data class DenseHit(
     val lineId: Long,
@@ -54,38 +60,11 @@ class IndependentSemanticSearch(
             }
 
         val docScoreMap = HashMap<Int, Float>()
-
-        if (baseOnly) {
-            val q =
-                if (filter != null) {
-                    KnnByteVectorQuery("vec_base", queryVec, k, filter)
-                } else {
-                    KnnByteVectorQuery("vec_base", queryVec, k)
-                }
-            val td = searcher.search(q, k)
-            for (sd in td.scoreDocs) {
-                docScoreMap[sd.doc] = sd.score
-            }
-        } else {
-            val qVec =
-                if (filter != null) {
-                    KnnByteVectorQuery("vec", queryVec, k, filter)
-                } else {
-                    KnnByteVectorQuery("vec", queryVec, k)
-                }
-            val qBase =
-                if (filter != null) {
-                    KnnByteVectorQuery("vec_base", queryVec, k, filter)
-                } else {
-                    KnnByteVectorQuery("vec_base", queryVec, k)
-                }
-
-            val tdVec = searcher.search(qVec, k)
-            val tdBase = searcher.search(qBase, k)
-            for (sd in tdVec.scoreDocs) {
-                docScoreMap[sd.doc] = sd.score
-            }
-            for (sd in tdBase.scoreDocs) {
+        val fields = if (baseOnly) listOf(FIELD_VEC_BASE) else listOf(FIELD_VEC, FIELD_VEC_BASE)
+        // Made once for both fields: the filter's weight
+        val filterWeight = filter?.let { searcher.createWeight(searcher.rewrite(it), ScoreMode.COMPLETE_NO_SCORES, 1f) }
+        for (field in fields) {
+            for (sd in searchField(field, queryVec, k, filter, filterWeight)) {
                 docScoreMap.merge(sd.doc, sd.score, ::maxOf)
             }
         }
@@ -106,6 +85,82 @@ class IndependentSemanticSearch(
         }
 
         return hits
+    }
+
+    /**
+     * The [k] vectors of [field] closest to [target], among the docs of [filter] when there is one (its weight
+     * [filterWeight]). A filter that keeps few of the field's vectors (a book, an author, a small category: at most
+     * [EXACT_LIMIT], and at most one in [EXACT_SHARE] of them) is searched exactly, every vector of it scored. There
+     * Lucene's filtered graph search walks far for each vector it keeps, costs more and finds less (the מהר״ל's 18
+     * books, 54,883 of 5,483,563 vectors: 22 to 128 ms and 87 to 100% of the closest 150, against 17 to 29 ms and all of
+     * them), and falls back to that same exact search whenever its walk finds fewer than [k], as in a cluster of
+     * identical lines (a heading repeated in hundreds of books). A filter keeping a large share goes to Lucene: the
+     * תלמוד's base books, 81,269 of the 242,109 base vectors, take it 6 to 16 ms, and 25 to 56 ms exactly.
+     */
+    private fun searchField(
+        field: String,
+        target: ByteArray,
+        k: Int,
+        filter: Query?,
+        filterWeight: Weight?,
+    ): Array<ScoreDoc> {
+        if (filter == null || filterWeight == null) return searcher.search(KnnByteVectorQuery(field, target, k), k).scoreDocs
+        var vectors = 0L
+        for (leaf in reader.leaves()) vectors += leaf.reader().getByteVectorValues(field)?.size() ?: 0
+        val limit = minOf(EXACT_LIMIT.toLong(), vectors / EXACT_SHARE).toInt()
+        if (filteredVectors(field, filterWeight, limit) > limit) {
+            return searcher.search(KnnByteVectorQuery(field, target, k, filter), k).scoreDocs
+        }
+        return exactSearch(field, target, k, filterWeight)
+    }
+
+    /** How many of [field]'s vectors [filterWeight] keeps, counted up to [limit] + 1 (past it, the count stops). */
+    private fun filteredVectors(
+        field: String,
+        filterWeight: Weight,
+        limit: Int,
+    ): Int {
+        var count = 0
+        for (leaf in reader.leaves()) {
+            val vectors = leaf.reader().getByteVectorValues(field)?.iterator() ?: continue
+            val docs = filterWeight.scorer(leaf)?.iterator() ?: continue
+            val both = ConjunctionUtils.intersectIterators(listOf(docs, vectors))
+            while (both.nextDoc() != DocIdSetIterator.NO_MORE_DOCS) {
+                if (++count > limit) return count
+            }
+        }
+        return count
+    }
+
+    /** The [k] vectors of [field] closest to [target] among the docs of [filterWeight], each one scored. */
+    private fun exactSearch(
+        field: String,
+        target: ByteArray,
+        k: Int,
+        filterWeight: Weight,
+    ): Array<ScoreDoc> {
+        // The k best so far, the worst first
+        val best = PriorityQueue<ScoreDoc>(k + 1, compareBy<ScoreDoc> { it.score }.thenByDescending { it.doc })
+        for (leaf in reader.leaves()) {
+            val scorer = leaf.reader().getByteVectorValues(field)?.scorer(target) ?: continue
+            val docs = filterWeight.scorer(leaf)?.iterator() ?: continue
+            val live = leaf.reader().liveDocs
+            val both = ConjunctionUtils.intersectIterators(listOf(docs, scorer.iterator()))
+            var doc = both.nextDoc()
+            while (doc != DocIdSetIterator.NO_MORE_DOCS) {
+                if (live == null || live[doc]) {
+                    val score = scorer.score()
+                    if (best.size < k) {
+                        best.add(ScoreDoc(leaf.docBase + doc, score))
+                    } else if (score > best.peek().score) {
+                        best.poll()
+                        best.add(ScoreDoc(leaf.docBase + doc, score))
+                    }
+                }
+                doc = both.nextDoc()
+            }
+        }
+        return best.sortedByDescending { it.score }.toTypedArray()
     }
 
     // The vectors of the last queries: a search's found lines are weighed against the same query many times (each page
@@ -183,6 +238,18 @@ class IndependentSemanticSearch(
         const val OPEN_MODEL_DIR_NAME = "pardes-model"
 
         private val LINE_AND_BOOK = setOf("line_id", "book_id")
+
+        private const val FIELD_VEC = "vec"
+        private const val FIELD_VEC_BASE = "vec_base"
+
+        /**
+         * A filter keeping at most this many of a field's vectors is searched exactly ([searchField]): some 45 ms on one
+         * core without SIMD (0.45 ms per thousand), about what Lucene's filtered graph search costs on such a filter.
+         */
+        internal const val EXACT_LIMIT = 100_000
+
+        /** ...and keeping at most one in this many of them: above it, Lucene's graph search finds them quickly. */
+        internal const val EXACT_SHARE = 8
 
         /** Queries whose vectors [bestPassages] keeps. */
         private const val QUERY_CACHE = 16
