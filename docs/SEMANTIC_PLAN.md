@@ -46,7 +46,7 @@
   - ה־manifest אומר גם מה בחבילה: `pack`, `model`, `dimension`, `library`, `lines`.
   - נבדקה בספריות שהתוכנה פורסת בהן: zstd-jni ו־commons-compress. כל הקבצים יצאו זהים למקור.
   - שמורה במאגר נתונים פרטי ב־Kaggle: `pardes-semantic-pack-2`.
-- **[`semantic-model/package_pack.py`](../semantic-model/package_pack.py)**: אורז חבילה כזו ובודק אותה.
+- **[`pardes-semantic/package_pack.py`](https://github.com/efrul/pardes-semantic/blob/main/package_pack.py)**: אורז חבילה כזו ובודק אותה.
 - **[`.github/workflows/semantic-release.yml`](../.github/workflows/semantic-release.yml)**, כאן. הוא:
   - מוריד את החבילה מ־Kaggle, מהחשבון של הטוקן. שם החשבון לא נכתב במאגר הזה, ובלוג הוא מוסתר;
   - בודק אותה מול ה־manifest;
@@ -70,7 +70,7 @@
 
 ## שלב 2: הקוד של החיפוש לפי משמעות במאגר הזה (בוצע)
 
-- הקוד עבר לכאן מ־efrul/Pardes-Hybrid-Desktop, יחד עם `semantic-model/`: `features/search/semantic`, החיבור ל־`HybridSearchEngine`, `LevelPrecedence` והבדיקות.
+- הקוד עבר לכאן מ־efrul/Pardes-Hybrid-Desktop, יחד עם `semantic-model/` (שעבר ב־2026-11-05 לריפו [pardes-semantic](https://github.com/efrul/pardes-semantic)): `features/search/semantic`, החיבור ל־`HybridSearchEngine`, `LevelPrecedence` והבדיקות.
 - `desktop-release.yml` בונה אותו, והמודל לא בקובץ ההתקנה: הוא מגיע כחבילה.
 
 ## שלב 3: התקנת החבילה מתוך התוכנה (בוצע)

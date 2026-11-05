@@ -7,9 +7,9 @@ import java.sql.DriverManager
 
 /**
  * The level of a book of the library, for the precedence among the lines that hold the query as a sentence
- * ([LevelPrecedence]): the earlier level first (semantic-model/eval-real/results-level-order.md). [MIKRA], [CHAZAL],
+ * ([LevelPrecedence]): the earlier level first (pardes-semantic/eval-real/results-level-order.md). [MIKRA], [CHAZAL],
  * [GEONIM], [RISHONIM], [ACHARONIM], [CONTEMPORARY], the lower the earlier; [levelOf] tells a book's from the library
- * itself, as semantic-model/eval-real/level_order.py's book_levels does.
+ * itself, as pardes-semantic/eval-real/level_order.py's book_levels does.
  */
 internal object BookLevels {
     const val MIKRA = 0

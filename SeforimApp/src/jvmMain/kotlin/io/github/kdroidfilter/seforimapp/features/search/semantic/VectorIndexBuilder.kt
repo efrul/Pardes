@@ -27,7 +27,7 @@ import kotlin.system.exitProcess
 
 /**
  * Builds the Pardes vector index (`pardes.vec.lucene`, next to seforim.db.lucene) from the vectors of
- * semantic-model/embed_corpus.py (ids.i64 + vecs.f32 + meta.txt, the format SeforimLibrary's generator reads, or
+ * pardes-semantic/embed_corpus.py (ids.i64 + vecs.f32 + meta.txt, the format SeforimLibrary's generator reads, or
  * vecs.i8 of quantize_vectors.py, the same vectors already quantized) and seforim.db (each line's book and whether it
  * is a base book).
  *

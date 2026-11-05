@@ -6,8 +6,8 @@
 המודל [neodictabert-bilingual-embed](https://huggingface.co/dicta-il/neodictabert-bilingual-embed) של דיקטה (CC BY 4.0), שאומן אצלנו על הקישורים שבספרייה,
 ONNX Runtime ו־Lucene. אין בו שום דבר מחבילת החיפוש הסמנטי הסגורה של זית או מהמודל שלה.
 
-- איך המודל נבנה, מאומן ונמדד: [semantic-model/README.md](semantic-model/README.md)
-- התוצאות: [semantic-model/BENCHMARK.md](semantic-model/BENCHMARK.md)
+- איך המודל נבנה, מאומן ונמדד, והמודלים עצמם: הריפו [pardes-semantic](https://github.com/efrul/pardes-semantic)
+- התוצאות: [BENCHMARK.md](https://github.com/efrul/pardes-semantic/blob/main/BENCHMARK.md) שבו
 - שורת המקורות המשותפים מעל התוצאות (תוכנית, עוד לא נבנתה): [docs/COMMON_SOURCES_PLAN.md](docs/COMMON_SOURCES_PLAN.md)
 - הבעיות בסדר התוצאות של החיפוש המשולב והצעות התיקון, עם המדידות: [docs/SEARCH_ORDER_ISSUES.md](docs/SEARCH_ORDER_ISSUES.md)
 
@@ -32,7 +32,7 @@ pardes.vec.lucene/   אינדקס הווקטורים (HNSW של Lucene)
 | קובץ | מה הוא עושה |
 |---|---|
 | `OpenModelSpec.kt` | קורא את `pardes-model.json`: הממד, הקידומת לשאילתה, אורך מקסימלי, מזהה המודל ומשקל ה־RRF |
-| `OpenModelCleaner.kt` | ניקוי הטקסט לפני הטוקנייזר (HTML, ישויות, גרשיים, רווחים). זהה ל־`semantic-model/pardes_semantic/clean.py` |
+| `OpenModelCleaner.kt` | ניקוי הטקסט לפני הטוקנייזר (HTML, ישויות, גרשיים, רווחים). זהה ל־`pardes-semantic/pardes_semantic/clean.py` |
 | `HfTokenizer.kt` | קורא את `tokenizer.json` של HuggingFace ומפעיל אותו ב־Kotlin, בלי ספרייה native |
 | `OnnxEmbeddingProvider.kt` | מריץ את המודל ב־ONNX Runtime ומכמת את הווקטור ל־int8 |
 | `VectorIndexBuilder.kt` | בונה את `pardes.vec.lucene` מהווקטורים ומ־`seforim.db` (`./gradlew :SeforimApp:buildVectorIndex`) |
@@ -40,7 +40,7 @@ pardes.vec.lucene/   אינדקס הווקטורים (HNSW של Lucene)
 | `Passages.kt` | חותך שורה שנמצאה למשפטים ולפסוקיות, הקטעים שמתוכם נבחר הקטע המודגש |
 | `HybridSearchEngine.kt` | משלב את החיפוש הרגיל והסמנטי (RRF, עם משקל לפי המודל), משאיר בעמוד הראשון את התוצאות המילוליות הראשונות שמכילות את השאילתה כציטוט, מקדים את הרמה המוקדמת (`LevelPrecedence`), מדגיש לפי משמעות ומחמם את החיפוש |
 | `MeaningFacets.kt` | הספירה לפי קטגוריה ולפי ספר (ה־facets) סופרת רק את מה שהמילים מצאו. הקובץ מוסיף לה את השורות שרק החיפוש לפי משמעות מצא, כדי שלכל קטגוריה שיש בה תוצאה ברשימה תהיה לשונית סינון, ו"עוד N תוצאות מ…" יספור גם אותן. אחרי הלשוניות האלה מוצעות גם שאר הקטגוריות הראשיות של הספרייה (`otherTabCategories`): הרשימה מכילה רק את התוצאות הראשונות, ולשונית מחפשת מחדש בקטגוריה שלה, ושם החיפוש לפי משמעות מוצא את השורות הקרובות ביותר בה. בחיפוש בספרי יסוד מוצעות רק קטגוריות שיש בהן ספרי יסוד |
-| `LevelPrecedence.kt` | בין השורות שמכילות את השאילתה כמשפט, מקדים את הרמה המוקדמת: הגמרא לפני האחרונים שמצטטים אותה, הפסוק לפני המדרש. בשתי מילים רק פסוק עולה למקום הראשון ([המדידה](semantic-model/eval-real/results-level-order.md)) |
+| `LevelPrecedence.kt` | בין השורות שמכילות את השאילתה כמשפט, מקדים את הרמה המוקדמת: הגמרא לפני האחרונים שמצטטים אותה, הפסוק לפני המדרש. בשתי מילים רק פסוק עולה למקום הראשון ([המדידה](https://github.com/efrul/pardes-semantic/blob/main/eval-real/results-level-order.md)) |
 | `BookLevels.kt` | הרמה של כל ספר (מקרא, חז"ל, גאונים, ראשונים, אחרונים, בני זמננו) לפי הספרייה עצמה, וקריאת השורות של העמוד מ־`seforim.db`, בחיבור לקריאה בלבד |
 | `pack/` | החבילה (המודל והאינדקס) ליד הספרייה: מוצא את החבילה האחרונה, מוריד או מייבא אותה, בודק אותה ומכניס אותה בהפעלה הבאה (למטה) |
 
