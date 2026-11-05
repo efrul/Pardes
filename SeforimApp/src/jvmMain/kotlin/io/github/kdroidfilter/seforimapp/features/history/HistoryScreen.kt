@@ -98,7 +98,13 @@ fun HistoryTabContent(tabId: String) {
         query = query,
         onQueryChange = { query = it },
         entries = entries,
-        onClearAll = { scope.launch { historyStore.clearAll() } },
+        onClearAll = {
+            scope.launch {
+                historyStore.clearAll()
+                // The time read goes with it (the learning split), as on Android
+                appGraph.readingTimeStore.clearAll()
+            }
+        },
         onOpen = ::openEntry,
         onDelete = { entry -> scope.launch { historyStore.delete(entry.key) } },
     )

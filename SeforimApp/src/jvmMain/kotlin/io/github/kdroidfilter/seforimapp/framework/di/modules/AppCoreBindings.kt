@@ -24,6 +24,7 @@ import io.github.kdroidfilter.seforimapp.core.favorites.FavoritesStore
 import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedbackStore
 import io.github.kdroidfilter.seforimapp.core.history.HistoryStore
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
+import io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore
 import io.github.kdroidfilter.seforimapp.core.selection.DefaultSelectionContext
 import io.github.kdroidfilter.seforimapp.core.selection.SelectionContext
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
@@ -166,6 +167,11 @@ object AppCoreBindings {
     @Provides
     @SingleIn(AppScope::class)
     fun provideSearchFeedbackStore(database: UserSettingsDb): SearchFeedbackStore = SearchFeedbackStore(database)
+
+    /** How long each book was read, per day: the Home's learning split (LearningSplitWidget). */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideReadingTimeStore(database: UserSettingsDb): ReadingTimeStore = ReadingTimeStore(database)
 
     /** Pardes's feedback service, at the build's FEEDBACK_URL (none without it: feedback is then only saved to files). */
     @Provides
