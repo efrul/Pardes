@@ -33,6 +33,15 @@ class DafLayoutsTest {
     }
 
     @Test
+    fun aCopyLeftHalfWrittenDoesNotHideTheTractatesFile() {
+        // "Berakhot (1).json" sorts before "Berakhot.json", and its head names the tractate as well
+        fixture.copyTo(File(dir, "Berakhot.json"))
+        File(dir, "Berakhot (1).json").writeText(fixture.readText().take(300))
+        val layouts = DafLayouts(dir)
+        assertEquals("35b", assertNotNull(layouts.tractate("Berakhot")).amudim.single().amud)
+    }
+
+    @Test
     fun seesAFilePutInAfterItLooked() {
         val layouts = DafLayouts(dir)
         assertFalse(layouts.has("ברכות"))

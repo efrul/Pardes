@@ -91,9 +91,8 @@ class DafReviewTest {
         val dir = Files.createTempDirectory("daf-review").toFile()
         val layout = DafLayoutFile(format = 2, tractate = "Bava Batra", tractateHe = "בבא בתרא", amudim = listOf(amud))
         val feedback = dir.resolve("feedback").apply { mkdirs() }
-        feedback.resolve("Bava Batra.json").writeText(
-            """{"tractate": "BavaBatra", "tractateHe": "בבא בתרא", "marks": [{"amud": "2a", "c": "R", "i": 1, "t": "אמר רבי יוחנן", "ok": true}]}""",
-        )
+        val mark = """{"amud": "2a", "c": "R", "i": 1, "t": "אמר רבי יוחנן", "ok": true}"""
+        feedback.resolve("Bava Batra.json").writeText("""{"tractate": "BavaBatra", "tractateHe": "בבא בתרא", "marks": [$mark]}""")
         DafReviews(dir).mark(layout, DafMark("2a", "R", 3, "מאי טעמא דהכא כתיב", ok = false))
 
         assertEquals(listOf(1, 3), DafReviews(dir).of(layout).marks.map { it.i }.sorted())

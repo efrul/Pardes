@@ -335,6 +335,7 @@
     <string name="daf_import">ייבוא קובץ צורת הדף…</string>
     <string name="daf_import_not_layout">הקובץ שנבחר אינו קובץ צורת הדף</string>
     <string name="daf_import_other_tractate">הקובץ יובא, אבל הוא של מסכת %1$s</string>
+    <string name="daf_import_failed">ייבוא הקובץ נכשל: %1$s</string>
     <string name="show_diacritics_tooltip">הצג ניקוד וטעמים</string>
     <string name="hide_diacritics_tooltip">הסתר ניקוד וטעמים</string>
     <string name="hide_teamim_tooltip">הסתר טעמים</string>
