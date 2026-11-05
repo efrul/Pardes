@@ -103,6 +103,19 @@ class DafAnchorsTest {
     }
 
     @Test
+    fun theFindInPagesMatchesAreOnTheWordsPrintedForThem() {
+        val texts = lines.mapValues { it.value.text }
+        // Found in the library's spelled out words, marked on the print's abbreviation for them
+        val found = foundWords(anchors, texts, "אמר רבי", null, Color.Yellow, Color.Red)
+        assertEquals(mapOf(DafWord(0, 0) to Color.Yellow), found)
+        // רבי twice in the line: the second match, the current one, on ר״ש
+        val rabbi = foundWords(anchors, texts, "רבי", segment to 1, Color.Yellow, Color.Red)
+        assertEquals(Color.Yellow, rabbi[DafWord(0, 0)])
+        assertEquals(Color.Red, rabbi[DafWord(1, 0)])
+        assertEquals(Color.Yellow, rabbi[DafWord(2, 1)], "the comment's line has its own matches")
+    }
+
+    @Test
     fun aSelectionIsLocatedLineByLineInEachLinesOwnBook() {
         val gemara = assertNotNull(locate(amud, DafRange(DafWord(0, 1), DafWord(1, 0)), anchors, tractate) { segment })
         val (start, _) = range(gemaraText, "יוֹחָנָן")
