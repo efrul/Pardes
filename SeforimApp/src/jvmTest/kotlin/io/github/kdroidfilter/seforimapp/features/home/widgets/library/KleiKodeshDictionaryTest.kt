@@ -52,7 +52,8 @@ class KleiKodeshDictionaryTest {
         )
         assertEquals(673, pack.texts[Dictionary.WIKIPEDIA].orEmpty().size)
         assertEquals(7_605, pack.texts[Dictionary.ARAMAIC].orEmpty().size)
-        assertEquals(5_597, pack.texts[Dictionary.MICHLOL].orEmpty().size)
+        // HaMichlol's definitions are left out (2026-11-05): the two dictionaries of words with their text, and no other
+        assertEquals(setOf(Dictionary.ARAMAIC, Dictionary.WIKIPEDIA), pack.texts.keys)
         assertTrue(pack.related("כעס").any { it.kind == RelationKind.SYNONYM })
     }
 
