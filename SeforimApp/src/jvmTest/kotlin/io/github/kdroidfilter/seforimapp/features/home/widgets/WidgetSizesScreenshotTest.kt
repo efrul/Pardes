@@ -35,7 +35,8 @@ import kotlin.test.assertTrue
  * Renders every widget at every size the grid lets it take, and measures the widest empty band across each card: a
  * widget must never be resizable to a size it can't fill. Every size and the report go to build/screenshots/sizes. The Filament widgets (the Earth, the sky, the solar system) need a real window and fill
  * their card with their view; they're left out. So is the dictionary: it reads its books on first use, and the tests have
- * no library DB, so its card holds its title and field over the room its words would take.
+ * no library DB, so its card holds its title and field over the room its words would take; and the learning split, which
+ * reads its books' titles and places there.
  */
 @OptIn(ExperimentalTestApi::class)
 class WidgetSizesScreenshotTest {
@@ -181,7 +182,9 @@ class WidgetSizesScreenshotTest {
 
     private companion object {
         val FILAMENT_WIDGETS = setOf("earth", "sky", "solar_system")
-        val LIBRARY_DB_WIDGETS = setOf("dictionary")
+
+        // The learning split reads its books' titles and places in the library too (LearningSplitCardUiTest draws it)
+        val LIBRARY_DB_WIDGETS = setOf("dictionary", "learning_split")
 
         const val HOUR = 3_600_000L
 
