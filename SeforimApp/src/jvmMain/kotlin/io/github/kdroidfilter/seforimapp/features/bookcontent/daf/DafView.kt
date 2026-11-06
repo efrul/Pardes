@@ -80,6 +80,7 @@ import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.CurrentFindMatchColor
 import io.github.kdroidfilter.seforimapp.core.presentation.text.SearchHighlightColor
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.formatBytes
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
@@ -107,10 +108,17 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CircularProgressIndicator
 import org.jetbrains.jewel.ui.component.ContextMenuDivider
+import org.jetbrains.jewel.ui.component.DefaultButton
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_amud_missing
+import seforimapp.seforimapp.generated.resources.daf_download
+import seforimapp.seforimapp.generated.resources.daf_download_checking
+import seforimapp.seforimapp.generated.resources.daf_download_failed
+import seforimapp.seforimapp.generated.resources.daf_download_none
+import seforimapp.seforimapp.generated.resources.daf_download_progress
+import seforimapp.seforimapp.generated.resources.daf_download_retry
 import seforimapp.seforimapp.generated.resources.daf_import
 import seforimapp.seforimapp.generated.resources.daf_import_failed
 import seforimapp.seforimapp.generated.resources.daf_import_not_layout
@@ -264,16 +272,8 @@ fun DafView(
     onWordInText: (DafAnchor) -> Unit = {},
     find: DafFind = DafFind.NONE,
 ) {
-    val graph = LocalAppGraph.current
-    // Next to the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another one
-    // than the settings)
-    val layouts =
-        remember(graph) {
-            val libraryDir =
-                runCatching { File(graph.databasePathProvider.get()).absoluteFile.parentFile }.getOrNull()
-                    ?: LibraryLocation.currentDir(graph.appSettings)
-            DafLayouts.of(libraryDir)
-        }
+    val layouts = rememberDafLayouts()
+    val downloads = remember(layouts) { DafDownloads.of(layouts) }
     // Bumped by an import, to read the folder again
     var imports by remember { mutableIntStateOf(0) }
     val load by produceState<DafLoad>(DafLoad.Loading, layouts, book.title, imports) {
@@ -287,6 +287,7 @@ fun DafView(
                 MissingLayout(
                     book = book,
                     layouts = layouts,
+                    downloads = downloads,
                     onImport = { imports++ },
                     modifier = Modifier.align(Alignment.Center),
                 )
@@ -913,16 +914,38 @@ private fun Modifier.sidewaysPan(
         }
     }
 
+/**
+ * The layouts beside the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another
+ * one than the settings): the daf view's and Settings › ניהול נתונים's.
+ */
+@Composable
+internal fun rememberDafLayouts(): DafLayouts {
+    val graph = LocalAppGraph.current
+    return remember(graph) {
+        val libraryDir =
+            runCatching { File(graph.databasePathProvider.get()).absoluteFile.parentFile }.getOrNull()
+                ?: LibraryLocation.currentDir(graph.appSettings)
+        DafLayouts.of(libraryDir)
+    }
+}
+
 @Composable
 private fun MissingLayout(
     book: Book,
     layouts: DafLayouts,
+    downloads: DafDownloads,
     onImport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
     // What became of the last import, when it did not bring this tractate
     var problem by remember(book.id) { mutableStateOf<ImportProblem?>(null) }
+    val download by downloads.state.collectAsState()
+    // The released layouts, read once a run
+    LaunchedEffect(downloads) { downloads.refresh() }
+    // A tractate a download put in the folder (this one, or one of all the card downloads): the folder is read again
+    val currentOnImport by rememberUpdatedState(onImport)
+    LaunchedEffect(download.revision) { if (download.revision > 0) currentOnImport() }
     Column(
         modifier.widthIn(max = 520.dp).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -939,6 +962,7 @@ private fun MissingLayout(
             color = JewelTheme.globalColors.text.info,
             textAlign = TextAlign.Center,
         )
+        DownloadLayout(book, download, downloads)
         OutlinedButton(onClick = {
             scope.launch {
                 // Off the GTK event-loop thread, as the data screen's pickers
@@ -972,6 +996,50 @@ private fun MissingLayout(
         }
     }
 }
+
+/** The tractate's layout from the newest release: its button, its progress, or why there is none. */
+@Composable
+private fun DownloadLayout(
+    book: Book,
+    download: DafDownloads.State,
+    downloads: DafDownloads,
+    modifier: Modifier = Modifier,
+) {
+    val entry = download.manifest?.entryFor(book.title)
+    val work = download.work
+    val info = JewelTheme.globalColors.text.info
+    Column(
+        modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        when {
+            work != null -> {
+                val percent = if (work.total > 0) (work.done * PERCENT / work.total).toInt() else 0
+                Text(stringResource(Res.string.daf_download_progress, work.tractateHe, percent), textAlign = TextAlign.Center)
+            }
+            download.checking -> Text(stringResource(Res.string.daf_download_checking), color = info)
+            entry != null ->
+                DefaultButton(onClick = { downloads.download(listOf(entry)) }) {
+                    Text(stringResource(Res.string.daf_download, book.title, formatBytes(entry.size)))
+                }
+            download.checked && download.problem == null ->
+                Text(stringResource(Res.string.daf_download_none, book.title), color = info, textAlign = TextAlign.Center)
+        }
+        download.problem?.takeIf { work == null }?.let { problem ->
+            Text(
+                stringResource(Res.string.daf_download_failed, problem),
+                color = JewelTheme.globalColors.text.error,
+                textAlign = TextAlign.Center,
+            )
+            OutlinedButton(onClick = { if (entry != null) downloads.download(listOf(entry)) else downloads.refresh(force = true) }) {
+                Text(stringResource(Res.string.daf_download_retry))
+            }
+        }
+    }
+}
+
+private const val PERCENT = 100L
 
 private sealed interface ImportProblem {
     data object NotLayout : ImportProblem
