@@ -242,7 +242,8 @@ class DafDownloads(
         val manifest = _state.value.manifest ?: return
         if (_state.value.work != null) return
         scope.launch {
-            val installed = withContext(io) { installedOf(manifest) }
+            // A file of the folder that can't be read leaves the count as it was
+            val installed = runSuspendCatching { withContext(io) { installedOf(manifest) } }.getOrNull() ?: return@launch
             _state.update { it.copy(installed = installed) }
         }
     }
