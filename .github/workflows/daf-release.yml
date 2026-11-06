@@ -1,0 +1,96 @@
+name: Daf layouts release
+
+# Publishes the daf view's layouts (צורת הדף) as a release of this repository, daf-<n>: each tractate's layout file
+# gzipped, pardes-daf.zip of them all to unpack beside the library, and the manifest that Pardes for desktop downloads
+# them by (SeforimApp/.../features/bookcontent/daf/DafDownloads.kt), all made by .github/scripts/daf_release.py. The
+# layouts are pardes-rashi-ocr's layouts/*.json (a private repository), pushed to this repository's branch
+# daf-layouts, which holds nothing else. Their words are Wikisource's Gemara (CC BY-SA, through Sefaria) and the Vilna
+# Rashi and Tosafot, their lines' places measured on the Vilna Shas's scans: the notes say so, and the files go out
+# under CC BY-SA.
+#
+# Every release is --latest=false and then the Android release is made the Latest again (gh's publishing of a release
+# with files ignores the flag), so the Android release stays the repository's Latest. The site's daf.json (the copy
+# the app reads when it can't reach the API) is written again after a release (android-site.yml).
+# Runs only by hand: Actions › Daf layouts release › Run workflow (on main).
+
+on:
+  workflow_dispatch:
+    inputs:
+      number:
+        description: 'The release number, daf-<n> (empty: one more than the newest)'
+        type: string
+        default: ''
+      note:
+        description: 'Optional paragraph at the top of the release notes (e.g. what changed in the layouts)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daf-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts/daf_release.py
+          sparse-checkout-cone-mode: false
+
+      - name: Check out the layouts
+        uses: actions/checkout@v4
+        with:
+          ref: daf-layouts
+          path: daf-layouts
+
+      - name: The release's number
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ inputs.number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$NUMBER" ]; then
+            last="$(gh release list -R "$GITHUB_REPOSITORY" --limit 200 --json tagName \
+              --jq '[.[].tagName | select(test("^daf-[0-9]+$")) | ltrimstr("daf-") | tonumber] | max // 0')"
+            NUMBER=$((last + 1))
+          fi
+          case "$NUMBER" in ''|*[!0-9]*) echo "::error::The number is a whole number"; exit 1 ;; esac
+          echo "NUMBER=$NUMBER" >> "$GITHUB_ENV"
+
+      - name: Build the release's files
+        env:
+          NOTE: ${{ inputs.note }}
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/daf_release.py daf-layouts/layouts out meta --number "$NUMBER" --note "$NOTE"
+          for f in out/*; do
+            test "$(stat -c %s "$f")" -lt 2147483648 || { echo "::error::$f is larger than GitHub's 2 GiB per file"; exit 1; }
+          done
+          ls -l out
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(cat meta/tag.txt)"
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::$tag is already released"; exit 1
+          fi
+          gh release create "$tag" out/* -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$(cat meta/title.txt)" --notes-file meta/notes.md --latest=false
+          # The publishing of a release with files makes it the Latest whatever --latest said: the newest Android
+          # release is made the Latest again
+          android="$(gh release list -R "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("android-"))][0] // empty')"
+          if [ -n "$android" ]; then gh release edit "$android" -R "$GITHUB_REPOSITORY" --latest; fi
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" != "$tag" \
+            || { echo "::error::$tag is the repository's Latest release: make the Android release the Latest by hand"; exit 1; }
+          echo "Released [$tag]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$tag)" >> "$GITHUB_STEP_SUMMARY"
