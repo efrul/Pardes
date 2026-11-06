@@ -13,6 +13,8 @@ export const SENDER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 export const MAX_QUERY = 20_000;
 /** The grades' scale: 3 exactly what was looked for, 2 relevant, 0 not relevant. */
 const GRADES = new Set([0, 2, 3]);
+/** Where the searches or grades came from, when sent by the standalone sender tool. */
+const SOURCES = new Set(["pardes", "zayit", "otzaria"]);
 
 /** Why [p] is not a package of Pardes in format 1, or null; its lists, when missing, are empty. */
 export function check(p) {
@@ -22,6 +24,7 @@ export function check(p) {
   if (typeof p.sender !== "string" || !SENDER.test(p.sender)) return "no sender id";
   if (!filled(p.sentAt, 64)) return "no sentAt";
   if (!optional(p.appVersion, 64) || !optional(p.library, 64)) return "a version is not one";
+  if (!maybeSource(p.source)) return "unknown source";
   for (const kind of ["grades", "searches", "daf"]) {
     p[kind] ??= [];
     if (!Array.isArray(p[kind])) return `${kind} is not a list`;
@@ -44,6 +47,7 @@ const optional = (s, max) => s === undefined || s === null || (typeof s === "str
 const count = (n) => Number.isSafeInteger(n) && n >= 0;
 const maybeId = (n) => n === undefined || n === null || Number.isSafeInteger(n);
 const maybeBoolean = (b) => b === undefined || b === null || typeof b === "boolean";
+const maybeSource = (s) => s === undefined || s === null || SOURCES.has(s);
 
 /** The first of [fields] whose check [o] fails, said with the length of a text too long; null when none. */
 function firstBad(o, fields) {
@@ -63,12 +67,14 @@ function whyGrade(g) {
   return firstBad(g, [["query", text(MAX_QUERY), MAX_QUERY], ["search", text(MAX_QUERY + 1000), MAX_QUERY + 1000],
     ["lineId", count], ["bookId", count], ["grade", (n) => GRADES.has(n)], ["rank", count], ["gradedAt", count],
     ["categoryId", maybeId], ["scopeBookId", maybeId], ["tocId", maybeId], ["extended", maybeBoolean],
-    ["model", maybeText(200), 200]]);
+    ["model", maybeText(200), 200], ["source", maybeSource], ["scope", maybeText(500), 500],
+    ["bookTitle", maybeText(500), 500], ["heRef", maybeText(500), 500]]);
 }
 
 function whySearch(s) {
   return firstBad(s, [["query", text(MAX_QUERY), MAX_QUERY], ["lastAt", count], ["count", (n) => n === undefined || count(n)],
-    ["categoryId", maybeId], ["bookId", maybeId], ["tocId", maybeId], ["extended", maybeBoolean]]);
+    ["categoryId", maybeId], ["bookId", maybeId], ["tocId", maybeId], ["extended", maybeBoolean],
+    ["source", maybeSource], ["scope", maybeText(500), 500]]);
 }
 
 function whyReview(r) {

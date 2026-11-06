@@ -14,6 +14,8 @@ const GRADES = [
   { grade: 0, name: "לא רלוונטי" },
 ];
 const COLUMNS = { G: "גמרא", R: 'רש"י', T: "תוספות" };
+const SOURCES = { pardes: "פרדס", zayit: "זית", otzaria: "אוצריא" };
+const sourceName = (s) => SOURCES[s] ?? s ?? "פרדס";
 
 const state = { token: null, packages: [], deletions: [], data: null, view: "overview", loadedAt: 0, ui: {} };
 
@@ -123,14 +125,17 @@ function derive(packages) {
   for (const p of packages) {
     senders.add(p.sender);
     const body = p.package ?? {};
+    const pkgSource = body.source ?? "pardes";
     for (const s of body.searches ?? []) {
-      const key = [p.sender, s.query, s.categoryId, s.bookId, s.tocId, Boolean(s.extended)].join("\u0000");
-      const row = { ...s, sender: p.sender, count: s.count ?? 1, lastAt: s.lastAt ?? 0 };
+      const src = s.source ?? pkgSource;
+      const key = [p.sender, src, s.query, s.categoryId, s.bookId, s.tocId, s.scope ?? "", Boolean(s.extended)].join("\u0000");
+      const row = { ...s, source: src, sender: p.sender, count: s.count ?? 1, lastAt: s.lastAt ?? 0 };
       if (!searches.has(key) || row.lastAt >= searches.get(key).lastAt) searches.set(key, row);
     }
     for (const g of body.grades ?? []) {
-      const key = [p.sender, g.search, g.lineId].join("\u0000");
-      const row = { ...g, sender: p.sender };
+      const src = g.source ?? pkgSource;
+      const key = [p.sender, src, g.search, g.lineId, g.heRef ?? ""].join("\u0000");
+      const row = { ...g, source: src, sender: p.sender };
       if (!grades.has(key) || row.gradedAt >= grades.get(key).gradedAt) grades.set(key, row);
     }
     for (const review of body.daf ?? []) {
@@ -144,13 +149,14 @@ function derive(packages) {
   // The same words in the same scope, by one sender or more
   const queries = new Map();
   for (const s of searches.values()) {
-    const key = [s.query, s.categoryId, s.bookId, s.tocId, Boolean(s.extended)].join("\u0000");
+    const key = [s.query, s.categoryId, s.bookId, s.tocId, s.scope ?? "", Boolean(s.extended)].join("\u0000");
     if (!queries.has(key)) {
-      queries.set(key, { query: s.query, categoryId: s.categoryId, bookId: s.bookId, tocId: s.tocId, extended: Boolean(s.extended), count: 0, senders: new Set(), lastAt: 0 });
+      queries.set(key, { query: s.query, categoryId: s.categoryId, bookId: s.bookId, tocId: s.tocId, scope: s.scope, extended: Boolean(s.extended), count: 0, senders: new Set(), sources: new Set(), lastAt: 0 });
     }
     const q = queries.get(key);
     q.count += s.count;
     q.senders.add(s.sender);
+    q.sources.add(s.source);
     q.lastAt = Math.max(q.lastAt, s.lastAt);
   }
   return { senders, queries: [...queries.values()], grades: [...grades.values()], marks: [...marks.values()] };
@@ -159,7 +165,8 @@ function derive(packages) {
 /** Where a search looked: the whole library, or a category, a book or a section of a book's contents. */
 function scope(row) {
   const parts = [];
-  if (row.tocId != null) parts.push(`פרק ${row.tocId}`);
+  if (row.scope) parts.push(row.scope);
+  else if (row.tocId != null) parts.push(`פרק ${row.tocId}`);
   else if (row.bookId != null) parts.push(`ספר ${row.bookId}`);
   else if (row.categoryId != null) parts.push(`קטגוריה ${row.categoryId}`);
   else parts.push("כל הספרייה");
@@ -397,9 +404,11 @@ function table(key, columns, rows, defaultSort) {
 function searches() {
   const filter = state.ui.searchesFilter ?? "";
   const rows = state.data.queries.filter((q) => matches(q.query, filter));
+  const sourcesOf = (q) => [...q.sources].map(sourceName).join(", ");
   const columns = [
     { title: "החיפוש", value: (q) => q.query, class: "text", cell: (q) => h("div", { class: "clip", title: q.query }, q.query) },
     { title: "איפה", value: scope },
+    { title: "מקור", value: sourcesOf },
     { title: "פעמים", value: (q) => q.count, class: "num", cell: (q) => number.format(q.count) },
     { title: "שולחים", value: (q) => q.senders.size, class: "num", cell: (q) => number.format(q.senders.size) },
     { title: "לאחרונה", value: (q) => q.lastAt, class: "when", cell: (q) => when(q.lastAt) },
@@ -407,8 +416,8 @@ function searches() {
   return h("div", {},
     toolbarFor("searchesFilter", "חיפוש בחיפושים", rows.length, state.data.queries.length, () =>
       download(`pardes-searches-${today()}.csv`, csv(
-        ["query", "scope", "categoryId", "bookId", "tocId", "extended", "count", "senders", "lastAt"],
-        state.data.queries.map((q) => [q.query, scope(q), q.categoryId, q.bookId, q.tocId, q.extended, q.count, q.senders.size, new Date(q.lastAt).toISOString()])),
+        ["query", "scope", "source", "categoryId", "bookId", "tocId", "extended", "count", "senders", "lastAt"],
+        state.data.queries.map((q) => [q.query, scope(q), [...q.sources].join(","), q.categoryId, q.bookId, q.tocId, q.extended, q.count, q.senders.size, new Date(q.lastAt).toISOString()])),
         "text/csv;charset=utf-8")),
     table("searches", columns, rows, { title: "פעמים", down: true }));
 }
@@ -444,17 +453,18 @@ function grades() {
     { title: "החיפוש", value: (g) => g.query, class: "text", cell: (g) => h("div", { class: "clip", title: g.query }, g.query) },
     { title: "הציון", value: (g) => g.grade, cell: (g) => h("span", { class: `pill grade-${g.grade}` }, name(g)) },
     { title: "מקום", value: (g) => g.rank, class: "num", cell: (g) => number.format(g.rank) },
-    { title: "שורה", value: (g) => g.lineId, class: "num", cell: (g) => String(g.lineId) },
-    { title: "ספר", value: (g) => g.bookId, class: "num", cell: (g) => String(g.bookId) },
+    { title: "שורה", value: (g) => g.heRef || g.lineId, class: "num", cell: (g) => String(g.heRef || g.lineId) },
+    { title: "ספר", value: (g) => g.bookTitle || g.bookId, class: "num", cell: (g) => String(g.bookTitle || g.bookId) },
     { title: "איפה", value: (g) => scope({ ...g, bookId: g.scopeBookId }) },
+    { title: "מקור", value: (g) => sourceName(g.source) },
     { title: "המודל", value: (g) => g.model ?? "", class: "id" },
     { title: "שולח", value: (g) => g.sender, class: "id", cell: (g) => short(g.sender) },
     { title: "מתי", value: (g) => g.gradedAt, class: "when", cell: (g) => when(g.gradedAt) },
   ];
   const bar = toolbarFor("gradesFilter", "חיפוש בדירוגים", rows.length, state.data.grades.length, () =>
     download(`pardes-grades-${today()}.csv`, csv(
-      ["query", "search", "grade", "rank", "lineId", "bookId", "categoryId", "scopeBookId", "tocId", "extended", "model", "sender", "gradedAt"],
-      state.data.grades.map((g) => [g.query, g.search, g.grade, g.rank, g.lineId, g.bookId, g.categoryId, g.scopeBookId, g.tocId, g.extended, g.model, g.sender, new Date(g.gradedAt).toISOString()])),
+      ["query", "search", "grade", "rank", "lineId", "bookId", "bookTitle", "heRef", "scope", "categoryId", "scopeBookId", "tocId", "extended", "source", "model", "sender", "gradedAt"],
+      state.data.grades.map((g) => [g.query, g.search, g.grade, g.rank, g.lineId, g.bookId, g.bookTitle, g.heRef, g.scope, g.categoryId, g.scopeBookId, g.tocId, g.extended, g.source ?? "pardes", g.model, g.sender, new Date(g.gradedAt).toISOString()])),
       "text/csv;charset=utf-8"));
   bar.insertBefore(select, bar.children[1]);
   return h("div", {}, bar, table("grades", columns, rows, { title: "מתי", down: true }));

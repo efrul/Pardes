@@ -172,6 +172,22 @@ describe("the feedback service", () => {
     // A passage pasted in to find its source is a search too, up to MAX_QUERY
     const passage = "א".repeat(1500);
     assert.equal((await post(mf, pkg(A, { searches: [{ query: passage, lastAt: 1793800000000 }] }))).status, 201);
+    // Searches and grades from Zayit and Otzaria with their source, scope and book/ref names
+    assert.equal((await post(mf, pkg(A, {
+      source: "otzaria",
+      searches: [
+        { query: "שנים אוחזין", source: "otzaria", scope: "/תלמוד בבלי/סדר נזיקין", count: 1, lastAt: 1793800000003 },
+        { query: "הכל חייבין", source: "zayit", categoryId: 2, count: 3, lastAt: 1793800000004 },
+      ],
+      grades: [
+        { query: "שנים אוחזין", search: "otzaria:שנים אוחזין", lineId: 0, bookId: 0, bookTitle: "בבא מציעא",
+          heRef: "בבא מציעא דף ב עמוד א", scope: "/תלמוד בבלי", source: "otzaria", grade: 2, rank: 0, gradedAt: 1793800000005 },
+      ],
+      daf: [],
+    }))).status, 201);
+    assert.deepEqual(await refused(pkg(A, { source: "other" })), [400, "unknown source"]);
+    assert.deepEqual(await refused(pkg(A, { searches: [{ query: "א", source: "other", lastAt: 1 }] })),
+      [400, "search 1 is not one (source)"]);
     const tooLong = { query: "א".repeat(MAX_QUERY + 1), lastAt: 1793800000000 };
     assert.deepEqual(await refused(pkg(A, { searches: [pkg(A).searches[0], tooLong] })),
       [400, `search 2 is not one (query: ${MAX_QUERY + 1} characters, at most ${MAX_QUERY})`]);
