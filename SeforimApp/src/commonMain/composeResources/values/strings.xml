@@ -389,7 +389,7 @@
     <string name="daf_import_failed">ייבוא הקובץ נכשל: %1$s</string>
     <string name="daf_download">הורדת צורת הדף של מסכת %1$s (%2$s)</string>
     <string name="daf_download_checking">בודק אם יש קובץ להורדה…</string>
-    <string name="daf_download_progress">מוריד את צורת הדף של מסכת %1$s… %2$d%%</string>
+    <string name="daf_download_progress">מוריד את צורת הדף של מסכת %1$s… %2$d%</string>
     <string name="daf_download_none">למסכת %1$s עוד אין קובץ להורדה.</string>
     <string name="daf_download_failed">ההורדה נכשלה: %1$s</string>
     <string name="daf_download_retry">ניסיון נוסף</string>
@@ -401,7 +401,7 @@
     <string name="daf_layouts_current">כל המסכתות מעודכנות.</string>
     <string name="daf_layouts_download">הורדת %1$d מסכתות (%2$s)</string>
     <string name="daf_layouts_update_hint">מסכת שהקובץ שלה שונה מזה שבגרסה, מקובץ שייבאתם או מגרסה קודמת, מתעדכנת. הסימונים של בדיקת השורות נשמרים.</string>
-    <string name="daf_layouts_progress">מוריד את מסכת %1$s (%2$d מתוך %3$d)… %4$d%%</string>
+    <string name="daf_layouts_progress">מוריד את מסכת %1$s (%2$d מתוך %3$d)… %4$d%</string>
     <string name="daf_layouts_cancel">ביטול</string>
     <string name="show_diacritics_tooltip">הצג ניקוד וטעמים</string>
     <string name="hide_diacritics_tooltip">הסתר ניקוד וטעמים</string>
