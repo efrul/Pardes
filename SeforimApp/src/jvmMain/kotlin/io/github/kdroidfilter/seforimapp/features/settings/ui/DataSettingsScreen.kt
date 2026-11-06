@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
+import io.github.kdroidfilter.seforimapp.features.settings.daf.DafLayoutsCard
 import io.github.kdroidfilter.seforimapp.features.settings.data.DataSettingsViewModel
 import io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackSendCard
 import io.github.kdroidfilter.seforimapp.features.settings.library.LibraryLocationCard
@@ -165,6 +166,8 @@ fun DataSettingsScreen() {
             LibraryLocationCard()
 
             SemanticPackCard()
+
+            DafLayoutsCard()
 
             FeedbackSendCard()
 
