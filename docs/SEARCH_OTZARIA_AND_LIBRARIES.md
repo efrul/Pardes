@@ -6,6 +6,8 @@
 מערכות. בכל מערכת כתוב מה היא עושה, ובאיזה רכיב שלה זה נמצא (בקוד, כשהוא פתוח). אחר כך כתוב מה מזה רלוונטי לפרדס. שום דבר
 כאן לא נמדד בפרדס.
 
+מיון התוצאות שמגיעות מכמה חיפושים (המיזוג), בפירוט: [SEARCH_FUSION_RESEARCH.md](SEARCH_FUSION_RESEARCH.md).
+
 **רישוי, לפני הכול:**
 - האפליקציה של אוצריא ([otzaria/otzaria](https://github.com/Otzaria/otzaria)) והמנוע הסמנטי שלה
   ([otzaria-semantic-search](https://github.com/Otzaria/otzaria-semantic-search)), כולל המודל, הם תחת "Personal Use License":
