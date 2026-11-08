@@ -1,6 +1,6 @@
 """The page that shows orderings.json: every search of the feedback, every method's first 10 side by side.
 
-    python make_html.py orderings.json out.html
+    python make_html.py orderings.json out.html [title]
 """
 
 import json
@@ -30,10 +30,15 @@ for key, name, _ in data["methods"]:
     summary[key] = s
 
 payload = json.dumps({**data, "summary": summary}, ensure_ascii=False, separators=(",", ":"))
+TITLE = sys.argv[3] if len(sys.argv) > 3 else "השוואת שיטות מיון על חיפושי המשוב"
+FEEDBACK = len(sys.argv) <= 3
+SUMMARY_TITLE = "סיכום על החיפושים שיש להם ציונים במשוב (מוטה לטובת האפליקציה)" if FEEDBACK else "סיכום: המקור (ציון 3) לפי שיטה"
+SUMMARY_NOTE = ("הציונים ניתנו על שורות שהאפליקציה הציגה, ולכן שיטה שמעלה שורות אחרות נראית כאן גרועה מכפי שהיא: שורה שלא נשפטה אינה רעה, רק לא ידועה."
+                if FEEDBACK else "כאן לכל שאלה יש מקור אחד ידוע (ושורות עם אותו נוסח בדיוק), והוא מסומן בירוק עם מסגרת. \"ראשונה טובה\" היא המקור במקום הראשון.")
 
 PAGE = r"""<!DOCTYPE html>
 <html lang="he" dir="rtl"><head><meta charset="utf-8">
-<title>השוואת שיטות מיון: חיפושי המשוב</title>
+<title>__TITLE__</title>
 <style>
 :root{--bg:#fafaf8;--fg:#1d1d1b;--mute:#6b6b66;--line:#e2e1dc;--card:#fff;--acc:#2f5d8a;--new:#eef5fc;
 --g3:#1f7a3f;--g2:#5fae6e;--g1:#e0b030;--g0:#c8443c}
@@ -80,7 +85,7 @@ table.sum th:first-child,table.sum td:first-child{text-align:right}
 details{margin:6px 0}summary{cursor:pointer;color:var(--acc)}
 .legend{font-size:12px;color:var(--mute)}
 </style></head><body>
-<header><h1>השוואת שיטות מיון על חיפושי המשוב</h1>
+<header><h1>__TITLE__</h1>
 <details><summary class="legend">מקרא</summary><div class="legend">מנוע סמנטי: התלמיד (student@695cbe2/pardes-clean-1, חבילה semantic-2) · ספרייה 20261012193827 · כל חיפוש בהיקף שבו נעשה ·
 <span class="gr g3"></span>3 <span class="gr g2"></span>2 <span class="gr g1"></span>1 <span class="gr g0"></span>0 = הציון שניתן במשוב (עם מסגרת: ציון של Claude) ·
 <span class="tag">ר 12</span>מקום ברגיל <span class="tag">ס 3</span>מקום בסמנטי <span class="tag">קישורים 7</span>ספרים מקושרים ·
@@ -90,14 +95,14 @@ details{margin:6px 0}summary{cursor:pointer;color:var(--acc)}
 <label><input type="checkbox" id="onlyGraded"> רק חיפושים עם ציונים במשוב</label>
 <label><input type="checkbox" id="onlyLex"> רק חיפושים שבהם שני הצדדים מצאו</label>
 <div class="legend" id="count"></div></div><div id="list"></div></aside>
-<main><div id="top"><details><summary>סיכום על החיפושים שיש להם ציונים במשוב (מוטה לטובת האפליקציה)</summary><div id="sumwrap"></div>
-<p class="legend">הציונים ניתנו על שורות שהאפליקציה הציגה, ולכן שיטה שמעלה שורות אחרות נראית כאן גרועה מכפי שהיא: שורה שלא נשפטה אינה רעה, רק לא ידועה.
+<main><div id="top"><details><summary>__SUMMARY_TITLE__</summary><div id="sumwrap"></div>
+<p class="legend">__SUMMARY_NOTE__
 "זהות לאפליקציה" היא כמה מהעשר הראשונות משותפות לעשר של האפליקציה, בממוצע על כל החיפושים.</p></details>
 <details id="pick"><summary id="pickSum">בחירת שיטות</summary><div class="methods" id="methods"></div></details><div id="head"></div></div><div id="view"></div></main></div>
 <script>
 const DATA = __DATA__;
 const M = DATA.methods, S = DATA.searches, LINES = DATA.lines, BOOKS = DATA.books;
-const DEFAULT = ["app","p12w","p12","window","dbsf","combo","dense","lex"];
+const DEFAULT = ["app","p12wl","p12w","window","dbsf","combo","dense","lex"];
 let shown = new Set(JSON.parse(localStorage.getItem("fusion.methods")||"null") || DEFAULT);
 let current = null;
 const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -133,7 +138,8 @@ function renderList(){
 }
 function cell(k, id, x, app){
   const L = LINES[id], P = x.lines[id], B = BOOKS[L[0]];
-  const gcls = P[2]>=0 ? `<span class="gr g${P[2]}${P[4]==="c"?" byc":""}" title="ציון ${P[2]}${P[4]==="c"?" (של Claude)":" (מהמשוב)"}"></span>` : "";
+  const gcls = P[4]==="t" ? `<span class="gr g3 byc" title="המקור שהשאלה מחפשת"></span>` :
+    P[2]>=0 ? `<span class="gr g${P[2]}${P[4]==="c"?" byc":""}" title="ציון ${P[2]}${P[4]==="c"?" (של Claude)":" (מהמשוב)"}"></span>` : "";
   return `<td class="${k!=="app"&&!app.has(id)?"new":""}">${gcls}<span class="b">${esc(B[0])}</span> <span class="ref">${esc(L[1]||"")} · ${esc(B[1])}${B[2]?" · ספר יסוד":""}</span><br>`
     + `<span class="tag">ר ${P[0]||"—"}</span><span class="tag">ס ${P[1]||"—"}</span><span class="tag">קישורים ${P[3]}</span><span class="tag">${L[3]} מילים</span>`
     + `<div class="snip" onclick="this.classList.toggle('open')">${highlight(L[2], x.q)}</div></td>`;
@@ -168,5 +174,6 @@ current = S.find(x => x.id == location.hash.slice(1)) || S[0];
 renderList(); renderView();
 </script></body></html>"""
 
-open(sys.argv[2], "w", encoding="utf-8").write(PAGE.replace("__DATA__", payload))
+open(sys.argv[2], "w", encoding="utf-8").write(PAGE.replace("__TITLE__", TITLE).replace("__SUMMARY_TITLE__", SUMMARY_TITLE)
+                                               .replace("__SUMMARY_NOTE__", SUMMARY_NOTE).replace("__DATA__", payload))
 print("written", sys.argv[2])
