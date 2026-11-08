@@ -13,6 +13,8 @@
 ההמשך, מסודר לפי מערכות (אוצריא, ויקיפדיה, CourtListener, ‏PubMed, ‏Semantic Scholar ומאגרים של שפות עתיקות):
 [SEARCH_OTZARIA_AND_LIBRARIES.md](SEARCH_OTZARIA_AND_LIBRARIES.md).
 
+מיון התוצאות שמגיעות מכמה חיפושים (המיזוג), בפירוט: [SEARCH_FUSION_RESEARCH.md](SEARCH_FUSION_RESEARCH.md).
+
 ## בקצרה: מה לנסות, מהזול ליקר
 
 | # | מה | הבעיה שהוא פותר | מאיפה | עלות | חופף לסשן של המודל? |
