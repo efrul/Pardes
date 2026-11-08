@@ -24,7 +24,7 @@ SM = Path(os.environ.get("PARDES_SEMANTIC", Path(__file__).resolve().parents[4] 
 sys.path.insert(0, str(SM / "search-order"))
 sys.path.insert(0, str(SM / "eval-real"))
 from order_common import holds_quote, holds_verbatim, keep, stem, verbatim_key  # noqa: E402
-from level_order import book_levels  # noqa: E402
+from level_order import ORDER, book_levels, holds_phrase  # noqa: E402
 
 results, dbp, searches_tsv, meta_p, grades_p, out = sys.argv[1:7]
 out = Path(out)
@@ -137,6 +137,37 @@ def level_p(d):
     return LEVEL_P.get(level_of.get(lines[d][0], "לא ידוע"), 0.65)
 
 
+def level_first(page, q):
+    """LevelPrecedence.order of the app: among the lines that hold the query as a sentence (3 words or more: spelling
+    apart, holds_phrase), the earlier level takes the places they hold in the first 20, and the first place too when
+    it is earlier than the line there; a query of two words: only a verse holding them as written takes place 1."""
+    k = verbatim_key(q).split()
+    if len(k) < 2:
+        return page
+    quoted = len(k) >= 3
+    lv = lambda d: ORDER.get(level_of.get(lines[d][0], "לא ידוע"), 4)  # noqa: E731
+    holders = {d for d in page if (quoted or lv(d) == 0) and holds_phrase(q, lines[d][2], spelling=quoted)}
+    if not holders:
+        return page
+    place = {}
+    for i, d in enumerate(page):
+        place.setdefault(d, i)
+    earliest = lambda d: (lv(d), place[d])  # noqa: E731
+    top = list(page[:20])
+    slots = [i for i, d in enumerate(top) if d in holders]
+    out = page
+    if slots:
+        chosen = sorted(holders, key=earliest)[:len(slots)]
+        left = [d for d in top if d in holders and d not in chosen]
+        for j, i in enumerate(slots):
+            top[i] = chosen[j]
+        out = top + left + [d for d in page[20:] if d not in chosen]
+    first = min(holders, key=earliest)
+    if out[0] not in holders and lv(first) < lv(out[0]):
+        out = [first] + [d for d in out if d != first]
+    return out
+
+
 def link_p(d):
     return min(1.0, math.log1p(links.get(d, 0)) / math.log1p(30))
 
@@ -240,6 +271,7 @@ METHODS = [
     ("z_qtype", "z-score עם משקל לפי סוג השאילתה", "כמו cc_z, והמשקל של המילים לפי סוג השאילתה של אוצריא"),
     ("p12", "הצעות 1+2 של SEARCH_ORDER_ISSUES", "RRF ×3; שורה רגילה שמכילה את השאילתה מילה במילה (3 מילים ומעלה) שוקלת 3; שורות סמנטיות בלבד של 8 מילים או פחות יוצאות (לא בספר שנבחר); keepLeaders"),
     ("p12w", "הצעות 1+2 עם החלון", "הצעות 1+2 של SEARCH_ORDER_ISSUES, ועוד 0.03·(חלק ממילות השאילתה שבחלון הטוב)², ו־keepLeaders"),
+    ("p12wl", "הצעות 1+2 עם החלון וקדימות הרמה", "p12w, ואחריו LevelPrecedence של האפליקציה: בין השורות שמכילות את השאילתה כמשפט (גם בכתיב מלא/חסר), הרמה המוקדמת קודמת"),
     ("window", "מיון מחדש לפי החלון הטוב (כמו ויקיפדיה)", "RRF ×3, ועוד 0.03·(חלק ממילות השאילתה שבחלון הטוב)²"),
     ("links", "ציון לפי הקישורים (PageRank פשוט)", "RRF ×3 כפול (0.7 + 0.3·log של מספר הספרים המקושרים)"),
     ("level", "ציון לפי רמת הספר", "RRF ×3 כפול (0.7 + 0.3·רמה): מקרא 1, חז\"ל 0.95, גאונים 0.85, ראשונים 0.8, אחרונים 0.65, בני זמננו 0.55"),
@@ -331,6 +363,8 @@ def order_for(method, r):
         dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
         sc = rrf(lex, dd, lw=lw)
         return keep(ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()}), leaders)
+    if method == "p12wl":
+        return level_first(order_for("p12w", r), q)
     if method == "window":
         sc = rrf(lex, dense)
         return ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()})
@@ -402,7 +436,7 @@ for r in rows:
     for d in shown:
         g = grades.get(f"{q}\t{d}")
         per_line[d] = [lex_rank.get(d, 0), dense_rank.get(d, 0), g["grade"] if g else -1, links.get(d, 0),
-                       "c" if g and g.get("by") == "claude" else "u"]
+                       {"claude": "c", "target": "t"}.get(g.get("by"), "u") if g else "u"]
         if d not in line_info:
             b = lines[d][0]
             line_info[d] = [b, lines[d][1], snippet(d, qw), len(words(d))]

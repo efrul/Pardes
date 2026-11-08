@@ -2,12 +2,15 @@
 
 # השוואת שיטות מיון על חיפושי המשוב (8.11.2026)
 
-[`fusion_compare.html`](fusion_compare.html) מציג את 10 התוצאות הראשונות של 23 שיטות מיון, זו ליד זו, לכל אחד מ־1,156 החיפושים
+[`fusion_compare.html`](fusion_compare.html) מציג את 10 התוצאות הראשונות של 24 שיטות מיון, זו ליד זו, לכל אחד מ־1,156 החיפושים
 שבחבילות המשוב עד 8.11.2026. השיטות הן אלה של [SEARCH_FUSION_RESEARCH.md](../SEARCH_FUSION_RESEARCH.md),
 [SEARCH_WORLD_RESEARCH.md](../SEARCH_WORLD_RESEARCH.md) ו־[SEARCH_OTZARIA_AND_LIBRARIES.md](../SEARCH_OTZARIA_AND_LIBRARIES.md).
 המטרה היא להתרשם, לא למדוד: אף שיטה לא כוילה, ומה שהקובץ מראה לא מחליף את המדידה של pardes-semantic.
 
 הניתוח של מה שהקובץ מראה: [ANALYSIS.md](ANALYSIS.md).
+
+בדיקה נוספת, על חיפושי מקור (157 שאלות של ציטוט, שהחיפוש הרגיל מוצא): [SOURCE_TEST.md](SOURCE_TEST.md), והקובץ שלה
+[`source_test/source_compare.html`](source_test/source_compare.html).
 
 הקובץ נכנס לריפו לפי החלטת המשתמש (8.11.2026). יש בו החיפושים מחבילות המשוב (בלי מזהה השולח), וקטעים מהטקסט של השורות.
 
@@ -40,6 +43,7 @@
 | `window` | תוספת לפי החלון הטוב בשורה (כמו מיון מחדש לפי ביטוי בוויקיפדיה) |
 | `links`, ‏`level` | הכפלה לפי מספר הספרים המקושרים, או לפי רמת הספר (עם רצפה, כמו CourtListener) |
 | `p12w` | הצעות 1+2 עם תוספת החלון (נוספה אחרי הניתוח) |
+| `p12wl` | ‏`p12w`, ומעליה `LevelPrecedence` של האפליקציה (נוספה אחרי בדיקת המקור, SOURCE_TEST) |
 | `diverse` | העמוד של האפליקציה, עם עד 2 שורות מכל ספר בעשר הראשונות |
 | `combo` | הכול יחד, במשקלים שנקבעו ביד |
 
@@ -76,6 +80,8 @@ git submodule update --init SeforimLibrary
 bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> <checkout של pardes-semantic>
 ```
 
+בדיקת המקור: `bash docs/fusion-compare/tools/run_source.sh <תיקיית עבודה> <checkout של pardes-semantic>`.
+
 - `feedback.json` הוא הייצוא של שירות המשוב (‏`/admin`).
 - תיקיית העבודה מקבלת את הספרייה ואת החבילה (כ־15GB, נפרסות תוך כדי הורדה), את הבנייה, את ההרצה ואת הקובץ (`out/fusion_compare.html`).
 - צריך JDK 21, ‏Python 3 עם `zstandard`, ו־curl. ההרצה עצמה לוקחת כמה דקות על 4 ליבות; ההורדה היא החלק הארוך.
@@ -90,8 +96,11 @@ bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> 
 | `tools/feedback_searches.py` | מוציא מהייצוא את החיפושים (שאילתה והיקף) ואת הציונים |
 | `tools/fuse_all.py` | כל שיטות המיון (משתמש ב־`search-order/order_common.py` וב־`eval-real/level_order.py` של pardes-semantic) |
 | `tools/make_html.py` | בונה את הקובץ |
-| `claude_grades.tsv` | 224 ציונים של Claude לשורות שבשלוש הראשונות שלא היה להן ציון במשוב (`feedback_searches.py` מוסיף אותם) |
+| `claude_grades.tsv` | 229 ציונים של Claude לשורות שבשלוש הראשונות שלא היה להן ציון במשוב (`feedback_searches.py` מוסיף אותם) |
 | `tools/analyze.py` | המספרים של [ANALYSIS.md](ANALYSIS.md): ממה בנויה כל רשימה, והמדדים לפי הציונים שבמשוב (`out/analysis.txt`) |
+| `tools/run_source.sh` | בדיקת המקור של [SOURCE_TEST.md](SOURCE_TEST.md), לפי הסדר |
+| `tools/source_searches.py` | מהשאלות של בדיקת המקור (`source_test/queries.tsv`) לחיפושים ולמקורות שלהם |
+| `tools/source_eval.py` | המדדים של בדיקת המקור: איפה כל שיטה שמה את המקור |
 
 **למה לא `search-order/build.sh` של pardes-semantic כמו שהוא:** הוא לא מתקמפל מול הקוד הנוכחי של פרדס, כי `MeaningFacets.kt`
 משתמש עכשיו ב־`Category` של SeforimLibrary core, שהוא לא מעתיק.
