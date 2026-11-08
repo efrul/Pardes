@@ -239,6 +239,7 @@ METHODS = [
     ("otzaria", "כמו אוצריא: משקל לפי סוג השאילתה", "BM25 ב־s/(10+s), סמנטי מתחת ל־0.55 לא נספר, משקל המילים 0.85/0.7/0.5/0.3 לפי סוג השאילתה, ‎+0.1‎ כששניהם מצאו"),
     ("z_qtype", "z-score עם משקל לפי סוג השאילתה", "כמו cc_z, והמשקל של המילים לפי סוג השאילתה של אוצריא"),
     ("p12", "הצעות 1+2 של SEARCH_ORDER_ISSUES", "RRF ×3; שורה רגילה שמכילה את השאילתה מילה במילה (3 מילים ומעלה) שוקלת 3; שורות סמנטיות בלבד של 8 מילים או פחות יוצאות (לא בספר שנבחר); keepLeaders"),
+    ("p12w", "הצעות 1+2 עם החלון", "הצעות 1+2 של SEARCH_ORDER_ISSUES, ועוד 0.03·(חלק ממילות השאילתה שבחלון הטוב)², ו־keepLeaders"),
     ("window", "מיון מחדש לפי החלון הטוב (כמו ויקיפדיה)", "RRF ×3, ועוד 0.03·(חלק ממילות השאילתה שבחלון הטוב)²"),
     ("links", "ציון לפי הקישורים (PageRank פשוט)", "RRF ×3 כפול (0.7 + 0.3·log של מספר הספרים המקושרים)"),
     ("level", "ציון לפי רמת הספר", "RRF ×3 כפול (0.7 + 0.3·רמה): מקרא 1, חז\"ל 0.95, גאונים 0.85, ראשונים 0.8, אחרונים 0.65, בני זמננו 0.55"),
@@ -323,6 +324,13 @@ def order_for(method, r):
         lexset = set(lex)
         dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
         return keep(ranked(rrf(lex, dd, lw=lw)), leaders)
+    if method == "p12w":
+        many = len(verbatim_key(q).split()) >= 3
+        lw = (lambda d: 3.0 if holds_verbatim(lines[d][2], q) else 1.0) if many else None
+        lexset = set(lex)
+        dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
+        sc = rrf(lex, dd, lw=lw)
+        return keep(ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()}), leaders)
     if method == "window":
         sc = rrf(lex, dense)
         return ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()})
@@ -393,7 +401,8 @@ for r in rows:
     per_line = {}
     for d in shown:
         g = grades.get(f"{q}\t{d}")
-        per_line[d] = [lex_rank.get(d, 0), dense_rank.get(d, 0), g["grade"] if g else -1, links.get(d, 0)]
+        per_line[d] = [lex_rank.get(d, 0), dense_rank.get(d, 0), g["grade"] if g else -1, links.get(d, 0),
+                       "c" if g and g.get("by") == "claude" else "u"]
         if d not in line_info:
             b = lines[d][0]
             line_info[d] = [b, lines[d][1], snippet(d, qw), len(words(d))]

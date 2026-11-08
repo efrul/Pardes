@@ -1,9 +1,10 @@
 """The searches and grades of a feedback export (the feedback service's /admin JSON) as the harness reads them.
 
-    python feedback_searches.py feedback.json OUT_DIR
+    python feedback_searches.py feedback.json OUT_DIR [claude_grades.tsv]
 
 Writes OUT_DIR/searches.tsv (id, query, kind, scopeId, ext: one row for each query and scope), search_meta.json (how
-many times each was searched, from which app) and grades.json ("query<TAB>lineId": the latest grade).
+many times each was searched, from which app) and grades.json ("query<TAB>lineId": the latest grade). With
+claude_grades.tsv (query, lineId, grade), its grades are added where the feedback has none, marked "by": "claude".
 """
 
 import json
@@ -48,6 +49,10 @@ def main():
             k = f"{norm(g['query'])}\t{g['lineId']}"
             if k not in grades or g["gradedAt"] > grades[k]["at"]:
                 grades[k] = {"grade": g["grade"], "at": g["gradedAt"], "search": g["search"]}
+    if len(sys.argv) > 3:
+        for line in open(sys.argv[3], encoding="utf-8").read().splitlines()[1:]:
+            q, d, g = line.split("\t")[:3]
+            grades.setdefault(f"{norm(q)}\t{d}", {"grade": int(g), "at": 0, "search": "", "by": "claude"})
     json.dump(grades, open(f"{out}/grades.json", "w", encoding="utf-8"), ensure_ascii=False)
     print(f"{len(seen)} searches, {len(grades)} graded lines")
 

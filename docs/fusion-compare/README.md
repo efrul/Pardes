@@ -2,7 +2,7 @@
 
 # השוואת שיטות מיון על חיפושי המשוב (8.11.2026)
 
-[`fusion_compare.html`](fusion_compare.html) מציג את 10 התוצאות הראשונות של 22 שיטות מיון, זו ליד זו, לכל אחד מ־1,156 החיפושים
+[`fusion_compare.html`](fusion_compare.html) מציג את 10 התוצאות הראשונות של 23 שיטות מיון, זו ליד זו, לכל אחד מ־1,156 החיפושים
 שבחבילות המשוב עד 8.11.2026. השיטות הן אלה של [SEARCH_FUSION_RESEARCH.md](../SEARCH_FUSION_RESEARCH.md),
 [SEARCH_WORLD_RESEARCH.md](../SEARCH_WORLD_RESEARCH.md) ו־[SEARCH_OTZARIA_AND_LIBRARIES.md](../SEARCH_OTZARIA_AND_LIBRARIES.md).
 המטרה היא להתרשם, לא למדוד: אף שיטה לא כוילה, ומה שהקובץ מראה לא מחליף את המדידה של pardes-semantic.
@@ -39,12 +39,16 @@
 | `p12` | הצעות 1 ו־2 של [SEARCH_ORDER_ISSUES.md](../SEARCH_ORDER_ISSUES.md) |
 | `window` | תוספת לפי החלון הטוב בשורה (כמו מיון מחדש לפי ביטוי בוויקיפדיה) |
 | `links`, ‏`level` | הכפלה לפי מספר הספרים המקושרים, או לפי רמת הספר (עם רצפה, כמו CourtListener) |
+| `p12w` | הצעות 1+2 עם תוספת החלון (נוספה אחרי הניתוח) |
 | `diverse` | העמוד של האפליקציה, עם עד 2 שורות מכל ספר בעשר הראשונות |
 | `combo` | הכול יחד, במשקלים שנקבעו ביד |
 
 ההגדרה המדויקת של כל אחת נמצאת ב־`order_for` שב־`tools/fuse_all.py`, ובהסבר שבקובץ (מעבר עם העכבר על שם השיטה).
 
 ## הסיכום שבקובץ, ומה הוא לא אומר
+
+**עדכון:** אחרי ש־Claude שפט את השורות החסרות (`claude_grades.tsv`), ההשוואה בלי הטיה נמצאת ב־[ANALYSIS.md](ANALYSIS.md), "אחרי השיפוט".
+הטבלה כאן היא מלפני השיפוט, בלי `p12w`.
 
 על 85 החיפושים שיש להם ציונים במשוב:
 
@@ -86,6 +90,7 @@ bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> 
 | `tools/feedback_searches.py` | מוציא מהייצוא את החיפושים (שאילתה והיקף) ואת הציונים |
 | `tools/fuse_all.py` | כל שיטות המיון (משתמש ב־`search-order/order_common.py` וב־`eval-real/level_order.py` של pardes-semantic) |
 | `tools/make_html.py` | בונה את הקובץ |
+| `claude_grades.tsv` | 224 ציונים של Claude לשורות שבשלוש הראשונות שלא היה להן ציון במשוב (`feedback_searches.py` מוסיף אותם) |
 | `tools/analyze.py` | המספרים של [ANALYSIS.md](ANALYSIS.md): ממה בנויה כל רשימה, והמדדים לפי הציונים שבמשוב (`out/analysis.txt`) |
 
 **למה לא `search-order/build.sh` של pardes-semantic כמו שהוא:** הוא לא מתקמפל מול הקוד הנוכחי של פרדס, כי `MeaningFacets.kt`
