@@ -73,6 +73,7 @@ mark{background:#ffe58a;color:inherit;padding:0 1px;border-radius:2px}
 @media (prefers-color-scheme:dark){mark{background:#6b5a17}}
 .tag{display:inline-block;font-size:11px;padding:0 5px;border-radius:9px;border:1px solid var(--line);color:var(--mute);margin-left:3px}
 .gr{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:4px;vertical-align:middle}
+.byc{outline:2px solid var(--acc);outline-offset:1px}
 .g3{background:var(--g3)}.g2{background:var(--g2)}.g1{background:var(--g1)}.g0{background:var(--g0)}
 table.sum{border-collapse:collapse;font-size:13px;margin:6px 0 14px}table.sum td,table.sum th{border:1px solid var(--line);padding:3px 7px;text-align:center}
 table.sum th:first-child,table.sum td:first-child{text-align:right}
@@ -81,7 +82,7 @@ details{margin:6px 0}summary{cursor:pointer;color:var(--acc)}
 </style></head><body>
 <header><h1>השוואת שיטות מיון על חיפושי המשוב</h1>
 <details><summary class="legend">מקרא</summary><div class="legend">מנוע סמנטי: התלמיד (student@695cbe2/pardes-clean-1, חבילה semantic-2) · ספרייה 20261012193827 · כל חיפוש בהיקף שבו נעשה ·
-<span class="gr g3"></span>3 <span class="gr g2"></span>2 <span class="gr g1"></span>1 <span class="gr g0"></span>0 = הציון שניתן במשוב ·
+<span class="gr g3"></span>3 <span class="gr g2"></span>2 <span class="gr g1"></span>1 <span class="gr g0"></span>0 = הציון שניתן במשוב (עם מסגרת: ציון של Claude) ·
 <span class="tag">ר 12</span>מקום ברגיל <span class="tag">ס 3</span>מקום בסמנטי <span class="tag">קישורים 7</span>ספרים מקושרים ·
 רקע כחול: לא בעשר הראשונות של האפליקציה</div></details></header>
 <div class="wrap"><aside><div class="tools">
@@ -96,7 +97,7 @@ details{margin:6px 0}summary{cursor:pointer;color:var(--acc)}
 <script>
 const DATA = __DATA__;
 const M = DATA.methods, S = DATA.searches, LINES = DATA.lines, BOOKS = DATA.books;
-const DEFAULT = ["app","dense","lex","cc_z30","otzaria","p12","window","combo"];
+const DEFAULT = ["app","p12w","p12","window","dbsf","combo","dense","lex"];
 let shown = new Set(JSON.parse(localStorage.getItem("fusion.methods")||"null") || DEFAULT);
 let current = null;
 const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -132,7 +133,7 @@ function renderList(){
 }
 function cell(k, id, x, app){
   const L = LINES[id], P = x.lines[id], B = BOOKS[L[0]];
-  const gcls = P[2]>=0 ? `<span class="gr g${P[2]}" title="ציון ${P[2]}"></span>` : "";
+  const gcls = P[2]>=0 ? `<span class="gr g${P[2]}${P[4]==="c"?" byc":""}" title="ציון ${P[2]}${P[4]==="c"?" (של Claude)":" (מהמשוב)"}"></span>` : "";
   return `<td class="${k!=="app"&&!app.has(id)?"new":""}">${gcls}<span class="b">${esc(B[0])}</span> <span class="ref">${esc(L[1]||"")} · ${esc(B[1])}${B[2]?" · ספר יסוד":""}</span><br>`
     + `<span class="tag">ר ${P[0]||"—"}</span><span class="tag">ס ${P[1]||"—"}</span><span class="tag">קישורים ${P[3]}</span><span class="tag">${L[3]} מילים</span>`
     + `<div class="snip" onclick="this.classList.toggle('open')">${highlight(L[2], x.q)}</div></td>`;

@@ -16,7 +16,7 @@ mkdir -p "$work/library" "$work/run" "$work/out"
 [ -f "$work/library/seforim.db" ] || python3 "$here/fetch_library.py" "$lib_tag" "$work/library"
 [ -d "$work/library/pardes.vec.lucene" ] || python3 "$here/fetch_pack.py" "$pack_tag" "$work/library"
 [ -f "$work/build/classpath.txt" ] || bash "$here/build.sh" "$work/build"
-python3 "$here/feedback_searches.py" "$feedback" "$work/run"
+python3 "$here/feedback_searches.py" "$feedback" "$work/run" "$here/../claude_grades.tsv"
 java -Xmx6g --add-modules jdk.incubator.vector -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
     -cp "$(cat "$work/build/classpath.txt")" FeedbackHistoryKt "$work/library/seforim.db" "$work/run/searches.tsv" "$work/run/results.jsonl" \
     2> "$work/run/run.err"
