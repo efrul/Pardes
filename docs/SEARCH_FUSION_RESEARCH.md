@@ -209,6 +209,9 @@
 
 ## 9. תוכנית מדידה (offline, על הכלים הקיימים)
 
+השיטות של המסמך הזה כבר הורצו על חיפושי המשוב, להתרשמות בלבד (בלי כיול ובלי שיפוט של שורות חדשות):
+[fusion-compare/](fusion-compare/README.md), עם הכלים שמריצים אותן שוב.
+
 הכול על קובצי המועמדים שכבר נוצרים (`Eval.kt`/`Cands.kt`: ‏`lexCand`, ‏`lexScores`, ‏`denseCand`, ‏`denseScores`), בהרחבה של
 `search-order/fusions.py`, על eval-real, אצווה 2 של eval-v1, eval-100, הציטוטים ו־eval-crfh.
 
