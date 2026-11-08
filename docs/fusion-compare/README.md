@@ -7,6 +7,8 @@
 [SEARCH_WORLD_RESEARCH.md](../SEARCH_WORLD_RESEARCH.md) ו־[SEARCH_OTZARIA_AND_LIBRARIES.md](../SEARCH_OTZARIA_AND_LIBRARIES.md).
 המטרה היא להתרשם, לא למדוד: אף שיטה לא כוילה, ומה שהקובץ מראה לא מחליף את המדידה של pardes-semantic.
 
+הניתוח של מה שהקובץ מראה: [ANALYSIS.md](ANALYSIS.md).
+
 הקובץ נכנס לריפו לפי החלטת המשתמש (8.11.2026). יש בו החיפושים מחבילות המשוב (בלי מזהה השולח), וקטעים מהטקסט של השורות.
 
 ## מה הורץ
@@ -84,6 +86,7 @@ bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> 
 | `tools/feedback_searches.py` | מוציא מהייצוא את החיפושים (שאילתה והיקף) ואת הציונים |
 | `tools/fuse_all.py` | כל שיטות המיון (משתמש ב־`search-order/order_common.py` וב־`eval-real/level_order.py` של pardes-semantic) |
 | `tools/make_html.py` | בונה את הקובץ |
+| `tools/analyze.py` | המספרים של [ANALYSIS.md](ANALYSIS.md): ממה בנויה כל רשימה, והמדדים לפי הציונים שבמשוב (`out/analysis.txt`) |
 
 **למה לא `search-order/build.sh` של pardes-semantic כמו שהוא:** הוא לא מתקמפל מול הקוד הנוכחי של פרדס, כי `MeaningFacets.kt`
 משתמש עכשיו ב־`Category` של SeforimLibrary core, שהוא לא מעתיק.

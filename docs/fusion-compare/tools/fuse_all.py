@@ -3,8 +3,9 @@ FeedbackHistory.kt wrote (the app's hybrid page, and the 150 of each side with t
 
     PARDES_SEMANTIC=<pardes-semantic checkout> python fuse_all.py results.jsonl seforim.db searches.tsv search_meta.json grades.json out_dir
 
-Writes out_dir/orderings.json (every method's first 10 for every search, with what the page needs) and
-out_dir/orderings.tsv (one row per search, method and place).
+Writes out_dir/orderings.json (every method's first 10 for every search, with what the page needs),
+out_dir/orderings.tsv (one row per search, method and place) and out_dir/tops50.json (every method's first 50, for
+analyze.py).
 """
 
 import json
@@ -373,6 +374,7 @@ def snippet(d, qw, n=45):
 
 
 out_searches, line_info, book_info = [], {}, {}
+full = []  # every method's first 50, for analyze.py
 tsv = open(out / "orderings.tsv", "w", encoding="utf-8")
 tsv.write("search\tquery\tscope\tmethod\tplace\tlineId\tbook\tref\tgrade\n")
 for r in rows:
@@ -380,11 +382,14 @@ for r in rows:
     qw = query_words(q)
     lex_rank = {h[0]: i + 1 for i, h in enumerate(r["lexCand"])}
     dense_rank = {h[0]: i + 1 for i, h in enumerate(r["denseCand"])}
-    tops, shown = {}, set()
+    tops, shown, firsts = {}, set(), {}
     for key, _, _ in METHODS:
-        top = order_for(key, r)[:10]
+        firsts[key] = order_for(key, r)[:50]
+        top = firsts[key][:10]
         tops[key] = top
         shown.update(top)
+    full.append({"id": r["id"], "q": q, "scope": r["scope"], "kind": r["kind"],
+                 "lex": [h[0] for h in r["lexCand"]], "dense": [h[0] for h in r["denseCand"]], "tops": firsts})
     per_line = {}
     for d in shown:
         g = grades.get(f"{q}\t{d}")
@@ -408,6 +413,7 @@ for r in rows:
             tsv.write(f"{r['id']}\t{q}\t{scope_label(r)}\t{key}\t{i + 1}\t{d}\t{book_info[lines[d][0]][0]}\t{lines[d][1]}\t{'' if gg < 0 else gg}\n")
 tsv.close()
 
+json.dump(full, open(out / "tops50.json", "w", encoding="utf-8"), ensure_ascii=False)
 json.dump({"methods": METHODS, "searches": out_searches, "lines": line_info, "books": book_info},
           open(out / "orderings.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 print(f"{len(out_searches)} searches, {len(line_info)} lines shown, {len(METHODS)} methods", flush=True)
