@@ -11,7 +11,7 @@ every file Pardes adds.
 - **Base:** Zayit v0.6.12 (`d7777e2e`, 2026-10-29), merged by `164a91f2` ("Merge Zayit v0.6.12 into Pardes").
   SeforimLibrary and SeforimAcronymizer are at Zayit's pins (`4f07145`, `dea83b3`), unchanged.
 - **Written** from 2026-11-05 to 2026-11-09 from the whole diff of every file and its Pardes commits. Then
-  879 files differed: 783 added, 88 modified, 6 deleted, 2 renamed.
+  882 files differed: 785 added, 89 modified, 6 deleted, 2 renamed.
   Today's numbers: `python3 .claude/skills/zayit-fidelity/scripts/check_change_map.py --stats`.
 - **The rule** (the `zayit-fidelity` skill, mandatory): every file that differs has its entry here, describing the
   file as it is now, written in the same commit as the change. The check script compares the map with git, and CI
@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (96 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (97 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (138 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (140 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -59,7 +59,7 @@ The entries of this section by kind:
 |---|---|
 | Pardes feature hook | 30 |
 | Pardes feature in Zayit's file | 30 |
-| Fix of Zayit's code | 11 |
+| Fix of Zayit's code | 12 |
 | Branding hook | 6 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 5 |
@@ -237,9 +237,11 @@ The entries of this section by kind:
 
 #### `SeforimApp/build.gradle.kts`
 
-- **Change:** modified, +27 −0 lines. Feature: Branding, Semantic search, Feedback mode.
+- **Change:** modified, +29 −0 lines. Feature: Branding, Semantic search, Feedback mode, Incremental library updates.
 - **What:**
   - `jvmTest`: `libs.ktor.client.mock`, for the feedback sender's tests.
+  - `jvmMain`: `libs.lucene.analysis.common` (already on the runtime classpath through SeforimLibrary's search), for
+    the delta's lines written with the release index's analyzer (`LuceneLineDocument`).
   - `jvmMain`: ONNX Runtime 1.17.1 (`com.microsoft.onnxruntime:onnxruntime`) and JSON-java (`org.json:json:20240303`),
     for Pardes's semantic search.
   - `buildConfig`: `FEEDBACK_URL`, from the `PARDES_FEEDBACK_URL` variable or the `feedback.url` property; without it
@@ -248,14 +250,15 @@ The entries of this section by kind:
     `-Xmx6g`), which builds `pardes.vec.lucene` from `semantic-model/embed_corpus.py`'s vectors.
   - The last line, `apply(from = rootProject.file("branding/brand.gradle"))`: everything that makes the build Pardes.
 - **Why:** the brand overlay needs one hook at the end of Zayit's script (`branding/README.md`); the semantic search
-  needs its runtime and its index task (`20e2fa81`); the feedback service's address is a build setting (`ddf604d8`).
+  needs its runtime and its index task (`20e2fa81`); the feedback service's address is a build setting (`ddf604d8`);
+  the fix of the delta's index lines needs Lucene's n-gram filter at compile time.
 - **Kind:** branding hook and Pardes feature hooks.
 - **Merge risk:** Zayit edits this file in most releases (0.6.13 does). The additions are separate lines in
   dependency blocks, in `buildConfig` and at the end, so conflicts stay small.
 - **Smaller:** the two dependencies could go through `gradle/libs.versions.toml`, as all of Zayit's do; the
   `buildVectorIndex` task could move into `branding/brand.gradle` or a Pardes script applied at the end.
-- **Tests:** the build itself; `VectorIndexBuilderTest` (the index), and the feedback tests through
-  `FeedbackTestDoubles.kt` (Ktor's `MockEngine`).
+- **Tests:** the build itself; `VectorIndexBuilderTest` (the index), the feedback tests through
+  `FeedbackTestDoubles.kt` (Ktor's `MockEngine`), and `DbDeltaLuceneSinkTest`.
 - **Notes:** two dependencies are written as literal coordinates, not as `libs.` aliases from the version catalog:
   a departure from Zayit's way.
 
@@ -499,6 +502,29 @@ The entries of this section by kind:
   sit in the updater's set-up.
 - **Smaller:** already minimal.
 - **Tests:** none.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/update/DbDeltaUpdateService.kt`
+
+- **Change:** modified, +31 −41 lines. Feature: Incremental library updates (a fix of Zayit's code).
+- **What:** `defaultLuceneSinksProvider`, the sink that writes a delta's lines into the full-text index:
+  - the writer analyzes with `LuceneLineDocument.analyzer()` (BuildLuceneIndex's: text_ng4's 4-grams) instead of a
+    plain `StandardAnalyzer`;
+  - the index's `FieldInfos` replace the one check of book_id's doc values, and each upserted line is
+    `LuceneLineDocument.create(fields, line, book)`, the document SeforimLibrary's index writer writes, instead of
+    Zayit's reduced one;
+  - `ancestorIds`, a companion function, reads a category's ancestors from `category_closure` (cached per category);
+  - the field constants and imports only the old document used are gone; `FIELD_LINE_ID` stays for the deletes.
+- **Why:** Zayit's document gave `line_index` no point where the release's index has one, so Lucene refused the first
+  line of every delta ("cannot change field line_index from points dimensionCount=1 ... to dimensionCount=0") and the
+  index's step failed; and it indexed the raw HTML with nikud, without text_ng4 or the category ancestors, so such
+  lines would not be found. `DbDeltaLuceneSinkTest` failed on Zayit's code with that exception.
+- **Kind:** fix of Zayit's code (it holds for Zayit as well).
+- **Merge risk:** small while Zayit leaves the sink alone; if Zayit rewrites it, keep its version and drop this fix
+  once its lines match the index writer's (`DbDeltaLuceneSinkTest` says when).
+- **Smaller:** already split: the document is a Pardes file (`LuceneLineDocument.kt`), the change here is the hooks.
+- **Tests:** `DbDeltaLuceneSinkTest` (a line written into an index made as the release's is found by its words, inside
+  a word, under its category ancestor, with a base book's order); `DbDeltaUpdateViewModelTest`.
+- **Notes:** Zayit's code still has the fault; a report upstream is the user's decision.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/platform/PlatformInfo.kt`
 
@@ -3154,6 +3180,44 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 - **Follows:** Zayit's `buildSrc` (its `Versioning` object beside it); a task class as Gradle's API has it.
 - **Tests:** the build (every Pardes build runs it).
 
+### The delta's lines in the full-text index (a fix of Zayit's code)
+
+A library delta's upserted lines go into the full-text index as SeforimLibrary's own index writer writes the release's
+lines, where Zayit's sink wrote a reduced document that the release's index refuses. The hook in Zayit's files is in
+`DbDeltaUpdateService.kt`, with the n-gram analyzer's dependency in `SeforimApp/build.gradle.kts`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/update/LuceneLineDocument.kt`
+
+- **Feature:** Incremental library updates (a fix of Zayit's code).
+- **Size:** 152 lines.
+- **What:** `LuceneLineDocument`: `analyzer()`, BuildLuceneIndex's per-field analyzer (StandardAnalyzer, and on
+  text_ng4 StandardTokenizer, LowerCaseFilter and 4-grams); `Book` (title, category, its ancestors, order, base book);
+  `create(fields, line, book)`, the line's document with LuceneTextIndexWriter.addLine's fields (type, book_id with
+  its doc values, category_id, book_title, ancestor_category_ids, line_id, line_index, order_index with base books
+  brought forward, is_base_book, text and text_ng4 of the normalized text), each given only the points, doc values
+  and indexing the index already has for it; and `normalize`, BuildLuceneIndex's normalizePostHtmlForIndex in one
+  `when` (the same characters dropped, spaced and replaced, checked on 200,000 random strings).
+- **Reached from:** `DbDeltaUpdateService.kt` (`defaultLuceneSinksProvider`).
+- **Follows:** SeforimLibrary's `generator/searchindex` `LuceneTextIndexWriter.addLine` and `BuildLuceneIndex`
+  (analyzer, normalization, base books' order), which wrote the index; Pardes for Android's `delta/LuceneDeltaSinks.kt`
+  made the same fix first.
+- **Tests:** `DbDeltaLuceneSinkTest`.
+- **Notes:** the normalization is written as a `when` over a set, not copied line for line, to keep within
+  `detekt.yml` (the copy was past its complexity and jump limits).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/update/DbDeltaLuceneSinkTest.kt`
+
+- **Feature:** Incremental library updates (a fix of Zayit's code).
+- **Size:** 152 lines.
+- **What:** one test: an index with one line written as LuceneTextIndexWriter.addLine writes the release's, a small
+  database of a book and its category ancestors, and a delta's line through `defaultLuceneSinksProvider`; the line
+  must then be found by its words without nikud or HTML, inside a word (text_ng4), under the category above its own,
+  by its line_index, with a base book's order brought forward. On Zayit's code it fails: Lucene refuses the line.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's update tests (Kotlin Test, sentences in backticks); a temporary folder and a JDBC database as
+  Pardes's `VectorIndexBuilderTest` makes them.
+- **Tests:** it is one (unit).
+
 ## 3. Pardes's own trees
 
 Every other file Pardes adds (645 files): Pardes for Android (`androidApp/`), branding, documents,
@@ -3475,7 +3539,7 @@ build leaves out for it.
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/DeltaUpdaterClient.kt` | `DeltaUpdaterClient`: the facade over the applier, the downloader, the Lucene and catalog updaters and the orchestrator (`recoverIfNeeded`, `checkForUpdate`, `applyChain`), with `fetchReleaseMeta` telling a missing file from up to date, `choosePath` preferring one direct patch of the release, and `pendingChain` for a half-applied delta. | Android variant of SeforimLibrary's delta-updater/src/jvmMain/.../deltaupdater/DeltaUpdaterClient.kt (7ddf045, unchanged up to the pinned 4f07145), same package and class name |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/LibraryDeltaService.kt` | Foreground data-sync service that keeps the process alive while `DbDeltaUpdateService` downloads and applies a delta, with its progress and, until the database part is committed, a cancel action. | Pardes's own |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/LogicalContentHasher.kt` | `LogicalContentHasher`: the logical sha256 of seforim.db (the tracked tables in key order, cells tagged by type, byte for byte as the JDBC version streams them) that must match the manifest's content hashes, read page by page with progress and cancellation. | Android variant of SeforimLibrary's generator/common/src/jvmMain/.../common/patch/LogicalContentHasher.kt (7ddf045, unchanged up to the pinned 4f07145), same package and class name |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/LuceneDeltaSinks.kt` | Where a delta's line changes go into seforim.db.lucene: one `IndexWriter` per delta on `NIOFSDirectory`, the documents written as SeforimLibrary's `LuceneTextIndexWriter.addLine` writes them (with `text_ng4` and `ancestor_category_ids`), segments over 512 MB left unmerged, committed only by the session. *Note:* Its header records that desktop's sink writes a reduced document (no `text_ng4`, no `ancestor_category_ids`), so lines a delta changes are missed by substring and category searches there: Zayit's code, in Pardes for desktop too. | Port of desktop 0.6.10's `defaultLuceneSinksProvider` (framework/update/DbDeltaUpdateService.kt), with the index writer's own documents |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/LuceneDeltaSinks.kt` | Where a delta's line changes go into seforim.db.lucene: one `IndexWriter` per delta on `NIOFSDirectory`, the documents written as SeforimLibrary's `LuceneTextIndexWriter.addLine` writes them (with `text_ng4` and `ancestor_category_ids`), segments over 512 MB left unmerged, committed only by the session. *Note:* Its header records that Zayit's sink writes a reduced document (no `text_ng4`, no `ancestor_category_ids`, no points on line_index), which the release's index refuses, and that Pardes for desktop writes the full one since 2026-11-09 (framework/update/LuceneLineDocument.kt). | Port of desktop 0.6.10's `defaultLuceneSinksProvider` (framework/update/DbDeltaUpdateService.kt), with the index writer's own documents |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/LuceneUpdater.kt` | `LuceneUpdater`: reads a patch's deleted and upserted lines, and every line of a book whose metadata alone changed, page by page into the sinks; its `SinkSession` gains `commit`, so a partial pass is rolled back, not committed on close. | Android variant of SeforimLibrary's delta-updater/src/jvmMain/.../deltaupdater/LuceneUpdater.kt (7ddf045, unchanged up to the pinned 4f07145), same package and class name |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/PatchApplier.kt` | `PatchApplier`: applies a patch.db onto the live seforim.db in one transaction (ATTACH, deferred foreign keys, migrations, upserts, deletes, foreign-key and content-hash checks, COMMIT) through android.database, with cancellation between statements. | Android variant of SeforimLibrary's generator/common/src/jvmMain/.../common/patch/PatchApplier.kt (7ddf045, unchanged up to the pinned 4f07145), same package and class name, same steps and SQL |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/delta/PatchDbSchema.kt` | `PatchDbSchema`: the client side of the patch schema (`CURRENT_VERSION`, `readTableInfo` with `ColumnInfo.pk`) through android.database. | Android variant of SeforimLibrary's generator/common/src/jvmMain/.../common/patch/PatchDbSchema.kt (7ddf045, unchanged up to the pinned 4f07145), same package and class name |
@@ -4013,11 +4077,13 @@ are a script's, not detekt's.
   `IndependentSemanticSearch` and `PardesLexicon` call `FSDirectory.open` unconditionally. Checked by use: the semantic
   search works in the released Pardes for desktop (the user, 2026-11-09), so nothing is changed; the difference from
   Zayit's guard stays noted here.
-- **Zayit's incremental updates and the full-text index.** Zayit's `defaultLuceneSinksProvider`
-  (`framework/update/DbDeltaUpdateService.kt`) writes a reduced document for each line a delta changes: no `text_ng4`
-  and no `ancestor_category_ids`, which the index's own writer has. Such lines are missed by substring and category
-  searches until the next full library. The code is Zayit's, so Pardes for desktop has it too; Pardes for Android
-  writes the full document (`delta/LuceneDeltaSinks.kt`). A fix belongs upstream first.
+- **Zayit's incremental updates and the full-text index (fixed in Pardes on 2026-11-09).** Zayit's
+  `defaultLuceneSinksProvider` (`framework/update/DbDeltaUpdateService.kt`) wrote each line a delta changes as a reduced
+  document: no point on `line_index`, the raw HTML with nikud, no `text_ng4`, no `ancestor_category_ids`. The release's
+  index has those, and Lucene refuses the first such line ("cannot change field line_index from points
+  dimensionCount=1 ... to dimensionCount=0"), so the index's step of every delta fails. Pardes for desktop now writes
+  the index writer's own document (`LuceneLineDocument.kt`, section 2; `DbDeltaLuceneSinkTest` failed before the fix),
+  as Pardes for Android did. Zayit's code still has it: a report upstream is the user's decision.
 
 ### Pardes for Android (`androidApp/`)
 
