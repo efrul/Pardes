@@ -147,6 +147,8 @@ describe("the feedback service", () => {
     assert.doesNotMatch(html, /type="password"|קוד המנהל/);
     const source = await readFile(new URL("../src/site/app.js", import.meta.url), "utf8");
     assert.doesNotMatch(source, /authorization|ADMIN_TOKEN/i);
+    // No sender on the page, not even its alias: no column of one, and none in a download
+    assert.doesNotMatch(source, /title: "שולח"|"sender"\]|\.sender\)\]/);
     const script = await site(mf, "/site/app.js");
     assert.match(script.headers.get("content-type"), /^text\/javascript/);
     assert.equal(await script.text(), source);

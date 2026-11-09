@@ -1,8 +1,10 @@
 // The open search data site (GET /): what users of the Torah library apps (Pardes, Zayit, Otzaria) shared to improve
-// search, open to everyone and in no one app's name, and a form to upload the packages people saved to files. It reads the service's public route, where each sender is an
-// alias (a digest of its id) and never the id itself, with which anyone could delete what that sender sent; uploads
-// go to POST /v1/packages, as the app sends them. Every text that came in a package is untrusted: it reaches the page
-// only as text (textContent, attribute values), never as markup, and the page's CSP runs no script but this file.
+// search, open to everyone and in no one app's name, and a form to upload the packages people saved to files. It reads
+// the service's public route, where each sender is an alias (a digest of its id, never the id, with which anyone could
+// delete what that sender sent). The page shows no sender at all, alias or id, nor puts one in a download: the alias
+// only lets it count each sender's rows once, and how many senders there are. Uploads go to POST /v1/packages, as the
+// app sends them. Every text that came in a package is untrusted: it reaches the page only as text (textContent,
+// attribute values), never as markup, and the page's CSP runs no script but this file.
 "use strict";
 
 const PAGE = 50; // packages a request, the public route's most
@@ -74,7 +76,8 @@ function svg(tag, attrs, ...children) {
 
 const $ = (id) => document.getElementById(id);
 const when = (ms) => (Number.isFinite(ms) && ms > 0 ? dateTime.format(new Date(ms)) : "—");
-const short = (id) => String(id ?? "").slice(0, 8);
+/** [p] without its sender, which the page never shows. */
+const anonymous = ({ sender, ...rest }) => rest;
 const sum = (rows, of) => rows.reduce((n, row) => n + of(row), 0);
 const size = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);
 const sourceName = (source) => SOURCES[source] ?? String(source);
@@ -326,7 +329,7 @@ function overview() {
       tile("שורות בצורת הדף", number.format(d.marks.length), "שנבדקו וסומנו")),
     h("p", { class: "lastline" }, last ? `החבילה האחרונה התקבלה ${when(last.receivedAt)}.` : "עוד לא התקבלה חבילה."),
     perDayCard(),
-    h("div", { class: "grid2" }, topSearchesCard(), gradesCard(), modelsCard(), sourcesCard()));
+    h("div", { class: "grid2" }, topSearchesCard(), h("div", { class: "column" }, gradesCard(), modelsCard(), sourcesCard())));
 }
 
 /** The packages received each day of the last [DAYS] days, as columns, with a table view. */
@@ -429,11 +432,22 @@ function topSearchesCard() {
     w.lastAt = Math.max(w.lastAt, q.lastAt);
     words.set(q.query, w);
   }
-  const rows = [...words.values()].sort((a, b) => b.value - a.value || b.lastAt - a.lastAt).slice(0, 10);
+  const rows = [...words.values()].sort((a, b) => b.value - a.value || b.lastAt - a.lastAt).slice(0, 12);
+  const top = Math.max(1, ...rows.map((r) => r.value));
+  const list = rows.length === 0 ? h("p", { class: "empty" }, "עוד אין חיפושים.")
+    : h("ol", { class: "ranked" }, rows.map((r, i) => {
+      const fill = h("div", { class: "fill" });
+      fill.style.width = `${(r.value / top) * 100}%`;
+      return h("li", {},
+        h("span", { class: "rank" }, number.format(i + 1)),
+        h("span", { class: "words", dir: "auto" }, r.name),
+        h("span", { class: "times" }, plural(r.value, "פעם", "פעמים")),
+        h("div", { class: "track", "aria-hidden": "true" }, fill));
+    }));
   return h("section", { class: "card" },
     h("h2", {}, "החיפושים הנפוצים"),
-    h("p", { class: "sub" }, "כמה פעמים חיפשו כל חיפוש, מכל השולחים"),
-    hbars(rows, "עוד אין חיפושים."));
+    h("p", { class: "sub" }, "המילים שחיפשו הכי הרבה פעמים, מכל התוכנות"),
+    list);
 }
 
 function gradesCard() {
@@ -595,13 +609,12 @@ function grades() {
     { title: "איפה", value: (g) => scope({ ...g, bookId: g.scopeBookId }), class: "scope" },
     { title: "המודל", value: (g) => g.model ?? "", class: "id" },
     { title: "מקור", value: (g) => sourceName(g.source), cell: (g) => h("span", { class: "source" }, sourceName(g.source)) },
-    { title: "שולח", value: (g) => g.sender, class: "id", cell: (g) => short(g.sender) },
     { title: "מתי", value: (g) => g.gradedAt, class: "when", cell: (g) => when(g.gradedAt) },
   ];
   const bar = toolbarFor("gradesFilter", "חיפוש בדירוגים או במודל", rows.length, state.data.grades.length, () =>
     download(`pardes-grades-${today()}.csv`, csv(
-      ["query", "search", "grade", "rank", "lineId", "bookId", "bookTitle", "heRef", "categoryId", "scopeBookId", "tocId", "scope", "extended", "model", "source", "sender", "gradedAt"],
-      state.data.grades.map((g) => [g.query, g.search, g.grade, g.rank, g.lineId, g.bookId, g.bookTitle, g.heRef, g.categoryId, g.scopeBookId, g.tocId, g.scope, g.extended, g.model, g.source, g.sender, iso(g.gradedAt)])),
+      ["query", "search", "grade", "rank", "lineId", "bookId", "bookTitle", "heRef", "categoryId", "scopeBookId", "tocId", "scope", "extended", "model", "source", "gradedAt"],
+      state.data.grades.map((g) => [g.query, g.search, g.grade, g.rank, g.lineId, g.bookId, g.bookTitle, g.heRef, g.categoryId, g.scopeBookId, g.tocId, g.scope, g.extended, g.model, g.source, iso(g.gradedAt)])),
     "text/csv;charset=utf-8"));
   bar.insertBefore(select, bar.children[1]);
   return h("div", {}, bar, table("grades", columns, rows, { title: "מתי", down: true }));
@@ -639,13 +652,12 @@ function daf() {
     { title: "המילים", value: (m) => m.t, class: "text", cell: (m) => h("span", { dir: "auto" }, m.t) },
     { title: "השורה", value: ok },
     { title: "הזזה", value: (m) => m.cut ?? 0, class: "num", cell: (m) => (m.cut ? String(m.cut) : "—") },
-    { title: "שולח", value: (m) => m.sender, class: "id", cell: (m) => short(m.sender) },
     { title: "מתי", value: (m) => m.atMs, class: "when", cell: (m) => when(m.atMs) },
   ];
   const bar = toolbarFor("dafFilter", "חיפוש בשורות", rows.length, marks.length, () =>
     download(`pardes-daf-${today()}.csv`, csv(
-      ["tractate", "tractateHe", "amud", "column", "line", "words", "ok", "cut", "sender", "at"],
-      marks.map((m) => [m.tractate, m.tractateHe, m.amud, m.c, m.i, m.t, m.ok, m.cut, m.sender, m.at])),
+      ["tractate", "tractateHe", "amud", "column", "line", "words", "ok", "cut", "at"],
+      marks.map((m) => [m.tractate, m.tractateHe, m.amud, m.c, m.i, m.t, m.ok, m.cut, m.at])),
     "text/csv;charset=utf-8"));
   return h("div", { class: "stack" },
     h("section", { class: "card" }, h("h2", {}, "המסכתות"), h("p", { class: "sub" }, "השורות שנבדקו בכל מסכת"), summary),
@@ -664,13 +676,12 @@ function packageSources(p) {
 function packages() {
   const open = (p) => {
     $("raw-title").textContent = `חבילה ${p.id} · ${when(p.receivedAt)}`;
-    $("raw-body").textContent = JSON.stringify(p.package, null, 2);
+    $("raw-body").textContent = JSON.stringify(anonymous(p.package ?? {}), null, 2);
     $("raw").showModal();
   };
   const columns = [
     { title: "מספר", value: (p) => p.id, class: "num", cell: (p) => String(p.id) },
     { title: "התקבלה", value: (p) => p.receivedAt, class: "when", cell: (p) => when(p.receivedAt) },
-    { title: "שולח", value: (p) => p.sender, class: "id", cell: (p) => short(p.sender) },
     { title: "מקור", value: (p) => [...packageSources(p)].map(sourceName).join(", "), cell: (p) => sources(packageSources(p)) },
     { title: "גרסה", value: (p) => p.appVersion ?? "" },
     { title: "הספרייה", value: (p) => p.library ?? "", class: "id" },
@@ -682,10 +693,9 @@ function packages() {
   ];
   const deletions = state.deletions.length
     ? h("section", {},
-      h("h2", { class: "section-title" }, "שולחים שמחקו את מה ששלחו"),
-      h("p", { class: "section-sub" }, "החבילות שלהם נמחקו מהשירות, וגם ההעתקים שהמתחזק הוריד נמחקים בהורדה הבאה"),
+      h("h2", { class: "section-title" }, "מחיקות"),
+      h("p", { class: "section-sub" }, `${plural(state.deletions.length, "שולח מחק", "שולחים מחקו")} את מה ששלחו. החבילות שלהם נמחקו מהשירות, וגם ההעתקים שהמתחזק הוריד נמחקים בהורדה הבאה.`),
       table("deletions", [
-        { title: "שולח", value: (d) => d.sender, class: "id", cell: (d) => short(d.sender) },
         { title: "מתי", value: (d) => d.deletedAt, class: "when", cell: (d) => when(d.deletedAt) },
       ], state.deletions, { title: "מתי", down: true }))
     : null;
@@ -909,7 +919,7 @@ function upload() {
         h("li", {}, h("strong", {}, "תוכנה אחרת: "), "כל קובץ JSON בפורמט 1 של חבילות נתוני החיפוש."),
         h("li", {}, h("strong", {}, "קובץ שפוצל לכמה חלקים: "), "בוחרים את כל החלקים יחד. שמות הקבצים הם בדרך כלל ", h("code", { dir: "ltr" }, "pardes-feedback-….json"), ".")),
       h("p", { class: "aside-note" },
-        "מה שמעלים כאן מוצג לכל מי שנכנס לאתר וזמין להורדה לכולם, עם כינוי במקום מזהה השולח. העלאה חוזרת של אותו קובץ לא מכפילה את החיפושים והדירוגים בסיכום.")));
+        "מה שמעלים כאן מוצג לכל מי שנכנס לאתר וזמין להורדה לכולם, בלי מזהה השולח ובלי שום פרט מזהה אחר. העלאה חוזרת של אותו קובץ לא מכפילה את החיפושים והדירוגים בסיכום.")));
 }
 
 // ---- Start ----
@@ -940,8 +950,11 @@ document.addEventListener("DOMContentLoaded", () => {
     show("upload");
     $("upload-files")?.focus();
   });
-  $("download").addEventListener("click", () =>
-    download(`pardes-feedback-${today()}.json`, JSON.stringify({ packages: state.packages, deletions: state.deletions }, null, 1), "application/json"));
+  // Without the senders: the page shows none, and gives none away
+  $("download").addEventListener("click", () => download(`pardes-feedback-${today()}.json`, JSON.stringify({
+    packages: state.packages.map(({ sender, package: body, ...row }) => ({ ...row, package: anonymous(body ?? {}) })),
+    deletions: state.deletions.map(({ deletedAt }) => ({ deletedAt })),
+  }, null, 1), "application/json"));
   $("raw-close").addEventListener("click", () => $("raw").close());
   window.addEventListener("scroll", hideTip, { passive: true });
   // A file dropped beside the drop zone is not opened in place of the page
