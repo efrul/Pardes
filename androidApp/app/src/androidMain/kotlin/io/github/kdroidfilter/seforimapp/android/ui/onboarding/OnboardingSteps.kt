@@ -43,6 +43,12 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton
 import io.github.kdroidfilter.seforimapp.android.ui.components.ZCheckRow
 import io.github.kdroidfilter.seforimapp.android.ui.settings.BundledLicenceLinks
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.icons.Download_for_offline
+import io.github.kdroidfilter.seforimapp.icons.FileArrowDown
+import io.github.kdroidfilter.seforimapp.icons.Ink_pen
+import io.github.kdroidfilter.seforimapp.icons.Speed
+import io.github.kdroidfilter.seforimapp.icons.Timer
+import io.github.kdroidfilter.seforimapp.icons.Unarchive
 
 /** Desktop message for a failed install (DownloadScreen / ExtractScreen / OfflineFileSelectionScreen). */
 internal fun installErrorMessage(failed: InstallState.Failed): String = when (failed.error) {
@@ -177,7 +183,7 @@ internal fun InstallTypeStep(device: DeviceState, onlineAllowed: Boolean, onOffl
                     DesktopStrings.installationOfflineButton,
                     onOffline,
                     Modifier.weight(1f).fillMaxHeight(),
-                    OnboardingIcons.Unarchive,
+                    Unarchive,
                 )
                 Box(Modifier.fillMaxHeight().width(1.dp).background(c.divider))
                 InstallOption(
@@ -186,7 +192,7 @@ internal fun InstallTypeStep(device: DeviceState, onlineAllowed: Boolean, onOffl
                     DesktopStrings.installationOnlineButton,
                     onOnline,
                     Modifier.weight(1f).fillMaxHeight(),
-                    OnboardingIcons.DownloadForOffline,
+                    Download_for_offline,
                     enabled = onlineAllowed,
                 )
             }
@@ -198,7 +204,7 @@ internal fun InstallTypeStep(device: DeviceState, onlineAllowed: Boolean, onOffl
                     DesktopStrings.installationOfflineButton,
                     onOffline,
                     Modifier.fillMaxWidth(),
-                    OnboardingIcons.Unarchive,
+                    Unarchive,
                 )
             }
             Island(Modifier.fillMaxWidth()) {
@@ -208,7 +214,7 @@ internal fun InstallTypeStep(device: DeviceState, onlineAllowed: Boolean, onOffl
                     DesktopStrings.installationOnlineButton,
                     onOnline,
                     Modifier.fillMaxWidth(),
-                    OnboardingIcons.DownloadForOffline,
+                    Download_for_offline,
                     enabled = onlineAllowed,
                 )
             }
@@ -251,17 +257,17 @@ internal fun DownloadStep(state: InstallState, onRetry: () -> Unit, onCancel: ()
         if (state is InstallState.Failed) {
             ErrorBanner(installErrorMessage(state), actionLabel = DesktopStrings.retryButton, onAction = onRetry)
         }
-        StepIllustration(OnboardingIcons.DownloadForOffline, wideSize = 192.dp, phoneSize = 140.dp)
+        StepIllustration(Download_for_offline, wideSize = 192.dp, phoneSize = 140.dp)
         val download = state as? InstallState.Downloading
         val total = download?.totalBytes
         if (download != null && total != null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 MetricRow(
-                    OnboardingIcons.FileArrowDown,
+                    FileArrowDown,
                     DesktopStrings.onboardingDownloadProgress.format(formatBytes(download.downloadedBytes), formatBytes(total)),
                 )
-                MetricRow(OnboardingIcons.Speed, formatBytesPerSec(download.speedBytesPerSec))
-                etaSeconds(download.downloadedBytes, total, download.speedBytesPerSec)?.let { MetricRow(OnboardingIcons.Timer, formatEta(it)) }
+                MetricRow(Speed, formatBytesPerSec(download.speedBytesPerSec))
+                etaSeconds(download.downloadedBytes, total, download.speedBytesPerSec)?.let { MetricRow(Timer, formatEta(it)) }
             }
             if (download.reconnecting) BodyText(AndroidStrings.reconnecting)
         } else if (state is InstallState.Preparing) {
@@ -278,7 +284,7 @@ internal fun OfflineFilesStep(state: InstallState, device: DeviceState, onPick: 
     val c = Zayit.colors
     val busy = state.isBusy
     StepScaffold(title = DesktopStrings.onboardingFileSelection) {
-        StepIllustration(OnboardingIcons.Unarchive, wideSize = 192.dp, phoneSize = 140.dp)
+        StepIllustration(Unarchive, wideSize = 192.dp, phoneSize = 140.dp)
         BodyText(DesktopStrings.onboardingFileSelection)
         BodyText(AndroidStrings.selectFilesMessage, Modifier.fillMaxWidth(0.9f))
         if (device.pickedFiles > 0 && state !is InstallState.Idle) {
@@ -325,7 +331,7 @@ internal fun ExtractStep(state: InstallState, onRetry: () -> Unit, onRestart: ()
                 if (state is InstallState.Failed) {
                     ErrorBanner(installErrorMessage(state), actionLabel = DesktopStrings.retryButton, onAction = onRetry)
                 }
-                StepIllustration(OnboardingIcons.Unarchive, wideSize = 192.dp, phoneSize = 140.dp)
+                StepIllustration(Unarchive, wideSize = 192.dp, phoneSize = 140.dp)
                 if (state is InstallState.Extracting) {
                     BodyText("${(state.progress * 100).toInt()}%")
                 }
@@ -394,11 +400,11 @@ internal fun ProfileStep(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 form(Modifier.weight(1f).padding(horizontal = 16.dp))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    StepIllustration(OnboardingIcons.InkPen, wideSize = 160.dp, phoneSize = 160.dp)
+                    StepIllustration(Ink_pen, wideSize = 160.dp, phoneSize = 160.dp)
                 }
             }
         } else {
-            StepIllustration(OnboardingIcons.InkPen, wideSize = 88.dp, phoneSize = 88.dp)
+            StepIllustration(Ink_pen, wideSize = 88.dp, phoneSize = 88.dp)
             form(Modifier.fillMaxWidth())
         }
     }
