@@ -208,14 +208,14 @@ function scope(row) {
   else if (row.categoryId != null) parts.push(`קטגוריה ${row.categoryId}`);
   else parts.push("כל הספרייה");
   if (row.extended) parts.push("מורחב");
-  return parts.join(" · ");
+  return parts.join(", ");
 }
 
 /** The result a grade is of: Otzaria's reference or book, or the library's book and line. */
 function result(g) {
   if (g.heRef && (!g.bookTitle || String(g.heRef).startsWith(g.bookTitle))) return g.heRef;
-  if (g.heRef || g.bookTitle) return [g.bookTitle, g.heRef].filter(Boolean).join(" · ");
-  return `ספר ${g.bookId} · שורה ${g.lineId}`;
+  if (g.heRef || g.bookTitle) return [g.bookTitle, g.heRef].filter(Boolean).join(", ");
+  return `ספר ${g.bookId}, שורה ${g.lineId}`;
 }
 
 const relevant = (grades) => grades.filter((g) => g.grade >= 2).length;
@@ -308,28 +308,98 @@ function failedNotice() {
     h("button", { type: "button", class: "primary", onclick: () => load() }, "לנסות שוב"));
 }
 
-function tile(label, value, note, key) {
-  return h("div", { class: key ? "tile key" : "tile" },
-    h("div", { class: "label" }, label),
-    h("div", { class: "value" }, value),
-    note ? h("div", { class: "note" }, note) : null);
+function overview() {
+  return h("div", { class: "stack" },
+    pageOfSearches(),
+    summary(),
+    perDayCard(),
+    h("div", { class: "grid3" }, gradesCard(), modelsCard(), sourcesCard()));
 }
 
-function overview() {
+/** The searches, the same words once wherever they looked, most searched first, with how their results were graded. */
+function words() {
+  const all = new Map();
+  for (const q of state.data.queries) {
+    const w = all.get(q.query) ?? { name: q.query, times: 0, senders: new Set(), lastAt: 0, graded: 0, relevant: 0 };
+    w.times += q.count;
+    for (const s of q.senders) w.senders.add(s);
+    w.lastAt = Math.max(w.lastAt, q.lastAt);
+    all.set(q.query, w);
+  }
+  for (const g of state.data.grades) {
+    const w = all.get(g.query);
+    if (!w) continue;
+    w.graded++;
+    if (g.grade >= 2) w.relevant++;
+  }
+  return [...all.values()].sort((a, b) => b.times - a.times || b.lastAt - a.lastAt);
+}
+
+/** How many times [w] was searched, as a mark after it, and in words for a screen reader. */
+function times(w) {
+  return h("span", { class: "n" }, number.format(w.times), h("span", { class: "visually-hidden" }, w.times === 1 ? " פעם" : " פעמים"));
+}
+
+/** What a commentary says of a search: how often, by how many, and how its results were graded. */
+function gloss(w) {
+  let text = w.times === 1 ? "חיפשו פעם אחת" : `חיפשו ${number.format(w.times)} פעמים`;
+  if (w.senders.size > 1) text += ` ${number.format(w.senders.size)} שולחים`;
+  if (w.graded === 1) text += w.relevant ? ", תוצאה רלוונטית" : ", תוצאה לא רלוונטית";
+  else if (w.graded > 1) text += `, ${number.format(w.relevant)} מ־${number.format(w.graded)} תוצאות רלוונטיות`;
+  return text;
+}
+
+/**
+ * The page of searches, set as a page of Gemara: the most searched in the middle, the first opening with a framed
+ * word as a chapter does, and the next ones around it as Rashi and Tosafot, each with what it was.
+ */
+function pageOfSearches() {
+  const all = words();
+  if (all.length === 0) {
+    return h("section", { class: "notice" },
+      h("h2", {}, "עוד אין חיפושים"),
+      h("p", {}, "חיפושים שנשלחים מהתוכנות, או שמעלים בלשונית ההעלאה, יופיעו כאן."),
+      h("button", { type: "button", class: "primary", onclick: () => show("upload") }, "העלאת חבילות"));
+  }
+  const main = all.slice(0, 8);
+  const inner = all.slice(8, 13);
+  const outer = all.slice(13, 18);
+  const [first, ...rest] = main[0].name.split(" ");
+  const gemara = h("p", { class: "gemara", dir: "rtl" },
+    h("span", { class: "opening" }, first),
+    rest.length ? ` ${rest.join(" ")}` : "",
+    times(main[0]),
+    main.slice(1).map((w) => [h("span", { class: "stop", "aria-hidden": "true" }, ": "), w.name, times(w)]),
+    h("span", { class: "stop", "aria-hidden": "true" }, ":"));
+  const commentary = (list, label) => list.length === 0 ? null
+    : h("p", { class: "commentary", "aria-label": label },
+      list.map((w, i) => [i ? " " : "", h("span", { class: "dh" }, w.name), ` ${gloss(w)}.`]));
+  const sides = [commentary(inner, "החיפושים הבאים"), commentary(outer, "ועוד חיפושים")];
+  // A grid's first column is the right one: Rashi beside the binding, the Gemara, then Tosafot
+  const body = h("div", { class: sides.some(Boolean) ? "daf-body" : "daf-body alone" },
+    sides[0] ?? (sides[1] ? h("span", {}) : null), gemara, sides[1]);
+  return h("figure", { class: "daf", "aria-labelledby": "daf-title" },
+    h("header", { class: "daf-head" },
+      h("h2", { id: "daf-title" }, "החיפושים הנפוצים"),
+      h("span", {}, `${plural(all.length, "חיפוש שונה", "חיפושים שונים")} עד עכשיו`)),
+    body,
+    h("figcaption", { class: "daf-caption" },
+      "באמצע, החיפושים שחיפשו הכי הרבה פעמים, והמספר הקטן אחרי כל אחד הוא כמה פעמים. מסביב, כמו רש״י ותוספות, הבאים אחריהם."));
+}
+
+/** What the data holds, in a few sentences. */
+function summary() {
   const d = state.data;
   const last = state.packages.at(-1);
+  const strong = (n) => h("strong", {}, typeof n === "number" ? number.format(n) : n);
+  const searched = sum(d.queries, (q) => q.count);
   const good = relevant(d.grades);
-  return h("div", { class: "stack" },
-    h("div", { class: "tiles" },
-      tile("חיפושים", number.format(sum(d.queries, (q) => q.count)), `${number.format(d.queries.length)} שונים`),
-      tile("דירוגים", number.format(d.grades.length), "תוצאות שקיבלו ציון"),
-      tile("תוצאות רלוונטיות", d.grades.length ? percent.format(good / d.grades.length) : "—",
-        d.grades.length ? `${number.format(good)} מתוך ${number.format(d.grades.length)} שדורגו` : "עוד אין דירוגים", true),
-      tile("שולחים", number.format(d.senders.size), plural(state.packages.length, "חבילה", "חבילות")),
-      tile("שורות בצורת הדף", number.format(d.marks.length), "שנבדקו וסומנו")),
-    h("p", { class: "lastline" }, last ? `החבילה האחרונה התקבלה ${when(last.receivedAt)}.` : "עוד לא התקבלה חבילה."),
-    perDayCard(),
-    h("div", { class: "grid2" }, topSearchesCard(), h("div", { class: "column" }, gradesCard(), modelsCard(), sourcesCard())));
+  return h("p", { class: "summary" },
+    "עד עכשיו שותפו ", strong(searched), " חיפושים (", strong(d.queries.length), " שונים) מ־", strong(d.senders.size),
+    d.senders.size === 1 ? " שולח" : " שולחים", ", ב־", strong(state.packages.length), state.packages.length === 1 ? " חבילה. " : " חבילות. ",
+    d.grades.length ? ["דורגו ", strong(d.grades.length), " תוצאות, ו־", strong(percent.format(good / d.grades.length)), " מהן נמצאו רלוונטיות. "] : "עוד לא דורגו תוצאות. ",
+    d.marks.length ? ["ונבדקו ", strong(d.marks.length), " שורות בצורת הדף. "] : "",
+    last ? `החבילה האחרונה התקבלה ${when(last.receivedAt)}.` : "");
 }
 
 /** The packages received each day of the last [DAYS] days, as columns, with a table view. */
@@ -409,7 +479,7 @@ function niceMax(n) {
   return [1, 2, 5, 10].map((m) => m * p).find((m) => m >= n);
 }
 
-/** Ranked horizontal bars of [rows] ({name, value, note}), one hue, the value at the tip. */
+/** Ranked bars of [rows] ({name, value, note}), one hue: the name and value above, the bar beneath. */
 function hbars(rows, empty) {
   if (rows.length === 0) return h("p", { class: "empty" }, empty);
   const top = Math.max(...rows.map((r) => r.value), 1);
@@ -418,43 +488,16 @@ function hbars(rows, empty) {
     fill.style.width = `${(r.value / top) * 100}%`;
     return h("div", { class: "hbar" },
       h("span", { class: "name", title: r.name, dir: "auto" }, r.name),
-      h("div", { class: "track" }, fill),
-      h("span", { class: "num" }, r.note ?? number.format(r.value)));
+      h("span", { class: "num" }, r.note ?? number.format(r.value)),
+      h("div", { class: "track", "aria-hidden": "true" }, fill));
   }));
-}
-
-function topSearchesCard() {
-  // The same words once, wherever they looked
-  const words = new Map();
-  for (const q of state.data.queries) {
-    const w = words.get(q.query) ?? { name: q.query, value: 0, lastAt: 0 };
-    w.value += q.count;
-    w.lastAt = Math.max(w.lastAt, q.lastAt);
-    words.set(q.query, w);
-  }
-  const rows = [...words.values()].sort((a, b) => b.value - a.value || b.lastAt - a.lastAt).slice(0, 12);
-  const top = Math.max(1, ...rows.map((r) => r.value));
-  const list = rows.length === 0 ? h("p", { class: "empty" }, "עוד אין חיפושים.")
-    : h("ol", { class: "ranked" }, rows.map((r, i) => {
-      const fill = h("div", { class: "fill" });
-      fill.style.width = `${(r.value / top) * 100}%`;
-      return h("li", {},
-        h("span", { class: "rank" }, number.format(i + 1)),
-        h("span", { class: "words", dir: "auto" }, r.name),
-        h("span", { class: "times" }, plural(r.value, "פעם", "פעמים")),
-        h("div", { class: "track", "aria-hidden": "true" }, fill));
-    }));
-  return h("section", { class: "card" },
-    h("h2", {}, "החיפושים הנפוצים"),
-    h("p", { class: "sub" }, "המילים שחיפשו הכי הרבה פעמים, מכל התוכנות"),
-    list);
 }
 
 function gradesCard() {
   const all = state.data.grades;
   const rows = GRADES.map(({ grade, name }) => {
     const n = all.filter((g) => g.grade === grade).length;
-    return { name, value: n, note: `${number.format(n)} · ${percent.format(all.length ? n / all.length : 0)}` };
+    return { name, value: n, note: `${number.format(n)} (${percent.format(all.length ? n / all.length : 0)})` };
   });
   return h("section", { class: "card" },
     h("h2", {}, "הדירוגים"),
@@ -477,7 +520,7 @@ function modelsCard() {
     .map((m) => ({
       name: m.name,
       value: m.grades.length,
-      note: `${number.format(m.grades.length)} · ${percent.format(relevant(m.grades) / m.grades.length)} רלוונטיות`,
+      note: `${number.format(m.grades.length)}, ${percent.format(relevant(m.grades) / m.grades.length)} רלוונטיות`,
     }));
   return h("section", { class: "card" },
     h("h2", {}, "לפי מודל החיפוש"),
@@ -500,7 +543,7 @@ function sourcesCard() {
     .map((t) => ({
       name: sourceName(t.source),
       value: t.searches + t.grades,
-      note: `${plural(t.searches, "חיפוש", "חיפושים")} · ${plural(t.grades, "דירוג", "דירוגים")}`,
+      note: `${plural(t.searches, "חיפוש", "חיפושים")}, ${plural(t.grades, "דירוג", "דירוגים")}`,
     }));
   return h("section", { class: "card" },
     h("h2", {}, "לפי תוכנה"),
@@ -607,7 +650,7 @@ function grades() {
     { title: "מקום", value: (g) => g.rank, class: "num", cell: (g) => number.format(g.rank) },
     { title: "התוצאה", value: result, class: "scope", cell: (g) => h("span", { dir: "auto" }, result(g)) },
     { title: "איפה", value: (g) => scope({ ...g, bookId: g.scopeBookId }), class: "scope" },
-    { title: "המודל", value: (g) => g.model ?? "", class: "id" },
+    { title: "המודל", value: (g) => g.model ?? "", class: "quiet" },
     { title: "מקור", value: (g) => sourceName(g.source), cell: (g) => h("span", { class: "source" }, sourceName(g.source)) },
     { title: "מתי", value: (g) => g.gradedAt, class: "when", cell: (g) => when(g.gradedAt) },
   ];
@@ -675,7 +718,7 @@ function packageSources(p) {
 
 function packages() {
   const open = (p) => {
-    $("raw-title").textContent = `חבילה ${p.id} · ${when(p.receivedAt)}`;
+    $("raw-title").textContent = `חבילה ${p.id}, התקבלה ${when(p.receivedAt)}`;
     $("raw-body").textContent = JSON.stringify(anonymous(p.package ?? {}), null, 2);
     $("raw").showModal();
   };
@@ -684,7 +727,7 @@ function packages() {
     { title: "התקבלה", value: (p) => p.receivedAt, class: "when", cell: (p) => when(p.receivedAt) },
     { title: "מקור", value: (p) => [...packageSources(p)].map(sourceName).join(", "), cell: (p) => sources(packageSources(p)) },
     { title: "גרסה", value: (p) => p.appVersion ?? "" },
-    { title: "הספרייה", value: (p) => p.library ?? "", class: "id" },
+    { title: "הספרייה", value: (p) => p.library ?? "", class: "quiet" },
     { title: "דירוגים", value: (p) => p.grades, class: "num", cell: (p) => number.format(p.grades) },
     { title: "חיפושים", value: (p) => p.searches, class: "num", cell: (p) => number.format(p.searches) },
     { title: "צורת הדף", value: (p) => p.dafMarks, class: "num", cell: (p) => number.format(p.dafMarks) },

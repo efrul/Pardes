@@ -22,7 +22,7 @@ async function service(limit = 1000, reads = 1000) {
         ...["index.js", "package.js", "site.js"].map((name) => ({ type: "ESModule", path: `${SRC}${name}` })),
         // As wrangler.toml's rules upload them: text, never run, and the font as data
         ...["site/index.html", "site/app.js", "site/style.css"].map((name) => ({ type: "Text", path: `${SRC}${name}` })),
-        { type: "Data", path: `${SRC}site/display.woff2` },
+        ...["site/display.woff2", "site/rashi.woff2"].map((name) => ({ type: "Data", path: `${SRC}${name}` })),
       ],
       compatibilityDate: "2026-10-01",
       d1Databases: { DB: "test" },
@@ -159,6 +159,9 @@ describe("the feedback service", () => {
     const font = await site(mf, "/site/display.woff2");
     assert.equal(font.headers.get("content-type"), "font/woff2");
     assert.deepEqual(Buffer.from(await font.arrayBuffer()), await readFile(new URL("../src/site/display.woff2", import.meta.url)));
+    const rashi = await site(mf, "/site/rashi.woff2");
+    assert.equal(rashi.headers.get("content-type"), "font/woff2");
+    assert.deepEqual(Buffer.from(await rashi.arrayBuffer()), await readFile(new URL("../src/site/rashi.woff2", import.meta.url)));
     // The maintainer's old page leads to the site
     const old = await site(mf, "/admin", { redirect: "manual" });
     assert.equal(old.status, 301);
