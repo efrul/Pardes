@@ -9,10 +9,15 @@ workers_dev = true
 [observability]
 enabled = false
 
-# The maintainer's page (src/admin.js): its files as text, served as they are, never run in the Worker
+# The site (src/site.js): its page, script and style as text, served as they are, never run in the Worker; its font as data
 [[rules]]
 type = "Text"
-globs = ["**/admin/*.html", "**/admin/*.css", "**/admin/*.js"]
+globs = ["**/site/*.html", "**/site/*.css", "**/site/*.js"]
+fallthrough = false
+
+[[rules]]
+type = "Data"
+globs = ["**/site/*.woff2"]
 fallthrough = false
 
 [[d1_databases]]
@@ -21,8 +26,14 @@ database_name = "pardes-feedback"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
-# At most 20 requests a minute from one address (in Cloudflare's memory, not kept)
+# At most 20 packages or deletions a minute from one address (in Cloudflare's memory, not kept)
 [[ratelimits]]
 name = "LIMITER"
 namespace_id = "1601"
 simple = { limit = 20, period = 60 }
+
+# The site's reads (GET /v1/public/packages, 50 packages each): at most 300 a minute from one address
+[[ratelimits]]
+name = "READ_LIMITER"
+namespace_id = "1602"
+simple = { limit = 300, period = 60 }

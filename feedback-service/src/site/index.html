@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="חיפושים, דירוגי תוצאות וסימונים בצורת הדף שמשתמשי תוכנות הספרייה התורנית שיתפו כדי לשפר את החיפוש. פתוח לכולם לעיון, להורדה ולהעלאה, בלי שום פרט מזהה.">
+<meta name="color-scheme" content="light dark">
+<title>מאגר החיפושים הפתוח</title>
+<link rel="preload" href="/site/display.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site/style.css">
+<script src="/site/app.js" defer></script>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <div class="titles">
+      <h1>מאגר החיפושים הפתוח</h1>
+      <p class="lede">חיפושים, דירוגים שניתנו לתוצאות וסימונים בצורת הדף, שמשתמשי פרדס, זית ואוצריא שיתפו כדי לשפר את החיפוש.
+        פתוח לכולם לעיון, להורדה ולהעלאה, בלי שום פרט מזהה.</p>
+    </div>
+    <div class="actions">
+      <div class="buttons">
+        <button id="refresh" type="button">רענון</button>
+        <button id="download" type="button">הורדת הכול (JSON)</button>
+        <button id="to-upload" type="button" class="cta">העלאת חבילות</button>
+      </div>
+      <span id="status" class="status" aria-live="polite"></span>
+    </div>
+  </div>
+</header>
+<nav class="tabs" aria-label="מה להציג">
+  <div class="tabs-inner" role="tablist">
+    <button type="button" role="tab" id="tab-overview" data-view="overview" aria-controls="view">סיכום</button>
+    <button type="button" role="tab" id="tab-searches" data-view="searches" aria-controls="view">חיפושים <span class="count-badge" data-count="searches"></span></button>
+    <button type="button" role="tab" id="tab-grades" data-view="grades" aria-controls="view">דירוגים <span class="count-badge" data-count="grades"></span></button>
+    <button type="button" role="tab" id="tab-daf" data-view="daf" aria-controls="view">צורת הדף <span class="count-badge" data-count="daf"></span></button>
+    <button type="button" role="tab" id="tab-packages" data-view="packages" aria-controls="view">חבילות <span class="count-badge" data-count="packages"></span></button>
+    <button type="button" role="tab" id="tab-upload" data-view="upload" aria-controls="view">העלאה</button>
+  </div>
+</nav>
+<main>
+  <div id="view" role="tabpanel" tabindex="-1"></div>
+</main>
+<footer class="foot">
+  <p>הנתונים כאן חופשיים לשימוש של כולם, לכל תוכנה ולכל מחקר. לא מוצג בהם שום פרט מזהה, גם לא המזהה האקראי של השולח.
+    <a href="https://github.com/efrul/Pardes/tree/main/feedback-service" rel="noopener noreferrer">קוד המקור</a></p>
+</footer>
+<div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+<dialog id="raw" class="raw" aria-labelledby="raw-title">
+  <div class="raw-head">
+    <strong id="raw-title"></strong>
+    <button type="button" id="raw-close">סגירה</button>
+  </div>
+  <pre id="raw-body" dir="ltr"></pre>
+</dialog>
+</body>
+</html>
