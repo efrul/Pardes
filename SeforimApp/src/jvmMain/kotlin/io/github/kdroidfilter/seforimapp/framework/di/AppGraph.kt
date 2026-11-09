@@ -19,6 +19,7 @@ import io.github.kdroidfilter.seforimapp.features.database.update.DatabaseCleanu
 import io.github.kdroidfilter.seforimapp.features.database.update.DatabasePreparationUseCase
 import io.github.kdroidfilter.seforimapp.features.database.update.navigation.DatabaseUpdateProgressBarState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindows
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryLookup
 import io.github.kdroidfilter.seforimapp.features.onboarding.data.OnboardingProcessRepository
 import io.github.kdroidfilter.seforimapp.features.onboarding.navigation.ProgressBarState
 import io.github.kdroidfilter.seforimapp.framework.crashreporting.CrashReporting
@@ -77,6 +78,7 @@ abstract class AppGraph : ViewModelGraph {
     abstract val appUpdateService: AppUpdateService
     abstract val crashReporting: CrashReporting
     abstract val toolWindows: ToolWindows
+    abstract val dictionaryLookup: DictionaryLookup
 
     /** The question at start whether to send feedback, and the sending by itself (FeedbackConsentDialog). */
     abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender

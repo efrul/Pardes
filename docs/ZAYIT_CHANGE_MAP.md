@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (145 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (146 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -350,18 +350,20 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +4 −0 lines. Feature: Reading time, Feedback mode.
+- **Change:** modified, +6 −0 lines. Feature: Reading time, Feedback mode, Dictionary window.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`.
   - `abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender`,
     with a KDoc line.
+  - `abstract val dictionaryLookup: DictionaryLookup`, after Zayit's `toolWindows`, with its import.
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`) and the
-  feedback sender (`main.kt`, `ddf604d8`) through the graph.
+  feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
+  lookup.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** two lines among Zayit's declarations.
+- **Merge risk:** three lines among Zayit's declarations, and an import.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`.
-- **Notes:** the two types are written fully qualified instead of imported, unlike every other line of the file:
+- **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`.
+- **Notes:** the first two types are written fully qualified instead of imported, unlike every other line of the file:
   fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
@@ -675,7 +677,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
-- **Change:** modified, +73 −10 lines. Feature: Daf view, Reading time, Copy of the words alone.
+- **Change:** modified, +88 −10 lines. Feature: Daf view, Reading time, Copy of the words alone, Dictionary window.
 - **What:**
   - In `BookTextMenus`, `LocalLocatedSelection.current`: when the content locates its own selection in the library (the
     daf's printed words), the context menu's link, note and highlight take that location instead of searching the
@@ -685,18 +687,22 @@ The entries of this section by kind:
     the text there is still the one it wrote (`written`), because the daf has an area per amud.
   - In `BookTextMenus`, the item "העתק טקסט בלבד" (`context_menu_copy_letters_only`) after "copy without nikud", when the
     copied text has anything but letters, digits and spaces (`hasMoreThanLetters`): it copies `lettersOnly(copiedText)`.
+  - In `BookTextMenus`, the item "פתח במילון" (`context_menu_open_in_dictionary`) after "search the selected text", when
+    the copied text is a word or up to four (`lookupWord`): it opens the dictionary's window on it
+    (`dictionaryLookup.open`, read from the graph beside the repository).
   - In `BookContentScreen`, a `LaunchedEffect` that tracks the book's reading time (`readingTimeStore.track`) while its
     tab is selected and its window focused (`windowInfo.isWindowFocused` read as a flow).
   - Imports, among them a redundant `androidx.compose.runtime.snapshotFlow` beside the file's `androidx.compose.runtime.*`.
 - **Why:** highlights and notes work on the daf's printed words (`d334af46`), a selection survives while another amud
   is composed (`d9cb48b7`), the learning split widget counts the time a book is read (`0083381e`), and a text is copied
-  without its nikud, teamim and punctuation, as the user asked on 2026-11-09.
+  without its nikud, teamim and punctuation, and a selected word is looked up in the dictionary, as the user asked on
+  2026-11-09.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: the edits sit inside Zayit's context-menu builder (`BookTextMenus`), which Zayit changes when
   it adds a menu action.
 - **Smaller:** the reading-time effect could be a Pardes composable called by one line; the menu's branches need the
   menu's locals.
-- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`.
+- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`, `DictionaryLookupTest`.
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
@@ -1187,8 +1193,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +212 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 199 Hebrew strings added in thirteen blocks,
+- **Change:** modified, +213 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 200 Hebrew strings added in thirteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
@@ -1204,7 +1210,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
-  - the reader's menu: `context_menu_copy_letters_only`.
+  - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -1378,7 +1384,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWidget.kt`
 
-- **Change:** modified, +169 −22 lines. Feature: Klei Kodesh dictionary, Dictionary window.
+- **Change:** modified, +170 −22 lines. Feature: Klei Kodesh dictionary, Dictionary window.
 - **What:**
   - `Dictionary` gains a `source` (`BOOK`, `INDEX`, `TEXT`) and an `attribution`, and six entries: four books of the
     library read through Klei Kodesh's index of headwords (מצודת ציון, the Malbim's ביאור המילות, מיקרופדיה תלמודית,
@@ -1392,17 +1398,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
     clicked is looked up.
   - `ToolWindow` is overridden by `DictionaryToolWindow`, and the field's modifier starts from
     `Modifier.fillMaxWidth().focusedInItsWindow()` (a local `field`): in the dictionary's own window the field takes the
-    focus.
+    focus. `LookupAskedFor(pickWord)` puts the word the window was opened on in the field.
   - The entry page shows a text entry's text and attribution, and no "open in the book" button for it; the options page
     marks Klei Kodesh's dictionaries ("· כלי קודש").
 - **Why:** more dictionaries and related words in the Home's dictionary card, from Klei Kodesh's Kitvei Hakodesh data
   (`66ae16e8`, `4f86ba1e`, `389f2438`); HaMichlol's definitions were taken out again before release (`f405bb7f`). The
-  dictionary opened from the Tools menu is ready to type in, as the user asked on 2026-11-09.
+  dictionary opened from the Tools menu is ready to type in, and the reader's menu opens it on a word, as the user asked
+  on 2026-11-09.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: Zayit's `readDictionaries` body was moved into `readBook`, so a Zayit change there conflicts.
 - **Smaller:** `readIndexed`, `titleVariants` and `RelatedWords` could move to `KleiKodeshDictionary.kt`; keeping Zayit's
   reading code where it was would avoid the move.
-- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`.
+- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`, `DictionaryLookupTest`.
 - **Notes:** the attributions and the "· כלי קודש" mark are Hebrew literals in Kotlin, as the file's dictionary labels
   already were in Zayit; ktlint left one `if (kind ==` broken over three lines.
 
@@ -2146,30 +2153,46 @@ Hakodesh data, with their permission. Hooks: `DictionaryWidget.kt`, `strings.xml
 
 ### The dictionary's own window
 
-The dictionary opened from the Tools menu is ready to type in: its field has the focus, as the user asked on 2026-11-09.
-Hook: `DictionaryWidget.kt`.
+The dictionary opened from the Tools menu is ready to type in, its field focused, and the reader's context menu opens
+it on the selected word ("פתח במילון"), as the user asked on 2026-11-09. Hooks: `DictionaryWidget.kt`,
+`BookContentScreen.kt`, `AppGraph.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWindow.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 36 lines.
+- **Size:** 82 lines.
 - **What:** `DictionaryToolWindow`, the dictionary's tool window: Zayit's `DefaultToolWindow` under
   `LocalDictionaryWindow` set to true. `Modifier.focusedInItsWindow()` gives the field the focus there, when the window
   opens, each time it is asked for again (`ToolWindows.reopened`) and back from an entry's page; on the Home the local is
-  false and the card takes no focus by itself.
-- **Reached from:** `DictionaryWidget.kt` (`ToolWindow`, the field's modifier).
+  false and the card takes no focus by itself. `DictionaryLookup` (app-scoped) opens that window on a word from outside
+  it, or brings it back: the word waits in it until `LookupAskedFor`, in the window alone, hands it to the field.
+  `lookupWord` is a selection as the dictionary is asked for it: its words alone (`lettersOnly`), or null when it is
+  empty or longer than four words.
+- **Reached from:** `DictionaryWidget.kt` (`ToolWindow`, the field's modifier, `LookupAskedFor`), `BookContentScreen.kt`
+  (`lookupWord`, `DictionaryLookup.open`), `AppGraph.kt`.
 - **Follows:** Zayit's `SolarSystemWidget`, whose `ToolWindow` is a window of its own, and his composable modifiers
-  (`Modifier.pageSwipe`, `Modifier.trackedDrag`).
-- **Tests:** `DictionaryWindowUiTest`.
+  (`Modifier.pageSwipe`, `Modifier.trackedDrag`); `DictionaryLookup` is injected as his `ToolWindows` is.
+- **Tests:** `DictionaryWindowUiTest`, `DictionaryLookupTest`.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWindowUiTest.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 60 lines.
-- **What:** in its own window the dictionary's field takes the focus; on the Home its card takes none by itself.
+- **Size:** 82 lines.
+- **What:** in its own window the dictionary's field takes the focus and the word asked for from outside; on the Home
+  its card takes no focus by itself and leaves that word to the window.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's widget UI tests (`WidgetMenuUiTest`: `runDesktopComposeUiTest`, the test graph).
 - **Tests:** it is one (Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryLookupTest.kt`
+
+- **Feature:** Dictionary window.
+- **Size:** 35 lines.
+- **What:** a selected word is asked for as its letters alone; no word, or more than four, is not looked up; a lookup
+  opens the dictionary's window and brings it back for the next word.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `DictionaryWidgetTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 ### Library location, and an installed Zayit's library used in place
 
