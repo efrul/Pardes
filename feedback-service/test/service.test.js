@@ -130,7 +130,7 @@ describe("the feedback service", () => {
     assert.equal(capped.more, true);
   });
 
-  test("serves the site, with no data and no login in it, and runs no script but its own", async () => {
+  test("serves the site, with no data in it, and runs no script but its own", async () => {
     await post(mf, pkg(A, { searches: [{ query: "סוד שלא בדף", lastAt: 1793800000002 }] }));
     const page = await site(mf, "/");
     const csp = page.headers.get("content-security-policy");
@@ -143,10 +143,9 @@ describe("the feedback service", () => {
     const html = await page.text();
     assert.doesNotMatch(html, /סוד שלא בדף/);
     assert.doesNotMatch(html, /<script>/);
-    // Open to everyone: nothing asks for the maintainer's token
-    assert.doesNotMatch(html, /type="password"|קוד המנהל/);
     const source = await readFile(new URL("../src/site/app.js", import.meta.url), "utf8");
-    assert.doesNotMatch(source, /authorization|ADMIN_TOKEN/i);
+    // Everyone's view reads the public route; only the maintainer, signed in, reads the packages as they came
+    assert.match(source, /\/v1\/public\/packages/);
     // No sender on the page, not even its alias: no column of one, and none in a download
     assert.doesNotMatch(source, /title: "שולח"|"sender"\]|\.sender\)\]/);
     const script = await site(mf, "/site/app.js");
@@ -167,27 +166,46 @@ describe("the feedback service", () => {
     assert.equal((await site(mf, "/", { method: "POST" })).status, 404);
   });
 
-  test("gives everyone the packages, each sender an alias that does not give its id away", async () => {
-    const sent = pkg(A, { searches: [{ query: "<img src=x onerror=alert(1)>", lastAt: 1793800000003 }] });
+  test("gives everyone the packages without a search's words, each sender an alias that does not give its id away", async () => {
+    const words = "חיפוש אישי שלא יתפרסם";
+    const sent = pkg(A, {
+      searches: [{ query: words, extended: false, count: 3, lastAt: 1793800000003, scope: "/תיקייה פרטית" }],
+      grades: [{ ...pkg(A).grades[0], query: words, search: `search:g:${words}`, heRef: "מקום פרטי", bookTitle: "ספר" }],
+      note: "טקסט שהוסיף השולח",
+    });
     const { id } = await (await post(mf, sent)).json();
     const res = await everyones(mf, `?after=${id - 1}`);
     assert.equal(res.status, 200);
     const raw = await res.text();
     assert.ok(!raw.includes(A), "a sender's id would let anyone delete what it sent");
+    for (const secret of [words, "מקום פרטי", "/תיקייה פרטית", "טקסט שהוסיף השולח", "26579"]) {
+      assert.ok(!raw.includes(secret), `everyone's list carries ${secret}`);
+    }
     const listed = JSON.parse(raw);
     const row = listed.packages[0];
     assert.equal(row.id, id);
     assert.match(row.sender, /^[0-9a-f]{12}$/);
     assert.equal(row.package.sender, row.sender);
-    assert.deepEqual({ ...row.package, sender: A }, sent);
     assert.equal(row.body, undefined);
-    // The same sender, the same alias; another sender, another
-    const all = await (await everyones(mf)).json();
-    const aliases = new Set(all.packages.filter((p) => p.package.appVersion === "1.0.7").map((p) => p.sender));
-    assert.ok(aliases.has(row.sender));
-    for (let i = 0; i < 3; i++) await post(mf, pkg(B));
-    const both = await (await everyones(mf, `?after=${id - 1}`)).json();
-    assert.equal(new Set(both.packages.map((p) => p.sender)).size, 2);
+    // What counts a search and a grade comes through; their words are opaque ids
+    const [search] = row.package.searches;
+    assert.match(search.query, /^[0-9a-f]{12}$/);
+    assert.deepEqual({ ...search, query: "" }, { query: "", extended: false, count: 3, lastAt: 1793800000003 });
+    const [grade] = row.package.grades;
+    assert.match(grade.search, /^[0-9a-f]{12}$/);
+    assert.deepEqual({ grade: grade.grade, rank: grade.rank, model: grade.model, gradedAt: grade.gradedAt },
+      { grade: 3, rank: 2, model: "student@695cbe2/pardes-clean-1", gradedAt: 1793800000002 });
+    assert.equal(row.package.daf[0].marks[0].t, "שורה");
+    // The same words in the same scope, the same id, whoever sent them; elsewhere, another
+    const again = await (await post(mf, pkg(B, { searches: [{ query: words, scope: "/תיקייה פרטית", lastAt: 1793800000004 },
+      { query: words, lastAt: 1793800000005 }] }))).json();
+    const later = await (await everyones(mf, `?after=${again.id - 1}`)).json();
+    assert.equal(later.packages[0].package.searches[0].query, search.query);
+    assert.notEqual(later.packages[0].package.searches[1].query, search.query);
+    assert.notEqual(later.packages[0].sender, row.sender);
+    // The maintainer, with the token, reads the words
+    const theirs = await (await admin(mf, `/v1/packages/${id}`)).json();
+    assert.equal(theirs.searches[0].query, words);
     // No token needed, and at most 50 a request
     for (let i = 0; i < 51; i++) await post(mf, pkg(B));
     const capped = await (await everyones(mf, "?limit=1000")).json();
