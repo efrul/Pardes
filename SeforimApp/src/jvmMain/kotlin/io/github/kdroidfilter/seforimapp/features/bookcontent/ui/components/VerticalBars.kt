@@ -165,7 +165,7 @@ fun EndVerticalBar(
                         toolTipText = stringResource(Res.string.daf_view_tooltip),
                         onClick = { onEvent(BookContentEvent.ToggleDafView) },
                         isSelected = uiState.content.dafView,
-                        icon = ColumnsGap,
+                        icon = GemaraPage,
                         iconDescription = stringResource(Res.string.daf_view),
                         label = stringResource(Res.string.daf_view),
                     )
