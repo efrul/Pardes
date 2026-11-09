@@ -99,6 +99,59 @@ def query_words(q):
     return list(dict.fromkeys(stem(w) for w in verbatim_key(q).split() if len(w) > 1))
 
 
+# Endings a word of the query and of the line may differ in (the index's letters: finals as base forms): the plural of
+# the Mishna and the Aramaic (דומין, דומים), the feminine and the construct (דומה, לפגעי)
+_ENDINGS = ("ימ", "ינ", "ות", "ה", "י")
+
+
+def unend(w):
+    """[w] (a stem) without one ending of _ENDINGS, when three letters stay."""
+    for e in _ENDINGS:
+        if w.endswith(e) and len(w) - len(e) >= 3:
+            return w[: -len(e)]
+    return w
+
+
+words_sfx_cache = {}
+
+
+def words_sfx(d):
+    w = words_sfx_cache.get(d)
+    if w is None:
+        w = words_sfx_cache[d] = [unend(x) for x in words(d)]
+    return w
+
+
+def query_words_sfx(q):
+    return list(dict.fromkeys(unend(w) for w in query_words(q)))
+
+
+def coverage_sfx(d, qw):
+    """coverage(), the words compared without their endings (unend)."""
+    if len(qw) < 2:
+        return 0.0
+    line, want, n = words_sfx(d), set(qw), len(qw)
+    win = max(2 * n, n + 4)
+    best = 0
+    for i, w in enumerate(line):
+        if w in want:
+            got = len(want & set(line[i:i + win]))
+            if got > best:
+                best = got
+                if best == n:
+                    break
+    return best / n
+
+
+def holds_near_verbatim(d, q):
+    """The line holds the query's words in a row, prefixes and endings off (unend), a query of 3 words or more."""
+    qw = [unend(stem(w)) for w in verbatim_key(q).split()]
+    if len(qw) < 3:
+        return False
+    line = words_sfx(d)
+    n = len(qw)
+    return any(line[i:i + n] == qw for i in range(len(line) - n + 1))
+
 # A numbered unit of a text (a verse, a mishna, a halacha, a seif: "(יג) ..."), not a commentary's lemma ("(ו) <b>...")
 _NUMBERED = re.compile(r"^\s*\([\u05d0-\u05ea]{1,4}\)\s*(?!<b>)")
 
@@ -292,6 +345,9 @@ METHODS = [
     ("p12wl", "הצעות 1+2 עם החלון וקדימות הרמה", "p12w, ואחריו LevelPrecedence של האפליקציה: בין השורות שמכילות את השאילתה כמשפט (גם בכתיב מלא/חסר), הרמה המוקדמת קודמת"),
     ("p12wl_w2", "p12wl, סמנטי ×2", "p12wl עם משקל 2 לצד הסמנטי במקום 3 (EXPANSIONS.md)"),
     ("p12wl_w15", "p12wl, סמנטי ×1.5", "p12wl עם משקל 1.5 לצד הסמנטי במקום 3 (EXPANSIONS.md)"),
+    ("p12wl_sfx", "p12wl, החלון בלי הסיומות", "p12wl, והחלון משווה מילים גם בלי הסיומות ים/ין/ות/ה/י (דומים=דומין=דומה)"),
+    ("p12wl_nv", "p12wl, מילה במילה גם בלי הסיומות", "p12wl_sfx, ושורה רגילה שמכילה את מילות השאילתה ברצף, בלי התחיליות והסיומות, שוקלת 3"),
+    ("p12wl_few", "p12wl, מעט תוצאות רגילות שוקלות 3", "p12wl, וכשהצד הרגיל מצא 10 שורות או פחות, כולן שוקלות 3"),
     ("p12wl_sa", "p12wl, שורה קצרה שמפרשים נתלים בה נשארת", "p12wl, והשורה הסמנטית הקצרה נשארת כשיש בה עוגני מפרשים (data-commentator: סעיפי השולחן ערוך ועוד), לא רק כשהצד הרגיל מצא אותה"),
     ("p12wl_sn", "p12wl, יחידה ממוספרת קצרה נשארת", "p12wl, והשורה הסמנטית הקצרה נשארת כשהיא יחידה ממוספרת של טקסט (פסוק, משנה, הלכה, סעיף: \"(יג) ...\"), לא דיבור המתחיל של מפרש"),
     ("p12wsl", "p12wl, מילה במילה גם בכתיב אחר", "p12wl, והשורה הרגילה שוקלת 3 כשהיא מכילה את השאילתה כמשפט גם בכתיב מלא/חסר ועם קידומות (holds_phrase של LevelPrecedence), לא רק מילה במילה (EXPANSIONS.md)"),
@@ -382,19 +438,26 @@ def order_for(method, r):
         lexset = set(lex)
         dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
         return keep(ranked(rrf(lex, dd, lw=lw)), leaders)
-    if method in ("p12w", "p12w_w2", "p12w_w15", "p12ws", "p12w_sa", "p12w_sn"):
+    if method in ("p12w", "p12w_w2", "p12w_w15", "p12ws", "p12w_sa", "p12w_sn", "p12w_sfx", "p12w_nv", "p12w_few"):
         w = {"p12w_w2": 2.0, "p12w_w15": 1.5}.get(method, 3.0)
         spare = {"p12w_sa": "anchors", "p12w_sn": "numbered"}.get(method)
         many = len(verbatim_key(q).split()) >= 3
         if method == "p12ws":  # the query as a sentence, spelling apart (LevelPrecedence's holds_phrase), not word for word
             lw = (lambda d: 3.0 if holds_phrase(q, lines[d][2], spelling=True) else 1.0) if many else None
+        elif method == "p12w_nv":
+            lw = (lambda d: 3.0 if holds_verbatim(lines[d][2], q) or holds_near_verbatim(d, q) else 1.0) if many else None
+        elif method == "p12w_few" and 0 < r.get("lexTotal", 999) <= 10:
+            lw = lambda d: 3.0  # noqa: E731
         else:
             lw = (lambda d: 3.0 if holds_verbatim(lines[d][2], q) else 1.0) if many else None
         lexset = set(lex)
         dd = [d for d in dense if not short_out(d, general, lexset, spare)]
         sc = rrf(lex, dd, w=w, lw=lw)
+        if method in ("p12w_sfx", "p12w_nv"):
+            qs = query_words_sfx(q)
+            return keep(ranked({d: s + 0.03 * coverage_sfx(d, qs) ** 2 for d, s in sc.items()}), leaders)
         return keep(ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()}), leaders)
-    if method in ("p12wl", "p12wl_w2", "p12wl_w15", "p12wsl", "p12wl_sa", "p12wl_sn"):
+    if method in ("p12wl", "p12wl_w2", "p12wl_w15", "p12wsl", "p12wl_sa", "p12wl_sn", "p12wl_sfx", "p12wl_nv", "p12wl_few"):
         return level_first(order_for({"p12wsl": "p12ws"}.get(method, method.replace("p12wl", "p12w")), r), q)
     if method == "window":
         sc = rrf(lex, dense)

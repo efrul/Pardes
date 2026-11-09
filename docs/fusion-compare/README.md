@@ -17,7 +17,7 @@
 מילים נרדפות, המילון הארמי וכתיב מלא/חסר בתוך החיפוש של פרדס, וכמה משפיע הסדר של כל צד: [EXPANSIONS.md](EXPANSIONS.md).
 
 **המימוש (9.11.2026):** ‏`p12wl` הוא עכשיו המיזוג של האפליקציה. האימות שלו, על חיפושי המקור, המשוב, eval-100 ו־eval-real:
-[IMPLEMENTATION.md](IMPLEMENTATION.md). הכתיב החסר במילון של פרדס (`PardesLexicon`), והמדידה שלו: [SPELLING.md](SPELLING.md).
+[IMPLEMENTATION.md](IMPLEMENTATION.md). הכתיב החסר במילון של פרדס (`PardesLexicon`), והמדידה שלו: [SPELLING.md](SPELLING.md). חיפוש שנבדק לעומק, "לימוני דומים לפגעי" (ים/ין, והמיזוג): [CASE_LIMONI.md](CASE_LIMONI.md).
 
 הקובץ נכנס לריפו לפי החלטת המשתמש (8.11.2026). יש בו החיפושים מחבילות המשוב (בלי מזהה השולח), וקטעים מהטקסט של השורות.
 
