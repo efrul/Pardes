@@ -58,7 +58,7 @@ object SemanticPack {
             (BundleParts.isPart(name) && name.startsWith("$BUNDLE_NAME.part", ignoreCase = true))
 }
 
-/** What a pack holds, as its manifest says (semantic-model/package_pack.py), beyond BundleManifest's files. */
+/** What a pack holds, as its manifest says (pardes-semantic/package_pack.py), beyond BundleManifest's files. */
 @Serializable
 data class PackInfo(
     val pack: Int,

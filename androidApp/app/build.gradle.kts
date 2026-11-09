@@ -97,7 +97,7 @@ val syncDesktopSemanticTests by tasks.registering(Sync::class) {
     into(layout.buildDirectory.dir("generated/desktopSemanticTests"))
 }
 
-// Desktop's tokenizer parity fixtures (semantic-model/make_parity_fixtures.py), read by the on-device parity test.
+// Desktop's tokenizer parity fixtures (pardes-semantic/make_parity_fixtures.py), read by the on-device parity test.
 val syncParityFixtures by tasks.registering(Sync::class) {
     from(rootDir.resolve("../SeforimApp/src/jvmTest/resources")) { include("semantic/*.gz") }
     into(layout.buildDirectory.dir("generated/parityFixtures"))
@@ -227,8 +227,8 @@ android {
         // java.nio.file, java.time and MethodHandle.invoke.
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.8.0"
+        versionCode = 11
+        versionName = "0.9.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

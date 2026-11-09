@@ -1,17 +1,21 @@
 ---
 name: pardes-semantic-search
-description: Pardes desktop's open semantic search (Dicta's neodictabert-bilingual-embed, fine-tuned on the library's links, ONNX int8 + Lucene HNSW + RRF) and its model pipeline in semantic-model/ (export, benchmark, fine-tuning, distillation, Kaggle runs, vector index). Use for any task on semantic or hybrid search, the embedding model, ONNX, the tokenizer parity, the benchmark or an outside evaluation set (crfh1672/search-queries), training or distilling, Kaggle or Colab GPU runs, pardes.vec.lucene, "smart find", or the common sources line above the search results (שורת מקורות משותפים), even when the request doesn't name them (e.g. "the search doesn't find by meaning", "train the model again", "why is the vector index ignored").
+description: Pardes desktop's open semantic search (Dicta's neodictabert-bilingual-embed, fine-tuned on the library's links, ONNX int8 + Lucene HNSW + RRF) and its model pipeline in the efrul/pardes-semantic repository (export, benchmark, fine-tuning, distillation, Kaggle runs, vector index). Use for any task on semantic or hybrid search, the embedding model, ONNX, the tokenizer parity, the benchmark or an outside evaluation set (crfh1672/search-queries), training or distilling, Kaggle or Colab GPU runs, pardes.vec.lucene, "smart find", or the common sources line above the search results (שורת מקורות משותפים), even when the request doesn't name them (e.g. "the search doesn't find by meaning", "train the model again", "why is the vector index ignored").
 ---
 
 # Pardes semantic search
 
-Read `SEMANTIC_SEARCH.md` (app side), `semantic-model/README.md` (pipeline) and `semantic-model/BENCHMARK.md` (numbers)
-first, and `docs/COMMON_SOURCES_PLAN.md` before building the common sources line above the results. Everything is open: Dicta's model (CC BY 4.0), ONNX Runtime, Lucene. Never use Zayit's semantic package or its
+Read `SEMANTIC_SEARCH.md` (app side), and pardes-semantic's `README.md` (pipeline) and `BENCHMARK.md` (numbers)
+first. Since 2026-11-05 the model is its own repository, https://github.com/efrul/pardes-semantic: its pipeline,
+evaluations and Kaggle runs, and the trained models as its releases (`models.yml`). It holds this repository as its
+`pardes` submodule, for the tools that check the model against the app's code. Add it to the session (`add_repo`)
+for any model work; the paths of the model's scripts below are in it. Here, `semantic-model/` keeps only `NOTICE.md`
+and the packs' `release_notes.py`. Read `docs/COMMON_SOURCES_PLAN.md` before building the common sources line above the results. Everything is open: Dicta's model (CC BY 4.0), ONNX Runtime, Lucene. Never use Zayit's semantic package or its
 model for Pardes; the app loads the legacy model only when `SEFORIM_MODEL_DIR` points at it, for a local comparison.
 
 The app side lives in Zayit's code, so the `zayit-fidelity` skill's rules hold for every change: written as the
-code around it, the smallest hook in Zayit's files, and every file added or changed (`features/search/semantic/`,
-`semantic-model/`, their tests) described in `docs/ZAYIT_CHANGE_MAP.md` in the same commit.
+code around it, the smallest hook in Zayit's files, and every file added or changed here (`features/search/semantic/`,
+what is left of `semantic-model/`, their tests) described in `docs/ZAYIT_CHANGE_MAP.md` in the same commit.
 
 ## Invariants (break one and search silently returns wrong lines)
 
@@ -95,11 +99,11 @@ change here, port it there too (the header says what differs), and run the Andro
 `kaggle_run.py push train|tune|distill|embed|int8|pool` (token as `KAGGLE_API_TOKEN` or `~/.kaggle/access_token`, user in
 `KAGGLE_USERNAME`), then `wait` / `output`; `kaggle kernels logs -f <user>/pardes-semantic-<stage>` shows a running log.
 Or `colab.ipynb`. Measure every candidate with `embed_corpus.py --corpus` + `evaluate.py` (`--dense-weights 1,2,3`) on
-the same benchmark, and on the real searches with `push pool` (`semantic-model/eval-pool/`), before choosing; export the
+the same benchmark, and on the real searches with `push pool` (`pardes-semantic/eval-pool/`), before choosing; export the
 chosen one with its `--hybrid-dense-weight`.
 
 The next run (teacher 3 and student 3: one teacher on Chavruta and the dictionary, judged by `eval-crfh/`) is planned in
-`semantic-model/RUN3_PLAN.md`, with its commands; `eval-pool/kernel_spec.py` takes the last `pool.json` out of the pool
+`pardes-semantic/RUN3_PLAN.md`, with its commands; `eval-pool/kernel_spec.py` takes the last `pool.json` out of the pool
 kernel's script (`kaggle kernels pull`).
 
 Kaggle pitfalls already met:

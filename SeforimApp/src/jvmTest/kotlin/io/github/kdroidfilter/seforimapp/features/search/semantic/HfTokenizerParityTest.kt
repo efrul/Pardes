@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 
 /**
  * The open model's cleaner and tokenizer in Kotlin against the Python ones (the corpus is embedded in Python, the
- * queries in Kotlin): the cases are written by semantic-model/make_parity_fixtures.py with the tokenizers library.
+ * queries in Kotlin): the cases are written by pardes-semantic/make_parity_fixtures.py with the tokenizers library.
  */
 class HfTokenizerParityTest {
     private val dir: Path = Path.of(javaClass.getResource("/semantic/parity.jsonl.gz")!!.toURI()).parent
@@ -55,7 +55,7 @@ class HfTokenizerParityTest {
     private fun JSONArray.toLongs(): List<Long> = (0 until length()).map { getLong(it) }
 
     private companion object {
-        // The values of semantic-model/pardes_semantic/model.py, as in the model's pardes-model.json
+        // The values of pardes-semantic/pardes_semantic/model.py, as in the model's pardes-model.json
         const val QUERY_PREFIX = "query: "
         const val QUERY_MAX_TOKENS = 128
         const val DOCUMENT_MAX_TOKENS = 512

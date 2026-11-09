@@ -1,19 +1,24 @@
 /**
  * Pardes's feedback service, a Cloudflare Worker with a D1 database (README.md). It receives the packages users send
  * from Pardes (Settings › ניהול נתונים › שליחת משוב, FeedbackPackage.kt), keeps each as it came, and gives them to the
- * maintainer (semantic-model/feedback/fetch.py). Of a request it keeps nothing but the package: no IP address, user
+ * maintainer (pardes-semantic/feedback/fetch.py). Of a request it keeps nothing but the package: no IP address, user
  * agent or other header is stored or logged. The address only keys the rate limit, in Cloudflare's memory.
  *
  * POST   /v1/packages        a package (JSON, at most MAX_BYTES) -> 201 {"id"}
  * DELETE /v1/senders/:id     everything the sender sent -> {"deleted"}
  * GET    /v1/packages        the maintainer's (Authorization: Bearer ADMIN_TOKEN): ?after=<id>&limit=<n>
- *                            -> {"packages": [{id, sender, receivedAt, ...}], "more", "deletions": [{sender, deletedAt}]}
+ *                            -> {"packages": [{id, sender, receivedAt, ...}], "more", "deletions": [{sender, deletedAt}]};
+ *                            with &bodies=1 each package as it came too ("package"), at most BODIES_LIMIT a request
  * GET    /v1/packages/:id    the maintainer's: the package as it came
+ * GET    /admin              the maintainer's page (admin.js), which asks for the token and reads the routes above
  */
 
+import { adminFile } from "./admin.js";
 import { check, MAX_BYTES, MAX_PER_DAY, SENDER } from "./package.js";
 
 const DAY = 86_400_000;
+/** Packages a request with their bodies: each is at most MAX_BYTES, most a few KB. */
+const BODIES_LIMIT = 50;
 const NO_STORE = { "cache-control": "no-store" };
 
 export default {
@@ -31,6 +36,7 @@ async function route(request, env, url) {
   const { pathname } = url;
   const method = request.method;
   if (pathname === "/" && method === "GET") return text("Pardes feedback service\n");
+  if (method === "GET" && pathname.startsWith("/admin")) return adminFile(pathname) ?? error(404, "not found");
   if (pathname === "/v1/packages" && method === "POST") return (await limited(request, env)) ?? receive(request, env);
   if (pathname === "/v1/packages" && method === "GET") return (await unauthorized(request, env)) ?? list(url, env);
   const one = pathname.match(/^\/v1\/packages\/(\d{1,15})$/);
@@ -92,16 +98,19 @@ async function receive(request, env) {
 }
 
 async function list(url, env) {
+  const bodies = url.searchParams.get("bodies") === "1";
   const after = Math.max(0, Number.parseInt(url.searchParams.get("after") ?? "0", 10) || 0);
-  const limit = Math.min(1000, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "500", 10) || 500));
+  const most = bodies ? BODIES_LIMIT : 1000;
+  const limit = Math.min(most, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "500", 10) || 500));
   const { results } = await env.DB.prepare(
     "SELECT id, sender, received_at AS receivedAt, app_version AS appVersion, library, grades, searches, " +
-      "daf_marks AS dafMarks, bytes FROM packages WHERE id > ? ORDER BY id LIMIT ?",
+      `daf_marks AS dafMarks, bytes${bodies ? ", body" : ""} FROM packages WHERE id > ? ORDER BY id LIMIT ?`,
   )
     .bind(after, limit + 1)
     .all();
   const deletions = await env.DB.prepare("SELECT sender, deleted_at AS deletedAt FROM deletions ORDER BY deleted_at").all();
-  return reply(200, { packages: results.slice(0, limit), more: results.length > limit, deletions: deletions.results });
+  const packages = results.slice(0, limit).map(({ body, ...row }) => (bodies ? { ...row, package: JSON.parse(body) } : row));
+  return reply(200, { packages, more: results.length > limit, deletions: deletions.results });
 }
 
 async function body(id, env) {

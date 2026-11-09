@@ -3,7 +3,7 @@
 # שורת המקורות המשותפים: תוכנית
 
 תוכנית לבנייה (27.10.2026). השורה עוד לא נבנתה: לבקשת המשתמש, גרסת ההתקנה של 26.10.2026 נבנתה בלעדיה. התוכנית נשענת
-על המדידה ב־[`results-common-source.md`](../semantic-model/eval-real/results-common-source.md) (PR #9), ועל בדיקה של
+על המדידה ב־[`results-common-source.md`](https://github.com/efrul/pardes-semantic/blob/main/eval-real/results-common-source.md) (PR #9), ועל בדיקה של
 הקוד ושל הספרייה (`seforim.db` מגרסה `20261012193827`) שנעשתה בשבילה. מספרי השורות בקוד נכונים ל־`main` של 26.10.2026
 (`be5fd14`), והם רק עזר למציאת המקום.
 
@@ -54,7 +54,7 @@
 
 ## הכלל, כפי שנמדד
 
-זה `common_sources` של [`common_source.py`](../semantic-model/eval-real/common_source.py) עם N=20, k=3, כל סוגי הקישור,
+זה `common_sources` של [`common_source.py`](https://github.com/efrul/pardes-semantic/blob/main/eval-real/common_source.py) עם N=20, k=3, כל סוגי הקישור,
 כל שורת ספר מקושרת ו־`shown=3`, עד שלושה מקורות, ואחריו החיתוך בחצי:
 
 1. **העמוד**: עשרים התוצאות הראשונות, בסדר של המנוע: `uiState.results.take(20)`, ולא השורות כפי שהן מצוירות במסך.
@@ -88,7 +88,7 @@
 
 ## מה נמדד ונדחה
 
-כל המספרים מ־[`results-common-source.md`](../semantic-model/eval-real/results-common-source.md):
+כל המספרים מ־[`results-common-source.md`](https://github.com/efrul/pardes-semantic/blob/main/eval-real/results-common-source.md):
 
 - **המקור במקום הראשון ברשימה**: התוצאה הראשונה הטובה יורדת מ־51 ל־38 בחיפושים של המשתמש, ומ־125 ל־106 באצווה 2.
 - **מקור אחד בתוך הרשימה, במקום 3**: המדידה מתירה אותו בנוסף לשורה, בגרסה שמעלה גם תוצאה שכבר בעמוד מתחת למקום 3.
@@ -513,7 +513,7 @@ object CommonSources {
      בתיקייה `features/search/semantic/` שהטבלה שם מתארת.
    - בראש `SEMANTIC_SEARCH.md`, ההפניה לתוכנית בלי "עוד לא נבנתה".
    - ב־skill `pardes-semantic-search`, ההפניה בלי "before building".
-   - בקשה מהסשן שאחראי על `semantic-model/TRAINING_PLAN.md`: לעדכן בשלב 1 את "המקור המשותף" (שורה נפרדת מעל הרשימה), עם הפניה
+   - בקשה מהסשן שאחראי על `pardes-semantic/TRAINING_PLAN.md`: לעדכן בשלב 1 את "המקור המשותף" (שורה נפרדת מעל הרשימה), עם הפניה
      לתוכנית הזו.
 
 **סיום**:
@@ -562,7 +562,7 @@ object CommonSources {
     קודם.
   - אנדרואיד שומר על התאמה לזית למחשב, ולכן השורה תירשם ב־`androidApp/docs/PARITY.md` כהבדל של פרדס.
 - **אימון**: זוגות של שורה מצטטת והמקור שלה, כולל כתיב וקרי ("ענו" ו"עניו"), כדי שהחיפוש עצמו ימצא את המקור. המדידה מפנה
-  את זה לשלב 2 של [`TRAINING_PLAN.md`](../semantic-model/TRAINING_PLAN.md), לשורת הקישורים שבטבלה.
+  את זה לשלב 2 של [`TRAINING_PLAN.md`](https://github.com/efrul/pardes-semantic/blob/main/TRAINING_PLAN.md), לשורת הקישורים שבטבלה.
 
 ## מה כבר בריפו עם התוכנית
 
@@ -576,7 +576,7 @@ object CommonSources {
   - מה שהשורה מציגה, בשתי הדרכים לשבור שוויון.
 
   בנוסף יש בו את המזהים של 386 ספרי הבסיס.
-- [`semantic-model/eval-real/common_source_fixture.py`](../semantic-model/eval-real/common_source_fixture.py): הסקריפט שכתב
+- [`pardes-semantic/eval-real/common_source_fixture.py`](https://github.com/efrul/pardes-semantic/blob/main/eval-real/common_source_fixture.py): הסקריפט שכתב
   אותו, מהפלט של ה־harness של eval-100 על הספרייה המלאה ומהספרייה עצמה. לפני שהוא כותב, הוא בודק שהכלל שבו שווה
   ל־`common_sources` בכל השאלות. את הפלט של ה־harness עצמו אין בריפו, כי יש בו טקסט של הספרים.
 

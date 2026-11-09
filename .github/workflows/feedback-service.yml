@@ -6,7 +6,7 @@ name: Feedback service
 # service › Run workflow), and on main when feedback-service/ changes.
 #
 # Secrets: CLOUDFLARE_API_TOKEN (an API token of the account, with Workers Scripts: Edit and D1: Edit),
-# CLOUDFLARE_ACCOUNT_ID, and FEEDBACK_ADMIN_TOKEN (a long random string, which semantic-model/feedback/fetch.py sends to
+# CLOUDFLARE_ACCOUNT_ID, and FEEDBACK_ADMIN_TOKEN (a long random string, which pardes-semantic/feedback/fetch.py sends to
 # download the packages). The account is never named in the log: its workers.dev subdomain and the database's id are
 # masked before anything prints them.
 

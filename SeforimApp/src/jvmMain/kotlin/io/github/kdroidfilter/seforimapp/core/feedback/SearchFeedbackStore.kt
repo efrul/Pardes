@@ -46,7 +46,7 @@ data class SearchFeedback(
 
 /**
  * Pardes: the grades the user gives search results in feedback mode (Settings › ניהול נתונים, the semantic search's card),
- * kept in the user database beside the visit history, for semantic-model/feedback/ to turn into training and evaluation
+ * kept in the user database beside the visit history, for pardes-semantic/feedback/ to turn into training and evaluation
  * data. A search is keyed as [io.github.kdroidfilter.seforimapp.core.history.HistoryStore.searchKey] keys it; each line of
  * its results holds at most one grade. [count] follows every write.
  */

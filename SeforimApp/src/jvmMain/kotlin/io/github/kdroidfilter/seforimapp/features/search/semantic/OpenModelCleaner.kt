@@ -3,7 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.search.semantic
 import java.util.regex.Pattern
 
 /**
- * The cleaning before the open model's tokenizer: semantic-model/pardes_semantic/clean.py in Kotlin, the same
+ * The cleaning before the open model's tokenizer: pardes-semantic/pardes_semantic/clean.py in Kotlin, the same
  * function, checked by `HfTokenizerParityTest` against the fixtures the Python one writes. [ID] is what the model's
  * manifest names (`cleaner`); changing anything here means a new id and a re-embedded corpus.
  *

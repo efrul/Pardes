@@ -9,6 +9,8 @@ export const MAX_BYTES = 1_000_000;
 export const MAX_PER_DAY = 200;
 /** The sender's id, a random UUID (AppSettings.getFeedbackSender). */
 export const SENDER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** A search's query at most, a grade's too: a passage pasted in to find its source is a search as well. */
+export const MAX_QUERY = 20_000;
 /** The grades' scale: 3 exactly what was looked for, 2 relevant, 0 not relevant. */
 const GRADES = new Set([0, 2, 3]);
 
@@ -25,9 +27,14 @@ export function check(p) {
     if (!Array.isArray(p[kind])) return `${kind} is not a list`;
   }
   if (p.grades.length + p.searches.length + p.daf.length === 0) return "nothing in the package";
-  if (!p.grades.every(isGrade)) return "a grade is not one";
-  if (!p.searches.every(isSearch)) return "a search is not one";
-  if (!p.daf.every(isReview)) return "a daf review is not one";
+  // Which one and what in it, for the app to show and its maintainer to fix
+  for (const [kind, name, why] of [["grades", "grade", whyGrade], ["searches", "search", whySearch],
+    ["daf", "daf review", whyReview]]) {
+    for (let i = 0; i < p[kind].length; i++) {
+      const reason = why(p[kind][i]);
+      if (reason) return `${name} ${i + 1} is not one (${reason})`;
+    }
+  }
   return null;
 }
 
@@ -38,23 +45,42 @@ const count = (n) => Number.isSafeInteger(n) && n >= 0;
 const maybeId = (n) => n === undefined || n === null || Number.isSafeInteger(n);
 const maybeBoolean = (b) => b === undefined || b === null || typeof b === "boolean";
 
-function isGrade(g) {
-  return object(g) && filled(g.query, 1000) && filled(g.search, 2000) && count(g.lineId) && count(g.bookId) &&
-    GRADES.has(g.grade) && count(g.rank) && count(g.gradedAt) && maybeId(g.categoryId) && maybeId(g.scopeBookId) &&
-    maybeId(g.tocId) && maybeBoolean(g.extended) && optional(g.model, 200);
+/** The first of [fields] whose check [o] fails, said with the length of a text too long; null when none. */
+function firstBad(o, fields) {
+  if (!object(o)) return "not an object";
+  for (const [name, ok, max] of fields) {
+    const v = o[name];
+    if (ok(v)) continue;
+    return typeof v === "string" && max !== undefined && v.length > max ? `${name}: ${v.length} characters, at most ${max}` : name;
+  }
+  return null;
 }
 
-function isSearch(s) {
-  return object(s) && filled(s.query, 1000) && count(s.lastAt) && (s.count === undefined || count(s.count)) &&
-    maybeId(s.categoryId) && maybeId(s.bookId) && maybeId(s.tocId) && maybeBoolean(s.extended);
+const text = (max) => (s) => filled(s, max);
+const maybeText = (max) => (s) => optional(s, max);
+
+function whyGrade(g) {
+  return firstBad(g, [["query", text(MAX_QUERY), MAX_QUERY], ["search", text(MAX_QUERY + 1000), MAX_QUERY + 1000],
+    ["lineId", count], ["bookId", count], ["grade", (n) => GRADES.has(n)], ["rank", count], ["gradedAt", count],
+    ["categoryId", maybeId], ["scopeBookId", maybeId], ["tocId", maybeId], ["extended", maybeBoolean],
+    ["model", maybeText(200), 200]]);
 }
 
-function isReview(r) {
-  return object(r) && (r.format === undefined || r.format === 1) && filled(r.tractate, 100) && optional(r.tractateHe, 100) &&
-    optional(r.library, 64) && Array.isArray(r.marks) && r.marks.every(isMark);
+function whySearch(s) {
+  return firstBad(s, [["query", text(MAX_QUERY), MAX_QUERY], ["lastAt", count], ["count", (n) => n === undefined || count(n)],
+    ["categoryId", maybeId], ["bookId", maybeId], ["tocId", maybeId], ["extended", maybeBoolean]]);
 }
 
-function isMark(m) {
-  return object(m) && filled(m.amud, 16) && filled(m.c, 16) && count(m.i) && typeof m.t === "string" &&
-    m.t.length <= 2000 && maybeBoolean(m.ok) && (m.cut === undefined || Number.isSafeInteger(m.cut)) && optional(m.at, 64);
+function whyReview(r) {
+  const bad = firstBad(r, [["format", (n) => n === undefined || n === 1], ["tractate", text(100), 100],
+    ["tractateHe", maybeText(100), 100], ["library", maybeText(64), 64], ["marks", Array.isArray]]);
+  if (bad) return bad;
+  const i = r.marks.findIndex((m) => whyMark(m) !== null);
+  return i < 0 ? null : `mark ${i + 1}: ${whyMark(r.marks[i])}`;
+}
+
+function whyMark(m) {
+  return firstBad(m, [["amud", text(16), 16], ["c", text(16), 16], ["i", count],
+    ["t", (s) => typeof s === "string" && s.length <= 2000, 2000], ["ok", maybeBoolean],
+    ["cut", (n) => n === undefined || Number.isSafeInteger(n)], ["at", maybeText(64), 64]]);
 }

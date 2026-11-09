@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 
 /**
  * The precedence of the earlier level among the lines that hold the query as a sentence ([LevelPrecedence], as
- * semantic-model/eval-real/level_order.py measures it), the books' levels ([BookLevels]), the library they are read from
+ * pardes-semantic/eval-real/level_order.py measures it), the books' levels ([BookLevels]), the library they are read from
  * ([LibraryLines]) and the lines' keys ([HybridSearchEngine.verbatimKey]).
  */
 class LevelPrecedenceTest {

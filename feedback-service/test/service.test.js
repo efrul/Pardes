@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { after, before, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { MAX_BYTES, MAX_PER_DAY } from "../src/package.js";
+import { MAX_BYTES, MAX_PER_DAY, MAX_QUERY } from "../src/package.js";
 
 const SRC = fileURLToPath(new URL("../src/", import.meta.url));
 const MIGRATION = new URL("../migrations/0001_packages.sql", import.meta.url);
@@ -18,7 +18,11 @@ async function service(limit = 1000) {
   const mf = new Miniflare(
     convertV4MiniflareOptions({
       modulesRoot: SRC,
-      modules: ["index.js", "package.js"].map((name) => ({ type: "ESModule", path: `${SRC}${name}` })),
+      modules: [
+        ...["index.js", "package.js", "admin.js"].map((name) => ({ type: "ESModule", path: `${SRC}${name}` })),
+        // As wrangler.toml's rules upload them: text, never run
+        ...["admin/index.html", "admin/app.js", "admin/style.css"].map((name) => ({ type: "Text", path: `${SRC}${name}` })),
+      ],
       compatibilityDate: "2026-10-01",
       d1Databases: { DB: "test" },
       bindings: { ADMIN_TOKEN: TOKEN },
@@ -101,6 +105,48 @@ describe("the feedback service", () => {
     assert.equal(await body.text(), sent);
   });
 
+  test("gives the maintainer the packages with their bodies, a few at a time", async () => {
+    const sent = pkg(A, { searches: [{ query: "<img src=x onerror=alert(1)>", lastAt: 1793800000001 }] });
+    const { id } = await (await post(mf, sent)).json();
+    assert.equal((await admin(mf, "/v1/packages?bodies=1", "wrong")).status, 401);
+    const listed = await (await admin(mf, `/v1/packages?bodies=1&after=${id - 1}`)).json();
+    assert.deepEqual(listed.packages[0].package, sent);
+    assert.equal(listed.packages[0].id, id);
+    assert.equal(listed.packages[0].body, undefined);
+    // Without bodies=1 the list holds none
+    const plain = await (await admin(mf, `/v1/packages?after=${id - 1}`)).json();
+    assert.equal(plain.packages[0].package, undefined);
+    for (let i = 0; i < 51; i++) await post(mf, pkg(B));
+    const capped = await (await admin(mf, "/v1/packages?bodies=1&limit=1000")).json();
+    assert.equal(capped.packages.length, 50);
+    assert.equal(capped.more, true);
+  });
+
+  test("serves the maintainer's page, with no data in it, and runs no script but its own", async () => {
+    await post(mf, pkg(A, { searches: [{ query: "סוד שלא בדף", lastAt: 1793800000002 }] }));
+    const page = await mf.dispatchFetch("http://feedback.test/admin");
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get("content-type"), /^text\/html/);
+    const csp = page.headers.get("content-security-policy");
+    assert.match(csp, /script-src 'self';/);
+    assert.match(csp, /default-src 'none'/);
+    assert.match(csp, /frame-ancestors 'none'/);
+    assert.equal(page.headers.get("cache-control"), "no-store");
+    const html = await page.text();
+    assert.match(html, /קוד המנהל/);
+    assert.doesNotMatch(html, /סוד שלא בדף/);
+    assert.doesNotMatch(html, /<script>/);
+    const script = await mf.dispatchFetch("http://feedback.test/admin/app.js");
+    assert.match(script.headers.get("content-type"), /^text\/javascript/);
+    assert.equal(await script.text(), await readFile(new URL("../src/admin/app.js", import.meta.url), "utf8"));
+    // Every text of a package reaches the page as text: the script builds no markup from strings
+    assert.doesNotMatch(await readFile(new URL("../src/admin/app.js", import.meta.url), "utf8"), /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
+    const style = await mf.dispatchFetch("http://feedback.test/admin/style.css");
+    assert.match(style.headers.get("content-type"), /^text\/css/);
+    assert.equal((await mf.dispatchFetch("http://feedback.test/admin/other")).status, 404);
+    assert.equal((await mf.dispatchFetch("http://feedback.test/admin", { method: "POST" })).status, 404);
+  });
+
   test("pages the list after an id", async () => {
     for (let i = 0; i < 3; i++) assert.equal((await post(mf, pkg(B))).status, 201);
     const first = await (await admin(mf, "/v1/packages?limit=2")).json();
@@ -122,7 +168,15 @@ describe("the feedback service", () => {
     assert.deepEqual(await refused(pkg(A, { format: 2 })), [400, "unknown format"]);
     assert.deepEqual(await refused(pkg("not-a-uuid")), [400, "no sender id"]);
     assert.deepEqual(await refused(pkg(A, { grades: [], searches: [], daf: [] })), [400, "nothing in the package"]);
-    assert.deepEqual(await refused(pkg(A, { grades: [{ query: "x", grade: 5 }] })), [400, "a grade is not one"]);
+    assert.deepEqual(await refused(pkg(A, { grades: [{ query: "x", grade: 5 }] })), [400, "grade 1 is not one (search)"]);
+    // A passage pasted in to find its source is a search too, up to MAX_QUERY
+    const passage = "א".repeat(1500);
+    assert.equal((await post(mf, pkg(A, { searches: [{ query: passage, lastAt: 1793800000000 }] }))).status, 201);
+    const tooLong = { query: "א".repeat(MAX_QUERY + 1), lastAt: 1793800000000 };
+    assert.deepEqual(await refused(pkg(A, { searches: [pkg(A).searches[0], tooLong] })),
+      [400, `search 2 is not one (query: ${MAX_QUERY + 1} characters, at most ${MAX_QUERY})`]);
+    const badMark = { ...pkg(A).daf[0], marks: [{ amud: "2a", c: "g", i: -1, t: "" }] };
+    assert.deepEqual(await refused(pkg(A, { daf: [badMark] })), [400, "daf review 1 is not one (mark 1: i)"]);
     assert.deepEqual(await refused(pkg(A, { searches: "all" })), [400, "searches is not a list"]);
     const big = pkg(A, { searches: [{ query: "א".repeat(900), lastAt: 1 }] });
     big.searches = Array.from({ length: Math.ceil(MAX_BYTES / 1800) + 1 }, () => big.searches[0]);
