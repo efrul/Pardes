@@ -110,7 +110,6 @@ import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.AppPrefs
 import io.github.kdroidfilter.seforimapp.android.search.SearchEntity
-import io.github.kdroidfilter.seforimapp.android.search.searchKey
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.components.Island
 import io.github.kdroidfilter.seforimapp.android.ui.components.LoadingBox
@@ -124,6 +123,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.LocalTabSession
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFonts
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimlibrary.core.models.SearchResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

@@ -13,6 +13,10 @@ for any model work; the paths of the model's scripts below are in it. Here, `sem
 and the packs' `release_notes.py`. Read `docs/COMMON_SOURCES_PLAN.md` before building the common sources line above the results. Everything is open: Dicta's model (CC BY 4.0), ONNX Runtime, Lucene. Never use Zayit's semantic package or its
 model for Pardes; the app loads the legacy model only when `SEFORIM_MODEL_DIR` points at it, for a local comparison.
 
+The app side lives in Zayit's code, so the `zayit-fidelity` skill's rules hold for every change: written as the
+code around it, the smallest hook in Zayit's files, and every file added or changed here (`features/search/semantic/`,
+what is left of `semantic-model/`, their tests) described in `docs/ZAYIT_CHANGE_MAP.md` in the same commit.
+
 ## Invariants (break one and search silently returns wrong lines)
 
 - **Query and corpus share the cleaner and tokenizer.** `pardes_semantic/clean.py` = `OpenModelCleaner.kt`;

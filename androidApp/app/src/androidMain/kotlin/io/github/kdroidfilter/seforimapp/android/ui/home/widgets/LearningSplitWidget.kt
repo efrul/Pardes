@@ -50,11 +50,11 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import java.time.LocalDate
 
-// Pardes's own widget (desktop 0.6.1 has none such): "לעולם ישלש אדם שנותיו, שליש במקרא, שליש במשנה, שליש בתלמוד"
-// (Kiddushin 30a). How the learning splits between the three, by the books opened (the history), by the time read
-// (data/ReadingTime.kt), or by both side by side. A book falls in the part of its place in the library, its root
-// category (a commentary sits under the text it explains); the options move a root category to another part, or leave
-// it out.
+// Pardes's own widget (Zayit has none; Pardes for desktop has its port, in features/home/widgets/library):
+// "לעולם ישלש אדם שנותיו, שליש במקרא, שליש במשנה, שליש בתלמוד" (Kiddushin 30a). How the learning splits between the
+// three, by the books opened (the history), by the time read (data/ReadingTime.kt), or by both side by side. A book
+// falls in the part of its place in the library, its root category (a commentary sits under the text it explains); the
+// options move a root category to another part, or leave it out.
 
 /** The three parts of learning. */
 internal enum class LearningPart(

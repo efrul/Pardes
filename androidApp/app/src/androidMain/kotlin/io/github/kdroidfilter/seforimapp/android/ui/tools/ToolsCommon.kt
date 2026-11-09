@@ -85,7 +85,6 @@ import io.github.kdroidfilter.seforimapp.android.data.ZmanimTimes
 import io.github.kdroidfilter.seforimapp.android.data.computeZmanimTimes
 import io.github.kdroidfilter.seforimapp.android.data.hebrewFormatter
 import io.github.kdroidfilter.seforimapp.android.data.hebrewWeekday
-import io.github.kdroidfilter.seforimapp.android.data.worldPlaces
 import io.github.kdroidfilter.seforimapp.android.ui.AppViewModel
 import io.github.kdroidfilter.seforimapp.android.ui.Destination
 import io.github.kdroidfilter.seforimapp.android.ui.Overlay
@@ -102,6 +101,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.shell.WideBreakpoint
 import io.github.kdroidfilter.seforimapp.android.ui.shell.WindowBackScope
 import io.github.kdroidfilter.seforimapp.android.ui.shell.isTabInFront
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.features.zmanim.data.worldPlaces
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
