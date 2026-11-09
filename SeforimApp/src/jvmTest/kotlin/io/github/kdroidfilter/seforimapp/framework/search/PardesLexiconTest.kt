@@ -21,21 +21,29 @@ class PardesLexiconTest {
     private val lexical: Path = dir.resolve("lexical.db")
     private val index: Path = dir.resolve("seforim.db.lucene")
 
+    /** The tables and index of lexical.db that MagicDictionaryIndex reads. */
+    private val schema =
+        listOf(
+            "CREATE TABLE base (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
+            "CREATE TABLE surface (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE, base_id INTEGER NOT NULL, notes TEXT)",
+            "CREATE TABLE variant (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
+            "CREATE TABLE surface_variant (surface_id INTEGER NOT NULL, variant_id INTEGER NOT NULL, PRIMARY KEY (surface_id, variant_id))",
+            "CREATE TABLE surface_extra_base (surface_id INTEGER NOT NULL, base_id INTEGER NOT NULL, PRIMARY KEY (surface_id, base_id))",
+            "CREATE INDEX surface_base_id_index ON surface(base_id)",
+        )
+
     /** ברכה with three forms, and ברכות also as a base without forms, as lexical.db has it. */
     private fun library() {
         DriverManager.getConnection("jdbc:sqlite:$lexical").use { c ->
             c.createStatement().use { st ->
-                listOf(
-                    "CREATE TABLE base (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
-                    "CREATE TABLE surface (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE, base_id INTEGER NOT NULL, notes TEXT)",
-                    "CREATE TABLE variant (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
-                    "CREATE TABLE surface_variant (surface_id INTEGER NOT NULL, variant_id INTEGER NOT NULL, PRIMARY KEY (surface_id, variant_id))",
-                    "CREATE TABLE surface_extra_base (surface_id INTEGER NOT NULL, base_id INTEGER NOT NULL, PRIMARY KEY (surface_id, base_id))",
-                    "CREATE INDEX surface_base_id_index ON surface(base_id)",
-                    "INSERT INTO base VALUES (1, 'ברכה'), (2, 'ברכות')",
-                    "INSERT INTO surface VALUES (1, 'ברכות', 1, NULL), (2, 'בברכה', 1, NULL), (3, 'ברכה', 1, NULL)",
-                    "INSERT INTO variant VALUES (1, 'וברכות')",
-                    "INSERT INTO surface_variant VALUES (1, 1)",
+                (
+                    schema +
+                        listOf(
+                            "INSERT INTO base VALUES (1, 'ברכה'), (2, 'ברכות')",
+                            "INSERT INTO surface VALUES (1, 'ברכות', 1, NULL), (2, 'בברכה', 1, NULL), (3, 'ברכה', 1, NULL)",
+                            "INSERT INTO variant VALUES (1, 'וברכות')",
+                            "INSERT INTO surface_variant VALUES (1, 1)",
+                        )
                 ).forEach { st.execute(it) }
             }
         }
@@ -106,16 +114,13 @@ class PardesLexiconTest {
     private fun spellingLibrary() {
         DriverManager.getConnection("jdbc:sqlite:$lexical").use { c ->
             c.createStatement().use { st ->
-                listOf(
-                    "CREATE TABLE base (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
-                    "CREATE TABLE surface (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE, base_id INTEGER NOT NULL, notes TEXT)",
-                    "CREATE TABLE variant (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
-                    "CREATE TABLE surface_variant (surface_id INTEGER NOT NULL, variant_id INTEGER NOT NULL, PRIMARY KEY (surface_id, variant_id))",
-                    "CREATE TABLE surface_extra_base (surface_id INTEGER NOT NULL, base_id INTEGER NOT NULL, PRIMARY KEY (surface_id, base_id))",
-                    "CREATE INDEX surface_base_id_index ON surface(base_id)",
-                    "INSERT INTO base VALUES (1, 'עשרון'), (2, 'גודר'), (3, 'גדר')",
-                    "INSERT INTO surface VALUES (1, 'עשרון', 1, NULL), (2, 'עשרונים', 1, NULL), (3, 'גודר', 2, NULL), " +
-                        "(4, 'גודרים', 2, NULL), (5, 'גדר', 3, NULL)",
+                (
+                    schema +
+                        listOf(
+                            "INSERT INTO base VALUES (1, 'עשרון'), (2, 'גודר'), (3, 'גדר')",
+                            "INSERT INTO surface VALUES (1, 'עשרון', 1, NULL), (2, 'עשרונים', 1, NULL), (3, 'גודר', 2, NULL), " +
+                                "(4, 'גודרים', 2, NULL), (5, 'גדר', 3, NULL)",
+                        )
                 ).forEach { st.execute(it) }
             }
         }
