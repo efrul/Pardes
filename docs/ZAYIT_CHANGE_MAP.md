@@ -4009,10 +4009,10 @@ are a script's, not detekt's.
 ### Risks found in the code
 
 - **Lucene in the native image.** Zayit opens `seforim.db.lookup.lucene` with `NIOFSDirectory` under GraalVM's
-  native image, which cannot run `MMapDirectory` (`LuceneLookupSearchService`). Pardes's `IndependentSemanticSearch`
-  and `PardesLexicon` call `FSDirectory.open` unconditionally, and Pardes for desktop ships native images on most
-  platforms (`desktop-release.yml`). The semantic search and the lexicon should be checked on a native build, and
-  given Zayit's guard if they fail there.
+  native image, which it says cannot run `MMapDirectory` (`LuceneLookupSearchService`). Pardes's
+  `IndependentSemanticSearch` and `PardesLexicon` call `FSDirectory.open` unconditionally. Checked by use: the semantic
+  search works in the released Pardes for desktop (the user, 2026-11-09), so nothing is changed; the difference from
+  Zayit's guard stays noted here.
 - **Zayit's incremental updates and the full-text index.** Zayit's `defaultLuceneSinksProvider`
   (`framework/update/DbDeltaUpdateService.kt`) writes a reduced document for each line a delta changes: no `text_ng4`
   and no `ancestor_category_ids`, which the index's own writer has. Such lines are missed by substring and category
@@ -4115,6 +4115,8 @@ bumps filament-kmp to 0.7.12 in `gradle/libs.versions.toml`.
   - Merging 0.6.13 or a later release brings code under the new licence, and with it Section 3's grant back on
     Pardes's own modifications of that code.
   - That is the user's decision, not part of a routine merge (the `zayit-fidelity` skill › Merging a Zayit release).
+  - **Decided on 2026-11-09:** Pardes stays on 0.6.12 for now. Each later release is asked about again, its licence
+    first.
 - **The rest of 0.6.13:**
   - the Microsoft Store install updates from the Store (`be6eae68`; `framework/update/StoreUpdates.kt`,
     `AppUpdateService.kt`);
@@ -4157,4 +4159,4 @@ Becoming one means a new fork of Zayit and everything moved to it:
   start again;
 - the stars, the Pages site and the secrets (the signing key, Cloudflare, Kaggle).
 
-The user decides that; nothing here depends on it.
+**Decided on 2026-11-09:** Pardes stays as it is, a repository of its own that merges Zayit's releases.

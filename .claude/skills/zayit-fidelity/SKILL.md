@@ -143,7 +143,8 @@ python3 .claude/skills/zayit-fidelity/scripts/check_change_map.py --stats
    - a trademark clause.
 
    It is not an OSI licence. Merging 0.6.13 or later brings that licence into Pardes, so it is the user's decision:
-   ask before merging, with the facts.
+   ask before merging, with the facts. On 2026-11-09 the user decided to stay on 0.6.12 for now; a later release is
+   asked about again, its licence first.
 2. **Merge** as `branding/README.md` › Merging a Zayit release says:
    - fetch the tag into a private ref (`git fetch --no-tags https://github.com/kdroidFilter/Zayit
      'refs/tags/v<x.y.z>:refs/zayit/v<x.y.z>'`) and never push it;
@@ -181,7 +182,7 @@ Being a fork would also have costs:
 
 Becoming one means a new fork with everything moved to it: issues, pull requests, releases (Pardes for Android
 updates itself from this repository's releases), stars, Pages and secrets. The map's section 6 has the details.
-That is the user's decision: don't do it, and don't start it.
+The user decided on 2026-11-09 to keep it as it is: don't do it, and don't start it.
 
 ## Before every commit
 
