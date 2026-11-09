@@ -28,13 +28,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (140 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (141 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (639 files: androidApp/, semantic-model/, branding/, docs/, workflows,
+- **Section 3, Pardes's own trees** (709 files: androidApp/, semantic-model/, branding/, docs/, workflows,
   skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -2225,19 +2225,24 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 574 lines.
+- **Size:** 690 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
-  `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`) by Reciprocal Rank Fusion; it keeps the
-  first lexical hits at places 2 and 4 (`keepLeaders`), recognizes a quote held word for word (`holdsQuote`), applies the
-  earlier level's precedence (`LevelPrecedence`), highlights by meaning, counts the meaning's lines in the facets
-  (`MeaningFacets`), and falls back to the words alone when the model or the index cannot load.
+  `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
+  with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
+  weighs 3; in a search of several books the dense side's lines of 8 words or fewer that the words did not find are left
+  out; every line gains for the query's words close together in its best window, `coverage`), on the candidates' lines
+  read once from the library (`candidateLines`); then it keeps the first lexical hits at places 2 and 4 (`keepLeaders`),
+  recognizes a quote held word for word (`holdsQuote`), applies the earlier level's precedence (`LevelPrecedence`),
+  highlights by meaning, counts the meaning's lines in the facets (`MeaningFacets`), and falls back to the words alone
+  when the model or the index cannot load.
 - **Reached from:** `InstalledSemanticSearch.kt` (`installedSemanticSearch.hybrid`).
 - **Follows:** Zayit's `SemanticSearchFeature` interface and its private `HybridSearchEngine`, of the same name and role
   (not its code, which Pardes has not).
-- **Tests:** `HybridSearchEngineDenseTest`, `HybridSearchEngineFallbackTest`, `HybridSearchEngineKeepLeadersTest`,
-  `LevelPrecedenceTest`, `MeaningFacetsTest`.
+- **Tests:** `HybridSearchEngineDenseTest`, `HybridSearchEngineFallbackTest`, `HybridSearchEngineFusionTest`,
+  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`.
 - **Notes:** its KDoc opens with "Independent Hybrid Search Engine for Pardes Desktop:", a title rather than Zayit's
-  plain sentence; with some 17 functions it passes `detekt.yml`'s 15.
+  plain sentence; with some 17 functions it passes `detekt.yml`'s 15. The fusion's measurements, before and after:
+  `docs/fusion-compare/IMPLEMENTATION.md`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/IndependentSemanticSearch.kt`
 
@@ -2523,6 +2528,18 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
 
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineFusionTest.kt`
+
+- **Feature:** Semantic search (order of results).
+- **Size:** 79 lines.
+- **What:** `fusedScores` and the window (seven tests: a query of three words held word for word weighs 3, one of two
+  words does not; the dense side's short lines left out of a search of several books, kept in one book and when the
+  words find them too; RRF alone without the library's lines; the dense side's order when the words find nothing; the
+  window's share, with prefixes or without).
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, as `HybridSearchEngineKeepLeadersTest`.
+- **Tests:** it is one (unit).
+
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/LevelPrecedenceTest.kt`
 
 - **Feature:** Semantic search (order of results).
@@ -2781,27 +2798,35 @@ index of the catalog, after Klei Kodesh's Kitvei Hakodesh. Hooks: `LuceneLookupS
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/PardesLexicon.kt`
 
 - **Feature:** Lexicon.
-- **Size:** 219 lines.
+- **Size:** 318 lines.
 - **What:** `PardesLexicon`, Pardes's copy of the library's word dictionary (`lexical.db`), which the regular search reads in
   its place: the same words and forms without the 4,711 bases no surface points to (2,479 of them spelled like a form of
-  another base, which left such words with no forms), and each base's surfaces numbered by how many lines hold them, so
-  the 32 forms the search keeps are the common ones. Built in the background when the library changes, until then the
+  another base, which left such words with no forms), each base's surfaces numbered by how many lines hold them, so the
+  32 forms the search keeps are the common ones, and, from version 2, the defective spellings of its forms
+  (`defectiveForms`: an inner ו or י left out) that some line holds and the dictionary lacks, as forms of the same base.
+  Built in the background when the library changes (`VERSION` in the fingerprint rebuilds an older copy), until then the
   search reads `lexical.db`; `awaitBuild` for the search's warm-up.
 - **Reached from:** `AppCoreBindings.kt` (`dictionaryFor`), `main.kt` (`awaitBuild`).
-- **Follows:** SeforimLibrary's `lexical.db` and `MagicDictionaryIndex`, which read the copy as they read the original.
+- **Follows:** SeforimLibrary's `lexical.db` and `MagicDictionaryIndex`, which read the copy as they read the original;
+  `defectiveForms` follows the deletions of Otzaria's `generate_spelling_variations` (otzaria_search_engine, MIT), as its
+  KDoc says.
 - **Tests:** `PardesLexiconTest`.
 - **Notes:** measured on eval-100 and eval-real (`docs/LEXICON.md`): the source in the first ten 13 → 16, a good line in the
-  first three 42 → 47 of 153, some 10 ms more a search. It opens the text index with `FSDirectory.open`, not Zayit's
-  `NIOFSDirectory` in a native image.
+  first three 42 → 47 of 153, some 10 ms more a search. The defective spellings (`docs/fusion-compare/SPELLING.md`):
+  59,034 forms, the file 55 → 59 MB, built in some 4 s, small gains on four test sets; a spelling the dictionary already
+  has is not joined to another base, which hurt. It opens the text index with `FSDirectory.open`, not Zayit's
+  `NIOFSDirectory` in a native image. Android's copy is still at version 1 (`androidApp/docs/PARITY.md`).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/search/PardesLexiconTest.kt`
 
 - **Feature:** Lexicon.
-- **Size:** 88 lines.
-- **What:** the empty base dropped and the commonest forms first; the copy rebuilt when the library changes.
+- **Size:** 148 lines.
+- **What:** the empty base dropped and the commonest forms first; the copy rebuilt when the library changes; the
+  defective-spelling rule (`defectiveForms`) and the spellings the build adds (a new form numbered by its lines, a word
+  typed as the lines write it given its base's forms, a spelling the dictionary has left with its own base).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
-- **Tests:** it is one (unit, a small dictionary and index).
+- **Tests:** it is one (unit, small dictionaries and indexes).
 - **Notes:** camelCase test names.
 
 ### Search in categories, and in several books and categories
@@ -3232,7 +3257,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `README.md` | The repository's front page, in Hebrew with one English line: what Pardes is (based on Zayit by Elie (Elyahou) Gambache and not on his behalf), the downloads, what the app has, installing on Android with the three ways to bring the library, where the code is, and licence and credits (the §7b line, Dicta's model). *Note:* The English line says desktop is Windows and Linux; macOS is built since desktop 1.0.2, as the Hebrew text says. Its list of Pardes's additions lacks feedback-service/, nucleus-fork/, scripts/kleikodesh_dictionary.py and the daf layouts' release. | Pardes's own; takes the place of Zayit's README.MD, which Pardes renamed README-zayit-desktop.md (README_HE.md likewise) |
-| `SEMANTIC_SEARCH.md` | Hebrew guide to Pardes for desktop's own semantic search on the app side: Dicta's open model fine-tuned on the library's links, ONNX Runtime and a Lucene HNSW vector index fused with BM25 by RRF; the files beside the library, the code of features/search/semantic/ file by file, installing packs, meaning highlights, warm-up, three correctness checks, known limits, the switch to the legacy model for comparison, and licensing. *Note:* Written in Hebrew, while Zayit's developer docs (TAB_SYSTEM_README.md, LINE_SELECTION_README.md, AGENTS.md) are in English. Zayit's semantic search is a private package with no doc here. | Pardes's own |
+| `SEMANTIC_SEARCH.md` | Hebrew guide to Pardes for desktop's own semantic search on the app side: Dicta's open model fine-tuned on the library's links, ONNX Runtime and a Lucene HNSW vector index fused with BM25 by RRF, with the fusion's three weights (word for word, short lines out, the window); the files beside the library, the code of features/search/semantic/ file by file, installing packs, meaning highlights, warm-up, three correctness checks, known limits, the switch to the legacy model for comparison, and licensing. *Note:* Written in Hebrew, while Zayit's developer docs (TAB_SYSTEM_README.md, LINE_SELECTION_README.md, AGENTS.md) are in English. Zayit's semantic search is a private package with no doc here. | Pardes's own |
 
 #### Claude Code: settings and skills
 
@@ -3374,13 +3399,87 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
-| `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again. *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
+| `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |
-| `docs/SEARCH_ORDER_ISSUES.md` | Hebrew working document (from 2026-10-28) on the order of the combined search's results: how it was measured (search history, eval-real, eval-100), ten issues (short semantic lines on top, rank-only fusion, "(א)" numbers, the 32 forms, long lines, the switch to all books, commentaries before the source, no noise floor, the same text twice, identical lines in the graph) with fixes measured offline, and what was not measured. *Note:* Written in Hebrew. Its numbers were measured in a separate working repository. | Pardes's own |
+| `docs/SEARCH_FUSION_RESEARCH.md` | Hebrew research note (2026-11-08) on merging the words' search and the meaning's: what plain RRF implies (a line only the words found, from their 11th place on, ranks below every line only the meaning found), rank against score fusion and their normalizations, calibration (ProbFuse, SSL, score distributions), weights by kind of query, a small learned ranker, and an offline measuring plan, which docs/fusion-compare/ carries out. *Note:* Written in Hebrew. | Pardes's own |
+| `docs/SEARCH_ORDER_ISSUES.md` | Hebrew working document (from 2026-10-28) on the order of the combined search's results: how it was measured (search history, eval-real, eval-100), ten issues (short semantic lines on top, rank-only fusion, "(א)" numbers, the 32 forms, long lines, the switch to all books, commentaries before the source, no noise floor, the same text twice, identical lines in the graph) with fixes measured offline, and what was not measured; issues 1 and 2 are marked done (2026-11-09) with the window, as fusion-compare/IMPLEMENTATION.md measures them. *Note:* Written in Hebrew. Its first numbers were measured in a separate working repository. | Pardes's own |
+| `docs/SEARCH_OTZARIA_AND_LIBRARIES.md` | Hebrew research (2026-11-08), system by system, on how large libraries search: Otzaria read from its code (per-word options, short lines embedded with their neighbours, long lines in 512-character windows, vectors keyed by their text, an exact scan instead of HNSW, a fusion weight by kind of query), Wikipedia's CirrusSearch, CourtListener, PubMed, Semantic Scholar, TLG, Perseus and STEP Bible, and their licences (Otzaria's app and semantic engine are for personal use only; its lexical engine is MIT). *Note:* Written in Hebrew. | Pardes's own |
+| `docs/SEARCH_PLAN.md` | English plan (2026-11-10) for the search after pull request #28: Pardes for desktop 1.0.9 from its Windows pre-release to the public release, per-word forms in the regular search (measure the spelling and ים↔ין forms in the measurement build, then the owner's decision on SeforimLibrary), the new eval-real grades into pardes-semantic, Android's lexicon and fusion behind desktop's, one re-embedding for short lines and the "(א)" numbers, and the open questions with what was measured and is not to do. | Pardes's own |
 | `docs/SEARCH_SYNTAX_REPORT.md` | English report (measured 2026-11-03) on how the search reads quotes, geresh and gershayim, maqaf and niqqud, prefixes and suffixes, word distance (near = 5, which only ranks) and order, with line counts on the October 2026 library, the recommendations not built, and Klei Kodesh's search syntax for comparison. *Note:* Finds that Hebrew-keyboard gershayim (רש״י) search as רשי, typographic quotes are ignored, and Zayit's strings.xml keeps unused search_level_1..5 strings. | Pardes's own |
+| `docs/SEARCH_WORLD_RESEARCH.md` | Hebrew research (2026-11-08) on how search systems outside Pardes handle each problem SEARCH_ORDER_ISSUES.md measures, with sources and what to try, cheapest first; it notes that the words' search adds each of a word's forms as a term of its own, twice, so scores add up across forms and favour long lines (Lucene's `SynonymQuery` is the known remedy). *Note:* Written in Hebrew. | Pardes's own |
 | `docs/SEMANTIC_PLAN.md` | Hebrew plan (2026-10-28) for shipping the semantic search's model and vector index as packs: how Zayit ships its library, what is ready, publishing packs as `semantic-*` releases from a Kaggle dataset, the code and the in-app install (both done), incremental index updates (open), and open decisions. *Note:* Written in Hebrew. | Pardes's own |
 | `docs/ZAYIT_CHANGE_MAP.md` | This map (מפת השינויים): every file in which Pardes differs from the Zayit release it is based on, Zayit's files changed in full, the files added in Zayit's modules by feature, Pardes's own trees in rows, the departures from Zayit's style still to fix, Zayit after the base, and why GitHub does not show Pardes as a fork. | Pardes's own |
 | `docs/ZAYIT_LEXICAL_REPORT.md` | English report addressed to Zayit: lexical.db (release 20261012193827) has 4,711 bases with no forms, 2,479 of them spelled like another base's form, which `MagicDictionaryIndex.expansionFor` prefers, and the 32 forms kept are the first by id; the measured effect and a fix in the generator or at runtime. *Note:* Pardes applies the fix at runtime (PardesLexicon, docs/LEXICON.md) without changing SeforimLibrary. | Pardes's own |
+
+#### The search's measurements (docs/fusion-compare/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/fusion-compare/ANALYSIS.md` | Hebrew analysis of the orderings on the feedback's 1,156 searches and its 89 graded ones: what the first ten are made of, the measures by the grades before and after Claude graded the missing lines, by query length and scope, examples, and what to do next (p12wl, proposals 1 and 2 with the window). | Pardes's own |
+| `docs/fusion-compare/CASE_LIMONI.md` | Hebrew case study (2026-11-09) of one search, "לימוני דומים לפגעי": why the regular search misses Shibbolei HaLeket (דומים takes the verb's base, where דומין is cut at 32), why the fusion buried the words' hit, every ordering on six forms of the query, three fusion variants measured on four test sets and left out, and what to learn (ים/ין belongs with the per-word forms). | Pardes's own |
+| `docs/fusion-compare/EXPANSIONS.md` | Hebrew report (2026-11-09): synonyms, the Aramaic dictionary and full/defective spelling given as extra forms inside Pardes's own regular search (a measurement hook), on every ordering, on the source test and the graded feedback; how much each side's order counts (shuffled, reversed); the recommendations. | Pardes's own |
+| `docs/fusion-compare/IMPLEMENTATION.md` | Hebrew verification (2026-11-09) of p12wl in the app: its three weights, the app's first ten against the tool's on four test sets, the unit tests, before and after on the source test, eval-100, the feedback and eval-real (with the grades added in eval_real/), what it gains and loses, two variants for short seifim, and how to run it again. | Pardes's own |
+| `docs/fusion-compare/OTZARIA_LEXICAL.md` | Hebrew report (2026-11-09): Pardes's regular search has no full/defective spelling rule; Otzaria's lexical search ported to Pardes's index in five modes and measured on the source test and the graded feedback with every ordering: spelling helps quotes, a phrase-only search hurts ideas. | Pardes's own |
+| `docs/fusion-compare/README.md` | Hebrew index of the folder (from 2026-11-08): what was run (the feedback's searches through the app's engines, then every ordering of the research notes on the same candidates), the orderings, what the page's summary says and does not, how to run it again, the files, and links to the reports below. | Pardes's own |
+| `docs/fusion-compare/SOURCE_TEST.md` | Hebrew report (2026-11-08) of the "where is it written" test: 157 quotes of the base books, each ordering measured strictly and leniently, the app losing the source from the first place, p12wl best on both parts, the regular search missing quotes in full spelling, the recommendations. | Pardes's own |
+| `docs/fusion-compare/SPELLING.md` | Hebrew report (2026-11-09): defective spellings through PardesLexicon without touching SeforimLibrary, two versions measured on four test sets, why joining a spelling to another base hurts (homographs, the extra base's order), what went in (version 2), and why the full gain needs a per-word hook in LuceneSearchEngine. | Pardes's own |
+| `docs/fusion-compare/claude_grades.tsv` | 361 grades (0 to 3) that Claude gave lines of the feedback's searches the feedback had not graded: query, line id, grade, book, reference. | Pardes's own; graded by Claude |
+| `docs/fusion-compare/eval_real/grades_new.tsv` | 160 grades that Claude gave eval-real's lines, blind to the version that found them, in the format of pardes-semantic's eval-real/grades.tsv (qid, lineId, grade, ref), to be added there. | Pardes's own; graded by Claude |
+| `docs/fusion-compare/expansions/feedback-condensed-10.txt` | graded_compare.py's condensed measures (judged lines only) in the first ten, for every ordering of each extra-forms run on the feedback. | generated by tools/graded_compare.py |
+| `docs/fusion-compare/expansions/feedback-graded-10.txt` | graded_compare.py's measures in the first ten for every ordering of each extra-forms run on the feedback. | generated by tools/graded_compare.py |
+| `docs/fusion-compare/expansions/feedback-graded-3.txt` | graded_compare.py's measures in the first three for the app and p12wl of each extra-forms run on the feedback. | generated by tools/graded_compare.py |
+| `docs/fusion-compare/expansions/feedback-spelling-10.txt` | graded_compare.py's measures in the first ten for every ordering, the spelling run against the base run. | generated by tools/graded_compare.py |
+| `docs/fusion-compare/expansions/feedback-spelling-3.txt` | The same in the first three. | generated by tools/graded_compare.py |
+| `docs/fusion-compare/expansions/feedback_expansions.html` | The feedback's page with every extra-forms run's orderings as columns of their own. | generated by tools/merge_runs.py and tools/make_html.py |
+| `docs/fusion-compare/expansions/order-feedback.txt` | order_shuffle.py on the feedback: how much of the app's first ten stays when one side's candidates are shuffled or reversed. | generated by tools/order_shuffle.py |
+| `docs/fusion-compare/expansions/order-source.txt` | The same on the source test. | generated by tools/order_shuffle.py |
+| `docs/fusion-compare/expansions/source-aramaic.txt` | source_eval.py's measures of the source test with the Aramaic dictionary's forms. | generated by tools/source_eval.py |
+| `docs/fusion-compare/expansions/source-base.txt` | source_eval.py's measures of the source test with no extra forms. | generated by tools/source_eval.py |
+| `docs/fusion-compare/expansions/source-lexical-shuffled.txt` | source_eval.py's measures of the source test with the lexical side's candidates shuffled. | generated by tools/source_eval.py |
+| `docs/fusion-compare/expansions/source-spelling.txt` | source_eval.py's measures of the source test with the full/defective spelling forms. | generated by tools/source_eval.py |
+| `docs/fusion-compare/expansions/source-synonyms.txt` | source_eval.py's measures of the source test with the synonyms. | generated by tools/source_eval.py |
+| `docs/fusion-compare/expansions/source_expansions.html` | The source test's page with every extra-forms run's orderings as columns of their own. | generated by tools/merge_runs.py and tools/make_html.py |
+| `docs/fusion-compare/fusion_compare.html` | Self-contained Hebrew page: for each of the 1,156 searches of the feedback packages up to 2026-11-08, every ordering's first ten side by side, with the feedback's grades and Claude's. *Note:* It holds the feedback's queries (no sender ids) and passages of the lines' text, here by the owner's decision. | generated by tools/make_html.py |
+| `docs/fusion-compare/otzaria_test/feedback-empty.txt` | In how many of the feedback's 1,156 searches each lexical side (Pardes's and Otzaria's five modes) finds nothing, three lines or fewer, and its median. | generated by tools/run_otzaria.sh |
+| `docs/fusion-compare/otzaria_test/feedback-graded.txt` | graded_compare.py with Otzaria's modes as the lexical side, every ordering, on the graded feedback. | generated by tools/graded_compare.py |
+| `docs/fusion-compare/otzaria_test/source-all.txt` | source_eval.py's measures of the source test with Otzaria's `all` mode as the lexical side. | generated by tools/source_eval.py |
+| `docs/fusion-compare/otzaria_test/source-exact.txt` | The same with the `exact` mode. | generated by tools/source_eval.py |
+| `docs/fusion-compare/otzaria_test/source-gram.txt` | The same with the `gram` mode. | generated by tools/source_eval.py |
+| `docs/fusion-compare/otzaria_test/source-pardes.txt` | The same with Pardes's own lexical side, for comparison. | generated by tools/source_eval.py |
+| `docs/fusion-compare/otzaria_test/source-smart.txt` | The same with the `smart` mode. | generated by tools/source_eval.py |
+| `docs/fusion-compare/otzaria_test/source-smartspell.txt` | The same with `smartspell` (Otzaria's smart search with spelling forms as a tier). | generated by tools/source_eval.py |
+| `docs/fusion-compare/source_test/queries.tsv` | The test's 157 quotes: id, group, type, query, the target line and its book and reference, and its lexical and dense ranks. | Pardes's own; the queries written by Claude |
+| `docs/fusion-compare/source_test/results-100.txt` | source_eval.py's measures on a random 100 of the quotes the lexical side finds. | generated by tools/source_eval.py |
+| `docs/fusion-compare/source_test/results-137.txt` | source_eval.py's measures on the 137 quotes the lexical side finds in its first ten. | generated by tools/source_eval.py |
+| `docs/fusion-compare/source_test/source_compare.html` | The source test's page: every quote with every ordering's first ten side by side, the source marked. | generated by tools/make_html.py |
+| `docs/fusion-compare/tools/CategoryStub.kt` | Stand-in for SeforimLibrary core's `Category` without its annotations, which MeaningFacets.kt reads, for the harness build. | Pardes's own |
+| `docs/fusion-compare/tools/ExtraForms.kt` | For the measurement build only: a query word's extra forms from a table, the ones some line holds, the most common first, placed before its dictionary forms (-DextraForms, -DextraFormsIndex, -DextraFormsKeep). | Pardes's own |
+| `docs/fusion-compare/tools/FeedbackHistory.kt` | The harness: runs searches through the app's own engines (LuceneSearchEngine through PardesLexicon, HybridSearchEngine) and writes each search's lexical and dense candidates with their scores and the app's page as JSON lines. | Pardes's own |
+| `docs/fusion-compare/tools/LoggerStub.kt` | The app's logger without Sentry, enough for the semantic package outside the app. | Pardes's own; as pardes-semantic's eval-100/harness/LoggerStub.kt |
+| `docs/fusion-compare/tools/OtzariaLexical.kt` | Otzaria's lexical search on Pardes's text index in five modes (smart, exact, gram, all, and smartspell of its pieces), for measuring it in place of Pardes's. | Pardes's own; ports otzaria_search_engine's hebrew_query.rs (8ef29fd, MIT): generate_spelling_variations, affix_arms, suffix_sides |
+| `docs/fusion-compare/tools/SpellingForms.kt` | The full/defective spelling forms of every word of the given searches, by Otzaria's rules, as an extra-forms table for ExtraForms.kt. | Pardes's own |
+| `docs/fusion-compare/tools/analyze.py` | The numbers of ANALYSIS.md from fuse_all.py's output: what each list is made of and the measures by the feedback's grades. | Pardes's own |
+| `docs/fusion-compare/tools/build.sh` | Builds the harness with a standalone Kotlin compiler, outside Gradle, against this checkout's search code (SeforimLibrary's search sources, the semantic package, LongQuerySearchEngine, PardesLexicon), fetching its jars from Maven Central. | Pardes's own; after pardes-semantic's search-order/build.sh |
+| `docs/fusion-compare/tools/eval100_methods.py` | eval-100 (pardes-semantic's expected sources) over fuse_all.py's orderings: the source first, in three, in ten and MRR@10, exact and in the same siman. | Pardes's own |
+| `docs/fusion-compare/tools/evalreal_score.py` | eval-real over fuse_all.py's orderings: the first line good, a good line in three, nDCG@3, the share judged, and the sign test against the app before p12wl. | Pardes's own |
+| `docs/fusion-compare/tools/expansion_tables.py` | The Aramaic and synonym extra-forms tables, from Klei Kodesh's dictionary data as Pardes ships it. | Pardes's own |
+| `docs/fusion-compare/tools/extra_forms_patch.py` | Patches the harness build's copy of LuceneSearchEngine.kt to take ExtraForms.kt's forms; fails loudly when the code it changes is gone. | Pardes's own |
+| `docs/fusion-compare/tools/feedback_searches.py` | The searches and grades of a feedback export as the harness reads them, with claude_grades.tsv where the feedback has none. | Pardes's own |
+| `docs/fusion-compare/tools/fetch_library.py` | Streams a SeforimLibrary release's bundle and keeps what the search needs (seforim.db, its index, lexical.db, release_info.txt), never storing the bundle. | Pardes's own |
+| `docs/fusion-compare/tools/fetch_pack.py` | Streams a semantic pack of Pardes's releases (the model and the vector index) into the library's folder. | Pardes's own |
+| `docs/fusion-compare/tools/fuse_all.py` | Every ordering measured (the app, RRF variants, score fusions, Otzaria's, p12 and its variants, and more) on the harness's candidates, writing each search's first ten and fifty for the pages and the measures. | Pardes's own; uses pardes-semantic's search-order/order_common.py and eval-real/level_order.py |
+| `docs/fusion-compare/tools/graded_compare.py` | The feedback's graded searches, every lexical side and ordering side by side: the first line good, good lines, nDCG and MRR, the share judged, the sign test, and the lines left to grade. | Pardes's own |
+| `docs/fusion-compare/tools/make_html.py` | The page of an orderings.json: every search, every ordering's first ten side by side. | Pardes's own |
+| `docs/fusion-compare/tools/merge_runs.py` | Several fuse_all.py runs side by side on one page, each run's orderings as columns of their own. | Pardes's own |
+| `docs/fusion-compare/tools/order_shuffle.py` | How much each side's order decides the app's ranking: its fusion recomputed with one side's candidates shuffled, reversed or cut. | Pardes's own |
+| `docs/fusion-compare/tools/run.sh` | The whole run from a feedback export to the page. | Pardes's own |
+| `docs/fusion-compare/tools/run_expansions.sh` | The extra-forms runs (Aramaic, synonyms, spelling) on the source test and the graded feedback, and the shuffles. | Pardes's own |
+| `docs/fusion-compare/tools/run_otzaria.sh` | Otzaria's lexical search against Pardes's, on the source test and the graded feedback. | Pardes's own |
+| `docs/fusion-compare/tools/run_source.sh` | The source test from its queries to the numbers and the page. | Pardes's own |
+| `docs/fusion-compare/tools/run_tests.sh` | The search's tests that need no Compose (the semantic package's and PardesLexicon's), compiled with kotlinc against build.sh's build and run with JUnit 4, outside Gradle. | Pardes's own |
+| `docs/fusion-compare/tools/source_eval.py` | Where every ordering puts each quote's source: strict and lenient, first, in three and in ten, MRR@10, by group, and the searches the lexical side misses. | Pardes's own |
+| `docs/fusion-compare/tools/source_searches.py` | The source test's searches from its queries, for the harness and fuse_all.py. | Pardes's own |
+| `docs/fusion-compare/tools/swap_lexical.py` | A harness run with another lexical side (one of OtzariaLexical.kt's modes) in place of Pardes's. | Pardes's own |
 
 #### The feedback service
 
@@ -3465,7 +3564,7 @@ build leaves out for it.
 | `androidApp/README.md` | README of Pardes for Android: what it is (based on Zayit by Elie Gambache, not on his behalf), building and signing, every way to get a library onto a device, the library on a memory card, the in-app updater, the source layout, the `zayit://` links, the known differences from desktop, and the licences and credits. | Pardes's own |
 | `androidApp/docs/DEVELOPMENT.md` | Developer notes of the Android app: the goal and constraints (Android 8.0+, parity with desktop Zayit 0.6.12, an app of its own based on Zayit, offline, desktop's code reused unchanged), the status by area, screenshots, how the work is done (committing as Zayit does, with the change map's rows), Windows, signing, testing the app update, Android 8 to 12, the semantic search, the decisions and why, and the known gaps. | Pardes's own |
 | `androidApp/docs/LIBRARY-LOCATION.md` | The plan of the library's location (מיקום הספרייה): what Android allows (the phone, a memory card's app folder, not USB or SAF folders), the facts that shape it (FAT32's 4 GiB, a removed card ending the app, uninstalling), and the steps. *Note:* Implemented since 2026-10-16, as its status line says; the rest is the plan of 2026-10-15, kept for what it found. | Pardes's own |
-| `androidApp/docs/PARITY.md` | The parity list against desktop Zayit 0.6.12: what was ported from each desktop release since 0.6.1, with the upstream commits and the Android files; Pardes for desktop's own features ported (the semantic search, categories, the commentators' groups, Klei Kodesh, the title index, the lexicon); what cannot be ported from public sources; what differs on purpose (the authorship texts); and the items by area and severity. | Pardes's own |
+| `androidApp/docs/PARITY.md` | The parity list against desktop Zayit 0.6.12: what was ported from each desktop release since 0.6.1, with the upstream commits and the Android files; Pardes for desktop's own features ported (the semantic search, categories, the commentators' groups, Klei Kodesh, the title index, the lexicon, which is behind desktop's version 2); what cannot be ported from public sources; what differs on purpose (the authorship texts); and the items by area and severity. | Pardes's own |
 
 #### The code: entry points
 
@@ -3555,7 +3654,7 @@ build leaves out for it.
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/LuceneLookupSearchService.kt` | `LuceneLookupSearchService`: the book, TOC and author suggestions over seforim.db.lookup.lucene (title tiers, words typed once), asking Pardes's title index first, plus `authorsOfBook`; the index opened with `NIOFSDirectory` (Android has no MMapDirectory) and a smaller query cache. | Android variant of Zayit 0.6.10's SeforimApp/src/jvmMain/.../framework/search/LuceneLookupSearchService.kt (same package and class), with Pardes for desktop's title-index calls |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/LuceneSearchEngine.kt` | The full-text `LuceneSearchEngine` (Hebrew normalisation, the dictionary's expansions, snippets, facets, the found lines' ranges) with the Android changes its header lists: `NIOFSDirectory`, lexical.db looked up beside the index only, at most four searcher threads, facets that stop when cancelled (`computeFacetsCancellable`), lexical.db closed with it, and a clause limit of 16,384. | Android variant of SeforimLibrary's search/src/jvmMain/.../LuceneSearchEngine.kt at 4f07145 (same package and class; the build leaves the original out) |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/MagicDictionaryIndex.kt` | `MagicDictionaryIndex`: the streaming dictionary of word forms over lexical.db (surface, variant, base) with its cache and prefetch, read with the platform SQLite, read-only, instead of JDBC connections per thread, and closed with the engine. | Android variant of SeforimLibrary's search/src/jvmMain/.../MagicDictionaryIndex.kt (unchanged upstream since 381fbea), same API, SQL and caches |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/PardesLexicon.kt` | `PardesLexicon`: builds pardes-lexical.db beside lexical.db in the background (bases without forms dropped, each base's forms ranked by how many indexed lines hold them), with desktop's version and fingerprint; the search reads it in place of lexical.db once it is ready. | Android variant of Pardes for desktop's framework/search/PardesLexicon.kt: the platform SQLite and NIOFSDirectory |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/PardesLexicon.kt` | `PardesLexicon`: builds pardes-lexical.db beside lexical.db in the background (bases without forms dropped, each base's forms ranked by how many indexed lines hold them); the search reads it in place of lexical.db once it is ready. *Note:* At version 1: desktop's is 2 since 2026-11-09 (the defective spellings), not ported yet (androidApp/docs/PARITY.md); a desktop copy on the phone is rebuilt at version 1. | Android variant of Pardes for desktop's framework/search/PardesLexicon.kt: the platform SQLite and NIOFSDirectory |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/ScopeItems.kt` | The search bar's picked books and categories (`ScopeItem`, `ScopeItems`): each once, in the order picked, and the scope they make, in Android's own `SearchScope`. | Android variant of Pardes for desktop's features/search/domain/ScopeItems.kt (same package and names) |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/SearchEntityFinder.kt` | What a search names, for the panel beside its results (`SearchEntityFinder`: a book or an author named exactly, compared by desktop's `searchKey`), `BookDetailsLoader` (categories, authors and their years, main parts, editions), the authors' eras and years (`AUTHOR_ERAS`, `authorYears`) and `plainPersonLinks`. | Port of Zayit 0.6.10's features/search/domain SearchEntityFinder.kt and BookDetailsLoader.kt, and features/author/AuthorScreen.kt's eras |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/SearchService.kt` | `SearchService`: opens desktop's search on the installed library when first used (the full-text engine, the lookup, the acronyms, Pardes's title index and lexicon), inside `HybridSearchEngine` when a semantic pack is beside the library and the device can run it, opens again when the library changes, reports the index's state, and adds `SearchEngine.countFacets`, which stops when cancelled. | Pardes's own, after Pardes for desktop's AppCoreBindings (the search engine, the semantic search, the lookup) |
@@ -3566,7 +3665,7 @@ build leaves out for it.
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/reference/RepositoryReferenceSource.kt` | `RepositoryReferenceSource`: the `ReferenceSource` over the repository; a TOC entry's lines are read in lists Android 8-11's SQLite can bind (`SqlVariableLimit`), a section reaching 9,400 lines. | Android variant of Zayit 0.6.10's SeforimApp/src/jvmMain/.../features/search/domain/reference/RepositoryReferenceSource.kt (same package and class) |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/BookLevels.kt` | `BookLevels` (a book's level, from Mikra to the latest authors, for the precedence of the earlier level among the lines that hold the query as a sentence) and `LibraryLines`, read through the app's own `SqlDriver` instead of a JDBC connection. | Android variant of Pardes for desktop's features/search/semantic/BookLevels.kt (same package and names; changes marked "Android:") |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/HfTokenizer.kt` | `HfTokenizer`: the open model's HuggingFace tokenizer.json read and applied in Kotlin (normalizers, pre-tokenizers, WordPiece, post-processor); Oniguruma's Unicode `\w`, `\d` and `\s` spelled out, because Android's ICU regex refuses `UNICODE_CHARACTER_CLASS`. | Android variant of Pardes for desktop's features/search/semantic/HfTokenizer.kt (same package and names; changes marked "Android:") |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/HybridSearchEngine.kt` | `HybridSearchEngine`: the full-text engine fused with the dense search by RRF (the model's dense weight, the lexical leaders that hold a quote, the earlier level first), snippets refined and highlighted by meaning, the reader's smart find, the fallback to words alone, and `lexicalEngine` for the facets; it logs with android.util.Log and reads the library through the app's connection. | Android variant of Pardes for desktop's features/search/semantic/HybridSearchEngine.kt (same package and names; changes marked "Android:") |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/HybridSearchEngine.kt` | `HybridSearchEngine`: the full-text engine fused with the dense search by RRF (the model's dense weight, the lexical leaders that hold a quote, the earlier level first), snippets refined and highlighted by meaning, the reader's smart find, the fallback to words alone, and `lexicalEngine` for the facets; it logs with android.util.Log and reads the library through the app's connection. *Note:* Its fusion is RRF alone: desktop's `fusedScores` (2026-11-09) is not ported. | Android variant of Pardes for desktop's features/search/semantic/HybridSearchEngine.kt (same package and names; changes marked "Android:") |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/IndependentSemanticSearch.kt` | `IndependentSemanticSearch` and `DenseHit`: the KNN search of pardes.vec.lucene (HNSW) opened with `NIOFSDirectory`, with the model looked for beside the index only, and no legacy model. | Android variant of Pardes for desktop's features/search/semantic/IndependentSemanticSearch.kt (same package and names; changes marked "Android:") |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/OnnxEmbeddingProvider.kt` | `OnnxEmbeddingProvider`: embeds a query, and passages of found lines, with the int8 ONNX model on onnxruntime-android into the vector the index is searched with; no legacy model. | Android variant of Pardes for desktop's features/search/semantic/OnnxEmbeddingProvider.kt (same package and names; changes marked "Android:") |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/OpenModelSpec.kt` | `OpenModelSpec`: the open model's pardes-model.json (its id, files, cleaner, prefixes and dense weight), read with `Files.readAllBytes`, since Android 8 has no `Files.readString`. | Android variant of Pardes for desktop's features/search/semantic/OpenModelSpec.kt (same package and names; changes marked "Android:") |

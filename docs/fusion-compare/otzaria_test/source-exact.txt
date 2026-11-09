@@ -1,0 +1,73 @@
+157 searches written; the lexical side finds the source in its first 10 in 114; all of them measured
+  lexical rank 1: 99, 2-3: 12, 4-10: 3, not in 10: 43
+  the dense side: in its 150 150, first 10 130, first 69
+app      | first 111 | in 3 137 | in 10 149 | MRR@10 0.796 | lost  0 || lenient: first 131 | in 3 149
+apprrf   | first 111 | in 3 137 | in 10 149 | MRR@10 0.796 | lost  0 || lenient: first 131 | in 3 149
+lex      | first  99 | in 3 111 | in 10 114 | MRR@10 0.670 | lost  0 || lenient: first 111 | in 3 119
+dense    | first  69 | in 3 103 | in 10 130 | MRR@10 0.570 | lost 17 || lenient: first  82 | in 3 113
+rrf60    | first 105 | in 3 128 | in 10 140 | MRR@10 0.747 | lost  7 || lenient: first 121 | in 3 135
+rrf60w15 | first 108 | in 3 132 | in 10 144 | MRR@10 0.767 | lost  3 || lenient: first 124 | in 3 138
+rrf20    | first  99 | in 3 125 | in 10 140 | MRR@10 0.720 | lost  7 || lenient: first 114 | in 3 133
+rrf100   | first 105 | in 3 129 | in 10 142 | MRR@10 0.749 | lost  5 || lenient: first 121 | in 3 136
+cc_mm50  | first 112 | in 3 131 | in 10 146 | MRR@10 0.786 | lost  1 || lenient: first 125 | in 3 141
+cc_mm30  | first  99 | in 3 125 | in 10 142 | MRR@10 0.721 | lost  5 || lenient: first 112 | in 3 134
+cc_z30   | first  72 | in 3 108 | in 10 131 | MRR@10 0.590 | lost 16 || lenient: first  87 | in 3 116
+cc_z50   | first  76 | in 3 108 | in 10 132 | MRR@10 0.606 | lost 15 || lenient: first  91 | in 3 117
+dbsf     | first 105 | in 3 133 | in 10 144 | MRR@10 0.758 | lost  3 || lenient: first 117 | in 3 139
+combmnz  | first 112 | in 3 132 | in 10 147 | MRR@10 0.787 | lost  0 || lenient: first 125 | in 3 141
+ssl      | first 104 | in 3 120 | in 10 138 | MRR@10 0.731 | lost  9 || lenient: first 117 | in 3 130
+otzaria  | first 107 | in 3 132 | in 10 144 | MRR@10 0.765 | lost  3 || lenient: first 123 | in 3 138
+z_qtype  | first  72 | in 3 108 | in 10 132 | MRR@10 0.591 | lost 15 || lenient: first  87 | in 3 116
+p12      | first 110 | in 3 134 | in 10 148 | MRR@10 0.784 | lost  0 || lenient: first 125 | in 3 142
+p12w     | first 107 | in 3 134 | in 10 150 | MRR@10 0.777 | lost  0 || lenient: first 124 | in 3 142
+p12wl    | first 113 | in 3 144 | in 10 152 | MRR@10 0.818 | lost  0 || lenient: first 134 | in 3 152
+window   | first 108 | in 3 137 | in 10 150 | MRR@10 0.782 | lost  0 || lenient: first 125 | in 3 144
+links    | first 105 | in 3 136 | in 10 144 | MRR@10 0.769 | lost  5 || lenient: first 120 | in 3 142
+level    | first 104 | in 3 130 | in 10 142 | MRR@10 0.748 | lost  6 || lenient: first 121 | in 3 137
+diverse  | first 105 | in 3 127 | in 10 140 | MRR@10 0.746 | lost  6 || lenient: first 121 | in 3 134
+combo    | first 107 | in 3 139 | in 10 150 | MRR@10 0.785 | lost  0 || lenient: first 122 | in 3 148
+
+== source first, by the source's book ==
+group (n)    | app      | lex      | dense    | rrf60    | rrf60w15 | dbsf     | combmnz  | otzaria  | p12      | p12w     | p12wl    | window   | combo      (strict / lenient)
+bavli   ( 44) |  34/34   |  34/34   |  22/22   |  34/34   |  34/34   |  33/33   |  35/35   |  34/34   |  34/34   |  35/35   |  35/35   |  34/34   |  34/34  
+midrash ( 12) |  11/12   |   8/9    |   6/6    |  10/10   |  11/11   |  10/10   |  11/11   |  11/11   |  11/11   |  11/12   |  11/12   |  11/11   |  11/11  
+mishna  ( 24) |  10/21   |  12/19   |   2/11   |   8/19   |   9/20   |   9/18   |  10/20   |   9/20   |  11/21   |  11/21   |  12/22   |   8/19   |   7/17  
+rambam  ( 19) |  13/16   |   6/10   |   9/10   |  12/15   |  12/15   |   9/12   |  12/15   |  12/15   |  12/15   |   9/13   |  13/17   |  12/16   |  13/16  
+sa      ( 25) |  14/19   |  20/20   |  15/18   |  20/22   |  20/22   |  22/22   |  22/22   |  20/22   |  20/22   |  20/22   |  14/20   |  20/22   |  19/21  
+tanakh  ( 27) |  24/24   |  15/15   |  12/12   |  16/16   |  17/17   |  18/18   |  18/18   |  17/17   |  18/18   |  17/17   |  24/24   |  18/18   |  19/19  
+yerushalmi(  6) |   5/5    |   4/4    |   3/3    |   5/5    |   5/5    |   4/4    |   4/4    |   4/4    |   4/4    |   4/4    |   4/4    |   5/5    |   4/4   
+
+== source first, by the query ==
+group (n)    | app      | lex      | dense    | rrf60    | rrf60w15 | dbsf     | combmnz  | otzaria  | p12      | p12w     | p12wl    | window   | combo      (strict / lenient)
+K       (  4) |   2/4    |   2/2    |   3/4    |   3/4    |   3/4    |   3/4    |   3/4    |   3/4    |   3/4    |   3/4    |   2/4    |   3/4    |   3/4   
+Q       (126) |  93/108  |  95/103  |  52/61   |  88/100  |  91/103  |  90/98   |  95/104  |  90/102  |  93/104  |  93/105  |  94/109  |  91/104  |  90/101 
+V       ( 27) |  16/19   |   2/6    |  14/17   |  14/17   |  14/17   |  12/15   |  14/17   |  14/17   |  14/17   |  11/15   |  17/21   |  14/17   |  14/17  
+
+== the searches the app loses (the source in the lexical first 3, not in the app's first 10) ==
+
+== the 43 searches whose source the lexical side does not find in its first 10 (not measured above) ==
+app      | first 23 | in 3 30 | in 10 36
+apprrf   | first 23 | in 3 30 | in 10 36
+lex      | first  0 | in 3  0 | in 10  0
+dense    | first 17 | in 3 24 | in 10 34
+rrf60    | first 16 | in 3 23 | in 10 34
+rrf60w15 | first 16 | in 3 23 | in 10 34
+rrf20    | first 16 | in 3 23 | in 10 34
+rrf100   | first 16 | in 3 23 | in 10 34
+cc_mm50  | first 16 | in 3 22 | in 10 33
+cc_mm30  | first 16 | in 3 23 | in 10 34
+cc_z30   | first 17 | in 3 23 | in 10 34
+cc_z50   | first 16 | in 3 23 | in 10 34
+dbsf     | first 13 | in 3 25 | in 10 34
+combmnz  | first 16 | in 3 22 | in 10 33
+ssl      | first 16 | in 3 23 | in 10 34
+otzaria  | first 16 | in 3 23 | in 10 34
+z_qtype  | first 17 | in 3 23 | in 10 34
+p12      | first 16 | in 3 22 | in 10 34
+p12w     | first 12 | in 3 22 | in 10 36
+p12wl    | first 24 | in 3 32 | in 10 38
+window   | first 18 | in 3 29 | in 10 37
+links    | first 19 | in 3 30 | in 10 36
+level    | first 14 | in 3 25 | in 10 35
+diverse  | first 16 | in 3 23 | in 10 34
+combo    | first 18 | in 3 27 | in 10 36
