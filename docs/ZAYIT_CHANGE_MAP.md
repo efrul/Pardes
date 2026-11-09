@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (141 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (143 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -675,7 +675,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
-- **Change:** modified, +58 −10 lines. Feature: Daf view, Reading time.
+- **Change:** modified, +73 −10 lines. Feature: Daf view, Reading time, Copy of the words alone.
 - **What:**
   - In `BookTextMenus`, `LocalLocatedSelection.current`: when the content locates its own selection in the library (the
     daf's printed words), the context menu's link, note and highlight take that location instead of searching the
@@ -683,17 +683,20 @@ The entries of this section by kind:
     `persistHighlights`.
   - The selection written to the `SelectionContext`: an area with nothing selected clears the tab's selection only if
     the text there is still the one it wrote (`written`), because the daf has an area per amud.
+  - In `BookTextMenus`, the item "העתק טקסט בלבד" (`context_menu_copy_letters_only`) after "copy without nikud", when the
+    copied text has anything but letters, digits and spaces (`hasMoreThanLetters`): it copies `lettersOnly(copiedText)`.
   - In `BookContentScreen`, a `LaunchedEffect` that tracks the book's reading time (`readingTimeStore.track`) while its
     tab is selected and its window focused (`windowInfo.isWindowFocused` read as a flow).
   - Imports, among them a redundant `androidx.compose.runtime.snapshotFlow` beside the file's `androidx.compose.runtime.*`.
 - **Why:** highlights and notes work on the daf's printed words (`d334af46`), a selection survives while another amud
-  is composed (`d9cb48b7`), and the learning split widget counts the time a book is read (`0083381e`).
+  is composed (`d9cb48b7`), the learning split widget counts the time a book is read (`0083381e`), and a text is copied
+  without its nikud, teamim and punctuation, as the user asked on 2026-11-09.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: the edits sit inside Zayit's context-menu builder (`BookTextMenus`), which Zayit changes when
   it adds a menu action.
 - **Smaller:** the reading-time effect could be a Pardes composable called by one line; the menu's branches need the
   menu's locals.
-- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`.
+- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`.
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
@@ -1184,8 +1187,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +211 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 198 Hebrew strings added in twelve blocks,
+- **Change:** modified, +212 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 199 Hebrew strings added in thirteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
@@ -1200,12 +1203,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`;
-  - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`.
+  - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
+  - the reader's menu: `context_menu_copy_letters_only`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); twelve insertion points, each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); thirteen insertion points, each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -2044,6 +2048,34 @@ book or by the time it was read, as Pardes for Android's widget. Hooks: `MainApp
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's widget UI tests.
 - **Tests:** it is one (Compose UI).
+
+### The reader's menu: a copy of the words alone
+
+"העתק טקסט בלבד" in the reader's context menu: the selected text without its nikud, teamim and punctuation, as the user
+asked on 2026-11-09. Hooks: `BookContentScreen.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/LettersOnly.kt`
+
+- **Feature:** Copy of the words alone.
+- **Size:** 50 lines.
+- **What:** `lettersOnly(text)`, a text as its words alone: Zayit's `HebrewTextUtils.removeAllDiacritics`, then every
+  character that is no letter or digit taken out, a space where it stood between two words (a maqaf, a dash, a slash),
+  the lines kept and the spaces folded. A geresh after a letter and gershayim between two letters stay, as the word's
+  own spelling (וגו׳, רש״י). `hasMoreThanLetters(text)` says whether such a copy would differ, for the menu to offer it.
+- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`).
+- **Follows:** Zayit's `core/CopyWithSource.kt`: the copy actions' top-level functions, in `core`.
+- **Tests:** `LettersOnlyTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/LettersOnlyTest.kt`
+
+- **Feature:** Copy of the words alone.
+- **Size:** 44 lines.
+- **What:** a verse loses its nikud, teamim and sof pasuq; a maqaf, a dash and a slash become a space; רש"י, ד"ה, וגו'
+  and ר׳ keep their marks while the quotation marks around words go; lines and numbers stay; and a text of words alone
+  is told from one with marks.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 ### Klei Kodesh's dictionaries in the dictionary card
 
