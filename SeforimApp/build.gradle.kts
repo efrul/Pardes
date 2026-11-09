@@ -194,6 +194,8 @@ kotlin {
             implementation(libs.zstd.jni)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.lucene.core)
+            // The delta's lines written with the release index's analyzer (text_ng4's 4-grams)
+            implementation(libs.lucene.analysis.common)
             implementation("com.microsoft.onnxruntime:onnxruntime:1.17.1")
             implementation("org.json:json:20240303")
             implementation(libs.reorderable)

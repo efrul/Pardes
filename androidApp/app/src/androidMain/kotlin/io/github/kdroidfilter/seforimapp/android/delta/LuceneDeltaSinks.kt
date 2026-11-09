@@ -36,11 +36,12 @@ import java.io.File
  *
  *  - The documents are those of the index's own writer, SeforimLibrary (7ddf045) generator
  *    `searchindex/lucene/LuceneTextIndexWriter.kt` addLine, analysed and normalised as `BuildLuceneIndex.kt` does
- *    (StandardAnalyzer, plus the 4-gram analyzer on `text_ng4`; Jsoup.clean + normalizePostHtmlForIndex). Desktop's
+ *    (StandardAnalyzer, plus the 4-gram analyzer on `text_ng4`; Jsoup.clean + normalizePostHtmlForIndex). Zayit's
  *    sink writes a reduced document (no `text_ng4`, no `ancestor_category_ids`, `line_index`/`order_index`/
  *    `is_base_book` stored only): the search would miss those lines in substring and category searches, and Lucene
- *    rejects a document whose fields drop the points the index has for them. Fields the index carries without points
- *    or doc values (an older release) are written the same way, like desktop's book_id doc-values check.
+ *    rejects a document whose fields drop the points the index has for them; Pardes for desktop writes this one too
+ *    since 2026-11-09 (`framework/update/LuceneLineDocument.kt`). Fields the index carries without points or doc
+ *    values (an older release) are written the same way, like desktop's book_id doc-values check.
  *  - The index opens with [NIOFSDirectory] (no MMapDirectory on Android), appends only, merges on the calling thread
  *    and leaves segments over 512 MB alone (a phone cannot rewrite the 5 GB main segment), and is committed only by
  *    [LuceneUpdater.SinkSession.commit]; a session closed without it rolls the writer back.
