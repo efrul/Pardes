@@ -118,7 +118,7 @@ Two entries as the map has them, and a row:
 ```
 
 ```markdown
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/data/CandleLighting.kt` | How early each city lights Shabbat candles in the עתים לבינה luach (`itimLabinaCandleLighting`, the defaults in Israel and abroad). *Note:* A copy of a desktop file that compiles as it is: the build could take it from desktop, as its Sync tasks do for others. | Copy of Zayit's features/zmanim/data/CandleLighting.kt, identical but for the package and a header line |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/home/widgets/ArrangeLayout.kt` | The Home's "arrange" action: the widgets laid out again, resized within their limits, in the dealing into rows and columns with the fewest empty cells, then the fewest rows; pressed again, another order. *Note:* It uses Android's own `WidgetPlacement` and `CellPitch` (`HomeWidget.kt`, `CellLayout.kt`), so the build cannot take desktop's file as it takes the others. | Copy of desktop 0.6.10's features/home/widgets/ArrangeLayout.kt (the same in 0.6.12), identical but for the package and a header |
 ```
 
 Kinds: branding hook; Pardes feature hook; Pardes feature in Zayit's file; fix of Zayit's code; licence removal;
