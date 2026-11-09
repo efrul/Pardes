@@ -85,4 +85,59 @@ class PardesLexiconTest {
         assertNotEquals(before, PardesLexicon.storedFingerprint(dir.resolve(PardesLexicon.FILE)))
         assertEquals("ברכה", forms(dir.resolve(PardesLexicon.FILE), "לברכה").first())
     }
+
+    @Test
+    fun defectiveFormsLeaveOutAnInnerVavOrYod() {
+        // Each inner ו or י, and both: the index keeps those some line holds
+        assertEquals(listOf("עשרנים", "עשרונם", "עשרנם"), PardesLexicon.defectiveForms("עשרונים"))
+        assertEquals(listOf("גדר"), PardesLexicon.defectiveForms("גודר"))
+        // One letter of a run, never the first letter of the word
+        assertEquals(listOf("וחיב"), PardesLexicon.defectiveForms("וחייב"))
+        assertEquals(listOf("והמחלות", "והמחולת", "והמחלת"), PardesLexicon.defectiveForms("והמחולות"))
+        // Not right before a final ה, and three letters stay
+        assertEquals(emptyList(), PardesLexicon.defectiveForms("מצוה"))
+        assertEquals(emptyList(), PardesLexicon.defectiveForms("קול"))
+    }
+
+    /**
+     * עשרון (two forms) and גודר, and גדר as a base of its own; the lines hold the defective spellings, in the index's
+     * letters (final letters as their base form, as the library's index).
+     */
+    private fun spellingLibrary() {
+        DriverManager.getConnection("jdbc:sqlite:$lexical").use { c ->
+            c.createStatement().use { st ->
+                listOf(
+                    "CREATE TABLE base (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
+                    "CREATE TABLE surface (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE, base_id INTEGER NOT NULL, notes TEXT)",
+                    "CREATE TABLE variant (id INTEGER PRIMARY KEY, value TEXT NOT NULL UNIQUE)",
+                    "CREATE TABLE surface_variant (surface_id INTEGER NOT NULL, variant_id INTEGER NOT NULL, PRIMARY KEY (surface_id, variant_id))",
+                    "CREATE TABLE surface_extra_base (surface_id INTEGER NOT NULL, base_id INTEGER NOT NULL, PRIMARY KEY (surface_id, base_id))",
+                    "CREATE INDEX surface_base_id_index ON surface(base_id)",
+                    "INSERT INTO base VALUES (1, 'עשרון'), (2, 'גודר'), (3, 'גדר')",
+                    "INSERT INTO surface VALUES (1, 'עשרון', 1, NULL), (2, 'עשרונים', 1, NULL), (3, 'גודר', 2, NULL), " +
+                        "(4, 'גודרים', 2, NULL), (5, 'גדר', 3, NULL)",
+                ).forEach { st.execute(it) }
+            }
+        }
+        IndexWriter(FSDirectory.open(index), IndexWriterConfig(StandardAnalyzer())).use { w ->
+            listOf("שני עשרנים", "עשרנים", "עשרון אחד", "גדר", "גודר גדר").forEach { text ->
+                w.addDocument(Document().apply { add(TextField("text", HebrewTextUtils.normalizeHebrew(text), Field.Store.NO)) })
+            }
+        }
+    }
+
+    @Test
+    fun defectiveSpellingsTheLinesHoldAreFormsOfTheBase() {
+        spellingLibrary()
+        val fixed = PardesLexicon.dictionaryFor(lexical, index)
+        PardesLexicon.awaitBuild(60_000)
+        // A new form, numbered with the others by its lines; עשרונים, which no line holds, after them (the forms come in
+        // the index's letters)
+        assertEquals(listOf("עשרנימ", "עשרונ", "עשרונימ"), forms(fixed, "עשרונים"))
+        // and the word typed as the lines write it gets its base's forms
+        assertEquals(listOf("עשרנימ", "עשרונ", "עשרונימ"), forms(fixed, "עשרנים"))
+        // A spelling the dictionary has stays with its own base: גדר isn't a form of גודר, nor the reverse
+        assertEquals(listOf("גודר", "גודרימ"), forms(fixed, "גודר"))
+        assertEquals(listOf("גדר"), forms(fixed, "גדר"))
+    }
 }

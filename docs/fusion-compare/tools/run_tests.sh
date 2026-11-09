@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# The semantic package's tests that need no Compose, outside Gradle (IMPLEMENTATION.md): build.sh's build of this
-# checkout, the tests compiled with the same kotlinc against it, run with JUnit 4.
+# The search's tests that need no Compose (the semantic package's and PardesLexicon's), outside Gradle
+# (IMPLEMENTATION.md, SPELLING.md): build.sh's build of this checkout, the tests compiled with the same kotlinc against
+# it, run with JUnit 4.
 #
 #   run_tests.sh WORK_DIR
 set -euo pipefail
@@ -23,11 +24,12 @@ fetch org.hamcrest hamcrest-core 1.3
 fetch org.jetbrains.kotlin kotlin-test 2.4.20
 fetch org.jetbrains.kotlin kotlin-test-junit 2.4.20
 cp_of() { ls "$1"/*.jar | tr '\n' ':'; }
-b="$work/build"; t="$repo/SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic"
+b="$work/build"; t="$repo/SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp"
 rm -rf "$work/testclasses"; mkdir -p "$work/testclasses"
 "$JAVA" -Xmx3g -cp "$(cp_of "$b/kotlinc")" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-reflect -nowarn \
     -jvm-target 21 -Xfriend-paths="$b/classes" -cp "$b/classes:$(cp_of "$b/jars")$(cp_of "$work/testjars")" \
-    -d "$work/testclasses" "$t/HybridSearchEngineFallbackTest.kt" "$t/HybridSearchEngineFusionTest.kt" \
-    "$t/HybridSearchEngineKeepLeadersTest.kt" "$t/LevelPrecedenceTest.kt"
+    -d "$work/testclasses" "$t/features/search/semantic/HybridSearchEngineFallbackTest.kt" \
+    "$t/features/search/semantic/HybridSearchEngineFusionTest.kt" "$t/features/search/semantic/HybridSearchEngineKeepLeadersTest.kt" \
+    "$t/features/search/semantic/LevelPrecedenceTest.kt" "$t/framework/search/PardesLexiconTest.kt"
 classes=$(cd "$work/testclasses" && find . -name '*Test.class' | sed 's|^\./||; s|\.class$||; s|/|.|g' | sort)
 "$JAVA" -cp "$work/testclasses:$b/classes:$(cp_of "$b/jars")$(cp_of "$work/testjars")" org.junit.runner.JUnitCore $classes
