@@ -1,7 +1,7 @@
 """The feedback's graded searches, every lexical side and method side by side (OTZARIA_LEXICAL.md, ANALYSIS.md "after
 grading").
 
-    python graded_compare.py grades.json BASE_OUT [LABEL=OUT ...] [--methods app,p12wl] [--depth 3]
+    python graded_compare.py grades.json BASE_OUT [LABEL=OUT ...] [--methods app,p12wl|all] [--depth 3] [--condensed]
 
 grades.json is feedback_searches.py's (the feedback's grades, and claude_grades.tsv's where the feedback has none).
 BASE_OUT is fuse_all.py's output for the app's own run, LABEL=OUT those of runs with another lexical side
@@ -9,7 +9,9 @@ BASE_OUT is fuse_all.py's output for the app's own run, LABEL=OUT those of runs 
 of any method (89 on the feedback of 8.11.2026). For every run and method: the first line good (grade 2 or 3), good
 lines in the first N (--depth, 3), lines graded 0 in the first N, nDCG@N (a line with no grade counts 0), MRR@10, the
 share of the first N that has a grade, and the sign test (on nDCG@N) against the base run's `app`. Last, the lines in
-the first N that have no grade: to grade before trusting a row whose share is under 100%.
+the first N that have no grade: to grade before trusting a row whose share is under 100%. With --condensed, a line with no
+grade is taken out of the list before measuring (a condensed list, Sakai 2007): no line counts against a method for not
+being graded, at the price of measuring a list the reader does not see.
 """
 
 import json
@@ -24,6 +26,7 @@ for opt in ("--methods", "--depth"):
     if opt in sys.argv:
         args.remove(sys.argv[sys.argv.index(opt) + 1])
 grades = json.load(open(args[0], encoding="utf-8"))
+condensed = "--condensed" in sys.argv
 runs = [("pardes", args[1])] + [tuple(a.split("=", 1)) for a in args[2:]]
 
 
@@ -45,6 +48,8 @@ by_query = {}
 for k, v in grades.items():
     by_query.setdefault(k.split("\t")[0], []).append(v["grade"])
 base_full = json.load(open(f"{runs[0][1]}/tops50.json", encoding="utf-8"))
+if methods == ["all"]:
+    methods = list(base_full[0]["tops"])
 measured = {x["id"] for x in base_full
             if any(f"{x['q']}\t{d}" in grades and grades[f"{x['q']}\t{d}"].get("by") != "claude"
                    for t in x["tops"].values() for d in t)}
@@ -58,6 +63,8 @@ for label, out in runs:
         nd, rr = {}, []
         for x in full:
             q, order = x["q"], x["tops"][m]
+            if condensed:
+                order = [d for d in order if grade(q, d) is not None]
             top = [grade(q, d) for d in order[:depth]]
             for d in order[:depth]:
                 if grade(q, d) is None:

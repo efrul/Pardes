@@ -1,0 +1,17 @@
+89 searches with grades from the feedback; grades: feedback 618, Claude 358
+pardes      app      graded in 3 100% | good first 51 | good in 3 132 | 0 in 3 113 | nDCG@3 0.489 | MRR@10 0.654 | vs the app +0 -0 p=1.000
+pardes      p12wl    graded in 3 100% | good first 59 | good in 3 147 | 0 in 3  99 | nDCG@3 0.562 | MRR@10 0.710 | vs the app +32 -8 p=0.000
+pardes      p12wsl   graded in 3 100% | good first 59 | good in 3 148 | 0 in 3  98 | nDCG@3 0.564 | MRR@10 0.710 | vs the app +32 -8 p=0.000
+pardes      p12wl_w2 graded in 3 100% | good first 59 | good in 3 148 | 0 in 3  97 | nDCG@3 0.560 | MRR@10 0.716 | vs the app +34 -10 p=0.000
+pardes      p12wl_w15 graded in 3 100% | good first 57 | good in 3 148 | 0 in 3  99 | nDCG@3 0.551 | MRR@10 0.700 | vs the app +30 -13 p=0.014
+spelling    app      graded in 3 100% | good first 51 | good in 3 131 | 0 in 3 113 | nDCG@3 0.487 | MRR@10 0.653 | vs the app +1 -2 p=1.000
+spelling    p12wl    graded in 3 100% | good first 60 | good in 3 144 | 0 in 3  99 | nDCG@3 0.566 | MRR@10 0.719 | vs the app +32 -11 p=0.002
+spelling    p12wsl   graded in 3 100% | good first 60 | good in 3 145 | 0 in 3  98 | nDCG@3 0.569 | MRR@10 0.719 | vs the app +32 -11 p=0.002
+spelling    p12wl_w2 graded in 3  99% | good first 60 | good in 3 146 | 0 in 3  94 | nDCG@3 0.566 | MRR@10 0.726 | vs the app +33 -13 p=0.005
+spelling    p12wl_w15 graded in 3  97% | good first 58 | good in 3 145 | 0 in 3  89 | nDCG@3 0.556 | MRR@10 0.709 | vs the app +30 -15 p=0.036
+
+4 lines in the first 3 with no grade:
+  היוונים לא העמידו עוד פילוסופים	373877	spelling/p12wl_w15
+  היוונים לא העמידו עוד פילוסופים	4328467	spelling/p12wl_w15, spelling/p12wl_w2
+  לימוני דמי לפגיעין	2717832	spelling/p12wl_w15
+  לימוני דמי לפגיעין	3838090	spelling/p12wl_w15

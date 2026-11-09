@@ -273,6 +273,9 @@ METHODS = [
     ("p12", "הצעות 1+2 של SEARCH_ORDER_ISSUES", "RRF ×3; שורה רגילה שמכילה את השאילתה מילה במילה (3 מילים ומעלה) שוקלת 3; שורות סמנטיות בלבד של 8 מילים או פחות יוצאות (לא בספר שנבחר); keepLeaders"),
     ("p12w", "הצעות 1+2 עם החלון", "הצעות 1+2 של SEARCH_ORDER_ISSUES, ועוד 0.03·(חלק ממילות השאילתה שבחלון הטוב)², ו־keepLeaders"),
     ("p12wl", "הצעות 1+2 עם החלון וקדימות הרמה", "p12w, ואחריו LevelPrecedence של האפליקציה: בין השורות שמכילות את השאילתה כמשפט (גם בכתיב מלא/חסר), הרמה המוקדמת קודמת"),
+    ("p12wl_w2", "p12wl, סמנטי ×2", "p12wl עם משקל 2 לצד הסמנטי במקום 3 (EXPANSIONS.md)"),
+    ("p12wl_w15", "p12wl, סמנטי ×1.5", "p12wl עם משקל 1.5 לצד הסמנטי במקום 3 (EXPANSIONS.md)"),
+    ("p12wsl", "p12wl, מילה במילה גם בכתיב אחר", "p12wl, והשורה הרגילה שוקלת 3 כשהיא מכילה את השאילתה כמשפט גם בכתיב מלא/חסר ועם קידומות (holds_phrase של LevelPrecedence), לא רק מילה במילה (EXPANSIONS.md)"),
     ("window", "מיון מחדש לפי החלון הטוב (כמו ויקיפדיה)", "RRF ×3, ועוד 0.03·(חלק ממילות השאילתה שבחלון הטוב)²"),
     ("links", "ציון לפי הקישורים (PageRank פשוט)", "RRF ×3 כפול (0.7 + 0.3·log של מספר הספרים המקושרים)"),
     ("level", "ציון לפי רמת הספר", "RRF ×3 כפול (0.7 + 0.3·רמה): מקרא 1, חז\"ל 0.95, גאונים 0.85, ראשונים 0.8, אחרונים 0.65, בני זמננו 0.55"),
@@ -360,15 +363,19 @@ def order_for(method, r):
         lexset = set(lex)
         dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
         return keep(ranked(rrf(lex, dd, lw=lw)), leaders)
-    if method == "p12w":
+    if method in ("p12w", "p12w_w2", "p12w_w15", "p12ws"):
+        w = {"p12w": 3.0, "p12w_w2": 2.0, "p12w_w15": 1.5, "p12ws": 3.0}[method]
         many = len(verbatim_key(q).split()) >= 3
-        lw = (lambda d: 3.0 if holds_verbatim(lines[d][2], q) else 1.0) if many else None
+        if method == "p12ws":  # the query as a sentence, spelling apart (LevelPrecedence's holds_phrase), not word for word
+            lw = (lambda d: 3.0 if holds_phrase(q, lines[d][2], spelling=True) else 1.0) if many else None
+        else:
+            lw = (lambda d: 3.0 if holds_verbatim(lines[d][2], q) else 1.0) if many else None
         lexset = set(lex)
         dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
-        sc = rrf(lex, dd, lw=lw)
+        sc = rrf(lex, dd, w=w, lw=lw)
         return keep(ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()}), leaders)
-    if method == "p12wl":
-        return level_first(order_for("p12w", r), q)
+    if method in ("p12wl", "p12wl_w2", "p12wl_w15", "p12wsl"):
+        return level_first(order_for({"p12wsl": "p12ws"}.get(method, method.replace("p12wl", "p12w")), r), q)
     if method == "window":
         sc = rrf(lex, dense)
         return ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()})
