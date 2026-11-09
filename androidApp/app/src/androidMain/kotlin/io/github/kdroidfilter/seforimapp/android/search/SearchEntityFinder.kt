@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.android.search
 import android.util.Log
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.HebrewDateFormatter
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
+import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.dao.repository.AuthorDetails
@@ -11,21 +12,9 @@ import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.ConcurrentHashMap
 
-// Ports of desktop 0.6.10 features/search/domain: SearchKey.kt, SearchEntityFinder.kt and BookDetailsLoader.kt, plus
-// features/author/AuthorScreen.kt's AUTHOR_ERAS and authorYears (shared by the knowledge panel and the author page).
-
-private val NIKUD = Regex("[֑-ׇ]")
-private val QUOTES = Regex("[\"'״׳]")
-private val SPACES = Regex("\\s+")
-
-/** A name as typed, to compare: without nikud, quotes and extra spaces (`שו"ע` = `שוע`). Desktop SearchKey.kt. */
-internal fun String.searchKey(): String =
-    // The maqaf joins words (שולחן־ערוך): a space, before the nikud range (which holds it) goes
-    replace('־', ' ')
-        .replace(NIKUD, "")
-        .replace(QUOTES, "")
-        .replace(SPACES, " ")
-        .trim()
+// Ports of desktop 0.6.10 features/search/domain: SearchEntityFinder.kt and BookDetailsLoader.kt (names compared by
+// desktop's own SearchKey.kt, compiled as-is), plus features/author/AuthorScreen.kt's AUTHOR_ERAS and authorYears
+// (shared by the knowledge panel and the author page).
 
 /** A part of a book and the line it starts at. */
 data class BookPart(val title: String, val lineId: Long)

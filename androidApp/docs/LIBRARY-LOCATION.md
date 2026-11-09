@@ -1,6 +1,6 @@
 # Library location (מיקום הספרייה): plan
 
-Status: **planned, not implemented** (2026-10-15). Desktop 0.6.1 has no location UI, and neither has 0.6.7: it has only the `SEFORIMAPP_DATABASE_PATH` variable and a hidden `database_path` pref. Its two strings `settings_db_path_label` ("נתיב מסד הנתונים:") and `settings_db_path_not_set` are unused. So this is an Android-only feature; record it in PARITY.md as such when it lands.
+Status: **implemented** since 2026-10-16 (`data/LibraryMover.kt`, `ui/settings/LibraryLocationSection.kt`, the transfer scripts' `--sdcard`); this was the plan of 2026-10-15, kept for what it found about Android. Where it says the scripts keep to the phone or that something is still to do, the code is ahead of it. Desktop 0.6.1 has no location UI, and neither has 0.6.7: it has only the `SEFORIMAPP_DATABASE_PATH` variable and a hidden `database_path` pref. Its two strings `settings_db_path_label` ("נתיב מסד הנתונים:") and `settings_db_path_not_set` are unused. So this is an Android-only feature; record it in PARITY.md as such when it lands.
 
 Paths below are relative to `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/`.
 

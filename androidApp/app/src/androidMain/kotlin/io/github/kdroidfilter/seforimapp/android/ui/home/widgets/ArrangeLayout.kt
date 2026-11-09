@@ -189,7 +189,7 @@ private fun splitRow(
             val fits = if (c == r) left == 0 else left > 0 && row[r xor c][h] shr left and 1 == 1
             if (!fits) continue
             val distance = indices(c).sumOf { abs(widgets[it].cell.w - w) }
-            if (distance < (best?.third ?: Int.MAX_VALUE)) best = Triple(c, w, distance)
+            if (best == null || distance < best!!.third) best = Triple(c, w, distance)
         }
     }
     val (c, w) = checkNotNull(best)

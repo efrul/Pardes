@@ -1,0 +1,26 @@
+name: Change map
+
+# Checks that docs/ZAYIT_CHANGE_MAP.md describes every file in which Pardes differs from the Zayit release it is based
+# on, with the details each kind needs, and nothing more (the zayit-fidelity skill). The check reads the map's base
+# line, so it needs the whole history. Runs on every push and pull request; a red run names the files to describe.
+# main's ruleset requires the job by its name, Change map: rename it only together with the ruleset.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Change map
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the change map
+        run: python3 .claude/skills/zayit-fidelity/scripts/check_change_map.py --committed
