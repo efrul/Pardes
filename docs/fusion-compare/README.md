@@ -16,6 +16,9 @@
 
 מילים נרדפות, המילון הארמי וכתיב מלא/חסר בתוך החיפוש של פרדס, וכמה משפיע הסדר של כל צד: [EXPANSIONS.md](EXPANSIONS.md).
 
+**המימוש (9.11.2026):** ‏`p12wl` הוא עכשיו המיזוג של האפליקציה. האימות שלו, על חיפושי המקור, המשוב, eval-100 ו־eval-real:
+[IMPLEMENTATION.md](IMPLEMENTATION.md).
+
 הקובץ נכנס לריפו לפי החלטת המשתמש (8.11.2026). יש בו החיפושים מחבילות המשוב (בלי מזהה השולח), וקטעים מהטקסט של השורות.
 
 ## מה הורץ
@@ -110,6 +113,7 @@ bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> 
 | `tools/source_eval.py` | המדדים של בדיקת המקור: איפה כל שיטה שמה את המקור |
 | `tools/OtzariaLexical.kt`, ‏`tools/swap_lexical.py`, ‏`tools/graded_compare.py`, ‏`tools/run_otzaria.sh` | החיפוש הרגיל של אוצריא במקום זה של פרדס ([OTZARIA_LEXICAL.md](OTZARIA_LEXICAL.md)) |
 | `tools/ExtraForms.kt`, ‏`tools/extra_forms_patch.py`, ‏`tools/expansion_tables.py`, ‏`tools/SpellingForms.kt`, ‏`tools/order_shuffle.py`, ‏`tools/merge_runs.py`, ‏`tools/run_expansions.sh` | צורות נוספות בחיפוש הרגיל, והשפעת הסדר ([EXPANSIONS.md](EXPANSIONS.md)) |
+| `tools/evalreal_score.py`, ‏`tools/eval100_methods.py`, ‏`tools/run_tests.sh`, ‏`eval_real/grades_new.tsv` | האימות של המימוש ב־eval-real וב־eval-100, והבדיקות בלי Gradle ([IMPLEMENTATION.md](IMPLEMENTATION.md)) |
 
 **למה לא `search-order/build.sh` של pardes-semantic כמו שהוא:** הוא לא מתקמפל מול הקוד הנוכחי של פרדס, כי `MeaningFacets.kt`
 משתמש עכשיו ב־`Category` של SeforimLibrary core, שהוא לא מעתיק.
