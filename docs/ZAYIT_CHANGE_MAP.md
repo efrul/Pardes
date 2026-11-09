@@ -524,7 +524,7 @@ The entries of this section by kind:
 - **Smaller:** already split: the document is a Pardes file (`LuceneLineDocument.kt`), the change here is the hooks.
 - **Tests:** `DbDeltaLuceneSinkTest` (a line written into an index made as the release's is found by its words, inside
   a word, under its category ancestor, with a base book's order); `DbDeltaUpdateViewModelTest`.
-- **Notes:** Zayit's code still has the fault; a report upstream is the user's decision.
+- **Notes:** Zayit's code still has the fault; the user decided on 2026-11-09 not to report it upstream.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/platform/PlatformInfo.kt`
 
@@ -4077,7 +4077,7 @@ are a script's, not detekt's.
   index has those, and Lucene refuses the first such line ("cannot change field line_index from points
   dimensionCount=1 ... to dimensionCount=0"), so the index's step of every delta fails. Pardes for desktop now writes
   the index writer's own document (`LuceneLineDocument.kt`, section 2; `DbDeltaLuceneSinkTest` failed before the fix),
-  as Pardes for Android did. Zayit's code still has it: a report upstream is the user's decision.
+  as Pardes for Android did. Zayit's code still has it; the user decided on 2026-11-09 not to report it upstream.
 
 ### Pardes for Android (`androidApp/`)
 
