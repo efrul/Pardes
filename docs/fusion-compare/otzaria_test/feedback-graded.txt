@@ -1,0 +1,255 @@
+89 searches with grades from the feedback; grades: feedback 618, Claude 280
+pardes      app      graded in 3 100% | good first 51 | good in 3 132 | 0 in 3 113 | nDCG@3 0.489 | MRR@10 0.654 | vs the app +0 -0 p=1.000
+pardes      p12w     graded in 3 100% | good first 58 | good in 3 147 | 0 in 3  99 | nDCG@3 0.564 | MRR@10 0.705 | vs the app +34 -8 p=0.000
+pardes      p12wl    graded in 3 100% | good first 59 | good in 3 147 | 0 in 3  99 | nDCG@3 0.562 | MRR@10 0.710 | vs the app +32 -8 p=0.000
+pardes      combmnz  graded in 3  92% | good first 54 | good in 3 133 | 0 in 3  87 | nDCG@3 0.518 | MRR@10 0.667 | vs the app +21 -18 p=0.749
+pardes      lex      graded in 3  35% | good first 40 | good in 3  68 | 0 in 3  18 | nDCG@3 0.306 | MRR@10 0.470 | vs the app +17 -47 p=0.000
+smart       app      graded in 3 100% | good first 49 | good in 3 123 | 0 in 3 117 | nDCG@3 0.464 | MRR@10 0.624 | vs the app +8 -14 p=0.286
+smart       p12w     graded in 3 100% | good first 58 | good in 3 143 | 0 in 3 103 | nDCG@3 0.557 | MRR@10 0.694 | vs the app +32 -15 p=0.019
+smart       p12wl    graded in 3 100% | good first 59 | good in 3 143 | 0 in 3 103 | nDCG@3 0.559 | MRR@10 0.703 | vs the app +32 -15 p=0.019
+smart       combmnz  graded in 3  79% | good first 45 | good in 3 108 | 0 in 3  83 | nDCG@3 0.416 | MRR@10 0.579 | vs the app +13 -30 p=0.014
+smart       lex      graded in 3  19% | good first 25 | good in 3  39 | 0 in 3  11 | nDCG@3 0.167 | MRR@10 0.305 | vs the app +7 -59 p=0.000
+exact       app      graded in 3 100% | good first 47 | good in 3 119 | 0 in 3 122 | nDCG@3 0.440 | MRR@10 0.610 | vs the app +6 -23 p=0.002
+exact       p12w     graded in 3 100% | good first 51 | good in 3 121 | 0 in 3 118 | nDCG@3 0.460 | MRR@10 0.627 | vs the app +10 -26 p=0.011
+exact       p12wl    graded in 3 100% | good first 52 | good in 3 122 | 0 in 3 118 | nDCG@3 0.464 | MRR@10 0.638 | vs the app +10 -25 p=0.017
+exact       combmnz  graded in 3 100% | good first 46 | good in 3 118 | 0 in 3 121 | nDCG@3 0.437 | MRR@10 0.598 | vs the app +6 -25 p=0.001
+exact       lex      graded in 3  14% | good first 19 | good in 3  29 | 0 in 3   3 | nDCG@3 0.122 | MRR@10 0.215 | vs the app +7 -65 p=0.000
+gram        app      graded in 3 100% | good first 48 | good in 3 120 | 0 in 3 120 | nDCG@3 0.451 | MRR@10 0.615 | vs the app +6 -21 p=0.006
+gram        p12w     graded in 3 100% | good first 54 | good in 3 126 | 0 in 3 110 | nDCG@3 0.485 | MRR@10 0.651 | vs the app +14 -22 p=0.243
+gram        p12wl    graded in 3 100% | good first 55 | good in 3 127 | 0 in 3 110 | nDCG@3 0.486 | MRR@10 0.663 | vs the app +12 -21 p=0.163
+gram        combmnz  graded in 3  98% | good first 47 | good in 3 120 | 0 in 3 113 | nDCG@3 0.453 | MRR@10 0.603 | vs the app +9 -23 p=0.020
+gram        lex      graded in 3  17% | good first 21 | good in 3  36 | 0 in 3   1 | nDCG@3 0.160 | MRR@10 0.238 | vs the app +9 -63 p=0.000
+all         app      graded in 3 100% | good first 48 | good in 3 120 | 0 in 3 120 | nDCG@3 0.451 | MRR@10 0.615 | vs the app +6 -21 p=0.006
+all         p12w     graded in 3 100% | good first 55 | good in 3 126 | 0 in 3 109 | nDCG@3 0.491 | MRR@10 0.657 | vs the app +15 -21 p=0.405
+all         p12wl    graded in 3 100% | good first 56 | good in 3 127 | 0 in 3 109 | nDCG@3 0.492 | MRR@10 0.668 | vs the app +13 -20 p=0.296
+all         combmnz  graded in 3  96% | good first 47 | good in 3 120 | 0 in 3 107 | nDCG@3 0.453 | MRR@10 0.599 | vs the app +9 -23 p=0.020
+all         lex      graded in 3  17% | good first 22 | good in 3  37 | 0 in 3   1 | nDCG@3 0.165 | MRR@10 0.249 | vs the app +9 -63 p=0.000
+smartspell  app      graded in 3 100% | good first 49 | good in 3 123 | 0 in 3 117 | nDCG@3 0.464 | MRR@10 0.624 | vs the app +8 -14 p=0.286
+smartspell  p12w     graded in 3 100% | good first 58 | good in 3 139 | 0 in 3 103 | nDCG@3 0.552 | MRR@10 0.694 | vs the app +32 -17 p=0.044
+smartspell  p12wl    graded in 3 100% | good first 59 | good in 3 139 | 0 in 3 103 | nDCG@3 0.554 | MRR@10 0.703 | vs the app +32 -17 p=0.044
+smartspell  combmnz  graded in 3  79% | good first 43 | good in 3 107 | 0 in 3  84 | nDCG@3 0.413 | MRR@10 0.567 | vs the app +14 -32 p=0.011
+smartspell  lex      graded in 3  20% | good first 24 | good in 3  40 | 0 in 3  11 | nDCG@3 0.168 | MRR@10 0.304 | vs the app +7 -59 p=0.000
+
+222 lines in the first 3 with no grade:
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	205045	smart/lex, smartspell/lex
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	205087	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	205862	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  אחר שמע שירים של גוים	172469	pardes/lex
+  אחר שמע שירים של גוים	216103	pardes/lex
+  אחר שמע שירים של גוים	231542	pardes/lex
+  אחר שמע שירים של גוים	2749472	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  אחר שמע שירים של גוים	4658413	smartspell/lex
+  אחר שמע שירים של גוים	5996008	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  אחר שמע שירים של גוים	5997645	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  אחר שמע שירים של גוים	6566067	pardes/lex
+  אחר שמע שירים של גוים	6776403	smartspell/lex
+  איוב לא חטא	18538	pardes/lex
+  איוב לא חטא	3255762	smart/combmnz, smartspell/combmnz
+  איוב לא חטא	3463802	smart/lex, smartspell/lex
+  איוב לא חטא	3638834	smart/lex, smartspell/lex
+  בחנו את רבי על מסכת שהוא לא למד	2877606	pardes/lex
+  בחנו את רבי על מסכת שהוא לא למד	2913297	smart/lex, smartspell/lex
+  בחנו את רבי על מסכת שהוא לא למד	4225995	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  בחנו את רבי על מסכת שהוא לא למד	4658417	pardes/combmnz, pardes/lex
+  בחנו את רבי על מסכת שהוא לא למד	7358022	smart/lex, smartspell/lex
+  בקדמין ברא	3099438	all/lex, exact/lex, gram/lex, pardes/lex
+  בקדמין ברא	3414511	smartspell/combmnz
+  בקדמין ברא	7745305	smart/lex, smartspell/lex
+  ג' שותפים באדם	137997	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  ג' שותפים באדם	140692	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  ג' שותפים באדם	168442	pardes/lex
+  ג' שותפים באדם	254781	smart/lex, smartspell/lex
+  ג' שותפים באדם	694537	smart/lex, smartspell/lex
+  ג' שותפים באדם	1490821	pardes/lex
+  ג' שותפים באדם - מה נותן כל אחד	168442	pardes/combmnz, pardes/lex
+  ג' שותפים באדם - מה נותן כל אחד	205023	smart/lex, smartspell/lex
+  ג' שותפים באדם - מה נותן כל אחד	205049	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  ג' שותפים באדם - מה נותן כל אחד	205864	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  ג' שותפים באדם - מה נותן כל אחד	273290	pardes/lex
+  ג' שותפים באדם - מה נותן כל אחד	273425	pardes/combmnz, pardes/lex
+  ג' שותפים באדם - מה נותן כל אחד	1934668	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  ג' שותפים באדם - מה נותן כל אחד	2970253	smart/lex, smartspell/lex
+  ג' שותפים באדם - מה נותן כל אחד	3715255	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	1943464	pardes/lex, smart/lex, smartspell/lex
+  גבינות הגוים אסורים העמידה בדבר היתר	1943464	pardes/lex, smart/lex, smartspell/lex
+  גבינות העכו"ם אסורות	1943464	pardes/lex, smart/lex, smartspell/lex
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	205045	smart/lex, smartspell/lex
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	205087	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	205862	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	255077	pardes/combmnz, pardes/lex
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	2396890	pardes/combmnz, pardes/lex
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	4658427	smart/lex, smartspell/lex
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	6654269	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	6655890	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	6658016	pardes/lex
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	6658018	pardes/lex
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	1943460	pardes/lex, smart/lex, smartspell/lex
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	1943483	pardes/lex
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	6654269	smart/lex, smartspell/lex
+  היוונים החטיאו את עם ישראל	475511	smart/lex
+  היוונים החטיאו את עם ישראל	1474106	pardes/lex, smart/lex, smartspell/lex
+  היוונים החטיאו את עם ישראל	3490501	smartspell/lex
+  היוונים החטיאו את עם ישראל	4159418	pardes/combmnz, pardes/lex, smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  היוונים החטיאו את עם ישראל	4658592	pardes/lex
+  היוונים לא העמידו עוד פילוסופים	373581	smartspell/combmnz, smartspell/lex
+  היוונים לא העמידו עוד פילוסופים	682899	smart/combmnz, smart/lex, smartspell/lex
+  היוונים לא העמידו עוד פילוסופים	2472905	pardes/combmnz, pardes/lex
+  היוונים לא העמידו עוד פילוסופים	2913297	pardes/lex, smart/lex
+  היוונים לא העמידו עוד פילוסופים	6925114	pardes/lex, smart/combmnz, smart/lex, smartspell/lex
+  הפקעת האיסור פנים חדשות באו לכאן	254555	pardes/combmnz, pardes/lex, smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  הפקעת האיסור פנים חדשות באו לכאן	2390230	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  הפקעת האיסור פנים חדשות באו לכאן	4790371	pardes/combmnz, pardes/lex
+  הפקעת האיסור פנים חדשות באו לכאן	4865034	pardes/lex
+  הפקעת האיסור פנים חדשות באו לכאן	6672690	smart/lex, smartspell/lex
+  הפקעת האיסור פנים חדשות באו לכאן	6691696	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  הפקעת האיסור פנים חדשות באו לכאן	7660859	pardes/combmnz, pardes/lex
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2592863	pardes/lex, smart/lex, smartspell/lex
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	1479072	pardes/lex
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	2373093	smartspell/lex
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	4225995	pardes/lex
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	4986747	smartspell/lex
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	2929832	pardes/lex
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	6766469	smart/lex, smartspell/lex
+  חמור שאכל בינתא	5285934	smart/lex
+  חמור שאכל בינתא	6186213	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  חמור שאכל בינתא	6384320	smartspell/combmnz, smartspell/lex
+  חמור שאכל בינתא	7290903	pardes/lex
+  חמור שאכל בינתא	7653356	smart/combmnz, smart/lex, smartspell/lex
+  חמור שאכל שעורים	1060565	pardes/lex
+  חמור שאכל שעורים	1088069	smart/lex, smartspell/lex
+  חמור שאכל שעורים	6186227	pardes/lex
+  חמור שאכל שעורים	7362353	smart/lex, smartspell/lex
+  חמור שאכל שעורים	7362355	smart/lex, smartspell/lex
+  חרדל מזיק לדבורים	6133378	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	6670566	smartspell/lex
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	7362353	smartspell/combmnz, smartspell/lex
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6640540	smart/lex, smartspell/lex
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6640550	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	1101643	pardes/lex
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	1172070	pardes/lex
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5002928	smart/combmnz, smartspell/combmnz
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5996008	smart/lex, smartspell/lex
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5997645	smart/lex, smartspell/lex
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	7236113	smart/lex, smartspell/lex
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1682789	smart/lex, smartspell/lex
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1683846	smart/lex, smartspell/lex
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	6571321	all/lex, exact/lex, gram/lex
+  לחם הפנים צריכין הגשה	1145390	pardes/lex
+  לחם הפנים צריכין הגשה	1949694	smart/lex, smartspell/lex
+  לחם הפנים צריכין הגשה	3134887	pardes/lex
+  לחם הפנים צריכין הגשה	6654321	smart/lex, smartspell/lex
+  לחם הפנים צריכין הגשה	7362354	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  לימוני דומים לפגעים	2472905	pardes/combmnz, pardes/lex
+  לימוני דמי לפגיעין	2717832	all/combmnz, all/lex
+  לימוני דמי לפגיעין	3838090	all/combmnz, all/lex
+  לימוני דמי לפגיעין	5030231	pardes/combmnz, pardes/lex
+  לימוני דמי לפגיעין	6120052	all/lex
+  מה הייתה רשעות וחטא הייונים	1478579	smartspell/lex
+  מה הייתה רשעות וחטא הייונים	1478971	smartspell/lex
+  מה הייתה רשעות וחטא הייונים	6683261	smartspell/combmnz, smartspell/lex
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	2389847	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	7775383	pardes/combmnz, pardes/lex, smart/lex, smartspell/lex
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	2932575	smart/lex, smartspell/lex
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6766632	smart/lex, smartspell/lex
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6770419	pardes/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	2066478	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	2369766	pardes/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	2993459	smart/lex, smartspell/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6280950	pardes/combmnz, pardes/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6299858	pardes/combmnz, pardes/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6689301	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6766701	pardes/combmnz, pardes/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7699669	smart/lex, smartspell/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7699968	pardes/lex, smart/lex, smartspell/lex
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7718105	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  מלוחי גוים אסורים	941851	smart/lex, smartspell/lex
+  מלוחי גוים אסורים	2538596	all/combmnz, all/lex
+  מלוחי גוים אסורים	2916337	smart/lex, smartspell/lex
+  מלוחי גוים אסורים	6228994	smart/lex, smartspell/lex
+  מלוחי גוים אסורים	6229002	pardes/lex
+  משקה הבא לתוך אוכל אוכל	2945499	smart/combmnz, smartspell/combmnz
+  משקה הבא לתוך אוכל אוכל	3838210	smart/combmnz, smartspell/combmnz
+  משקה הבא לתוך אוכל אוכל	4891929	all/lex, gram/lex, pardes/lex
+  משקה הבא לתוך אוכל אוכל	6120190	smart/lex, smartspell/lex
+  משקה הבא לתוך אוכל אוכל	6282444	smart/lex, smartspell/lex
+  משקה הבא לתוך אוכל אוכל	6296054	smart/lex, smartspell/lex
+  משקה הבא לתוך אוכל אוכל	6698664	pardes/lex
+  עושה אדם דין לעצמו	121838	pardes/lex
+  עושה אדם דין לעצמו	209131	smart/combmnz, smartspell/combmnz
+  עושה אדם דין לעצמו	254489	smart/lex, smartspell/lex
+  עושה אדם דין לעצמו	255077	smart/lex, smartspell/lex
+  עושה אדם דין לעצמו	3665791	smart/lex, smartspell/lex
+  עני חמור	50388	smart/combmnz, smartspell/combmnz
+  עני חמור	131513	pardes/lex
+  עני חמור	144524	smart/lex, smartspell/lex
+  עני חמור	218896	all/combmnz, all/lex, gram/combmnz, gram/lex
+  עני חמור	254781	smart/lex, smartspell/lex
+  עני חמור	274792	all/lex, gram/lex
+  עני חמור	2778846	gram/combmnz, gram/lex
+  עני חמור	3200498	smart/lex, smartspell/lex
+  עני חמור	3228022	smart/lex, smartspell/lex
+  עני חמור	3550176	all/combmnz, all/lex
+  עני חמור	3587846	all/combmnz, all/lex
+  עני חמור	3615810	gram/lex
+  עני חמור	3736196	all/combmnz
+  עני חמור	3887851	all/lex
+  עני חמור	4681544	gram/combmnz, gram/lex
+  עני חמור	5619465	gram/lex
+  עני חמור	5969002	all/lex
+  עני חמור	6472745	gram/lex
+  עני חמור	6523353	all/lex, gram/combmnz, gram/lex
+  עני חמור	6591455	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  פקע איסור שנשתנה	2390926	smart/lex, smartspell/lex
+  פקע איסור שנשתנה	4902569	pardes/lex
+  פקע איסור שנשתנה	4924833	pardes/lex
+  פקע איסור שנשתנה	6740205	smart/lex, smartspell/lex
+  צריך גם להרחיק וגם למרוח סיד	4023653	pardes/combmnz, pardes/lex, smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	883396	smart/lex, smartspell/lex
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	3957177	smart/lex, smartspell/lex
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	6347288	pardes/lex
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	6764138	smart/lex, smartspell/lex
+  רבי עקיבא אמר כלל גדול בתורה	148424	pardes/lex, smart/combmnz, smart/lex, smartspell/lex
+  רבי עקיבא אמר כלל גדול בתורה	151524	pardes/lex, smartspell/combmnz, smartspell/lex
+  רבי עקיבא אמר כלל גדול בתורה	167920	smart/lex
+  רבי עקיבא אמר כלל גדול בתורה	181180	smart/lex
+  רבי עקיבא אמר כלל גדול בתורה	183660	smart/combmnz, smartspell/combmnz
+  רבי עקיבא אמר כלל גדול בתורה	1480367	smartspell/lex
+  רבי עקיבא אמר כלל גדול בתורה	1716178	smart/combmnz, smart/lex
+  רבי עקיבא אמר כלל גדול בתורה	3262234	pardes/lex
+  רבי עקיבא אמר כלל גדול בתורה	4254833	smartspell/lex
+  רבי עקיבא אמר כלל גדול בתורה	6103023	smart/lex
+  רבי עקיבא אמר כלל גדול בתורה	7042848	smart/combmnz, smart/lex
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	827757	pardes/lex
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	1913170	pardes/lex
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	2397106	pardes/lex
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	6013660	smart/lex, smartspell/lex
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	6019783	smart/lex, smartspell/lex
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	7698415	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  שבת רביעי גשם	2737366	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  שבת רביעי גשם	3619751	smart/lex, smartspell/lex
+  שבת רביעי גשם	6885975	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  שבת רביעי גשם	7601991	pardes/lex
+  שבת רביעי גשם זה ברכה של גשם בעיתו	4658564	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  שבת רביעי גשם זה ברכה של גשם בעיתו	5985589	pardes/lex
+  שבת רביעי גשם זה ברכה של גשם בעיתו	6023287	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  שבת רביעי גשם זה ברכה של גשם בעיתו	7238440	smart/lex, smartspell/lex
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	2721298	smart/lex, smartspell/lex
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	2929832	pardes/lex
+  תענית זה דבר טוב לחלום	136195	smart/lex, smartspell/lex
+  תענית זה דבר טוב לחלום	136328	pardes/combmnz, pardes/lex
+  תענית זה דבר טוב לחלום	181379	pardes/lex
+  תענית זה דבר טוב לחלום	192187	smart/combmnz, smartspell/combmnz
+  תענית זה דבר טוב לחלום	204994	smart/lex, smartspell/lex
+  תענית זה דבר טוב לחלום	205130	smart/lex, smartspell/lex
+  תענית זה דבר טוב לחלום	253056	smart/combmnz, smartspell/combmnz
+  תענית זה דבר טוב לחלום	265188	pardes/lex
+  תפילה בשפה אחרת	116486	pardes/lex
+  תפילה בשפה אחרת	424459	smart/lex
+  תפילה בשפה אחרת	6123224	smart/combmnz, smart/lex, smartspell/lex
+  תפילה בשפה אחרת	7238019	smartspell/combmnz, smartspell/lex
+  תפילה בשפה שלא מבין	692509	smart/combmnz, smart/lex, smartspell/combmnz, smartspell/lex
+  תפילה בשפה שלא מבין	5031030	pardes/lex
+  תפילה בשפה שלא מבין	6016263	smart/lex
+  תפילה בשפה שלא מבין	7238019	smartspell/lex
+  תרבות יוון מהי	4333926	pardes/lex
+  תרבות יוון מהי	6640676	smart/lex, smartspell/lex

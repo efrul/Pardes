@@ -28,6 +28,7 @@ fetch() {  # group artifact version dir: from Maven Central, retried (it answers
 fetch org.apache.lucene lucene-core 10.5.2 "$out/jars"
 fetch org.apache.lucene lucene-analysis-common 10.5.2 "$out/jars"
 fetch org.apache.lucene lucene-queryparser 10.5.2 "$out/jars"
+fetch org.apache.lucene lucene-queries 10.5.2 "$out/jars"
 fetch co.touchlab kermit-jvm 2.1.0 "$out/jars"
 fetch co.touchlab kermit-core-jvm 2.1.0 "$out/jars"
 fetch org.jsoup jsoup 1.22.1 "$out/jars"
@@ -50,7 +51,7 @@ app="$repo/SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp"
 cp "$repo"/SeforimLibrary/search/src/jvmMain/kotlin/io/github/kdroidfilter/seforimlibrary/search/*.kt "$out/src/"
 cp "$app"/features/search/semantic/*.kt "$out/src/"
 cp "$app/framework/search/LongQuerySearchEngine.kt" "$app/framework/search/PardesLexicon.kt" "$app/core/coroutines/CoroutineUtils.kt" "$out/src/"
-cp "$here/FeedbackHistory.kt" "$here/CategoryStub.kt" "$here/LoggerStub.kt" "$out/src/"
+cp "$here/FeedbackHistory.kt" "$here/OtzariaLexical.kt" "$here/CategoryStub.kt" "$here/LoggerStub.kt" "$out/src/"
 
 cp_of() { local list=""; for j in "$1"/*.jar; do list="$list$j:"; done; printf '%s' "${list%:}"; }
 "$JAVA" -Xmx3g -cp "$(cp_of "$out/kotlinc")" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-reflect -nowarn \

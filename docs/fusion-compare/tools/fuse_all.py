@@ -254,6 +254,7 @@ def diversify(order, per_book=2, top=10):
 # ---------------------------------------------------------------- the methods
 METHODS = [
     ("app", "האפליקציה היום", "מה שפרדס מציג: RRF ‏(k=60, סמנטי ×3) על 150+150, ואחריו keepLeaders ו־LevelPrecedence"),
+    ("apprrf", "האפליקציה, מחושבת מחדש", "RRF ‏(k=60, סמנטי ×3) על המועמדים, keepLeaders ו־LevelPrecedence, כאן בפייתון: מה שהאפליקציה עושה, כשהצד הרגיל אחר (swap_lexical.py)"),
     ("lex", "רגיל בלבד (להשוואה)", "סדר החיפוש במילים לבדו, עם בונוס ספרי היסוד, בלי הסמנטי"),
     ("dense", "סמנטי בלבד (להשוואה)", "סדר התלמיד לבדו, לפי הקוסינוס"),
     ("rrf60", "RRF k=60 ×3, בלי כללים", "הנוסחה של האפליקציה לבדה, בלי keepLeaders ו־LevelPrecedence"),
@@ -284,14 +285,17 @@ def order_for(method, r):
     q = r["query"]
     lex = [h[0] for h in r["lexCand"]]
     dense = [h[0] for h in r["denseCand"]]
-    L = {h[0]: raw_bm25(h[0], h[1]) for h in r["lexCand"]}
+    # A lexical side other than the app's (OtzariaLexical.kt, swap_lexical.py) has no base books' boost to take off
+    L = {h[0]: h[1] if r.get("lexRaw") else raw_bm25(h[0], h[1]) for h in r["lexCand"]}
     D = {h[0]: h[1] for h in r["denseCand"]}
     qw = query_words(q)
     general = r["scope"] != "book"
     leaders = [(d, (1, 3)[j]) for j, d in enumerate(lex[:2]) if holds_quote(plain(d), q)]
 
     if method == "app":
-        return [h[0] for h in r["hybrid"]]
+        return [h[0] for h in r["hybrid"]] or order_for("apprrf", r)
+    if method == "apprrf":
+        return level_first(keep(ranked(rrf(lex, dense)), leaders), q)
     if method == "lex":
         return lex
     if method == "dense":

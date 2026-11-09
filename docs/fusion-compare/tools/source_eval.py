@@ -1,7 +1,7 @@
 """Where every ordering puts a search's source: the measure of the "where is it written" test (SOURCE_TEST.md).
 
     PARDES_SEMANTIC=<pardes-semantic checkout> python source_eval.py OUT_DIR targets.json seforim.db [--lex-top 10] [--sample 100]
-        [--write queries.tsv]
+        [--write queries.tsv] [--all]
 
 OUT_DIR holds fuse_all.py's tops50.json and lines.pkl for the test's searches; targets.json gives each search's source
 line ({id: {"line": lineId, "group", "type", "q", ...}}). A line with the source's very text (verbatimKey) counts as
@@ -14,7 +14,8 @@ lexical side's first 3 but not in the method's first 10), and the same by the so
 kind (Q a quote, V a quote with a change, K key words). Strict: the source line (or its very text); lenient: also a
 line holding the query (holds_quote or holds_verbatim) in a book of an earlier level, or for a Mishnah its copy in
 the Bavli, the Yerushalmi or the Tosefta. Last, apart, the searches whose source the lexical side does not find in its
-first --lex-top (most of them queries with a change), with where every method puts it.
+first --lex-top (most of them queries with a change), with where every method puts it. With --all, every search is
+measured: to compare runs with different lexical sides (swap_lexical.py) on the same searches.
 """
 
 import json
@@ -84,10 +85,12 @@ for x in full:
     lr = rank(x["lex"], tk, t["line"])
     dr = rank(x["dense"], tk, t["line"])
     rows.append((x, t, tk, lr, dr))
-    if lr is not None and lr <= lex_top:
+    if "--all" in sys.argv or (lr is not None and lr <= lex_top):
         kept.append((x, t, tk, lr, dr))
 
-print(f"{len(full)} searches written; the lexical side finds the source in its first {lex_top} in {len(kept)}")
+found = sum(1 for r in rows if r[3] is not None and r[3] <= lex_top)
+print(f"{len(full)} searches written; the lexical side finds the source in its first {lex_top} in {found}"
+      + ("; all of them measured" if "--all" in sys.argv else ""))
 if sample and sample < len(kept):
     rnd = random.Random(5785)
     by = defaultdict(list)
@@ -108,16 +111,16 @@ if "--write" in sys.argv:  # every search with its lexical and dense rank, and w
         for x, t, tk, lr, dr in rows:
             f.write(f"{x['id']}\t{t['group']}\t{t['type']}\t{t['q']}\t{t['line']}\t{t['book']}\t{t['ref']}\t{lr or ''}\t{dr or ''}\t"
                     f"{1 if x['id'] in measured else 0}\n")
-lexr = [r[3] for r in kept]
+lexr = [r[3] or 999 for r in kept]
 denr = [r[4] for r in kept]
-print(f"  lexical rank 1: {sum(1 for r in lexr if r == 1)}, 2-3: {sum(1 for r in lexr if 2 <= r <= 3)}, 4-10: {sum(1 for r in lexr if r >= 4)}")
+print(f"  lexical rank 1: {sum(1 for r in lexr if r == 1)}, 2-3: {sum(1 for r in lexr if 2 <= r <= 3)}, 4-10: {sum(1 for r in lexr if 4 <= r <= 10)}, not in 10: {sum(1 for r in lexr if r > 10)}")
 print(f"  the dense side: in its 150 {sum(1 for r in denr if r)}, first 10 {sum(1 for r in denr if r and r <= 10)}, first {sum(1 for r in denr if r == 1)}")
 
 methods = list(full[0]["tops"])
 res = {}
 for m in methods:
     rs = [rank(x["tops"][m], tk, t["line"]) for x, t, tk, lr, dr in kept]
-    lost = sum(1 for (x, t, tk, lr, dr), r in zip(kept, rs) if lr <= 3 and (r is None or r > 10))
+    lost = sum(1 for (x, t, tk, lr, dr), r in zip(kept, rs) if lr and lr <= 3 and (r is None or r > 10))
     res[m] = rs
     first = sum(1 for r in rs if r == 1)
     in3 = sum(1 for r in rs if r and r <= 3)
@@ -142,7 +145,7 @@ for label, field in (("the source's book", "group"), ("the query", "type")):
 
 print("\n== the searches the app loses (the source in the lexical first 3, not in the app's first 10) ==")
 for (x, t, tk, lr, dr), r in zip(kept, res["app"]):
-    if lr <= 3 and (r is None or r > 10):
+    if lr and lr <= 3 and (r is None or r > 10):
         others = {m: res[m][kept.index((x, t, tk, lr, dr))] for m in ("p12", "p12w", "p12wl", "dbsf", "window")}
         print(f"  [{t['group']}/{t['type']}] {t['q']}  ({t['ref']}): lexical {lr}, dense {dr}, app {r}; " +
               ", ".join(f"{m} {v}" for m, v in others.items()))

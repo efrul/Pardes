@@ -1,7 +1,8 @@
 157 searches written; the lexical side finds the source in its first 10 in 137
-  lexical rank 1: 110, 2-3: 20, 4-10: 7
+  lexical rank 1: 110, 2-3: 20, 4-10: 7, not in 10: 0
   the dense side: in its 150 132, first 10 113, first 62
 app      | first  90 | in 3 121 | in 10 135 | MRR@10 0.778 | lost  1 || lenient: first 106 | in 3 132
+apprrf   | first  90 | in 3 121 | in 10 135 | MRR@10 0.778 | lost  1 || lenient: first 106 | in 3 132
 lex      | first 110 | in 3 130 | in 10 137 | MRR@10 0.878 | lost  0 || lenient: first 122 | in 3 133
 dense    | first  62 | in 3  92 | in 10 113 | MRR@10 0.581 | lost 22 || lenient: first  73 | in 3 100
 rrf60    | first  86 | in 3 114 | in 10 126 | MRR@10 0.737 | lost  9 || lenient: first  98 | in 3 122
@@ -47,6 +48,7 @@ V       ( 10) |   8/9    |   8/9    |   7/8    |   8/9    |   8/9    |   8/9    
 
 == the 20 searches whose source the lexical side does not find in its first 10 (not measured above) ==
 app      | first 10 | in 3 12 | in 10 17
+apprrf   | first 10 | in 3 12 | in 10 17
 lex      | first  0 | in 3  0 | in 10  0
 dense    | first  7 | in 3 11 | in 10 17
 rrf60    | first  6 | in 3  8 | in 10 17

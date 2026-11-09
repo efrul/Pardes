@@ -1,0 +1,7 @@
+1156 searches | lexical side | none found | 3 or fewer | median found
+pardes | 272 | 466 | 9.0
+smart | 274 | 410 | 19.5
+exact | 843 | 988 | 0.0
+gram | 797 | 948 | 0.0
+all | 757 | 921 | 0.0
+smartspell | 253 | 394 | 20.0

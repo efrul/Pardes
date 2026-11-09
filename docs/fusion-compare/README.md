@@ -2,7 +2,7 @@
 
 # השוואת שיטות מיון על חיפושי המשוב (8.11.2026)
 
-[`fusion_compare.html`](fusion_compare.html) מציג את 10 התוצאות הראשונות של 24 שיטות מיון, זו ליד זו, לכל אחד מ־1,156 החיפושים
+[`fusion_compare.html`](fusion_compare.html) מציג את 10 התוצאות הראשונות של 25 שיטות מיון, זו ליד זו, לכל אחד מ־1,156 החיפושים
 שבחבילות המשוב עד 8.11.2026. השיטות הן אלה של [SEARCH_FUSION_RESEARCH.md](../SEARCH_FUSION_RESEARCH.md),
 [SEARCH_WORLD_RESEARCH.md](../SEARCH_WORLD_RESEARCH.md) ו־[SEARCH_OTZARIA_AND_LIBRARIES.md](../SEARCH_OTZARIA_AND_LIBRARIES.md).
 המטרה היא להתרשם, לא למדוד: אף שיטה לא כוילה, ומה שהקובץ מראה לא מחליף את המדידה של pardes-semantic.
@@ -11,6 +11,8 @@
 
 בדיקה נוספת, על חיפושי מקור (157 שאלות של ציטוט, שהחיפוש הרגיל מוצא): [SOURCE_TEST.md](SOURCE_TEST.md), והקובץ שלה
 [`source_test/source_compare.html`](source_test/source_compare.html).
+
+החיפוש הרגיל של אוצריא במקום זה של פרדס, וכתיב מלא/חסר: [OTZARIA_LEXICAL.md](OTZARIA_LEXICAL.md).
 
 הקובץ נכנס לריפו לפי החלטת המשתמש (8.11.2026). יש בו החיפושים מחבילות המשוב (בלי מזהה השולח), וקטעים מהטקסט של השורות.
 
@@ -33,6 +35,7 @@
 | מפתח | שיטה |
 |---|---|
 | `app` | האפליקציה היום: RRF ‏(k=60, סמנטי ×3), ‏`keepLeaders`, ‏`LevelPrecedence` |
+| `apprrf` | אותו מיזוג, מחושב מחדש על המועמדים (כשהצד הרגיל מוחלף, OTZARIA_LEXICAL) |
 | `lex`, ‏`dense` | רגיל בלבד, סמנטי בלבד (להשוואה) |
 | `rrf60`, ‏`rrf60w15`, ‏`rrf20`, ‏`rrf100` | RRF בלי הכללים, במשקל 1.5, ‏k=20, ‏k=100 |
 | `cc_mm50`, ‏`cc_mm30`, ‏`cc_z30`, ‏`cc_z50` | צירוף ליניארי של ציונים מנורמלים (min-max או z-score), במשקל 0.5 או 0.3 למילים |
@@ -80,7 +83,8 @@ git submodule update --init SeforimLibrary
 bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> <checkout של pardes-semantic>
 ```
 
-בדיקת המקור: `bash docs/fusion-compare/tools/run_source.sh <תיקיית עבודה> <checkout של pardes-semantic>`.
+בדיקת המקור: `bash docs/fusion-compare/tools/run_source.sh <תיקיית עבודה> <checkout של pardes-semantic>`. אחריה, החיפוש הרגיל
+של אוצריא: `bash docs/fusion-compare/tools/run_otzaria.sh <תיקיית עבודה> <checkout של pardes-semantic>`.
 
 - `feedback.json` הוא הייצוא של שירות המשוב (‏`/admin`).
 - תיקיית העבודה מקבלת את הספרייה ואת החבילה (כ־15GB, נפרסות תוך כדי הורדה), את הבנייה, את ההרצה ואת הקובץ (`out/fusion_compare.html`).
@@ -96,11 +100,12 @@ bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> 
 | `tools/feedback_searches.py` | מוציא מהייצוא את החיפושים (שאילתה והיקף) ואת הציונים |
 | `tools/fuse_all.py` | כל שיטות המיון (משתמש ב־`search-order/order_common.py` וב־`eval-real/level_order.py` של pardes-semantic) |
 | `tools/make_html.py` | בונה את הקובץ |
-| `claude_grades.tsv` | 229 ציונים של Claude לשורות שבשלוש הראשונות שלא היה להן ציון במשוב (`feedback_searches.py` מוסיף אותם) |
+| `claude_grades.tsv` | 280 ציונים של Claude לשורות שבשלוש הראשונות שלא היה להן ציון במשוב (`feedback_searches.py` מוסיף אותם) |
 | `tools/analyze.py` | המספרים של [ANALYSIS.md](ANALYSIS.md): ממה בנויה כל רשימה, והמדדים לפי הציונים שבמשוב (`out/analysis.txt`) |
 | `tools/run_source.sh` | בדיקת המקור של [SOURCE_TEST.md](SOURCE_TEST.md), לפי הסדר |
 | `tools/source_searches.py` | מהשאלות של בדיקת המקור (`source_test/queries.tsv`) לחיפושים ולמקורות שלהם |
 | `tools/source_eval.py` | המדדים של בדיקת המקור: איפה כל שיטה שמה את המקור |
+| `tools/OtzariaLexical.kt`, ‏`tools/swap_lexical.py`, ‏`tools/graded_compare.py`, ‏`tools/run_otzaria.sh` | החיפוש הרגיל של אוצריא במקום זה של פרדס ([OTZARIA_LEXICAL.md](OTZARIA_LEXICAL.md)) |
 
 **למה לא `search-order/build.sh` של pardes-semantic כמו שהוא:** הוא לא מתקמפל מול הקוד הנוכחי של פרדס, כי `MeaningFacets.kt`
 משתמש עכשיו ב־`Category` של SeforimLibrary core, שהוא לא מעתיק.
