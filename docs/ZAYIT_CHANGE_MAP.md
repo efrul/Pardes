@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (140 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (141 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -738,7 +738,7 @@ The entries of this section by kind:
 
 - **Change:** modified, +30 −9 lines. Feature: Daf view.
 - **What:**
-  - The end bar shows a "צורת הדף" toggle (`ColumnsGap` icon, `daf_view` strings) for a Bavli tractate
+  - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf (`zoomIn/zoomOut`),
     are enabled by `MIN/MAX_DAF_ZOOM` and their tooltips say "400% max" / "30% min"; otherwise the text, as before.
@@ -1644,6 +1644,18 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Follows:** the text view's highlight and note marks (Zayit's `applyUserHighlights`), drawn the same way.
 - **Tests:** `DafPageTest` (a click reaches its word, a right-click its menu, a drag goes down a column, a range is
   copied as printed, the page drawn to `build/reports/daf/`).
+
+#### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/GemaraPage.kt`
+
+- **Feature:** Daf view.
+- **Size:** 69 lines.
+- **What:** the daf view's icon, `GemaraPage`: a page of the Talmud as printed, the Gemara's lines in the middle and its
+  two commentaries each a column beside them that turns over them at the top, where the two meet.
+- **Reached from:** `VerticalBars.kt` (the end bar's "צורת הדף" toggle).
+- **Follows:** Zayit's icons in the module (`ColumnsGap.kt`, which the toggle had): an `ImageVector` built once and
+  kept, 16 units square, filled paths.
+- **Tests:** none; the icon is seen in the reader's end bar.
+- **Notes:** Android compiles the module's folder as it is, so the file stays a plain `ImageVector`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAnchors.kt`
 
