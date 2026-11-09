@@ -37,12 +37,14 @@ The rules below are mandatory for every change, in every session, desktop or And
    [docs/ZAYIT_CHANGE_MAP.md](../../../docs/ZAYIT_CHANGE_MAP.md). The entry goes in the same commit as the change:
    - **A Zayit file changed, deleted or renamed:** a `#### \`path\`` entry with the fields Change, What (every
      change in the file, by function and key), Why, Kind, Merge risk and Tests, plus Renamed from for a rename.
-     Smaller and Notes go in when there is something to say.
+     Smaller and Notes go in when there is something to say. The Change field holds the file's line counts against
+     the base (`+4 −0`).
    - **A file added inside one of Zayit's modules** (SeforimApp, buildSrc, navigation, …): a `#### \`path\`` entry
-     with the fields Feature, What, Reached from (the hook in Zayit's code), Follows (the Zayit code it copies or
-     extends) and Tests.
+     with the fields Feature, Size (`102 lines`, or `binary`), What, Reached from (the hook in Zayit's code), Follows
+     (the Zayit code it copies or extends) and Tests.
    - **Any other added file** (androidApp/, semantic-model/, branding/, docs/, workflows, skills, …): its row in its
-     folder's table, saying what it is and where it comes from.
+     folder's table: what the file is, and where it comes from (Pardes's own, a port or a copy of a named file, a
+     third party's), with a note after the description when something needs saying.
    - **A file that already has an entry:** rewrite the entry to describe the file as it is now. The entry is not a
      log; the commits are.
    - **A file back to Zayit's text:** drop its entry.
@@ -51,12 +53,15 @@ The rules below are mandatory for every change, in every session, desktop or And
    ```bash
    python3 .claude/skills/zayit-fidelity/scripts/check_change_map.py
    ```
-   It compares the working tree, untracked files included, with the map's base. CI runs the same check on every
-   push and pull request (`.github/workflows/change-map.yml`, with `--committed`).
+   It compares the working tree, untracked files included, with the map's base, and the line counts of every
+   detailed entry with the file's: once a file changes, the check fails until its entry has been gone over again. CI
+   runs the same check on every push and pull request (`.github/workflows/change-map.yml`, with `--committed`).
 4. **Lint and test what you touched.** `./gradlew ktlintCheck detekt` on the module, the module's tests, and the app
    itself for a UI change (`pardes-desktop-run` for desktop, `zayit-android` for Android). ktlint must pass, as in
    his CI. detekt is his configured standard: a new file keeps to `detekt.yml`, and a change to his file adds no
    issue to it (his largest files are already past the size limits; don't make them grow more than the hook needs).
+   - `androidApp/` has neither ktlint nor detekt yet (the map's section 4): keep its code to the same 140 columns
+     and `detekt.yml` limits by hand.
    - Run Gradle with `LC_ALL=C.UTF-8` (`pardes-desktop-run` › The locale) and with a `gh` on `PATH` that exits 1, so
      the build never reads Zayit's private packages.
    - In the cloud container, Maven Central often answers 429 through the proxy, and a cold build may not get
@@ -74,35 +79,46 @@ The rules below are mandatory for every change, in every session, desktop or And
 
 `docs/ZAYIT_CHANGE_MAP.md` (מפת השינויים) describes every file that differs from the Zayit release Pardes is based
 on, named by its `<!-- zayit-base: v<x.y.z> <sha> -->` line. The sections are:
-- the Zayit files Pardes changes, deleted or renamed, area by area, each in full;
-- the files Pardes adds inside Zayit's modules, by feature;
-- Pardes's own trees, in tables;
-- the departures from Zayit's style still to fix.
+1. the Zayit files Pardes changes, deletes or renames, area by area, each in full;
+2. the files Pardes adds inside Zayit's modules, by feature;
+3. Pardes's own trees (androidApp/ among them), in tables;
+4. the departures from Zayit's style still to fix;
+5. Zayit after the base (the releases not merged, and what a merge would meet);
+6. why GitHub does not show Pardes as a fork.
 
-The two detailed templates:
+Two entries as the map has them, and a row:
 
 ```markdown
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/licence/LicenceScreen.kt`
 
 - **Change:** modified, +4 −0 lines. Feature: Existing Zayit library.
-- **What:**
-  - `LicenceScreen`'s accept action goes to `ExistingLibraryScreen` when `ForeignLibraries.find()` finds a library.
-- **Why:** an installed Zayit's library is offered for use in place, without a second download.
+- **What:** after the licence, with no usable library of Pardes's own, `ForeignLibraries.find()` finding one leads to
+  `ExistingLibraryScreen` instead of the install.
+- **Why:** an installed Zayit's library is offered for use in place, without a second download of 8 GB (`07e14dac`).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** one call in the accept handler; conflicts only if Zayit rewrites that handler.
+- **Merge risk:** small; one branch in the accept handler.
 - **Smaller:** already minimal.
-- **Tests:** `jvmTest/.../ForeignLibrariesTest.kt` (the finder); the screen itself has none.
+- **Tests:** `ForeignLibrariesTest` (the finder); the screen has none.
 ```
 
 ```markdown
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/database/ForeignLibraries.kt`
 
 - **Feature:** Existing Zayit library.
-- **What:** `ForeignLibraries` finds an installed Zayit's library (its `database_path` preference, then its default
-  folder) and tells whether a folder is one that Pardes uses in place.
-- **Reached from:** `LicenceScreen.kt`, `DatabaseCleanupUseCase.kt`, `PendingDbCleanup.kt`, `DataSettingsViewModel.kt`.
-- **Follows:** Zayit's `DatabaseVersionManager` for the version check; otherwise Pardes's own.
-- **Tests:** `jvmTest/.../framework/database/ForeignLibrariesTest.kt`.
+- **Size:** 102 lines.
+- **What:** `ForeignLibraries`, another app's library on this machine that Pardes may use in place: `find` (the other
+  app named by `BrandLibraries`: its `database_path` preference, then its default folder, when recent enough),
+  `useInPlace` (points `database_path` at it, with no copy), and `isForeign` (a folder Pardes uses but must never delete
+  from).
+- **Reached from:** `LicenceScreen.kt`, `ExistingLibraryScreen.kt`, `DatabaseCleanupUseCase.kt`, `PendingDbCleanup.kt`,
+  `DataSettingsViewModel.kt`, `LibraryLocation.kt`, `LibraryLocationViewModel.kt`.
+- **Follows:** Zayit's `DatabaseVersionManager` for the version check; `branding/README.md` names it the only reader of
+  `BrandLibraries`, which `LibraryLocationViewModel` now reads too.
+- **Tests:** `ForeignLibrariesTest`.
+```
+
+```markdown
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/data/CandleLighting.kt` | How early each city lights Shabbat candles in the עתים לבינה luach (`itimLabinaCandleLighting`, the defaults in Israel and abroad). *Note:* A copy of a desktop file that compiles as it is: the build could take it from desktop, as its Sync tasks do for others. | Copy of Zayit's features/zmanim/data/CandleLighting.kt, identical but for the package and a header line |
 ```
 
 Kinds: branding hook; Pardes feature hook; Pardes feature in Zayit's file; fix of Zayit's code; licence removal;
