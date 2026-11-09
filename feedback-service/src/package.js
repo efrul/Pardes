@@ -22,6 +22,8 @@ export function check(p) {
   if (typeof p.sender !== "string" || !SENDER.test(p.sender)) return "no sender id";
   if (!filled(p.sentAt, 64)) return "no sentAt";
   if (!optional(p.appVersion, 64) || !optional(p.library, 64)) return "a version is not one";
+  // The sender's consent to show the package's words to everyone (index.js, published)
+  if (!maybeBoolean(p.publish)) return "publish is not true or false";
   for (const kind of ["grades", "searches", "daf"]) {
     p[kind] ??= [];
     if (!Array.isArray(p[kind])) return `${kind} is not a list`;

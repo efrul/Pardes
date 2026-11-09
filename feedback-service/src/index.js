@@ -1,16 +1,18 @@
 /**
  * Pardes's feedback service, a Cloudflare Worker with a D1 database (README.md). It receives the packages users send
  * from Pardes (Settings › ניהול נתונים › שליחת משוב, FeedbackPackage.kt), keeps each as it came, and gives them to the
- * maintainer (pardes-semantic/feedback/fetch.py), and shows everyone on its site what they add up to: users sent
- * them to improve Pardes, not to have them published, so a search's or a grade's words are the maintainer's alone. Of a request it keeps nothing but the package: no IP address, user agent or other header is
+ * maintainer (pardes-semantic/feedback/fetch.py), and shows everyone on its site what they add up to. A package whose
+ * sender agreed to publish it ("publish": true) is shown with its searches' and grades' words; any other was sent to
+ * improve Pardes, not to be published, so its words are the maintainer's alone. Of a request it keeps nothing but the package: no IP address, user agent or other header is
  * stored or logged. The address only keys the rate limits, in Cloudflare's memory.
  *
  * POST   /v1/packages          a package (JSON, at most MAX_BYTES) -> 201 {"id"}; the app's, and the site's uploads
  * DELETE /v1/senders/:id       everything the sender sent -> {"deleted"}
  * GET    /v1/public/packages   everyone's: ?after=<id>&limit=<n>, at most BODIES_LIMIT a request -> {"packages":
  *                              [{id, sender, receivedAt, ..., package}], "more", "deletions": [{sender, deletedAt}]},
- *                              each sender (in the package too) its alias, never its id, which lets one delete; and
- *                              each search and graded result an opaque id in place of its words (forEveryone)
+ *                              each sender (in the package too) its alias, never its id, which lets one delete; a
+ *                              published package with its words (published), any other with each search and graded
+ *                              result an opaque id in place of them (forEveryone); "public" says which
  * GET    /v1/packages          the maintainer's (Authorization: Bearer ADMIN_TOKEN): ?after=<id>&limit=<n>
  *                              -> {"packages": [{id, sender, receivedAt, ...}], "more", "deletions": [{sender, deletedAt}]};
  *                              with &bodies=1 each package as it came too ("package"), at most BODIES_LIMIT a request
@@ -19,7 +21,7 @@
  */
 
 import { siteFile } from "./site.js";
-import { check, MAX_BYTES, MAX_PER_DAY, SENDER } from "./package.js";
+import { check, MAX_BYTES, MAX_PER_DAY, MAX_QUERY, SENDER } from "./package.js";
 
 const DAY = 86_400_000;
 /** Packages a request with their bodies: each is at most MAX_BYTES, most a few KB. */
@@ -102,11 +104,11 @@ async function receive(request, env) {
   if (sent.n >= MAX_PER_DAY) return error(429, "too many packages today");
   const marks = pkg.daf.reduce((n, review) => n + review.marks.length, 0);
   const row = await env.DB.prepare(
-    "INSERT INTO packages (sender, received_at, app_version, library, grades, searches, daf_marks, bytes, body) " +
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+    "INSERT INTO packages (sender, received_at, app_version, library, grades, searches, daf_marks, bytes, body, public) " +
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
   )
     .bind(pkg.sender, now, pkg.appVersion ?? null, pkg.library ?? null, pkg.grades.length, pkg.searches.length, marks,
-      bytes.byteLength, json)
+      bytes.byteLength, json, pkg.publish === true ? 1 : 0)
     .first();
   return reply(201, { id: row.id });
 }
@@ -114,14 +116,16 @@ async function receive(request, env) {
 async function list(url, env) {
   const bodies = url.searchParams.get("bodies") === "1";
   const { rows, more, deletions } = await page(url, env, bodies ? BODIES_LIMIT : 1000, 500, bodies);
-  const packages = rows.map(({ body, ...row }) => (bodies ? { ...row, package: JSON.parse(body) } : row));
+  const packages = rows.map(({ body, ...row }) =>
+    (bodies ? { ...row, public: row.public === 1, package: JSON.parse(body) } : { ...row, public: row.public === 1 }));
   return reply(200, { packages, more, deletions });
 }
 
 /**
- * Everyone's list, for the site: the packages, each sender, in the package too, its alias, and of the searches and
- * grades only what counts them (forEveryone). A sender's id is never shown, since with it anyone could delete what
- * the sender sent; a search's words are never shown, since users sent them to improve Pardes, not to publish them.
+ * Everyone's list, for the site: the packages, each sender, in the package too, its alias; a published package with its
+ * words (published), any other with of its searches and grades only what counts them (forEveryone). A sender's id is
+ * never shown, since with it anyone could delete what the sender sent; the words of a package not published are never
+ * shown, since its sender sent them to improve Pardes, not to publish them.
  */
 async function everyones(url, env) {
   if (!env.ADMIN_TOKEN) return error(503, "no admin token set");
@@ -135,7 +139,9 @@ async function everyones(url, env) {
   const packages = [];
   for (const { body, sender, ...row } of rows) {
     const name = await of(sender);
-    packages.push({ ...row, sender: name, package: await forEveryone(JSON.parse(body), name, idOf) });
+    const shown = row.public === 1;
+    const cut = shown ? published : forEveryone;
+    packages.push({ ...row, sender: name, public: shown, package: await cut(JSON.parse(body), name, idOf) });
   }
   const deleted = [];
   for (const d of deletions) deleted.push({ sender: await of(d.sender), deletedAt: d.deletedAt });
@@ -149,7 +155,7 @@ async function page(url, env, most, fallback, bodies) {
   const limit = Math.min(most, Math.max(1, asked));
   const { results } = await env.DB.prepare(
     "SELECT id, sender, received_at AS receivedAt, app_version AS appVersion, library, grades, searches, " +
-      `daf_marks AS dafMarks, bytes${bodies ? ", body" : ""} FROM packages WHERE id > ? ORDER BY id LIMIT ?`,
+      `daf_marks AS dafMarks, bytes, public${bodies ? ", body" : ""} FROM packages WHERE id > ? ORDER BY id LIMIT ?`,
   )
     .bind(after, limit + 1)
     .all();
@@ -158,28 +164,71 @@ async function page(url, env, most, fallback, bodies) {
 }
 
 /**
- * What everyone may see of package [p]: its versions and dates; of each search, only an opaque id of its words and
- * scope, how often and when; of each grade, an opaque id of its search and result, the grade, its rank and model, and when; and
- * the daf reviews, words of the Talmud's lines, as they came. Nothing else a sender added comes through.
+ * What everyone may see of a package not published, [p]: its versions and dates; of each search, only an opaque id of
+ * its words and scope, how often and when; of each grade, an opaque id of its search and result, the grade, its rank and
+ * model, and when; and the daf reviews, words of the Talmud's lines, as they came. Nothing else a sender added comes
+ * through. The ids are the same a published package's rows carry (published), so the site counts a row sent both ways once.
  */
 async function forEveryone(p, sender, idOf) {
+  const searches = await Promise.all((p.searches ?? []).map(async (s) => {
+    const queryId = await searchId(s, idOf);
+    return { query: queryId, queryId, source: s.source, extended: s.extended, count: s.count, lastAt: s.lastAt };
+  }));
+  const grades = await Promise.all((p.grades ?? []).map(async (g) => {
+    const resultId = await gradeId(g, idOf);
+    return {
+      search: resultId, resultId, grade: g.grade, rank: g.rank, model: g.model, source: g.source, extended: g.extended,
+      gradedAt: g.gradedAt,
+    };
+  }));
+  return frame(p, sender, grades, searches);
+}
+
+/**
+ * What everyone may see of a published package, [p]: as forEveryone, and the words with them: each search's words,
+ * scope and options, each grade's search, result and place. Still nothing else a sender added, and still the sender's
+ * alias only.
+ */
+async function published(p, sender, idOf) {
   const searches = await Promise.all((p.searches ?? []).map(async (s) => ({
-    // The words and where they looked, as one id: the site counts a search in each scope apart, as the maintainer's does
-    query: await idOf(`query\u0000${s.query}\u0000${s.categoryId}\u0000${s.bookId}\u0000${s.tocId}\u0000${s.scope}`),
+    query: s.query,
+    queryId: await searchId(s, idOf),
+    categoryId: s.categoryId,
+    bookId: s.bookId,
+    tocId: s.tocId,
+    scope: text(s.scope),
+    ref: text(s.ref),
     source: s.source,
     extended: s.extended,
     count: s.count,
     lastAt: s.lastAt,
+    timeUnknown: s.timeUnknown === true ? true : undefined,
   })));
   const grades = await Promise.all((p.grades ?? []).map(async (g) => ({
-    search: await idOf(`result\u0000${g.search}\u0000${g.lineId}\u0000${g.heRef ?? ""}`),
+    query: g.query,
+    search: g.search,
+    resultId: await gradeId(g, idOf),
+    lineId: g.lineId,
+    bookId: g.bookId,
     grade: g.grade,
     rank: g.rank,
+    categoryId: g.categoryId,
+    scopeBookId: g.scopeBookId,
+    tocId: g.tocId,
+    scope: text(g.scope),
+    bookTitle: text(g.bookTitle),
+    heRef: text(g.heRef),
+    docId: text(g.docId),
     model: g.model,
     source: g.source,
     extended: g.extended,
     gradedAt: g.gradedAt,
   })));
+  return frame(p, sender, grades, searches);
+}
+
+/** A package's frame as everyone sees it: its versions, dates and daf reviews, with [grades] and [searches] as cut. */
+function frame(p, sender, grades, searches) {
   const daf = (p.daf ?? []).map((r) => ({
     format: r.format,
     tractate: r.tractate,
@@ -192,13 +241,28 @@ async function forEveryone(p, sender, idOf) {
     app: p.app,
     appVersion: p.appVersion,
     library: p.library,
-    source: p.source,
+    source: text(p.source),
     sentAt: p.sentAt,
     sender,
     grades,
     searches,
     daf,
   };
+}
+
+/** A search's opaque id: its words, where it looked and its options, as one, so a search in each scope counts apart. */
+function searchId(s, idOf) {
+  return idOf(`query\u0000${s.query}\u0000${s.categoryId}\u0000${s.bookId}\u0000${s.tocId}\u0000${s.scope}\u0000${s.ref}`);
+}
+
+/** A graded result's opaque id: its search and the result graded. */
+function gradeId(g, idOf) {
+  return idOf(`result\u0000${g.search}\u0000${g.lineId}\u0000${g.heRef ?? ""}`);
+}
+
+/** [v] when it is a text of at most [max] characters (a field package.js does not check), else nothing. */
+function text(v, max = MAX_QUERY) {
+  return typeof v === "string" && v.length <= max ? v : undefined;
 }
 
 /**
