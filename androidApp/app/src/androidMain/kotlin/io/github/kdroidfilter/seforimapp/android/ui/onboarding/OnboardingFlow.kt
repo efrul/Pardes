@@ -63,6 +63,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.components.IslandShape
 import io.github.kdroidfilter.seforimapp.android.ui.components.ZIconButton
 import io.github.kdroidfilter.seforimapp.android.ui.shell.SystemBarsOver
 import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
+import io.github.kdroidfilter.seforimapp.icons.Install_desktop
 
 /** Width from which the flow is shown as a centered card, like the desktop setup window. */
 private val WideBreakpoint = 840.dp
@@ -166,7 +167,7 @@ fun OnboardingFlow(onFinished: () -> Unit) {
         }
     }
 
-    InstallerWindow(DesktopStrings.onboardingTitleBar, OnboardingIcons.InstallDesktop, canGoBack, onBack = { vm.back() }, progress, content)
+    InstallerWindow(DesktopStrings.onboardingTitleBar, Install_desktop, canGoBack, onBack = { vm.back() }, progress, content)
 }
 
 /**
