@@ -1,13 +1,18 @@
-// The open search data site (GET /): what users of the Torah library apps (Pardes, Zayit, Otzaria) shared to improve
-// search, open to everyone and in no one app's name, and a form to upload the packages people saved to files. It reads
-// the service's public route, where each sender is an alias (a digest of its id, never the id, with which anyone could
-// delete what that sender sent). The page shows no sender at all, alias or id, nor puts one in a download: the alias
-// only lets it count each sender's rows once, and how many senders there are. Uploads go to POST /v1/packages, as the
-// app sends them. Every text that came in a package is untrusted: it reaches the page only as text (textContent,
-// attribute values), never as markup, and the page's CSP runs no script but this file.
+// The search data site (GET /): what users of the Torah library apps (Pardes, Zayit, Otzaria) sent to improve search,
+// in no one app's name, and a form to upload the packages people saved to files. Everyone sees what the data adds up
+// to, from the service's public route, which carries no search's or grade's words (users sent them to improve Pardes,
+// not to have them published): each search and graded result is an opaque id there, enough to count it once. The
+// maintainer, signed in with the admin token, reads the packages as they came from the maintainer's route and sees
+// the searches themselves. Each sender is an alias on the public route; the page shows no sender at all, alias or id,
+// nor puts one in a download. Uploads go to POST /v1/packages, as the app sends them. Every text that came in a
+// package is untrusted: it reaches the page only as text (textContent, attribute values), never as markup, and the
+// page's CSP runs no script but this file.
 "use strict";
 
-const PAGE = 50; // packages a request, the public route's most
+const PAGE = 25; // packages a request (the routes give at most 50), each a short piece of the Worker's time
+const TOKEN_KEY = "pardes-feedback-admin";
+/** The views of the searches' and grades' words, the maintainer's alone. */
+const WORDS_VIEWS = ["searches", "grades"];
 const ROWS = 500; // a table's rows on the page; the downloads hold them all
 const DAYS = 30;
 /** A package's part at most, as Pardes and the telemetry tool split theirs; the service takes 1,000,000 bytes. */
@@ -39,6 +44,7 @@ const state = {
   ui: {},
   uploads: [],
   uploading: false,
+  token: savedToken(),
 };
 
 const number = new Intl.NumberFormat("he-IL");
@@ -92,10 +98,44 @@ function viewOfHash() {
   return VIEWS.includes(view) ? view : "overview";
 }
 
+// ---- The maintainer's token ----
+
+function savedToken() {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function keepToken(token, remember) {
+  try {
+    sessionStorage.setItem(TOKEN_KEY, token);
+    if (remember) localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    // A private window: the token lasts as long as the page
+  }
+}
+
+function forgetToken() {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Nothing kept
+  }
+}
+
+const isAdmin = () => Boolean(state.token);
+
+class Refused extends Error {}
+
 // ---- Reading ----
 
 async function getJSON(path) {
-  const response = await fetch(path, { cache: "no-store" });
+  const headers = state.token ? { authorization: `Bearer ${state.token}` } : {};
+  const response = await fetch(path, { cache: "no-store", headers });
+  if (response.status === 401) throw new Refused("קוד המנהל כבר לא נכון. נכנסים שוב עם הקוד הנוכחי.");
   if (response.status === 429) throw new Error("נשלחו יותר מדי בקשות מהכתובת הזאת בדקה האחרונה. אפשר לחכות דקה ולרענן.");
   if (!response.ok) throw new Error(`השירות ענה ${response.status}.`);
   return response.json();
@@ -119,7 +159,8 @@ async function load() {
     let deletions = [];
     let after = 0;
     for (;;) {
-      const page = await getJSON(`/v1/public/packages?limit=${PAGE}&after=${after}`);
+      const route = isAdmin() ? `/v1/packages?bodies=1&limit=${PAGE}` : `/v1/public/packages?limit=${PAGE}`;
+      const page = await getJSON(`${route}&after=${after}`);
       packages.push(...page.packages);
       deletions = page.deletions ?? [];
       const progress = `טוען… ${plural(packages.length, "חבילה", "חבילות")}`;
@@ -135,8 +176,15 @@ async function load() {
     state.loadedAt = Date.now();
     setStatus(`עודכן ${when(state.loadedAt)}`);
   } catch (e) {
-    state.failed = e instanceof TypeError ? "לא הצלחתי להגיע לשירות. אולי אין חיבור לרשת." : e.message;
-    setStatus("הטעינה נכשלה");
+    if (e instanceof Refused) {
+      // The token changed: back to everyone's view, and say why
+      signOut();
+      state.again = true;
+      setStatus(e.message);
+    } else {
+      state.failed = e instanceof TypeError ? "לא הצלחתי להגיע לשירות. אולי אין חיבור לרשת." : e.message;
+      setStatus("הטעינה נכשלה");
+    }
   } finally {
     state.loading = false;
     $("refresh").disabled = false;
@@ -271,6 +319,10 @@ function hideTip() {
 
 function render() {
   hideTip();
+  if (!isAdmin() && WORDS_VIEWS.includes(state.view)) state.view = "overview";
+  for (const tab of document.querySelectorAll(".tabs [role=tab]")) tab.hidden = !isAdmin() && WORDS_VIEWS.includes(tab.dataset.view);
+  $("sign-in").textContent = isAdmin() ? "יציאה ממצב מנהל" : "כניסת מנהל";
+  $("admin-badge").hidden = !isAdmin();
   for (const tab of document.querySelectorAll(".tabs [role=tab]")) {
     const selected = tab.dataset.view === state.view;
     tab.setAttribute("aria-selected", String(selected));
@@ -336,7 +388,16 @@ function overview() {
       tile("שורות בצורת הדף", number.format(d.marks.length), "שנבדקו וסומנו")),
     h("p", { class: "lastline" }, last ? `החבילה האחרונה התקבלה ${when(last.receivedAt)}.` : "עוד לא התקבלה חבילה."),
     perDayCard(),
-    h("div", { class: "grid2" }, topSearchesCard(), h("div", { class: "column" }, gradesCard(), modelsCard(), sourcesCard())));
+    h("div", { class: "grid2" }, isAdmin() ? topSearchesCard() : wordsCard(), h("div", { class: "column" }, gradesCard(), modelsCard(), sourcesCard())));
+}
+
+/** Where the searches would be: why everyone sees only what they add up to. */
+function wordsCard() {
+  return h("section", { class: "card" },
+    h("h2", {}, "החיפושים עצמם"),
+    h("p", { class: "sub" }, "מוצגים רק למתחזק"),
+    h("p", { class: "words-note" },
+      "מי ששלח עד עכשיו שלח את החיפושים והדירוגים כדי לשפר את החיפוש, לא כדי שיתפרסמו. לכן כאן מוצג רק מה שהם מסתכמים בו: כמה חיפשו, כמה תוצאות דורגו ואיך, לפי מודל ולפי תוכנה. המילים שחיפשו והתוצאות שדורגו לא יוצאות מהשירות בלי קוד המנהל."));
 }
 
 /** The packages received each day of the last [DAYS] days, as columns, with a table view. */
@@ -926,7 +987,27 @@ function upload() {
         h("li", {}, h("strong", {}, "תוכנה אחרת: "), "כל קובץ JSON בפורמט 1 של חבילות נתוני החיפוש."),
         h("li", {}, h("strong", {}, "קובץ שפוצל לכמה חלקים: "), "בוחרים את כל החלקים יחד. שמות הקבצים הם בדרך כלל ", h("code", { dir: "ltr" }, "pardes-feedback-….json"), ".")),
       h("p", { class: "aside-note" },
-        "מה שמעלים כאן מוצג לכל מי שנכנס לאתר וזמין להורדה לכולם, בלי מזהה השולח ובלי שום פרט מזהה אחר. העלאה חוזרת של אותו קובץ לא מכפילה את החיפושים והדירוגים בסיכום.")));
+        "מה שמעלים כאן נכנס לשירות. לכולם מוצגים רק המספרים שהוא מסתכם בהם, בלי המילים שחיפשו ובלי מזהה השולח. העלאה חוזרת של אותו קובץ לא מכפילה את החיפושים והדירוגים בסיכום.")));
+}
+
+// ---- Signing in ----
+
+/** Signs in with [token] once the maintainer's route takes it, and reads the packages as they came. */
+async function signIn(token, remember) {
+  const response = await fetch("/v1/packages?limit=1", { cache: "no-store", headers: { authorization: `Bearer ${token}` } });
+  if (response.status === 401) throw new Refused("הקוד לא נכון.");
+  if (response.status === 503) throw new Refused("לשירות לא נקבע קוד מנהל (הסוד FEEDBACK_ADMIN_TOKEN).");
+  if (!response.ok) throw new Error(`השירות ענה ${response.status}.`);
+  state.token = token;
+  keepToken(token, remember);
+  state.data = null;
+  await load();
+}
+
+function signOut() {
+  forgetToken();
+  state.token = null;
+  state.data = null;
 }
 
 // ---- Start ----
@@ -944,11 +1025,12 @@ document.addEventListener("DOMContentLoaded", () => {
     tab.addEventListener("click", () => show(tab.dataset.view));
     // Arrow keys move between the tabs (a tablist's keys); the reading order is right to left
     tab.addEventListener("keydown", (event) => {
-      const i = tabs.indexOf(tab);
-      const step = { ArrowLeft: 1, ArrowRight: -1, Home: -i, End: tabs.length - 1 - i }[event.key];
+      const shown = tabs.filter((t) => !t.hidden);
+      const i = shown.indexOf(tab);
+      const step = { ArrowLeft: 1, ArrowRight: -1, Home: -i, End: shown.length - 1 - i }[event.key];
       if (step === undefined) return;
       event.preventDefault();
-      show(tabs[(i + step + tabs.length) % tabs.length].dataset.view, true);
+      show(shown[(i + step + shown.length) % shown.length].dataset.view, true);
     });
   }
   window.addEventListener("hashchange", () => show(viewOfHash()));
@@ -963,6 +1045,32 @@ document.addEventListener("DOMContentLoaded", () => {
     deletions: state.deletions.map(({ deletedAt }) => ({ deletedAt })),
   }, null, 1), "application/json"));
   $("raw-close").addEventListener("click", () => $("raw").close());
+  $("sign-in").addEventListener("click", () => {
+    if (isAdmin()) {
+      signOut();
+      load();
+      return;
+    }
+    $("login-error").hidden = true;
+    $("token").value = "";
+    $("login").showModal();
+  });
+  $("login-cancel").addEventListener("click", () => $("login").close());
+  $("login-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.submitter;
+    if (button) button.disabled = true;
+    $("login-error").hidden = true;
+    try {
+      await signIn($("token").value.trim(), $("remember").checked);
+      $("login").close();
+    } catch (e) {
+      $("login-error").textContent = e instanceof Refused ? e.message : `לא הצלחתי להגיע לשירות: ${e.message}`;
+      $("login-error").hidden = false;
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
   window.addEventListener("scroll", hideTip, { passive: true });
   // A file dropped beside the drop zone is not opened in place of the page
   window.addEventListener("dragover", (event) => event.preventDefault());
