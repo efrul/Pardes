@@ -14,6 +14,8 @@
 
 החיפוש הרגיל של אוצריא במקום זה של פרדס, וכתיב מלא/חסר: [OTZARIA_LEXICAL.md](OTZARIA_LEXICAL.md).
 
+מילים נרדפות, המילון הארמי וכתיב מלא/חסר בתוך החיפוש של פרדס, וכמה משפיע הסדר של כל צד: [EXPANSIONS.md](EXPANSIONS.md).
+
 הקובץ נכנס לריפו לפי החלטת המשתמש (8.11.2026). יש בו החיפושים מחבילות המשוב (בלי מזהה השולח), וקטעים מהטקסט של השורות.
 
 ## מה הורץ
@@ -47,6 +49,7 @@
 | `links`, ‏`level` | הכפלה לפי מספר הספרים המקושרים, או לפי רמת הספר (עם רצפה, כמו CourtListener) |
 | `p12w` | הצעות 1+2 עם תוספת החלון (נוספה אחרי הניתוח) |
 | `p12wl` | ‏`p12w`, ומעליה `LevelPrecedence` של האפליקציה (נוספה אחרי בדיקת המקור, SOURCE_TEST) |
+| `p12wl_w2`, ‏`p12wl_w15`, ‏`p12wsl` | ‏`p12wl` עם סמנטי ×2 או ×1.5, ו־`p12wl` שבה "מילה במילה" מקבל גם כתיב אחר וקידומות (נוספו ב־EXPANSIONS; לא בקובץ, שנבנה לפניהן) |
 | `diverse` | העמוד של האפליקציה, עם עד 2 שורות מכל ספר בעשר הראשונות |
 | `combo` | הכול יחד, במשקלים שנקבעו ביד |
 
@@ -100,12 +103,13 @@ bash docs/fusion-compare/tools/run.sh <feedback.json> <תיקיית עבודה> 
 | `tools/feedback_searches.py` | מוציא מהייצוא את החיפושים (שאילתה והיקף) ואת הציונים |
 | `tools/fuse_all.py` | כל שיטות המיון (משתמש ב־`search-order/order_common.py` וב־`eval-real/level_order.py` של pardes-semantic) |
 | `tools/make_html.py` | בונה את הקובץ |
-| `claude_grades.tsv` | 280 ציונים של Claude לשורות שבשלוש הראשונות שלא היה להן ציון במשוב (`feedback_searches.py` מוסיף אותם) |
+| `claude_grades.tsv` | 358 ציונים של Claude לשורות שבשלוש הראשונות שלא היה להן ציון במשוב (`feedback_searches.py` מוסיף אותם) |
 | `tools/analyze.py` | המספרים של [ANALYSIS.md](ANALYSIS.md): ממה בנויה כל רשימה, והמדדים לפי הציונים שבמשוב (`out/analysis.txt`) |
 | `tools/run_source.sh` | בדיקת המקור של [SOURCE_TEST.md](SOURCE_TEST.md), לפי הסדר |
 | `tools/source_searches.py` | מהשאלות של בדיקת המקור (`source_test/queries.tsv`) לחיפושים ולמקורות שלהם |
 | `tools/source_eval.py` | המדדים של בדיקת המקור: איפה כל שיטה שמה את המקור |
 | `tools/OtzariaLexical.kt`, ‏`tools/swap_lexical.py`, ‏`tools/graded_compare.py`, ‏`tools/run_otzaria.sh` | החיפוש הרגיל של אוצריא במקום זה של פרדס ([OTZARIA_LEXICAL.md](OTZARIA_LEXICAL.md)) |
+| `tools/ExtraForms.kt`, ‏`tools/extra_forms_patch.py`, ‏`tools/expansion_tables.py`, ‏`tools/SpellingForms.kt`, ‏`tools/order_shuffle.py`, ‏`tools/merge_runs.py`, ‏`tools/run_expansions.sh` | צורות נוספות בחיפוש הרגיל, והשפעת הסדר ([EXPANSIONS.md](EXPANSIONS.md)) |
 
 **למה לא `search-order/build.sh` של pardes-semantic כמו שהוא:** הוא לא מתקמפל מול הקוד הנוכחי של פרדס, כי `MeaningFacets.kt`
 משתמש עכשיו ב־`Category` של SeforimLibrary core, שהוא לא מעתיק.

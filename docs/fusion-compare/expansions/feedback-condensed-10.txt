@@ -1,0 +1,54 @@
+89 searches with grades from the feedback; grades: feedback 618, Claude 358
+pardes      app      graded in 10  82% | good first 51 | good in 10 320 | 0 in 10 352 | nDCG@10 0.584 | MRR@10 0.658 | vs the app +0 -0 p=1.000
+pardes      apprrf   graded in 10  82% | good first 51 | good in 10 320 | 0 in 10 353 | nDCG@10 0.585 | MRR@10 0.658 | vs the app +1 -0 p=1.000
+pardes      lex      graded in 10  22% | good first 42 | good in 10 139 | 0 in 10  42 | nDCG@10 0.305 | MRR@10 0.492 | vs the app +14 -63 p=0.000
+pardes      dense    graded in 10  80% | good first 40 | good in 10 287 | 0 in 10 369 | nDCG@10 0.495 | MRR@10 0.548 | vs the app +7 -36 p=0.000
+pardes      rrf60    graded in 10  82% | good first 49 | good in 10 309 | 0 in 10 359 | nDCG@10 0.549 | MRR@10 0.621 | vs the app +3 -15 p=0.008
+pardes      rrf60w15 graded in 10  83% | good first 52 | good in 10 321 | 0 in 10 360 | nDCG@10 0.568 | MRR@10 0.641 | vs the app +15 -15 p=1.000
+pardes      rrf20    graded in 10  83% | good first 43 | good in 10 313 | 0 in 10 365 | nDCG@10 0.533 | MRR@10 0.576 | vs the app +8 -29 p=0.001
+pardes      rrf100   graded in 10  82% | good first 51 | good in 10 313 | 0 in 10 358 | nDCG@10 0.559 | MRR@10 0.635 | vs the app +12 -15 p=0.701
+pardes      cc_mm50  graded in 10  83% | good first 50 | good in 10 320 | 0 in 10 355 | nDCG@10 0.587 | MRR@10 0.646 | vs the app +20 -23 p=0.761
+pardes      cc_mm30  graded in 10  83% | good first 42 | good in 10 309 | 0 in 10 365 | nDCG@10 0.529 | MRR@10 0.568 | vs the app +8 -32 p=0.000
+pardes      cc_z30   graded in 10  83% | good first 42 | good in 10 309 | 0 in 10 365 | nDCG@10 0.533 | MRR@10 0.571 | vs the app +12 -30 p=0.008
+pardes      cc_z50   graded in 10  83% | good first 50 | good in 10 322 | 0 in 10 356 | nDCG@10 0.576 | MRR@10 0.641 | vs the app +22 -25 p=0.771
+pardes      dbsf     graded in 10  83% | good first 54 | good in 10 327 | 0 in 10 353 | nDCG@10 0.606 | MRR@10 0.672 | vs the app +30 -17 p=0.079
+pardes      combmnz  graded in 10  83% | good first 55 | good in 10 325 | 0 in 10 352 | nDCG@10 0.608 | MRR@10 0.682 | vs the app +24 -17 p=0.349
+pardes      ssl      graded in 10  82% | good first 41 | good in 10 305 | 0 in 10 366 | nDCG@10 0.522 | MRR@10 0.563 | vs the app +3 -27 p=0.000
+pardes      otzaria  graded in 10  78% | good first 56 | good in 10 313 | 0 in 10 322 | nDCG@10 0.591 | MRR@10 0.686 | vs the app +18 -16 p=0.864
+pardes      z_qtype  graded in 10  83% | good first 45 | good in 10 319 | 0 in 10 358 | nDCG@10 0.551 | MRR@10 0.606 | vs the app +16 -29 p=0.072
+pardes      p12      graded in 10  74% | good first 55 | good in 10 321 | 0 in 10 290 | nDCG@10 0.595 | MRR@10 0.694 | vs the app +26 -17 p=0.222
+pardes      p12w     graded in 10  75% | good first 58 | good in 10 326 | 0 in 10 290 | nDCG@10 0.617 | MRR@10 0.711 | vs the app +39 -16 p=0.003
+pardes      p12wl    graded in 10  75% | good first 59 | good in 10 326 | 0 in 10 290 | nDCG@10 0.617 | MRR@10 0.716 | vs the app +37 -17 p=0.009
+pardes      p12wl_w2 graded in 10  76% | good first 59 | good in 10 338 | 0 in 10 285 | nDCG@10 0.633 | MRR@10 0.721 | vs the app +38 -18 p=0.010
+pardes      p12wl_w15 graded in 10  75% | good first 57 | good in 10 338 | 0 in 10 276 | nDCG@10 0.631 | MRR@10 0.705 | vs the app +36 -20 p=0.044
+pardes      p12wsl   graded in 10  75% | good first 59 | good in 10 326 | 0 in 10 290 | nDCG@10 0.618 | MRR@10 0.716 | vs the app +37 -17 p=0.009
+pardes      window   graded in 10  83% | good first 55 | good in 10 326 | 0 in 10 351 | nDCG@10 0.591 | MRR@10 0.673 | vs the app +33 -23 p=0.229
+pardes      links    graded in 10  82% | good first 51 | good in 10 309 | 0 in 10 364 | nDCG@10 0.555 | MRR@10 0.637 | vs the app +24 -26 p=0.888
+pardes      level    graded in 10  82% | good first 51 | good in 10 311 | 0 in 10 359 | nDCG@10 0.552 | MRR@10 0.631 | vs the app +20 -27 p=0.382
+pardes      diverse  graded in 10  82% | good first 51 | good in 10 320 | 0 in 10 352 | nDCG@10 0.585 | MRR@10 0.658 | vs the app +7 -2 p=0.180
+pardes      combo    graded in 10  81% | good first 53 | good in 10 342 | 0 in 10 321 | nDCG@10 0.618 | MRR@10 0.676 | vs the app +32 -18 p=0.065
+aramaic     app      graded in 10  82% | good first 52 | good in 10 320 | 0 in 10 352 | nDCG@10 0.586 | MRR@10 0.664 | vs the app +4 -2 p=0.688
+aramaic     apprrf   graded in 10  82% | good first 52 | good in 10 320 | 0 in 10 353 | nDCG@10 0.588 | MRR@10 0.664 | vs the app +5 -2 p=0.453
+aramaic     lex      graded in 10  22% | good first 43 | good in 10 141 | 0 in 10  41 | nDCG@10 0.310 | MRR@10 0.503 | vs the app +15 -62 p=0.000
+aramaic     dense    graded in 10  80% | good first 40 | good in 10 287 | 0 in 10 369 | nDCG@10 0.495 | MRR@10 0.548 | vs the app +7 -36 p=0.000
+aramaic     rrf60    graded in 10  82% | good first 50 | good in 10 309 | 0 in 10 359 | nDCG@10 0.551 | MRR@10 0.627 | vs the app +6 -16 p=0.052
+aramaic     rrf60w15 graded in 10  83% | good first 52 | good in 10 322 | 0 in 10 360 | nDCG@10 0.571 | MRR@10 0.641 | vs the app +18 -15 p=0.728
+aramaic     rrf20    graded in 10  83% | good first 43 | good in 10 313 | 0 in 10 364 | nDCG@10 0.534 | MRR@10 0.576 | vs the app +10 -28 p=0.005
+aramaic     rrf100   graded in 10  82% | good first 52 | good in 10 313 | 0 in 10 358 | nDCG@10 0.561 | MRR@10 0.641 | vs the app +15 -15 p=1.000
+aramaic     cc_mm50  graded in 10  82% | good first 49 | good in 10 318 | 0 in 10 354 | nDCG@10 0.584 | MRR@10 0.643 | vs the app +21 -24 p=0.766
+aramaic     cc_mm30  graded in 10  83% | good first 42 | good in 10 310 | 0 in 10 364 | nDCG@10 0.531 | MRR@10 0.568 | vs the app +10 -32 p=0.001
+aramaic     cc_z30   graded in 10  83% | good first 41 | good in 10 309 | 0 in 10 365 | nDCG@10 0.532 | MRR@10 0.564 | vs the app +12 -30 p=0.008
+aramaic     cc_z50   graded in 10  83% | good first 50 | good in 10 322 | 0 in 10 355 | nDCG@10 0.575 | MRR@10 0.641 | vs the app +23 -26 p=0.775
+aramaic     dbsf     graded in 10  83% | good first 54 | good in 10 328 | 0 in 10 352 | nDCG@10 0.607 | MRR@10 0.672 | vs the app +32 -17 p=0.044
+aramaic     combmnz  graded in 10  82% | good first 55 | good in 10 323 | 0 in 10 351 | nDCG@10 0.606 | MRR@10 0.682 | vs the app +26 -17 p=0.222
+aramaic     ssl      graded in 10  82% | good first 41 | good in 10 305 | 0 in 10 366 | nDCG@10 0.522 | MRR@10 0.561 | vs the app +4 -29 p=0.000
+aramaic     otzaria  graded in 10  77% | good first 56 | good in 10 313 | 0 in 10 321 | nDCG@10 0.592 | MRR@10 0.687 | vs the app +20 -16 p=0.618
+aramaic     z_qtype  graded in 10  82% | good first 45 | good in 10 319 | 0 in 10 358 | nDCG@10 0.550 | MRR@10 0.606 | vs the app +15 -30 p=0.036
+aramaic     p12      graded in 10  75% | good first 56 | good in 10 321 | 0 in 10 291 | nDCG@10 0.597 | MRR@10 0.700 | vs the app +29 -16 p=0.072
+aramaic     p12w     graded in 10  75% | good first 58 | good in 10 326 | 0 in 10 291 | nDCG@10 0.618 | MRR@10 0.711 | vs the app +40 -16 p=0.002
+aramaic     p12wl    graded in 10  75% | good first 59 | good in 10 326 | 0 in 10 291 | nDCG@10 0.618 | MRR@10 0.717 | vs the app +38 -17 p=0.006
+Traceback (most recent call last):
+  File "/home/user/Pardes/docs/fusion-compare/tools/graded_compare.py", line 65, in <module>
+    q, order = x["q"], x["tops"][m]
+                       ~~~~~~~~~^^^
+KeyError: 'p12wl_w2'

@@ -51,7 +51,7 @@ app="$repo/SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp"
 cp "$repo"/SeforimLibrary/search/src/jvmMain/kotlin/io/github/kdroidfilter/seforimlibrary/search/*.kt "$out/src/"
 cp "$app"/features/search/semantic/*.kt "$out/src/"
 cp "$app/framework/search/LongQuerySearchEngine.kt" "$app/framework/search/PardesLexicon.kt" "$app/core/coroutines/CoroutineUtils.kt" "$out/src/"
-cp "$here/FeedbackHistory.kt" "$here/OtzariaLexical.kt" "$here/CategoryStub.kt" "$here/LoggerStub.kt" "$here/ExtraForms.kt" "$out/src/"
+cp "$here/FeedbackHistory.kt" "$here/OtzariaLexical.kt" "$here/SpellingForms.kt" "$here/CategoryStub.kt" "$here/LoggerStub.kt" "$here/ExtraForms.kt" "$out/src/"
 # A word's extra forms (-DextraForms, EXPANSIONS.md); without it the search is the app's own
 python3 "$here/extra_forms_patch.py" "$out/src/LuceneSearchEngine.kt"
 
