@@ -1,8 +1,9 @@
 157 searches written; the lexical side finds the source in its first 10 in 137
   of them 100 at random: bavli 32, midrash 9, mishna 15, rambam 9, sa 17, tanakh 14, yerushalmi 4
-  lexical rank 1: 80, 2-3: 16, 4-10: 4
+  lexical rank 1: 80, 2-3: 16, 4-10: 4, not in 10: 0
   the dense side: in its 150 95, first 10 76, first 40
 app      | first  67 | in 3  90 | in 10  98 | MRR@10 0.786 | lost  1 || lenient: first  78 | in 3  97
+apprrf   | first  67 | in 3  90 | in 10  98 | MRR@10 0.786 | lost  1 || lenient: first  78 | in 3  97
 lex      | first  80 | in 3  96 | in 10 100 | MRR@10 0.877 | lost  0 || lenient: first  89 | in 3  98
 dense    | first  40 | in 3  63 | in 10  76 | MRR@10 0.530 | lost 22 || lenient: first  47 | in 3  68
 rrf60    | first  61 | in 3  81 | in 10  89 | MRR@10 0.715 | lost  9 || lenient: first  69 | in 3  87
@@ -48,6 +49,7 @@ V       (  7) |   5/6    |   5/6    |   4/5    |   5/6    |   5/6    |   5/6    
 
 == the 20 searches whose source the lexical side does not find in its first 10 (not measured above) ==
 app      | first 10 | in 3 12 | in 10 17
+apprrf   | first 10 | in 3 12 | in 10 17
 lex      | first  0 | in 3  0 | in 10  0
 dense    | first  7 | in 3 11 | in 10 17
 rrf60    | first  6 | in 3  8 | in 10 17
