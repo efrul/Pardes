@@ -354,6 +354,7 @@
     <string name="context_menu_search_selected_text">חפש במאגר</string>
     <string name="context_menu_find_in_page">חפש בעמוד</string>
     <string name="context_menu_copy_without_nikud">העתק ללא ניקוד</string>
+    <string name="context_menu_copy_letters_only">העתק טקסט בלבד</string>
     <string name="context_menu_copy_with_source">העתק עם מקור</string>
     <string name="context_menu_copy_link">העתק קישור לקטע זה</string>
     <string name="context_menu_highlight">סמן</string>

@@ -51,6 +51,8 @@ import io.github.kdroidfilter.seforimapp.core.annotations.resolveHighlightRanges
 import io.github.kdroidfilter.seforimapp.core.bookErrorReportMailto
 import io.github.kdroidfilter.seforimapp.core.buildCopyWithSourcePayload
 import io.github.kdroidfilter.seforimapp.core.deeplink.bookShareLink
+import io.github.kdroidfilter.seforimapp.core.hasMoreThanLetters
+import io.github.kdroidfilter.seforimapp.core.lettersOnly
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
@@ -97,6 +99,7 @@ import org.jetbrains.jewel.ui.theme.menuStyle
 import org.jetbrains.skiko.hostOs
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.context_menu_add_note
+import seforimapp.seforimapp.generated.resources.context_menu_copy_letters_only
 import seforimapp.seforimapp.generated.resources.context_menu_copy_link
 import seforimapp.seforimapp.generated.resources.context_menu_copy_with_source
 import seforimapp.seforimapp.generated.resources.context_menu_copy_without_nikud
@@ -457,6 +460,7 @@ fun BookTextMenus(
     val searchSelectedLabel = stringResource(Res.string.context_menu_search_selected_text)
     val findInPageLabel = stringResource(Res.string.context_menu_find_in_page)
     val copyWithoutNikudLabel = stringResource(Res.string.context_menu_copy_without_nikud)
+    val copyLettersOnlyLabel = stringResource(Res.string.context_menu_copy_letters_only)
     val copyWithSourceLabel = stringResource(Res.string.context_menu_copy_with_source)
     val copyLinkLabel = stringResource(Res.string.context_menu_copy_link)
     val addNoteLabel = stringResource(Res.string.context_menu_add_note)
@@ -583,6 +587,17 @@ fun BookTextMenus(
                                         ) {
                                             val textWithoutDiacritics = HebrewTextUtils.removeAllDiacritics(copiedText)
                                             copyToClipboard(textWithoutDiacritics)
+                                        },
+                                    )
+                                }
+                                // Copy the words alone: no nikud, no teamim and no punctuation
+                                if (copiedText.isNotBlank() && hasMoreThanLetters(copiedText)) {
+                                    add(
+                                        ContextMenuItemOption(
+                                            icon = AllIconsKeys.Actions.Copy,
+                                            label = copyLettersOnlyLabel,
+                                        ) {
+                                            copyToClipboard(lettersOnly(copiedText))
                                         },
                                     )
                                 }
