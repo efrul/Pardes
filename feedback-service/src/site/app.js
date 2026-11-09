@@ -147,7 +147,8 @@ async function load() {
 
 /**
  * What the packages hold, each row once: a search made again, a grade changed or a daf line marked again is sent
- * again in a later package, and stands as it was last sent. A package uploaded twice adds nothing here.
+ * again in a later package, and stands as it was last sent. A package uploaded twice adds nothing here, nor does the
+ * same data sent again under a new sender id.
  */
 function derive(packages) {
   const searches = new Map();
@@ -177,9 +178,15 @@ function derive(packages) {
       }
     }
   }
+  // The same event sent under two sender ids (a new id, or the same data sent again) counts once: a grade, a search
+  // or a daf mark the same to the millisecond is one person's, whichever id sent it
+  const once = (rows, key) => [...new Map(rows.map((row) => [key(row).join("\u0000"), row])).values()];
+  const searched = once([...searches.values()], (s) => [s.source, s.query, s.categoryId, s.bookId, s.tocId, s.scope, Boolean(s.extended), s.lastAt]);
+  const graded = once([...grades.values()], (g) => [g.source, g.search, g.lineId, g.heRef, g.gradedAt, g.grade]);
+  const marked = once([...marks.values()], (m) => [m.tractate, m.amud, m.c, m.i, m.at]);
   // The same words in the same scope, by one sender or more, from one app or more
   const queries = new Map();
-  for (const s of searches.values()) {
+  for (const s of searched) {
     const key = [s.query, s.categoryId, s.bookId, s.tocId, s.scope, Boolean(s.extended)].join("\u0000");
     if (!queries.has(key)) {
       queries.set(key, { query: s.query, categoryId: s.categoryId, bookId: s.bookId, tocId: s.tocId, scope: s.scope, extended: Boolean(s.extended), count: 0, senders: new Set(), sources: new Set(), lastAt: 0 });
@@ -192,10 +199,10 @@ function derive(packages) {
   }
   return {
     senders,
-    searches: [...searches.values()],
+    searches: searched,
     queries: [...queries.values()],
-    grades: [...grades.values()],
-    marks: [...marks.values()],
+    grades: graded,
+    marks: marked,
   };
 }
 
