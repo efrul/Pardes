@@ -48,12 +48,6 @@ internal enum class Dictionary(
         DictionarySource.TEXT,
         attribution = "מתוך ויקיפדיה העברית, בידי כותביה · CC BY-SA",
     ),
-    MICHLOL(
-        "המכלול",
-        "המכלול",
-        DictionarySource.TEXT,
-        attribution = "מתוך המכלול, בידי תורמיו · CC BY-SA",
-    ),
     ;
 
     companion object {

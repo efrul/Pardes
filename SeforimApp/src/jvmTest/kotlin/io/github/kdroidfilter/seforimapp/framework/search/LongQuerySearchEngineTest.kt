@@ -13,7 +13,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class LongQuerySearchEngineTest {
-    // The query of semantic-model/eval-v1 that LuceneSearchEngine could not run (v1-0002)
+    // The query of pardes-semantic/eval-v1 that LuceneSearchEngine could not run (v1-0002)
     private val long = "ההבטחה להוציא את ישראל מעוני מצרים ולהביא אותם לארץ שבעת העמים"
     private val quote = "\"$long\""
 

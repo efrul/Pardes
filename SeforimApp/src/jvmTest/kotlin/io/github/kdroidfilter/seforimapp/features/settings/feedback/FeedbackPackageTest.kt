@@ -100,6 +100,20 @@ class FeedbackPackageTest {
     }
 
     @Test
+    fun `a query longer than the service takes is left out, a passage pasted in is not`() {
+        val passage = "א".repeat(1500)
+        val tooLong = "ב".repeat(MAX_QUERY_CHARS + 1)
+        grade(passage, 10, 3, at = 100)
+        grade(tooLong, 11, 3, at = 110)
+        visit("search:a", "search", passage, at = 150)
+        visit("search:b", "search", tooLong, at = 160)
+
+        val read = source.read(FeedbackSent())
+        assertEquals(listOf(10L), read.grades.map { it.lineId })
+        assertEquals(listOf(passage), read.searches.map { it.query })
+    }
+
+    @Test
     fun `a package sent up to its newest time is not read again, a mark's finer time too`() {
         grade("שנים אוחזין", 10, 3, at = 100)
         visit("search:a", "search", "שנים אוחזין", at = 150)

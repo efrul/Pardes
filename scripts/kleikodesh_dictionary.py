@@ -12,10 +12,9 @@ Read as data, none of the clone's scripts run. What it takes (its owners allowed
   they no longer have are left out.
 - the Aramaic-Hebrew dictionary (source_kind 1, 7,605 senses), Torat Emet's: Klei Kodesh's developer says they had
   Torat Emet's permission long ago (2026-11-04).
-- the acronyms of Hebrew Wikipedia (source_kind 2, CC BY-SA, Hebrew Wikipedia contributors) and the definitions of
-  HaMichlol (source_kind 5, CC BY-SA as their sources.json gives the site's licence, not checked by us; HaMichlol
-  contributors; included at the user's decision, 2026-11-04). Nothing of Otzaria's lists (source_kind 9, 11) nor of the other sources
-  whose origin is unknown (3, 4, 6, 7, 8, 10).
+- the acronyms of Hebrew Wikipedia (source_kind 2, CC BY-SA, Hebrew Wikipedia contributors). Not HaMichlol's
+  definitions (source_kind 5), left out at the user's decision (2026-11-05), nor anything of Otzaria's lists (source_kind
+  9, 11) or of the other sources whose origin is unknown (3, 4, 6, 7, 8, 10).
 
 Rows, tab separated, by their first field:
   B  dictionary  book title                  (the books, numbered from 0 in their order)
@@ -35,7 +34,7 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent.parent / "SeforimApp/src/jvmMain/resources/kleikodesh/dictionary.tsv.gz"
 SOURCES = {"metzudat": "METZUDAT", "malbim": "MALBIM", "micropedia": "MIKROPEDIA", "menachem": "MENACHEM"}
-SENSES = {"source_01.tsv": "ARAMAIC", "source_02.tsv": "WIKIPEDIA", "source_05.tsv": "MICHLOL"}
+SENSES = {"source_01.tsv": "ARAMAIC", "source_02.tsv": "WIKIPEDIA"}
 KINDS = {"1", "2"}
 
 csv.field_size_limit(sys.maxsize)

@@ -26,7 +26,7 @@ import java.util.zip.GZIPInputStream
  * tokenized unlike the corpus finds the wrong lines without any error.
  *
  * `HfTokenizerParityTest` checks the ids against those of the `tokenizers` library on the corpus
- * (semantic-model/make_parity_fixtures.py).
+ * (pardes-semantic/make_parity_fixtures.py).
  */
 class HfTokenizer private constructor(
     private val normalizers: List<(String) -> String>,

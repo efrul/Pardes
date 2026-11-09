@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * The Vilna page (צורת הדף) of a tractate: for every amud, its lines of Gemara, Rashi and Tosafot, each with its
  * words as printed and its box on the page, in PDF points (the page's top left at 0,0). Made by pardes-rashi-ocr's
- * export_layout.py from Otzaria's Talmud scans (the lines' places) and the texts of the library (their words). In
+ * export_layout.py from the Vilna Shas's scans (the lines' places) and the texts of the library (their words). In
  * format 2, every line also names the library's lines its words belong to ([DafLine.u]), and [library] the library
  * release those ids are of.
  */
@@ -79,7 +79,8 @@ data class DafLine(
  * few tractates read are kept.
  */
 class DafLayouts(
-    private val dir: File,
+    /** The folder: the library's pardes-daf. */
+    internal val dir: File,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private var scannedAt = Long.MIN_VALUE
@@ -95,6 +96,10 @@ class DafLayouts(
     /** Whether there is a layout for the tractate named [name], in English or in Hebrew. */
     @Synchronized
     fun has(name: String): Boolean = filesFor(name).isNotEmpty()
+
+    /** The file [tractate] reads the tractate named [name] from first, or null when none is for it. */
+    @Synchronized
+    fun fileFor(name: String): File? = filesFor(name).firstOrNull()
 
     /** The tractate named [name], in English or in Hebrew, or null when no file is for it or it cannot be read. */
     @Synchronized
@@ -186,6 +191,6 @@ class DafLayouts(
         fun of(libraryDir: File): DafLayouts = File(libraryDir, DIR_NAME).absoluteFile.let { shared.getOrPut(it) { DafLayouts(it) } }
 
         /** Names compare without quotes, nikud, punctuation, extra spaces or case (`עבודה זרה`, `Avodah Zarah`). */
-        private fun key(name: String): String = ReferenceParser.normalizeName(name).lowercase()
+        internal fun key(name: String): String = ReferenceParser.normalizeName(name).lowercase()
     }
 }

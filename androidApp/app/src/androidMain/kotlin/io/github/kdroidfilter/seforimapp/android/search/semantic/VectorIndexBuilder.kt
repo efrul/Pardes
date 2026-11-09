@@ -12,7 +12,7 @@ import java.nio.file.Path
 
 /**
  * The Pardes vector index (`pardes.vec.lucene`, next to seforim.db.lucene), built on a computer by desktop's
- * VectorIndexBuilder from the vectors of semantic-model/embed_corpus.py: its documents have the fields of
+ * VectorIndexBuilder from the vectors of pardes-semantic/embed_corpus.py: its documents have the fields of
  * SeforimLibrary's LuceneTextIndexWriter that [IndependentSemanticSearch] reads (line_id, book_id, and the int8 vector
  * in `vec`, or `vec_base` for a base book's line), and its commit records the model it was embedded with
  * ([KEY_MODEL]): the app searches it only with that model.

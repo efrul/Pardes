@@ -206,15 +206,6 @@ private val dataCredits = listOf(
         "המילון הארמי־עברי שבמילון שבמסך הבית (7,605 ערכים, מתוך נתוני כתבי הקודש) הוא של תורת אמת. לפי מפתח כלי קודש, הם קיבלו מתורת אמת רשות להשתמש בו מזמן.",
     ),
     Credit(
-        "המכלול",
-        "תורמי המכלול",
-        listOf(
-            LicenceDoc("CC BY-SA 4.0", url = "https://creativecommons.org/licenses/by-sa/4.0/"),
-            LicenceDoc("המכלול", url = "https://www.hamichlol.org.il"),
-        ),
-        "ההגדרות שבמילון שבמסך הבית (5,597 ערכים, מתוך נתוני כתבי הקודש) לקוחות מהמכלול. CC BY-SA, לפי רישיון האתר כפי שכלי קודש רשמו אותו; לא בדקנו את הרישיון בעצמנו. הן מופצות גם הן ברישיון CC BY-SA.",
-    ),
-    Credit(
         "HYG Database v4.1",
         "David Nash (astronexus)",
         listOf(
