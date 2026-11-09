@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="חיפושים, דירוגי תוצאות וסימונים בצורת הדף שמשתמשי תוכנות הספרייה התורנית שיתפו כדי לשפר את החיפוש. פתוח לכולם לעיון, להורדה ולהעלאה, וכל שולח מופיע בכינוי.">
+<meta name="description" content="חיפושים, דירוגי תוצאות וסימונים בצורת הדף שמשתמשי תוכנות הספרייה התורנית שיתפו כדי לשפר את החיפוש. פתוח לכולם לעיון, להורדה ולהעלאה, בלי שום פרט מזהה.">
 <meta name="color-scheme" content="light dark">
 <title>מאגר החיפושים הפתוח</title>
 <link rel="preload" href="/site/display.woff2" as="font" type="font/woff2" crossorigin>
@@ -11,27 +11,27 @@
 <script src="/site/app.js" defer></script>
 </head>
 <body>
-<header class="band">
-  <div class="band-inner">
-    <div class="brand">
-      <span class="mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<header class="masthead">
+  <div class="wrap">
+    <div class="titles">
+      <p class="eyebrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="10.5" cy="10.5" r="6.5"></circle>
           <path d="m15.5 15.5 5 5"></path>
-          <path d="M7.5 9h6M7.5 12h4"></path>
         </svg>
-      </span>
-      <div class="titles">
-        <h1>מאגר החיפושים הפתוח</h1>
-        <p class="lede">חיפושים, דירוגים שניתנו לתוצאות וסימונים בצורת הדף, שמשתמשי תוכנות הספרייה התורנית שיתפו כדי לשפר את
-          החיפוש. פתוח לכולם: לעיין, להוריד ולהעלות. כל שולח מופיע בכינוי בלבד.</p>
-      </div>
+        נתוני חיפוש בספרייה התורנית
+      </p>
+      <h1>מאגר החיפושים הפתוח</h1>
+      <p class="lede">חיפושים, דירוגים שניתנו לתוצאות וסימונים בצורת הדף, שמשתמשי פרדס, זית ואוצריא שיתפו כדי לשפר את החיפוש.
+        פתוח לכולם לעיון, להורדה ולהעלאה, בלי שום פרט מזהה.</p>
     </div>
     <div class="actions">
+      <div class="buttons">
+        <button id="refresh" type="button">רענון</button>
+        <button id="download" type="button">הורדת הכול (JSON)</button>
+        <button id="to-upload" type="button" class="cta">העלאת חבילות</button>
+      </div>
       <span id="status" class="status" aria-live="polite"></span>
-      <button id="refresh" type="button" class="ghost">רענון</button>
-      <button id="download" type="button" class="ghost">הורדת הכול (JSON)</button>
-      <button id="to-upload" type="button" class="cta">העלאת חבילות</button>
     </div>
   </div>
 </header>
@@ -49,8 +49,8 @@
   <div id="view" role="tabpanel" tabindex="-1"></div>
 </main>
 <footer class="foot">
-  <p>הנתונים כאן חופשיים לשימוש של כולם, לכל תוכנה ולכל מחקר. המזהה האקראי של כל שולח לא מוצג: במקומו מופיע כינוי קבוע שנגזר
-    ממנו, כך שאי אפשר לחזור ממנו למזהה. <a href="https://github.com/efrul/Pardes/tree/main/feedback-service" rel="noopener noreferrer">קוד המקור</a></p>
+  <p>הנתונים כאן חופשיים לשימוש של כולם, לכל תוכנה ולכל מחקר. לא מוצג בהם שום פרט מזהה, גם לא המזהה האקראי של השולח.
+    <a href="https://github.com/efrul/Pardes/tree/main/feedback-service" rel="noopener noreferrer">קוד המקור</a></p>
 </footer>
 <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
 <dialog id="raw" class="raw" aria-labelledby="raw-title">
