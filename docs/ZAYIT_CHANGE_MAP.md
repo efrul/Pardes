@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (143 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (145 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1378,7 +1378,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWidget.kt`
 
-- **Change:** modified, +160 −21 lines. Feature: Klei Kodesh dictionary.
+- **Change:** modified, +169 −22 lines. Feature: Klei Kodesh dictionary, Dictionary window.
 - **What:**
   - `Dictionary` gains a `source` (`BOOK`, `INDEX`, `TEXT`) and an `attribution`, and six entries: four books of the
     library read through Klei Kodesh's index of headwords (מצודת ציון, the Malbim's ביאור המילות, מיקרופדיה תלמודית,
@@ -1390,15 +1390,19 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `KleiKodeshPack.shipped`.
   - Each word's synonyms and spellings from Klei Kodesh (`RelatedWords`), under the field and on the entry's page; one
     clicked is looked up.
+  - `ToolWindow` is overridden by `DictionaryToolWindow`, and the field's modifier starts from
+    `Modifier.fillMaxWidth().focusedInItsWindow()` (a local `field`): in the dictionary's own window the field takes the
+    focus.
   - The entry page shows a text entry's text and attribution, and no "open in the book" button for it; the options page
     marks Klei Kodesh's dictionaries ("· כלי קודש").
 - **Why:** more dictionaries and related words in the Home's dictionary card, from Klei Kodesh's Kitvei Hakodesh data
-  (`66ae16e8`, `4f86ba1e`, `389f2438`); HaMichlol's definitions were taken out again before release (`f405bb7f`).
+  (`66ae16e8`, `4f86ba1e`, `389f2438`); HaMichlol's definitions were taken out again before release (`f405bb7f`). The
+  dictionary opened from the Tools menu is ready to type in, as the user asked on 2026-11-09.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: Zayit's `readDictionaries` body was moved into `readBook`, so a Zayit change there conflicts.
 - **Smaller:** `readIndexed`, `titleVariants` and `RelatedWords` could move to `KleiKodeshDictionary.kt`; keeping Zayit's
   reading code where it was would avoid the move.
-- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`.
+- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`.
 - **Notes:** the attributions and the "· כלי קודש" mark are Hebrew literals in Kotlin, as the file's dictionary labels
   already were in Zayit; ktlint left one `if (kind ==` broken over three lines.
 
@@ -2139,6 +2143,33 @@ Hakodesh data, with their permission. Hooks: `DictionaryWidget.kt`, `strings.xml
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `…E2ETest`s on a real library.
 - **Tests:** it is one (end to end).
+
+### The dictionary's own window
+
+The dictionary opened from the Tools menu is ready to type in: its field has the focus, as the user asked on 2026-11-09.
+Hook: `DictionaryWidget.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWindow.kt`
+
+- **Feature:** Dictionary window.
+- **Size:** 36 lines.
+- **What:** `DictionaryToolWindow`, the dictionary's tool window: Zayit's `DefaultToolWindow` under
+  `LocalDictionaryWindow` set to true. `Modifier.focusedInItsWindow()` gives the field the focus there, when the window
+  opens, each time it is asked for again (`ToolWindows.reopened`) and back from an entry's page; on the Home the local is
+  false and the card takes no focus by itself.
+- **Reached from:** `DictionaryWidget.kt` (`ToolWindow`, the field's modifier).
+- **Follows:** Zayit's `SolarSystemWidget`, whose `ToolWindow` is a window of its own, and his composable modifiers
+  (`Modifier.pageSwipe`, `Modifier.trackedDrag`).
+- **Tests:** `DictionaryWindowUiTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWindowUiTest.kt`
+
+- **Feature:** Dictionary window.
+- **Size:** 60 lines.
+- **What:** in its own window the dictionary's field takes the focus; on the Home its card takes none by itself.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's widget UI tests (`WidgetMenuUiTest`: `runDesktopComposeUiTest`, the test graph).
+- **Tests:** it is one (Compose UI).
 
 ### Library location, and an installed Zayit's library used in place
 

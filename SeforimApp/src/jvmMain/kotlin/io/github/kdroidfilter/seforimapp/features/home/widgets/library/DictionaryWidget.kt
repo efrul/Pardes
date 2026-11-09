@@ -389,6 +389,12 @@ internal object DictionaryWidget : HomeWidget {
     override fun Options(state: HomeWidgetsState) = DictionaryOptionsPage(state)
 
     @Composable
+    override fun ToolWindow(
+        state: HomeWidgetsState,
+        onClose: () -> Unit,
+    ) = DictionaryToolWindow(state, onClose)
+
+    @Composable
     override fun Content(
         state: HomeWidgetsState,
         modifier: Modifier,
@@ -456,6 +462,8 @@ internal object DictionaryWidget : HomeWidget {
                         state[DictionarySettings.picked] = it
                     }
                 }
+                // In the dictionary's own window the field is ready to type in
+                val field = Modifier.fillMaxWidth().focusedInItsWindow()
                 TextField(
                     state = query,
                     placeholder = { Text(stringResource(Res.string.home_dictionary_hint, searched?.label ?: allLabel)) },
@@ -472,7 +480,7 @@ internal object DictionaryWidget : HomeWidget {
                     textStyle = TextStyle(fontSize = 14.sp),
                     // Enter reads the first entry found
                     modifier =
-                        Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) wanted = true }.onPreviewKeyEvent { event ->
+                        field.onFocusChanged { if (it.isFocused) wanted = true }.onPreviewKeyEvent { event ->
                             val first = results.firstOrNull()
                             if (event.type == KeyEventType.KeyUp && event.key == Key.Enter && first != null) {
                                 opened = first
