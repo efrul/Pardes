@@ -1629,15 +1629,16 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPage.kt`
 
 - **Feature:** Daf view.
-- **Size:** 560 lines.
+- **Size:** 558 lines.
 - **What:** drawing a set amud: `DafAmudText` draws each run of lines as one text in the text's own components (a square
   letter for the Gemara, Rashi script for the commentaries), with highlights behind words, notes underlined, selection by
-  click and drag in the reading order (`DafRange`, `textOf`, `lineRangeOf`), and lighter unsure lines when asked
-  (`UNSURE_INK`). `DafWord`, `DafHighlight`, `RunLine`, `TextRun` and `AmudLayout` are its model.
+  click and drag in the reading order (`DafRange`, `textOf`, `lineRangeOf`), a right-click that opens the menu on its
+  word and selects nothing, as on the text's lines, and lighter unsure lines when asked (`UNSURE_INK`). `DafWord`,
+  `DafHighlight`, `RunLine`, `TextRun` and `AmudLayout` are its model.
 - **Reached from:** `DafView.kt`, `DafSetting.kt`, `DafAnchors.kt`, `DafAmudLinks.kt`.
 - **Follows:** the text view's highlight and note marks (Zayit's `applyUserHighlights`), drawn the same way.
-- **Tests:** `DafPageTest` (a click reaches its word, a drag goes down a column, a range is copied as printed, the page
-  drawn to `build/reports/daf/`).
+- **Tests:** `DafPageTest` (a click reaches its word, a right-click its menu, a drag goes down a column, a range is
+  copied as printed, the page drawn to `build/reports/daf/`).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAnchors.kt`
 
@@ -1796,10 +1797,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPageTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 235 lines.
+- **Size:** 272 lines.
 - **What:** Berakhot 35b drawn from its layout (`berakhot-35b.json`): every line in a run of its column, evenly spaced, a
-  run's text in order and searchable, a click reaching its callback, a drag down a column, a range read in the amud's
-  order and copied as printed; the drawing written to `build/reports/daf/`.
+  run's text in order and searchable, a click reaching its callback, a right-click opening the menu on its word with nothing
+  selected, a drag down a column, a range read in the amud's order and copied as printed; the drawing written to
+  `build/reports/daf/`.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's screenshot tests: an `ImageComposeScene` drawn to PNG, pointer events sent to it.
 - **Tests:** it is one (Compose, off screen).

@@ -827,7 +827,7 @@ private fun dafTextManager(
         override val paste: TextContextMenu.Action? = null
         override val selectAll: TextContextMenu.Action? = null
 
-        // The page selects the word under a right-click itself, before the menu opens
+        // A right-click selects no word: the menu acts on the selection as it is, or on the line under the pointer
         override fun selectWordAtPositionIfNotAlreadySelected(offset: Offset) = Unit
     }
 
