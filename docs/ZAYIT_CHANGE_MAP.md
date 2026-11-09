@@ -1580,9 +1580,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
 - **Feature:** Daf view.
-- **Size:** 1174 lines.
+- **Size:** 1176 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
-  height, with its title, zoom, keys, selection, context menu, find marks and review mode; `DafMode` (what a click
+  height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
+  `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review mode; `DafMode` (what a click
   selects) and `DafControl` (what the keys and the find bar ask: page up or down, first or last amud, a line brought into
   view) are its two seams with the text view. Also the amud helpers (`isBavli`, `amudOf`, `amudIndex`, `amudTitle`,
   `firstLines`, `placesOfLines`), the page's marks (`dafHighlight`: passage, segments, their comments), clicks
@@ -1595,7 +1596,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
   composables have no UI test.
-- **Notes:** at 1,174 lines, with some 26 top-level and member functions, it is far beyond `detekt.yml`'s limits
+- **Notes:** at 1,176 lines, with some 26 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
   parts (pages, review, missing layout, marks).
 
@@ -1616,14 +1617,18 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafSetting.kt`
 
 - **Feature:** Daf view.
-- **Size:** 574 lines.
+- **Size:** 605 lines.
 - **What:** typesetting an amud: `layoutAmud` sets every line in runs (a column's lines one below the other at its
   pitch), one size of letters per column, made smaller for a line only as far as its words need, its spaces widened to
-  fill its box, a big word's neighbours set beside it, an overfull line given its empty neighbour's room. The private
-  setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`) and the constants of the printed page's proportions.
-- **Reached from:** `DafView.kt` (`layoutAmud`).
+  fill its box, a big word's neighbours set beside it, an overfull line given its empty neighbour's room. `DafSizes`
+  is a tractate's usual box height for the Gemara and for a commentary, a set share of its block's width
+  (`GEMARA_BOX`, `COMMENTARY_BOX`): given to `layoutAmud`, every amud's letters are that one size, whatever the height
+  of its own boxes, which follows each scan (without it, as the tests lay out a lone amud, a column's own usual box).
+  The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`) and the constants of the printed page's
+  proportions.
+- **Reached from:** `DafView.kt` (`layoutAmud`, `DafSizes`).
 - **Follows:** Pardes's own.
-- **Tests:** `DafPageTest` (evenly spaced runs, words in order).
+- **Tests:** `DafPageTest` (evenly spaced runs, words in order, one size of letters with a tractate's sizes).
 - **Notes:** with some 28 functions it passes `detekt.yml`'s 15 per file.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPage.kt`
@@ -1797,10 +1802,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPageTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 272 lines.
+- **Size:** 301 lines.
 - **What:** Berakhot 35b drawn from its layout (`berakhot-35b.json`): every line in a run of its column, evenly spaced, a
-  run's text in order and searchable, a click reaching its callback, a right-click opening the menu on its word with nothing
-  selected, a drag down a column, a range read in the amud's order and copied as printed; the drawing written to
+  run's text in order and searchable, the amud and a copy of it with lower boxes set in one size of letters by a
+  tractate's sizes, a click reaching its callback, a right-click opening the menu on its word with nothing selected, a
+  drag down a column, a range read in the amud's order and copied as printed; the drawing written to
   `build/reports/daf/`.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's screenshot tests: an `ImageComposeScene` drawn to PNG, pointer events sent to it.

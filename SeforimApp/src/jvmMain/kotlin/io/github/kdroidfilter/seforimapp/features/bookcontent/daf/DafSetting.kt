@@ -17,6 +17,13 @@ private const val RASHI_SIZE = 0.95f
 private const val BIG_SIZE = 0.9f
 
 /**
+ * A line's usual box height to its tractate's block width, as printed: the Shas is set in one size of square letters
+ * and one of Rashi script, some 86 of the Gemara's letters to the block's width, whatever a scan's own scale.
+ */
+private const val GEMARA_BOX = 10f / 412f
+private const val COMMENTARY_BOX = 7.5f / 412f
+
+/**
  * A line's letters are not made smaller than this much of its column's for its box's sake (a big word's than
  * [MIN_SIZE] pixels): its spaces then narrower by at most [SQUEEZE] of one, and the line past its box's left edge into
  * the room there (its box the alignment's, too narrow for its words), smaller only when that room is too narrow too.
@@ -68,14 +75,29 @@ private const val COLUMN_GAP = 3f
 private const val SPACE_PROBE = "א"
 
 /**
+ * The usual height of a line's box in a tractate, in points: the [gemara]'s and a [commentary]'s. One for all its
+ * amudim, whose own boxes are as tall as each scan made them: its letters are then one size on every amud.
+ */
+internal data class DafSizes(
+    val gemara: Float,
+    val commentary: Float,
+) {
+    companion object {
+        /** A tractate's, from its usual block's width in points. */
+        fun of(blockWidth: Float) = DafSizes(blockWidth * GEMARA_BOX, blockWidth * COMMENTARY_BOX)
+    }
+}
+
+/**
  * Lays out every line of [amud] at [scale] pixels a point, in runs of lines (a column's lines one below the other at
- * its pitch) that are each drawn as one text: one size of letters for a column (its usual line's), made smaller for a
- * line only while its words do not fit its box with a normal space between them, then spread so the line fills its
- * box, as printed. A column's big first word is a run of its own, in square letters as printed, and a line it stands
- * in has its words on both sides of it. Where the alignment's box is wrong for its words, the line is still read: its
- * letters no smaller than [LEAST_SIZE] of the column's but for room's sake (the line past its box), its spaces no wider
- * than its column's usual ones ([SPARSE]), two printed lines' words in one set in two ([OVERFULL]). [beforeEachLine]
- * is called before each line is measured, to stop the layout by throwing (a coroutine's ensureActive).
+ * its pitch) that are each drawn as one text: one size of letters for a column (its tractate's with [sizes], else its
+ * own usual line's), made smaller for a line only while its words do not fit its box with a normal space between them,
+ * then spread so the line fills its box, as printed. A column's big first word is a run of its own, in square letters
+ * as printed, and a line it stands in has its words on both sides of it. Where the alignment's box is wrong for its
+ * words, the line is still read: its letters no smaller than [LEAST_SIZE] of the column's but for room's sake (the
+ * line past its box), its spaces no wider than its column's usual ones ([SPARSE]), two printed lines' words in one set
+ * in two ([OVERFULL]). [beforeEachLine] is called before each line is measured, to stop the layout by throwing (a
+ * coroutine's ensureActive).
  */
 internal fun layoutAmud(
     amud: DafAmud,
@@ -84,13 +106,15 @@ internal fun layoutAmud(
     density: Density,
     gemara: FontFamily,
     rashi: FontFamily,
+    sizes: DafSizes? = null,
     beforeEachLine: () -> Unit = {},
 ): AmudLayout {
     val setter = AmudSetter(amud, scale, measurer, density, beforeEachLine)
     val columns =
         listOf("G", "R", "T").mapNotNull { column ->
             val isGemara = column == "G"
-            setter.column(column, if (isGemara) gemara else rashi, isGemara)
+            val usual = sizes?.let { if (isGemara) it.gemara else it.commentary }
+            setter.column(column, if (isGemara) gemara else rashi, isGemara, usual?.times(scale))
         }
     // Drawn last, on top of the runs whose lines they stand beside
     val bigRuns = columns.flatMap { it.bigRuns(gemara) }
@@ -160,14 +184,18 @@ private class AmudSetter(
 
     fun words(i: Int) = lines[i].t.split(' ').filter { it.isNotEmpty() }
 
-    /** The column [column]'s lines, in [family] ([isGemara]: the Gemara's square letters), or null when it has none. */
+    /**
+     * The column [column]'s lines, in [family] ([isGemara]: the Gemara's square letters), or null when it has none.
+     * [usual]: its tractate's usual box height in pixels, when its letters are the tractate's size.
+     */
     fun column(
         column: String,
         family: FontFamily,
         isGemara: Boolean,
+        usual: Float? = null,
     ): ColumnSetter? {
         val indices = lines.indices.filter { lines[it].c == column && lines[it].t.isNotBlank() }
-        return if (indices.isEmpty()) null else ColumnSetter(this, column, family, isGemara, indices)
+        return if (indices.isEmpty()) null else ColumnSetter(this, column, family, isGemara, indices, usual)
     }
 
     /** The width of [words] at [size], a normal space between two, those in [bold] bold. */
@@ -258,6 +286,7 @@ private class ColumnSetter(
     private val family: FontFamily,
     private val isGemara: Boolean,
     indices: List<Int>,
+    tractateUsual: Float? = null,
 ) {
     private val lines = amud.lines
     private val bigLines = indices.filter { lines[it].isBig }
@@ -265,12 +294,14 @@ private class ColumnSetter(
     private val bigBoxes = bigLines.map { amud.boxes[it] }
     private val words = normal.associateWith(amud::words)
 
-    // The column's letters, from its usual line's height (its sure lines', those the alignment placed best)
+    // The column's letters, from its usual line's height: its tractate's, else its own sure lines' (those the
+    // alignment placed best)
     private val usual =
-        (normal.filter { lines[it].s == 1 }.ifEmpty { normal })
-            .map { amud.boxes[it].let { b -> b[3] - b[1] } }
-            .sorted()
-            .let { it.getOrElse(it.size / 2) { 0f } }
+        tractateUsual
+            ?: (normal.filter { lines[it].s == 1 }.ifEmpty { normal })
+                .map { amud.boxes[it].let { b -> b[3] - b[1] } }
+                .sorted()
+                .let { it.getOrElse(it.size / 2) { 0f } }
     private val size = usual * if (isGemara) GEMARA_SIZE else RASHI_SIZE
     private val least = size * LEAST_SIZE
 
