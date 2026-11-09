@@ -25,9 +25,11 @@ import java.nio.file.Path
 /**
  * Independent Hybrid Search Engine for Pardes Desktop:
  * Combines lexical BM25 (LuceneSearchEngine) with independent ONNX dense vector search (IndependentSemanticSearch)
- * using Reciprocal Rank Fusion: RRF(doc) = Σ 1/(K + rank), the dense side weighed per model, with the lexical side's
- * first hits that hold the query as a quote kept on the first page ([keepLeaders], [holdsQuote]), and the earlier level
- * first among the lines that hold it as a sentence ([LevelPrecedence], [BookLevels]).
+ * using Reciprocal Rank Fusion: RRF(doc) = Σ 1/(K + rank), the dense side weighed per model, a lexical hit holding the
+ * query word for word weighing more, short lines of the dense side alone left out and a bonus for the query's words
+ * close together ([fusedScores]); then the lexical side's first hits that hold the query as a quote kept on the first
+ * page ([keepLeaders], [holdsQuote]), and the earlier level first among the lines that hold it as a sentence
+ * ([LevelPrecedence], [BookLevels]).
  *
  * Gracefully and safely degrades to pure lexical search if the model or vector files are not found.
  */
@@ -248,32 +250,35 @@ class HybridSearchEngine internal constructor(
             }
             onLexical?.invoke(lexicalTotal, true)
 
-            val rrf = HashMap<Long, Double>()
-            lexHits.forEachIndexed { rank, hit ->
-                rrf.merge(hit.lineId, 1.0 / (RRF_K + rank + 1), Double::plus)
-            }
-            val denseWeight = semantic?.hybridWeight ?: 1.0
-            denseHits.forEachIndexed { rank, hit ->
-                rrf.merge(hit.lineId, denseWeight / (RRF_K + rank + 1), Double::plus)
-            }
+            // The candidates' lines, read once: for the fusion's weights and for the precedence of the earlier level
+            val lines = candidateLines(lexHits.map { it.lineId } + denseHits.map { it.lineId })
+            val rrf =
+                fusedScores(
+                    lexical = lexHits.map { it.lineId },
+                    dense = denseHits.map { it.lineId },
+                    denseWeight = semantic?.hybridWeight ?: 1.0,
+                    query = query,
+                    // A search of several books: one book's short lines are its own (a chosen book is read whole)
+                    general = bookIds?.size != 1,
+                ) { lines?.get(it)?.text }
 
             val lexById = lexHits.associateBy { it.lineId }
             val denseBooks = denseHits.associate { it.lineId to it.bookId }
-            val order = rrf.entries.sortedByDescending { it.value }.map { it.key }
+            val order = rrf.entries.sortedWith(compareByDescending<Map.Entry<Long, Double>> { it.value }.thenBy { it.key }).map { it.key }
             // The lexical side's first hits that hold the query as a quote keep a place on the first page; the others rank
             // as fused. On real searches the lexical first hit was mostly a long line the query's words are scattered in:
             // kept whatever it held, it cost the first page more than it gave
             val leaders = LinkedHashMap<Long, Int>()
             if (quoteKey(query) != null) {
                 lexHits.take(LEXICAL_PLACES.size).forEachIndexed { j, hit ->
-                    val text = runSuspendCatching { resolveLine(hit.lineId, query)?.rawText }.getOrNull()
+                    val text = lines?.get(hit.lineId)?.text ?: runSuspendCatching { resolveLine(hit.lineId, query)?.rawText }.getOrNull()
                     if (text != null && holdsQuote(text, query)) leaders[hit.lineId] = LEXICAL_PLACES[j]
                 }
             }
             // The order is the list's from here, not the scores': a kept lexical hit keeps its own (lower) score
             val page = keepLeaders(order, leaders)
             // Within one book every line has the same level: no line to put first
-            (if (bookIds?.size == 1) page else withPrecedence(page, query))
+            (if (bookIds?.size == 1) page else withPrecedence(page, query, lines))
                 .map { lineId ->
                     val lexicalHit = lexById[lineId]
                     FusedEntry(lineId, rrf.getValue(lineId).toFloat(), lexicalHit, lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L)
@@ -281,19 +286,34 @@ class HybridSearchEngine internal constructor(
         }
 
     /**
+     * The library's lines of [ids] (their book and text), for the fusion's weights ([fusedScores]) and the precedence;
+     * null when the library can't be read: the fusion is then RRF alone.
+     */
+    private suspend fun candidateLines(ids: List<Long>): Map<Long, LineText>? {
+        val library = library ?: return null
+        return withContext(Dispatchers.IO) {
+            runSuspendCatching { library.lines(ids) }
+                .onFailure { warnln(it) { "[HybridSearchEngine] The library's lines unavailable; RRF alone." } }
+                .getOrNull()
+        }
+    }
+
+    /**
      * [page] with the earlier level first among its lines that hold [query] as a sentence ([LevelPrecedence]), as the
-     * library's book levels and lines tell; [page] as it is when they can't be read.
+     * library's book levels and lines tell ([known], when the fusion has read them already); [page] as it is when they
+     * can't be read.
      */
     private suspend fun withPrecedence(
         page: List<Long>,
         query: String,
+        known: Map<Long, LineText>? = null,
     ): List<Long> {
         val library = library ?: return page
         if (quoteKey(query) == null) return page
         return withContext(Dispatchers.IO) {
             runSuspendCatching {
                 val levels = library.levels()
-                val lines = library.lines(page)
+                val lines = known ?: library.lines(page)
                 LevelPrecedence.order(page, query, { lines[it]?.text }) { id ->
                     lines[id]?.let { levels[it.bookId] } ?: BookLevels.UNKNOWN
                 }
@@ -453,6 +473,106 @@ class HybridSearchEngine internal constructor(
 
         /** The one-letter prefixes a word may carry in a quote and not in its source, or the reverse ([stem]). */
         internal const val PREFIXES = "והבכלמש"
+
+        /** From this many words a query is a sentence a lexical hit can hold word for word ([fusedScores]). */
+        private const val VERBATIM_WORDS = 3
+
+        /** What a lexical hit holding the query word for word weighs in the RRF, the others 1 ([fusedScores]). */
+        private const val VERBATIM_WEIGHT = 3.0
+
+        /** A line only the dense side finds, of this many words or fewer, stays out of a search of several books. */
+        private const val SHORT_LINE_WORDS = 8
+
+        /** What a line holding all the query's words in its best window gains ([fusedScores], [coverage]). */
+        private const val WINDOW_BONUS = 0.03
+
+        /**
+         * The fused scores of the [lexical] and [dense] candidates (each in its side's order): RRF (k = [RRF_K], the dense
+         * side weighing [denseWeight]) with three changes, measured on the feedback's graded searches, 157 source
+         * searches, eval-100 and eval-real (docs/fusion-compare: SOURCE_TEST.md, EXPANSIONS.md, IMPLEMENTATION.md;
+         * "p12wl" there, with [keepLeaders] and [LevelPrecedence] after it):
+         * - a lexical hit that holds a query of [VERBATIM_WORDS] words or more word for word ([verbatimKey]) weighs
+         *   [VERBATIM_WEIGHT]: a line the words find and the model doesn't is otherwise below the first 121 dense hits;
+         * - in a search of several books ([general]) a line only the dense side finds, of [SHORT_LINE_WORDS] words or
+         *   fewer, is left out (a heading, a line of a list: the model ranks such lines close to anything), and the dense
+         *   ranks are counted without it;
+         * - every line gains [WINDOW_BONUS] times the square of the share of the query's words its best window holds
+         *   ([coverage]).
+         * A line whose text [textOf] doesn't give takes none of them: without the library's lines this is RRF alone. So is
+         * a search the words find nothing for: the dense side's order, as measured.
+         */
+        internal fun fusedScores(
+            lexical: List<Long>,
+            dense: List<Long>,
+            denseWeight: Double,
+            query: String,
+            general: Boolean,
+            textOf: (Long) -> String?,
+        ): Map<Long, Double> {
+            if (lexical.isEmpty()) {
+                val alone = HashMap<Long, Double>()
+                dense.forEachIndexed { rank, id -> alone.merge(id, denseWeight / (RRF_K + rank + 1), Double::plus) }
+                return alone
+            }
+            val queryKey = verbatimKey(query)
+            val sentence = queryKey.isNotEmpty() && wordCount(queryKey) >= VERBATIM_WORDS
+            val keys = HashMap<Long, String>()
+
+            fun keyOf(id: Long): String? = keys[id] ?: textOf(id)?.let(::verbatimKey)?.also { keys[id] = it }
+
+            val scores = HashMap<Long, Double>()
+            lexical.forEachIndexed { rank, id ->
+                val weight = if (sentence && keyOf(id)?.contains(queryKey) == true) VERBATIM_WEIGHT else 1.0
+                scores.merge(id, weight / (RRF_K + rank + 1), Double::plus)
+            }
+            val found = lexical.toHashSet()
+            dense
+                .filterNot { id -> general && id !in found && keyOf(id)?.let { wordCount(it) <= SHORT_LINE_WORDS } == true }
+                .forEachIndexed { rank, id -> scores.merge(id, denseWeight / (RRF_K + rank + 1), Double::plus) }
+            val wanted = queryWords(query)
+            for (id in scores.keys.toList()) {
+                val share = keyOf(id)?.let { coverage(it, wanted) } ?: 0.0
+                if (share > 0.0) scores[id] = scores.getValue(id) + WINDOW_BONUS * share * share
+            }
+            return scores
+        }
+
+        /** The words of a [verbatimKey]. */
+        private fun wordCount(key: String): Int = if (key.isEmpty()) 0 else key.count { it == ' ' } + 1
+
+        /** The query's distinct words of two letters or more, as [stem]s, in their order ([coverage]). */
+        internal fun queryWords(query: String): List<String> =
+            verbatimKey(query)
+                .split(' ')
+                .filter { it.length > 1 }
+                .map(::stem)
+                .distinct()
+
+        /**
+         * The share of [wanted] (the query's words, [queryWords]) that the best window of the line [lineKey] (its
+         * [verbatimKey]) holds: a window of twice the query's words, at least four more than them, starting at a word of
+         * the query. 0 for a query of fewer than two words.
+         */
+        internal fun coverage(
+            lineKey: String,
+            wanted: List<String>,
+        ): Double {
+            val n = wanted.size
+            if (n < 2 || lineKey.isEmpty()) return 0.0
+            val want = wanted.toHashSet()
+            val line = lineKey.split(' ').map(::stem)
+            val window = maxOf(2 * n, n + 4)
+            var best = 0
+            for (i in line.indices) {
+                if (line[i] !in want) continue
+                val got = line.subList(i, minOf(i + window, line.size)).filterTo(HashSet()) { it in want }.size
+                if (got > best) {
+                    best = got
+                    if (best == n) break
+                }
+            }
+            return best.toDouble() / n
+        }
 
         /**
          * [fused] with each of [leaders] (lexical hits, in order, each with its place) moved up to that place, or left

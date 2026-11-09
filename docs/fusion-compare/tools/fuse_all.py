@@ -99,6 +99,23 @@ def query_words(q):
     return list(dict.fromkeys(stem(w) for w in verbatim_key(q).split() if len(w) > 1))
 
 
+# A numbered unit of a text (a verse, a mishna, a halacha, a seif: "(יג) ..."), not a commentary's lemma ("(ו) <b>...")
+_NUMBERED = re.compile(r"^\s*\([\u05d0-\u05ea]{1,4}\)\s*(?!<b>)")
+
+
+def short_out(d, general, lexset, spare=None):
+    """p12's short line: found by the dense side alone, of 8 words or fewer, in a search of several books; [spare]:
+    the short lines it keeps all the same ("anchors": those commentaries hang on, data-commentator; "numbered": a
+    numbered unit of a text)."""
+    if not general or d in lexset or len(words(d)) > 8:
+        return False
+    if spare == "anchors":
+        return "data-commentator" not in lines[d][2]
+    if spare == "numbered":
+        return not _NUMBERED.match(lines[d][2])
+    return True
+
+
 def coverage(d, qw):
     """The best window's share of the query's distinct words: window of max(2n, n+4) words."""
     if len(qw) < 2:
@@ -275,6 +292,8 @@ METHODS = [
     ("p12wl", "הצעות 1+2 עם החלון וקדימות הרמה", "p12w, ואחריו LevelPrecedence של האפליקציה: בין השורות שמכילות את השאילתה כמשפט (גם בכתיב מלא/חסר), הרמה המוקדמת קודמת"),
     ("p12wl_w2", "p12wl, סמנטי ×2", "p12wl עם משקל 2 לצד הסמנטי במקום 3 (EXPANSIONS.md)"),
     ("p12wl_w15", "p12wl, סמנטי ×1.5", "p12wl עם משקל 1.5 לצד הסמנטי במקום 3 (EXPANSIONS.md)"),
+    ("p12wl_sa", "p12wl, שורה קצרה שמפרשים נתלים בה נשארת", "p12wl, והשורה הסמנטית הקצרה נשארת כשיש בה עוגני מפרשים (data-commentator: סעיפי השולחן ערוך ועוד), לא רק כשהצד הרגיל מצא אותה"),
+    ("p12wl_sn", "p12wl, יחידה ממוספרת קצרה נשארת", "p12wl, והשורה הסמנטית הקצרה נשארת כשהיא יחידה ממוספרת של טקסט (פסוק, משנה, הלכה, סעיף: \"(יג) ...\"), לא דיבור המתחיל של מפרש"),
     ("p12wsl", "p12wl, מילה במילה גם בכתיב אחר", "p12wl, והשורה הרגילה שוקלת 3 כשהיא מכילה את השאילתה כמשפט גם בכתיב מלא/חסר ועם קידומות (holds_phrase של LevelPrecedence), לא רק מילה במילה (EXPANSIONS.md)"),
     ("window", "מיון מחדש לפי החלון הטוב (כמו ויקיפדיה)", "RRF ×3, ועוד 0.03·(חלק ממילות השאילתה שבחלון הטוב)²"),
     ("links", "ציון לפי הקישורים (PageRank פשוט)", "RRF ×3 כפול (0.7 + 0.3·log של מספר הספרים המקושרים)"),
@@ -363,18 +382,19 @@ def order_for(method, r):
         lexset = set(lex)
         dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
         return keep(ranked(rrf(lex, dd, lw=lw)), leaders)
-    if method in ("p12w", "p12w_w2", "p12w_w15", "p12ws"):
-        w = {"p12w": 3.0, "p12w_w2": 2.0, "p12w_w15": 1.5, "p12ws": 3.0}[method]
+    if method in ("p12w", "p12w_w2", "p12w_w15", "p12ws", "p12w_sa", "p12w_sn"):
+        w = {"p12w_w2": 2.0, "p12w_w15": 1.5}.get(method, 3.0)
+        spare = {"p12w_sa": "anchors", "p12w_sn": "numbered"}.get(method)
         many = len(verbatim_key(q).split()) >= 3
         if method == "p12ws":  # the query as a sentence, spelling apart (LevelPrecedence's holds_phrase), not word for word
             lw = (lambda d: 3.0 if holds_phrase(q, lines[d][2], spelling=True) else 1.0) if many else None
         else:
             lw = (lambda d: 3.0 if holds_verbatim(lines[d][2], q) else 1.0) if many else None
         lexset = set(lex)
-        dd = [d for d in dense if not (general and d not in lexset and len(words(d)) <= 8)]
+        dd = [d for d in dense if not short_out(d, general, lexset, spare)]
         sc = rrf(lex, dd, w=w, lw=lw)
         return keep(ranked({d: s + 0.03 * coverage(d, qw) ** 2 for d, s in sc.items()}), leaders)
-    if method in ("p12wl", "p12wl_w2", "p12wl_w15", "p12wsl"):
+    if method in ("p12wl", "p12wl_w2", "p12wl_w15", "p12wsl", "p12wl_sa", "p12wl_sn"):
         return level_first(order_for({"p12wsl": "p12ws"}.get(method, method.replace("p12wl", "p12w")), r), q)
     if method == "window":
         sc = rrf(lex, dense)
