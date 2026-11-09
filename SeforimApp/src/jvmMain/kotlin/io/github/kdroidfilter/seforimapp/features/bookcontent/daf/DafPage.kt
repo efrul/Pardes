@@ -270,7 +270,7 @@ private const val SPAN = 3
  * its texts by their tops, and take a drag down one column into another's lines between): a drag selects from the
  * word it starts on, a double click a word, a triple click the word's comment or segment, a Shift+click to a word;
  * [onRange] is given each change. A click on a word, not a drag, also goes to [onWordClick] (with Ctrl or Cmd held, as
- * the text's lines take them); a right-click selects the word under it unless it is in the selection, gives it to
+ * the text's lines take them); a right-click selects nothing, as on the text's lines: it gives the word under it to
  * [onContextWord] and opens the text's menu where it was ([onMenu]). [onPress] comes first on any press. With
  * [markUnsure], the lines the alignment is not sure of are drawn lighter.
  */
@@ -364,10 +364,8 @@ internal fun DafAmudText(
                 val at = change.position
                 currentOnPress()
                 if (down.buttons.isSecondaryPressed) {
-                    // The text's menu: on the selection when the pointer is in it, else on the word under it
-                    val word = wordAt(at)
-                    if (word != null && currentRange?.contains(word) != true) currentOnRange(DafRange(word, word))
-                    word?.let { currentOnContextWord(it) }
+                    // The text's menu, on the word under the pointer: the selection stays as it is, as on the text's lines
+                    wordAt(at)?.let { currentOnContextWord(it) }
                     currentOnMenu(at)
                     change.consume()
                     return@awaitEachGesture

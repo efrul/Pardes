@@ -148,6 +148,43 @@ class DafPageTest {
 
     @OptIn(ExperimentalComposeUiApi::class)
     @Test
+    fun aRightClickOpensTheMenuOnItsWordAndSelectsNothing() {
+        val laidOut = layout(amud())
+        val ranges = mutableListOf<DafRange?>()
+        val context = mutableListOf<DafWord>()
+        val menus = mutableListOf<Offset>()
+        val scene =
+            ImageComposeScene(laidOut.width.toInt() + 1, laidOut.height.toInt() + 1, Density(1f), LayoutDirection.Rtl) {
+                DafAmudText(
+                    laidOut,
+                    1f,
+                    gemara,
+                    rashi,
+                    Color.Black,
+                    onRange = { ranges += it },
+                    onContextWord = { context += it },
+                    onMenu = { menus += it },
+                )
+            }
+        try {
+            scene.render()
+            val run = laidOut.runs.first { it.isGemara && !it.isBig }
+            val slot = run.lines.indexOfFirst { it != null && it.words.size > 2 }
+            val line = run.lines[slot]!!
+            val at = Offset(run.left + run.width - line.indent - 3f, run.top + run.pitch * (slot + 0.5f))
+            scene.sendPointerEvent(PointerEventType.Press, at, buttons = PointerButtons(isSecondaryPressed = true))
+            scene.sendPointerEvent(PointerEventType.Release, at)
+            scene.render()
+            assertEquals(listOf(DafWord(line.index, 0)), context, "the menu's word")
+            assertEquals(listOf(at), menus, "the menu opens where the pointer is")
+            assertTrue(ranges.isEmpty(), "the selection stays as it was")
+        } finally {
+            scene.close()
+        }
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test
     fun aDragGoesDownAColumnFromOneOfItsBoxesToTheNext() {
         val amud = amud()
         val laidOut = layout(amud)
