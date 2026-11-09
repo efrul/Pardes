@@ -52,7 +52,8 @@ val syncDesktopSemantic by tasks.registering(Sync::class) {
 // text names (CategorySuggestions, with the names' comparison key it uses), a category's base books (BaseBooks), how
 // authors' names are shown and matched (AuthorNames), and the books and authors found by name
 // (framework/search/titles: the title index, its reading of names and acronyms, after Klei Kodesh's Kitvei Hakodesh, and
-// its loader, given the library's rows by android/search/TitleIndex.kt). The bar's picked books and categories
+// its loader, given the library's rows by android/search/TitleIndex.kt), the typed references (ReferenceParser,
+// ReferenceResolver) and the results' snippets (RepositorySnippetSourceProvider). The bar's picked books and categories
 // (ScopeItems) have an Android variant in src/androidMain/.../android/search: they name Android's own SearchScope.
 val syncDesktopSearch by tasks.registering(Sync::class) {
     from(desktopApp) {
@@ -65,9 +66,24 @@ val syncDesktopSearch by tasks.registering(Sync::class) {
             "io/github/kdroidfilter/seforimapp/framework/search/titles/BookTitleIndex.kt",
             "io/github/kdroidfilter/seforimapp/framework/search/titles/BookTitleIndexLoader.kt",
             "io/github/kdroidfilter/seforimapp/features/search/domain/BaseBooks.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/domain/reference/ReferenceParser.kt",
+            "io/github/kdroidfilter/seforimapp/features/search/domain/reference/ReferenceResolver.kt",
+            "io/github/kdroidfilter/seforimapp/framework/search/RepositorySnippetSourceProvider.kt",
         )
     }
     into(layout.buildDirectory.dir("generated/desktopSearch"))
+}
+
+// Desktop's region lists and candle-lighting table (features/zmanim/data, as-is): their names are the stored region
+// values, shared with desktop, and the times are the עתים לבינה luach's.
+val syncDesktopZmanim by tasks.registering(Sync::class) {
+    from(desktopApp) {
+        include(
+            "io/github/kdroidfilter/seforimapp/features/zmanim/data/Cities.kt",
+            "io/github/kdroidfilter/seforimapp/features/zmanim/data/CandleLighting.kt",
+        )
+    }
+    into(layout.buildDirectory.dir("generated/desktopZmanim"))
 }
 
 // Desktop's semantic tests that run on the port unchanged (SeforimApp/src/jvmTest): the fusion's leaders and quotes, the
@@ -124,9 +140,8 @@ kotlin {
         }
         androidMain {
             kotlin.srcDir(seforimLibrary.resolve("dao/src/androidMain/kotlin"))
-            // htmlparser as desktop 0.6.10 has it (citation links, plainTextFromHtml), vendored; ../htmlparser equals it
-            // since the merge of Zayit 0.6.10.
-            kotlin.srcDir("src/androidMain/htmlparser")
+            // Desktop's htmlparser (citation links, plainTextFromHtml, the commentary anchors), as-is.
+            kotlin.srcDir(desktopRoot.resolve("htmlparser/src/commonMain/kotlin"))
             // Desktop full-text search (Lucene), as-is. The two files excluded below read SQLite through JDBC or
             // open the index with MMapDirectory and Path.of; their Android variants (same package and class names)
             // are in src/androidMain/.../android/search, next to the 0.6.10 app files the search needs (vendored).
@@ -154,6 +169,8 @@ kotlin {
             kotlin.srcDir(syncDesktopSemantic)
             // Desktop's category suggestions for the search bar (see syncDesktopSearch).
             kotlin.srcDir(syncDesktopSearch)
+            // Desktop's region lists and candle lighting (see syncDesktopZmanim).
+            kotlin.srcDir(syncDesktopZmanim)
             // Desktop icons (the search telescope).
             kotlin.srcDir(desktopRoot.resolve("icons/src/commonMain/kotlin"))
             dependencies {

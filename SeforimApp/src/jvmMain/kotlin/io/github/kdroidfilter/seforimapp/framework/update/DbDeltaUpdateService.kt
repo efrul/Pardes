@@ -3,15 +3,8 @@ package io.github.kdroidfilter.seforimapp.framework.update
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.DeltaUpdaterClient
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.LuceneUpdater
 import io.github.kdroidfilter.seforimlibrary.deltaupdater.UpdatePath
-import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
 import org.apache.lucene.document.IntPoint
-import org.apache.lucene.document.NumericDocValuesField
-import org.apache.lucene.document.StoredField
-import org.apache.lucene.document.TextField
 import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.DocValuesType
 import org.apache.lucene.index.FieldInfos
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
@@ -95,17 +88,9 @@ open class DbDeltaUpdateService(
 
     companion object {
         // Match the field names used by the generator's LuceneTextIndexWriter
-        // so the index produced here stays compatible with the live search.
-        private const val FIELD_TYPE = "type"
-        private const val TYPE_LINE = "line"
-        private const val FIELD_BOOK_ID = "book_id"
-        private const val FIELD_CATEGORY_ID = "category_id"
+        // so the index produced here stays compatible with the live search
+        // (the lines themselves: LuceneLineDocument).
         private const val FIELD_LINE_ID = "line_id"
-        private const val FIELD_LINE_INDEX = "line_index"
-        private const val FIELD_TEXT = "text"
-        private const val FIELD_BOOK_TITLE = "book_title"
-        private const val FIELD_ORDER_INDEX = "order_index"
-        private const val FIELD_IS_BASE_BOOK = "is_base_book"
 
         /**
          * Default Lucene sinks: if a [luceneIndexDir] is supplied, open a
@@ -131,14 +116,12 @@ open class DbDeltaUpdateService(
                     )
                 } else {
                     val dir = FSDirectory.open(luceneIndexDir)
-                    val writer = IndexWriter(dir, IndexWriterConfig(StandardAnalyzer()))
-                    // Indexes built with book_id doc values (for the facets) need them on every new line: Lucene
-                    // rejects a document whose field schema differs from the index's
-                    val bookIdDocValues =
-                        DirectoryReader.open(writer).use { reader ->
-                            FieldInfos.getMergedFieldInfos(reader).fieldInfo(FIELD_BOOK_ID)?.docValuesType == DocValuesType.NUMERIC
-                        }
+                    val writer = IndexWriter(dir, IndexWriterConfig(LuceneLineDocument.analyzer()))
+                    // The index's fields: a new line gets the structures the index has for each one (book_id's doc
+                    // values for the facets...), as Lucene rejects a document whose field schema differs from the index's
+                    val fields = DirectoryReader.open(writer).use { reader -> FieldInfos.getMergedFieldInfos(reader) }
                     val bookMetaCache = HashMap<Long, BookMeta>()
+                    val ancestorsCache = HashMap<Long, List<Long>>()
                     val dbConn =
                         seforimDb?.let {
                             java.sql.DriverManager.getConnection("jdbc:sqlite:${it.toAbsolutePath()}")
@@ -178,23 +161,16 @@ open class DbDeltaUpdateService(
                             LuceneUpdater.UpsertSink { line ->
                                 val meta = lookupBookMeta(line.bookId)
                                 writer.deleteDocuments(IntPoint.newExactQuery(FIELD_LINE_ID, line.id.toInt()))
-                                val doc =
-                                    Document().apply {
-                                        add(Field(FIELD_TYPE, TYPE_LINE, org.apache.lucene.document.StringField.TYPE_STORED))
-                                        add(IntPoint(FIELD_BOOK_ID, line.bookId.toInt()))
-                                        add(StoredField(FIELD_BOOK_ID, line.bookId))
-                                        if (bookIdDocValues) add(NumericDocValuesField(FIELD_BOOK_ID, line.bookId))
-                                        add(IntPoint(FIELD_CATEGORY_ID, meta.categoryId.toInt()))
-                                        add(StoredField(FIELD_CATEGORY_ID, meta.categoryId))
-                                        add(IntPoint(FIELD_LINE_ID, line.id.toInt()))
-                                        add(StoredField(FIELD_LINE_ID, line.id))
-                                        add(StoredField(FIELD_LINE_INDEX, line.lineIndex.toLong()))
-                                        add(TextField(FIELD_TEXT, line.content, Field.Store.NO))
-                                        add(StoredField(FIELD_BOOK_TITLE, meta.title))
-                                        add(StoredField(FIELD_ORDER_INDEX, meta.orderIndex))
-                                        add(StoredField(FIELD_IS_BASE_BOOK, meta.isBaseBook.toLong()))
-                                    }
-                                writer.addDocument(doc)
+                                val ancestors = ancestorsCache.getOrPut(meta.categoryId) { ancestorIds(dbConn, meta.categoryId) }
+                                val book =
+                                    LuceneLineDocument.Book(
+                                        title = meta.title,
+                                        categoryId = meta.categoryId,
+                                        ancestorCategoryIds = ancestors,
+                                        orderIndex = meta.orderIndex,
+                                        isBaseBook = meta.isBaseBook == 1,
+                                    )
+                                writer.addDocument(LuceneLineDocument.create(fields, line, book))
                             },
                         // Commit + close in lock-step: this is what guarantees
                         // the delta is actually persisted to the index. Skipping
@@ -211,6 +187,20 @@ open class DbDeltaUpdateService(
                     )
                 }
             }
+
+        /** A category and the ones above it (category_closure), as the release's lines list them (ancestor_category_ids). */
+        private fun ancestorIds(
+            dbConn: java.sql.Connection?,
+            categoryId: Long,
+        ): List<Long> {
+            if (dbConn == null) return emptyList()
+            return runCatching {
+                dbConn.prepareStatement("SELECT ancestorId FROM category_closure WHERE descendantId = ?").use { ps ->
+                    ps.setLong(1, categoryId)
+                    ps.executeQuery().use { rs -> buildList { while (rs.next()) add(rs.getLong(1)) } }
+                }
+            }.getOrDefault(emptyList())
+        }
 
         private data class BookMeta(
             val title: String,

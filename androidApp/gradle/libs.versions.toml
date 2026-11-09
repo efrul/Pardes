@@ -11,7 +11,6 @@ compose-bom = "2026.03.00"
 activity-compose = "1.13.0"
 lifecycle = "2.10.0"
 core-ktx = "1.17.0"
-paging = "3.3.6"
 zmanim = "2.5.0"
 # Same as desktop 0.6.10 (its zmanim engine); resolves the androidJvm artifact kosherkotlin-android.
 kosherkotlin = "3.0.5"
@@ -48,8 +47,6 @@ activity-compose = { module = "androidx.activity:activity-compose", version.ref 
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }
 zmanim = { module = "com.kosherjava:zmanim", version.ref = "zmanim" }
 kosherkotlin = { module = "io.github.kdroidfilter:kosherkotlin", version.ref = "kosherkotlin" }
 hebrew-numerals = { module = "io.github.kdroidfilter:hebrewnumerals", version.ref = "hebrew-numerals" }

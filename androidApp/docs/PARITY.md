@@ -21,7 +21,7 @@ From `git diff v0.6.1 v0.6.4` upstream, only these four 0.6.2 fixes were ported,
 
 | Upstream commit | Fix | Android files |
 |---|---|---|
-| `2126c238` | Typing `בבא קמא` opens בבא קמא (not בבא בתרא דף קמא), `בבא קמא יז` finds the daf, no crash on a word made only of quotes, book suggestions ranked by title tier | `search/reference/ReferenceParser.kt`, `ReferenceResolver.kt`, `RepositoryReferenceSource.kt`, `search/LuceneLookupSearchService.kt` |
+| `2126c238` | Typing `בבא קמא` opens בבא קמא (not בבא בתרא דף קמא), `בבא קמא יז` finds the daf, no crash on a word made only of quotes, book suggestions ranked by title tier | desktop's `ReferenceParser.kt` and `ReferenceResolver.kt` (built unchanged since 2026-11-09, `syncDesktopSearch`), `search/reference/RepositoryReferenceSource.kt`, `search/LuceneLookupSearchService.kt` |
 | `90552dbc` | No author or book suggested by reading one typed word twice (`בבא ב` no longer suggests רב בבאר שבע or תוספתא בבא קמא) | `search/LuceneLookupSearchService.kt`, `search/AuthorNames.kt`, `ui/search/SearchBarViewModel.kt` |
 | `51463d23` | A title being typed past its first word (`בבא ק`) puts the book before the text search, so Enter opens it | `ui/search/UnifiedSearchBar.kt` (`catBookRows`) |
 | `411280b9` | The תפילת היום widget turns to the next Hebrew day at צאת הכוכבים | `ui/home/widgets/LuachWidgets.kt` (`TefilaWidget`) |
@@ -42,7 +42,7 @@ From `git diff v0.6.4 v0.6.5` upstream, these were ported on 2026-10-16, because
 | Upstream commit | Change | Android files |
 |---|---|---|
 | `1723de06`, `9e3d19a8` | A picked author (desktop Tab, here the row's "חיפוש בתוך") is a search scope: the row "חיפוש בספרי X: …" searches the text in all their books, base books or not, with one action (no base/all choice; Ctrl+Enter is Enter). The scope stays through the category tabs and "more from this book" and when they are left. A restored tab gets it back, and its bar searches there before the author's chip has loaded. The history keeps it (the author's id in the key, `search:a<id>:…`, titled "query — author"). The bar lists the same books the search runs in (`getAuthorDetails`). | `data/SearchScope.kt` (`Author`), `data/HistoryStore.kt`, `ui/AppState.kt` (history title), `ui/search/SearchBarViewModel.kt`, `ui/search/UnifiedSearchBar.kt`, `ui/search/SearchViewModel.kt`, `ui/search/SearchScreen.kt` (status line) |
-| `f443277d`, `5e016dfa` | Citation links in the accent color, without an underline: it crossed the nikud below the letters. Desktop underlines a link under the pointer only; a finger has no hover. | `htmlparser/.../HtmlCompose.kt` (vendored) |
+| `f443277d`, `5e016dfa` | Citation links in the accent color, without an underline: it crossed the nikud below the letters. Desktop underlines a link under the pointer only; a finger has no hover. | `htmlparser/.../HtmlCompose.kt` (vendored; desktop's own `../htmlparser` since 2026-11-09) |
 | `46a1ecb8` | Links and footnote markers in the search's passage preview in the accent color, not the parser's blue | `ui/search/PassagePreview.kt` |
 | `e3051846` | Two fingers on the passage preview zoom the text, as in the books (one helper for both) | `ui/components/PinchZoom.kt`, `ui/search/SearchScreen.kt`, `ui/reader/BookTextView.kt` |
 | `1d50541d` (its pin mark) | A pinned tab of the tablet strip shows a pin beside its icon or acronym, 16 dp wider (the phone's tab list had one already) | `ui/shell/TopBar.kt` |
@@ -138,7 +138,7 @@ Tested on the API 33 emulator on 2026-10-28, on a test library of Bereshit, Bera
 
 ### 0.6.12
 
-The move to 0.6.12 (2026-10-29), from `git diff v0.6.11 v0.6.12` upstream. SeforimLibrary is unchanged (`4f07145`), so the library, the deltas, the Lucene index and the user `.sq` files stay as they are. htmlparser is vendored again, at 0.6.12 (`app/src/androidMain/htmlparser`):
+The move to 0.6.12 (2026-10-29), from `git diff v0.6.11 v0.6.12` upstream. SeforimLibrary is unchanged (`4f07145`), so the library, the deltas, the Lucene index and the user `.sq` files stay as they are. htmlparser is vendored again, at 0.6.12 (`app/src/androidMain/htmlparser`; since 2026-11-09 the build compiles desktop's `../htmlparser` instead, the same files):
 
 | Upstream commit | Release | Change | Here |
 |---|---|---|---|

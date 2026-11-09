@@ -20,8 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,7 +62,6 @@ import io.github.kdroidfilter.seforimapp.android.ui.onboarding.InstallOption
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.InstallerWindow
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.LocalOnboardingWide
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.MetricRow
-import io.github.kdroidfilter.seforimapp.android.ui.onboarding.OnboardingIcons
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.StepIllustration
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.StepScaffold
 import io.github.kdroidfilter.seforimapp.android.ui.onboarding.TrackInstallerVisibility
@@ -77,6 +76,9 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.icons.CheckCircle
 import io.github.kdroidfilter.seforimapp.icons.Deployed_code_update
 import io.github.kdroidfilter.seforimapp.icons.Download_for_offline
+import io.github.kdroidfilter.seforimapp.icons.FileArrowDown
+import io.github.kdroidfilter.seforimapp.icons.Speed
+import io.github.kdroidfilter.seforimapp.icons.Timer
 import io.github.kdroidfilter.seforimapp.icons.Unarchive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -413,9 +415,9 @@ private fun OnlineStep(state: InstallState, onBack: () -> Unit, onRetry: () -> U
                 val total = state.totalBytes
                 if (total != null) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MetricRow(OnboardingIcons.FileArrowDown, DesktopStrings.onboardingDownloadProgress.format(formatBytes(state.downloadedBytes), formatBytes(total)))
-                        MetricRow(OnboardingIcons.Speed, formatBytesPerSec(state.speedBytesPerSec))
-                        etaSeconds(state.downloadedBytes, total, state.speedBytesPerSec)?.let { MetricRow(OnboardingIcons.Timer, formatEta(it)) }
+                        MetricRow(FileArrowDown, DesktopStrings.onboardingDownloadProgress.format(formatBytes(state.downloadedBytes), formatBytes(total)))
+                        MetricRow(Speed, formatBytesPerSec(state.speedBytesPerSec))
+                        etaSeconds(state.downloadedBytes, total, state.speedBytesPerSec)?.let { MetricRow(Timer, formatEta(it)) }
                     }
                 }
                 if (state.reconnecting) BodyText(AndroidStrings.reconnecting)
