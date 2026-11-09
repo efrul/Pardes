@@ -251,7 +251,7 @@ class HybridSearchEngine internal constructor(
             onLexical?.invoke(lexicalTotal, true)
 
             // The candidates' lines, read once: for the fusion's weights and for the precedence of the earlier level
-            val lines = candidateLines(lexHits.map { it.lineId } + denseHits.map { it.lineId })
+            val lines = library?.candidateLines(lexHits.map { it.lineId } + denseHits.map { it.lineId })
             val rrf =
                 fusedScores(
                     lexical = lexHits.map { it.lineId },
@@ -284,19 +284,6 @@ class HybridSearchEngine internal constructor(
                     FusedEntry(lineId, rrf.getValue(lineId).toFloat(), lexicalHit, lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L)
                 }
         }
-
-    /**
-     * The library's lines of [ids] (their book and text), for the fusion's weights ([fusedScores]) and the precedence;
-     * null when the library can't be read: the fusion is then RRF alone.
-     */
-    private suspend fun candidateLines(ids: List<Long>): Map<Long, LineText>? {
-        val library = library ?: return null
-        return withContext(Dispatchers.IO) {
-            runSuspendCatching { library.lines(ids) }
-                .onFailure { warnln(it) { "[HybridSearchEngine] The library's lines unavailable; RRF alone." } }
-                .getOrNull()
-        }
-    }
 
     /**
      * [page] with the earlier level first among its lines that hold [query] as a sentence ([LevelPrecedence]), as the
@@ -564,10 +551,8 @@ class HybridSearchEngine internal constructor(
             val window = maxOf(2 * n, n + 4)
             var best = 0
             for (i in line.indices) {
-                if (line[i] !in want) continue
-                val got = line.subList(i, minOf(i + window, line.size)).filterTo(HashSet()) { it in want }.size
-                if (got > best) {
-                    best = got
+                if (line[i] in want) {
+                    best = maxOf(best, line.subList(i, minOf(i + window, line.size)).filterTo(HashSet()) { it in want }.size)
                     if (best == n) break
                 }
             }
@@ -692,3 +677,14 @@ class HybridSearchEngine internal constructor(
         }
     }
 }
+
+/**
+ * The library's lines of [ids] (their book and text), for the fusion's weights ([HybridSearchEngine.fusedScores]) and the
+ * precedence; null when the library can't be read: the fusion is then RRF alone.
+ */
+private suspend fun LibraryLines.candidateLines(ids: List<Long>): Map<Long, LineText>? =
+    withContext(Dispatchers.IO) {
+        runSuspendCatching { lines(ids) }
+            .onFailure { warnln(it) { "[HybridSearchEngine] The library's lines unavailable; RRF alone." } }
+            .getOrNull()
+    }
