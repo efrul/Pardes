@@ -67,6 +67,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveComposeSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveRange
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.lookupWord
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.text.HebrewTextUtils
@@ -105,6 +106,7 @@ import seforimapp.seforimapp.generated.resources.context_menu_copy_with_source
 import seforimapp.seforimapp.generated.resources.context_menu_copy_without_nikud
 import seforimapp.seforimapp.generated.resources.context_menu_find_in_page
 import seforimapp.seforimapp.generated.resources.context_menu_highlight
+import seforimapp.seforimapp.generated.resources.context_menu_open_in_dictionary
 import seforimapp.seforimapp.generated.resources.context_menu_report_error
 import seforimapp.seforimapp.generated.resources.context_menu_search_selected_text
 import java.awt.event.InputEvent
@@ -463,6 +465,7 @@ fun BookTextMenus(
     val copyLettersOnlyLabel = stringResource(Res.string.context_menu_copy_letters_only)
     val copyWithSourceLabel = stringResource(Res.string.context_menu_copy_with_source)
     val copyLinkLabel = stringResource(Res.string.context_menu_copy_link)
+    val openInDictionaryLabel = stringResource(Res.string.context_menu_open_in_dictionary)
     val addNoteLabel = stringResource(Res.string.context_menu_add_note)
     val reportErrorLabel = stringResource(Res.string.context_menu_report_error)
     val baseTextContextMenu = LocalTextContextMenu.current
@@ -503,6 +506,7 @@ fun BookTextMenus(
                 ) {
                     val appSettings = LocalAppGraph.current.appSettings
                     val repository = LocalAppGraph.current.repository
+                    val dictionaryLookup = LocalAppGraph.current.dictionaryLookup
                     val copyToClipboard = rememberCopyToClipboard()
                     // Pardes: a selection its content located in the library itself (the daf's), for the highlights,
                     // the note and the link, in place of a search of the selected text in the book's lines
@@ -661,6 +665,17 @@ fun BookTextMenus(
                                             label = searchSelectedLabel,
                                         ) {
                                             onEvent(BookContentEvent.SearchInDatabase(query))
+                                        },
+                                    )
+                                }
+                                // Its word, or its few, in the dictionary's window
+                                lookupWord(copiedText)?.let { word ->
+                                    add(
+                                        ContextMenuItemOption(
+                                            icon = AllIconsKeys.Toolwindows.Documentation,
+                                            label = openInDictionaryLabel,
+                                        ) {
+                                            dictionaryLookup.open(word)
                                         },
                                     )
                                 }

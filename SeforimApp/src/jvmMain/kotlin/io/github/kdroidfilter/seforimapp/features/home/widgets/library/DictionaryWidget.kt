@@ -430,6 +430,7 @@ internal object DictionaryWidget : HomeWidget {
         }
         val accent = rememberAccentColor(JewelTheme.isDark)
         val allLabel = stringResource(Res.string.home_dictionary_all)
+        LookupAskedFor(pickWord)
 
         PanelCard(modifier) {
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
