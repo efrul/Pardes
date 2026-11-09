@@ -31,7 +31,7 @@ for key, name, _ in data["methods"]:
 
 payload = json.dumps({**data, "summary": summary}, ensure_ascii=False, separators=(",", ":"))
 TITLE = sys.argv[3] if len(sys.argv) > 3 else "השוואת שיטות מיון על חיפושי המשוב"
-FEEDBACK = len(sys.argv) <= 3
+FEEDBACK = data.get("feedback", len(sys.argv) <= 3)
 SUMMARY_TITLE = "סיכום על החיפושים שיש להם ציונים במשוב (מוטה לטובת האפליקציה)" if FEEDBACK else "סיכום: המקור (ציון 3) לפי שיטה"
 SUMMARY_NOTE = ("הציונים ניתנו על שורות שהאפליקציה הציגה, ולכן שיטה שמעלה שורות אחרות נראית כאן גרועה מכפי שהיא: שורה שלא נשפטה אינה רעה, רק לא ידועה."
                 if FEEDBACK else "כאן לכל שאלה יש מקור אחד ידוע (ושורות עם אותו נוסח בדיוק), והוא מסומן בירוק עם מסגרת. \"ראשונה טובה\" היא המקור במקום הראשון.")
@@ -102,8 +102,9 @@ details{margin:6px 0}summary{cursor:pointer;color:var(--acc)}
 <script>
 const DATA = __DATA__;
 const M = DATA.methods, S = DATA.searches, LINES = DATA.lines, BOOKS = DATA.books;
-const DEFAULT = ["app","p12wl","p12w","window","dbsf","combo","dense","lex"];
-let shown = new Set(JSON.parse(localStorage.getItem("fusion.methods")||"null") || DEFAULT);
+const DEFAULT = DATA.defaultMethods || ["app","p12wl","p12w","window","dbsf","combo","dense","lex"];
+const STORE = DATA.storeKey || "fusion.methods";
+let shown = new Set(JSON.parse(localStorage.getItem(STORE)||"null") || DEFAULT);
 let current = null;
 const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const strip = w => w.replace(/[֑-ׇ]/g,"").replace(/[^א-ת\w]/g,"").replace(/[ךםןףץ]/g,c=>"כמנפצ"["ךםןףץ".indexOf(c)]);
@@ -126,7 +127,7 @@ function renderMethods(){
   document.getElementById("all").onclick = e => { e.preventDefault(); shown = new Set(M.map(m=>m[0])); save(); renderMethods(); renderView(); };
   document.getElementById("def").onclick = e => { e.preventDefault(); shown = new Set(DEFAULT); save(); renderMethods(); renderView(); };
 }
-function save(){ localStorage.setItem("fusion.methods", JSON.stringify([...shown])); pickLabel(); }
+function save(){ localStorage.setItem(STORE, JSON.stringify([...shown])); pickLabel(); }
 function pickLabel(){ document.getElementById("pickSum").textContent = `בחירת שיטות (${shown.size} מתוך ${M.length} מוצגות)`; }
 function fitHeader(){ document.documentElement.style.setProperty("--hh", document.querySelector("header").offsetHeight + "px"); }
 function renderList(){

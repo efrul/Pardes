@@ -1,0 +1,413 @@
+89 searches with grades from the feedback; grades: feedback 618, Claude 310
+pardes      app      graded in 10  67% | good first 51 | good in 10 255 | 0 in 10 293 | nDCG@10 0.530 | MRR@10 0.654 | vs the app +0 -0 p=1.000
+pardes      p12wl    graded in 10  62% | good first 59 | good in 10 271 | 0 in 10 239 | nDCG@10 0.570 | MRR@10 0.710 | vs the app +42 -14 p=0.000
+aramaic     app      graded in 10  67% | good first 52 | good in 10 255 | 0 in 10 294 | nDCG@10 0.532 | MRR@10 0.660 | vs the app +4 -2 p=0.688
+aramaic     p12wl    graded in 10  62% | good first 59 | good in 10 272 | 0 in 10 239 | nDCG@10 0.572 | MRR@10 0.711 | vs the app +43 -14 p=0.000
+synonyms    app      graded in 10  67% | good first 52 | good in 10 249 | 0 in 10 299 | nDCG@10 0.518 | MRR@10 0.649 | vs the app +4 -8 p=0.388
+synonyms    p12wl    graded in 10  62% | good first 59 | good in 10 267 | 0 in 10 244 | nDCG@10 0.558 | MRR@10 0.700 | vs the app +40 -19 p=0.009
+
+404 lines in the first 10 with no grade:
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	697161	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	1551591	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	5577262	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	5696012	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	5774323	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  אחר שמע שירים של גוים	780853	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  אחר שמע שירים של גוים	1997530	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  אחר שמע שירים של גוים	4450769	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  אחר שמע שירים של גוים	5984797	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  אחר שמע שירים של גוים	7312075	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  איוב לא חטא	3417463	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  איוב לא חטא	3417465	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  איוב לא חטא	3469656	aramaic/app, pardes/app, synonyms/app
+  איוב לא חטא	3587476	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  איוב לא חטא	6436167	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  איוב לא חטא	7780874	aramaic/app, pardes/app, synonyms/app
+  אם מותר להלחין מנגינות לתפילה מגוים	2022824	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  אם מותר להלחין מנגינות לתפילה מגוים	2160920	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  אם מותר להלחין מנגינות לתפילה מגוים	2951689	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  אם מותר להלחין מנגינות לתפילה מגוים	3015644	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  אם מותר להלחין מנגינות לתפילה מגוים	7183157	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בחנו את רבי על מסכת שהוא לא למד	5389134	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  בקדמין ברא	38	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בקדמין ברא	101	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בקדמין ברא	111	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בקדמין ברא	146	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בקדמין ברא	149	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בקדמין ברא	3089607	aramaic/app, pardes/app, synonyms/app
+  בקדמין ברא	3243629	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בקדמין ברא	3248958	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  בקדמין ברא	3359411	aramaic/app, pardes/app, synonyms/app
+  בקדמין ברא	7796245	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ג' שותפים באדם	38899	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ג' שותפים באדם	69375	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם	69740	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם	69755	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם	70117	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם	70572	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם	71612	aramaic/app, pardes/app, synonyms/app
+  ג' שותפים באדם	105981	aramaic/app, pardes/app, synonyms/app
+  ג' שותפים באדם	247338	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם	248469	aramaic/app, pardes/app, synonyms/app
+  ג' שותפים באדם	257740	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ג' שותפים באדם	257770	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ג' שותפים באדם	257881	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם	1529525	aramaic/app, pardes/app, synonyms/app
+  ג' שותפים באדם	1961776	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ג' שותפים באדם	4314780	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ג' שותפים באדם	6944999	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ג' שותפים באדם - מה נותן כל אחד	83090	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם - מה נותן כל אחד	230399	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ג' שותפים באדם - מה נותן כל אחד	273478	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	1943476	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  גבינות הגוים אסורים העמידה בדבר היתר	1943323	aramaic/app, pardes/app, synonyms/app
+  גבינות הגוים אסורים העמידה בדבר היתר	1943476	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות הגוים אסורים העמידה בדבר היתר	1943480	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  גבינות הגוים אסורים העמידה בדבר היתר	1943537	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1942934	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943476	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943480	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943493	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943537	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גבינות העכו"ם אסורות שהעמידם בדבר המותר	1943277	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1509731	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1512546	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1541610	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1546746	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1555697	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	4221509	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	43625	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	138157	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	147707	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	3787932	aramaic/app, pardes/app, synonyms/app
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	6165088	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	240810	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	2219044	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	2437797	aramaic/app, pardes/app, synonyms/app
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	3721324	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	5136188	aramaic/app, pardes/app, synonyms/app
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	6701617	aramaic/app, pardes/app, synonyms/app
+  הזמן הטוב לגשם	49778	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם	49877	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם	49908	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם	49916	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם	49922	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם	50000	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם	50511	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם שבת רביעי	49777	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם שבת רביעי	49876	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם שבת רביעי	50049	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הזמן הטוב לגשם שבת רביעי	50325	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496463	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496466	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496500	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496717	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496732	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496761	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496778	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים החטיאו את עם ישראל	319685	aramaic/app, pardes/app, synonyms/app
+  היוונים החטיאו את עם ישראל	4159899	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  היוונים החטיאו את עם ישראל	4160169	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  היוונים החטיאו את עם ישראל	5750481	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  היוונים החטיאו את עם ישראל	7614747	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	136505	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	235486	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	238688	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	238777	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	1496475	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	1496526	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	1496527	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	1496646	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	1496717	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	1496727	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  היוונים לא העמידו עוד פילוסופים	1496755	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	34747	aramaic/app, pardes/app, synonyms/app
+  הפקעת האיסור פנים חדשות באו לכאן	39427	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	54032	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	90258	aramaic/app, pardes/app, synonyms/app
+  הפקעת האיסור פנים חדשות באו לכאן	90260	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	90274	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	90336	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	105102	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	1167528	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  הפקעת האיסור פנים חדשות באו לכאן	3908873	aramaic/app, pardes/app, synonyms/app
+  הפקעת האיסור פנים חדשות באו לכאן	3908877	aramaic/app, pardes/app, synonyms/app
+  הפקעת האיסור פנים חדשות באו לכאן	5586874	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  והרינגש מותרין לנו	2625784	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  והרינגש מותרין לנו	6880967	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	1229347	aramaic/app, pardes/app, synonyms/app
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	1988620	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2300510	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2539221	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2917797	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	5659036	aramaic/app, pardes/app, synonyms/app
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	6229046	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	1316470	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	2594899	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	5700855	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	6221400	aramaic/app, pardes/app, synonyms/app
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	6947733	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	7258918	aramaic/app, pardes/app, synonyms/app
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	7581244	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	240808	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	2538717	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	6346506	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל בינתא	787800	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חמור שאכל בינתא	1323408	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל בינתא	1443851	aramaic/app, pardes/app, synonyms/app
+  חמור שאכל בינתא	5342560	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל בינתא	5368820	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל בינתא	5397845	aramaic/app, pardes/app, synonyms/app
+  חמור שאכל בינתא	5579535	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל בינתא	6186174	aramaic/app, pardes/app, synonyms/app
+  חמור שאכל בינתא	7385864	aramaic/app, pardes/app, synonyms/app
+  חמור שאכל שעורים	1273430	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל שעורים	5342560	aramaic/app, pardes/app, synonyms/app
+  חמור שאכל שעורים	6186209	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל שעורים	6186215	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל שעורים	6186227	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חמור שאכל שעורים	6186317	aramaic/app, pardes/app, synonyms/app
+  חמור שאכל שעורים	7642445	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חרדל מזיק לדבורים	1075220	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חרדל מזיק לדבורים	1086194	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חרדל מזיק לדבורים	1263954	aramaic/app, pardes/app, synonyms/app
+  חרדל מזיק לדבורים	2648190	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חרדל מזיק לדבורים	6131888	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חרדל מזיק לדבורים	6910165	aramaic/app, pardes/app, synonyms/app
+  חרדל מזיק לדבורים	7316368	aramaic/app, pardes/app, synonyms/app
+  חרדל מזיק לדבורים	7423170	aramaic/app, pardes/app, synonyms/app
+  חתול שאכל תמרים	1059384	aramaic/app, pardes/app, synonyms/app
+  חתול שאכל תמרים	5490339	aramaic/app, pardes/app, synonyms/app
+  חתול שאכל תמרים	5582997	aramaic/app, pardes/app, synonyms/app
+  חתול שאכל תמרים	5885678	aramaic/app, pardes/app, synonyms/app
+  חתול שאכל תמרים	6183865	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חתול שאכל תמרים	6186193	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חתול שאכל תמרים	6194312	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חתול שאכל תמרים	6255857	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  חתול שאכל תמרים	6364509	aramaic/app, pardes/app, synonyms/app
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	2278680	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	4792301	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	5091952	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	7360330	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	956894	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	999667	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	1045785	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	1054868	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	3728667	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	5847621	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	5854040	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	5901262	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7414826	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7414861	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7475492	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7648018	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7659550	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7677713	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	1173118	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	3993979	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6578399	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6749654	aramaic/app, pardes/app, synonyms/app
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6749656	aramaic/app, pardes/app, synonyms/app
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6954314	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	965786	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5135252	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5624512	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5851668	aramaic/app, pardes/app, synonyms/app
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	7463307	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	7559171	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	136746	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	149647	aramaic/app, pardes/app, synonyms/app
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	158818	aramaic/app, pardes/app, synonyms/app
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	193870	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	208129	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	214543	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	252609	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	254016	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1613532	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1613767	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1677849	aramaic/app, pardes/app, synonyms/app
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	6571321	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	6572233	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	6573316	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לחם הפנים צריכין הגשה	100195	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לחם הפנים צריכין הגשה	972500	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לחם הפנים צריכין הגשה	1145595	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לחם הפנים צריכין הגשה	5169389	aramaic/app, pardes/app, synonyms/app
+  לחם הפנים צריכין הגשה	5496372	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לחם הפנים צריכין הגשה	5496561	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לחם הפנים צריכין הגשה	5649893	aramaic/app, pardes/app, synonyms/app
+  לחם הפנים צריכין הגשה	6470560	aramaic/app, pardes/app, synonyms/app
+  לחם הפנים צריכין הגשה	7564748	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לימוני דומים לפגעים	589811	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לימוני דומים לפגעים	655592	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לימוני דומים לפגעים	674231	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לימוני דומים לפגעים	1491601	aramaic/app, pardes/app, synonyms/app
+  לימוני דומים לפגעים	4423821	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לימוני דומים לפגעים	6274125	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לימוני דומים לפגעים	6708686	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לימוני דומים לפגעים	7644520	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  לימוני דמי לפגיעין	577956	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לימוני דמי לפגיעין	1374022	aramaic/app, pardes/app, synonyms/app
+  לימוני דמי לפגיעין	3017790	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לימוני דמי לפגיעין	3745655	aramaic/app, pardes/app, synonyms/app
+  לימוני דמי לפגיעין	5986419	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  לימוני דמי לפגיעין	5987584	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מה היה חטא היוונים בתקופת נס חנוכה	4160093	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	2770295	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	2933455	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3725585	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3725860	aramaic/app, pardes/app, synonyms/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3759672	aramaic/app, pardes/app, synonyms/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3760235	aramaic/app, pardes/app, synonyms/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3778078	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3882259	aramaic/app, pardes/app, synonyms/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3892682	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3904964	aramaic/app, pardes/app, synonyms/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3912704	aramaic/app, pardes/app, synonyms/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	7071239	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	7331654	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	913228	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	2166294	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	2242175	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	3767321	aramaic/app, pardes/app, synonyms/app
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6180867	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6180869	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6557895	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6793599	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	313102	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	316747	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	667282	aramaic/app, pardes/app, synonyms/app
+  מי שאין לו דעת רק מפסיד ולא מרוויח	920908	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	921445	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	921785	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1226381	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1242425	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1827505	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1904206	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	3767321	aramaic/app, pardes/app, synonyms/app
+  מי שאין לו דעת רק מפסיד ולא מרוויח	5852536	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6557895	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7416518	aramaic/app, pardes/app, synonyms/app
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7514072	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מי שלומד תורה בקול יזכןר את הלימוד ברוריה בעטה בתלמיד שלמד בשקט	1753524	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מי שלומד תורה בקול יזכןר את הלימוד ברוריה בעטה בתלמיד שלמד בשקט	6679733	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  מלוחי גוים אסורים	934641	aramaic/app, pardes/app, synonyms/app
+  מלוחי גוים אסורים	2691983	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מלוחי גוים אסורים	6229044	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  מלוחי גוים אסורים	6314177	aramaic/app, pardes/app, synonyms/app
+  מלוחי גוים אסורים	7342965	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  משקה הבא לתוך אוכל אוכל	1282212	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  משקה הבא לתוך אוכל אוכל	2019880	aramaic/app, pardes/app, synonyms/app
+  משקה הבא לתוך אוכל אוכל	2190379	aramaic/app, pardes/app, synonyms/app
+  משקה הבא לתוך אוכל אוכל	4891929	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  משקה הבא לתוך אוכל אוכל	6619194	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  עושה אדם דין לעצמו	129093	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  עושה אדם דין לעצמו	138327	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  עושה אדם דין לעצמו	251952	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  עושה אדם דין לעצמו	571634	aramaic/app, pardes/app, synonyms/app
+  עושה אדם דין לעצמו	999115	aramaic/app, pardes/app, synonyms/app
+  עושה אדם דין לעצמו	5531135	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  עושה אדם דין לעצמו	6629155	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  עושה אדם דין לעצמו	6756904	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  עושה אדם דין לעצמו	7465962	aramaic/app, pardes/app, synonyms/app
+  עני חמור	37829	aramaic/app, pardes/app, synonyms/app
+  עני חמור	37842	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  עני חמור	44374	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  עני חמור	80060	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  עני חמור	139405	aramaic/app, pardes/app, synonyms/app
+  עני חמור	210792	aramaic/app, pardes/app, synonyms/app
+  עני חמור	3107635	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  עני חמור	3119312	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  עני חמור	3336149	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  עני חמור	3502821	aramaic/app, pardes/app, synonyms/app
+  עני חמור	3504177	aramaic/app, pardes/app, synonyms/app
+  עני חמור	6503511	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  עני חמור	7767529	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  פקע איסור שנשתנה	909486	aramaic/app, pardes/app, synonyms/app
+  פקע איסור שנשתנה	4823412	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  פקע איסור שנשתנה	4922693	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  פקע איסור שנשתנה	5280202	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  פקע איסור שנשתנה	5547136	aramaic/app, pardes/app, synonyms/app
+  פקע איסור שנשתנה	5907258	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  צריך גם להרחיק וגם למרוח סיד	1736545	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  צריך גם להרחיק וגם למרוח סיד	2295889	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  צריך גם להרחיק וגם למרוח סיד	2594605	aramaic/app, pardes/app, synonyms/app
+  צריך גם להרחיק וגם למרוח סיד	5504858	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  צריך גם להרחיק וגם למרוח סיד	6131663	aramaic/app, pardes/app, synonyms/app
+  צריך גם להרחיק וגם למרוח סיד	7635706	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	4066939	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  רבי עקיבא אמר כלל גדול בתורה	70538	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  רבי עקיבא אמר כלל גדול בתורה	140319	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר כלל גדול בתורה	200883	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  רבי עקיבא אמר כלל גדול בתורה	4257889	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר כלל גדול בתורה	4336245	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	138350	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	138351	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	673256	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	674138	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	1849446	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	2966792	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	2966912	aramaic/app, pardes/app, synonyms/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	3471315	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	3565290	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	7085165	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם	51941	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם	648579	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם	1630568	aramaic/app, pardes/app, synonyms/app
+  שבת רביעי גשם	2352613	aramaic/app, pardes/app, synonyms/app
+  שבת רביעי גשם	4226149	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם	4413633	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם	6891835	aramaic/app, pardes/app, synonyms/app
+  שבת רביעי גשם זה ברכה של גשם בעיתו	837149	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	1841667	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	1841669	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	2708124	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	4296119	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	4445955	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	6939246	aramaic/app, pardes/app, synonyms/app
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	240808	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	2538717	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	6346506	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	6346807	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7004416	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7554311	aramaic/app, pardes/app, synonyms/app
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7788018	aramaic/app, pardes/app, synonyms/app
+  שירים לועזיים גרמו לצאת בשאלה	300933	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שירים לועזיים גרמו לצאת בשאלה	331304	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שירים לועזיים גרמו לצאת בשאלה	3888675	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שירים לועזיים גרמו לצאת בשאלה	5942951	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שירים לועזיים גרמו לצאת בשאלה	7387425	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שירים לועזיים גרמו לצאת בשאלה	7415797	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  שירים לועזיים גרמו לצאת בשאלה	7664657	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1379880	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1398604	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1788145	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	2701932	aramaic/app, pardes/app, synonyms/app
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	5703540	aramaic/app, pardes/app, synonyms/app
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	6225317	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	6227905	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1379880	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1398604	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1788145	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	2627782	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	2701932	aramaic/app, pardes/app, synonyms/app
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	5703540	aramaic/app, pardes/app, synonyms/app
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	6225317	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	6227905	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תפילה בשפה אחרת	698024	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תפילה בשפה אחרת	3904964	aramaic/app, pardes/app, synonyms/app
+  תפילה בשפה אחרת	3912704	aramaic/app, pardes/app, synonyms/app
+  תפילה בשפה אחרת	4978108	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תפילה בשפה אחרת	4978380	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תפילה בשפה אחרת	5919753	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תפילה בשפה שלא מבין	4978253	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תפילה בשפה שלא מבין	4978528	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תפילה בשפה שלא מבין	4978530	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תפילה בשפה שלא מבין	4978532	aramaic/app, pardes/app, synonyms/app
+  תפילה בשפה שלא מבין	7069718	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תרבות יוון מהי	1053019	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תרבות יוון מהי	1543211	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
+  תרבות יוון מהי	5579976	aramaic/p12wl, pardes/p12wl, synonyms/p12wl
+  תרבות יוון מהי	7004361	aramaic/app, pardes/app, synonyms/app
+  תרבות יוון מהי	7008087	aramaic/app, pardes/app, synonyms/app
+  תרבות יוון מהי	7028962	aramaic/app, aramaic/p12wl, pardes/app, pardes/p12wl, synonyms/app, synonyms/p12wl
