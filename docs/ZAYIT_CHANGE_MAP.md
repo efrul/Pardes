@@ -34,7 +34,7 @@ every file Pardes adds.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (708 files: androidApp/, semantic-model/, branding/, docs/, workflows,
+- **Section 3, Pardes's own trees** (709 files: androidApp/, semantic-model/, branding/, docs/, workflows,
   skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
