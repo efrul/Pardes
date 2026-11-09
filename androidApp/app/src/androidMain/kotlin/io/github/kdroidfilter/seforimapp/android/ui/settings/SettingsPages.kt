@@ -47,7 +47,6 @@ import io.github.kdroidfilter.seforimapp.android.R
 import io.github.kdroidfilter.seforimapp.android.ZayitApplication
 import io.github.kdroidfilter.seforimapp.android.data.AppPrefs
 import io.github.kdroidfilter.seforimapp.android.data.Community
-import io.github.kdroidfilter.seforimapp.android.data.worldPlaces
 import io.github.kdroidfilter.seforimapp.android.packageInfoCompat
 import io.github.kdroidfilter.seforimapp.android.ui.components.HSpacer
 import io.github.kdroidfilter.seforimapp.android.ui.components.OutlineButton
@@ -56,6 +55,7 @@ import io.github.kdroidfilter.seforimapp.android.ui.theme.Zayit
 import io.github.kdroidfilter.seforimapp.android.ui.theme.ZayitFont
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdateStrings
 import io.github.kdroidfilter.seforimapp.android.update.AppUpdater
+import io.github.kdroidfilter.seforimapp.features.zmanim.data.worldPlaces
 
 /*
  * The pages of desktop 0.6.10's settings window (features/settings/ui): GeneralSettingsScreen, DisplaySettingsScreen,

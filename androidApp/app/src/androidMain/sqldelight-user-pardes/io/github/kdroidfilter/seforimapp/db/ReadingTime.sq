@@ -1,5 +1,6 @@
--- Pardes's own (not in desktop's schema): the seconds each book was read, per day (an epoch day), for the Home's
--- learning split. Written by data/ReadingTime.kt in two statements, as Android 8-10's SQLite has no UPSERT.
+-- Pardes's own (not in Zayit's schema; Pardes for desktop has the same table): the seconds each book was read, per
+-- day (an epoch day), for the Home's learning split. Written by data/ReadingTime.kt in two statements, as Android
+-- 8-10's SQLite has no UPSERT.
 CREATE TABLE IF NOT EXISTS reading_time (
     bookId INTEGER NOT NULL,
     day INTEGER NOT NULL,

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="כמה חיפשו משתמשי תוכנות הספרייה התורנית ואיך דירגו את התוצאות, כדי לשפר את החיפוש: המספרים, בלי המילים שחיפשו ובלי שום פרט מזהה.">
+<meta name="color-scheme" content="light dark">
+<title>מאגר החיפושים הפתוח</title>
+<link rel="preload" href="/site/display.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site/style.css">
+<script src="/site/app.js" defer></script>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <div class="titles">
+      <h1>מאגר החיפושים הפתוח</h1>
+      <p class="lede">כמה חיפשו משתמשי פרדס, זית ואוצריא, ואיך דירגו את התוצאות, כדי לשפר את החיפוש בספרייה התורנית. כאן
+        מוצגים רק המספרים, בלי המילים שחיפשו ובלי שום פרט מזהה. אפשר גם להעלות חבילות ששמרתם לקובץ.</p>
+    </div>
+    <div class="actions">
+      <div class="buttons">
+        <button id="refresh" type="button">רענון</button>
+        <button id="download" type="button">הורדת הכול (JSON)</button>
+        <button id="to-upload" type="button" class="cta">העלאת חבילות</button>
+      </div>
+      <div class="admin-line">
+        <span id="admin-badge" class="admin-badge" hidden>מצב מנהל: החיפושים עצמם מוצגים</span>
+        <button id="sign-in" type="button" class="linkish">כניסת מנהל</button>
+      </div>
+      <span id="status" class="status" aria-live="polite"></span>
+    </div>
+  </div>
+</header>
+<nav class="tabs" aria-label="מה להציג">
+  <div class="tabs-inner" role="tablist">
+    <button type="button" role="tab" id="tab-overview" data-view="overview" aria-controls="view">סיכום</button>
+    <button type="button" role="tab" id="tab-searches" data-view="searches" aria-controls="view">חיפושים <span class="count-badge" data-count="searches"></span></button>
+    <button type="button" role="tab" id="tab-grades" data-view="grades" aria-controls="view">דירוגים <span class="count-badge" data-count="grades"></span></button>
+    <button type="button" role="tab" id="tab-daf" data-view="daf" aria-controls="view">צורת הדף <span class="count-badge" data-count="daf"></span></button>
+    <button type="button" role="tab" id="tab-packages" data-view="packages" aria-controls="view">חבילות <span class="count-badge" data-count="packages"></span></button>
+    <button type="button" role="tab" id="tab-upload" data-view="upload" aria-controls="view">העלאה</button>
+  </div>
+</nav>
+<main>
+  <div id="view" role="tabpanel" tabindex="-1"></div>
+</main>
+<footer class="foot">
+  <p>המספרים כאן פתוחים לכולם. המילים שחיפשו והתוצאות שדורגו מוצגות רק למתחזק, ושום פרט מזהה לא מוצג, גם לא המזהה האקראי של
+    השולח. <a href="https://github.com/efrul/Pardes/tree/main/feedback-service" rel="noopener noreferrer">קוד המקור</a></p>
+</footer>
+<div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+<dialog id="login" class="login" aria-labelledby="login-title">
+  <form id="login-form" autocomplete="on">
+    <h2 id="login-title">כניסת מנהל</h2>
+    <p>עם קוד המנהל של השירות (הסוד <code>FEEDBACK_ADMIN_TOKEN</code>) מוצגים גם החיפושים עצמם והתוצאות שדורגו.</p>
+    <label for="token">קוד המנהל</label>
+    <input id="token" name="password" type="password" autocomplete="current-password" required spellcheck="false" dir="ltr">
+    <label class="check" for="remember"><input id="remember" type="checkbox"> לזכור במכשיר הזה</label>
+    <p id="login-error" class="login-error" role="alert" hidden></p>
+    <div class="login-buttons">
+      <button type="button" id="login-cancel">ביטול</button>
+      <button type="submit" class="primary">כניסה</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="raw" class="raw" aria-labelledby="raw-title">
+  <div class="raw-head">
+    <strong id="raw-title"></strong>
+    <button type="button" id="raw-close">סגירה</button>
+  </div>
+  <pre id="raw-body" dir="ltr"></pre>
+</dialog>
+</body>
+</html>

@@ -6,6 +6,7 @@ import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.HebrewDateFormatter
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishCalendar
 import io.github.kdroidfilter.kosherkotlin.util.GeoLocation
 import io.github.kdroidfilter.kosherkotlin.util.NOAACalculator
+import io.github.kdroidfilter.seforimapp.features.zmanim.data.worldPlaces
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinTimeZone
 import java.time.DayOfWeek

@@ -10,7 +10,7 @@ import io.github.kdroidfilter.seforimapp.android.data.InstallPurpose
 import io.github.kdroidfilter.seforimapp.android.data.InstallState
 import io.github.kdroidfilter.seforimapp.android.data.LibraryInstaller
 import io.github.kdroidfilter.seforimapp.android.data.LibraryLocation
-import io.github.kdroidfilter.seforimapp.android.data.worldPlaces
+import io.github.kdroidfilter.seforimapp.features.zmanim.data.worldPlaces
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
