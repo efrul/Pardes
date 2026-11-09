@@ -132,6 +132,21 @@ git log --no-merges --format='%h %ad %s' --date=short $B..HEAD -- <path>
 python3 .claude/skills/zayit-fidelity/scripts/check_change_map.py --stats
 ```
 
+### Into main only through the check
+
+main's ruleset (Settings › Rules › Rulesets, the user's decision of 2026-11-09) lets main point only at a commit on
+which the Change map workflow's job, **Change map**, has passed, with the branch up to date with main; it also refuses
+force pushes and deleting main. No one bypasses it, sessions included: they push as the user. So a change reaches
+main:
+- through a pull request, merged once its Change map check is green; when main has moved, merge main into the branch
+  first and let the check run again; or
+- by merging main into the branch, pushing the branch, waiting for its Change map check, then pushing that same
+  commit to main, a fast-forward.
+
+A push straight to main of a commit the check has not passed is refused (`Required status check "Change map" is
+expected`): push it to its branch first. A branch from before 2026-11-09 has neither the map nor the workflow: merge
+main into it, describe its files in the map, then merge it. Never rename the job: the ruleset requires it by name.
+
 ## Merging a Zayit release
 
 1. **Read the release first, with its licence.** Zayit 0.6.12 and earlier are AGPL v3 with the §7b attribution
@@ -191,3 +206,4 @@ The user decided on 2026-11-09 to keep it as it is: don't do it, and don't start
 - [ ] Every file touched has its entry, true to the file as it is now, and `check_change_map.py` passes.
 - [ ] ktlint and detekt pass on the module; the tests pass; a UI change was seen in the app.
 - [ ] The commit message is `type(scope): summary`, its body says what the user sees and why, signed off as efrul.
+- [ ] It reaches main only through the Change map check: a pull request, or a fast-forward to a checked commit.
