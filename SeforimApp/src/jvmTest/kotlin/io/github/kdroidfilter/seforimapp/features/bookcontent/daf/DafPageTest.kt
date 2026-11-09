@@ -48,10 +48,39 @@ class DafPageTest {
         return file.amudim.single { it.amud == "35b" }
     }
 
-    private fun layout(amud: DafAmud): AmudLayout {
+    private fun layout(
+        amud: DafAmud,
+        sizes: DafSizes? = null,
+    ): AmudLayout {
         val density = Density(1f)
         val measurer = TextMeasurer(createFontFamilyResolver(), density, LayoutDirection.Rtl)
-        return layoutAmud(amud, 1200f / (amud.block[2] - amud.block[0]), measurer, density, gemara, rashi)
+        return layoutAmud(amud, 1200f / (amud.block[2] - amud.block[0]), measurer, density, gemara, rashi, sizes)
+    }
+
+    @Test
+    fun aTractatesSizesGiveEveryAmudOneSizeOfLetters() {
+        val amud = amud()
+        // The amud as another scan would box it: every line's box a fifth lower, its words and their place the same
+        val lower =
+            amud.copy(
+                lines =
+                    amud.lines.map { line ->
+                        val (left, top, right, bottom) = line.b
+                        line.copy(b = listOf(left, top, right, top + (bottom - top) * 0.8f))
+                    },
+            )
+
+        fun sizesOf(laidOut: AmudLayout) =
+            laidOut.runs
+                .filter { !it.isBig }
+                .groupBy({ it.isGemara }, { it.size })
+                .mapValues { it.value.toSet() }
+        assertTrue(sizesOf(layout(amud)) != sizesOf(layout(lower)), "an amud's own boxes give its letters their size")
+
+        val sizes = DafSizes.of(amud.block[2] - amud.block[0])
+        val shared = sizesOf(layout(amud, sizes))
+        assertEquals(shared, sizesOf(layout(lower, sizes)), "the tractate's sizes give both amudim the same letters")
+        assertTrue(shared.values.all { it.size == 1 }, "one size for the Gemara, one for the commentaries")
     }
 
     @Test

@@ -371,7 +371,8 @@ private fun DafPages(
                 .sorted()
                 .let { it[it.size / 2] }
         }
-    val layouts = remember(file, gemara, rashi, density) { LayoutCache(KEPT_LAYOUTS) }
+    // And one size of letters: a scan's boxes are taller on one amud than on another, the print's letters are not
+    val layouts = remember(file, gemara, rashi, density) { LayoutCache(KEPT_LAYOUTS, DafSizes.of(blockWidth)) }
     val measurer = remember(resolver, density) { TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0) }
     val marked = if (isTocEntrySelection) emptySet() else selectedLineIds
     val passage = selectedPassage?.targetLineIds.orEmpty()
@@ -602,7 +603,7 @@ private fun AmudItem(
         if (value == null) {
             value =
                 withContext(Dispatchers.Default) {
-                    layoutAmud(shown, LAYOUT_SCALE, measurer, density, gemara, rashi, beforeEachLine = { ensureActive() })
+                    layoutAmud(shown, LAYOUT_SCALE, measurer, density, gemara, rashi, layouts.sizes) { ensureActive() }
                 }.also { layouts[shown] = it }
         }
     }
@@ -831,9 +832,10 @@ private fun dafTextManager(
         override fun selectWordAtPositionIfNotAlreadySelected(offset: Offset) = Unit
     }
 
-/** The last few amudim laid out, by amud. */
+/** The last few amudim laid out, by amud, each with the tractate's [sizes]. */
 private class LayoutCache(
     private val kept: Int,
+    val sizes: DafSizes,
 ) {
     private val map =
         object : LinkedHashMap<DafAmud, AmudLayout>(kept + 1, LOAD_FACTOR, true) {
