@@ -159,6 +159,20 @@ input[type="search"]:hover, select:hover { border-color: var(--axis); }
 .actions { display: grid; gap: 8px; justify-items: end; }
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .status { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.6em; }
+.admin-line { display: flex; gap: 12px; align-items: center; font-size: 13px; }
+.admin-badge { color: var(--accent); font-weight: 600; }
+.words-note { margin: 0; max-width: 60ch; color: var(--text-2); }
+
+/* Signing in */
+.login { width: min(440px, 92vw); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 24px; background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.login::backdrop { background: rgba(8, 12, 18, 0.4); }
+.login form { display: grid; gap: 10px; }
+.login h2 { margin: 0; font-family: var(--font-display); font-size: 22px; }
+.login p { margin: 0; color: var(--text-2); font-size: 14px; }
+.login input[type="password"] { background: var(--page); border: 1px solid var(--rule); border-radius: 10px; padding: 9px 12px; }
+.login .check { display: flex; gap: 8px; align-items: center; color: var(--text-2); font-size: 14px; }
+.login-error { color: var(--critical) !important; }
+.login-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
 
 /* ---- The tabs, kept on screen ---- */
 .tabs {
