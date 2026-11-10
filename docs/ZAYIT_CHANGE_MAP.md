@@ -2291,7 +2291,7 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinks.kt`
 
 - **Feature:** More links.
-- **Size:** 211 lines.
+- **Size:** 233 lines.
 - **What:** `LibraryLinks`, the library's links of the kinds no pane listed (`KINDS`: QUOTATION, MISHNAH_IN_TALMUD,
   RELATED, OTHER; 1,738,497 links in the library of 2026-10-12). `of(lineIds)` gives the lines they reach as the
   repository's `LineReference`s, in both directions (such a link is stored once, with no direction of its own), a line
@@ -2302,9 +2302,10 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
   that a line's commentaries, far more than these links, are never read.
   For the verse links, `linesIn(categories, lineIds)` gives the lines of the books right under some categories that each
   line is linked to, by such a link or a reference (the other line's book told from the link itself, before its line is
-  read), and `booksOf(categories)` the books right under them, read where it is called.
+  read), `booksOf(categories)` the books right under them, read where it is called, and `lineIdsBefore(line, count)` the
+  lines that come before a line in its book.
 - **Reached from:** `LineReferences.kt` (`loadLinePlaces`, `ReferenceKind.of`), `VerticalBars.kt` (the pane's button),
-  through `AppGraph.libraryLinks`; `VerseLinks` (`linesIn`, `booksOf`), given it by `main.kt`.
+  through `AppGraph.libraryLinks`; `VerseLinks` (`linesIn`, `booksOf`, `lineIdsBefore`), given it by `main.kt`.
 - **Follows:** `CommentaryLinks` (an `@Inject` class reading the library on a JDBC connection of its own, the
   repository having no query); Zayit's `getReferencesForLines` for what a place is (a line once, the asked lines out).
 - **Tests:** `LibraryLinksTest`.
@@ -2316,14 +2317,15 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinksTest.kt`
 
 - **Feature:** More links.
-- **Size:** 151 lines.
+- **Size:** 162 lines.
 - **What:** on a small library made for the test (the four tables the links are read by): a line's links are those
   that start from it and those that reach it, each with its book's title, category and order; the kinds the panes
   already list (a commentary, a reference, עין משפט, מסורת הש״ס) are left to them; a line reached by several links is
   listed once, and the selected lines not at all, lines linked to one another only having nothing to list; no lines, no
   links; and the other kinds group under `ReferenceKind.More`, a tab of its own after the references, a book listed
   once as a reference and once with its other links. For the verse links: the lines of some categories' books a line is
-  linked to, either way and once, a commentary's link being none, and the books right under some categories.
+  linked to, either way and once, a commentary's link being none, the books right under some categories, and the lines before a
+  line in its book.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `LineReferencesTest` beside it (Kotlin Test, camel-case names); `LevelPrecedenceTest` for a
   SQLite file made in the test.
@@ -2332,34 +2334,41 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
 ### The verses the Talmud quotes, as links to them
 
 A verse quoted in the Bavli or the Yerushalmi is a link to it, as in Zayit's official builds, without Zayit's private
-package: from the library's own links (a line of the Talmud linked to a verse) and the verse's words found in the line.
-On the library of 2026-10-12: 22,611 verses linked in 16,584 lines of the 76 tractates (16,943 in the Bavli, 5,668 in
-the Yerushalmi; Zayit's package has 24,817). As the user asked on 2026-11-09. Hooks:
+package: from the library's own links (a line of the Talmud linked to a verse) and the verse's words found in the line,
+and in the lines after it that quote the verse again. On the library of 2026-10-12: 24,218 verses linked in 17,805
+lines of the 76 tractates (22,611 in the lines the library links, 16,943 of them in the Bavli and 5,668 in the
+Yerushalmi, and 1,607 quoted again; Zayit's package has 24,817). As the user asked on 2026-11-09, with two pictures of
+Zayit on 2026-11-10 that set the rule: a quote alone is a link, not the Talmud's own words that a verse has too, and a
+verse quoted again two lines on is one. Hooks:
 `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt`, `main.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/VerseLinks.kt`
 
 - **Feature:** Verse links.
-- **Size:** 49 lines.
+- **Size:** 67 lines.
 - **What:** `VerseLinks`, Zayit's `QuoteLinksFeature` on the library's links. `covers(bookId)`: a tractate of the Bavli
   or the Yerushalmi (the books right under their sedarim, `CatalogPresets`' categories, read once). `decorate`: the
-  verses each line of the page is linked to (`LibraryLinks.linesIn`, the Torah's, the Neviim's and the Ketuvim's books),
-  and each such line with its quotes made links (`withVerseLinks`); a line that quotes nothing is the same object.
+  verses each line of the page, and each of the ten lines before it (`lineIdsBefore`), is linked to
+  (`LibraryLinks.linesIn`, the Torah's, the Neviim's and the Ketuvim's books), and each line with its quotes made links
+  (`withVerseLinks`): of its own verses, then of the verses of the ten lines before it, the nearest first (the library
+  links a verse to the line that quotes it first alone). A line that quotes nothing is the same object.
   `library` is given once the graph is made; until then no book is covered.
 - **Reached from:** `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt` (`installedQuoteLinks`), which Zayit's
   `ContentUseCase.buildLinesPager` reads; `main.kt` sets `library`.
 - **Follows:** Zayit's `TalmudQuoteLinks` in `addons/quotelinks/enabled` (an object implementing the feature, a line
   left as it is when nothing is added); Pardes's `InstalledSemanticSearch` for a community build that plugs its own.
 - **Tests:** `VerseQuotesTest` and `LibraryLinksTest` for its two halves; none of its own.
-- **Notes:** a page of fifty lines costs 1.0 ms to read its verses and 0.6 ms to find and link their quotes, measured
-  over the 2,081 pages of the Talmud on the full library. `linesByIds`, by which Zayit's package checks its verses, is
+- **Notes:** a page of fifty lines costs 1.0 ms to read its verses and 1.3 ms to find and link their quotes (0.6 ms
+  for its own verses, 0.7 ms for those of the lines before), measured over the 2,081 pages of the Talmud on the full
+  library. Looking two lines back links 1,152 verses more, five 1,486, ten 1,607, twenty 1,670, forty 1,707: ten was
+  kept. `linesByIds`, by which Zayit's package checks its verses, is
   not used: the verses are read with the links. `library` is a global set at start, as the feature itself is one
   (`installedQuoteLinks`): the reader reaches it without the graph.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/VerseQuotes.kt`
 
 - **Feature:** Verse links.
-- **Size:** 251 lines.
+- **Size:** 269 lines.
 - **What:** the finding and the writing of a verse's quote in a line, with no library.
   - `comparedLetters`: a word as it is compared, its letters without nikud and teamim and without ו and י, which a
     quote in the Talmud spells as it pleases (בשכבך for ובשכבך), the Name one word however written (ה׳, יי, אלקים).
@@ -2370,7 +2379,8 @@ the Yerushalmi; Zayit's package has 24,817). As the user asked on 2026-11-09. Ho
     letters or more; in a line that marks its quotes (״), the words before the quote opens or after it closes are left
     out, and two words alone are a quote only where one opens or closes.
   - `withVerseLinks`: each verse's quotes, the longer first (up to three passes, a word linked once), then a word quoted
-    by itself that one verse alone has (״לָכֶם״); written as `<a class="ref" href="seforim://line/<id>">`, the library's
+    by itself that one verse alone has (״לָכֶם״), then the quotes of the `near` verses, those of the lines before, told by
+    three words or more; written as `<a class="ref" href="seforim://line/<id>">`, the library's
     own citation, which the reader already draws and opens. A link crosses no tag and no quote mark.
 - **Reached from:** `VerseLinks.decorate`.
 - **Follows:** Zayit's `LineReferences.kt` (top-level `internal` functions, constants at the file's end).
@@ -2382,13 +2392,14 @@ the Yerushalmi; Zayit's package has 24,817). As the user asked on 2026-11-09. Ho
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/VerseQuotesTest.kt`
 
 - **Feature:** Verse links.
-- **Size:** 147 lines.
+- **Size:** 169 lines.
 - **What:** on lines and verses as the library keeps them: a verse's words are its letters alone, its note none of
   them; the Name is one word however written; a verse quoted in a line is a link to it; a quote spelled another way is
   still the verse's; the Name's geresh is inside the link; a line that quotes nothing is the same object, and one word
   in no quote is none; a word quoted by itself is a link when one verse alone has it; each verse has its quotes, the
   longer first; the Talmud's own words are no quote though the verse has them (before a quote opens, two words in no
-  quote), while a line that marks no quote has its two words linked; a link crosses no tag and no quote mark; the words
+  quote), while a line that marks no quote has its two words linked; a verse of the lines before is told by three words (the
+  passage of Zayit's picture, ברכות ב:), not by two nor by one quoted alone, and the line's own verse comes first; a link crosses no tag and no quote mark; the words
   of a link the line already has are left to it.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `LineReferencesTest` (Kotlin Test, camel-case names).

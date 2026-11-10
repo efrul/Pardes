@@ -126,6 +126,28 @@ class VerseQuotesTest {
     }
 
     @Test
+    fun aVerseOfTheLinesBeforeIsToldByThreeWords() {
+        val watch = verse(12, "(טז) וְהָֽיוּ־לָ֧נוּ הַלַּ֛יְלָה מִשְׁמָ֖ר וְהַיּ֥וֹם מְלָאכָֽה׃")
+        val quote = link(12, "וְהָיוּ לָנוּ הַלַּיְלָה מִשְׁמָר וְהַיּוֹם מְלָאכָה")
+        // The library links the verse to the line that quotes it first: the next line quotes it again
+        val again = "וְכִי תֵּימָא לֵילְיָא הוּא, תָּא שְׁמַע ״וְהָיוּ לָנוּ הַלַּיְלָה מִשְׁמָר וְהַיּוֹם מְלָאכָה״."
+        assertEquals("וְכִי תֵּימָא לֵילְיָא הוּא, תָּא שְׁמַע ״$quote״.", withVerseLinks(again, emptyList(), listOf(watch)))
+        // Two words of it are not enough, nor one quoted by itself
+        val two = "מַאי ״הַלַּיְלָה מִשְׁמָר״, וּמַאי ״מְלָאכָה״?"
+        assertSame(two, withVerseLinks(two, emptyList(), listOf(watch)))
+        assertEquals(
+            "מַאי ״${link(12, "הַלַּיְלָה מִשְׁמָר")}״, וּמַאי ״${link(12, "מְלָאכָה")}״?",
+            withVerseLinks(two, listOf(watch)),
+        )
+        // The line's own verse first
+        val own = verse(13, "(א) וְהָיוּ לָנוּ הַלַּיְלָה מִשְׁמָר")
+        assertEquals(
+            "״${link(13, "וְהָיוּ לָנוּ הַלַּיְלָה מִשְׁמָר")}״",
+            withVerseLinks("״וְהָיוּ לָנוּ הַלַּיְלָה מִשְׁמָר״", listOf(own), listOf(watch)),
+        )
+    }
+
+    @Test
     fun aLinkCrossesNoTagAndNoQuoteMark() {
         val verse = verse(3, "(יא) וְלֹֽא־תִשְׁכַּ֣ח אֶת־אֲמָתֶ֔ךָ וְנָתַתָּ֥ה לַאֲמָתְךָ֖ זֶ֣רַע אֲנָשִׁ֑ים")
         // Two quotes one after the other, of words that follow one another in the verse

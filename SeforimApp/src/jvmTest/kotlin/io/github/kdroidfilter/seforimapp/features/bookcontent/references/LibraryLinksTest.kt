@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.references
 
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.ConnectionType
+import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import java.nio.file.Files
 import java.sql.Connection
 import java.sql.DriverManager
@@ -121,6 +122,16 @@ class LibraryLinksTest {
         assertTrue(LibraryLinks.linkedIn(connection, listOf(20L), listOf(32L)).isEmpty())
         assertEquals(setOf(1L, 3L), LibraryLinks.booksIn(connection, listOf(10L, 30L)))
         assertTrue(LibraryLinks.booksIn(connection, emptyList()).isEmpty())
+    }
+
+    @Test
+    fun theLinesBeforeALineInItsBook() {
+        val second = Line(id = 32, bookId = 3, lineIndex = 4, content = "", heRef = null)
+        assertEquals(listOf(31L), LibraryLinks.idsBefore(connection, second, 10))
+        assertTrue(LibraryLinks.idsBefore(connection, second.copy(lineIndex = 0), 10).isEmpty())
+        assertTrue(LibraryLinks.idsBefore(connection, second, 0).isEmpty())
+        // ברכות's two lines, at 0 and 1
+        assertEquals(listOf(11L), LibraryLinks.idsBefore(connection, Line(id = 12, bookId = 1, lineIndex = 1, content = ""), 1))
     }
 
     @Test
