@@ -577,20 +577,25 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +18 −0 lines. Feature: Search in categories, Feedback mode, Result tabs.
+- **Change:** modified, +26 −0 lines. Feature: Search in categories, Feedback mode, Result tabs.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
-    when the search moves by itself (to a category's base books, or all its books), its bar says where it searches.
+    when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
+    and the tabs picked above the results are the bar's categories (`SearchScope.Global`, no tab picked any longer,
+    clears them with `barViewModel.onClearCategory()`).
+  - The search tab's own bar's `onRemoveScope` also calls `viewModel.unpickCategoryTab(...)` for a category: a category
+    taken out of the bar is a tab picked no longer.
   - The search tab's own bar passes `onNewBarOpened = null` (a bar in a new tab opens empty, as in Zayit; this one opens
     where its search looked).
   - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`.
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
     `onNewBarOpened` to `SearchHomeViewModel`.
-  - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
-    `Grade`) and `onSearchInPickedCategories` (`viewModel::searchInPickedCategories`).
+  - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`) and `onGrade` (event
+    `Grade`).
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
-  Zayit wires its own search callbacks.
+  Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
+  link of their own: a search made again from the bar searches in them).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: one-line additions inside Zayit's callback and action builders, which Zayit extends
   when it adds a search action.
@@ -1134,7 +1139,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +375 −49 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs.
+- **Change:** modified, +382 −49 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1155,11 +1160,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - **Result tabs:** `showOnlyCategory` picks a tab with those already picked, or lets it go (Zayit's showed one at a
     time); `listed` keeps the search's session when its list can be shown in part (`SessionViews`), and
     `executeFilteredSearch` then shows the tabs' categories from that list with no new search (a category with no line
-    in it is searched, as before); `searchInPickedCategories` searches again in the tabs picked alone, telling the bar
-    (`scopeChanges`), through the file-level `scopeOfTabs(tabs, picked)`.
+    in it is searched, as before); in a search of the whole library the tabs picked are the bar's categories
+    (`showTabsInBar`, through `scopeChanges` and the file-level `scopeOfTabs(tabs, picked)`; `SearchScope.Global` when
+    none is picked any longer), so the text searched again from the bar is searched in them, and `unpickCategoryTab`
+    lets a tab go when its category is taken out of the bar.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
-  the first lines found, and a tab that searched its category again gave another list, slowly.
+  the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
+  the bar's categories are the user's choice of 2026-11-10 over a link that searched in them.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
@@ -1170,7 +1178,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +91 −23 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs.
+- **Change:** modified, +64 −21 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1179,13 +1187,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
     others offers the other choice (`search_switch_scope_all` / `…_base`).
   - The preview's highlights come from `rememberPreviewHighlights(...)` instead of an inline `produceState`.
   - The category tabs are picked several at once: `FilterTabs` has a form taking the set picked (`selected: Set<Long>`,
-    "הכל" the one picked when none is, and an `after` slot in the tabs' row), Zayit's one-at-a-time form calling it;
-    `CategoryTabs` marks every top category picked, and with a tab picked in a search of the whole library shows the
-    link `search_tabs_search_in` ("חיפוש חדש רק בקטגוריות שנבחרו"), which calls the new action
-    `onSearchInPickedCategories`.
+    "הכל" the one picked when none is), Zayit's one-at-a-time form calling it; `CategoryTabs` marks every top
+    category picked.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
-  several at once, and a way to put a category in the search bar.
+  several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
+  screen's.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over seven
   places, and `FilterTabs`' body is now the set's form.
@@ -1291,8 +1298,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +222 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 209 Hebrew strings added in fifteen blocks,
+- **Change:** modified, +221 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 208 Hebrew strings added in fourteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
@@ -1309,8 +1316,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
   - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
-  - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`;
-  - the result tabs: `search_tabs_search_in`, after Zayit's `search_tabs_more`.
+  - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).

@@ -83,9 +83,9 @@ private const val LAZY_PAGE_SIZE = 25
 private const val NO_BOOK_ID = -1L
 
 /**
- * Where a search in the tabs picked runs: the top categories of [tabs] (in their order, each once: a category may be
- * a tab of the results and of the library's others) that are among [picked], one category or several together; null
- * when none is picked.
+ * Where the tabs picked search, for the bar to show: the top categories of [tabs] (in their order, each once: a
+ * category may be a tab of the results and of the library's others) that are among [picked], one category or several
+ * together; null when none is picked.
  */
 internal fun scopeOfTabs(
     tabs: List<Long>,
@@ -935,7 +935,10 @@ class SearchResultViewModel(
 
     private val _scopeChanges = MutableSharedFlow<SearchScope>(extraBufferCapacity = 1)
 
-    /** The scopes this search moves to by itself (the status line's choice of books), for its bar to show. */
+    /**
+     * The scopes this search moves to by itself (the status line's choice of books) and the tabs picked above its
+     * results ([SearchScope.Global] when none is any longer), for its bar to show.
+     */
     val scopeChanges: SharedFlow<SearchScope> = _scopeChanges.asSharedFlow()
 
     /**
@@ -1963,7 +1966,7 @@ class SearchResultViewModel(
 
     /**
      * Shows a top category's results (a tab above the results) with those of the tabs already picked, or no longer when
-     * it is one of them; all the results for null.
+     * it is one of them; all the results for null. The tabs picked are the bar's categories too ([showTabsInBar]).
      */
     fun showOnlyCategory(categoryId: Long?) {
         dropBeforeBook()
@@ -1975,28 +1978,32 @@ class SearchResultViewModel(
         updatePersistedSearch { it.copy(selectedCategoryIds = categories, selectedBookIds = emptySet(), selectedTocIds = emptySet()) }
         if (categoryId != null) {
             setCategoryChecked(categoryId, categoryId !in picked)
+            showTabsInBar(if (categoryId in picked) picked - categoryId else picked + categoryId)
         } else {
             maybeClearFiltersIfNoneChecked()
             executeFilteredSearch()
+            if (picked.isNotEmpty()) showTabsInBar(emptySet())
         }
     }
 
     /**
-     * Searches again in the categories picked as tabs alone, as if picked in the bar, which shows them ([scopeChanges]):
-     * the tabs filter the list found, and a category searched by itself gives more of its own. Only from a search in
-     * the whole library: another scope is the reader's choice already.
+     * Lets the tab of [categoryId] go when picked: its category was taken out of the bar, which is not told again. Only
+     * in a search of the whole library, where the tabs are what the bar shows ([showTabsInBar]).
      */
-    fun searchInPickedCategories() {
-        viewModelScope.launch {
-            val state = persistedSearchState()
-            if (state.wideScope != SearchScope.Global) return@launch
-            val tabs = (_searchTree.value + _otherTabCategories.value).map { it.category.id }
-            val scope = scopeOfTabs(tabs, _selectedCategoryIds.value) ?: return@launch
-            val query = state.query.ifBlank { _uiState.value.query }
-            if (query.isBlank()) return@launch
-            _scopeChanges.tryEmit(scope)
-            searchFromBar(query, scope)
-        }
+    fun unpickCategoryTab(categoryId: Long) {
+        if (persistedSearchState().wideScope != SearchScope.Global) return
+        if (categoryId in _selectedCategoryIds.value) setCategoryChecked(categoryId, false)
+    }
+
+    /**
+     * The tabs [picked] become the bar's categories ([scopeChanges]), none of them clearing it: the tabs filter the list
+     * found, and the text searched again from the bar is searched in them. Only in a search of the whole library:
+     * another scope is the reader's choice already, which the bar keeps.
+     */
+    private fun showTabsInBar(picked: Set<Long>) {
+        if (persistedSearchState().wideScope != SearchScope.Global) return
+        val tabs = (_searchTree.value + _otherTabCategories.value).map { it.category.id }
+        _scopeChanges.tryEmit(scopeOfTabs(tabs, picked) ?: SearchScope.Global)
     }
 
     fun setBookChecked(

@@ -54,6 +54,7 @@ import io.github.kdroidfilter.seforimapp.features.search.SearchHomeViewModel
 import io.github.kdroidfilter.seforimapp.features.search.SearchResultInBookShellMvi
 import io.github.kdroidfilter.seforimapp.features.search.SearchResultViewModel
 import io.github.kdroidfilter.seforimapp.features.search.SearchShellActions
+import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.siddur.installedSiddur
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -292,9 +293,12 @@ private fun SearchTabContent(
     LaunchedEffect(barViewModel, tabsViewModel) {
         barViewModel.navigationEvents.collect { event -> navigate(event, tabsViewModel) }
     }
-    // The search moved by itself (a category's base books or all its books): its bar shows where it searches now
+    // The search moved by itself (a category's base books or all its books), or its tabs were picked: its bar shows
+    // where it searches now, and the tabs picked are its categories (none: everywhere)
     LaunchedEffect(barViewModel, viewModel) {
-        viewModel.scopeChanges.collect { scope -> barViewModel.showScope(scope) }
+        viewModel.scopeChanges.collect { scope ->
+            if (scope == SearchScope.Global) barViewModel.onClearCategory() else barViewModel.showScope(scope)
+        }
     }
     val homeSearchCallbacks = rememberHomeSearchCallbacks(barViewModel) { destination.tabId }
     // The home bar here: its text search runs in this tab, where the bar says (its picked book or
@@ -306,6 +310,11 @@ private fun SearchTabContent(
                     if (extended) viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetGlobalExtended(true))
                 },
                 onSubmitTextSearch = { query -> viewModel.searchFromBar(query, barViewModel.barScope()) },
+                // A category taken out of the bar is a tab picked no longer
+                onRemoveScope = { item ->
+                    homeSearchCallbacks.onRemoveScope(item)
+                    if (item is ScopeItem.CategoryItem) viewModel.unpickCategoryTab(item.category.id)
+                },
                 // Its own bar, which opens where its search looked
                 onNewBarOpened = null,
             )
@@ -495,7 +504,6 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
                 viewModel.onEvent(SearchResultViewModel.SearchResultEvents.FilterByTocId(entry.id))
             },
             onShowOnlyCategory = viewModel::showOnlyCategory,
-            onSearchInPickedCategories = viewModel::searchInPickedCategories,
             onOpenBookAt = viewModel::openBookAt,
             onSelectResult = viewModel::selectResult,
             onMoreFromBook = viewModel::showMoreFromBook,
