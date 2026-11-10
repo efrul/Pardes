@@ -164,7 +164,9 @@ class SearchResultViewModel(
             when (scope) {
                 SearchScope.Global -> null
                 is SearchScope.Category ->
+                    // A category of the library by its title; the commentaries on a book of one time have their label alone
                     repository.getCategory(scope.categoryId)?.title?.let { if (scope.baseBooksOnly) baseBooksLabel(it) else it }
+                        ?: categoryLabel(scope.categoryId)
                 is SearchScope.Multi -> multiScopeLabel(scope.bookIds, scope.categoryIds, scope.baseOnlyCategoryIds)
                 is SearchScope.Book -> repository.getBookCore(scope.bookId)?.title
                 is SearchScope.Author -> authorScope(scope.authorId)?.name?.let(AuthorNames::display)

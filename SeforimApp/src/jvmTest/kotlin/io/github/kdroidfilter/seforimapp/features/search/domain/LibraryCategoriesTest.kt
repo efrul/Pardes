@@ -56,7 +56,7 @@ class LibraryCategoriesTest {
     private val catalogCache = mockk<CatalogCache> { every { getCatalog() } returns catalog }
 
     // No database: the catalog answers everything
-    private val categories = LibraryCategories(catalogCache, mockk(), mockk { every { read() } returns emptyMap() })
+    private val categories = LibraryCategories(catalogCache, mockk(), mockk { every { counted() } returns emptyMap() })
 
     @Test
     fun `a category's books are its subcategories' too, all of them or its base books alone`() =
