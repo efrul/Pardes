@@ -1066,7 +1066,7 @@ private fun Modifier.sidewaysPan(
 
 /**
  * The layouts beside the seforim.db open now, as the semantic search's model (SEFORIMAPP_DATABASE_PATH can name another
- * one than the settings): the daf view's and Settings › ניהול נתונים's.
+ * one than the settings): the daf view's and Settings › צורת הדף's.
  */
 @Composable
 internal fun rememberDafLayouts(): DafLayouts {
