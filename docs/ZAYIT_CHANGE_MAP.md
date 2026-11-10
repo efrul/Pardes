@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (170 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (172 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -961,7 +961,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/CommentatorsGrid.kt`
 
-- **Change:** modified, +198 −38 lines. Feature: Commentators in their own panes.
+- **Change:** modified, +216 −41 lines. Feature: Commentators in their own panes, Commentator kept.
 - **What:**
   - The commentators' pages turn sideways: a `HorizontalPager` with its dots in a row above it
     (`HorizontalPagerIndicator`) replaces Zayit's `VerticalPager` with its dots in a column beside it. A dot's tooltip
@@ -973,15 +973,22 @@ The entries of this section by kind:
     (`tearOffs.show/hide`); the header is the pane's grip (`tearOffHandle`), and on hover a button opens the pane in a
     window of its own (the panes' own "open in a separate window", `AllIconsKeys.Actions.MoveToWindow`, `pane_float`).
   - `CommentatorCell` passes `tearOffs`; the constants of the swipe.
+  - The reader's commentator is kept from line to line (`KeptCommentator.kt`): `CommentatorsGridScaffold` takes `kept`
+    and `line`; the pager opens on his page when the line has him (`keptPage`); a page settled follows
+    `kept.settledOn(...)` in place of the page's first commentator; a commentator who comes back with a line is no
+    longer promoted as one just added (`kept.tickedOn(line)`), and one the reader ticks is his choice (`kept.chose`);
+    `KeepCommentator(...)` follows him on each line; the dots, the wheel over them and `pageSwipe(pagerState, kept)`
+    call `kept.turns()` before they turn a page.
 - **Why:** commentators split off into panes, torn off by their header; with pages side by side, a column's vertical
   scroll never turns a page (`d85afee7`, `03c84c1f`, `5498e05f`, `831ad272`, `5c6c84f3`; a mouse-drag version was
-  reverted in `ab469da8`).
+  reverted in `ab469da8`). The commentator kept: the user's request of 2026-11-10 (stepping down the Gemara, the pages
+  moved to another commentator on each line that lacked his, and did not come back to him).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium to high: Zayit's pager and indicator were replaced, so a Zayit change to the grid's paging
   conflicts, and the grid no longer looks like Zayit's (pages sideways, dots above).
 - **Smaller:** the swipe and the tear-off could stay with Zayit's vertical pager, keeping its layout; turning the pages
   sideways is a design choice, not a need of the panes.
-- **Tests:** `CommentatorsPageSwipeTest` (the swipe), `CommentatorPaneIdTest`.
+- **Tests:** `CommentatorsPageSwipeTest` (the swipe), `CommentatorPaneIdTest`, `KeptCommentatorTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
@@ -1025,7 +1032,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineCommentsView.kt`
 
-- **Change:** modified, +338 −46 lines. Feature: Commentators in their own panes, Commentator selection kept.
+- **Change:** modified, +348 −47 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept.
 - **What:**
   - `LineCommentsView` reads the book's `CommentatorSelection` (`bookCommentators`) instead of the line's
     `selectedCommentatorIds`, and the split-off commentators, and passes both to the single- and multi-line contents.
@@ -1041,14 +1048,18 @@ The entries of this section by kind:
   - `commentatorsCheckState(names, selected)`: on, off or indeterminate.
   - `CommentariesLayoutConfig.tearOffs`, from `LocalCommentatorTearOffs`, only while more commentators can be split off
     (`canDetach`).
+  - The reader's commentator (`KeptCommentator`, remembered for the book in `LineCommentsView`) goes down in
+    `CommentariesColumnScroll.kept` to the grid, with the line(s) shown (`line = selection`); the commentator of the
+    passage selected in the text is the reader's when he comments on it, else its first as before.
 - **Why:** a commentator in a pane of its own (`d85afee7`, `831ad272`) and whole groups checked from line to line
-  (`3c6bae9b`, `49b456d4`).
+  (`3c6bae9b`, `49b456d4`); the commentator the pages stay on from line to line, asked for on 2026-11-10.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the edits run through both content composables, the list and the layout config of one of
   Zayit's largest files (some 1,400 lines).
 - **Smaller:** `DetachedCommentatorView` and its column could live in a Pardes file beside `CommentatorTearOffs.kt`;
   the rest is woven into Zayit's composables.
-- **Tests:** `CommentatorsCheckStateTest`, `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`.
+- **Tests:** `CommentatorsCheckStateTest`, `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`,
+  `KeptCommentatorTest`.
 
 ### Search and history
 
@@ -2114,7 +2125,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 ### Commentators in their own panes, and the commentator selection kept
 
 A commentator can be split off the commentaries pane into a pane of its own (torn off by its header, placed anywhere in
-the dock, or opened in a window), and a commentator, a group or "כל המפרשים" checked stays checked from line to line.
+the dock, or opened in a window), and a commentator, a group or "כל המפרשים" checked stays checked from line to line. The commentator the reader is on
+in the pane's pages is kept from line to line too (`KeptCommentator.kt`).
 The hooks in Zayit's files are in `ReaderPanes.kt`, `LineCommentsView.kt`, `CommentatorsGrid.kt`,
 `CommentariesUseCase.kt`, `BookContentViewModel.kt`, the reader's state and `SessionModels.kt`.
 
@@ -2220,6 +2232,36 @@ The hooks in Zayit's files are in `ReaderPanes.kt`, `LineCommentsView.kt`, `Comm
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's use-case tests: the real `BookContentStateManager` and `CommentariesUseCase`, the repository and
   the lists mocked with MockK (`mockk`, `spyk`).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/KeptCommentator.kt`
+
+- **Feature:** Commentator kept.
+- **Size:** 98 lines.
+- **What:** `KeptCommentator`, the commentator the reader is on in the commentaries' pages, kept from line to line and
+  from passage to passage: his `name`, set by the reader alone (`turns()` then `settledOn(...)`: a page he turned;
+  `chose(...)`: a commentator he ticked, or the first passage he clicked); `settledOn(first, shown, focus)` says whom
+  the pages follow once settled (the reader's turn, else the passage's commentator, else the reader's when the line
+  has him, else the page's first); `among(shown)`; `listedOn(line)` and `tickedOn(line)` tell a commentator ticked
+  from one who comes back with a line. `KeepCommentator(...)`, the composable that follows him on each line that has
+  him while no passage is selected. A turn that never settled is forgotten after three seconds.
+- **Reached from:** `CommentatorsGrid.kt` (`CommentatorsGridScaffold`, the dots, `pageSwipe`), `LineCommentsView.kt`
+  (`CommentariesColumnScroll.kept`, the passage's commentator).
+- **Follows:** Zayit's anchor in `CommentatorsGridScaffold` ("the commentator the user is focused on"), which it keeps
+  beyond one line: the grid leaves the composition between two lines when a line's commentators are not ready, and
+  came back on its page's number, another commentator's.
+- **Tests:** `KeptCommentatorTest`; stepping down בבא בתרא's lines was tried in the app.
+- **Notes:** on a line he does not comment on the pages show another commentator, Zayit's choice as before.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/KeptCommentatorTest.kt`
+
+- **Feature:** Commentator kept.
+- **Size:** 60 lines.
+- **What:** the page the reader turns to is his choice and the page the pane leaves is not; a passage's commentator is
+  followed without replacing the reader's; a turn that never settled is forgotten; a commentator ticked is told from
+  one who comes back with a line.
+- **Reached from:** the JVM tests.
+- **Follows:** `CommentatorsCheckStateTest` beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### Reading time and the learning split widget
