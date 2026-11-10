@@ -320,8 +320,8 @@ private data class LineResourceAvailability(
 )
 
 /**
- * The zoom in and out shared by the reading screens' end bars: of the daf when the reading view of [tabId] shows one,
- * else of the text.
+ * The zoom in and out shared by the reading screens' end bars: of the text, and of the daf with it when the reading view
+ * of [tabId] shows one (a button stays on while either can still be zoomed).
  */
 @Composable
 fun ZoomButtons(tabId: String = "") {
@@ -330,8 +330,8 @@ fun ZoomButtons(tabId: String = "") {
     val dafZoom by appSettings.dafZoomFlow.collectAsState()
     val dafViews by appSettings.dafViewsFlow.collectAsState()
     val daf = tabId in dafViews
-    val canZoomIn = if (daf) dafZoom < AppSettings.MAX_DAF_ZOOM else rawTextSize < AppSettings.MAX_TEXT_SIZE
-    val canZoomOut = if (daf) dafZoom > AppSettings.MIN_DAF_ZOOM else rawTextSize > AppSettings.MIN_TEXT_SIZE
+    val canZoomIn = (daf && dafZoom < AppSettings.MAX_DAF_ZOOM) || rawTextSize < AppSettings.MAX_TEXT_SIZE
+    val canZoomOut = (daf && dafZoom > AppSettings.MIN_DAF_ZOOM) || rawTextSize > AppSettings.MIN_TEXT_SIZE
     val maxHint = if (daf) "${(AppSettings.MAX_DAF_ZOOM * 100).roundToInt()}% max" else "${AppSettings.MAX_TEXT_SIZE.toInt()}sp max"
     val minHint = if (daf) "${(AppSettings.MIN_DAF_ZOOM * 100).roundToInt()}% min" else "${AppSettings.MIN_TEXT_SIZE.toInt()}sp min"
     SelectableIconButtonWithToolip(

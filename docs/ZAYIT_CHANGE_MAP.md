@@ -549,14 +549,16 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +213 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode.
+- **Change:** modified, +215 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     lighter unsure lines (`daf_mark_unsure`), the review mode (`daf_review`) and its two fonts (`font_daf_gemara`,
     default Frank Ruehl CLM; `font_daf_commentary`, default Noto Rashi Hebrew). All are portable (`PORTABLE_KEYS`) and
     reset by `clearAll()`.
   - **Zoom of the selected tab:** `dafShown`/`dafHidden`/`showsDaf` count the views that show a daf per tab
-    (`dafViewsFlow`), and `zoomIn`/`zoomOut(tabId)` zoom the daf to the next level, or the text as before.
+    (`dafViewsFlow`), and `zoomIn`/`zoomOut(tabId)` zoom the text as before, and the daf with it to its next level
+    when the tab shows one: the panes beside a daf (the commentaries, the references) are drawn in the text's size,
+    and did not follow the zoom until the user asked on 2026-11-10; a pinch over the daf still zooms it alone.
   - **Library location:** `getLibraryInstallDir`/`setLibraryInstallDir` (`library_install_dir`, not portable) and
     `flush()`, which writes the preferences now, before a step that relies on them.
   - **Semantic packs:** `semantic_pack_prompt`, whether a start without a pack opens the settings on it.
@@ -762,8 +764,9 @@ The entries of this section by kind:
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
-  - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf (`zoomIn/zoomOut`),
-    are enabled by `MIN/MAX_DAF_ZOOM` and their tooltips say "400% max" / "30% min"; otherwise the text, as before.
+  - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
+    (`zoomIn/zoomOut`), are enabled while either can still be zoomed, and their tooltips say "400% max" / "30% min";
+    otherwise the text, as before.
   - The references pane's button is enabled for a line with a link of the other kinds too:
     `repository.getReferencesForLines(placesLineIds).isNotEmpty() || libraryLinks.any(placesLineIds)`, with
     `val libraryLinks = LocalAppGraph.current.libraryLinks`.
@@ -1960,10 +1963,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/settings/DafZoomTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 96 lines.
-- **What:** the daf's own settings: the zoom keys, buttons and menu zoom a tab's daf while it shows one, level by level,
-  else the text; a pinch goes on from the next level; the views' count; the unsure lines and the review mode off until
-  asked and reset; the zoom kept and reset.
+- **Size:** 106 lines.
+- **What:** the daf's own settings: the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
+  shows one, level by level; the daf's own zoom (a pinch) leaves the text alone and goes on from the next level; the
+  views' count; the unsure lines and the review mode off until asked and reset; the zoom kept and reset.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's settings tests (`testAppSettings()`).
 - **Tests:** it is one (unit, `AppSettings`).
