@@ -31,6 +31,23 @@ class LibraryLinks(
     /** Whether a line of [lineIds] has such a link: the links' indexes alone are read, no line. */
     suspend fun any(lineIds: Collection<Long>): Boolean = read(false) { connection -> anyLinked(connection, lineIds) }
 
+    /**
+     * The lines of the books right under [categories] that each of [lineIds] is linked to, by such a link or a
+     * reference: {line: the lines it is linked to}, a line once. The verses a line of the Talmud quotes are read so.
+     */
+    suspend fun linesIn(
+        categories: Collection<Long>,
+        lineIds: Collection<Long>,
+    ): Map<Long, List<Line>> = read(emptyMap()) { connection -> linkedIn(connection, categories, lineIds) }
+
+    /** The books right under [categories]; a few rows, read where it is called. Empty when the database can't be read. */
+    fun booksOf(categories: Collection<Long>): Set<Long> =
+        runCatching { readOnly(databasePathProvider.get()).use { connection -> booksIn(connection, categories) } }
+            .getOrElse {
+                warnln { "[LibraryLinks] the library's books could not be read: $it" }
+                emptySet()
+            }
+
     private suspend fun <T> read(
         otherwise: T,
         query: (Connection) -> T,
@@ -106,6 +123,66 @@ class LibraryLinks(
                 }
             }
             return found
+        }
+
+        /** [LibraryLinks.linesIn] on [connection]. */
+        internal fun linkedIn(
+            connection: Connection,
+            categories: Collection<Long>,
+            lineIds: Collection<Long>,
+        ): Map<Long, List<Line>> {
+            if (lineIds.isEmpty() || categories.isEmpty()) return emptyMap()
+            val ids = lineIds.joinToString(",")
+            val names = (KINDS + ConnectionType.REFERENCE).joinToString { "'${it.name}'" }
+            val kinds = "SELECT id FROM connection_type WHERE name IN ($names)"
+            val books = "SELECT id FROM book WHERE categoryId IN (${categories.joinToString(",")})"
+            // The other line's book is told from the link itself, before its line is read, and by no index of its own
+            val sql =
+                """
+                SELECT k.sourceLineId, ol.id, ol.bookId, ol.lineIndex, ol.heRef, ol.content
+                FROM link k
+                JOIN line ol ON ol.id = k.targetLineId
+                WHERE k.sourceLineId IN ($ids) AND k.connectionTypeId IN ($kinds) AND +k.targetBookId IN ($books)
+                UNION ALL
+                SELECT k.targetLineId, ol.id, ol.bookId, ol.lineIndex, ol.heRef, ol.content
+                FROM link k
+                JOIN line ol ON ol.id = k.sourceLineId
+                WHERE k.targetLineId IN ($ids) AND k.connectionTypeId IN ($kinds) AND +k.sourceBookId IN ($books)
+                """.trimIndent()
+            val found = LinkedHashMap<Long, MutableList<Line>>()
+            connection.createStatement().use { statement ->
+                statement.executeQuery(sql).use { rows ->
+                    while (rows.next()) {
+                        val lines = found.getOrPut(rows.getLong(1)) { ArrayList(2) }
+                        val lineId = rows.getLong(2)
+                        if (lines.any { it.id == lineId }) continue
+                        lines +=
+                            Line(
+                                id = lineId,
+                                bookId = rows.getLong(3),
+                                lineIndex = rows.getInt(4),
+                                content = rows.getString(6),
+                                heRef = rows.getString(5),
+                            )
+                    }
+                }
+            }
+            return found
+        }
+
+        /** [LibraryLinks.booksOf] on [connection]. */
+        internal fun booksIn(
+            connection: Connection,
+            categories: Collection<Long>,
+        ): Set<Long> {
+            if (categories.isEmpty()) return emptySet()
+            val books = HashSet<Long>()
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT id FROM book WHERE categoryId IN (${categories.joinToString(",")})").use { rows ->
+                    while (rows.next()) books += rows.getLong(1)
+                }
+            }
+            return books
         }
 
         /** [LibraryLinks.any] on [connection]. */
