@@ -56,7 +56,7 @@ import seforimapp.seforimapp.generated.resources.daf_layouts_update_one
 import seforimapp.seforimapp.generated.resources.daf_layouts_version
 
 /**
- * Settings › ניהול נתונים: the daf view's layouts (צורת הדף) as released for download, how many of them the library's
+ * Settings › צורת הדף: the daf view's layouts as released for download, how many of them the library's
  * folder has as released, and every one it lacks, or has otherwise, downloaded at once or one by one ([DafDownloads]):
  * each tractate has a version of its own, and a row with the folder's and the release's. The download goes on when the
  * settings close.

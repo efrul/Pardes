@@ -27,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
 import io.github.kdroidfilter.seforimapp.icons.BootstrapPersonLines
 import io.github.kdroidfilter.seforimapp.icons.FileArrowDown
+import io.github.kdroidfilter.seforimapp.icons.GemaraPage
 import io.github.kdroidfilter.seforimapp.icons.LucideInspectionPanel
 import io.github.kdroidfilter.seforimapp.icons.MaterialIconsDisplay_settings
 import io.github.kdroidfilter.seforimapp.icons.RadixFontRoman
@@ -37,6 +38,7 @@ import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.daf_view
 import seforimapp.seforimapp.generated.resources.settings_category_about
 import seforimapp.seforimapp.generated.resources.settings_category_conditions
 import seforimapp.seforimapp.generated.resources.settings_category_data
@@ -86,6 +88,11 @@ fun SettingsSidebar(
                 icon = RadixFontRoman,
             ),
             SettingsItem(
+                label = stringResource(Res.string.daf_view),
+                destination = SettingsDestination.Daf,
+                icon = GemaraPage,
+            ),
+            SettingsItem(
                 label = stringResource(Res.string.settings_category_data),
                 destination = SettingsDestination.Data,
                 icon = FileArrowDown,
@@ -117,6 +124,7 @@ fun SettingsSidebar(
                         is SettingsDestination.About -> currentRoute.contains("About")
                         is SettingsDestination.Conditions -> currentRoute.contains("Conditions")
                         is SettingsDestination.Data -> currentRoute.contains("Data")
+                        is SettingsDestination.Daf -> currentRoute.contains("Daf")
                     }
                 SidebarItem(
                     label = item.label,

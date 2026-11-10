@@ -294,7 +294,7 @@
     <string name="feedback_consent_searches">היסטוריית החיפושים</string>
     <string name="feedback_consent_searches_hint">מה חיפשתם, באיזה היקף וכמה פעמים, גם בלי ציון: הם מראים מה מחפשים.</string>
     <string name="feedback_consent_daf">הסימונים של שורות בצורת הדף</string>
-    <string name="feedback_consent_daf_hint">במצב הבדיקה של צורת הדף, שמדליקים בהגדרות › גופנים.</string>
+    <string name="feedback_consent_daf_hint">במצב הבדיקה של צורת הדף, שמדליקים בהגדרות › צורת הדף.</string>
     <string name="feedback_consent_privacy">לא נשלחים ההערות, ההדגשות, המועדפים, הספרים שפתחתם, ושום דבר שמזהה אתכם או את המחשב, והשרת שומר את המשוב בלי כתובת ה־IP. בהגדרות › ניהול נתונים › שליחת משוב אפשר לשנות את הבחירה, לעצור את השליחה ולמחוק את מה שנשלח.</string>
     <string name="feedback_consent_agree">אישור</string>
     <string name="feedback_consent_decline">לא, תודה</string>

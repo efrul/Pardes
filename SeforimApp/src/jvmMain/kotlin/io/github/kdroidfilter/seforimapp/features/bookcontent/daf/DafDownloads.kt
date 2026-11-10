@@ -162,7 +162,7 @@ class DafReleases(
  * Downloading the released layouts into a library's pardes-daf folder ([layouts]): the newest release and its
  * manifest, what of it is in the folder, and each tractate downloaded, checked and imported as a picked file is
  * ([DafLayouts.import]). One for a folder ([of]), whose work goes on wherever it was started from: the daf view's
- * screen of a tractate without its layout, or Settings › ניהול נתונים.
+ * screen of a tractate without its layout, or Settings › צורת הדף.
  */
 class DafDownloads(
     private val layouts: DafLayouts,

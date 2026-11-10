@@ -26,7 +26,6 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontOption
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
-import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafReviewsFolderLink
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsViewModel
@@ -36,20 +35,13 @@ import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.component.CheckboxRow
 import org.jetbrains.jewel.ui.component.ListComboBox
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.settings_daf_mark_unsure
-import seforimapp.seforimapp.generated.resources.settings_daf_mark_unsure_info
-import seforimapp.seforimapp.generated.resources.settings_daf_review
-import seforimapp.seforimapp.generated.resources.settings_daf_review_info
 import seforimapp.seforimapp.generated.resources.settings_font_book_label
 import seforimapp.seforimapp.generated.resources.settings_font_commentary_label
-import seforimapp.seforimapp.generated.resources.settings_font_daf_commentary_label
-import seforimapp.seforimapp.generated.resources.settings_font_daf_gemara_label
 import seforimapp.seforimapp.generated.resources.settings_font_reset_defaults
 import seforimapp.seforimapp.generated.resources.settings_font_sources_label
 import seforimapp.seforimapp.generated.resources.settings_font_targum_label
@@ -112,49 +104,6 @@ private fun FontsSettingsView(
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetSourceFont(code)) },
             )
 
-            FontSettingCard(
-                label = Res.string.settings_font_daf_gemara_label,
-                fontCode = state.dafGemaraFontCode,
-                options = options,
-                optionLabels = optionLabels,
-                onFontChange = { code -> onEvent(FontsSettingsEvents.SetDafGemaraFont(code)) },
-            )
-
-            FontSettingCard(
-                label = Res.string.settings_font_daf_commentary_label,
-                fontCode = state.dafCommentaryFontCode,
-                options = options,
-                optionLabels = optionLabels,
-                onFontChange = { code -> onEvent(FontsSettingsEvents.SetDafCommentaryFont(code)) },
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                CheckboxRow(
-                    text = stringResource(Res.string.settings_daf_mark_unsure),
-                    checked = state.dafMarkUnsure,
-                    onCheckedChange = { onEvent(FontsSettingsEvents.SetDafMarkUnsure(it)) },
-                )
-                Text(
-                    text = stringResource(Res.string.settings_daf_mark_unsure_info),
-                    fontSize = 12.sp,
-                    color = JewelTheme.globalColors.text.info,
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                CheckboxRow(
-                    text = stringResource(Res.string.settings_daf_review),
-                    checked = state.dafReview,
-                    onCheckedChange = { onEvent(FontsSettingsEvents.SetDafReview(it)) },
-                )
-                Text(
-                    text = stringResource(Res.string.settings_daf_review_info),
-                    fontSize = 12.sp,
-                    color = JewelTheme.globalColors.text.info,
-                )
-                if (state.dafReview) DafReviewsFolderLink()
-            }
-
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
@@ -168,7 +117,7 @@ private fun FontsSettingsView(
 }
 
 @Composable
-private fun FontSettingCard(
+internal fun FontSettingCard(
     label: StringResource,
     fontCode: String,
     options: ImmutableList<FontOption>,

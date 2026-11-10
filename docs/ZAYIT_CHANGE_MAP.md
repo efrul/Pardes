@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (97 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (103 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (172 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (173 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,8 +57,8 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 33 |
-| Pardes feature in Zayit's file | 30 |
+| Pardes feature hook | 37 |
+| Pardes feature in Zayit's file | 29 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 6 |
 | Removed Zayit file | 5 |
@@ -1417,18 +1417,50 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DataSettingsScreen.kt`
 
-- **Change:** modified, +22 −7 lines. Feature: Library location, Semantic search packs, Daf view, Feedback sending,
+- **Change:** modified, +19 −7 lines. Feature: Library location, Semantic search packs, Feedback sending,
   No error reports.
 - **What:**
-  - Four Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()`, `DafLayoutsCard()` and
-    `FeedbackSendCard()`.
+  - Three Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()` and `FeedbackSendCard()` (the
+    daf's layouts card stood among them until 2026-11-10; it is in the daf's own settings page).
   - The error-reports card only when `isErrorReportingAvailable`, with a comment.
 - **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`, `3e365d16`, `e14ce828`); a build
   without a DSN sends no reports (`fabcf4e8`).
 - **Kind:** Pardes feature hooks.
 - **Merge risk:** small: one call per card in Zayit's column, and one `if` around its last card.
-- **Smaller:** the four cards could be one `PardesDataCards()` call.
+- **Smaller:** the three cards could be one `PardesDataCards()` call.
 - **Tests:** `SemanticPackCardUiTest`, `FeedbackSendCardUiTest`; the other cards have none.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsDestination.kt`
+
+- **Change:** modified, +4 −0 lines. Feature: Daf view.
+- **What:** `SettingsDestination.Daf`, the daf view's settings page, after `Data`, with a comment.
+- **Why:** the daf view's settings stood in two pages (its fonts, marks and review among the fonts, its layouts among
+  the data); the user asked on 2026-11-10 for an ordered category of their own.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; one object at the end of Zayit's sealed interface.
+- **Smaller:** already minimal.
+- **Tests:** none.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsNavHost.kt`
+
+- **Change:** modified, +4 −0 lines. Feature: Daf view.
+- **What:** the `SettingsDestination.Daf` route draws `DafSettingsScreen()`; its import.
+- **Why:** as for `SettingsDestination.kt`.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; one route after Zayit's last.
+- **Smaller:** already minimal.
+- **Tests:** none.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/SettingsSidebar.kt`
+
+- **Change:** modified, +8 −0 lines. Feature: Daf view.
+- **What:** a sidebar item "צורת הדף" (`daf_view`, the reader's own label, with its icon `GemaraPage`) between the fonts
+  and the data, and its branch in the `when` that marks the page shown; two imports.
+- **Why:** as for `SettingsDestination.kt`.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; an item in Zayit's list and a branch in its `when`, which must stay exhaustive.
+- **Smaller:** already minimal.
+- **Tests:** none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/GeneralSettingsScreen.kt`
 
@@ -1480,15 +1512,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontsSettingsScreen.kt`
 
-- **Change:** modified, +51 −0 lines. Feature: Daf view.
-- **What:** two `FontSettingCard`s (the daf's Gemara and its Rashi and Tosafot) and two checkboxes with their notes:
-  lighter unsure lines (`settings_daf_mark_unsure`) and the review mode (`settings_daf_review`), with, while the review
-  is on, a link that opens the folder its marks are kept in (`DafReviewsFolderLink`, which was an item of the daf's
-  menu); imports.
-- **Why:** as for `FontsSettingsEvents.kt`.
-- **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** small; a block after Zayit's last card.
-- **Smaller:** the block could be a Pardes composable called by one line.
+- **Change:** modified, +1 −1 lines. Feature: Daf view.
+- **What:** `FontSettingCard` is `internal` (it was `private`): the daf's settings page draws the daf's two fonts with
+  it. The daf's cards and checkboxes that stood here after Zayit's last card are in `DafSettingsScreen.kt` since
+  2026-11-10.
+- **Why:** the daf view's settings in a page of their own, as the user asked.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** minimal; one word.
+- **Smaller:** already minimal.
 - **Tests:** none of the screen.
 
 ### Home widgets
@@ -1950,14 +1981,28 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 - **Feature:** Daf layouts download.
 - **Size:** 213 lines.
-- **What:** Settings › ניהול נתונים's card for the daf's layouts: how many the library's folder has as released, and
+- **What:** Settings › צורת הדף's card for the daf's layouts (in Settings › ניהול נתונים until 2026-11-10): how many the library's folder has as released, and
   every one it lacks, or has otherwise, downloaded at once; the download goes on when the settings close. Each
   tractate has a row (`Tractates`, `tractateLine`): its name, its file's version in the folder and the release's, and
   for one to download a link that downloads it alone; those to download are always listed, the others when asked
   ("כל המסכתות והגרסאות שלהן").
-- **Reached from:** `DataSettingsScreen.kt` (`DafLayoutsCard()`).
+- **Reached from:** `DafSettingsScreen.kt` (`DafLayoutsCard()`).
 - **Follows:** the settings cards of Zayit's data page (their layout and components).
 - **Tests:** `DafLayoutsCardUiTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafSettingsScreen.kt`
+
+- **Feature:** Daf view.
+- **Size:** 106 lines.
+- **What:** `DafSettingsScreen`, Settings › צורת הדף: the daf view's settings in one page, in order: its two fonts (the
+  Gemara's, Rashi's and Tosafot's), the lighter unsure lines with their note, the review mode with its note and the
+  link to its folder, then the layouts' card (`DafLayoutsCard`). They stood among the fonts and among the data until
+  2026-11-10, when the user asked for a category of their own.
+- **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Daf`), from `SettingsSidebar.kt`'s item.
+- **Follows:** Zayit's `FontsSettingsScreen` (a screen over a view of state and events, the same column of cards), whose
+  view model it reads: the daf's fonts and switches are kept there (`FontsSettingsState`, `FontsSettingsEvents`), and
+  the fonts' reset still resets them.
+- **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its card.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LocatedSelection.kt`
 
