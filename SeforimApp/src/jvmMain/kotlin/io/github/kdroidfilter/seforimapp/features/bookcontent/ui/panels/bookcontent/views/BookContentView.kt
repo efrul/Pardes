@@ -908,6 +908,15 @@ fun BookContentView(
         scope.launch { listState.animateScrollToItem(targetIndex, 0) }
     }
 
+    // On the daf, with a comment of Rashi or Tosafot selected, the arrows step through its commentary
+    fun stepLine(
+        forward: Boolean,
+        @StructuredScope scope: CoroutineScope,
+    ) {
+        val step = if (forward) BookContentEvent.NavigateToNextLine else BookContentEvent.NavigateToPreviousLine
+        if (currentDaf == null) onEvent(step) else scope.launch { if (!dafControl.stepComment(forward)) onEvent(step) }
+    }
+
     // Global preview handler: handle basic navigation keys regardless of inner focus
     val previewKeyHandler =
         remember(onEvent) {
@@ -916,12 +925,12 @@ fun BookContentView(
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {
                         Key.DirectionUp -> {
-                            onEvent(BookContentEvent.NavigateToPreviousLine)
+                            stepLine(forward = false, scope)
                             true
                         }
 
                         Key.DirectionDown -> {
-                            onEvent(BookContentEvent.NavigateToNextLine)
+                            stepLine(forward = true, scope)
                             true
                         }
 
