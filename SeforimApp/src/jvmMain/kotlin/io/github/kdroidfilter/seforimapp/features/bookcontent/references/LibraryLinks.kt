@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.Properties
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The library's links of the kinds no pane lists ([KINDS]): a quotation, a Mishnah in the Talmud, a related passage and
@@ -22,6 +23,9 @@ import java.util.Properties
 class LibraryLinks(
     private val databasePathProvider: DatabasePathProvider,
 ) {
+    // What the links say of the books asked so far
+    private val connections = ConcurrentHashMap<Long, BookConnections>()
+
     /**
      * The lines the links of [lineIds] reach, as the repository's getReferencesForLines returns its own: a line once,
      * however many links reach it, the lines of [lineIds] left out. Empty when the database can't be read.
@@ -45,6 +49,15 @@ class LibraryLinks(
         line: Line,
         count: Int,
     ): List<Long> = read(emptyList()) { connection -> idsBefore(connection, line, count) }
+
+    /**
+     * What the links of the book [bookId] say of it: whether it is commented on, and whether it comments on another.
+     * For a book whose own flags say neither: the library's חברותא and its notes have links both ways and no flag, so
+     * that their commentaries and their sources could not be opened. Asked once a book.
+     */
+    suspend fun connectionsOf(bookId: Long): BookConnections =
+        connections[bookId] ?: read(BookConnections.NONE) { connection -> bookConnections(connection, bookId) }
+            .also { if (it !== BookConnections.NONE) connections[bookId] = it }
 
     /**
      * The lines of the book [bookId] that each of [lineIds] is linked to, each with the [chars] letters it starts with:
@@ -93,6 +106,18 @@ class LibraryLinks(
             setOf(ConnectionType.QUOTATION, ConnectionType.MISHNAH_IN_TALMUD, ConnectionType.RELATED, ConnectionType.OTHER)
 
         private val KIND_IDS = "SELECT id FROM connection_type WHERE name IN (${KINDS.joinToString { "'${it.name}'" }})"
+
+        // The kinds a book comments by, as the repository's SOURCE view reads them (LinkQueries.sq, selectSourcesByLineIds)
+        private val SOURCE_KINDS =
+            listOf(
+                ConnectionType.COMMENTARY,
+                ConnectionType.SUPER_COMMENTARY,
+                ConnectionType.TARGUM,
+                ConnectionType.MIDRASH,
+                ConnectionType.PARSHANUT,
+                ConnectionType.DIBUR_HAMATCHIL,
+                ConnectionType.EIN_MISHPAT,
+            )
 
         /** What the library names a book's notes by: הערות על חברותא על ברכות, the notes on חברותא על ברכות. */
         const val NOTES_ON = "הערות על "
@@ -216,6 +241,27 @@ class LibraryLinks(
             }
         }
 
+        /** [LibraryLinks.connectionsOf] on [connection]. */
+        internal fun bookConnections(
+            connection: Connection,
+            bookId: Long,
+        ): BookConnections {
+            // The commentaries pane lists COMMENTARY links; a book comments by any link the SOURCE view reads backward
+            val commented = "SELECT id FROM connection_type WHERE name = '${ConnectionType.COMMENTARY.name}'"
+            val comments = "SELECT id FROM connection_type WHERE name IN (${SOURCE_KINDS.joinToString { "'${it.name}'" }})"
+            val sql =
+                """
+                SELECT
+                    EXISTS (SELECT 1 FROM link k WHERE k.sourceBookId = $bookId AND k.targetBookId != $bookId AND k.connectionTypeId IN ($commented)),
+                    EXISTS (SELECT 1 FROM link k WHERE k.targetBookId = $bookId AND k.sourceBookId != $bookId AND k.connectionTypeId IN ($comments))
+                """.trimIndent()
+            return connection.createStatement().use { statement ->
+                statement.executeQuery(sql).use { rows ->
+                    if (rows.next()) BookConnections(rows.getBoolean(1), rows.getBoolean(2)) else BookConnections.NONE
+                }
+            }
+        }
+
         /** [LibraryLinks.startsIn] on [connection]. */
         internal fun linkedStarts(
             connection: Connection,
@@ -288,5 +334,15 @@ class LibraryLinks(
                 statement.executeQuery(sql).use { rows -> rows.next() && rows.getBoolean(1) }
             }
         }
+    }
+}
+
+/** What a book's links say of it: [commentedOn] by another book's commentary, and whether it [comments] on another. */
+data class BookConnections(
+    val commentedOn: Boolean,
+    val comments: Boolean,
+) {
+    companion object {
+        val NONE = BookConnections(commentedOn = false, comments = false)
     }
 }

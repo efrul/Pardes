@@ -154,6 +154,21 @@ class LibraryLinksTest {
     }
 
     @Test
+    fun aBooksLinksSayWhetherItIsCommentedOnAndWhetherItComments() {
+        // ברכות (1) is commented on by בית יוסף (3) here, which is linked to דברים (2) by no commentary's link
+        link(11, 31, ConnectionType.COMMENTARY)
+        link(31, 21, ConnectionType.OTHER)
+        link(11, 12, ConnectionType.COMMENTARY)
+        assertEquals(BookConnections(commentedOn = true, comments = false), LibraryLinks.bookConnections(connection, 1))
+        assertEquals(BookConnections(commentedOn = false, comments = true), LibraryLinks.bookConnections(connection, 3))
+        assertEquals(BookConnections.NONE, LibraryLinks.bookConnections(connection, 2))
+        // A targum's link makes a book one that comments, not one commented on in the commentaries pane
+        link(21, 32, ConnectionType.TARGUM)
+        assertEquals(BookConnections.NONE, LibraryLinks.bookConnections(connection, 2))
+        assertTrue(LibraryLinks.bookConnections(connection, 3).comments)
+    }
+
+    @Test
     fun noLinesNoLinks() {
         assertTrue(LibraryLinks.linked(connection, emptyList()).isEmpty())
         assertFalse(LibraryLinks.anyLinked(connection, emptyList()))
