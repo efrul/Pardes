@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
+import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookConnections
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.placesLines
@@ -198,8 +199,13 @@ fun EndVerticalBar(
                 label = bookDetailsLabel,
             )
             val targumEnabled = selectedBook?.hasTargumConnection == true
-            val commentaryEnabled = selectedBook?.hasCommentaryConnection == true
-            val sourcesEnabled = selectedBook?.hasSourceConnection == true
+            // A book whose flags say neither may still have the links (חברותא and its notes): they tell
+            val linked by produceState<BookConnections?>(null, selectedBook?.id) {
+                val unflagged = selectedBook?.takeIf { !it.hasCommentaryConnection || !it.hasSourceConnection }
+                value = unflagged?.let { libraryLinks.connectionsOf(it.id) }
+            }
+            val commentaryEnabled = selectedBook?.hasCommentaryConnection == true || linked?.commentedOn == true
+            val sourcesEnabled = selectedBook?.hasSourceConnection == true || linked?.comments == true
             // Ein mishpat and masoret hashas have no flag of their own: OTHER covers the books that have them
             val referencesEnabled = selectedBook?.hasReferenceConnection == true || selectedBook?.hasOtherConnection == true
 

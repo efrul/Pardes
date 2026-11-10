@@ -753,7 +753,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +33 −11 lines. Feature: Daf view, More links.
+- **Change:** modified, +41 −13 lines. Feature: Daf view, More links, Unflagged books.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
@@ -762,12 +762,19 @@ The entries of this section by kind:
   - The references pane's button is enabled for a line with a link of the other kinds too:
     `repository.getReferencesForLines(placesLineIds).isNotEmpty() || libraryLinks.any(placesLineIds)`, with
     `val libraryLinks = LocalAppGraph.current.libraryLinks`.
+  - The commentaries' and the sources' buttons are shown for a book whose flags miss its links:
+    `commentaryEnabled = selectedBook?.hasCommentaryConnection == true || linked?.commentedOn == true`, and
+    `sourcesEnabled` so with `linked?.comments`, where `linked` is `libraryLinks.connectionsOf(book.id)`, asked in a
+    `produceState` for a book that lacks either flag.
 - **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`); a button
-  is enabled exactly when its pane has something to show, as Zayit's comment there says.
+  is enabled exactly when its pane has something to show, as Zayit's comment there says. The library of 2026-10-12 has
+  75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
+  their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; one button among the bar's, `ZoomButtons`' body, and the references' availability.
+- **Merge risk:** small; one button among the bar's, `ZoomButtons`' body, the references' availability and the two
+  `…Enabled` lines.
 - **Smaller:** already minimal.
-- **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`).
+- **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LineReferences.kt`
 
@@ -2294,7 +2301,7 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinks.kt`
 
 - **Feature:** More links.
-- **Size:** 292 lines.
+- **Size:** 348 lines.
 - **What:** `LibraryLinks`, the library's links of the kinds no pane listed (`KINDS`: QUOTATION, MISHNAH_IN_TALMUD,
   RELATED, OTHER; 1,738,497 links in the library of 2026-10-12). `of(lineIds)` gives the lines they reach as the
   repository's `LineReference`s, in both directions (such a link is stored once, with no direction of its own), a line
@@ -2309,10 +2316,12 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
   lines that come before a line in its book. For the note links, `notedBooks()` gives the books that have a book of
   notes on them, each with it (the notes' book named `הערות על` and the book's title, `NOTES_ON`: the 38 books of
   חברותא), and `startsIn(bookId, lineIds, chars)` the lines of a book each line is linked to, with the letters each
-  starts with.
+  starts with. `connectionsOf(bookId)` says what a book's links say of it (`BookConnections`: commented on by a
+  COMMENTARY link, commenting by a link the SOURCE view reads backward), asked once a book, for the books whose flags
+  in the library miss their links.
 - **Reached from:** `LineReferences.kt` (`loadLinePlaces`, `ReferenceKind.of`), `VerticalBars.kt` (the pane's button),
   through `AppGraph.libraryLinks`; `VerseLinks` (`linesIn`, `booksOf`, `lineIdsBefore`) and `NoteLinks` (`notedBooks`, `startsIn`), given it by
-  `TextLinks`, which `main.kt` gives it.
+  `TextLinks`, which `main.kt` gives it; `VerticalBars.kt` (`connectionsOf`).
 - **Follows:** `CommentaryLinks` (an `@Inject` class reading the library on a JDBC connection of its own, the
   repository having no query); Zayit's `getReferencesForLines` for what a place is (a line once, the asked lines out).
 - **Tests:** `LibraryLinksTest`.
@@ -2324,14 +2333,15 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinksTest.kt`
 
 - **Feature:** More links.
-- **Size:** 181 lines.
+- **Size:** 196 lines.
 - **What:** on a small library made for the test (the four tables the links are read by): a line's links are those
   that start from it and those that reach it, each with its book's title, category and order; the kinds the panes
   already list (a commentary, a reference, עין משפט, מסורת הש״ס) are left to them; a line reached by several links is
   listed once, and the selected lines not at all, lines linked to one another only having nothing to list; no lines, no
   links; and the other kinds group under `ReferenceKind.More`, a tab of its own after the references, a book listed
   once as a reference and once with its other links. For the verse links: the lines of some categories' books a line is
-  linked to, either way and once, a commentary's link being none, the books right under some categories, the lines before a line in its book, and a book's book of notes with the letters its linked notes start with.
+  linked to, either way and once, a commentary's link being none, the books right under some categories, the lines before a line in its book, a book's book of notes with the letters its linked notes start with, and what a book's links say of it (commented
+  on, commenting, neither; a targum's link makes a book one that comments).
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `LineReferencesTest` beside it (Kotlin Test, camel-case names); `LevelPrecedenceTest` for a
   SQLite file made in the test.
