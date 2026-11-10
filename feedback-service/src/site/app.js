@@ -764,13 +764,16 @@ function daf() {
     { title: "השורה", value: ok },
     { title: "מה לא נכון", value: why },
     { title: "המילים שסומנו", value: part },
+    { title: "גרסת הקובץ", value: (m) => m.version ?? 0, class: "num", cell: (m) => (m.version == null ? "—" : String(m.version)) },
     { title: "הזזה", value: (m) => m.cut ?? 0, class: "num", cell: (m) => (m.cut ? String(m.cut) : "—") },
     { title: "מתי", value: (m) => m.atMs, class: "when", cell: (m) => when(m.atMs) },
   ];
   const bar = toolbarFor("dafFilter", "חיפוש בשורות", rows.length, marks.length, () =>
     download(`pardes-daf-${today()}.csv`, csv(
-      ["tractate", "tractateHe", "amud", "column", "line", "words", "ok", "cut", "at", "layoutWrong", "wordsWrong", "from", "to"],
-      marks.map((m) => [m.tractate, m.tractateHe, m.amud, m.c, m.i, m.t, m.ok, m.cut, m.at, m.layout, m.words, m.from, m.to])),
+      ["tractate", "tractateHe", "amud", "column", "line", "words", "ok", "cut", "at", "layoutWrong", "wordsWrong", "from", "to",
+        "layoutVersion"],
+      marks.map((m) => [m.tractate, m.tractateHe, m.amud, m.c, m.i, m.t, m.ok, m.cut, m.at, m.layout, m.words, m.from, m.to,
+        m.version])),
     "text/csv;charset=utf-8"));
   return h("div", { class: "stack" },
     h("section", { class: "card" }, h("h2", {}, "המסכתות"), h("p", { class: "sub" }, "השורות שנבדקו בכל מסכת"), summary),

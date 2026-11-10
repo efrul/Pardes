@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (154 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (156 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1215,14 +1215,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +209 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 196 Hebrew strings added in thirteen blocks,
+- **Change:** modified, +220 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 207 Hebrew strings added in thirteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
   - semantic packs: `semantic_pack_*` (31), `semantic_problem_*` (6);
   - feedback: `feedback_send_*` (35), `feedback_consent_*` (14), `search_feedback_*` (6);
-  - the daf view: `daf_layouts_*` (10), `daf_review_*` (4), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
+  - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (4), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
     `daf_view_tooltip`, `daf_missing`, `daf_missing_hint`, `daf_amud_missing`, `settings_daf_*` (4) and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
   - the existing Zayit library: `onboarding_existing_library_*` (5);
@@ -1620,7 +1620,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
 - **Feature:** Daf view.
-- **Size:** 1320 lines.
+- **Size:** 1324 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review mode; `DafMode` (what a click
@@ -1642,30 +1642,33 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   two checkboxes, "הקטע מעומד לא נכון" and "יש טעות במילים" (`ContextMenuCheck`), of the lines the right-clicked word's
   selection covers (`reviewedAt`: the reader's own selection when the word is in it, or the selected segment's or
   comment's words on the amud, else the word's line), each written through `DafReviews.say`, one write at a time
-  (`reviewing`); a line marked before the two reasons has "ביטול הסימון של השורה" too.
+  (`reviewing`); a line marked before the two reasons has "ביטול הסימון של השורה" too. Over a tractate's pages,
+  `DafUpdateLine` (`DafUpdate.kt`) offers a newer version of its layout.
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
   (`DafMode`, `isBavli`), `VerticalBars.kt` (`isBavli`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
   composables have no UI test.
-- **Notes:** at 1,320 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
+- **Notes:** at 1,324 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
   parts (pages, review, missing layout, marks).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayout.kt`
 
 - **Feature:** Daf view.
-- **Size:** 196 lines.
+- **Size:** 210 lines.
 - **What:** the layout file's model and folder. `DafLayoutFile` (a tractate's amudim, made by pardes-rashi-ocr's
   `export_layout.py`), `DafLibrary` (the library release a format-2 file's line ids are of), `DafAmud` (page and block
   size, lines), `DafLine` (column, box, words, sureness, dibbur words, each word's library line `u`), and `DafLayouts`:
   a folder's files found by the tractate their header names (English or Hebrew), watched for files put in or taken out,
-  the last few read kept, and an import.
+  the last few read kept, and an import. A file's `version` is its tractate's own among the released layouts (one more
+  in each release its layout changed in), read with the file or from its head alone (`versionOf`); a file of before
+  the releases gave each tractate one has none.
 - **Reached from:** `DafView.kt`, `DafPage.kt`, `DafSetting.kt`, `DafAnchors.kt`, `DafAmudLinks.kt`, `DafReview.kt`,
   `DafDownloads.kt`, `DafLayoutsCard.kt`.
 - **Follows:** Pardes's own; kotlinx-serialization as Zayit uses it.
-- **Tests:** `DafLayoutsTest`, `DafPageTest`.
+- **Tests:** `DafLayoutsTest`, `DafPageTest`, `DafDownloadsTest` (a file's version).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafSetting.kt`
 
@@ -1779,7 +1782,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReview.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 283 lines.
+- **Size:** 287 lines.
 - **What:** a reader's review of a tractate's layout, for pardes-rashi-ocr: `DafReviewFile` and `DafMark`, a line
   with what the reader said is wrong with it (`DafReason`: how it is set on the page, `layout`, or its words, `words`,
   with `ok` false), of which of its words when the passage reviewed starts or ends inside it (`from`, `to`); a mark of
@@ -1788,7 +1791,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   the selection's when the word is in it, each with the words of it meant, else the word's own (`ReviewedLine`).
   `lineBefore`/`lineAfter` in a column's reading order, and `DafReviews`, kept in the layouts' folder under
   `feedback/`, one file a tractate, written at every mark (`say`: a reason said or unsaid of a passage's lines in one
-  write, each from its mark as it is in the file), an unreadable file set aside. The format stays 1: the service
+  write, each from its mark as it is in the file, with the version of the layout it was made on, `version`), an
+  unreadable file set aside. The format stays 1: the service
   refuses another, and takes fields it does not know.
 - **Reached from:** `DafView.kt`, `DafReviewMenu.kt`, `DafLayout.kt`, `FeedbackPackage.kt` (sent with the feedback).
 - **Follows:** Pardes's own; the file is read by pardes-rashi-ocr's `feedback.py`.
@@ -1811,24 +1815,41 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafDownloads.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 339 lines.
+- **Size:** 362 lines.
 - **What:** the released layouts downloaded into a library's `pardes-daf` folder: `DafReleases` (the `daf-<n>` releases
   from the GitHub API, or the site's `daf.json` when it fails), `DafManifest` (each tractate's gzipped file with its
-  sha256 and its layout's), and `DafDownloads` (what the folder has as released, and each tractate downloaded, checked
-  and imported as a picked file is).
-- **Reached from:** `DafView.kt` (a missing tractate's download), `DafLayoutsCard.kt`.
+  sha256 and its layout's, and the tractate's own version, none in a release of before the versions), and
+  `DafDownloads` (what the folder has as released, the version of each of its files, and each tractate downloaded,
+  checked and imported as a picked file is, one alone or several). The sha256 still says whether a file is the
+  release's; the versions are what the reader is shown.
+- **Reached from:** `DafView.kt` (a missing tractate's download), `DafUpdate.kt`, `DafLayoutsCard.kt`.
 - **Follows:** Zayit's library download (`GitHubReleaseFetcher`, `HttpFileDownloader`) in spirit; its own code.
 - **Tests:** `DafDownloadsTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafUpdate.kt`
+
+- **Feature:** Daf layouts download.
+- **Size:** 85 lines.
+- **What:** `newerFor`, the tractate's newer version among the released layouts than the folder's file (none when the
+  file is the release's, a later one than it, or the release has no versions), and `DafUpdateLine`, a quiet line at
+  the daf's bottom corner that names it with a link that downloads it, then has the daf read the folder again. The
+  releases are read once a run, and only when the app checks for updates by itself (the settings' switch).
+- **Reached from:** `DafView.kt` (`DafView`, over a tractate's pages).
+- **Follows:** `DafView.kt`'s `DownloadLayout` (the same downloads and progress text); Jewel's `Link`.
+- **Tests:** `DafDownloadsTest` (`newerFor`); the line itself has none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafLayoutsCard.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 140 lines.
+- **Size:** 213 lines.
 - **What:** Settings › ניהול נתונים's card for the daf's layouts: how many the library's folder has as released, and
-  every one it lacks, or has otherwise, downloaded at once; the download goes on when the settings close.
+  every one it lacks, or has otherwise, downloaded at once; the download goes on when the settings close. Each
+  tractate has a row (`Tractates`, `tractateLine`): its name, its file's version in the folder and the release's, and
+  for one to download a link that downloads it alone; those to download are always listed, the others when asked
+  ("כל המסכתות והגרסאות שלהן").
 - **Reached from:** `DataSettingsScreen.kt` (`DafLayoutsCard()`).
 - **Follows:** the settings cards of Zayit's data page (their layout and components).
-- **Tests:** none.
+- **Tests:** `DafLayoutsCardUiTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LocatedSelection.kt`
 
@@ -1869,14 +1890,28 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafDownloadsTest.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 170 lines.
+- **Size:** 231 lines.
 - **What:** the newest published release with a manifest chosen, a tractate found by either name, downloaded, checked and
-  put in the folder, a layout that is not the manifest's refused, a folder's own file seen as to be updated.
+  put in the folder, a layout that is not the manifest's refused, a folder's own file seen as to be updated; a
+  tractate's version read from its file's head, a newer one in the release offered and, downloaded, the folder's, a
+  later file than the release's left, and a release of before the versions offering none.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test and coroutines' test dispatcher; the releases and files are faked in memory (gzipped, with
   their sha256).
 - **Tests:** it is one (unit, `DafDownloads.kt`).
 - **Notes:** camelCase test names.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafLayoutsCardUiTest.kt`
+
+- **Feature:** Daf layouts download.
+- **Size:** 98 lines.
+- **What:** the layouts' card drawn with three tractates (one the release's, one an older version, one missing): each
+  to download with its row and its own link, all of them by the button, the release's own row only when the list is
+  asked for; and a release of before the versions, its rows without one. The card's drawing is written to
+  `build/reports/daf/layouts-card.png`.
+- **Reached from:** the JVM tests.
+- **Follows:** `FeedbackSendCardUiTest` (Compose UI test on the desktop, Jewel's `IntUiTheme`, right to left).
+- **Tests:** it is one (Compose UI).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayoutsTest.kt`
 
@@ -1945,13 +1980,14 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewTest.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 180 lines.
+- **Size:** 185 lines.
 - **What:** a line's start moved a word on or back with its library line and bold, a move that would empty a line left
   out, a mark of a changed line or another amud moving nothing, the review kept in the feedback folder (the new mark in
   place of the old), written to the file it was read from, and an unreadable file set aside. The two reasons: a review
   is of the selection's lines when the word is in it, with the words it holds (its column's lines alone, no big word),
   else of the word's line; a reason said of a passage's lines in one write and unsaid again, the other reason kept, no
-  mark left with neither; a mark of before the reasons kept under them (its move still made) and told apart.
+  mark left with neither, each mark with the version of the layout it was made on; a mark of before the reasons kept
+  under them (its move still made) and told apart.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, `DafReview.kt`).
@@ -3510,7 +3546,7 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (639 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (640 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -3569,11 +3605,12 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `.github/scripts/daf_release.py` | Makes a daf-<n> release's files from pardes-rashi-ocr's layouts: each tractate's layout gzipped, pardes-daf.zip of them all to unpack beside the library, the manifest Pardes for desktop downloads them by (sha256 of each file and of its layout), and the release's tag, title and notes. | Pardes's own |
+| `.github/scripts/daf_release.py` | Makes a daf-<n> release's files from pardes-rashi-ocr's layouts: each tractate's layout gzipped, pardes-daf.zip of them all to unpack beside the library, the manifest Pardes for desktop downloads them by (sha256 of each file and of its layout), and the release's tag, title and notes. Each tractate has a version of its own, written in its file's header and in the manifest: 1 at first, one more in a release where its layout is not the one of the release before (--previous, that release's manifest, whose contentSha256 is the layout's without its version), the same otherwise, so that a tractate that did not change is the same file byte for byte; the notes name the tractates that changed. | Pardes's own |
+| `.github/scripts/test_daf_release.py` | The release script's tests, run by hand or by pytest and by daf-release.yml before it builds: a tractate's version goes up only in a release where its layout changed (the other's file the same bytes), the version at the head of the file, a layout that comes with a version of its own the same layout, and every tractate's first version after a release without versions or with none before. | Pardes's own |
 | `.github/workflows/android-release.yml` | Workflow, run by hand only (inputs prerelease and note), that builds Pardes for Android's release APK signed with Pardes's key from the repository's secrets, checks its certificate, the lucene-android API 26 gate and the release dex, and publishes `android-<versionName>-<run>` as the Latest release with the APK, the complete source with SeforimLibrary and the desktop-to-phone transfer scripts. *Note:* The notes come from androidApp/CHANGELOG.md's section for the version, and the run stops without one. Zayit's release and site workflows (deploy.yaml, pages.yaml) are removed here. | Pardes's own |
 | `.github/workflows/android-site.yml` | Workflow that deploys androidApp/site to GitHub Pages with the transfer scripts, both changelogs (changelog.md, changelog-desktop.md) and the releases.json, semantic.json, daf.json and downloads.json snapshots; runs on pushes to main that touch them, after every successful Android, Desktop, Semantic pack or Daf layouts release, and by hand. *Note:* The Android updater reads releases.json and changelog.md, Pardes for desktop semantic.json and daf.json (SemanticPackReleases, DafDownloads), so their shapes are a contract (its header). | Pardes's own; Zayit's pages.yaml, which deployed Zayit's website/, was removed |
 | `.github/workflows/change-map.yml` | Workflow that runs check_change_map.py --committed on every push and pull request, with the whole history (the map's base must be there): a red run names the files to describe. Its job, Change map, is the check main's ruleset requires, by that name. | Pardes's own |
-| `.github/workflows/daf-release.yml` | Workflow that publishes the daf view's layouts as a release daf-<n> (daf_release.py), from this repository's branch daf-layouts, where pardes-rashi-ocr pushes its layouts/*.json; the notes say what the words are (Wikisource's Gemara under CC BY-SA through Sefaria, the Vilna Rashi and Tosafot) and the files go out under CC BY-SA. | Pardes's own |
+| `.github/workflows/daf-release.yml` | Workflow that publishes the daf view's layouts as a release daf-<n> (daf_release.py, after its tests), from this repository's branch daf-layouts, where pardes-rashi-ocr pushes its layouts/*.json, with the manifest of the release before it downloaded for each tractate's version; the notes say what the words are (Wikisource's Gemara under CC BY-SA through Sefaria, the Vilna Rashi and Tosafot) and the files go out under CC BY-SA. | Pardes's own |
 | `.github/workflows/desktop-release.yml` | Workflow, run by hand only, that builds Pardes for desktop through branding/ (Windows x64 GraalVM and arm64 JVM as NSIS, Linux x64 and arm64 as deb, rpm and pacman, macOS Apple Silicon and Intel as dmg and zip), writes Nucleus's latest*.yml update feeds and the complete source, and publishes `desktop-<x.y.z>-<run>` with --latest=false. *Note:* Version and notes from desktop/CHANGELOG.md's top section; GITHUB_REF=refs/tags/v<version> set in the Gradle shell for Versioning. No Zayit secrets, add-ons or Rust installer wrapper; optional Linux GPG and PARDES_FEEDBACK_URL secrets. 600 lines. | Pardes's own, built as Zayit's deploy.yaml (removed here) builds its platforms |
 | `.github/workflows/feedback-service.yml` | Workflow that tests the feedback service in Miniflare and, with its Cloudflare secrets, masks the account's name, e-mail and workers.dev subdomain, creates the D1 database the first time, applies the migrations, deploys the Worker and sets its admin token; runs by hand and on pushes to main that touch feedback-service/. *Note:* Without the secrets a push only tests. It deploys from main, the default branch (38ba9543), while CLAUDE.md keeps Zayit's line that PRs target master. | Pardes's own |
 | `.github/workflows/semantic-notes.yml` | Workflow, run by hand with a pack's tag (default semantic-2-v3-20261012193827), that writes a released semantic pack's title and notes again from semantic-model/release_notes.py and the release's manifest, then makes the newest Android release the Latest again. | Pardes's own |
@@ -3756,15 +3793,15 @@ the description where something needs saying.
 | `feedback-service/migrations/0002_public.sql` | Second D1 migration: column `public` of `packages` (0 or 1, 0 by default), whether the sender agreed to publish the package ("publish": true), which index.js sets on receiving it and reads for the public route. Packages from before stay 0. | Pardes's own |
 | `feedback-service/package-lock.json` | npm lockfile (v3) of the service's dev dependencies, wrangler 4.151.2 and miniflare 5.20261019.0-beta, and their dependencies. *Note:* Miniflare is pinned at a beta version. | generated by npm |
 | `feedback-service/package.json` | npm manifest of the private package pardes-feedback (ES modules, Node 22 or later): the scripts dev (wrangler dev), test (node --test) and deploy (wrangler deploy), and the dev dependencies wrangler and miniflare. | Pardes's own |
-| `feedback-service/src/index.js` | The Worker: POST /v1/packages keeps a checked package (at most 1,000,000 bytes, 200 a day per sender, 20 packages or deletions a minute per address through the LIMITER binding), with `public` 1 when it says "publish": true; DELETE /v1/senders/:id deletes a sender's packages and records it; GET /v1/public/packages gives everyone the packages (at most 50 a request, 300 requests a minute per address through READ_LIMITER), each with `public` and each sender, in the package too, the first 6 bytes of a SHA-256 of its id in hex: a published package as published cuts it (the words, scope, options and graded place of its searches and grades, nothing else a sender added), any other as forEveryone cuts it (each search and graded result an opaque id, an HMAC-SHA-256 under a key from ADMIN_TOKEN, in place of its words, scope and place), every row with its opaque id (queryId, resultId) so the site counts a row sent both ways once, the daf reviews with each mark's own fields (its line and words, right or wrong, a move, what is wrong with it, `layout` or `words`, and of which of its words, `from` and `to`) and nothing a sender added to one; the maintainer's GET routes list the packages with `public` (with their bodies on request, at most 50) and return one with the ADMIN_TOKEN, and GET / serves the site (site.js), to which /admin leads. *Note:* Plain JavaScript, while Zayit's own web code (website/) is TypeScript. Any error answers a bare 500, with nothing logged. | Pardes's own |
-| `feedback-service/src/package.js` | What a package must be: format 1 of app "Pardes", a UUID sender, sentAt, optional versions, an optional boolean "publish" (the sender's consent to show its words to everyone), and lists of grades (0, 2 or 3), searches (a pasted passage too) and daf reviews with their marks (a mark's two reasons true or false, the words they are of counts), every field checked by type and length, and a refusal that names the row and the reason; exports MAX_BYTES, MAX_PER_DAY, MAX_QUERY and SENDER. | Pardes's own; follows the app's FeedbackPackage.kt format |
+| `feedback-service/src/index.js` | The Worker: POST /v1/packages keeps a checked package (at most 1,000,000 bytes, 200 a day per sender, 20 packages or deletions a minute per address through the LIMITER binding), with `public` 1 when it says "publish": true; DELETE /v1/senders/:id deletes a sender's packages and records it; GET /v1/public/packages gives everyone the packages (at most 50 a request, 300 requests a minute per address through READ_LIMITER), each with `public` and each sender, in the package too, the first 6 bytes of a SHA-256 of its id in hex: a published package as published cuts it (the words, scope, options and graded place of its searches and grades, nothing else a sender added), any other as forEveryone cuts it (each search and graded result an opaque id, an HMAC-SHA-256 under a key from ADMIN_TOKEN, in place of its words, scope and place), every row with its opaque id (queryId, resultId) so the site counts a row sent both ways once, the daf reviews with each mark's own fields (its line and words, right or wrong, a move, what is wrong with it, `layout` or `words`, of which of its words, `from` and `to`, and the layout's `version` it was made on) and nothing a sender added to one; the maintainer's GET routes list the packages with `public` (with their bodies on request, at most 50) and return one with the ADMIN_TOKEN, and GET / serves the site (site.js), to which /admin leads. *Note:* Plain JavaScript, while Zayit's own web code (website/) is TypeScript. Any error answers a bare 500, with nothing logged. | Pardes's own |
+| `feedback-service/src/package.js` | What a package must be: format 1 of app "Pardes", a UUID sender, sentAt, optional versions, an optional boolean "publish" (the sender's consent to show its words to everyone), and lists of grades (0, 2 or 3), searches (a pasted passage too) and daf reviews with their marks (a mark's two reasons true or false, the words they are of and the layout's version counts), every field checked by type and length, and a refusal that names the row and the reason; exports MAX_BYTES, MAX_PER_DAY, MAX_QUERY and SENDER. | Pardes's own; follows the app's FeedbackPackage.kt format |
 | `feedback-service/src/site.js` | The site's route (GET /): serves its page, script, style and font, which hold no data, with a CSP that runs no script but its own and reaches no other address, no framing and no referrer; the page and script uncached, the font for 30 days; /admin redirects to it. | Pardes's own; replaces the maintainer's page (admin.js) |
 | `feedback-service/src/site/OFL-Frank-Ruhl-Libre.txt` | The SIL Open Font License 1.1 of Frank Ruhl Libre (Copyright 2015 The Frank Ruhl Libre Project Authors), the site's display font. | Frank Ruhl Libre's licence, as published |
-| `feedback-service/src/site/app.js` | The search data site's script (1,128 lines). Everyone sees what the data adds up to, read page by page from the public route: a summary (searches, grades, senders, daf lines, the days of the last 30, the grades by search model, the app of each row: Pardes, and Zayit and Otzaria through the search telemetry tool); the common searches and the searches' and grades' tabs from published packages only (their tabs shown once there are any, with a word that the rest are counted but not shown); the daf marks' table (each line with what its reader said is wrong with it, its setting on the page or its words, and of which of its words; the tractates' counts of each) with search, sorting and a CSV download; the packages as the public route gives them; and an upload of package files, each posted with "publish": true under a line that says what is uploaded is published (split into parts of at most 900,000 bytes, waiting out the rate limit). Rows are counted once across senders, and across a published and an unpublished copy by their opaque ids, showing the words. The admin sign-in (the admin token, kept in the browser only if asked) reads the maintainer's route and shows every search. It shows no sender, alias or id, and every text from a package only as text. | Pardes's own; replaces the maintainer's page (admin/app.js) |
+| `feedback-service/src/site/app.js` | The search data site's script (1,131 lines). Everyone sees what the data adds up to, read page by page from the public route: a summary (searches, grades, senders, daf lines, the days of the last 30, the grades by search model, the app of each row: Pardes, and Zayit and Otzaria through the search telemetry tool); the common searches and the searches' and grades' tabs from published packages only (their tabs shown once there are any, with a word that the rest are counted but not shown); the daf marks' table (each line with what its reader said is wrong with it, its setting on the page or its words, of which of its words, and on which version of the layout; the tractates' counts of each) with search, sorting and a CSV download; the packages as the public route gives them; and an upload of package files, each posted with "publish": true under a line that says what is uploaded is published (split into parts of at most 900,000 bytes, waiting out the rate limit). Rows are counted once across senders, and across a published and an unpublished copy by their opaque ids, showing the words. The admin sign-in (the admin token, kept in the browser only if asked) reads the maintainer's route and shows every search. It shows no sender, alias or id, and every text from a package only as text. | Pardes's own; replaces the maintainer's page (admin/app.js) |
 | `feedback-service/src/site/display.woff2` | Frank Ruhl Libre, subset to Hebrew, digits and punctuation (binary), the font of the site's headings and searches, served by the Worker itself. | Frank Ruhl Libre (SIL OFL 1.1), subset for the site |
 | `feedback-service/src/site/index.html` | The open site's page, "מאגר החיפושים הפתוח" (Hebrew, right to left, light and dark): its masthead (the figures open to everyone, the searches only from those who agreed to publish them), the admin sign-in's button and dialog, the tabs and the sections the script fills, and a footer saying the same; no data in it. | Pardes's own; replaces the maintainer's page (admin/index.html) |
 | `feedback-service/src/site/style.css` | The open site's styles, in no app's branding: an index of a library rather than an admin panel, a Hebrew serif title, figures between hairlines, sticky tabs, one techelet accent and a chart hue checked for contrast in light and dark, the admin sign-in's dialog, and the upload's note that what is uploaded is published. | Pardes's own; replaces the maintainer's page (admin/style.css) |
-| `feedback-service/test/service.test.js` | node:test suite that runs the Worker in Miniflare with every migration applied in order: the site at the root and nothing else without a route, keeping and listing a package with its counts and bodies, the site with no data in it, its CSP, its upload posting with "publish": true and saying so, the public route without a search's words and with each sender an alias that does not give its id away, a package's words shown to everyone only with "publish": true (and the same opaque ids on both forms, a mixed pair from one sender, `public` for the maintainer), paging, refusing non-packages with the row and reason (a "publish" that is not true or false too, and a daf mark whose reason is not true or false or whose word is below 0), a daf mark's reasons and words shown to everyone without what a sender added to it, the token on the maintainer's routes, deleting a sender's packages (told to everyone by its alias), the daily limit and the per-address rate limit. | Pardes's own |
+| `feedback-service/test/service.test.js` | node:test suite that runs the Worker in Miniflare with every migration applied in order: the site at the root and nothing else without a route, keeping and listing a package with its counts and bodies, the site with no data in it, its CSP, its upload posting with "publish": true and saying so, the public route without a search's words and with each sender an alias that does not give its id away, a package's words shown to everyone only with "publish": true (and the same opaque ids on both forms, a mixed pair from one sender, `public` for the maintainer), paging, refusing non-packages with the row and reason (a "publish" that is not true or false too, and a daf mark whose reason is not true or false, whose word is below 0 or whose version is no number), a daf mark's reasons and words shown to everyone without what a sender added to it, the token on the maintainer's routes, deleting a sender's packages (told to everyone by its alias), the daily limit and the per-address rate limit. | Pardes's own |
 | `feedback-service/wrangler.toml` | Wrangler configuration of the Worker pardes-feedback: src/index.js, compatibility date 2026-10-01, workers.dev on, observability off (no request logs), the D1 binding DB with migrations/, the LIMITER rate limit of 20 packages or deletions a minute and READ_LIMITER's of 300 public reads a minute, and rules that bundle the site's page, script and style as text and its font as data. *Note:* Holds no account id; its D1 database id is all zeros, written in by feedback-service.yml for its run only. | Pardes's own |
 
 #### The Nucleus fork (the commentators' tear-off)

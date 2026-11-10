@@ -35,7 +35,8 @@ data class DafReviewFile(
  * (counted in [t] from 0; null: from its first, to its last), when the passage reviewed starts or ends inside it. [ok]
  * is false for a line either is said of (a review of before the two reasons: whether its words are the printed line's,
  * null not said), and [cut] how many words the line's start moves in the column's text, in such a review: 1 its first
- * word is the line before's last, -1 the line before's last word is its first. [at] when it was marked.
+ * word is the line before's last, -1 the line before's last word is its first. [at] when it was marked, [version] the
+ * version of the tractate's layout file it was marked on (null: a file of before each tractate had one).
  */
 @Serializable
 data class DafMark(
@@ -50,6 +51,7 @@ data class DafMark(
     val words: Boolean = false,
     val from: Int? = null,
     val to: Int? = null,
+    val version: Int? = null,
 ) {
     val isEmpty: Boolean get() = ok == null && cut == 0
 
@@ -241,7 +243,9 @@ class DafReviews(
             lines.mapNotNull { reviewed ->
                 val line = amud.lines.getOrNull(reviewed.index) ?: return@mapNotNull null
                 val mine = review.marks.firstOrNull { it.amud == amud.amud && it.i == reviewed.index && it.t == line.t }
-                (mine ?: DafMark(amud.amud, line.c, reviewed.index, line.t)).saying(reason, said, reviewed.from, reviewed.to)
+                (mine ?: DafMark(amud.amud, line.c, reviewed.index, line.t))
+                    .saying(reason, said, reviewed.from, reviewed.to)
+                    .copy(version = layout.version)
             }
         return marked(layout, marks)
     }

@@ -77,16 +77,21 @@ class DafDownloadsTest {
         assertNull(DafManifest.parseOrNull("""{"format": 2, "daf": 1, "tractates": []}"""), "a format this app does not know")
     }
 
-    /** A release of the fixture as Berakhot, served from memory; [layout] the file served, [manifestJson] its sha256. */
+    /**
+     * A release of the fixture as Berakhot, served from memory; [layout] the file served, [manifestJson] its sha256,
+     * [version] the tractate's in the manifest (none: a release of before the versions).
+     */
     private fun downloads(
         layout: ByteArray = fixture.readBytes(),
         manifestJson: ByteArray = layout,
+        version: Int? = null,
         scope: TestScope,
     ): DafDownloads {
         val gz = gzip(layout)
+        val versioned = version?.let { ""","version":$it""" }.orEmpty()
         val manifest =
             """{"format":1,"daf":1,"tractates":[{"tractate":"Berakhot","tractateHe":"ברכות","file":"Berakhot.json.gz",""" +
-                """"size":${gz.size},"sha256":"${sha256(gz)}","jsonSha256":"${sha256(manifestJson)}","amudim":1}]}"""
+                """"size":${gz.size},"sha256":"${sha256(gz)}","jsonSha256":"${sha256(manifestJson)}","amudim":1$versioned}]}"""
         val releases =
             DafReleases { url ->
                 assertEquals(DafReleases.API_URL, url)
@@ -166,5 +171,61 @@ class DafDownloadsTest {
                 downloads.state.value.installedOf(assertNotNull(downloads.state.value.manifest).tractates.single()),
             )
             assertEquals(String(newer), File(dir, "Berakhot.json").readText())
+        }
+
+    // The fixture as the releases write a tractate's version of its own: in its file's head
+    private fun versioned(version: Int) = fixture.readText().replaceFirst("\"amudim\"", "\"version\":$version,\"amudim\"")
+
+    @Test
+    fun aTractatesVersionIsItsFilesAndANewerOneIsOffered() =
+        runBlocking<Unit> {
+            val file = File(dir, "Berakhot.json")
+            fixture.copyTo(file)
+            assertNull(DafLayouts(dir).versionOf("Berakhot"), "a file of before the versions")
+            val test = TestScope(StandardTestDispatcher())
+            val downloads = downloads(layout = versioned(3).toByteArray(), version = 3, scope = test)
+            downloads.refresh()
+            test.advanceUntilIdle()
+            assertNull(downloads.state.value.versions["Berakhot"])
+            val offered = downloads.state.value.newerFor("ברכות")
+            assertEquals(3, offered?.version, "a file with no version is older than any")
+
+            // The folder's file an older version: the release's is offered, and downloaded it is the folder's
+            file.writeText(versioned(2))
+            downloads.recount()
+            test.advanceUntilIdle()
+            val older = downloads.state.value
+            assertEquals(2, older.versions["Berakhot"])
+            val newer = assertNotNull(older.newerFor("Berakhot"))
+            downloads.download(listOf(newer))
+            test.advanceUntilIdle()
+            val done = downloads.state.value
+            assertNull(done.problem)
+            assertEquals(3, done.versions["Berakhot"])
+            assertNull(done.newerFor("ברכות"))
+            val layouts = DafLayouts(dir)
+            assertEquals(3, layouts.versionOf("ברכות"))
+            assertEquals(3, assertNotNull(layouts.tractate("Berakhot")).version)
+
+            // A later file than the release's (one brought by hand) is another file, but nothing newer is offered
+            file.writeText(versioned(4))
+            downloads.recount()
+            test.advanceUntilIdle()
+            val later = downloads.state.value
+            assertEquals(DafDownloads.Installed.OTHER, later.installedOf(newer))
+            assertNull(later.newerFor("ברכות"))
+        }
+
+    @Test
+    fun aReleaseOfBeforeTheVersionsOffersNoNewerOne() =
+        runBlocking<Unit> {
+            File(dir, "Berakhot.json").writeText(versioned(1))
+            val test = TestScope(StandardTestDispatcher())
+            val downloads = downloads(scope = test)
+            downloads.refresh()
+            test.advanceUntilIdle()
+            val state = downloads.state.value
+            assertEquals(DafDownloads.Installed.OTHER, state.installedOf(state.toGet.single()))
+            assertNull(state.newerFor("ברכות"))
         }
 }

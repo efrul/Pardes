@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,30 +24,42 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.AnimatedHo
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.formatBytes
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafDownloads
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafLayouts
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafManifest
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafLayouts
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.DefaultButton
+import org.jetbrains.jewel.ui.component.Link
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_download_failed
 import seforimapp.seforimapp.generated.resources.daf_download_retry
+import seforimapp.seforimapp.generated.resources.daf_layouts_available_version
 import seforimapp.seforimapp.generated.resources.daf_layouts_cancel
 import seforimapp.seforimapp.generated.resources.daf_layouts_checking
 import seforimapp.seforimapp.generated.resources.daf_layouts_current
 import seforimapp.seforimapp.generated.resources.daf_layouts_description
 import seforimapp.seforimapp.generated.resources.daf_layouts_download
+import seforimapp.seforimapp.generated.resources.daf_layouts_get_one
+import seforimapp.seforimapp.generated.resources.daf_layouts_hide_all
+import seforimapp.seforimapp.generated.resources.daf_layouts_installed_other
+import seforimapp.seforimapp.generated.resources.daf_layouts_installed_version
 import seforimapp.seforimapp.generated.resources.daf_layouts_none
+import seforimapp.seforimapp.generated.resources.daf_layouts_not_installed
 import seforimapp.seforimapp.generated.resources.daf_layouts_progress
+import seforimapp.seforimapp.generated.resources.daf_layouts_show_all
 import seforimapp.seforimapp.generated.resources.daf_layouts_status
 import seforimapp.seforimapp.generated.resources.daf_layouts_title
 import seforimapp.seforimapp.generated.resources.daf_layouts_update_hint
+import seforimapp.seforimapp.generated.resources.daf_layouts_update_one
+import seforimapp.seforimapp.generated.resources.daf_layouts_version
 
 /**
  * Settings › ניהול נתונים: the daf view's layouts (צורת הדף) as released for download, how many of them the library's
- * folder has as released, and every one it lacks, or has otherwise, downloaded at once ([DafDownloads]). The download
- * goes on when the settings close.
+ * folder has as released, and every one it lacks, or has otherwise, downloaded at once or one by one ([DafDownloads]):
+ * each tractate has a version of its own, and a row with the folder's and the release's. The download goes on when the
+ * settings close.
  */
 @Composable
 fun DafLayoutsCard() {
@@ -59,7 +73,7 @@ fun DafLayoutsCard() {
     }
     DafLayoutsCardContent(
         state = state,
-        onDownload = { downloads.download(state.toGet) },
+        onDownload = downloads::download,
         onCancel = downloads::cancel,
         onRetry = { if (state.manifest != null) downloads.download(state.toGet) else downloads.refresh(force = true) },
     )
@@ -68,7 +82,7 @@ fun DafLayoutsCard() {
 @Composable
 internal fun DafLayoutsCardContent(
     state: DafDownloads.State,
-    onDownload: () -> Unit,
+    onDownload: (List<DafManifest.Entry>) -> Unit,
     onCancel: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
@@ -110,7 +124,7 @@ internal fun DafLayoutsCardContent(
                     Text(text = stringResource(Res.string.daf_layouts_current), fontSize = 13.sp)
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        DefaultButton(onClick = onDownload) {
+                        DefaultButton(onClick = { onDownload(toGet) }) {
                             Text(stringResource(Res.string.daf_layouts_download, toGet.size, formatBytes(toGet.sumOf { it.size })))
                         }
                     }
@@ -118,6 +132,7 @@ internal fun DafLayoutsCardContent(
                         Hint(stringResource(Res.string.daf_layouts_update_hint))
                     }
                 }
+                Tractates(manifest, state, onDownload)
             }
             state.checked && state.problem == null -> Text(text = stringResource(Res.string.daf_layouts_none), fontSize = 13.sp)
         }
@@ -130,6 +145,64 @@ internal fun DafLayoutsCardContent(
             OutlinedButton(onClick = onRetry) { Text(stringResource(Res.string.daf_download_retry)) }
         }
     }
+}
+
+/**
+ * A row for each tractate of the release: its version in the folder and the release's, and, for one the folder lacks or
+ * has otherwise, a button that downloads it alone. Those to download are always listed, the others when asked.
+ */
+@Composable
+private fun Tractates(
+    manifest: DafManifest,
+    state: DafDownloads.State,
+    onDownload: (List<DafManifest.Entry>) -> Unit,
+) {
+    var all by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (entry in manifest.tractates) {
+            val installed = state.installedOf(entry)
+            if (installed == DafDownloads.Installed.CURRENT && !all) continue
+            val line = tractateLine(entry, installed, state.versions[entry.tractate])
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = line, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                if (installed != DafDownloads.Installed.CURRENT) {
+                    val missing = installed == DafDownloads.Installed.MISSING
+                    val label = if (missing) Res.string.daf_layouts_get_one else Res.string.daf_layouts_update_one
+                    Link(text = stringResource(label), onClick = { onDownload(listOf(entry)) })
+                }
+            }
+        }
+        Link(
+            text = stringResource(if (all) Res.string.daf_layouts_hide_all else Res.string.daf_layouts_show_all),
+            onClick = { all = !all },
+        )
+    }
+}
+
+/** A tractate's line: its name, what the folder has of it ([mine]: its file's version), and the release's version. */
+@Composable
+private fun tractateLine(
+    entry: DafManifest.Entry,
+    installed: DafDownloads.Installed,
+    mine: Int?,
+): String {
+    val released = entry.version
+    val parts =
+        when (installed) {
+            DafDownloads.Installed.CURRENT -> listOfNotNull(released?.let { stringResource(Res.string.daf_layouts_version, it) })
+            DafDownloads.Installed.MISSING ->
+                listOfNotNull(
+                    stringResource(Res.string.daf_layouts_not_installed),
+                    released?.let { stringResource(Res.string.daf_layouts_available_version, it) },
+                )
+            DafDownloads.Installed.OTHER ->
+                listOfNotNull(
+                    mine?.let { stringResource(Res.string.daf_layouts_installed_version, it) }
+                        ?: stringResource(Res.string.daf_layouts_installed_other),
+                    released?.let { stringResource(Res.string.daf_layouts_available_version, it) },
+                )
+        }
+    return (listOf(entry.tractateHe) + parts).joinToString(" · ")
 }
 
 @Composable
