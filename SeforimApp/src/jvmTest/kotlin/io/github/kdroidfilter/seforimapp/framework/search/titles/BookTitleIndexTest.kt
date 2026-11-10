@@ -82,6 +82,47 @@ class BookTitleIndexTest {
     }
 
     @Test
+    fun `the base books of a category named whole come before the books that have its name in their title`() {
+        val tanakh =
+            BookTitleIndex(
+                listOf(
+                    book(1, "אור הישר (תנך)", listOf("תנ״ך", "אחרונים")),
+                    book(2, "בראשית", listOf("תנ״ך", "תורה"), base = true),
+                    book(3, "שמואל א", listOf("תנ״ך", "נביאים"), base = true),
+                    book(4, "יהושע", listOf("תנ״ך", "נביאים"), base = true),
+                    book(5, "רש\"י על בראשית", listOf("תנ״ך", "ראשונים", "רש״י", "תורה")),
+                    book(6, "משנה תורה, הלכות שבת", listOf("הלכה", "משנה תורה", "ספר זמנים"), base = true),
+                    book(7, "ביאור הלכה", listOf("הלכה", "שולחן ערוך", "מפרשים")),
+                    book(8, "שולחן ערוך, אורח חיים", listOf("הלכה", "שולחן ערוך"), base = true),
+                ),
+                emptyList(),
+            )
+
+        fun titles(query: String) = tanakh.searchBooks(query, 10).map { it.book.title }
+        // In the library's order, a longer title in its place; then the title that has the name, then the commentary
+        assertEquals(listOf("בראשית", "שמואל א", "יהושע", "אור הישר (תנך)", "רש\"י על בראשית"), titles("תנך"))
+        assertEquals(listOf("שמואל א", "יהושע"), titles("נביאים"))
+        // A wide category's name: its own books and those right under it, not every base book below
+        assertEquals(listOf("שולחן ערוך, אורח חיים", "ביאור הלכה", "משנה תורה, הלכות שבת"), titles("הלכה"))
+    }
+
+    @Test
+    fun `when nothing is found, every word may be the start of a word`() {
+        val tanakh =
+            BookTitleIndex(
+                listOf(
+                    book(1, "שמואל א", listOf("תנ״ך", "נביאים"), base = true),
+                    book(2, "רש\"י על שמואל א", listOf("תנ״ך", "ראשונים", "רש״י", "נביאים")),
+                    book(3, "מדרש שמואל", listOf("מדרש", "אגדה"), base = true),
+                ),
+                emptyList(),
+            )
+        assertEquals(listOf("שמואל א", "רש\"י על שמואל א"), tanakh.searchBooks("נביא שמואל", 10).map { it.book.title })
+        // Found as typed: no word is read as a beginning but the last
+        assertEquals(listOf("מדרש שמואל"), tanakh.searchBooks("מדרש שמואל", 10).map { it.book.title })
+    }
+
+    @Test
     fun `authors are found by name or another name, without their title, spelled otherwise`() {
         fun firstAuthor(query: String) =
             index

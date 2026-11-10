@@ -172,7 +172,10 @@ internal sealed interface CatBookRow {
  * `משנה תורה` is the category, not the first of its books (משנה תורה, מסירת תורה שבעל פה), and it comes before the
  * books only an acronym names so (a library may call משנה תורה, הלכות שבת `משנה תורה`); a book's own title before it.
  * A book whose title is typed has its authors right after it, and the authors named as it (`כף החיים`: the book, the two
- * authors, then the category): no category, acronym or text search pushes them down.
+ * authors, then the category): no category, acronym or text search pushes them down. An author named as typed comes
+ * before the categories and the acronyms named so too (`רשי`, `מהרשא`): Tab on the name typed lists the author's books.
+ * The base books whose titles the text begins come right after the text search (`שמואל`: שמואל א, שמואל ב), before
+ * the other authors and categories, when they are few ([MAX_BEGUN_BOOKS]): a text that begins many names none of them.
  */
 internal fun catBookRows(
     query: String,
@@ -194,29 +197,36 @@ internal fun catBookRows(
     val (titledBooks, acronymBooks) = namedBooks.partition { it.book.title.searchKey() == key }
     val typedTitle =
         otherBooks.firstOrNull()?.takeIf { book ->
-            val title =
-                book.book.title
-                    .searchKey()
-                    .replace(",", "")
-            namedBooks.isEmpty() && exactCategories.isEmpty() && ' ' in key && title.startsWith(key)
+            namedBooks.isEmpty() && exactCategories.isEmpty() && ' ' in key && book.titleKey().startsWith(key)
         }
     val typedBooks = (titledBooks + listOfNotNull(typedTitle)).map { it.book.title }
     val (bookAuthors, laterAuthors) = otherAuthors.partition { it.ofBook in typedBooks }
+    val begunBooks =
+        otherBooks
+            .filter { it !== typedTitle && it.book.isBaseBook && it.titleKey().startsWith(key) }
+            .takeIf { it.size <= MAX_BEGUN_BOOKS }
+            .orEmpty()
     return buildList {
         if (textSearch && textSearchFirst) add(CatBookRow.TextSearch)
         jumps.mapTo(this) { CatBookRow.Jump(it) }
         titledBooks.mapTo(this) { CatBookRow.Book(it) }
         typedTitle?.let { add(CatBookRow.Book(it)) }
-        if (typedBooks.isNotEmpty()) (exactAuthors + bookAuthors).mapTo(this) { CatBookRow.Author(it) }
+        (exactAuthors + bookAuthors).mapTo(this) { CatBookRow.Author(it) }
         exactCategories.mapTo(this) { CatBookRow.Category(it) }
         acronymBooks.mapTo(this) { CatBookRow.Book(it) }
-        if (typedBooks.isEmpty()) exactAuthors.mapTo(this) { CatBookRow.Author(it) }
         if (textSearch && !textSearchFirst) add(CatBookRow.TextSearch)
+        begunBooks.mapTo(this) { CatBookRow.Book(it) }
         laterAuthors.mapTo(this) { CatBookRow.Author(it) }
         otherCategories.mapTo(this) { CatBookRow.Category(it) }
-        otherBooks.filter { it !== typedTitle }.mapTo(this) { CatBookRow.Book(it) }
+        otherBooks.filter { it !== typedTitle && it !in begunBooks }.mapTo(this) { CatBookRow.Book(it) }
     }.toImmutableList()
 }
+
+// A book's title as it is compared with the text typed
+private fun BookSuggestion.titleKey(): String = book.title.searchKey().replace(",", "")
+
+// The most base books a text may begin for them to come before the authors and categories it names (שולחן ערוך's five)
+private const val MAX_BEGUN_BOOKS = 5
 
 /**
  * In a book, the other books and categories [query] names, to add to its search: the categories named exactly as typed
