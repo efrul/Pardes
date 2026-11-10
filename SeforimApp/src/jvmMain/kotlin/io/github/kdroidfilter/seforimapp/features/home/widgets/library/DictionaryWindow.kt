@@ -31,9 +31,11 @@ internal fun lookupWord(selection: String): String? {
     return words.joinToString(" ").takeIf { words.size in 1..MAX_WORDS }
 }
 
-// The letters a word takes before it in a text (וה, בכל, מש) and the Aramaic ד; at most two are dropped
+// The letters a word takes before it in a text (וה, בכל, מש) and the Aramaic ד; at most two are dropped, down to a word
+// of three letters (shorter, what is left of והלל is לל, the Aramaic night)
 private const val PREFIXES = "והבכלמשד"
 private const val MOST_PREFIXES = 2
+private const val LEAST_WORD = 3
 
 /**
  * [query]'s entries, as [lookup]; a word no entry begins with is looked up as it stands in a text, without the letters
@@ -47,7 +49,7 @@ internal fun lookupAsRead(
     if (found.isNotEmpty()) return found
     var word = normalizeWord(query)
     repeat(MOST_PREFIXES) {
-        if (word.length < 2 || word[0] !in PREFIXES) return found
+        if (word.length <= LEAST_WORD || word[0] !in PREFIXES) return found
         word = word.drop(1)
         if (entries.any { it.key == word }) return lookup(entries, word)
     }

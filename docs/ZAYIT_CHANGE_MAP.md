@@ -2168,7 +2168,7 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWindow.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 105 lines.
+- **Size:** 107 lines.
 - **What:** `DictionaryToolWindow`, the dictionary's tool window: Zayit's `DefaultToolWindow` under
   `LocalDictionaryWindow` set to true. `Modifier.focusedInItsWindow()` gives the field the focus there, when the window
   opens, each time it is asked for again (`ToolWindows.reopened`) and back from an entry's page; on the Home the local is
@@ -2176,7 +2176,8 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
   it, or brings it back: the word waits in it until `LookupAskedFor`, in the window alone, hands it to the field.
   `lookupWord` is a selection as the dictionary is asked for it: its words alone (`lettersOnly`), or null when it is
   empty or longer than four words. `lookupAsRead` is Zayit's `lookup`, and for a word no entry begins with, the same
-  word without the letters before it in a text (והלל: הלל, דאמר: אמר), at most two, when what is left is an entry.
+  word without the letters before it in a text (והלל: הלל, דאמר: אמר), at most two and down to three letters, when
+  what is left is an entry.
 - **Reached from:** `DictionaryWidget.kt` (`ToolWindow`, the field's modifier, `LookupAskedFor`, `lookupAsRead`),
   `BookContentScreen.kt` (`lookupWord`, `DictionaryLookup.open`), `AppGraph.kt`.
 - **Follows:** Zayit's `SolarSystemWidget`, whose `ToolWindow` is a window of its own, and his composable modifiers
@@ -2196,7 +2197,7 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryLookupTest.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 53 lines.
+- **Size:** 55 lines.
 - **What:** a selected word is asked for as its letters alone; no word, or more than four, is not looked up; a word of
   a text is found without the letters before it, a word of the dictionaries as itself; a lookup opens the dictionary's
   window and brings it back for the next word.
