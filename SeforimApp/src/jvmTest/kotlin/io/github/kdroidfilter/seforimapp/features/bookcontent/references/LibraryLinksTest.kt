@@ -24,7 +24,8 @@ class LibraryLinksTest {
                 "CREATE TABLE line (id INTEGER PRIMARY KEY, bookId INTEGER, lineIndex INTEGER, content TEXT, heRef TEXT)",
             )
             statement.executeUpdate(
-                "CREATE TABLE link (id INTEGER PRIMARY KEY, sourceLineId INTEGER, targetLineId INTEGER, connectionTypeId INTEGER)",
+                "CREATE TABLE link (id INTEGER PRIMARY KEY, sourceBookId INTEGER, targetBookId INTEGER, " +
+                    "sourceLineId INTEGER, targetLineId INTEGER, connectionTypeId INTEGER)",
             )
             ConnectionType.entries.forEach {
                 statement.executeUpdate("INSERT INTO connection_type VALUES (${it.ordinal + 1}, '${it.name}')")
@@ -48,7 +49,11 @@ class LibraryLinksTest {
         to: Long,
         type: ConnectionType,
     ) = connection.createStatement().use {
-        it.executeUpdate("INSERT INTO link (sourceLineId, targetLineId, connectionTypeId) VALUES ($from, $to, ${type.ordinal + 1})")
+        // A line's book is its id's tens here
+        it.executeUpdate(
+            "INSERT INTO link (sourceBookId, targetBookId, sourceLineId, targetLineId, connectionTypeId) " +
+                "VALUES (${from / 10}, ${to / 10}, $from, $to, ${type.ordinal + 1})",
+        )
     }
 
     @Test
@@ -95,6 +100,27 @@ class LibraryLinksTest {
         assertTrue(LibraryLinks.linked(connection, listOf(11L, 12L)).isEmpty())
         assertFalse(LibraryLinks.anyLinked(connection, listOf(11L, 12L)))
         assertTrue(LibraryLinks.anyLinked(connection, listOf(11L)))
+    }
+
+    @Test
+    fun theLinesOfSomeBooksALineIsLinkedTo() {
+        link(11, 21, ConnectionType.OTHER)
+        link(21, 11, ConnectionType.QUOTATION)
+        link(12, 21, ConnectionType.REFERENCE)
+        link(11, 31, ConnectionType.OTHER)
+        link(11, 21, ConnectionType.COMMENTARY)
+        // דברים is under category 20, בית יוסף under 30
+        val verses = LibraryLinks.linkedIn(connection, listOf(20L), listOf(11L, 12L))
+        assertEquals(setOf(11L, 12L), verses.keys)
+        assertEquals(listOf(21L), verses.getValue(11).map { it.id })
+        assertEquals("ובשכבך", verses.getValue(12).single().content)
+        assertEquals(listOf(31L), LibraryLinks.linkedIn(connection, listOf(30L), listOf(11L)).getValue(11).map { it.id })
+        assertTrue(LibraryLinks.linkedIn(connection, listOf(40L), listOf(11L)).isEmpty())
+        assertTrue(LibraryLinks.linkedIn(connection, emptyList(), listOf(11L)).isEmpty())
+        // A commentary's link alone is none
+        assertTrue(LibraryLinks.linkedIn(connection, listOf(20L), listOf(32L)).isEmpty())
+        assertEquals(setOf(1L, 3L), LibraryLinks.booksIn(connection, listOf(10L, 30L)))
+        assertTrue(LibraryLinks.booksIn(connection, emptyList()).isEmpty())
     }
 
     @Test
