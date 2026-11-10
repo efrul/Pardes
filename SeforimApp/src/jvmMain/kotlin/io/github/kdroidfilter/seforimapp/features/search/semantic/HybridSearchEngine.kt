@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.logger.debugln
 import io.github.kdroidfilter.seforimapp.logger.infoln
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.search.HebrewTextUtils
@@ -219,12 +220,18 @@ class HybridSearchEngine internal constructor(
         onLexical: ((total: Long, denseAnswered: Boolean) -> Unit)? = null,
     ): List<FusedEntry> =
         coroutineScope {
+            val started = System.nanoTime()
+            var denseMillis = 0L
+            // Whether the dense side's walk came back short, in a trap of its graph: it then starts again where the
+            // words' first hits are (IndependentSemanticSearch.search)
+            var short = false
             val dense =
                 async(Dispatchers.Default) {
                     val sem = ensureSemantic() ?: return@async null
-                    runSuspendCatching { sem.search(query, CANDIDATES, baseOnly, bookIds) }
+                    runSuspendCatching { sem.search(query, CANDIDATES, baseOnly, bookIds, onShort = { short = true }) }
                         .onFailure { warnln(it) { "[HybridSearchEngine] Dense KNN failed; using lexical results." } }
                         .getOrNull()
+                        .also { denseMillis = millisSince(started) }
                 }
 
             // A lexical failure must not sink the search either: a long query's dictionary expansions can pass Lucene's
@@ -242,8 +249,19 @@ class HybridSearchEngine internal constructor(
                     warnln(e) { "[HybridSearchEngine] Lexical search failed; using dense results." }
                     emptyList()
                 }
+            val wordsMillis = millisSince(started)
 
-            val denseHits = dense.await()
+            var denseHits = dense.await()
+            if (short) {
+                val seeds = lexHits.take(DENSE_SEEDS).map { it.lineId }
+                denseHits =
+                    withContext(Dispatchers.Default) {
+                        runSuspendCatching { semantic?.search(query, CANDIDATES, baseOnly, bookIds, seeds) }
+                            .onFailure { warnln(it) { "[HybridSearchEngine] Dense KNN failed; using lexical results." } }
+                            .getOrNull()
+                            .also { denseMillis = millisSince(started) }
+                    } ?: denseHits
+            }
             if (denseHits.isNullOrEmpty()) {
                 onLexical?.invoke(lexicalTotal, false)
                 return@coroutineScope lexHits.map { FusedEntry(it.lineId, it.score, it) }
@@ -251,7 +269,10 @@ class HybridSearchEngine internal constructor(
             onLexical?.invoke(lexicalTotal, true)
 
             // The candidates' lines, read once: for the fusion's weights and for the precedence of the earlier level
+            val linesStarted = System.nanoTime()
             val lines = library?.candidateLines(lexHits.map { it.lineId } + denseHits.map { it.lineId })
+            val linesMillis = millisSince(linesStarted)
+            val orderStarted = System.nanoTime()
             val rrf =
                 fusedScores(
                     lexical = lexHits.map { it.lineId },
@@ -282,6 +303,13 @@ class HybridSearchEngine internal constructor(
                 .map { lineId ->
                     val lexicalHit = lexById[lineId]
                     FusedEntry(lineId, rrf.getValue(lineId).toFloat(), lexicalHit, lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L)
+                }.also {
+                    // The two sides run at once: the list waits for the slower one, then for the lines
+                    debugln {
+                        "[HybridSearchEngine] ${bookIds?.size ?: "all"} books, fused in ${millisSince(started)} ms: " +
+                            "words $wordsMillis, meaning $denseMillis, the candidates' lines $linesMillis, " +
+                            "their order ${millisSince(orderStarted)}"
+                    }
                 }
         }
 
@@ -445,9 +473,16 @@ class HybridSearchEngine internal constructor(
     }
 
     companion object {
+        private const val NANOS_PER_MILLI = 1_000_000
+
+        private fun millisSince(start: Long) = (System.nanoTime() - start) / NANOS_PER_MILLI
+
         private const val RRF_K = 60
         private const val SMART_FIND_NEAR = 5
         private const val CANDIDATES = 150
+
+        /** The words' first hits the dense side's walk starts again at, when it came back short: 16 were enough, 4 not. */
+        private const val DENSE_SEEDS = 64
 
         /** The places (0-based) the lexical side's first two hits are moved up to at worst: 2 and 4. */
         private val LEXICAL_PLACES = intArrayOf(1, 3)
