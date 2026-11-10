@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (149 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (151 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2342,7 +2342,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 690 lines.
+- **Size:** 725 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -2351,12 +2351,13 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   read once from the library (`candidateLines`); then it keeps the first lexical hits at places 2 and 4 (`keepLeaders`),
   recognizes a quote held word for word (`holdsQuote`), applies the earlier level's precedence (`LevelPrecedence`),
   highlights by meaning, counts the meaning's lines in the facets (`MeaningFacets`), and falls back to the words alone
-  when the model or the index cannot load.
+  when the model or the index cannot load. A dense side whose walk came back short is searched again from the words'
+  first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering.
 - **Reached from:** `InstalledSemanticSearch.kt` (`installedSemanticSearch.hybrid`).
 - **Follows:** Zayit's `SemanticSearchFeature` interface and its private `HybridSearchEngine`, of the same name and role
   (not its code, which Pardes has not).
 - **Tests:** `HybridSearchEngineDenseTest`, `HybridSearchEngineFallbackTest`, `HybridSearchEngineFusionTest`,
-  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`.
+  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`, `DenseTrapTest`.
 - **Notes:** its KDoc opens with "Independent Hybrid Search Engine for Pardes Desktop:", a title rather than Zayit's
   plain sentence; with some 17 functions it passes `detekt.yml`'s 15. The fusion's measurements, before and after:
   `docs/fusion-compare/IMPLEMENTATION.md`.
@@ -2364,14 +2365,18 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/IndependentSemanticSearch.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 377 lines.
+- **Size:** 472 lines.
 - **What:** `IndependentSemanticSearch`, the dense search: the query embedded (`EmbeddingProvider`), the nearest lines in
   the pack's vector index (`pardes.vec.lucene`), in the base books or a set of books, as `DenseHit`s; `bestPassages`, the
   passage of a found line closest in meaning; it opens the pack beside the library and checks that the index and the
-  model share their id.
+  model share their id. A small scope is scored exactly (`exactSearch`); any other is walked on the graph by itself
+  (`graphWalk`), without Lucene's exact search of every vector, and a walk that comes back short, fallen among a
+  repeated line's identical vectors, starts again at the `seeds` it is given (`SeededKnnVectorQuery`) or tells its
+  caller (`onShort`). The last queries' vectors are kept (`searchVector`), and a debug line times the model and each
+  field.
 - **Reached from:** `HybridSearchEngine.kt`, `InstalledPack.kt`.
 - **Follows:** Pardes's own.
-- **Tests:** `HybridSearchEngineDenseTest`, `PassagesTest`.
+- **Tests:** `HybridSearchEngineDenseTest`, `DenseTrapTest`, `PassagesTest`; measured by `ScopeSearchBench`.
 - **Notes:** the class has no KDoc. It opens its index with `FSDirectory.open`, where Zayit's own Lucene code uses
   `NIOFSDirectory` in a GraalVM native image ("GraalVM native image does not support MMapDirectory"); to check on the
   native builds.
@@ -2623,6 +2628,29 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, a small Lucene index).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/DenseTrapTest.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 119 lines.
+- **What:** the dense search over a vector index with a trap, a line repeated 40 times that is the closest to the query:
+  the walk comes back with 33 lines and says so; started again where the words' hits are, it finds three in four of the
+  closest at least; in a large scope with no seeds every vector of the scope is scored.
+- **Reached from:** the JVM tests.
+- **Follows:** `HybridSearchEngineDenseTest` beside it (a small Lucene index, an `EmbeddingProvider` of its own).
+- **Tests:** it is one (unit, a small Lucene index).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/ScopeSearchBench.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 152 lines.
+- **What:** a `main` that measures where a search in a scope spends its time with the semantic pack, stage by stage (the
+  query's vector, the dense side, the words' candidates, the facets, the first page as the app runs it, the result
+  tree), for the whole library, two large categories, a tractate's commentators and one book, on the library
+  `SEFORIMAPP_DATABASE_PATH` names.
+- **Reached from:** run by hand.
+- **Follows:** Zayit's `SearchBench` and Pardes's `CategorySearchBench`, which measure the words' search.
+- **Tests:** a bench.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineFallbackTest.kt`
 
@@ -3541,7 +3569,7 @@ the description where something needs saying.
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |
 | `docs/SEARCH_FUSION_RESEARCH.md` | Hebrew research note (2026-11-08) on merging the words' search and the meaning's: what plain RRF implies (a line only the words found, from their 11th place on, ranks below every line only the meaning found), rank against score fusion and their normalizations, calibration (ProbFuse, SSL, score distributions), weights by kind of query, a small learned ranker, and an offline measuring plan, which docs/fusion-compare/ carries out. *Note:* Written in Hebrew. | Pardes's own |
-| `docs/SEARCH_ORDER_ISSUES.md` | Hebrew working document (from 2026-10-28) on the order of the combined search's results: how it was measured (search history, eval-real, eval-100), ten issues (short semantic lines on top, rank-only fusion, "(א)" numbers, the 32 forms, long lines, the switch to all books, commentaries before the source, no noise floor, the same text twice, identical lines in the graph) with fixes measured offline, and what was not measured; issues 1 and 2 are marked done (2026-11-09) with the window, as fusion-compare/IMPLEMENTATION.md measures them. *Note:* Written in Hebrew. Its first numbers were measured in a separate working repository. | Pardes's own |
+| `docs/SEARCH_ORDER_ISSUES.md` | Hebrew working document (from 2026-10-28) on the order of the combined search's results: how it was measured (search history, eval-real, eval-100), ten issues (short semantic lines on top, rank-only fusion, "(א)" numbers, the 32 forms, long lines, the switch to all books, commentaries before the source, no noise floor, the same text twice, identical lines in the graph) with fixes measured offline, and what was not measured; issues 1 and 2 are marked done (2026-11-09) with the window, as fusion-compare/IMPLEMENTATION.md measures them, and issue 11 eased in the app (2026-11-10, the walk started again at the words' hits). *Note:* Written in Hebrew. Its first numbers were measured in a separate working repository. | Pardes's own |
 | `docs/SEARCH_OTZARIA_AND_LIBRARIES.md` | Hebrew research (2026-11-08), system by system, on how large libraries search: Otzaria read from its code (per-word options, short lines embedded with their neighbours, long lines in 512-character windows, vectors keyed by their text, an exact scan instead of HNSW, a fusion weight by kind of query), Wikipedia's CirrusSearch, CourtListener, PubMed, Semantic Scholar, TLG, Perseus and STEP Bible, and their licences (Otzaria's app and semantic engine are for personal use only; its lexical engine is MIT). *Note:* Written in Hebrew. | Pardes's own |
 | `docs/SEARCH_PLAN.md` | English plan (2026-11-10) for the search after pull request #28: Pardes for desktop 1.0.9 from its Windows pre-release to the public release, per-word forms in the regular search (measure the spelling and ים↔ין forms in the measurement build, then the owner's decision on SeforimLibrary), the new eval-real grades into pardes-semantic, Android's lexicon and fusion behind desktop's, one re-embedding for short lines and the "(א)" numbers, and the open questions with what was measured and is not to do. | Pardes's own |
 | `docs/SEARCH_SYNTAX_REPORT.md` | English report (measured 2026-11-03) on how the search reads quotes, geresh and gershayim, maqaf and niqqud, prefixes and suffixes, word distance (near = 5, which only ranks) and order, with line counts on the October 2026 library, the recommendations not built, and Klei Kodesh's search syntax for comparison. *Note:* Finds that Hebrew-keyboard gershayim (רש״י) search as רשי, typographic quotes are ignored, and Zayit's strings.xml keeps unused search_level_1..5 strings. | Pardes's own |
