@@ -13,7 +13,8 @@ import java.util.concurrent.ConcurrentHashMap
  * words as printed and its box on the page, in PDF points (the page's top left at 0,0). Made by pardes-rashi-ocr's
  * export_layout.py from the Vilna Shas's scans (the lines' places) and the texts of the library (their words). In
  * format 2, every line also names the library's lines its words belong to ([DafLine.u]), and [library] the library
- * release those ids are of.
+ * release those ids are of. [version] is the tractate's own among the released layouts (one more each time its layout
+ * changed), null in a file of before the releases gave each tractate one.
  */
 @Serializable
 data class DafLayoutFile(
@@ -22,6 +23,7 @@ data class DafLayoutFile(
     val tractateHe: String,
     val amudim: List<DafAmud>,
     val library: DafLibrary? = null,
+    val version: Int? = null,
 )
 
 /** The library a format-2 file's line ids are of: its [release] (release_info.txt) and its books, by column. */
@@ -101,6 +103,17 @@ class DafLayouts(
     @Synchronized
     fun fileFor(name: String): File? = filesFor(name).firstOrNull()
 
+    /** The version of the file of the tractate named [name], read from its head; null with no file, or a file of none. */
+    @Synchronized
+    fun versionOf(name: String): Int? =
+        fileFor(name)?.let(::headOf)?.let { head ->
+            VERSION
+                .find(head)
+                ?.groupValues
+                ?.get(1)
+                ?.toIntOrNull()
+        }
+
     /** The tractate named [name], in English or in Hebrew, or null when no file is for it or it cannot be read. */
     @Synchronized
     fun tractate(name: String): DafLayoutFile? {
@@ -157,11 +170,11 @@ class DafLayouts(
         return found
     }
 
+    private fun headOf(file: File): String? =
+        runCatching { file.inputStream().use { input -> String(input.readNBytes(HEAD_BYTES), Charsets.UTF_8) } }.getOrNull()
+
     private fun headerNames(file: File): List<String>? {
-        val head =
-            runCatching {
-                file.inputStream().use { input -> String(input.readNBytes(HEAD_BYTES), Charsets.UTF_8) }
-            }.getOrNull() ?: return null
+        val head = headOf(file) ?: return null
         val english = TRACTATE.find(head)?.groupValues?.get(1) ?: return null
         val hebrew = TRACTATE_HE.find(head)?.groupValues?.get(1) ?: return null
         return runCatching { listOf(english, hebrew).map { json.decodeFromString<String>("\"$it\"") } }.getOrNull()
@@ -184,6 +197,7 @@ class DafLayouts(
         private const val HEAD_BYTES = 4096
         private val TRACTATE = Regex("\"tractate\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
         private val TRACTATE_HE = Regex("\"tractateHe\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
+        private val VERSION = Regex("\"version\"\\s*:\\s*(\\d+)")
         private val UNSAFE_NAME = Regex("[^A-Za-z0-9 _-]")
         private val shared = ConcurrentHashMap<File, DafLayouts>()
 

@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** A reader's review of the daf: a line's start moved a word on or back, as the reader said, and kept in its file. */
@@ -120,6 +121,10 @@ class DafReviewTest {
         assertTrue(words.marks.all { !it.layout && it.words && it.ok == false }, "read from its file, the other reason kept")
         assertTrue(DafReviews(dir).say(layout, amud, lines, DafReason.WORDS, said = false).marks.isEmpty())
         assertTrue(DafReviews(dir).of(layout).marks.isEmpty())
+        // A mark says which version of the tractate's layout it was made on
+        assertNull(first.version)
+        val fourth = DafReviews(dir).say(layout.copy(version = 4), amud, lines, DafReason.WORDS, said = true)
+        assertEquals(listOf(4, 4), fourth.marks.map { it.version })
         dir.deleteRecursively()
     }
 

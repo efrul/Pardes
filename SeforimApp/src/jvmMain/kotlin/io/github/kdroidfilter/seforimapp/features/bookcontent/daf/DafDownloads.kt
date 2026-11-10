@@ -33,7 +33,8 @@ import java.util.zip.GZIPInputStream
 
 /**
  * The layouts as released for download (.github/workflows/daf-release.yml, a daf-<n> release of Pardes's repository):
- * its manifest names every tractate's file, gzipped, with its sha256 and the sha256 of the layout it holds.
+ * its manifest names every tractate's file, gzipped, with its sha256 and the sha256 of the layout it holds, and the
+ * tractate's own version (one more in each release its layout changed in; none in a release of before the versions).
  */
 @Serializable
 data class DafManifest(
@@ -52,6 +53,7 @@ data class DafManifest(
         /** The layout's own sha256, unzipped: what a tractate's file in the folder is compared with. */
         val jsonSha256: String,
         val amudim: Int = 0,
+        val version: Int? = null,
     )
 
     /** The tractate named [name], in English or in Hebrew. */
@@ -193,6 +195,8 @@ class DafDownloads(
         val release: DafReleases.Available? = null,
         val manifest: DafManifest? = null,
         val installed: Map<String, Installed> = emptyMap(),
+        /** The version of each tractate's file in the folder, where it has one. */
+        val versions: Map<String, Int> = emptyMap(),
         val work: Work? = null,
         /** Why the last check or download stopped. */
         val problem: String? = null,
@@ -224,12 +228,19 @@ class DafDownloads(
                             val asset = r.assets.getValue(DafReleases.MANIFEST_NAME)
                             DafManifest.parseOrNull(fetchText(asset.url)) ?: throw IOException("Unknown manifest format")
                         }
-                    Triple(release, manifest, withContext(io) { installedOf(manifest) })
+                    Triple(release, manifest, withContext(io) { installedOf(manifest) to versionsOf(manifest) })
                 }
             _state.update { s ->
                 result.fold(
-                    { (release, manifest, installed) ->
-                        s.copy(checking = false, checked = true, release = release, manifest = manifest, installed = installed)
+                    { (release, manifest, folder) ->
+                        s.copy(
+                            checking = false,
+                            checked = true,
+                            release = release,
+                            manifest = manifest,
+                            installed = folder.first,
+                            versions = folder.second,
+                        )
                     },
                     { s.copy(checking = false, checked = true, problem = it.message ?: it.toString()) },
                 )
@@ -243,8 +254,9 @@ class DafDownloads(
         if (_state.value.work != null) return
         scope.launch {
             // A file of the folder that can't be read leaves the count as it was
-            val installed = runSuspendCatching { withContext(io) { installedOf(manifest) } }.getOrNull() ?: return@launch
-            _state.update { it.copy(installed = installed) }
+            val folder =
+                runSuspendCatching { withContext(io) { installedOf(manifest) to versionsOf(manifest) } }.getOrNull() ?: return@launch
+            _state.update { it.copy(installed = folder.first, versions = folder.second) }
         }
     }
 
@@ -265,7 +277,11 @@ class DafDownloads(
                         }
                         done += entry.size
                         _state.update { s ->
-                            s.copy(installed = s.installed + (entry.tractate to Installed.CURRENT), revision = s.revision + 1)
+                            s.copy(
+                                installed = s.installed + (entry.tractate to Installed.CURRENT),
+                                versions = entry.version?.let { s.versions + (entry.tractate to it) } ?: (s.versions - entry.tractate),
+                                revision = s.revision + 1,
+                            )
                         }
                     }
                     _state.update { it.copy(work = null) }
@@ -314,6 +330,13 @@ class DafDownloads(
                     sha256(file).equals(entry.jsonSha256, ignoreCase = true) -> Installed.CURRENT
                     else -> Installed.OTHER
                 }
+        }
+
+    private fun versionsOf(manifest: DafManifest?): Map<String, Int> =
+        buildMap {
+            for (entry in manifest?.tractates.orEmpty()) {
+                (layouts.versionOf(entry.tractate) ?: layouts.versionOf(entry.tractateHe))?.let { put(entry.tractate, it) }
+            }
         }
 
     companion object {

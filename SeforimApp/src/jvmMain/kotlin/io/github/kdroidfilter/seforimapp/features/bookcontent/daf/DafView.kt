@@ -332,6 +332,10 @@ fun DafView(
                     onScroll = onScroll,
                 )
         }
+        // A newer version of the tractate's layout among the released ones, when its file is an older one
+        if (load is DafLoad.Ready) {
+            DafUpdateLine(book.title, downloads, onUpdate = { imports++ }, Modifier.align(Alignment.BottomStart).padding(12.dp))
+        }
     }
 }
 

@@ -8,6 +8,10 @@ name: Daf layouts release
 # Rashi and Tosafot, their lines' places measured on the Vilna Shas's scans: the notes say so, and the files go out
 # under CC BY-SA.
 #
+# Each tractate has a version of its own, in its file's header and in the manifest: one more than in the release before
+# when its layout changed, the same otherwise (the manifest of the release before is downloaded for it). A tractate
+# that did not change is the same file, and the app downloads only those that did.
+#
 # Every release is --latest=false and then the Android release is made the Latest again (gh's publishing of a release
 # with files ignores the flag), so the Android release stays the repository's Latest. The site's daf.json (the copy
 # the app reads when it can't reach the API) is written again after a release (android-site.yml).
@@ -41,8 +45,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: .github/scripts/daf_release.py
+          sparse-checkout: |
+            .github/scripts/daf_release.py
+            .github/scripts/test_daf_release.py
           sparse-checkout-cone-mode: false
+
+      - name: Test the release's script
+        run: python3 .github/scripts/test_daf_release.py
 
       - name: Check out the layouts
         uses: actions/checkout@v4
@@ -63,13 +72,21 @@ jobs:
           fi
           case "$NUMBER" in ''|*[!0-9]*) echo "::error::The number is a whole number"; exit 1 ;; esac
           echo "NUMBER=$NUMBER" >> "$GITHUB_ENV"
+          # The manifest of the release before this one, for each tractate's version: the same for the same layout
+          before="$(gh release list -R "$GITHUB_REPOSITORY" --limit 200 --json tagName \
+            --jq "[.[].tagName | select(test(\"^daf-[0-9]+\$\")) | ltrimstr(\"daf-\") | tonumber | select(. < $NUMBER)] | max // empty")"
+          mkdir -p previous
+          if [ -n "$before" ]; then
+            gh release download "daf-$before" -R "$GITHUB_REPOSITORY" -p pardes-daf.manifest.json -D previous
+          fi
 
       - name: Build the release's files
         env:
           NOTE: ${{ inputs.note }}
         run: |
           set -euo pipefail
-          python3 .github/scripts/daf_release.py daf-layouts/layouts out meta --number "$NUMBER" --note "$NOTE"
+          python3 .github/scripts/daf_release.py daf-layouts/layouts out meta --number "$NUMBER" --note "$NOTE" \
+            --previous previous/pardes-daf.manifest.json
           for f in out/*; do
             test "$(stat -c %s "$f")" -lt 2147483648 || { echo "::error::$f is larger than GitHub's 2 GiB per file"; exit 1; }
           done

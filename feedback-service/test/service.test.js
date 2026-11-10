@@ -178,7 +178,7 @@ describe("the feedback service", () => {
       searches: [{ query: words, extended: false, count: 3, lastAt: 1793800000003, scope: "/תיקייה פרטית" }],
       grades: [{ ...pkg(A).grades[0], query: words, search: `search:g:${words}`, heRef: "מקום פרטי", bookTitle: "ספר" }],
       daf: [{ ...pkg(A).daf[0], marks: [{ amud: "2a", c: "t", i: 7, t: "שורה", ok: false, layout: true, words: false, from: 1,
-        to: 3, at: "2026-11-01T09:00:00Z", note: "הערה פרטית" }] }],
+        to: 3, version: 2, at: "2026-11-01T09:00:00Z", note: "הערה פרטית" }] }],
       note: "טקסט שהוסיף השולח",
     });
     const { id } = await (await post(mf, sent)).json();
@@ -205,8 +205,8 @@ describe("the feedback service", () => {
     assert.deepEqual({ grade: grade.grade, rank: grade.rank, model: grade.model, gradedAt: grade.gradedAt },
       { grade: 3, rank: 2, model: "student@695cbe2/pardes-clean-1", gradedAt: 1793800000002 });
     // A daf mark comes with what is wrong with its line and of which of its words, and nothing a sender added to it
-    assert.deepEqual(row.package.daf[0].marks[0],
-      { amud: "2a", c: "t", i: 7, t: "שורה", ok: false, layout: true, words: false, from: 1, to: 3, at: "2026-11-01T09:00:00Z" });
+    assert.deepEqual(row.package.daf[0].marks[0], { amud: "2a", c: "t", i: 7, t: "שורה", ok: false, layout: true, words: false,
+      from: 1, to: 3, version: 2, at: "2026-11-01T09:00:00Z" });
     // The same words in the same scope, the same id, whoever sent them; elsewhere, another
     const again = await (await post(mf, pkg(B, { searches: [{ query: words, scope: "/תיקייה פרטית", lastAt: 1793800000004 },
       { query: words, lastAt: 1793800000005 }] }))).json();
@@ -296,6 +296,8 @@ describe("the feedback service", () => {
     assert.deepEqual(await refused(pkg(A, { daf: [badReason] })), [400, "daf review 1 is not one (mark 1: layout)"]);
     const badWord = { ...pkg(A).daf[0], marks: [{ ...mark, ok: false, words: true, from: -1 }] };
     assert.deepEqual(await refused(pkg(A, { daf: [badWord] })), [400, "daf review 1 is not one (mark 1: from)"]);
+    const badVersion = { ...pkg(A).daf[0], marks: [{ ...mark, version: "3" }] };
+    assert.deepEqual(await refused(pkg(A, { daf: [badVersion] })), [400, "daf review 1 is not one (mark 1: version)"]);
     assert.deepEqual(await refused(pkg(A, { searches: "all" })), [400, "searches is not a list"]);
     assert.deepEqual(await refused(pkg(A, { publish: "yes" })), [400, "publish is not true or false"]);
     assert.equal((await post(mf, pkg(A, { publish: false }))).status, 201);

@@ -87,5 +87,7 @@ function whyMark(m) {
     ["t", (s) => typeof s === "string" && s.length <= 2000, 2000], ["ok", maybeBoolean],
     ["cut", (n) => n === undefined || Number.isSafeInteger(n)], ["at", maybeText(64), 64],
     // What the reader said is wrong with the line (DafMark): how it is set on the page, its words, and which of them
-    ["layout", maybeBoolean], ["words", maybeBoolean], ["from", maybeCount], ["to", maybeCount]]);
+    ["layout", maybeBoolean], ["words", maybeBoolean], ["from", maybeCount], ["to", maybeCount],
+    // The version of the tractate's layout the line was reviewed on
+    ["version", maybeCount]]);
 }

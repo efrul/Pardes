@@ -401,6 +401,17 @@
     <string name="daf_layouts_update_hint">מסכת שהקובץ שלה שונה מזה שבגרסה, מקובץ שייבאתם או מגרסה קודמת, מתעדכנת. הסימונים של בדיקת השורות נשמרים.</string>
     <string name="daf_layouts_progress">מוריד את מסכת %1$s (%2$d מתוך %3$d)… %4$d%</string>
     <string name="daf_layouts_cancel">ביטול</string>
+    <string name="daf_layouts_version">גרסה %1$d</string>
+    <string name="daf_layouts_installed_version">מותקנת גרסה %1$d</string>
+    <string name="daf_layouts_installed_other">מותקן קובץ אחר</string>
+    <string name="daf_layouts_not_installed">לא מותקנת</string>
+    <string name="daf_layouts_available_version">זמינה גרסה %1$d</string>
+    <string name="daf_layouts_update_one">עדכון</string>
+    <string name="daf_layouts_get_one">הורדה</string>
+    <string name="daf_layouts_show_all">כל המסכתות והגרסאות שלהן</string>
+    <string name="daf_layouts_hide_all">הסתרת רשימת המסכתות</string>
+    <string name="daf_update_available">לצורת הדף של המסכת יש גרסה %1$d</string>
+    <string name="daf_update_now">עדכון</string>
     <string name="show_diacritics_tooltip">הצג ניקוד וטעמים</string>
     <string name="hide_diacritics_tooltip">הסתר ניקוד וטעמים</string>
     <string name="hide_teamim_tooltip">הסתר טעמים</string>
