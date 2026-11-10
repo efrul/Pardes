@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (151 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (153 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -865,7 +865,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +307 −217 lines. Feature: Daf view.
+- **Change:** modified, +318 −219 lines. Feature: Daf view.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
     `DafView` in place of the lines' `LazyColumn`.
@@ -874,12 +874,15 @@ The entries of this section by kind:
   - The content is not hidden for initial positioning on the daf (its lines' list is not laid out there).
   - Find in page, Ctrl+Home/End and Page Up/Down act on the daf through `dafControl` (`scrollToLine`, `scrollToEdge`,
     `scrollPage`); the find bar's matches are drawn on the daf (`DafFind`).
+  - The up and down arrows go through `stepLine`: on the daf they first ask `dafControl.stepComment`, which steps through
+    Rashi's or Tosafot's comments when one is selected, and step through the lines as before when it says no.
   - A word clicked on the daf is selected in the book's text (`selectInLine`), and the right-clicked word's line is the
     context menu's (`onContextLine`).
   - `BookSelectionContainer` gets `selection = null` and `ownsSelection = false` on the daf.
   - The lines' `LazyColumn` and the `ContentScrollbar` move into the `else` branch: re-indented, unchanged.
 - **Why:** the daf view lives inside the text view's own frame, so that everything the reader does around the text
-  works on the daf too (`e00754a4`, `8d3825e7`, `d334af46`, `efad35cc`).
+  works on the daf too (`e00754a4`, `8d3825e7`, `d334af46`, `efad35cc`); the user asked on 2026-11-09 that the arrows
+  move within Rashi and Tosafot when the focus is on them.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the re-indented block is the heart of Zayit's reader (some 220 lines), and every Zayit change
   there conflicts. Without whitespace the change is about 90 lines.
@@ -1601,13 +1604,16 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
 - **Feature:** Daf view.
-- **Size:** 1176 lines.
+- **Size:** 1236 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review mode; `DafMode` (what a click
   selects) and `DafControl` (what the keys and the find bar ask: page up or down, first or last amud, a line brought into
-  view) are its two seams with the text view. Also the amud helpers (`isBavli`, `amudOf`, `amudIndex`, `amudTitle`,
-  `firstLines`, `placesOfLines`), the page's marks (`dafHighlight`: passage, segments, their comments), clicks
+  view, a step to the next comment) are its two seams with the text view. A comment selected by a click on its own words
+  is the one the arrows step from (`focused`): `stepComment` selects the comment read after it or before it in its
+  commentary (`DafIndex.next`), on its Gemara line (`baseOf`), brings it into view, and waits for the tab's selection to
+  follow (`awaitPassage`), one step at a time. Also the amud helpers (`isBavli`, `amudOf`, `amudIndex`, `amudTitle`,
+  `firstLines`), the page's marks (`dafHighlight`: passage, segments, their comments), clicks
   (`clickOn`, `segmentOf`), the links read for a page (`loadLinks`), the layouts folder (`rememberDafLayouts`), a missing
   layout's page with its download (`MissingLayout`, `DownloadLayout`), the review's menu items and tints, `DafFind`, and a
   sideways pan as the commentaries' pages turn.
@@ -1617,7 +1623,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
   composables have no UI test.
-- **Notes:** at 1,176 lines, with some 26 top-level and member functions, it is far beyond `detekt.yml`'s limits
+- **Notes:** at 1,236 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
   parts (pages, review, missing layout, marks).
 
@@ -1667,6 +1673,18 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Follows:** the text view's highlight and note marks (Zayit's `applyUserHighlights`), drawn the same way.
 - **Tests:** `DafPageTest` (a click reaches its word, a right-click its menu, a drag goes down a column, a range is
   copied as printed, a long run's lines on their pitch at any scale, the page drawn to `build/reports/daf/`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafIndex.kt`
+
+- **Feature:** Daf view.
+- **Size:** 73 lines.
+- **What:** `DafIndex`, a tractate's printed lines of the library, the Gemara's and the commentaries': where each is
+  printed first (`places`, what `DafView` scrolls to), and each commentary column's comments in the order they are read
+  (`next`): amud by amud, each book's comments by the library's numbers (the lines list a comment a line early or late in
+  a third of the amudim), a column's second book where it is printed (the Rashbam after Rashi, Bava Batra 29a).
+- **Reached from:** `DafView.kt` (`reveal`, `stepComment`).
+- **Follows:** Pardes's own; it takes the place of `DafView.kt`'s `placesOfLines`, which held the Gemara's lines alone.
+- **Tests:** `DafIndexTest`.
 
 #### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/GemaraPage.kt`
 
@@ -1847,6 +1865,17 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Follows:** Zayit's screenshot tests: an `ImageComposeScene` drawn to PNG, pointer events sent to it.
 - **Tests:** it is one (Compose, off screen).
 - **Notes:** camelCase test names.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafIndexTest.kt`
+
+- **Feature:** Daf view.
+- **Size:** 82 lines.
+- **What:** over three amudim made for it: a column's comments read in the library's order, each once, though a line
+  lists one early; a second book of the column read where it is printed; a column ending where its comments do, the
+  Gemara's lines no comments; every line with the place it is printed at first.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, backtick names.
+- **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewTest.kt`
 

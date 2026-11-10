@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -101,8 +102,11 @@ import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -168,26 +172,6 @@ internal fun firstLines(toc: List<TocEntry>): Map<String, Long> {
 }
 
 /**
- * Where each Gemara line of the library is printed first: its amud's place in [order] and the top of its first printed
- * line (points, from the amud's block's top).
- */
-internal fun placesOfLines(
-    file: DafLayoutFile,
-    order: List<String>,
-): Map<Long, Pair<Int, Float>> {
-    val places = HashMap<Long, Pair<Int, Float>>()
-    val at = order.withIndex().associate { (i, amud) -> amud to i }
-    for (amud in file.amudim) {
-        val index = at[amud.amud] ?: continue
-        for (line in amud.lines) {
-            if (!line.isGemara) continue
-            for (id in line.lineIds) places.putIfAbsent(id, index to line.b[1] - amud.block[1])
-        }
-    }
-    return places
-}
-
-/**
  * A tab's tractate shown as its Vilna page in the text view ([book]), and what a click on a word selects: a segment
  * ([onSelectLine], with whether Ctrl or Cmd was held), or a passage ([onSelectPassage]: the segment, the comments, their
  * books).
@@ -200,19 +184,27 @@ class DafMode(
 
 /**
  * What the reader's keys and its find bar ask of the daf: a page up or down, the tractate's first or last amud, a
- * line of the library brought into view. Set by [DafView] while it is shown.
+ * line of the library brought into view, a step to the next comment of the commentary a comment is selected in. Set by
+ * [DafView] while it is shown.
  */
 @Stable
 class DafControl {
     internal var page: suspend (forward: Boolean) -> Unit = {}
     internal var edge: suspend (end: Boolean) -> Unit = {}
     internal var toLine: suspend (lineId: Long) -> Unit = {}
+    internal var step: suspend (forward: Boolean) -> Boolean = { false }
 
     suspend fun scrollPage(forward: Boolean) = page(forward)
 
     suspend fun scrollToEdge(end: Boolean) = edge(end)
 
     suspend fun scrollToLine(lineId: Long) = toLine(lineId)
+
+    /**
+     * With a comment of Rashi or Tosafot selected by a click on it, selects the comment read after it ([forward]) or
+     * before it, and brings it into view; false when none is, for the arrows to step through the Gemara as in the text.
+     */
+    suspend fun stepComment(forward: Boolean): Boolean = step(forward)
 }
 
 private sealed interface DafLoad {
@@ -360,9 +352,8 @@ private fun DafPages(
     }
     val order = remember(file, amudLines) { (file.amudim.map { it.amud } + amudLines.keys).distinct().sortedBy(::amudIndex) }
     val byName = remember(file) { file.amudim.associateBy { it.amud } }
-    val places by produceState(emptyMap<Long, Pair<Int, Float>>(), file, order) {
-        value = withContext(Dispatchers.Default) { placesOfLines(file, order) }
-    }
+    val index by produceState<DafIndex?>(null, file, order) { value = withContext(Dispatchers.Default) { DafIndex(file, order) } }
+    val places = index?.places.orEmpty()
     // The tractate's usual block: one scale for all its amudim, each as tall as printed
     val blockWidth =
         remember(file) {
@@ -406,6 +397,12 @@ private fun DafPages(
         clicked = id
         onSelectPassage(id, comments, books)
     }
+    // The comment a click on its own words selected, which the arrows step from through its commentary; none after a
+    // click on the Gemara, though it selects a comment's passage too
+    var focused by remember(file) { mutableStateOf<Long?>(null) }
+    val stepping = remember { Mutex() }
+    val currentPassage by rememberUpdatedState(selectedPassage)
+    val currentIndex by rememberUpdatedState(index)
 
     BoxWithConstraints(
         Modifier
@@ -463,6 +460,36 @@ private fun DafPages(
             }
         }
         control.toLine = { id -> reveal(id, always = false) }
+        control.step = step@{ forward ->
+            val from = focused ?: return@step false
+            // One step at a time: a key held down waits for the selection it asked for
+            if (!stepping.tryLock()) return@step true
+            try {
+                // The selection moved on some other way (the table of contents, a search): the keys are the text's again
+                if (!awaitPassage(from) { currentPassage }) {
+                    focused = null
+                    return@step false
+                }
+                val comments = currentIndex ?: return@step true
+                var next = comments.next(from, forward)
+                // A comment the library ties to no line of the tractate is passed over
+                repeat(MOST_PASSED) {
+                    val id = next ?: return@step true
+                    val base = baseOf(graph.repository, book.id, id) { comments.places[it]?.first == comments.places[id]?.first }
+                    if (base != null) {
+                        focused = id
+                        selectPassage(base.first, setOf(id), setOf(base.second))
+                        reveal(id, always = false)
+                        awaitPassage(id) { currentPassage }
+                        return@step true
+                    }
+                    next = comments.next(id, forward)
+                }
+                true
+            } finally {
+                stepping.unlock()
+            }
+        }
 
         // The tab's line in view: once the places are known, then whenever it changes or the tab asks
         var revealed by remember(file) { mutableStateOf(false) }
@@ -545,6 +572,7 @@ private fun DafPages(
                                 passage = passage,
                                 onSelectLine = selectLine,
                                 onSelectPassage = selectPassage,
+                                onFocusComment = { focused = it },
                                 onContextLine = onContextLine,
                                 review = review,
                                 onMark = onMark,
@@ -563,6 +591,36 @@ private fun DafPages(
 
 /** A page up or down moves this much of the view. */
 private const val PAGE_STEP = 0.9f
+
+/** The comments tied to no line of the tractate that one step passes over at most. */
+private const val MOST_PASSED = 20
+
+/** How long a step waits for the selection it asked for to be the tab's. */
+private const val STEP_WAIT_MS = 1_000L
+
+/** Whether [passage] is, or becomes within [STEP_WAIT_MS], the comment [commentId] alone. */
+private suspend fun awaitPassage(
+    commentId: Long,
+    passage: () -> SelectedPassage?,
+): Boolean = withTimeoutOrNull(STEP_WAIT_MS) { snapshotFlow { passage()?.targetLineIds }.first { it == setOf(commentId) } } != null
+
+/**
+ * The Gemara line of [bookId] that the comment [commentId] is on, the one [preferred] when it is on several, with the
+ * comment's book; null for a comment on no line of it.
+ */
+private suspend fun baseOf(
+    repository: SeforimRepository,
+    bookId: Long,
+    commentId: Long,
+    preferred: (Long) -> Boolean,
+): Pair<Long, Long>? {
+    val bases =
+        runSuspendCatching { repository.getCommentarySummariesForLines(listOf(commentId), includeSources = true) }
+            .getOrDefault(emptyList())
+            .map { it.link }
+            .filter { it.connectionType == ConnectionType.SOURCE && it.targetBookId == bookId }
+    return (bases.firstOrNull { preferred(it.targetLineId) } ?: bases.firstOrNull())?.let { it.targetLineId to it.sourceBookId }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Suppress("ComposeUnstableCollections")
@@ -585,6 +643,7 @@ private fun AmudItem(
     passage: Set<Long>,
     onSelectLine: (Long, Boolean) -> Unit,
     onSelectPassage: (Long, Set<Long>, Set<Long>) -> Unit,
+    onFocusComment: (Long?) -> Unit,
     onContextLine: (Long) -> Unit,
     review: DafReviewFile?,
     onMark: (DafMark) -> Unit,
@@ -698,6 +757,7 @@ private fun AmudItem(
                                 onWordClick = { word, withModifier ->
                                     links?.let { l ->
                                         clickOn(l, word, withModifier, onSelectLine, onSelectPassage)
+                                        onFocusComment(l.lineIdOf(word)?.takeUnless { l.isGemara(word) })
                                         // The word itself in the text, where it is in its line
                                         l.anchors[word]?.takeIf { it.bookId == book.id }?.let(onWordInText)
                                     }
