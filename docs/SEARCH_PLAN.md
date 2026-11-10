@@ -24,9 +24,15 @@ long query), so a word's own spelling can be cut:
 - וחיב is at place 204 of חייב's 225;
 - דומין is at place 91 of the verb דמה's forms, the base the search picks for דומים.
 
-`PardesLexicon` cannot order forms per word (`SPELLING.md`). A hook in `LuceneSearchEngine.kt` that puts a word's own
-forms right after it can: the measurement build does it (`docs/fusion-compare/tools/ExtraForms.kt`,
-`extra_forms_patch.py`).
+A word the dictionary does not have gets no forms at all, and its 4-grams do not bridge a spelling:
+- "לימוני דמי לפגיעין" finds nothing of its source, Shibbolei HaLeket 90:4, which writes לפגעין;
+- לפגיעין is not in the dictionary, and none of its 4-grams (לפגי, פגיע, גיעי, יעינ) is in לפגעין;
+- without the yod ("לימוני דמי לפגעין") the app puts the source first.
+
+`PardesLexicon` cannot help in either case. It orders forms per root, not per word (`SPELLING.md`), and it adds
+spellings only to words it has. A hook in `LuceneSearchEngine.kt` that puts a word's own forms right after it can: the
+measurement build does it (`docs/fusion-compare/tools/ExtraForms.kt`, `extra_forms_patch.py`). Otzaria's rule (an
+inner yod left out) turns לפגיעין into לפגעין.
 
 1. **Measure first**, in the measurement build only, which needs no change to SeforimLibrary:
    - the forms: Otzaria's spelling forms (an inner ו or י added or left out), plus the plural ים↔ין, which no rule
@@ -79,6 +85,15 @@ Measure on eval-100 and eval-real against the current pack before releasing it.
 
 - **Searches in a chosen book** (43% of the history, issue 10) have no grades. `p12wl`'s word-for-word weight and window
   apply there, its short-line rule does not.
+- **The fusion buries a short, exact lexical list.**
+  - "הלימוני דמי לפגעין": the regular search finds three lines, all of them the source and its copies, at places 1 to 3,
+    and the app shows them at 41.
+  - The line holds דומין, not דמי, so it is not word for word, and the dense side does not find it.
+  - Without the ה the dense side finds it, at 34, and the app puts it first: that is how fragile it is.
+  - An idea not measured yet: the lexical side's own scores. Its phrase bonus already rewards the query's words found
+    together in their dictionary forms, while RRF looks only at places. When the lexical first hit is far ahead of its
+    second, it could weigh more. Measure it on the four sets; a short lexical list weighing 3 regardless was worse
+    (`CASE_LIMONI.md`).
 - **The window does not read abbreviations or other forms.** "אין ישנים בב"ה" does not count בית הכנסת. Three fusion
   variants that read endings or count a short lexical list (`CASE_LIMONI.md`) were mixed or worse; the fix belongs in
   the regular search.
