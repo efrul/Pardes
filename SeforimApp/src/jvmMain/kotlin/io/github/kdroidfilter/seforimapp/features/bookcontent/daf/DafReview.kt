@@ -8,9 +8,11 @@ import java.nio.file.StandardCopyOption
 import java.time.Instant
 
 /**
- * A reader's review of a tractate's daf (its layout file's lines), for pardes-rashi-ocr: which lines are right, which
- * are not, and where a line's first word really is. Kept in the layouts' folder, under feedback/, one file a tractate,
- * which the reader sends; pardes-rashi-ocr's feedback.py measures the layouts by it and puts its moves in them.
+ * A reader's review of a tractate's daf (its layout file's lines), for pardes-rashi-ocr: which lines are wrong, and
+ * what is wrong with them (how they are set on the page, their words). Kept in the layouts' folder, under feedback/,
+ * one file a tractate, which the reader sends; pardes-rashi-ocr's feedback.py measures the layouts by it. A review of
+ * before the two reasons also says which lines are right and where a line's first word really is (its moves are
+ * still made on the page, and put in the layouts by feedback.py).
  */
 @Serializable
 data class DafReviewFile(
@@ -28,9 +30,12 @@ data class DafReviewFile(
 
 /**
  * The review of one line: the [i]th of its [amud]'s lines (the layout file's), of column [c], whose words were [t]
- * when it was reviewed (a mark whose line has other words now, the layout made again, is not applied). [ok] whether its
- * words are the printed line's (null: not said), and [cut] how many words the line's start moves in the column's text:
- * 1 its first word is the line before's last, -1 the line before's last word is its first. [at] when it was marked.
+ * when it was reviewed (a mark whose line has other words now, the layout made again, is not applied). What the reader
+ * said is wrong with it: how it is set on the page ([layout]), its words ([words]); of its words [from] to [to] alone
+ * (counted in [t] from 0; null: from its first, to its last), when the passage reviewed starts or ends inside it. [ok]
+ * is false for a line either is said of (a review of before the two reasons: whether its words are the printed line's,
+ * null not said), and [cut] how many words the line's start moves in the column's text, in such a review: 1 its first
+ * word is the line before's last, -1 the line before's last word is its first. [at] when it was marked.
  */
 @Serializable
 data class DafMark(
@@ -41,8 +46,68 @@ data class DafMark(
     val ok: Boolean? = null,
     val cut: Int = 0,
     val at: String = Instant.now().toString(),
+    val layout: Boolean = false,
+    val words: Boolean = false,
+    val from: Int? = null,
+    val to: Int? = null,
 ) {
     val isEmpty: Boolean get() = ok == null && cut == 0
+
+    /** Whether it says something the two reasons do not: the line is right, wrong for no reason given, or moved. */
+    val isFormer: Boolean get() = cut != 0 || ok == true || (ok == false && !layout && !words)
+
+    /** The mark with [reason] said of the line ([said]) or no longer, of its words [from] to [to]. */
+    fun saying(
+        reason: DafReason,
+        said: Boolean,
+        from: Int?,
+        to: Int?,
+    ): DafMark {
+        val layout = if (reason == DafReason.LAYOUT) said else layout
+        val words = if (reason == DafReason.WORDS) said else words
+        val wrong = layout || words
+        return copy(
+            layout = layout,
+            words = words,
+            ok = if (wrong) false else null,
+            from = from.takeIf { wrong },
+            to = to.takeIf { wrong },
+            at = Instant.now().toString(),
+        )
+    }
+}
+
+/** What a reader says is wrong with a passage of the daf: how it is set on the page, or its words. */
+enum class DafReason { LAYOUT, WORDS }
+
+/** A line a review is of, by its [index] in its amud, and the words of it meant, [from] to [to] (null: its first, its last). */
+data class ReviewedLine(
+    val index: Int,
+    val from: Int? = null,
+    val to: Int? = null,
+)
+
+/**
+ * The lines a review of [word] is of: those of [range] (the reader's selection, or the selected segment or comment's
+ * words) when the word is in it, each with the words of it the range holds; else the word's own line. Not a big word's.
+ */
+internal fun DafAmud.reviewed(
+    word: DafWord,
+    range: DafRange?,
+): List<ReviewedLine> {
+    val line = lines.getOrNull(word.line)?.takeIf { !it.isBig } ?: return emptyList()
+    if (range == null || word !in range) return listOf(ReviewedLine(word.line))
+    val (first, last) = range.first to range.last
+    return (first.line..last.line)
+        .filter { lines[it].c == line.c && !lines[it].isBig }
+        .map { i ->
+            val lastWord = lines[i].t.split(' ').count { it.isNotEmpty() } - 1
+            ReviewedLine(
+                index = i,
+                from = first.word.takeIf { i == first.line && it > 0 },
+                to = last.word.takeIf { i == last.line && it < lastWord },
+            )
+        }
 }
 
 /** The line of [amud] at [index] in its column's reading order, before it (null for its column's first or a big word). */
@@ -157,10 +222,38 @@ class DafReviews(
     fun mark(
         layout: DafLayoutFile,
         mark: DafMark,
+    ): DafReviewFile = marked(layout, listOf(mark))
+
+    /**
+     * [layout]'s review with [reason] said of [lines] of [amud] ([said]), or no longer said of them, written once:
+     * each line's mark as it is now with the reason changed, a new one for a line with none.
+     */
+    @Synchronized
+    fun say(
+        layout: DafLayoutFile,
+        amud: DafAmud,
+        lines: List<ReviewedLine>,
+        reason: DafReason,
+        said: Boolean,
     ): DafReviewFile {
         val review = of(layout)
-        val others = review.marks.filterNot { it.amud == mark.amud && it.i == mark.i }
-        val next = review.copy(marks = if (mark.isEmpty) others else others + mark)
+        val marks =
+            lines.mapNotNull { reviewed ->
+                val line = amud.lines.getOrNull(reviewed.index) ?: return@mapNotNull null
+                val mine = review.marks.firstOrNull { it.amud == amud.amud && it.i == reviewed.index && it.t == line.t }
+                (mine ?: DafMark(amud.amud, line.c, reviewed.index, line.t)).saying(reason, said, reviewed.from, reviewed.to)
+            }
+        return marked(layout, marks)
+    }
+
+    private fun marked(
+        layout: DafLayoutFile,
+        marks: List<DafMark>,
+    ): DafReviewFile {
+        val review = of(layout)
+        val places = marks.mapTo(HashSet()) { it.amud to it.i }
+        val others = review.marks.filterNot { (it.amud to it.i) in places }
+        val next = review.copy(marks = others + marks.filterNot { it.isEmpty })
         write(layout.tractate, next)
         read[layout.tractate] = next
         return next

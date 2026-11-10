@@ -57,6 +57,8 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.resolveLineRangeFromSelection
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.ContextMenuCheck
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.ContextMenuCheckRow
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.BookContentPanel
@@ -218,6 +220,8 @@ private fun MenuScope.contextItems(items: List<ContextMenuItem>) {
                     )
                 }
             }
+
+            is ContextMenuCheck -> passiveItem { ContextMenuCheckRow(item) }
 
             is ContextMenuItemOptionWithKeybinding ->
                 selectableItem(

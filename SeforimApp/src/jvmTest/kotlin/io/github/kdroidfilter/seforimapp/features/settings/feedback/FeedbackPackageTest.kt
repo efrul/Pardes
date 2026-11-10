@@ -158,6 +158,24 @@ class FeedbackPackageTest {
     }
 
     @Test
+    fun `a daf mark is sent with what is wrong with its line, and of which of its words`() {
+        review(
+            mark(1, "2026-11-03T10:00:00Z").copy(layout = true, from = 2),
+            mark(2, "2026-11-03T10:00:01Z").copy(words = true, to = 4),
+            mark(3, "2026-11-03T10:00:02Z"),
+        )
+        val made = feedbackPackage(source.read(FeedbackSent()), FeedbackChoice(), "sender-1", "1.0.7", "v1")
+        val json = made.toJson()
+        assertTrue("\"layout\":true" in json && "\"from\":2" in json)
+        assertTrue("\"words\":true" in json && "\"to\":4" in json)
+        assertEquals(made, Json.decodeFromString(FeedbackPackage.serializer(), json))
+        // A mark of before the two reasons says neither
+        val marks = made.daf.single().marks
+        assertEquals(listOf(true, false, false), marks.map { it.layout })
+        assertEquals(listOf(false, true, false), marks.map { it.words })
+    }
+
+    @Test
     fun `a big package goes in parts under the limit, every row in one of them, in order`() {
         val grades = (1..400).map { GradeRow("שאילתה $it", "search::שאילתה $it", it.toLong(), 7, 2, 0, gradedAt = it.toLong()) }
         val searches = (1..300).map { SearchRow("חיפוש $it", lastAt = it.toLong()) }

@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (153 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (154 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -677,7 +677,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
-- **Change:** modified, +88 −10 lines. Feature: Daf view, Reading time, Copy of the words alone, Dictionary window.
+- **Change:** modified, +92 −10 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window.
 - **What:**
   - In `BookTextMenus`, `LocalLocatedSelection.current`: when the content locates its own selection in the library (the
     daf's printed words), the context menu's link, note and highlight take that location instead of searching the
@@ -690,13 +690,15 @@ The entries of this section by kind:
   - In `BookTextMenus`, the item "פתח במילון" (`context_menu_open_in_dictionary`) after "search the selected text", when
     the copied text is a word or up to four (`lookupWord`): it opens the dictionary's window on it
     (`dictionaryLookup.open`, read from the graph beside the repository).
+  - In `contextItems`, a branch for `ContextMenuCheck` (the daf review's checkboxes): a passive item drawing
+    `ContextMenuCheckRow`, so that a click on it leaves the menu open.
   - In `BookContentScreen`, a `LaunchedEffect` that tracks the book's reading time (`readingTimeStore.track`) while its
     tab is selected and its window focused (`windowInfo.isWindowFocused` read as a flow).
   - Imports, among them a redundant `androidx.compose.runtime.snapshotFlow` beside the file's `androidx.compose.runtime.*`.
 - **Why:** highlights and notes work on the daf's printed words (`d334af46`), a selection survives while another amud
   is composed (`d9cb48b7`), the learning split widget counts the time a book is read (`0083381e`), and a text is copied
   without its nikud, teamim and punctuation, and a selected word is looked up in the dictionary, as the user asked on
-  2026-11-09.
+  2026-11-09; the daf's review is said in two checkboxes, as the user asked the same day.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: the edits sit inside Zayit's context-menu builder (`BookTextMenus`), which Zayit changes when
   it adds a menu action.
@@ -1213,14 +1215,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +213 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 200 Hebrew strings added in thirteen blocks,
+- **Change:** modified, +209 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 196 Hebrew strings added in thirteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
   - semantic packs: `semantic_pack_*` (31), `semantic_problem_*` (6);
   - feedback: `feedback_send_*` (35), `feedback_consent_*` (14), `search_feedback_*` (6);
-  - the daf view: `daf_layouts_*` (10), `daf_review_*` (8), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
+  - the daf view: `daf_layouts_*` (10), `daf_review_*` (4), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
     `daf_view_tooltip`, `daf_missing`, `daf_missing_hint`, `daf_amud_missing`, `settings_daf_*` (4) and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
   - the existing Zayit library: `onboarding_existing_library_*` (5);
@@ -1370,9 +1372,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontsSettingsScreen.kt`
 
-- **Change:** modified, +49 −0 lines. Feature: Daf view.
+- **Change:** modified, +51 −0 lines. Feature: Daf view.
 - **What:** two `FontSettingCard`s (the daf's Gemara and its Rashi and Tosafot) and two checkboxes with their notes:
-  lighter unsure lines (`settings_daf_mark_unsure`) and the review mode (`settings_daf_review`); imports.
+  lighter unsure lines (`settings_daf_mark_unsure`) and the review mode (`settings_daf_review`), with, while the review
+  is on, a link that opens the folder its marks are kept in (`DafReviewsFolderLink`, which was an item of the daf's
+  menu); imports.
 - **Why:** as for `FontsSettingsEvents.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small; a block after Zayit's last card.
@@ -1616,7 +1620,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
 - **Feature:** Daf view.
-- **Size:** 1336 lines.
+- **Size:** 1320 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review mode; `DafMode` (what a click
@@ -1634,14 +1638,18 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   `firstLines`), the page's marks (`dafHighlight`: passage, segments, their comments), clicks
   (`clickOn`, `segmentOf`), the links read for a page (`loadLinks`), the layouts folder (`rememberDafLayouts`), a missing
   layout's page with its download (`MissingLayout`, `DownloadLayout`), the review's menu items and tints, `DafFind`, and a
-  sideways pan as the commentaries' pages turn.
+  sideways pan as the commentaries' pages turn. The review's items (`reviewItems`, while the settings' review is on) are
+  two checkboxes, "הקטע מעומד לא נכון" and "יש טעות במילים" (`ContextMenuCheck`), of the lines the right-clicked word's
+  selection covers (`reviewedAt`: the reader's own selection when the word is in it, or the selected segment's or
+  comment's words on the amud, else the word's line), each written through `DafReviews.say`, one write at a time
+  (`reviewing`); a line marked before the two reasons has "ביטול הסימון של השורה" too.
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
   (`DafMode`, `isBavli`), `VerticalBars.kt` (`isBavli`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
   composables have no UI test.
-- **Notes:** at 1,336 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
+- **Notes:** at 1,320 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
   parts (pages, review, missing layout, marks).
 
@@ -1771,14 +1779,34 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReview.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 190 lines.
-- **What:** a reader's review of a tractate's layout, for pardes-rashi-ocr: `DafReviewFile` and `DafMark` (a line right,
-  wrong, or its first word moved), `withMarks` (the amud with the review's moves made, a mark whose line now holds other
-  words left out), `lineBefore`/`lineAfter` in a column's reading order, and `DafReviews`, kept in the layouts' folder
-  under `feedback/`, one file a tractate, written at every mark, an unreadable file set aside.
-- **Reached from:** `DafView.kt`, `DafLayout.kt`, `FeedbackPackage.kt` (sent with the feedback).
+- **Size:** 283 lines.
+- **What:** a reader's review of a tractate's layout, for pardes-rashi-ocr: `DafReviewFile` and `DafMark`, a line
+  with what the reader said is wrong with it (`DafReason`: how it is set on the page, `layout`, or its words, `words`,
+  with `ok` false), of which of its words when the passage reviewed starts or ends inside it (`from`, `to`); a mark of
+  before the two reasons (a line right, wrong, or its first word moved: `isFormer`) is still read, its moves still made
+  (`withMarks`, a mark whose line now holds other words left out). `reviewed` gives the lines a review of a word is of:
+  the selection's when the word is in it, each with the words of it meant, else the word's own (`ReviewedLine`).
+  `lineBefore`/`lineAfter` in a column's reading order, and `DafReviews`, kept in the layouts' folder under
+  `feedback/`, one file a tractate, written at every mark (`say`: a reason said or unsaid of a passage's lines in one
+  write, each from its mark as it is in the file), an unreadable file set aside. The format stays 1: the service
+  refuses another, and takes fields it does not know.
+- **Reached from:** `DafView.kt`, `DafReviewMenu.kt`, `DafLayout.kt`, `FeedbackPackage.kt` (sent with the feedback).
 - **Follows:** Pardes's own; the file is read by pardes-rashi-ocr's `feedback.py`.
 - **Tests:** `DafReviewTest`, `FeedbackPackageTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewMenu.kt`
+
+- **Feature:** Daf view (review mode).
+- **Size:** 94 lines.
+- **What:** `ContextMenuCheck`, an entry of the text's menu that is a checkbox (checked or not when the menu opens; a
+  click checks or unchecks it and the menu stays open, for another to be checked too), and its row
+  (`ContextMenuCheckRow`: Jewel's `Checkbox` and the label, lit under the pointer as the menu's items are); and
+  `DafReviewsFolderLink`, the settings' link that opens the folder the reviews are kept in.
+- **Reached from:** `BookContentScreen.kt` (`contextItems`, one branch), `DafView.kt` (`reviewItems`),
+  `FontsSettingsScreen.kt` (the link).
+- **Follows:** Zayit's `ContextMenuHighlightColorPicker` and its row in `BookContentScreen.kt` (a passive item of the
+  menu, its own hover and content color); Jewel's `Checkbox` and `Link`.
+- **Tests:** none of the composables; the marks they make are `DafReviewTest`'s.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafDownloads.kt`
 
@@ -1917,10 +1945,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewTest.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 128 lines.
+- **Size:** 180 lines.
 - **What:** a line's start moved a word on or back with its library line and bold, a move that would empty a line left
   out, a mark of a changed line or another amud moving nothing, the review kept in the feedback folder (the new mark in
-  place of the old), written to the file it was read from, and an unreadable file set aside.
+  place of the old), written to the file it was read from, and an unreadable file set aside. The two reasons: a review
+  is of the selection's lines when the word is in it, with the words it holds (its column's lines alone, no big word),
+  else of the word's line; a reason said of a passage's lines in one write and unsaid again, the other reason kept, no
+  mark left with neither; a mark of before the reasons kept under them (its move still made) and told apart.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, `DafReview.kt`).
@@ -3356,10 +3387,11 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackPackageTest.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 218 lines.
+- **Size:** 236 lines.
 - **What:** the source reads what is newer than each kind's last package (only searches of the history); a query longer
   than the service takes left out, a pasted passage not; a package not read again; the choice's kinds and left-out
-  queries; a big package in parts under the limit, in order; what a package and a grade say.
+  queries; a daf mark sent with what is wrong with its line and of which of its words; a big package in parts under
+  the limit, in order; what a package and a grade say.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
@@ -3724,15 +3756,15 @@ the description where something needs saying.
 | `feedback-service/migrations/0002_public.sql` | Second D1 migration: column `public` of `packages` (0 or 1, 0 by default), whether the sender agreed to publish the package ("publish": true), which index.js sets on receiving it and reads for the public route. Packages from before stay 0. | Pardes's own |
 | `feedback-service/package-lock.json` | npm lockfile (v3) of the service's dev dependencies, wrangler 4.151.2 and miniflare 5.20261019.0-beta, and their dependencies. *Note:* Miniflare is pinned at a beta version. | generated by npm |
 | `feedback-service/package.json` | npm manifest of the private package pardes-feedback (ES modules, Node 22 or later): the scripts dev (wrangler dev), test (node --test) and deploy (wrangler deploy), and the dev dependencies wrangler and miniflare. | Pardes's own |
-| `feedback-service/src/index.js` | The Worker: POST /v1/packages keeps a checked package (at most 1,000,000 bytes, 200 a day per sender, 20 packages or deletions a minute per address through the LIMITER binding), with `public` 1 when it says "publish": true; DELETE /v1/senders/:id deletes a sender's packages and records it; GET /v1/public/packages gives everyone the packages (at most 50 a request, 300 requests a minute per address through READ_LIMITER), each with `public` and each sender, in the package too, the first 6 bytes of a SHA-256 of its id in hex: a published package as published cuts it (the words, scope, options and graded place of its searches and grades, nothing else a sender added), any other as forEveryone cuts it (each search and graded result an opaque id, an HMAC-SHA-256 under a key from ADMIN_TOKEN, in place of its words, scope and place), every row with its opaque id (queryId, resultId) so the site counts a row sent both ways once, the daf reviews as they came; the maintainer's GET routes list the packages with `public` (with their bodies on request, at most 50) and return one with the ADMIN_TOKEN, and GET / serves the site (site.js), to which /admin leads. *Note:* Plain JavaScript, while Zayit's own web code (website/) is TypeScript. Any error answers a bare 500, with nothing logged. | Pardes's own |
-| `feedback-service/src/package.js` | What a package must be: format 1 of app "Pardes", a UUID sender, sentAt, optional versions, an optional boolean "publish" (the sender's consent to show its words to everyone), and lists of grades (0, 2 or 3), searches (a pasted passage too) and daf reviews with their marks, every field checked by type and length, and a refusal that names the row and the reason; exports MAX_BYTES, MAX_PER_DAY, MAX_QUERY and SENDER. | Pardes's own; follows the app's FeedbackPackage.kt format |
+| `feedback-service/src/index.js` | The Worker: POST /v1/packages keeps a checked package (at most 1,000,000 bytes, 200 a day per sender, 20 packages or deletions a minute per address through the LIMITER binding), with `public` 1 when it says "publish": true; DELETE /v1/senders/:id deletes a sender's packages and records it; GET /v1/public/packages gives everyone the packages (at most 50 a request, 300 requests a minute per address through READ_LIMITER), each with `public` and each sender, in the package too, the first 6 bytes of a SHA-256 of its id in hex: a published package as published cuts it (the words, scope, options and graded place of its searches and grades, nothing else a sender added), any other as forEveryone cuts it (each search and graded result an opaque id, an HMAC-SHA-256 under a key from ADMIN_TOKEN, in place of its words, scope and place), every row with its opaque id (queryId, resultId) so the site counts a row sent both ways once, the daf reviews with each mark's own fields (its line and words, right or wrong, a move, what is wrong with it, `layout` or `words`, and of which of its words, `from` and `to`) and nothing a sender added to one; the maintainer's GET routes list the packages with `public` (with their bodies on request, at most 50) and return one with the ADMIN_TOKEN, and GET / serves the site (site.js), to which /admin leads. *Note:* Plain JavaScript, while Zayit's own web code (website/) is TypeScript. Any error answers a bare 500, with nothing logged. | Pardes's own |
+| `feedback-service/src/package.js` | What a package must be: format 1 of app "Pardes", a UUID sender, sentAt, optional versions, an optional boolean "publish" (the sender's consent to show its words to everyone), and lists of grades (0, 2 or 3), searches (a pasted passage too) and daf reviews with their marks (a mark's two reasons true or false, the words they are of counts), every field checked by type and length, and a refusal that names the row and the reason; exports MAX_BYTES, MAX_PER_DAY, MAX_QUERY and SENDER. | Pardes's own; follows the app's FeedbackPackage.kt format |
 | `feedback-service/src/site.js` | The site's route (GET /): serves its page, script, style and font, which hold no data, with a CSP that runs no script but its own and reaches no other address, no framing and no referrer; the page and script uncached, the font for 30 days; /admin redirects to it. | Pardes's own; replaces the maintainer's page (admin.js) |
 | `feedback-service/src/site/OFL-Frank-Ruhl-Libre.txt` | The SIL Open Font License 1.1 of Frank Ruhl Libre (Copyright 2015 The Frank Ruhl Libre Project Authors), the site's display font. | Frank Ruhl Libre's licence, as published |
-| `feedback-service/src/site/app.js` | The search data site's script (1,118 lines). Everyone sees what the data adds up to, read page by page from the public route: a summary (searches, grades, senders, daf lines, the days of the last 30, the grades by search model, the app of each row: Pardes, and Zayit and Otzaria through the search telemetry tool); the common searches and the searches' and grades' tabs from published packages only (their tabs shown once there are any, with a word that the rest are counted but not shown); the daf marks' table with search, sorting and a CSV download; the packages as the public route gives them; and an upload of package files, each posted with "publish": true under a line that says what is uploaded is published (split into parts of at most 900,000 bytes, waiting out the rate limit). Rows are counted once across senders, and across a published and an unpublished copy by their opaque ids, showing the words. The admin sign-in (the admin token, kept in the browser only if asked) reads the maintainer's route and shows every search. It shows no sender, alias or id, and every text from a package only as text. | Pardes's own; replaces the maintainer's page (admin/app.js) |
+| `feedback-service/src/site/app.js` | The search data site's script (1,128 lines). Everyone sees what the data adds up to, read page by page from the public route: a summary (searches, grades, senders, daf lines, the days of the last 30, the grades by search model, the app of each row: Pardes, and Zayit and Otzaria through the search telemetry tool); the common searches and the searches' and grades' tabs from published packages only (their tabs shown once there are any, with a word that the rest are counted but not shown); the daf marks' table (each line with what its reader said is wrong with it, its setting on the page or its words, and of which of its words; the tractates' counts of each) with search, sorting and a CSV download; the packages as the public route gives them; and an upload of package files, each posted with "publish": true under a line that says what is uploaded is published (split into parts of at most 900,000 bytes, waiting out the rate limit). Rows are counted once across senders, and across a published and an unpublished copy by their opaque ids, showing the words. The admin sign-in (the admin token, kept in the browser only if asked) reads the maintainer's route and shows every search. It shows no sender, alias or id, and every text from a package only as text. | Pardes's own; replaces the maintainer's page (admin/app.js) |
 | `feedback-service/src/site/display.woff2` | Frank Ruhl Libre, subset to Hebrew, digits and punctuation (binary), the font of the site's headings and searches, served by the Worker itself. | Frank Ruhl Libre (SIL OFL 1.1), subset for the site |
 | `feedback-service/src/site/index.html` | The open site's page, "מאגר החיפושים הפתוח" (Hebrew, right to left, light and dark): its masthead (the figures open to everyone, the searches only from those who agreed to publish them), the admin sign-in's button and dialog, the tabs and the sections the script fills, and a footer saying the same; no data in it. | Pardes's own; replaces the maintainer's page (admin/index.html) |
 | `feedback-service/src/site/style.css` | The open site's styles, in no app's branding: an index of a library rather than an admin panel, a Hebrew serif title, figures between hairlines, sticky tabs, one techelet accent and a chart hue checked for contrast in light and dark, the admin sign-in's dialog, and the upload's note that what is uploaded is published. | Pardes's own; replaces the maintainer's page (admin/style.css) |
-| `feedback-service/test/service.test.js` | node:test suite that runs the Worker in Miniflare with every migration applied in order: the site at the root and nothing else without a route, keeping and listing a package with its counts and bodies, the site with no data in it, its CSP, its upload posting with "publish": true and saying so, the public route without a search's words and with each sender an alias that does not give its id away, a package's words shown to everyone only with "publish": true (and the same opaque ids on both forms, a mixed pair from one sender, `public` for the maintainer), paging, refusing non-packages with the row and reason (a "publish" that is not true or false too), the token on the maintainer's routes, deleting a sender's packages (told to everyone by its alias), the daily limit and the per-address rate limit. | Pardes's own |
+| `feedback-service/test/service.test.js` | node:test suite that runs the Worker in Miniflare with every migration applied in order: the site at the root and nothing else without a route, keeping and listing a package with its counts and bodies, the site with no data in it, its CSP, its upload posting with "publish": true and saying so, the public route without a search's words and with each sender an alias that does not give its id away, a package's words shown to everyone only with "publish": true (and the same opaque ids on both forms, a mixed pair from one sender, `public` for the maintainer), paging, refusing non-packages with the row and reason (a "publish" that is not true or false too, and a daf mark whose reason is not true or false or whose word is below 0), a daf mark's reasons and words shown to everyone without what a sender added to it, the token on the maintainer's routes, deleting a sender's packages (told to everyone by its alias), the daily limit and the per-address rate limit. | Pardes's own |
 | `feedback-service/wrangler.toml` | Wrangler configuration of the Worker pardes-feedback: src/index.js, compatibility date 2026-10-01, workers.dev on, observability off (no request logs), the D1 binding DB with migrations/, the LIMITER rate limit of 20 packages or deletions a minute and READ_LIMITER's of 300 public reads a minute, and rules that bundle the site's page, script and style as text and its font as data. *Note:* Holds no account id; its D1 database id is all zeros, written in by feedback-service.yml for its run only. | Pardes's own |
 
 #### The Nucleus fork (the commentators' tear-off)

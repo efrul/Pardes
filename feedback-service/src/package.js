@@ -45,6 +45,7 @@ const filled = (s, max) => typeof s === "string" && s.length > 0 && s.length <= 
 const optional = (s, max) => s === undefined || s === null || (typeof s === "string" && s.length <= max);
 const count = (n) => Number.isSafeInteger(n) && n >= 0;
 const maybeId = (n) => n === undefined || n === null || Number.isSafeInteger(n);
+const maybeCount = (n) => n === undefined || n === null || count(n);
 const maybeBoolean = (b) => b === undefined || b === null || typeof b === "boolean";
 
 /** The first of [fields] whose check [o] fails, said with the length of a text too long; null when none. */
@@ -84,5 +85,7 @@ function whyReview(r) {
 function whyMark(m) {
   return firstBad(m, [["amud", text(16), 16], ["c", text(16), 16], ["i", count],
     ["t", (s) => typeof s === "string" && s.length <= 2000, 2000], ["ok", maybeBoolean],
-    ["cut", (n) => n === undefined || Number.isSafeInteger(n)], ["at", maybeText(64), 64]]);
+    ["cut", (n) => n === undefined || Number.isSafeInteger(n)], ["at", maybeText(64), 64],
+    // What the reader said is wrong with the line (DafMark): how it is set on the page, its words, and which of them
+    ["layout", maybeBoolean], ["words", maybeBoolean], ["from", maybeCount], ["to", maybeCount]]);
 }

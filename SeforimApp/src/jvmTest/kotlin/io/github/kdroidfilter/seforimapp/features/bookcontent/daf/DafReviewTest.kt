@@ -87,6 +87,58 @@ class DafReviewTest {
     }
 
     @Test
+    fun `a review is of the selection's lines when the word is in it, with the words it holds, else of the word's line`() {
+        assertEquals(listOf(ReviewedLine(3)), amud.reviewed(DafWord(3, 1), null))
+        val range = DafRange(DafWord(1, 1), DafWord(4, 1))
+        assertEquals(
+            listOf(ReviewedLine(1, from = 1), ReviewedLine(3), ReviewedLine(4, to = 1)),
+            amud.reviewed(DafWord(3, 0), range),
+            "its column's lines, not the Gemara's between them",
+        )
+        assertEquals(listOf(ReviewedLine(4)), amud.reviewed(DafWord(4, 2), range), "a word outside the selection: its own line")
+        val whole = DafRange(DafWord(1, 0), DafWord(3, 3))
+        assertEquals(listOf(ReviewedLine(1), ReviewedLine(3)), amud.reviewed(DafWord(1, 0), whole), "whole lines name no words")
+        assertEquals(emptyList(), amud.reviewed(DafWord(0, 0), null), "a big word is no line to review")
+    }
+
+    @Test
+    fun `what is wrong with a passage is said of each of its lines in one write, and unsaid leaves no mark`() {
+        val dir = Files.createTempDirectory("daf-review").toFile()
+        val layout = DafLayoutFile(format = 2, tractate = "Bava Batra", tractateHe = "בבא בתרא", amudim = listOf(amud))
+        val reviews = DafReviews(dir)
+        val lines = listOf(ReviewedLine(1, from = 1), ReviewedLine(3))
+
+        val said = reviews.say(layout, amud, lines, DafReason.LAYOUT, said = true)
+        assertEquals(listOf(1, 3), said.marks.map { it.i })
+        val first = said.marks.first()
+        assertTrue(first.layout && !first.words && first.ok == false)
+        assertEquals(1 to null, first.from to first.to)
+        assertEquals("אמר רבי יוחנן", first.t)
+
+        assertTrue(reviews.say(layout, amud, lines, DafReason.WORDS, said = true).marks.all { it.layout && it.words })
+        val words = DafReviews(dir).say(layout, amud, lines, DafReason.LAYOUT, said = false)
+        assertTrue(words.marks.all { !it.layout && it.words && it.ok == false }, "read from its file, the other reason kept")
+        assertTrue(DafReviews(dir).say(layout, amud, lines, DafReason.WORDS, said = false).marks.isEmpty())
+        assertTrue(DafReviews(dir).of(layout).marks.isEmpty())
+        dir.deleteRecursively()
+    }
+
+    @Test
+    fun `a mark of before the two reasons is kept under them, and told apart`() {
+        val moved = DafMark("2a", "R", 3, "מאי טעמא דהכא כתיב", cut = 1)
+        assertTrue(moved.isFormer)
+        val both = moved.saying(DafReason.WORDS, said = true, from = null, to = 2)
+        assertTrue(both.isFormer && both.words && both.ok == false)
+        assertEquals(1 to 2, both.cut to both.to)
+        val unsaid = both.saying(DafReason.WORDS, said = false, from = null, to = 2)
+        assertTrue(unsaid.cut == 1 && unsaid.ok == null && unsaid.to == null && !unsaid.isEmpty, "its move is still made")
+
+        assertTrue(DafMark("2a", "R", 3, "מאי", ok = true).isFormer)
+        assertTrue(DafMark("2a", "R", 3, "מאי", ok = false).isFormer, "wrong, with no reason given")
+        assertTrue(!DafMark("2a", "R", 3, "מאי").saying(DafReason.LAYOUT, said = true, from = null, to = null).isFormer)
+    }
+
+    @Test
     fun `a mark is written to the file the review was read from, whatever tractate the file names`() {
         val dir = Files.createTempDirectory("daf-review").toFile()
         val layout = DafLayoutFile(format = 2, tractate = "Bava Batra", tractateHe = "בבא בתרא", amudim = listOf(amud))
