@@ -109,6 +109,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.queryNarr
 import io.github.kdroidfilter.seforimapp.features.search.semantic.installedSemanticSearch
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.debugln
+import io.github.kdroidfilter.seforimapp.pagination.PagingDefaults
 import io.github.kdroidfilter.seforimapp.texteffects.rememberTextZoom
 import io.github.kdroidfilter.seforimlibrary.core.models.AltTocEntry
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
@@ -176,6 +177,8 @@ fun BookContentView(
     focusRequest: Int = 0,
     // A Talmud tractate shown as its Vilna page, in this view's frame (its zoom, keys, selection, menu and find bar)
     daf: DafMode? = null,
+    // Opens the commentaries pane, back from the daf with a comment selected on it; whether it was closed
+    onShowCommentaries: () -> Boolean = { false },
 ) {
     val appSettings = LocalAppGraph.current.appSettings
     // Don't use the saved scroll position initially if we have an anchor
@@ -215,6 +218,9 @@ fun BookContentView(
             onZoomingChange = onPointerZoomInProgressChange,
         )
     val showsDaf = daf != null
+    // Back from the daf, the text is hidden until it is placed where the daf was (below)
+    var wasDaf by remember(bookId) { mutableStateOf(showsDaf) }
+    val backFromDaf = wasDaf && !showsDaf
     DisposableEffect(tabId, showsDaf) {
         if (showsDaf) appSettings.dafShown(tabId)
         onDispose { if (showsDaf) appSettings.dafHidden(tabId) }
@@ -262,7 +268,7 @@ fun BookContentView(
             !hasRestored &&
             (hasTopAnchorRequest || (topAnchorTimestamp == 0L && hasSavedInitialPosition))
     // Not the daf's: the lines' list it waits on is not laid out there (its scrolls wait for its first layout)
-    val contentAlpha = if (needsInitialPositioning && daf == null) 0f else 1f
+    val contentAlpha = if ((needsInitialPositioning || backFromDaf) && daf == null) 0f else 1f
     if (E2e.enabled) SideEffect { E2eReader.bookShown(bookId, listState, visible = contentAlpha == 1f) }
 
     // selectedLineId is now passed as a parameter for stability
@@ -526,6 +532,8 @@ fun BookContentView(
     val savedAnchorIndexUpdated by rememberUpdatedState(anchorIndex)
 
     fun maybeSave(data: AnchorData) {
+        // On the daf the tab's place is the daf's (DafView's onScroll), not that of the lines' list, which is not shown
+        if (currentDaf != null) return
         // Guard: on cold-boot restore, don't overwrite the persisted position with an initial transient emission
         // before the restoration effect has applied the saved anchor/offset.
         val hasPersistedPosition =
@@ -1005,6 +1013,52 @@ fun BookContentView(
             }
         }
     }
+
+    // The daf's place is the tab's, as the text's top line is: where the daf opens, and comes back to
+    fun dafAt(top: Line) {
+        val index = minOf(top.lineIndex, PagingDefaults.LINES.INITIAL_LOAD_SIZE / 2)
+        onScrollUpdated(bookId, top.id, index, index, 0)
+    }
+
+    // Back from the daf, the text opens where the daf was: the Gemara's segment at the daf's top at its own top, the
+    // selected line in view when it was on the daf, and a comment selected there by a click on itself in the
+    // commentaries pane
+    val currentOnShowCommentaries by rememberUpdatedState(onShowCommentaries)
+    LaunchedEffect(showsDaf) {
+        if (showsDaf) {
+            wasDaf = true
+            return@LaunchedEffect
+        }
+        if (!wasDaf) return@LaunchedEffect
+        val selectedId = primarySelectedLineId
+
+        suspend fun showSelected() {
+            val selected = lazyPagingItems.itemSnapshotList.items.indexOfFirst { it.id == selectedId }
+            val shown = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == selected }
+            if (selected < 0 || isLineFullyVisible(shown?.offset, shown?.size, listState.layoutInfo.viewportEndOffset)) return
+            listState.scrollToItem(selected)
+        }
+        val place = dafControl.place()
+        val opened = place?.onComment == true && currentOnShowCommentaries()
+        try {
+            val top = place?.let { runSuspendCatching { repository.getLine(it.topLineId) }.getOrNull() } ?: return@LaunchedEffect
+            // The tab's place too: the daf may not have told its last one yet
+            dafAt(top)
+            listState.scrollToItem(loadLine(top.lineIndex) ?: return@LaunchedEffect)
+            if (!place.selectionShown) return@LaunchedEffect
+            awaitNextLayout()
+            showSelected()
+        } finally {
+            wasDaf = false
+        }
+        // The pane takes some of the view once it opens: the selected line is kept in what it leaves
+        if (opened) {
+            val height = listState.layoutInfo.viewportSize.height
+            withTimeoutOrNull(PANE_WAIT) {
+                snapshotFlow { listState.layoutInfo.viewportSize.height }.collect { if (it < height) showSelected() }
+            }
+        }
+    }
     BookSelectionContainer(
         // The daf's words are not the book's lines' text: its runs' own selections, copied as selected
         selection = if (daf != null) null else bookSelection,
@@ -1038,6 +1092,8 @@ fun BookContentView(
                 },
                 modifier = Modifier.fillMaxSize().padding(bottom = 8.dp),
                 onWordInText = selectWordInText,
+                openAt = anchorId.takeIf { it > 0 },
+                onScroll = { id -> wordScope.launch { runSuspendCatching { repository.getLine(id) }.getOrNull()?.let(::dafAt) } },
                 // The find in page's matches drawn on the daf too, the current one strongest
                 find =
                     DafFind(
@@ -1370,6 +1426,9 @@ private const val SMART_FIND_LIMIT = 60
 
 // The daf's zoom as the text zoom's size: a hundred to its 1
 private const val PERCENT = 100f
+
+// Longest wait for the commentaries pane, opened back from the daf, to take its part of the view
+private val PANE_WAIT = 3000.milliseconds
 
 // Literal find: pause after the last keystroke before querying the index
 private val FIND_DEBOUNCE = 150.milliseconds

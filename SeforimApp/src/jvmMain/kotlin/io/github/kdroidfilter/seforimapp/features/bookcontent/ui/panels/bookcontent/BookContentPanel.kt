@@ -325,6 +325,11 @@ private fun BookContentPanelContent(
                         onPointerZoomInProgressChange = { isBookContentZoomInProgress = it },
                         focusRequest = uiState.content.focusTextRequest,
                         daf = daf,
+                        onShowCommentaries = {
+                            val closed = !content.showCommentaries
+                            if (closed) onEvent(BookContentEvent.ToggleCommentaries)
+                            closed
+                        },
                     )
                 }
             }
