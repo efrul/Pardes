@@ -34,10 +34,12 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextIndent
@@ -62,7 +64,23 @@ fun interface DafHighlight {
 }
 
 /**
- * A printed line in a run: the amud's line [index], its [words] (those in [bold] a dibbur hamatchil), its letters
+ * How the first word of a dibbur hamatchil is printed in Tosafot: in the Gemara's square letters ([family]), bold,
+ * [ratio] times the size of its line's letters.
+ */
+internal class LeadStyle(
+    val family: FontFamily,
+    val ratio: Float,
+) {
+    /** Such a word's style in a line of letters [size] pixels. */
+    fun span(
+        size: Float,
+        density: Density,
+    ) = SpanStyle(fontFamily = family, fontSize = with(density) { (size * ratio).toSp() }, fontWeight = FontWeight.Bold)
+}
+
+/**
+ * A printed line in a run: the amud's line [index], its [words] (those in [bold] a dibbur hamatchil, those in [lead]
+ * the first of one in Tosafot, printed as the run's [TextRun.lead]), its letters
  * [size] pixels, set [indent] pixels in from the run's right edge, with [extra] pixels more after each of its spaces so
  * that it fills its box, as printed, or [gaps] after each its own (a line on both sides of a big word: one of them
  * the big word's width). [unsure] when the alignment is not sure of its first or last word. Its words are its line's
@@ -78,13 +96,15 @@ internal class RunLine(
     val unsure: Boolean,
     val gaps: FloatArray? = null,
     val firstWord: Int = 0,
+    val lead: Set<Int> = emptySet(),
 )
 
 /**
  * Lines of [column] one below the other, [pitch] apart, from [top] down: drawn as one text, each line a paragraph of its
  * own (null, a line's place left empty). Its box is [left] and
  * [width] wide; [size] is its letters', [isGemara] whether they are the Gemara's (a square letter) or a commentary's,
- * [isBig] for a column's big first word. All in pixels at the scale the amud was laid out at.
+ * [isBig] for a column's big first word, [lead] how a dibbur's first word is printed in it (Tosafot's). All in pixels
+ * at the scale the amud was laid out at.
  */
 internal class TextRun(
     val column: String,
@@ -96,6 +116,7 @@ internal class TextRun(
     val isGemara: Boolean,
     val isBig: Boolean,
     val lines: List<RunLine?>,
+    val lead: LeadStyle? = null,
 ) {
     /** The run's words, a space between two of them and between two lines, which a copy keeps. */
     val text: String
@@ -145,25 +166,34 @@ internal class TextRun(
 
     /**
      * The text drawn [k] times its laid-out size, the [density] the run was laid out with; its lines the alignment is
-     * not sure of in [unsureInk], when given.
+     * not sure of in [unsureInk], when given. [drawn]: how high a line with a dibbur's first word in square letters is
+     * drawn at a line height, its letters a size in pixels ([leadLineHeight]).
      */
     fun annotated(
         k: Float,
         density: Density,
         unsureInk: Color?,
+        drawn: ((lineHeight: Int, size: Float) -> Int)? = null,
     ): AnnotatedString =
         with(density) {
             // A line is drawn whole pixels high, so each is given the pixels that keep it where its pitch puts it: at one
             // height for all, a run of 25 lines 21.6 pixels apart ended 10 pixels low, on the next run's first line
             val step = pitch * k
+            var top = 0
             buildAnnotatedString {
                 append(text)
                 lines.forEachIndexed { slot, line ->
                     val start = lineStarts[slot]
                     val end = lineStarts.getOrNull(slot + 1) ?: text.length
                     val indent = line?.indent?.takeIf { it > 0f }?.let { TextIndent(firstLine = (it * k).toSp()) }
-                    val lineHeight = (((slot + 1) * step).roundToInt() - (slot * step).roundToInt()).toSp()
-                    addStyle(ParagraphStyle(textIndent = indent, lineHeight = lineHeight, lineHeightStyle = CENTERED), start, end)
+                    val height = ((slot + 1) * step).roundToInt() - top
+                    // A line with a dibbur's first word is drawn higher than its line height (the square letters stand
+                    // higher on their line than the others): it is given the line height that is drawn as high as it is
+                    val ofLead = if (lead != null && line?.lead?.isNotEmpty() == true) drawn else null
+                    val letters = (line?.size ?: 0f) * k
+                    val lineHeight = ofLead?.let { fitting(height) { h -> it(h, letters) } } ?: height
+                    top += ofLead?.invoke(lineHeight, letters) ?: lineHeight
+                    addStyle(ParagraphStyle(textIndent = indent, lineHeight = lineHeight.toSp(), lineHeightStyle = CENTERED), start, end)
                     if (line == null) return@forEachIndexed
                     if (abs(line.size - size) > SAME_SIZE) addStyle(SpanStyle(fontSize = (line.size * k).toSp()), start, end)
                     if (line.unsure && unsureInk != null) addStyle(SpanStyle(color = unsureInk), start, end)
@@ -171,6 +201,7 @@ internal class TextRun(
                     for (i in line.words.indices) {
                         val wordEnd = starts[i] + line.words[i].length
                         if (i in line.bold) addStyle(SpanStyle(fontWeight = FontWeight.Bold), starts[i], wordEnd)
+                        if (lead != null && i in line.lead) addStyle(lead.span(line.size * k, density), starts[i], wordEnd)
                         if (i == line.words.lastIndex) continue
                         val extra = line.gaps?.get(i) ?: line.extra
                         if (extra != 0f) addStyle(SpanStyle(letterSpacing = (extra * k).toSp()), wordEnd, wordEnd + 1)
@@ -180,10 +211,17 @@ internal class TextRun(
         }
 
     private companion object {
-        val CENTERED = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
-
         /** Sizes this near are one (pixels). */
         const val SAME_SIZE = 0.01f
+
+        /** A line with a dibbur's first word is drawn no more pixels than these higher than its line height. */
+        const val MOST_RISE = 12
+
+        /** The line height drawn [height] pixels high, by how high [drawn] says each is; the nearest below with none. */
+        inline fun fitting(
+            height: Int,
+            drawn: (Int) -> Int,
+        ): Int = (height downTo maxOf(1, height - MOST_RISE)).firstOrNull { drawn(it) <= height } ?: height
 
         /** The index of the last value not above [value]. */
         fun IntArray.binarySearchFloor(value: Int): Int {
@@ -203,6 +241,31 @@ internal class TextRun(
         }
     }
 }
+
+private val CENTERED = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
+
+/**
+ * How many pixels high a line of [style] is drawn at a line height of [lineHeight] pixels when one of its words is a
+ * dibbur's first, in [lead]'s letters, the line's own [size] pixels: more than its line height.
+ */
+internal fun TextMeasurer.leadLineHeight(
+    style: TextStyle,
+    lead: LeadStyle,
+    size: Float,
+    lineHeight: Int,
+    density: Density,
+): Int {
+    val text =
+        buildAnnotatedString {
+            append(LEAD_PROBE)
+            addStyle(ParagraphStyle(lineHeight = with(density) { lineHeight.toSp() }, lineHeightStyle = CENTERED), 0, length)
+            addStyle(SpanStyle(fontSize = with(density) { size.toSp() }), 0, length)
+            addStyle(lead.span(size, density), 0, 1)
+        }
+    return measure(text, style, softWrap = false, density = density).size.height
+}
+
+private const val LEAD_PROBE = "א א"
 
 /** An amud laid out at [scale] pixels a point (its block [width] by [height] pixels): its runs of lines. */
 internal class AmudLayout(
@@ -298,6 +361,7 @@ internal fun DafAmudText(
     underlineColor: Color = Color.Unspecified,
 ) {
     val density = LocalDensity.current
+    val measurer = rememberTextMeasurer(cacheSize = 0)
     val currentRange by rememberUpdatedState(range)
     val currentOnRange by rememberUpdatedState(onRange)
     val currentOnWordClick by rememberUpdatedState(onWordClick)
@@ -412,7 +476,6 @@ internal fun DafAmudText(
         modifier = with(density) { modifier.size((layout.width * k).toDp(), (layout.height * k).toDp()) }.then(pointer),
         content = {
             layout.runs.forEachIndexed { i, run ->
-                val text = remember(run, k, density, unsureInk) { run.annotated(k, density, unsureInk) }
                 val style =
                     remember(run, k, density, ink, gemara, rashi) {
                         TextStyle(
@@ -422,6 +485,14 @@ internal fun DafAmudText(
                             color = ink,
                             textDirection = TextDirection.Rtl,
                         )
+                    }
+                val text =
+                    remember(run, k, density, unsureInk, style, measurer) {
+                        val lead = run.lead ?: return@remember run.annotated(k, density, unsureInk)
+                        val heights = HashMap<Pair<Int, Float>, Int>()
+                        run.annotated(k, density, unsureInk) { lineHeight, size ->
+                            heights.getOrPut(lineHeight to size) { measurer.leadLineHeight(style, lead, size, lineHeight, density) }
+                        }
                     }
                 val marks = remember(run, highlight) { marksOf(run, highlight) }
                 val selected =

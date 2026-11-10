@@ -17,6 +17,12 @@ private const val RASHI_SIZE = 0.95f
 private const val BIG_SIZE = 0.9f
 
 /**
+ * The first word of a dibbur of Tosafot to the Gemara's letters, both square: 1.07 of their height on the scans, give
+ * or take 0.03 (162 such words of 12 tractates, pardes-rashi-ocr's experiment of 2026-11-10), bold.
+ */
+private const val LEAD_SIZE = 1.07f
+
+/**
  * A line's usual box height to its tractate's block width, as printed: the Shas is set in one size of square letters
  * and one of Rashi script, some 86 of the Gemara's letters to the block's width, whatever a scan's own scale.
  */
@@ -93,7 +99,8 @@ internal data class DafSizes(
  * its pitch) that are each drawn as one text: one size of letters for a column (its tractate's with [sizes], else its
  * own usual line's), made smaller for a line only while its words do not fit its box with a normal space between them,
  * then spread so the line fills its box, as printed. A column's big first word is a run of its own, in square letters
- * as printed, and a line it stands in has its words on both sides of it. Where the alignment's box is wrong for its
+ * as printed, and a line it stands in has its words on both sides of it; the first word of each dibbur of Tosafot is
+ * in square letters too, [LEAD_SIZE] of the Gemara's. Where the alignment's box is wrong for its
  * words, the line is still read: its letters no smaller than [LEAST_SIZE] of the column's but for room's sake (the
  * line past its box), its spaces no wider than its column's usual ones ([SPARSE]), two printed lines' words in one set
  * in two ([OVERFULL]). [beforeEachLine] is called before each line is measured, to stop the layout by throwing (a
@@ -110,12 +117,16 @@ internal fun layoutAmud(
     beforeEachLine: () -> Unit = {},
 ): AmudLayout {
     val setter = AmudSetter(amud, scale, measurer, density, beforeEachLine)
+    val commentary = sizes?.commentary?.times(scale)
+    val text = setter.column("G", gemara, isGemara = true, sizes?.gemara?.times(scale))
+    // A dibbur's first word in Tosafot is printed in the Gemara's letters, a little bigger than the Gemara's own
+    val lead = (sizes?.let { it.gemara * scale * GEMARA_SIZE } ?: text?.size)?.let { gemara to it * LEAD_SIZE }
     val columns =
-        listOf("G", "R", "T").mapNotNull { column ->
-            val isGemara = column == "G"
-            val usual = sizes?.let { if (isGemara) it.gemara else it.commentary }
-            setter.column(column, if (isGemara) gemara else rashi, isGemara, usual?.times(scale))
-        }
+        listOfNotNull(
+            text,
+            setter.column("R", rashi, isGemara = false, commentary),
+            setter.column("T", rashi, isGemara = false, commentary, lead),
+        )
     // Drawn last, on top of the runs whose lines they stand beside
     val bigRuns = columns.flatMap { it.bigRuns(gemara) }
     // Where every column's words are first, the boxes wrong for them made right: then the room a line may take is known
@@ -132,14 +143,47 @@ private class LineSet(
 )
 
 /**
- * Words of the amud's [line], from its word [first] on ([bold] the dibbur's among them), the [box] they are set in
- * (the line's, but where that is wrong for them) and how they are [set] there.
+ * The words of a line printed apart from its others: a dibbur's ([bold]), and in Tosafot the first of one ([lead]), in
+ * square letters ([style]).
+ */
+private class Marks(
+    val bold: Set<Int>,
+    val lead: Set<Int> = emptySet(),
+    val style: LeadStyle? = null,
+) {
+    /** Those of the line's words from [from] until [until], counted from [from]. */
+    fun of(
+        from: Int,
+        until: Int,
+    ) = Marks(bold.within(from, until), lead.within(from, until), style)
+
+    /** How the word [i] is printed in a line of letters [size] pixels, or null as the line's others. */
+    fun styleOf(
+        i: Int,
+        size: Float,
+        density: Density,
+    ): SpanStyle? =
+        when {
+            style != null && i in lead -> style.span(size, density)
+            i in bold -> SpanStyle(fontWeight = FontWeight.Bold)
+            else -> null
+        }
+
+    private fun Set<Int>.within(
+        from: Int,
+        until: Int,
+    ) = filter { it in from until until }.mapTo(HashSet()) { it - from }
+}
+
+/**
+ * Words of the amud's [line], from its word [first] on ([marks] those printed apart among them), the [box] they are set
+ * in (the line's, but where that is wrong for them) and how they are [set] there.
  */
 private class Piece(
     val line: Int,
     val first: Int,
     val words: List<String>,
-    val bold: Set<Int>,
+    val marks: Marks,
     val box: FloatArray,
     val set: LineSet,
 ) {
@@ -149,7 +193,7 @@ private class Piece(
     fun runLine(
         right: Float,
         unsure: Boolean,
-    ) = RunLine(line, words, bold, set.size, right - box[2], set.extra, unsure, set.gaps, first)
+    ) = RunLine(line, words, marks.bold, set.size, right - box[2], set.extra, unsure, set.gaps, first, marks.lead)
 }
 
 /** An amud's lines being set: their boxes in the block's pixels, and where their words are. */
@@ -186,22 +230,24 @@ private class AmudSetter(
 
     /**
      * The column [column]'s lines, in [family] ([isGemara]: the Gemara's square letters), or null when it has none.
-     * [usual]: its tractate's usual box height in pixels, when its letters are the tractate's size.
+     * [usual]: its tractate's usual box height in pixels, when its letters are the tractate's size. [lead]: the square
+     * letters and the size in pixels of a dibbur's first word, when the column prints it so (Tosafot).
      */
     fun column(
         column: String,
         family: FontFamily,
         isGemara: Boolean,
         usual: Float? = null,
+        lead: Pair<FontFamily, Float>? = null,
     ): ColumnSetter? {
         val indices = lines.indices.filter { lines[it].c == column && lines[it].t.isNotBlank() }
-        return if (indices.isEmpty()) null else ColumnSetter(this, column, family, isGemara, indices, usual)
+        return if (indices.isEmpty()) null else ColumnSetter(this, column, family, isGemara, indices, usual, lead)
     }
 
-    /** The width of [words] at [size], a normal space between two, those in [bold] bold. */
+    /** The width of [words] at [size], a normal space between two, those of [marks] as they are printed. */
     fun width(
         words: List<String>,
-        bold: Set<Int>,
+        marks: Marks,
         family: FontFamily,
         size: Float,
     ): Float {
@@ -209,8 +255,9 @@ private class AmudSetter(
             buildAnnotatedString {
                 words.forEachIndexed { i, w ->
                     if (i > 0) append(' ')
-                    if (i in bold) {
-                        pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
+                    val style = marks.styleOf(i, size, density)
+                    if (style != null) {
+                        pushStyle(style)
                         append(w)
                         pop()
                     } else {
@@ -228,8 +275,7 @@ private class AmudSetter(
         size: Float,
     ): Float =
         spaces.getOrPut(family to size) {
-            width(listOf(SPACE_PROBE, SPACE_PROBE), emptySet(), family, size) -
-                width(listOf(SPACE_PROBE + SPACE_PROBE), emptySet(), family, size)
+            width(listOf(SPACE_PROBE, SPACE_PROBE), PLAIN, family, size) - width(listOf(SPACE_PROBE + SPACE_PROBE), PLAIN, family, size)
         }
 
     /**
@@ -238,19 +284,19 @@ private class AmudSetter(
      */
     fun set(
         words: List<String>,
-        bold: Set<Int>,
+        marks: Marks,
         family: FontFamily,
         size: Float,
         least: Float,
         boxWidth: Float,
-        natural: Float = width(words, bold, family, size),
+        natural: Float = width(words, marks, family, size),
     ): LineSet {
         var s = size
         var w = natural
         var tries = 0
         while (w > boxWidth && s > least && tries++ < MAX_TRIES) {
             s = maxOf(least, s * minOf(boxWidth / w, FIT_STEP))
-            w = width(words, bold, family, s)
+            w = width(words, marks, family, s)
         }
         val gaps = words.size - 1
         if (gaps <= 0) return LineSet(s, 0f, null, w)
@@ -277,9 +323,16 @@ private class AmudSetter(
         fun takes(o: FloatArray) = o[0] < place[2] && o[2] > place[0] && minOf(o[3], place[3]) - maxOf(o[1], place[1]) > EMPTY_SLACK * pitch
         return lines.indices.none { it != self && lines[it].t.isNotBlank() && takes(places[it]) } && moved.none(::takes)
     }
+
+    private companion object {
+        val PLAIN = Marks(emptySet())
+    }
 }
 
-/** A column of an amud being set, its lines' [indices]: one size of letters ([size]), one pitch. */
+/**
+ * A column of an amud being set, its lines' [indices]: one size of letters ([size]), one pitch. [leadLetters]: the
+ * square letters and the size in pixels its dibburim's first words are printed in (Tosafot's).
+ */
 private class ColumnSetter(
     private val amud: AmudSetter,
     private val column: String,
@@ -287,6 +340,7 @@ private class ColumnSetter(
     private val isGemara: Boolean,
     indices: List<Int>,
     tractateUsual: Float? = null,
+    leadLetters: Pair<FontFamily, Float>? = null,
 ) {
     private val lines = amud.lines
     private val bigLines = indices.filter { lines[it].isBig }
@@ -302,8 +356,20 @@ private class ColumnSetter(
                 .map { amud.boxes[it].let { b -> b[3] - b[1] } }
                 .sorted()
                 .let { it.getOrElse(it.size / 2) { 0f } }
-    private val size = usual * if (isGemara) GEMARA_SIZE else RASHI_SIZE
+    val size = usual * if (isGemara) GEMARA_SIZE else RASHI_SIZE
     private val least = size * LEAST_SIZE
+    private val lead = leadLetters?.takeIf { size > 0f }?.let { (letters, pixels) -> LeadStyle(letters, pixels / size) }
+
+    // Each line's words printed apart: a dibbur's, and the first of each when the column prints it in square letters
+    private val marks =
+        HashMap<Int, Marks>().also { found ->
+            var above: Int? = null
+            for (i in indices) {
+                val bold = lines[i].d.toSet()
+                found[i] = if (lead == null || lines[i].isBig) Marks(bold) else Marks(bold, firsts(bold, above), lead)
+                above = i
+            }
+        }
 
     // Its pitch: the usual distance between two of its lines one below the other
     private val pitch =
@@ -318,7 +384,7 @@ private class ColumnSetter(
     private val natural =
         normal.associateWith { i ->
             amud.beforeEachLine()
-            amud.width(words.getValue(i), lines[i].d.toSet(), family, size)
+            amud.width(words.getValue(i), marks.getValue(i), family, size)
         }
     private val across = normal.associateWith { acrossOf(amud.boxes[it], bigBoxes, amud.edgeSlack) }
 
@@ -333,14 +399,18 @@ private class ColumnSetter(
     // A line on both sides of the big word it runs across: where, and how (null: as any line there)
     private val arounds = HashMap<Int, Pair<FloatArray, LineSet?>>()
 
-    /** The column's big first words: each a run of its own in square letters as printed, its box's height. */
+    /**
+     * The column's big first words: each a run of its own in square letters as printed, its box's height; in Tosafot a
+     * dibbur's first word as any other of them (its box is two lines high, the word is not).
+     */
     fun bigRuns(gemara: FontFamily): List<TextRun> =
         bigLines.map { i ->
             amud.beforeEachLine()
             val b = amud.boxes[i]
             val words = amud.words(i)
             val bold = lines[i].d.toSet()
-            val set = amud.set(words, bold, gemara, (b[3] - b[1]) * BIG_SIZE, MIN_SIZE, b[2] - b[0])
+            val letters = lead?.let { it.ratio * size } ?: ((b[3] - b[1]) * BIG_SIZE)
+            val set = amud.set(words, Marks(bold), gemara, letters, MIN_SIZE, b[2] - b[0])
             val line = RunLine(i, words, bold, set.size, 0f, set.extra, lines[i].s != 1)
             TextRun(column, b[0], b[1], b[2] - b[0], b[3] - b[1], set.size, isGemara = true, isBig = true, listOf(line))
         }
@@ -366,19 +436,33 @@ private class ColumnSetter(
 
     private fun isSparse(i: Int) = words.getValue(i).size > 1 && amud.boxes[i].let { it[2] - it[0] } > wide(i) * SPARSE
 
+    // The first word of each dibbur of a line ([bold]: its words of one), but of one that goes on from the line [above]:
+    // from its last word, or after a big first word, wherever the line's words go on after it
+    private fun firsts(
+        bold: Set<Int>,
+        above: Int?,
+    ): Set<Int> {
+        val starts = bold.filterTo(sortedSetOf()) { it - 1 !in bold }
+        val goesOn =
+            above?.let { a ->
+                if (lines[a].isBig) starts.firstOrNull() else 0.takeIf { amud.words(a).lastIndex in lines[a].d }
+            }
+        return starts - setOfNotNull(goesOn)
+    }
+
     // Each line in the pieces it is set in: one where its words are, or two for two printed lines' words in one
     private fun pieces(): List<Piece> =
         normal.flatMap { i ->
             val words = words.getValue(i)
-            val bold = lines[i].d.toSet()
+            val marks = marks.getValue(i)
             val place = amud.places[i]
             val around = arounds[i]
             val split = around?.second
             when {
-                split != null -> listOf(Piece(i, 0, words, bold, place, split))
+                split != null -> listOf(Piece(i, 0, words, marks, place, split))
                 around == null && !isSparse(i) && words.size > 1 && wide(i) > (place[2] - place[0]) * OVERFULL ->
-                    inTwo(i, words, bold) ?: listOf(Piece(i, 0, words, bold, place, setIn(i, words, bold, place, natural.getValue(i))))
-                else -> listOf(Piece(i, 0, words, bold, place, setIn(i, words, bold, place, natural.getValue(i))))
+                    inTwo(i, words, marks) ?: listOf(Piece(i, 0, words, marks, place, setIn(i, words, marks, place, natural.getValue(i))))
+                else -> listOf(Piece(i, 0, words, marks, place, setIn(i, words, marks, place, natural.getValue(i))))
             }
         }
 
@@ -387,12 +471,12 @@ private class ColumnSetter(
     private fun inTwo(
         i: Int,
         words: List<String>,
-        bold: Set<Int>,
+        marks: Marks,
     ): List<Piece>? {
         val b = amud.boxes[i]
         val extent = extentNear(i)
         val direction = listOf(-1, 1).firstOrNull { emptyBeside(i, it, extent) } ?: return null
-        val heads = FloatArray(words.size) { if (it == 0) 0f else amud.width(words.subList(0, it), bold, family, size) }
+        val heads = FloatArray(words.size) { if (it == 0) 0f else amud.width(words.subList(0, it), marks.of(0, it), family, size) }
         val j = (1 until words.size).minBy { abs(heads[it] - natural.getValue(i) / 2f) }
         val h = b[3] - b[1]
         val other = amud.centre(i) + direction * pitch
@@ -403,11 +487,11 @@ private class ColumnSetter(
         val (upper, lower) = if (direction < 0) moved to own else own to moved
         val first = words.subList(0, j)
         val rest = words.subList(j, words.size)
-        val firstBold = bold.filter { it < j }.toSet()
-        val restBold = bold.filter { it >= j }.map { it - j }.toSet()
+        val firstMarks = marks.of(0, j)
+        val restMarks = marks.of(j, words.size)
         return listOf(
-            Piece(i, 0, first, firstBold, upper, setIn(i, first, firstBold, upper)),
-            Piece(i, j, rest, restBold, lower, setIn(i, rest, restBold, lower)),
+            Piece(i, 0, first, firstMarks, upper, setIn(i, first, firstMarks, upper)),
+            Piece(i, j, rest, restMarks, lower, setIn(i, rest, restMarks, lower)),
         )
     }
 
@@ -440,14 +524,14 @@ private class ColumnSetter(
     private fun setIn(
         i: Int,
         words: List<String>,
-        bold: Set<Int>,
+        marks: Marks,
         b: FloatArray,
-        natural: Float = amud.width(words, bold, family, size),
+        natural: Float = amud.width(words, marks, family, size),
     ): LineSet {
-        val set = amud.set(words, bold, family, size, least, b[2] - b[0], natural)
+        val set = amud.set(words, marks, family, size, least, b[2] - b[0], natural)
         if (set.width <= b[2] - b[0]) return set
         val room = b[2] - amud.leftLimit(b, i)
-        return if (set.width <= room) set else amud.set(words, bold, family, size, MIN_SIZE, room, natural)
+        return if (set.width <= room) set else amud.set(words, marks, family, size, MIN_SIZE, room, natural)
     }
 
     // The line [i]'s words in its box [b] with the big word [big] among them: as many of them right of it as fill the
@@ -459,7 +543,7 @@ private class ColumnSetter(
         big: FloatArray,
     ): Pair<FloatArray, LineSet?> {
         val words = words.getValue(i)
-        val bold = lines[i].d.toSet()
+        val marks = marks.getValue(i)
         val n = words.size
         val sw = amud.space(family, size)
         val rightRoom = b[2] - big[2] - sw
@@ -468,12 +552,12 @@ private class ColumnSetter(
         fun head(
             j: Int,
             s: Float,
-        ) = if (j == 0) 0f else amud.width(words.subList(0, j), bold, family, s)
+        ) = if (j == 0) 0f else amud.width(words.subList(0, j), marks.of(0, j), family, s)
 
         fun tail(
             j: Int,
             s: Float,
-        ) = if (j == n) 0f else amud.width(words.subList(j, n), bold.mapNotNull { (it - j).takeIf { at -> at >= 0 } }.toSet(), family, s)
+        ) = if (j == n) 0f else amud.width(words.subList(j, n), marks.of(j, n), family, s)
         val heads = FloatArray(n + 1) { head(it, size) }
         val j = (0..n).minBy { maxOf(fullness(heads[it], rightRoom), fullness(heads[n] - heads[it], leftRoom)) }
         if (j == 0) return floatArrayOf(b[0], b[1], big[0] - sw, b[3]) to null
@@ -525,7 +609,8 @@ private class ColumnSetter(
             val left = real.minOf { minOf(it.box[0], it.box[2] - it.set.width) }
             val right = maxOf(real.maxOf { it.box[2] }, runRight)
             val runLines = slots.map { it?.runLine(right, lines[it.line].s != 1) }
-            runs += TextRun(column, left, real.first().centre - pitch / 2f, right - left, pitch, size, isGemara, isBig = false, runLines)
+            val top = real.first().centre - pitch / 2f
+            runs += TextRun(column, left, top, right - left, pitch, size, isGemara, isBig = false, runLines, lead)
             slots.clear()
         }
         var previous: Piece? = null
