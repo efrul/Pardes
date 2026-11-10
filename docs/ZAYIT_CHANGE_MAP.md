@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (168 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (170 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1182,7 +1182,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +64 −21 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs.
+- **Change:** modified, +71 −28 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1193,12 +1193,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - The category tabs are picked several at once: `FilterTabs` has a form taking the set picked (`selected: Set<Long>`,
     "הכל" the one picked when none is), Zayit's one-at-a-time form calling it; `CategoryTabs` marks every top
     category picked.
+  - `PassagePreview` is read as a book is (`PassageReading.kt`): its lines are `rememberPassageReading(preview).lines`
+    (more of the book past the passage's ends, the scroll container taking `readPastEnds`); Zayit's `Box` around the
+    lines is `PassageText` (the text selected, the menu of a right click); a line's `clickable` and its hand pointer are
+    `passageLine`, which still opens the book on a click of its own; and the view goes to the found line only until
+    lines are added before the passage (`!passage.grownBefore`).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
-  screen's.
+  screen's. The passage read as a book is the user's request of 2026-11-10: its text selected and copied, the book's
+  menu on a right click, and scrolling up and down past it.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over seven
+- **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over eleven
   places, and `FilterTabs`' body is now the set's form.
 - **Smaller:** already near minimal.
 - **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `ResultTabsTest`; the tabs were tried in the app.
@@ -2315,6 +2321,56 @@ asked on 2026-11-09. Hooks: `BookContentScreen.kt`, `strings.xml`.
   is told from one with marks.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The passage beside the results, read as a book is
+
+The passage shown beside the search results (Zayit's `PassagePreview`: the found line among the lines around it, a click
+on a line opening the book there) can be read without opening the book, as the user asked on 2026-11-10: its text is
+selected with the mouse and copied; a right click opens the reader's menu, of what a passage not opened can do ("העתק
+ללא ניקוד", "העתק טקסט בלבד", "העתק עם מקור", "העתק קישור לקטע זה", "חפש במאגר", "פתח במילון", and "פתח ספר" at the
+line clicked); and a wheel turned past the passage's first or last line reads 30 more lines of the book that way, up
+to 600. A click on a line still opens the book there, some 300 ms later (a second click selects its word instead).
+Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's own, and Zayit's unused `open_book`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/PassageReading.kt`
+
+- **Feature:** Passage read as a book.
+- **Size:** 399 lines.
+- **What:**
+  - `PassageReading`, the state of one result's passage: its `lines` (the result's own, then those read before and
+    after them, `more(before)`: 30 at a time by `lineIndex`, one reading at a time, none past the book's ends or 600
+    lines); `pastEnds`, a nested scroll connection that asks for more when a scroll is left over at an end;
+    `linesOf(selected)`, the first and last lines of the selected text, counted from the line its press began on (down
+    when the selection begins in that line, up when it ends there); and `laidOut(height)` with `heldBack`, the height
+    of lines just added before those read.
+  - `rememberPassageReading(preview)`, anew for each result, reading the book through `SeforimRepository.getLines`.
+  - `Modifier.readPastEnds(passage, scroll)`: the nested scroll connection, and the wheel's own events at an end (a
+    passage shorter than its pane scrolls nothing).
+  - `PassageText`: a `SelectionContainer` under a `TextContextMenu` that adds the menu's items (`PassageActions`) to the
+    app's own (Jewel's "העתקה"), and the lines added before those read kept out of the way: drawn above the view
+    (`offset`) until the scroll takes their height (`dispatchRawDelta`), so what is read stays in its place.
+  - `Modifier.passageLine(passage, lineId, onOpen)`: a click of its own opens (not a drag, not a click that lets a
+    selection go, not the first of two on a word, waited for `doubleTapTimeoutMillis`), nothing consumed, so the
+    selection takes the same presses; the line pressed and the line right-clicked are kept.
+- **Reached from:** `SearchResultScreen.kt` (`PassagePreview`).
+- **Follows:** the reader's `BookTextMenus` (`BookContentScreen.kt`) for the menu's items, labels and icons, and its
+  helpers (`buildCopyWithSourcePayload`, `bookShareLink`, `lettersOnly`, `lookupWord`); `PreviewHighlights.kt` beside
+  it, the other part of the passage Pardes adds.
+- **Tests:** `PassageReadingTest`; the selection, the menu, the clicks and the scroll were tried in the app.
+- **Notes:** what needs the book open is left to the reader: a note, a highlight, the find bar, a report of an error.
+  The lines are composed all of them (a `Column`, as Zayit's), which keeps a selection whole however far it is
+  scrolled, and is why the reading stops at 600 lines.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/PassageReadingTest.kt`
+
+- **Feature:** Passage read as a book.
+- **Size:** 125 lines.
+- **What:** more of the book read after the passage and before it; nothing read past the book's ends, an end asked
+  once; one reading at a time; a selection's lines counted from the line pressed, down or up, or from the line of a
+  right click; the lines added before the passage held back for the scroll, those after not.
+- **Reached from:** the JVM tests.
+- **Follows:** `SearchUiStateTest` beside it (Kotlin Test, backtick names), `BreadcrumbNavigatorTest` for the test scope.
 - **Tests:** it is one (unit).
 
 ### The links of the other kinds in the references pane

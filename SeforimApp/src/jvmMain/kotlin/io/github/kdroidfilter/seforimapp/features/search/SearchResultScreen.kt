@@ -881,7 +881,9 @@ private fun PassagePreview(
     val accent = JewelTheme.globalColors.outlines.focused
     val ink = JewelTheme.globalColors.text.normal
     val (categories, place) = remember(pieces, hit.bookTitle) { categoriesAndPlace(pieces, hit.bookTitle) }
-    val lines = preview.lines
+    // Read as a book is: more of its lines past the passage's ends, its text selected, the book's menu
+    val passage = rememberPassageReading(preview)
+    val lines = passage.lines
     val fontFamily = FontCatalog.familyFor(bookFontCode)
     val searchEngine = LocalAppGraph.current.searchEngine
     val highlight = accent.copy(alpha = 0.22f)
@@ -906,9 +908,9 @@ private fun PassagePreview(
             }
         }
         Divider(Orientation.Horizontal, Modifier.fillMaxWidth())
-        VerticallyScrollableContainer(scrollState = scroll, modifier = Modifier.weight(1f).fillMaxWidth()) {
+        VerticallyScrollableContainer(scrollState = scroll, modifier = Modifier.weight(1f).fillMaxWidth().readPastEnds(passage, scroll)) {
             // The ScrollState overload scrolls its content itself
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            PassageText(passage, preview, scroll, onOpenLine, Modifier.fillMaxWidth()) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     // The whole width, as the book's text
@@ -949,10 +951,8 @@ private fun PassagePreview(
                                             drawRect(accent, Offset(x, 0f), Size(bar, size.height))
                                         }
                                     }.hoverable(lineHover)
-                                    .clickable(interactionSource = lineHover, indication = null) {
-                                        if (found) onOpen() else onOpenLine(line.id)
-                                    }.pointerHoverIcon(PointerIcon.Hand)
-                                    .onGloballyPositioned { if (found) foundTop = it.positionInParent().y.toInt() }
+                                    .passageLine(passage, line.id) { if (found) onOpen() else onOpenLine(line.id) }
+                                    .onGloballyPositioned { if (found && !passage.grownBefore) foundTop = it.positionInParent().y.toInt() }
                                     .padding(start = 17.dp),
                         )
                     }
