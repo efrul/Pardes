@@ -1,0 +1,6 @@
+as is              | same as the app in the first 10: 100.0%
+lexical shuffled   | same as the app in the first 10:  95.9%
+lexical reversed   | same as the app in the first 10:  94.9%
+semantic shuffled  | same as the app in the first 10:  12.6%
+lexical removed    | same as the app in the first 10:  90.3%
+semantic removed   | same as the app in the first 10:  11.0%

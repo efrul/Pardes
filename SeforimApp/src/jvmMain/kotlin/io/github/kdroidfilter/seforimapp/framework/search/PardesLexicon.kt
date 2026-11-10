@@ -14,7 +14,7 @@ import java.sql.DriverManager
 
 /**
  * Pardes's copy of the library's word dictionary (lexical.db), which the regular search reads in its place
- * ([LuceneSearchEngine]'s `dictionaryPath`). It holds the same words and forms, with two fixes:
+ * ([LuceneSearchEngine]'s `dictionaryPath`). It holds the same words and forms, with two fixes and one addition:
  *
  * 1. **No base without forms.** lexical.db (release 20261012193827) has 4,711 bases that no surface points to, and
  *    2,479 of them are spelled like a form of another base (ברכות, הלכות, לאכול, דברים, תפלין). MagicDictionaryIndex
@@ -22,9 +22,17 @@ import java.sql.DriverManager
  * 2. **The commonest forms first.** The search keeps a word's first 32 forms, in the order of the surface ids. Here each
  *    base's surfaces are numbered by how many lines of the library's index hold them, so the 32 are the common ones
  *    (שלוש keeps שלש and שלשה, docs/SEARCH_ORDER_ISSUES.md #4). The variants still come after the surfaces.
+ * 3. **The defective spellings (כתיב חסר).** A form written with a ו or a י that the library's older texts leave out
+ *    (והמחולות for והמחלות) didn't reach them, and a word typed as they write it had no forms at all. Each form's
+ *    defective spellings ([defectiveForms]) that some line holds and that the dictionary doesn't have are forms of its
+ *    base too, numbered with the others. A spelling the dictionary has, it keeps under its own base: a defective
+ *    spelling is often another word (בשורי, my ox, is בשרי, of meat), and joined to another base (an extra base, listed by
+ *    its own number) it took over that base's first forms or the word's whole paradigm.
  *
  * Measured on eval-100 and eval-real (lexical side, docs/LEXICON.md): source in the first ten 13 → 16, a good line in the
- * first three 42 → 47 of 153, about 10 ms more per search (real paradigms instead of nothing).
+ * first three 42 → 47 of 153, about 10 ms more per search (real paradigms instead of nothing). The defective spellings,
+ * with the hybrid search (docs/fusion-compare/SPELLING.md): 157 source searches, source first / in 3 / in 10
+ * 114/145/154 → 115/146/155; eval-real 4 searches better, none worse; the feedback's graded searches, one query worse.
  *
  * Built from lexical.db and the text index when they change (a library install or update), in the background, into
  * [FILE] next to lexical.db; until it is there the search reads lexical.db itself.
@@ -33,7 +41,7 @@ object PardesLexicon {
     const val FILE = "pardes-lexical.db"
 
     /** Bump when the derivation changes: older files are rebuilt. */
-    private const val VERSION = 1
+    private const val VERSION = 2
     private const val META = "pardes_meta"
     private const val BATCH = 5_000
 
@@ -119,24 +127,16 @@ object PardesLexicon {
                 c.exec("ATTACH DATABASE '${lexical.toAbsolutePath().toString().replace("'", "''")}' AS src")
                 val hasExtra = c.hasTable("src", "surface_extra_base")
                 c.exec(SCHEMA)
-                // Surface ids, each base's surfaces by their lines in the index
-                val surfaces = mutableListOf<LongArray>() // id, base id, document frequency
-                DirectoryReader.open(FSDirectory.open(indexDir)).use { reader ->
-                    c.createStatement().use { st ->
-                        st.executeQuery("SELECT id, base_id, value FROM src.surface").use { rs ->
-                            while (rs.next()) {
-                                val term = HebrewTextUtils.normalizeHebrew(rs.getString(3) ?: "")
-                                val df = if (term.isEmpty() || term.contains(' ')) 0 else reader.docFreq(Term("text", term))
-                                surfaces += longArrayOf(rs.getLong(1), rs.getLong(2), df.toLong())
-                            }
-                        }
-                    }
-                }
-                surfaces.sortWith(compareBy<LongArray> { it[1] }.thenByDescending { it[2] }.thenBy { it[0] })
+                // Surface ids, each base's surfaces by their lines in the index, the defective spellings it lacks among them
+                val surfaces =
+                    DirectoryReader
+                        .open(FSDirectory.open(indexDir))
+                        .use { reader -> c.surfaces(reader) }
+                        .sortedWith(compareBy<Surface> { it.base }.thenByDescending { it.lines }.thenBy { it.id })
                 c.exec("CREATE TEMP TABLE smap (old INTEGER PRIMARY KEY, new INTEGER NOT NULL)")
                 c.prepareStatement("INSERT INTO smap VALUES (?, ?)").use { ps ->
                     surfaces.forEachIndexed { i, s ->
-                        ps.setLong(1, s[0])
+                        ps.setLong(1, s.id)
                         ps.setLong(2, i + 1L)
                         ps.addBatch()
                         if (i % BATCH == 0) ps.executeBatch()
@@ -151,6 +151,7 @@ object PardesLexicon {
                 c.exec(
                     "INSERT INTO surface SELECT m.new, s.value, s.base_id, NULL FROM src.surface s JOIN smap m ON m.old = s.id ORDER BY m.new",
                 )
+                c.insertSpellings(surfaces)
                 c.exec("INSERT INTO variant SELECT id, value FROM src.variant")
                 c.exec(
                     "INSERT INTO surface_variant SELECT m.new, sv.variant_id FROM src.surface_variant sv " +
@@ -177,6 +178,104 @@ object PardesLexicon {
         } finally {
             Files.deleteIfExists(tmp)
         }
+    }
+
+    /** A surface of the copy: its id in lexical.db (past them for an added spelling), its base and its lines in the index. */
+    private class Surface(
+        val id: Long,
+        val base: Long,
+        val lines: Int,
+        val spelling: String? = null,
+    )
+
+    /**
+     * lexical.db's surfaces with their lines in the index, and the defective spellings ([defectiveForms]) of each that
+     * some line holds and the dictionary doesn't have, as surfaces of its base.
+     */
+    private fun Connection.surfaces(reader: DirectoryReader): List<Surface> {
+        val rows = ArrayList<Triple<Long, Long, String>>()
+        createStatement().use { st ->
+            st.executeQuery("SELECT id, base_id, value FROM src.surface").use { rs ->
+                while (rs.next()) rows += Triple(rs.getLong(1), rs.getLong(2), rs.getString(3) ?: "")
+            }
+        }
+        // The terms the dictionary has, and those already looked for
+        val seen = rows.mapTo(HashSet(rows.size * 2)) { HebrewTextUtils.normalizeHebrew(it.third) }
+        val out = rows.mapTo(ArrayList(rows.size)) { (id, base, value) -> Surface(id, base, reader.lines(value)) }
+        var next = (rows.maxOfOrNull { it.first } ?: 0L) + 1
+        for ((_, base, value) in rows) {
+            for (form in defectiveForms(value)) {
+                if (!seen.add(HebrewTextUtils.normalizeHebrew(form))) continue
+                val lines = reader.lines(form)
+                if (lines > 0) out += Surface(next++, base, lines, form)
+            }
+        }
+        return out
+    }
+
+    /** How many lines of the index hold [value], in the index's letters; none for a value of several words. */
+    private fun DirectoryReader.lines(value: String): Int {
+        val term = HebrewTextUtils.normalizeHebrew(value)
+        return if (term.isEmpty() || term.contains(' ')) 0 else docFreq(Term("text", term))
+    }
+
+    /** The added spellings among [surfaces], numbered by their place in it, as forms of their bases. */
+    private fun Connection.insertSpellings(surfaces: List<Surface>) {
+        prepareStatement("INSERT INTO surface VALUES (?, ?, ?, NULL)").use { ps ->
+            var batched = 0
+            surfaces.forEachIndexed { i, surface ->
+                val spelling = surface.spelling ?: return@forEachIndexed
+                ps.setLong(1, i + 1L)
+                ps.setString(2, spelling)
+                ps.setLong(3, surface.base)
+                ps.addBatch()
+                if (++batched % BATCH == 0) ps.executeBatch()
+            }
+            ps.executeBatch()
+        }
+    }
+
+    /** At most this many ו and as many י left out of one word ([defectiveForms]). */
+    private const val MAX_LEFT_OUT = 3
+
+    /** The ו and י a word may lose are looked for in its first this many runs of them ([defectiveForms]). */
+    private const val MAX_RUNS = 10
+
+    /**
+     * The defective spellings of [word]: an inner ו or י left out, one from each run of them, never the first letter nor
+     * the last nor one right before a final ה (מצוה keeps its ו), up to [MAX_LEFT_OUT] ו and as many י at once, and at
+     * least three letters left. The deletions of Otzaria's generate_spelling_variations (otzaria_search_engine, MIT).
+     */
+    internal fun defectiveForms(word: String): List<String> {
+        val at = omissible(word)
+        val letters = word.count { it in 'א'..'ת' }
+        return (1 until (1 shl at.size))
+            .mapNotNull { mask ->
+                val left = at.filterIndexed { p, _ -> mask and (1 shl p) != 0 }
+                val tooMany = left.count { word[it] == 'ו' } > MAX_LEFT_OUT || left.count { word[it] == 'י' } > MAX_LEFT_OUT
+                if (tooMany || letters - left.size < 3) null else word.filterIndexed { idx, _ -> idx !in left }
+            }.distinct()
+    }
+
+    /**
+     * The places of the ו and י [word] may lose ([defectiveForms]): in each run of one of them, its first letter that is
+     * neither the word's first nor its last, unless it stands right before a final ה.
+     */
+    private fun omissible(word: String): List<Int> {
+        val at = ArrayList<Int>()
+        var i = 0
+        while (i < word.length && at.size < MAX_RUNS) {
+            var j = i + 1
+            if (word[i] == 'ו' || word[i] == 'י') {
+                while (j < word.length && word[j] == word[i]) j++
+                (i until j)
+                    .firstOrNull { it > 0 && it + 1 < word.length }
+                    ?.takeUnless { it + 2 == word.length && word.last() == 'ה' }
+                    ?.let { at += it }
+            }
+            i = j
+        }
+        return at
     }
 
     private fun Connection.exec(sql: String) {

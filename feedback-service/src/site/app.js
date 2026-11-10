@@ -1,17 +1,17 @@
 // The search data site (GET /): what users of the Torah library apps (Pardes, Zayit, Otzaria) sent to improve search,
 // in no one app's name, and a form to upload the packages people saved to files. Everyone sees what the data adds up
-// to, from the service's public route, which carries no search's or grade's words (users sent them to improve Pardes,
-// not to have them published): each search and graded result is an opaque id there, enough to count it once. The
-// maintainer, signed in with the admin token, reads the packages as they came from the maintainer's route and sees
-// the searches themselves. Each sender is an alias on the public route; the page shows no sender at all, alias or id,
-// nor puts one in a download. Uploads go to POST /v1/packages, as the app sends them. Every text that came in a
-// package is untrusted: it reaches the page only as text (textContent, attribute values), never as markup, and the
-// page's CSP runs no script but this file.
+// to, from the service's public route, and the searches themselves only from the packages whose senders agreed to
+// publish them ("publish": true); in any other package each search and graded result is an opaque id, enough to count
+// it once. Every row carries its id, so a row sent both ways counts once and shows its words. The maintainer, signed in
+// with the admin token, reads the packages as they came from the maintainer's route and sees every search. Each sender
+// is an alias on the public route; the page shows no sender at all, alias or id, nor puts one in a download. Uploads go
+// to POST /v1/packages, as the app sends them. Every text that came in a package is untrusted: it reaches the page only
+// as text (textContent, attribute values), never as markup, and the page's CSP runs no script but this file.
 "use strict";
 
 const PAGE = 25; // packages a request (the routes give at most 50), each a short piece of the Worker's time
 const TOKEN_KEY = "pardes-feedback-admin";
-/** The views of the searches' and grades' words, the maintainer's alone. */
+/** The views of the searches' and grades' words: everyone's only once some sender agreed to publish theirs. */
 const WORDS_VIEWS = ["searches", "grades"];
 const ROWS = 500; // a table's rows on the page; the downloads hold them all
 const DAYS = 30;
@@ -196,27 +196,34 @@ async function load() {
 /**
  * What the packages hold, each row once: a search made again, a grade changed or a daf line marked again is sent
  * again in a later package, and stands as it was last sent. A package uploaded twice adds nothing here, nor does the
- * same data sent again under a new sender id.
+ * same data sent again under a new sender id, nor a row sent both in a published package and in one that was not
+ * (by the opaque id every row carries on the public route): it shows its words. A row is "published" when it came in
+ * a package its sender agreed to publish.
  */
 function derive(packages) {
   const searches = new Map();
   const grades = new Map();
   const marks = new Map();
   const senders = new Set();
+  // The later of two copies of a row, and of two copies of the same time, the published one
+  const newer = (row, old, at) => !old || row[at] > old[at] || (row[at] === old[at] && row.published && !old.published);
+  const searchKey = (s) => (s.queryId ? [s.queryId] : [s.query, s.categoryId, s.bookId, s.tocId, s.scope, s.ref]);
+  const gradeKey = (g) => (g.resultId ? [g.resultId] : [g.search, g.lineId, g.heRef]);
   for (const p of packages) {
     senders.add(p.sender);
     const body = p.package ?? {};
+    const published = p.public === true;
     for (const s of body.searches ?? []) {
       const source = s.source ?? body.source ?? "pardes";
-      const key = [p.sender, source, s.query, s.categoryId, s.bookId, s.tocId, s.scope, Boolean(s.extended)].join("\u0000");
-      const row = { ...s, source, sender: p.sender, count: s.count ?? 1, lastAt: s.lastAt ?? 0 };
-      if (!searches.has(key) || row.lastAt >= searches.get(key).lastAt) searches.set(key, row);
+      const key = [p.sender, source, ...searchKey(s), Boolean(s.extended)].join("\u0000");
+      const row = { ...s, source, published, sender: p.sender, count: s.count ?? 1, lastAt: s.lastAt ?? 0 };
+      if (newer(row, searches.get(key), "lastAt")) searches.set(key, row);
     }
     for (const g of body.grades ?? []) {
       const source = g.source ?? body.source ?? "pardes";
-      const key = [p.sender, source, g.search, g.lineId, g.heRef].join("\u0000");
-      const row = { ...g, source, sender: p.sender };
-      if (!grades.has(key) || row.gradedAt >= grades.get(key).gradedAt) grades.set(key, row);
+      const key = [p.sender, source, ...gradeKey(g)].join("\u0000");
+      const row = { ...g, source, published, sender: p.sender };
+      if (newer(row, grades.get(key), "gradedAt")) grades.set(key, row);
     }
     for (const review of body.daf ?? []) {
       for (const m of review.marks ?? []) {
@@ -227,19 +234,29 @@ function derive(packages) {
     }
   }
   // The same event sent under two sender ids (a new id, or the same data sent again) counts once: a grade, a search
-  // or a daf mark the same to the millisecond is one person's, whichever id sent it
-  const once = (rows, key) => [...new Map(rows.map((row) => [key(row).join("\u0000"), row])).values()];
-  const searched = once([...searches.values()], (s) => [s.source, s.query, s.categoryId, s.bookId, s.tocId, s.scope, Boolean(s.extended), s.lastAt]);
-  const graded = once([...grades.values()], (g) => [g.source, g.search, g.lineId, g.heRef, g.gradedAt, g.grade]);
+  // or a daf mark the same to the millisecond is one person's, whichever id sent it; a published copy shows its words
+  const once = (rows, key) => {
+    const kept = new Map();
+    for (const row of rows) {
+      const k = key(row).join("\u0000");
+      const old = kept.get(k);
+      if (!old || (row.published && !old.published)) kept.set(k, row);
+    }
+    return [...kept.values()];
+  };
+  const searched = once([...searches.values()], (s) => [s.source, ...searchKey(s), Boolean(s.extended), s.lastAt]);
+  const graded = once([...grades.values()], (g) => [g.source, ...gradeKey(g), g.gradedAt, g.grade]);
   const marked = once([...marks.values()], (m) => [m.tractate, m.amud, m.c, m.i, m.at]);
   // The same words in the same scope, by one sender or more, from one app or more
   const queries = new Map();
   for (const s of searched) {
-    const key = [s.query, s.categoryId, s.bookId, s.tocId, s.scope, Boolean(s.extended)].join("\u0000");
+    const key = [...searchKey(s), Boolean(s.extended)].join("\u0000");
     if (!queries.has(key)) {
-      queries.set(key, { query: s.query, categoryId: s.categoryId, bookId: s.bookId, tocId: s.tocId, scope: s.scope, extended: Boolean(s.extended), count: 0, senders: new Set(), sources: new Set(), lastAt: 0 });
+      queries.set(key, { query: s.query, categoryId: s.categoryId, bookId: s.bookId, tocId: s.tocId, scope: s.scope, extended: Boolean(s.extended), published: false, count: 0, senders: new Set(), sources: new Set(), lastAt: 0 });
     }
     const q = queries.get(key);
+    // Its words, once any of its rows was published
+    if (s.published && !q.published) Object.assign(q, { query: s.query, categoryId: s.categoryId, bookId: s.bookId, tocId: s.tocId, scope: s.scope, published: true });
     q.count += s.count;
     q.senders.add(s.sender);
     q.sources.add(s.source);
@@ -253,6 +270,10 @@ function derive(packages) {
     marks: marked,
   };
 }
+
+// The searches and grades whose words this view may show: every one for the maintainer, the published ones for everyone
+const shownQueries = () => (isAdmin() ? state.data.queries : state.data.queries.filter((q) => q.published));
+const shownGrades = () => (isAdmin() ? state.data.grades : state.data.grades.filter((g) => g.published));
 
 /** Where a search looked: the whole library, a category, a book, a section of a book's contents, or Otzaria's path. */
 function scope(row) {
@@ -319,8 +340,12 @@ function hideTip() {
 
 function render() {
   hideTip();
-  if (!isAdmin() && WORDS_VIEWS.includes(state.view)) state.view = "overview";
-  for (const tab of document.querySelectorAll(".tabs [role=tab]")) tab.hidden = !isAdmin() && WORDS_VIEWS.includes(tab.dataset.view);
+  // The words' tabs: the maintainer's, and everyone's once some sender published searches or grades
+  const wordsShown = { searches: state.data ? shownQueries().length > 0 : isAdmin(), grades: state.data ? shownGrades().length > 0 : isAdmin() };
+  if (WORDS_VIEWS.includes(state.view) && !isAdmin() && !wordsShown[state.view]) state.view = "overview";
+  for (const tab of document.querySelectorAll(".tabs [role=tab]")) {
+    tab.hidden = WORDS_VIEWS.includes(tab.dataset.view) && !isAdmin() && !wordsShown[tab.dataset.view];
+  }
   $("sign-in").textContent = isAdmin() ? "יציאה ממצב מנהל" : "כניסת מנהל";
   $("admin-badge").hidden = !isAdmin();
   for (const tab of document.querySelectorAll(".tabs [role=tab]")) {
@@ -331,8 +356,8 @@ function render() {
   $("view").setAttribute("aria-labelledby", `tab-${state.view}`);
   const d = state.data;
   const counts = {
-    searches: d?.queries.length,
-    grades: d?.grades.length,
+    searches: d ? shownQueries().length : undefined,
+    grades: d ? shownGrades().length : undefined,
     daf: d?.marks.length,
     packages: d ? state.packages.length : undefined,
   };
@@ -388,16 +413,22 @@ function overview() {
       tile("שורות בצורת הדף", number.format(d.marks.length), "שנבדקו וסומנו")),
     h("p", { class: "lastline" }, last ? `החבילה האחרונה התקבלה ${when(last.receivedAt)}.` : "עוד לא התקבלה חבילה."),
     perDayCard(),
-    h("div", { class: "grid2" }, isAdmin() ? topSearchesCard() : wordsCard(), h("div", { class: "column" }, gradesCard(), modelsCard(), sourcesCard())));
+    h("div", { class: "grid2" }, shownQueries().length ? topSearchesCard() : wordsCard(), h("div", { class: "column" }, gradesCard(), modelsCard(), sourcesCard())));
 }
 
-/** Where the searches would be: why everyone sees only what they add up to. */
+/** Where the searches would be, while no sender published any: why everyone sees only what they add up to. */
 function wordsCard() {
   return h("section", { class: "card" },
     h("h2", {}, "החיפושים עצמם"),
-    h("p", { class: "sub" }, "מוצגים רק למתחזק"),
+    h("p", { class: "sub" }, "מוצגים רק ממי שהסכים לפרסם אותם"),
     h("p", { class: "words-note" },
-      "מי ששלח עד עכשיו שלח את החיפושים והדירוגים כדי לשפר את החיפוש, לא כדי שיתפרסמו. לכן כאן מוצג רק מה שהם מסתכמים בו: כמה חיפשו, כמה תוצאות דורגו ואיך, לפי מודל ולפי תוכנה. המילים שחיפשו והתוצאות שדורגו לא יוצאות מהשירות בלי קוד המנהל."));
+      "עוד אין חיפושים ששולחיהם הסכימו לפרסם. מי ששלח עד עכשיו שלח את החיפושים והדירוגים כדי לשפר את החיפוש, לא כדי שיתפרסמו, ולכן הם נספרים במספרים כאן אבל המילים שלהם לא מוצגות."));
+}
+
+/** Under the words everyone sees: that they are only the published ones. */
+function publishedNote() {
+  if (isAdmin()) return null;
+  return h("p", { class: "section-sub" }, "מוצגים רק חיפושים ודירוגים של מי שהסכים לפרסם אותם. השאר נספרים במספרים, אבל לא מוצגים.");
 }
 
 /** The packages received each day of the last [DAYS] days, as columns, with a table view. */
@@ -494,7 +525,7 @@ function hbars(rows, empty) {
 function topSearchesCard() {
   // The same words once, wherever they looked
   const words = new Map();
-  for (const q of state.data.queries) {
+  for (const q of shownQueries()) {
     const w = words.get(q.query) ?? { name: q.query, value: 0, lastAt: 0 };
     w.value += q.count;
     w.lastAt = Math.max(w.lastAt, q.lastAt);
@@ -514,7 +545,8 @@ function topSearchesCard() {
     }));
   return h("section", { class: "card" },
     h("h2", {}, "החיפושים הנפוצים"),
-    h("p", { class: "sub" }, "המילים שחיפשו הכי הרבה פעמים, מכל התוכנות"),
+    h("p", { class: "sub" }, isAdmin() ? "המילים שחיפשו הכי הרבה פעמים, מכל התוכנות"
+      : "המילים שחיפשו הכי הרבה פעמים, מהחיפושים ששולחיהם הסכימו לפרסם"),
     list);
 }
 
@@ -638,7 +670,8 @@ const sources = (set) => h("span", { class: "source" }, [...set].map(sourceName)
 
 function searches() {
   const filter = state.ui.searchesFilter ?? "";
-  const rows = state.data.queries.filter((q) => matches(q.query, filter));
+  const all = shownQueries();
+  const rows = all.filter((q) => matches(q.query, filter));
   const columns = [
     { title: "החיפוש", value: (q) => q.query, class: "text", cell: (q) => text(q.query) },
     { title: "איפה", value: scope, class: "scope" },
@@ -648,10 +681,11 @@ function searches() {
     { title: "לאחרונה", value: (q) => q.lastAt, class: "when", cell: (q) => when(q.lastAt) },
   ];
   return h("div", {},
-    toolbarFor("searchesFilter", "חיפוש בחיפושים", rows.length, state.data.queries.length, () =>
+    publishedNote(),
+    toolbarFor("searchesFilter", "חיפוש בחיפושים", rows.length, all.length, () =>
       download(`pardes-searches-${today()}.csv`, csv(
         ["query", "scope", "sources", "categoryId", "bookId", "tocId", "extended", "count", "senders", "lastAt"],
-        state.data.queries.map((q) => [q.query, scope(q), [...q.sources].join(" "), q.categoryId, q.bookId, q.tocId, q.extended, q.count, q.senders.size, iso(q.lastAt)])),
+        all.map((q) => [q.query, scope(q), [...q.sources].join(" "), q.categoryId, q.bookId, q.tocId, q.extended, q.count, q.senders.size, iso(q.lastAt)])),
       "text/csv;charset=utf-8")),
     table("searches", columns, rows, { title: "פעמים", down: true }));
 }
@@ -659,7 +693,8 @@ function searches() {
 function grades() {
   const filter = state.ui.gradesFilter ?? "";
   const grade = state.ui.grade ?? "all";
-  const rows = state.data.grades.filter((g) => (matches(g.query, filter) || matches(g.model, filter)) && (grade === "all" || String(g.grade) === grade));
+  const all = shownGrades();
+  const rows = all.filter((g) => (matches(g.query, filter) || matches(g.model, filter)) && (grade === "all" || String(g.grade) === grade));
   const select = h("select", { id: "grade-filter", "aria-label": "הציון" },
     h("option", { value: "all" }, "כל הציונים"),
     GRADES.map((g) => h("option", { value: String(g.grade) }, g.name)));
@@ -679,13 +714,13 @@ function grades() {
     { title: "מקור", value: (g) => sourceName(g.source), cell: (g) => h("span", { class: "source" }, sourceName(g.source)) },
     { title: "מתי", value: (g) => g.gradedAt, class: "when", cell: (g) => when(g.gradedAt) },
   ];
-  const bar = toolbarFor("gradesFilter", "חיפוש בדירוגים או במודל", rows.length, state.data.grades.length, () =>
+  const bar = toolbarFor("gradesFilter", "חיפוש בדירוגים או במודל", rows.length, all.length, () =>
     download(`pardes-grades-${today()}.csv`, csv(
       ["query", "search", "grade", "rank", "lineId", "bookId", "bookTitle", "heRef", "categoryId", "scopeBookId", "tocId", "scope", "extended", "model", "source", "gradedAt"],
-      state.data.grades.map((g) => [g.query, g.search, g.grade, g.rank, g.lineId, g.bookId, g.bookTitle, g.heRef, g.categoryId, g.scopeBookId, g.tocId, g.scope, g.extended, g.model, g.source, iso(g.gradedAt)])),
+      all.map((g) => [g.query, g.search, g.grade, g.rank, g.lineId, g.bookId, g.bookTitle, g.heRef, g.categoryId, g.scopeBookId, g.tocId, g.scope, g.extended, g.model, g.source, iso(g.gradedAt)])),
     "text/csv;charset=utf-8"));
   bar.insertBefore(select, bar.children[1]);
-  return h("div", {}, bar, table("grades", columns, rows, { title: "מתי", down: true }));
+  return h("div", {}, publishedNote(), bar, table("grades", columns, rows, { title: "מתי", down: true }));
 }
 
 function daf() {
@@ -880,7 +915,8 @@ async function uploadAll() {
       showUploads();
       try {
         if (entry.size > MAX_FILE) throw new Refusal("הקובץ גדול מ־50MB.");
-        const all = packagesIn(await entry.file.text()).flatMap(parts);
+        // Uploading here publishes: the page says so above the drop zone, and each package carries the consent
+        const all = packagesIn(await entry.file.text()).map((p) => ({ ...p, publish: true })).flatMap(parts);
         entry.parts = all.length;
         for (const part of all) {
           await post(part, entry);
@@ -976,6 +1012,7 @@ function upload() {
     h("section", { class: "card" },
       h("h2", {}, "העלאת חבילות"),
       h("p", { class: "sub" }, "חבילות נתוני חיפוש ששמרתם לקובץ, מכל תוכנה, נשלחות מכאן לשירות ומצטרפות למאגר. חבילה גדולה מתחלקת לבד לחלקים."),
+      h("p", { class: "publish-note" }, "מה שמעלים כאן מתפרסם לכולם: המילים שחיפשו, הדירוגים, ההיקף והזמנים מוצגים באתר וזמינים להורדה. מזהה השולח לא מוצג לעולם."),
       zone,
       list,
       h("div", { class: "chart-foot" }, h("span", {}), clear)),
@@ -987,7 +1024,7 @@ function upload() {
         h("li", {}, h("strong", {}, "תוכנה אחרת: "), "כל קובץ JSON בפורמט 1 של חבילות נתוני החיפוש."),
         h("li", {}, h("strong", {}, "קובץ שפוצל לכמה חלקים: "), "בוחרים את כל החלקים יחד. שמות הקבצים הם בדרך כלל ", h("code", { dir: "ltr" }, "pardes-feedback-….json"), ".")),
       h("p", { class: "aside-note" },
-        "מה שמעלים כאן נכנס לשירות. לכולם מוצגים רק המספרים שהוא מסתכם בהם, בלי המילים שחיפשו ובלי מזהה השולח. העלאה חוזרת של אותו קובץ לא מכפילה את החיפושים והדירוגים בסיכום.")));
+        "כל חבילה שמעלים כאן נשלחת עם הסכמה לפרסום, כך שהחיפושים שבה מוצגים לכולם, בלי מזהה השולח ובלי שום פרט מזהה אחר. העלאה חוזרת של אותו קובץ לא מכפילה את החיפושים והדירוגים בסיכום.")));
 }
 
 // ---- Signing in ----

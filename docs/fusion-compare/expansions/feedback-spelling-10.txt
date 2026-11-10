@@ -1,0 +1,520 @@
+89 searches with grades from the feedback; grades: feedback 618, Claude 358
+pardes      app      graded in 10  67% | good first 51 | good in 10 255 | 0 in 10 297 | nDCG@10 0.521 | MRR@10 0.654 | vs the app +0 -0 p=1.000
+pardes      p12wl    graded in 10  64% | good first 59 | good in 10 279 | 0 in 10 247 | nDCG@10 0.564 | MRR@10 0.710 | vs the app +43 -13 p=0.000
+pardes      p12wsl   graded in 10  64% | good first 59 | good in 10 280 | 0 in 10 246 | nDCG@10 0.567 | MRR@10 0.710 | vs the app +43 -13 p=0.000
+pardes      p12wl_w2 graded in 10  62% | good first 59 | good in 10 276 | 0 in 10 230 | nDCG@10 0.568 | MRR@10 0.716 | vs the app +40 -19 p=0.009
+pardes      p12wl_w15 graded in 10  59% | good first 57 | good in 10 268 | 0 in 10 219 | nDCG@10 0.559 | MRR@10 0.700 | vs the app +35 -24 p=0.193
+spelling    app      graded in 10  67% | good first 51 | good in 10 258 | 0 in 10 294 | nDCG@10 0.524 | MRR@10 0.653 | vs the app +4 -5 p=1.000
+spelling    p12wl    graded in 10  64% | good first 60 | good in 10 274 | 0 in 10 248 | nDCG@10 0.568 | MRR@10 0.719 | vs the app +45 -15 p=0.000
+spelling    p12wsl   graded in 10  64% | good first 60 | good in 10 275 | 0 in 10 247 | nDCG@10 0.570 | MRR@10 0.719 | vs the app +45 -15 p=0.000
+spelling    p12wl_w2 graded in 10  62% | good first 60 | good in 10 272 | 0 in 10 231 | nDCG@10 0.570 | MRR@10 0.726 | vs the app +40 -21 p=0.020
+spelling    p12wl_w15 graded in 10  59% | good first 58 | good in 10 263 | 0 in 10 219 | nDCG@10 0.559 | MRR@10 0.709 | vs the app +35 -26 p=0.306
+
+507 lines in the first 10 with no grade:
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	697161	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	1551591	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	5577262	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	5696012	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	5774323	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	6974546	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  "דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר"	6977653	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  אחר שמע שירים של גוים	780853	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  אחר שמע שירים של גוים	1201562	pardes/p12wl_w2, spelling/p12wl_w2
+  אחר שמע שירים של גוים	1997530	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  אחר שמע שירים של גוים	2681611	pardes/p12wl_w15, spelling/p12wl_w15
+  אחר שמע שירים של גוים	5976715	spelling/p12wl_w15
+  אחר שמע שירים של גוים	5984797	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  אחר שמע שירים של גוים	6364146	pardes/p12wl_w15
+  אחר שמע שירים של גוים	7312075	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  איוב לא חטא	18538	pardes/p12wl_w15, spelling/p12wl_w15
+  איוב לא חטא	3417463	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  איוב לא חטא	3417465	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  איוב לא חטא	3469656	pardes/app, spelling/app
+  איוב לא חטא	3587476	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  איוב לא חטא	6436167	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  איוב לא חטא	7780874	pardes/app, spelling/app
+  אם מותר להלחין מנגינות לתפילה מגוים	2022824	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  אם מותר להלחין מנגינות לתפילה מגוים	2160920	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  אם מותר להלחין מנגינות לתפילה מגוים	2951689	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  אם מותר להלחין מנגינות לתפילה מגוים	3015644	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  אם מותר להלחין מנגינות לתפילה מגוים	7183157	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  בחנו את רבי על מסכת שהוא לא למד	759446	pardes/p12wl_w15, spelling/p12wl_w15
+  בחנו את רבי על מסכת שהוא לא למד	4658417	pardes/p12wl_w15, spelling/p12wl_w15
+  בחנו את רבי על מסכת שהוא לא למד	5389134	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  בקדמין ברא	38	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  בקדמין ברא	101	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  בקדמין ברא	111	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  בקדמין ברא	146	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  בקדמין ברא	149	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  בקדמין ברא	3089607	pardes/app, spelling/app
+  בקדמין ברא	3099438	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  בקדמין ברא	3243629	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  בקדמין ברא	3248958	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  בקדמין ברא	3359411	pardes/app, spelling/app
+  בקדמין ברא	3531615	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  בקדמין ברא	7745305	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  בקדמין ברא	7748441	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  בקדמין ברא	7796245	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  ג' שותפים באדם	27554	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  ג' שותפים באדם	38899	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	69375	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	69740	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	69755	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	70048	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  ג' שותפים באדם	70117	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	70572	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  ג' שותפים באדם	71480	pardes/p12wl_w15, spelling/p12wl_w15
+  ג' שותפים באדם	71612	pardes/app, spelling/app
+  ג' שותפים באדם	105981	pardes/app, spelling/app
+  ג' שותפים באדם	247238	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  ג' שותפים באדם	247338	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	248469	pardes/app, spelling/app
+  ג' שותפים באדם	257740	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  ג' שותפים באדם	257770	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  ג' שותפים באדם	257881	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	694537	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  ג' שותפים באדם	694593	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  ג' שותפים באדם	695686	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15
+  ג' שותפים באדם	1529525	pardes/app, spelling/app
+  ג' שותפים באדם	1961776	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם	4314780	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  ג' שותפים באדם	6944999	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  ג' שותפים באדם - מה נותן כל אחד	83090	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם - מה נותן כל אחד	230399	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  ג' שותפים באדם - מה נותן כל אחד	247238	pardes/p12wl_w15, spelling/p12wl_w15
+  ג' שותפים באדם - מה נותן כל אחד	248522	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  ג' שותפים באדם - מה נותן כל אחד	273425	pardes/p12wl_w15, spelling/p12wl_w15
+  ג' שותפים באדם - מה נותן כל אחד	273478	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ג' שותפים באדם - מה נותן כל אחד	5859365	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  ג' שותפים באדם - מה נותן כל אחד	5999101	pardes/p12wl_w15
+  גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	1943476	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות הגוים אסורים העמידה בדבר היתר	1943476	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות הגוים אסורים העמידה בדבר היתר	1943537	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות העכו"ם אסורות	1943464	pardes/p12wl_w15, spelling/p12wl_w15
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1942934	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943476	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943480	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943493	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות העכו"ם אסורות בין שהעמידן בדבר האוסר בין שהעמידם בדבר המותר	1943537	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גבינות העכו"ם אסורות שהעמידם בדבר המותר	1943277	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1509731	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1512546	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1541610	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1546746	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	1555697	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  גדולת המכבים וזכותם לעומת רשעות היוונים	4221509	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	43625	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	135917	pardes/p12wl_w15, spelling/p12wl_w15
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	138157	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  דבר סתום האמור בתורה, ואין אנו יודעים במה הוא מדבר	147707	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	3787932	pardes/app, spelling/app
+  האם מותר לבחון את הרב על מסכת שלא יודע ולא למד	6165088	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	240810	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	1943460	pardes/p12wl_w15, spelling/p12wl_w15
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	2219044	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	2437797	pardes/app, spelling/app
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	2665250	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	3721324	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	5136188	pardes/app, spelling/app
+  הורו מקצת הגאונים שכל גבינות הגוים אסורים בין שהעמידה בדבר איסור בין שהעמידה בדבר היתר	6701617	pardes/app, spelling/app
+  הזמן הטוב לגשם	49778	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם	49877	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם	49908	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם	49916	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם	49922	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם	50000	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם	50511	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם שבת רביעי	49777	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם שבת רביעי	49876	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם שבת רביעי	50049	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הזמן הטוב לגשם שבת רביעי	50325	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496463	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496466	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496500	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496717	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496732	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496761	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  החכמה הייתה אצל הייונים ואחרי זה נגמרה והלכה	1496778	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים החטיאו את עם ישראל	319685	pardes/app, spelling/app
+  היוונים החטיאו את עם ישראל	3490501	spelling/p12wl_w15
+  היוונים החטיאו את עם ישראל	4158992	pardes/p12wl_w2, spelling/p12wl_w2
+  היוונים החטיאו את עם ישראל	4159418	pardes/p12wl_w15, spelling/p12wl_w15
+  היוונים החטיאו את עם ישראל	4159899	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים החטיאו את עם ישראל	4658592	pardes/p12wl_w15
+  היוונים החטיאו את עם ישראל	5750481	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים החטיאו את עם ישראל	7614747	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	136505	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	235486	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	238688	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	238777	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	373581	spelling/p12wl_w15
+  היוונים לא העמידו עוד פילוסופים	373877	spelling/p12wl_w15
+  היוונים לא העמידו עוד פילוסופים	1496475	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	1496526	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	1496527	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	1496646	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	1496717	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	1496727	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	1496755	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  היוונים לא העמידו עוד פילוסופים	4328467	spelling/p12wl_w15, spelling/p12wl_w2
+  היוונים לא העמידו עוד פילוסופים	4328484	spelling/p12wl_w15
+  הפקעת האיסור פנים חדשות באו לכאן	34747	pardes/app, spelling/app
+  הפקעת האיסור פנים חדשות באו לכאן	39427	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הפקעת האיסור פנים חדשות באו לכאן	54032	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הפקעת האיסור פנים חדשות באו לכאן	90258	pardes/app, spelling/app
+  הפקעת האיסור פנים חדשות באו לכאן	90260	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הפקעת האיסור פנים חדשות באו לכאן	90274	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הפקעת האיסור פנים חדשות באו לכאן	90336	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הפקעת האיסור פנים חדשות באו לכאן	105102	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הפקעת האיסור פנים חדשות באו לכאן	1167528	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  הפקעת האיסור פנים חדשות באו לכאן	1493611	pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  הפקעת האיסור פנים חדשות באו לכאן	3908873	pardes/app, spelling/app
+  הפקעת האיסור פנים חדשות באו לכאן	3908877	pardes/app, spelling/app
+  הפקעת האיסור פנים חדשות באו לכאן	4865034	pardes/p12wl_w15
+  הפקעת האיסור פנים חדשות באו לכאן	5586874	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  והרינגש מותרין לנו	92226	pardes/p12wl_w15, spelling/p12wl_w15
+  והרינגש מותרין לנו	2625784	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  והרינגש מותרין לנו	6880967	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	1229347	pardes/app, spelling/app
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	1988620	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2300510	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2539221	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2917797	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	2917798	pardes/p12wl_w15, spelling/p12wl_w15
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	5659036	pardes/app, spelling/app
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	6229046	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  ומין דגים מלוחין שקורין הרינג"ש מותרים	7043121	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	2594899	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	5700169	pardes/p12wl_w15, spelling/p12wl_w15
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	5700855	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	6221400	pardes/app, spelling/app
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	6947733	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	7258918	pardes/app, spelling/app
+  חגים של גוים, שבהם נאסרו יחסים ידועים בין ישראל לגוים אלו דברים נאסרו	7581244	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	240808	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	2538717	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	6346506	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7347331	pardes/p12wl_w15, spelling/p12wl_w15
+  חמור שאכל בינתא	1262791	spelling/p12wl_w15
+  חמור שאכל בינתא	1273432	spelling/p12wl_w15
+  חמור שאכל בינתא	1323408	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  חמור שאכל בינתא	1443851	pardes/app, spelling/app
+  חמור שאכל בינתא	5397845	pardes/app, spelling/app
+  חמור שאכל בינתא	5579535	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חמור שאכל בינתא	6186191	spelling/p12wl_w15
+  חמור שאכל בינתא	6186211	spelling/p12wl_w15
+  חמור שאכל בינתא	7385864	pardes/app, spelling/app
+  חמור שאכל שעורים	1262791	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  חמור שאכל שעורים	1273430	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חמור שאכל שעורים	5342560	pardes/app, spelling/app
+  חמור שאכל שעורים	6186209	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חמור שאכל שעורים	6186215	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חמור שאכל שעורים	6186227	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חמור שאכל שעורים	6186317	pardes/app, spelling/app
+  חמור שאכל שעורים	7642445	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  חרדל מזיק לדבורים	1086194	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חרדל מזיק לדבורים	1263954	pardes/app, spelling/app
+  חרדל מזיק לדבורים	2648190	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חרדל מזיק לדבורים	6131888	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חרדל מזיק לדבורים	6910165	pardes/app, spelling/app
+  חרדל מזיק לדבורים	7316368	pardes/app, spelling/app
+  חרדל מזיק לדבורים	7423170	pardes/app, spelling/app
+  חתול שאכל תמרים	1059384	pardes/app, spelling/app
+  חתול שאכל תמרים	5490339	pardes/app, spelling/app
+  חתול שאכל תמרים	5582997	pardes/app, spelling/app
+  חתול שאכל תמרים	5885678	pardes/app, spelling/app
+  חתול שאכל תמרים	6183865	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חתול שאכל תמרים	6186193	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חתול שאכל תמרים	6194312	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חתול שאכל תמרים	6255857	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חתול שאכל תמרים	6364509	pardes/app, spelling/app
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	2278680	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	4792301	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	5091952	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  חתכו בצל בסכין חלבית וטגנו בסיר בשרי	7360330	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	956894	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	999667	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	1045785	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	1054868	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	3728667	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	5847621	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה	5854040	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	5901262	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7414826	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7414861	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7475492	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7648018	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7659550	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  יש עניין ללמוד בקול ולהוציא את המילים מהפה ררוריה אשתו של רבי מאיר	7677713	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	1173118	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	5972506	pardes/p12wl_w15, spelling/p12wl_w15
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6223239	pardes/p12wl_w15
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6223351	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6277346	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6335719	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6351827	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6393557	pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6578399	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6749654	pardes/app, spelling/app
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6749656	pardes/app, spelling/app
+  כיבוש יחיד מקום שלא סמוך לארץ ישראל	6954314	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	965786	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	3954187	pardes/p12wl_w15, spelling/p12wl_w15
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	3956074	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5135252	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5624512	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	5851668	pardes/app, spelling/app
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	7463307	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  כל קבוע כמחצה על מחצה דלא איתחזק איסורא	7559171	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	116208	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	149647	pardes/app, spelling/app
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	158818	pardes/app, spelling/app
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	193870	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	202562	pardes/p12wl_w15
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	206059	spelling/p12wl_w15, spelling/p12wl_w2
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	208129	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	214543	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	252609	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	254016	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1589797	pardes/p12wl_w15, spelling/p12wl_w15
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1613532	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	1613767	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	6571321	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לְךָ יְהֹוָה הַגְּ֒דֻלָּה וְהַגְּ֒בוּרָה וְהַתִּפְאֶֽרֶת וְהַנֵּֽצַח וְהַהוֹד כִּי־כֹל בַּשָּׁמַֽיִם וּבָאָֽרֶץ לְךָ יְהֹוָה הַמַּמְלָכָה וְהַמִּתְנַשֵּׂא לְכֹל לְרֹאשׁ	6572233	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לחם הפנים צריכין הגשה	100195	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לחם הפנים צריכין הגשה	972500	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לחם הפנים צריכין הגשה	1145595	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לחם הפנים צריכין הגשה	5169389	pardes/app, spelling/app
+  לחם הפנים צריכין הגשה	5496372	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לחם הפנים צריכין הגשה	5496561	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לחם הפנים צריכין הגשה	5649893	pardes/app, spelling/app
+  לחם הפנים צריכין הגשה	6470560	pardes/app, spelling/app
+  לחם הפנים צריכין הגשה	7564748	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דומים לפגעים	589811	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דומים לפגעים	655592	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דומים לפגעים	674231	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דומים לפגעים	1491601	pardes/app, spelling/app
+  לימוני דומים לפגעים	4423821	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דומים לפגעים	6274125	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דומים לפגעים	6708686	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דומים לפגעים	7644520	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דמי לפגיעין	577956	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  לימוני דמי לפגיעין	1243127	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15
+  לימוני דמי לפגיעין	1267958	pardes/p12wl_w15
+  לימוני דמי לפגיעין	1374022	pardes/app, spelling/app
+  לימוני דמי לפגיעין	2717832	spelling/p12wl_w15, spelling/p12wl_w2
+  לימוני דמי לפגיעין	3017790	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  לימוני דמי לפגיעין	3745655	pardes/app, spelling/app
+  לימוני דמי לפגיעין	3838090	spelling/p12wl_w15, spelling/p12wl_w2
+  לימוני דמי לפגיעין	5986419	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  לימוני דמי לפגיעין	5987584	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  מה היה חטא היוונים בתקופת נס חנוכה	4160093	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	2770295	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	2933455	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3725585	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3725860	pardes/app, spelling/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3759672	pardes/app, spelling/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3760235	pardes/app, spelling/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3778078	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3882259	pardes/app, spelling/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3892682	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3904964	pardes/app, spelling/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	3912704	pardes/app, spelling/app
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	7071239	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מהם הדרכים והתנאים שצריך כדי שתתקבל התפילה	7331654	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	913228	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	2166294	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	2242175	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	3767321	pardes/app, spelling/app
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	4992711	pardes/p12wl_w15, spelling/p12wl_w15
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6180869	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת הריוח לא מצינו אותו אלא מפסיד	6793599	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	313102	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	316747	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	667282	pardes/app, spelling/app
+  מי שאין לו דעת רק מפסיד ולא מרוויח	920908	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	921445	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	921785	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1226381	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1242425	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1487516	pardes/p12wl_w2, spelling/p12wl_w2
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1827505	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	1904206	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	2369766	pardes/p12wl_w15, spelling/p12wl_w15
+  מי שאין לו דעת רק מפסיד ולא מרוויח	3767321	pardes/app, spelling/app
+  מי שאין לו דעת רק מפסיד ולא מרוויח	5852536	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6180861	pardes/p12wl_w15, spelling/p12wl_w15
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6180879	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  מי שאין לו דעת רק מפסיד ולא מרוויח	6557895	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7356311	pardes/p12wl_w15, spelling/p12wl_w15
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7416518	pardes/app, spelling/app
+  מי שאין לו דעת רק מפסיד ולא מרוויח	7514072	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שלומד תורה בקול יזכןר את הלימוד ברוריה בעטה בתלמיד שלמד בשקט	1753524	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מי שלומד תורה בקול יזכןר את הלימוד ברוריה בעטה בתלמיד שלמד בשקט	6679733	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  מלוחי גוים אסורים	934641	pardes/app, spelling/app
+  מלוחי גוים אסורים	941851	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  מלוחי גוים אסורים	6228994	pardes/p12wl_w15, spelling/p12wl_w15
+  מלוחי גוים אסורים	6314177	pardes/app, spelling/app
+  מלוחי גוים אסורים	7342965	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  משקה הבא לתוך אוכל אוכל	35539	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  משקה הבא לתוך אוכל אוכל	1282212	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  משקה הבא לתוך אוכל אוכל	2019880	pardes/app, spelling/app
+  משקה הבא לתוך אוכל אוכל	2190379	pardes/app, spelling/app
+  משקה הבא לתוך אוכל אוכל	3670813	pardes/p12wl_w15, spelling/p12wl_w15
+  משקה הבא לתוך אוכל אוכל	4891929	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  עושה אדם דין לעצמו	129093	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  עושה אדם דין לעצמו	138327	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  עושה אדם דין לעצמו	209131	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עושה אדם דין לעצמו	236772	pardes/p12wl_w15, spelling/p12wl_w15
+  עושה אדם דין לעצמו	251952	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  עושה אדם דין לעצמו	571634	pardes/app, spelling/app
+  עושה אדם דין לעצמו	999115	pardes/app, spelling/app
+  עושה אדם דין לעצמו	3936939	pardes/p12wl_w15, spelling/p12wl_w15
+  עושה אדם דין לעצמו	5531135	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  עושה אדם דין לעצמו	6187383	pardes/p12wl_w15, spelling/p12wl_w15
+  עושה אדם דין לעצמו	6629155	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  עושה אדם דין לעצמו	6756904	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  עושה אדם דין לעצמו	6970515	pardes/p12wl_w15, spelling/p12wl_w15
+  עושה אדם דין לעצמו	7465962	pardes/app, spelling/app
+  עושה אדם דין לעצמו	7642674	pardes/p12wl_w15, spelling/p12wl_w15
+  עני חמור	31502	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	37829	pardes/app, spelling/app
+  עני חמור	37842	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  עני חמור	44374	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  עני חמור	80060	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  עני חמור	88293	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	131513	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	139405	pardes/app, spelling/app
+  עני חמור	163968	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	210792	pardes/app, spelling/app
+  עני חמור	243458	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	268778	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	1004246	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	3107635	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  עני חמור	3119312	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  עני חמור	3216394	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	3219355	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	3228024	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	3336149	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  עני חמור	3475307	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	3502821	pardes/app, spelling/app
+  עני חמור	3504177	pardes/app, spelling/app
+  עני חמור	3558459	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	3615194	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  עני חמור	6503511	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  עני חמור	7767529	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  פקע איסור שנשתנה	909486	pardes/app, spelling/app
+  פקע איסור שנשתנה	4823412	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  פקע איסור שנשתנה	4922693	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  פקע איסור שנשתנה	5280202	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  פקע איסור שנשתנה	5547136	pardes/app, spelling/app
+  פקע איסור שנשתנה	5907258	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  פקע איסור שנשתנה	7373712	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  פקע איסור שנשתנה	7657240	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  צריך גם להרחיק וגם למרוח סיד	1736545	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  צריך גם להרחיק וגם למרוח סיד	2295889	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  צריך גם להרחיק וגם למרוח סיד	2594605	pardes/app, spelling/app
+  צריך גם להרחיק וגם למרוח סיד	4752828	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  צריך גם להרחיק וגם למרוח סיד	4752831	pardes/p12wl_w15, spelling/p12wl_w15
+  צריך גם להרחיק וגם למרוח סיד	5504858	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  צריך גם להרחיק וגם למרוח סיד	6131663	pardes/app, spelling/app
+  צריך גם להרחיק וגם למרוח סיד	7635706	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	3017682	spelling/p12wl_w15, spelling/p12wl_w2
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	3954189	pardes/p12wl_w15, pardes/p12wl_w2
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	3956074	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	4066939	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  קבוע כמחצה על מחצה היכא דלא איתחזק איסורא	7417352	pardes/p12wl_w15, spelling/p12wl_w15
+  רבי עקיבא אמר כלל גדול בתורה	70538	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  רבי עקיבא אמר כלל גדול בתורה	140319	pardes/app, spelling/app
+  רבי עקיבא אמר כלל גדול בתורה	148424	pardes/p12wl_w15, spelling/p12wl_w15
+  רבי עקיבא אמר כלל גדול בתורה	181180	pardes/p12wl_w15, spelling/p12wl_w15
+  רבי עקיבא אמר כלל גדול בתורה	200883	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  רבי עקיבא אמר כלל גדול בתורה	456922	pardes/p12wl_w15, spelling/p12wl_w15
+  רבי עקיבא אמר כלל גדול בתורה	464636	pardes/p12wl_w15, spelling/p12wl_w15
+  רבי עקיבא אמר כלל גדול בתורה	679022	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  רבי עקיבא אמר כלל גדול בתורה	1937724	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  רבי עקיבא אמר כלל גדול בתורה	3471315	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  רבי עקיבא אמר כלל גדול בתורה	4254883	pardes/p12wl_w15, spelling/p12wl_w15
+  רבי עקיבא אמר כלל גדול בתורה	4257889	pardes/app, spelling/app
+  רבי עקיבא אמר כלל גדול בתורה	4336245	pardes/app, spelling/app
+  רבי עקיבא אמר כלל גדול בתורה	6904224	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	138350	pardes/app, spelling/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	138351	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	341358	pardes/p12wl_w15, spelling/p12wl_w15
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	673256	pardes/app, spelling/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	674138	pardes/app, spelling/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	1849446	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	2966792	pardes/app, spelling/app
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	3471315	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	3565290	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  רבי עקיבא אמר לאהוב את החבר כמו את עצמו	7085165	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם	51941	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם	365085	pardes/p12wl_w15
+  שבת רביעי גשם	648579	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם	1630568	pardes/app, spelling/app
+  שבת רביעי גשם	2352613	pardes/app, spelling/app
+  שבת רביעי גשם	3259579	pardes/p12wl_w15, spelling/p12wl_w15
+  שבת רביעי גשם	4226149	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם	4413633	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  שבת רביעי גשם	6891835	pardes/app, spelling/app
+  שבת רביעי גשם	7692847	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  שבת רביעי גשם זה ברכה של גשם בעיתו	538837	pardes/p12wl_w15, spelling/p12wl_w15
+  שבת רביעי גשם זה ברכה של גשם בעיתו	837149	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	1841667	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	1841669	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	3259579	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  שבת רביעי גשם זה ברכה של גשם בעיתו	4296119	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	4445955	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  שבת רביעי גשם זה ברכה של גשם בעיתו	6939246	pardes/app, spelling/app
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	240808	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	2538717	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	6346506	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	6346807	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7004416	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7347331	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7554311	pardes/app, spelling/app
+  שחלב בהמה טמאה יותר ביוקר מחלב בהמה טהורה	7788018	pardes/app, spelling/app
+  שירים לועזיים גרמו לצאת בשאלה	300933	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שירים לועזיים גרמו לצאת בשאלה	331304	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שירים לועזיים גרמו לצאת בשאלה	3888675	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שירים לועזיים גרמו לצאת בשאלה	5942951	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שירים לועזיים גרמו לצאת בשאלה	7387425	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שירים לועזיים גרמו לצאת בשאלה	7415797	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  שירים לועזיים גרמו לצאת בשאלה	7664657	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1360575	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1379880	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1398604	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1788145	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	2701932	pardes/app, spelling/app
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	5703540	pardes/app, spelling/app
+  תני ר' שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	6227905	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1360575	pardes/p12wl_w15, spelling/p12wl_w15
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1379880	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1398604	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	1788145	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	2627782	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	2701932	pardes/app, spelling/app
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	5703540	pardes/app, spelling/app
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	6225317	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תני רבי שמעון בן יוחי בו ביום גזרו על פיתן ועל שמנן ועל כבושיהן ומלוחיהן וגבינותיהן וחמאותיהן	6227905	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תענית זה דבר טוב לחלום	136195	pardes/p12wl_w15, spelling/p12wl_w15
+  תענית זה דבר טוב לחלום	262325	pardes/p12wl_w2, spelling/p12wl_w2
+  תפילה בשפה אחרת	3904964	pardes/app, spelling/app
+  תפילה בשפה אחרת	3912704	pardes/app, spelling/app
+  תפילה בשפה אחרת	4978108	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תפילה בשפה אחרת	4978380	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  תפילה בשפה אחרת	5919745	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  תפילה בשפה אחרת	5919753	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  תפילה בשפה שלא מבין	4978253	pardes/app, pardes/p12wl, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wsl
+  תפילה בשפה שלא מבין	4978525	pardes/p12wl_w15, spelling/p12wl_w15
+  תפילה בשפה שלא מבין	4978528	pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תפילה בשפה שלא מבין	4978530	pardes/app, pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  תפילה בשפה שלא מבין	4978532	pardes/app, spelling/app
+  תפילה בשפה שלא מבין	4978578	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  תפילה בשפה שלא מבין	7003452	pardes/p12wl_w15, spelling/p12wl_w15
+  תרבות יוון מהי	1053019	pardes/p12wl, pardes/p12wsl, spelling/p12wl, spelling/p12wsl
+  תרבות יוון מהי	1543211	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
+  תרבות יוון מהי	4414430	pardes/p12wl_w15, pardes/p12wl_w2, spelling/p12wl_w15, spelling/p12wl_w2
+  תרבות יוון מהי	5579976	pardes/p12wl, pardes/p12wl_w2, pardes/p12wsl, spelling/p12wl, spelling/p12wl_w2, spelling/p12wsl
+  תרבות יוון מהי	7008087	pardes/app, spelling/app
+  תרבות יוון מהי	7028962	pardes/app, pardes/p12wl, pardes/p12wl_w15, pardes/p12wl_w2, pardes/p12wsl, spelling/app, spelling/p12wl, spelling/p12wl_w15, spelling/p12wl_w2, spelling/p12wsl
