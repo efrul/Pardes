@@ -40,6 +40,12 @@ class LibraryLinks(
         lineIds: Collection<Long>,
     ): Map<Long, List<Line>> = read(emptyMap()) { connection -> linkedIn(connection, categories, lineIds) }
 
+    /** The [count] lines that come before [line] in its book, in its order (fewer at the book's start). */
+    suspend fun lineIdsBefore(
+        line: Line,
+        count: Int,
+    ): List<Long> = read(emptyList()) { connection -> idsBefore(connection, line, count) }
+
     /** The books right under [categories]; a few rows, read where it is called. Empty when the database can't be read. */
     fun booksOf(categories: Collection<Long>): Set<Long> =
         runCatching { readOnly(databasePathProvider.get()).use { connection -> booksIn(connection, categories) } }
@@ -168,6 +174,22 @@ class LibraryLinks(
                 }
             }
             return found
+        }
+
+        /** [LibraryLinks.lineIdsBefore] on [connection]. */
+        internal fun idsBefore(
+            connection: Connection,
+            line: Line,
+            count: Int,
+        ): List<Long> {
+            if (line.lineIndex <= 0 || count <= 0) return emptyList()
+            val sql = "SELECT id FROM line WHERE bookId = ? AND lineIndex >= ? AND lineIndex < ? ORDER BY lineIndex"
+            return connection.prepareStatement(sql).use { statement ->
+                statement.setLong(1, line.bookId)
+                statement.setInt(2, line.lineIndex - count)
+                statement.setInt(3, line.lineIndex)
+                statement.executeQuery().use { rows -> buildList { while (rows.next()) add(rows.getLong(1)) } }
+            }
         }
 
         /** [LibraryLinks.booksOf] on [connection]. */

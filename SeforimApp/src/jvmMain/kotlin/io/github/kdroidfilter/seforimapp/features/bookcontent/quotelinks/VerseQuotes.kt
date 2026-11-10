@@ -77,18 +77,19 @@ internal fun wordsOfLine(html: String): List<LineWord> {
 }
 
 /**
- * The words of [line] that quote [verse]: its longest run of the verse's words in their order that is a quote
- * ([quoteIn]), among the words [free] to be linked. Null when there is none.
+ * The words of [line] that quote [verse]: its longest run of the verse's words in their order that is a quote of
+ * [least] words or more ([quoteIn]), among the words [free] to be linked. Null when there is none.
  */
 internal fun quoteOf(
     line: List<LineWord>,
     verse: List<String>,
     free: BooleanArray,
+    least: Int = MIN_WORDS,
 ): IntRange? {
     val left = free.copyOf()
     while (true) {
         val run = longestRun(line, verse, left) ?: return null
-        quoteIn(line, run)?.let { return it }
+        quoteIn(line, run, least)?.let { return it }
         run.forEach { left[it] = false }
     }
 }
@@ -120,21 +121,22 @@ private fun longestRun(
 }
 
 /**
- * The quote in [run], words of a verse in their order: [MIN_WORDS] words or more, of no fewer than [MIN_LETTERS]
- * letters. In a line that marks its quotes, the Talmud's own words may be a verse's too: the words before the quote
- * opens or after it closes are left out (אָמַר לָהֶם: ״לְכוּ אִכְלוּ מַשְׁמַנִּים״), and two words alone are a quote only where one
- * opens or closes (צאת הכוכבים is the Talmud's).
+ * The quote in [run], words of a verse in their order: [least] words or more, of no fewer than [MIN_LETTERS] letters.
+ * In a line that marks its quotes, the Talmud's own words may be a verse's too: the words before the quote opens or
+ * after it closes are left out (אָמַר לָהֶם: ״לְכוּ אִכְלוּ מַשְׁמַנִּים״), and two words alone are a quote only where one opens or
+ * closes (צאת הכוכבים is the Talmud's).
  */
 private fun quoteIn(
     line: List<LineWord>,
     run: IntRange,
+    least: Int,
 ): IntRange? {
     var quote = run
     val opening = quote.firstOrNull { line[it].opens }
     if (opening != null && (quote.first until opening).none { line[it].closes }) quote = opening..quote.last
     val closing = quote.lastOrNull { line[it].closes }
     if (closing != null && (closing + 1..quote.last).none { line[it].opens }) quote = quote.first..closing
-    if (quote.count() < MIN_WORDS || quote.sumOf { line[it].letters.length } < MIN_LETTERS) return null
+    if (quote.count() < least || quote.sumOf { line[it].letters.length } < MIN_LETTERS) return null
     val marked = quote.count() > MIN_WORDS || line[quote.first].opens || line[quote.last].closes
     return quote.takeIf { marked || line.none { it.opens || it.closes } }
 }
@@ -142,35 +144,27 @@ private fun quoteIn(
 /**
  * [html], a line of the Talmud, with the words that quote each of [verses] made links to it
  * (`<a class="ref" href="seforim://line/<id>">`, as the library's own citations): every run of two words or more of a
- * verse, the longer first, and a word quoted by itself that one verse alone has. The same [html] when nothing is quoted.
+ * verse, the longer first, and a word quoted by itself that one verse alone has. Then the verses of the lines before it
+ * ([near], the nearest first), which the library links to the line that quotes them first alone: a verse quoted again
+ * is told by [MIN_NEAR_WORDS] words or more. The same [html] when nothing is quoted.
  */
 internal fun withVerseLinks(
     html: String,
     verses: List<Verse>,
+    near: List<Verse> = emptyList(),
 ): String {
     val line = wordsOfLine(html)
-    if (line.isEmpty() || verses.isEmpty()) return html
+    if (line.isEmpty() || (verses.isEmpty() && near.isEmpty())) return html
     val free = BooleanArray(line.size) { true }
     val links = ArrayList<Pair<IntRange, Long>>()
-    // Each verse's longest quote first, then what else of it the line quotes
-    var left = verses
-    repeat(MAX_QUOTES) {
-        val found =
-            left
-                .mapNotNull { verse -> quoteOf(line, verse.words, free)?.let { it to verse } }
-                .sortedByDescending { it.first.count() }
-        for ((run, verse) in found) {
-            if (run.any { !free[it] }) continue
-            run.forEach { free[it] = false }
-            links += run to verse.lineId
-        }
-        left = found.map { it.second }
-    }
+    links.addQuotes(line, verses, free, MIN_WORDS)
     for ((index, word) in line.withIndex()) {
         if (!free[index] || !word.quotedAlone || word.letters.length < MIN_ALONE_LETTERS) continue
         val verse = verses.singleOrNull { word.letters in it.words } ?: continue
+        free[index] = false
         links += (index..index) to verse.lineId
     }
+    links.addQuotes(line, near, free, MIN_NEAR_WORDS)
     if (links.isEmpty()) return html
     return buildString(html.length + links.size * LINK_CHARS) {
         var at = 0
@@ -182,6 +176,29 @@ internal fun withVerseLinks(
             at = end
         }
         append(html, at, html.length)
+    }
+}
+
+/** Adds each of [verses]' quotes in [line] of [least] words or more: its longest first, then what else of it is quoted. */
+private fun MutableList<Pair<IntRange, Long>>.addQuotes(
+    line: List<LineWord>,
+    verses: List<Verse>,
+    free: BooleanArray,
+    least: Int,
+) {
+    var left = verses
+    repeat(MAX_QUOTES) {
+        if (left.isEmpty()) return
+        val found =
+            left
+                .mapNotNull { verse -> quoteOf(line, verse.words, free, least)?.let { it to verse } }
+                .sortedByDescending { it.first.count() }
+        for ((run, verse) in found) {
+            if (run.any { !free[it] }) continue
+            run.forEach { free[it] = false }
+            add(run to verse.lineId)
+        }
+        left = found.map { it.second }
     }
 }
 
@@ -248,4 +265,5 @@ private const val LINK_CHARS = 48
 private const val MIN_WORDS = 2
 private const val MIN_LETTERS = 5
 private const val MIN_ALONE_LETTERS = 3
+private const val MIN_NEAR_WORDS = 3
 private const val MAX_QUOTES = 3
