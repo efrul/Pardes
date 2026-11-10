@@ -418,7 +418,7 @@ internal object DictionaryWidget : HomeWidget {
         val pool = remember(read, needed) { needed.flatMap { read?.get(it).orEmpty() } }
         val query = rememberTextFieldState()
         var opened by remember { mutableStateOf<DictionaryEntry?>(null) }
-        val results = remember(pool, query.text) { lookup(pool, query.text.toString()) }
+        val results = remember(pool, query.text) { lookupAsRead(pool, query.text.toString()) }
         // Klei Kodesh's synonyms and spellings, read with the first dictionary
         val pack by produceState<KleiKodeshPack?>(null, read != null) {
             if (read != null) value = withContext(Dispatchers.Default) { KleiKodeshPack.shipped }

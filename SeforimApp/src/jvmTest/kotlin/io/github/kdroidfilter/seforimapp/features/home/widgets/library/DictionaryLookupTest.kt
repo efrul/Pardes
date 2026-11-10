@@ -22,6 +22,24 @@ class DictionaryLookupTest {
     }
 
     @Test
+    fun `a word of a text is found without the letters before it`() {
+        val words = listOf("הלל", "הללויה", "אמר", "משה", "שה")
+        val entries = words.mapIndexed { i, word -> DictionaryEntry(word, "", Dictionary.ARUKH, 1, i.toLong(), i) }
+
+        fun found(query: String) = lookupAsRead(entries, query).map { it.word }
+        assertEquals(listOf("הלל", "הללויה"), found("והלל"))
+        assertEquals(listOf("אמר"), found("דאמר"))
+        assertEquals(listOf("אמר"), found("וּכְאָמַר"))
+        // A word of the dictionaries is itself, whatever its first letter, and so is one being typed
+        assertEquals(listOf("משה"), found("משה"))
+        assertEquals(listOf("הלל", "הללויה"), found("הל"))
+        // No word left, or more letters before it than a word takes: nothing found, as before
+        assertEquals(emptyList(), found("וגבר"))
+        assertEquals(emptyList(), found("ואמ"))
+        assertEquals(emptyList(), found("וכשאמר"))
+    }
+
+    @Test
     fun `a lookup opens the dictionary's window, and brings it back for the next word`() {
         val toolWindows = ToolWindows()
         val lookup = DictionaryLookup(toolWindows)
