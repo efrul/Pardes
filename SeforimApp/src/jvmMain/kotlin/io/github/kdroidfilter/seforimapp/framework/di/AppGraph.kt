@@ -82,4 +82,7 @@ abstract class AppGraph : ViewModelGraph {
 
     /** The question at start whether to send feedback, and the sending by itself (FeedbackConsentDialog). */
     abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender
+
+    /** The links of the kinds the repository does not read, for the references pane. */
+    abstract val libraryLinks: io.github.kdroidfilter.seforimapp.features.bookcontent.references.LibraryLinks
 }
