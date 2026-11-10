@@ -2,7 +2,7 @@
 
 The layouts of Pardes's daf view (צורת הדף): one JSON file a tractate of the Bavli, every line of the Gemara, Rashi
 and Tosafot of the Vilna Shas with its words and its place on the page. They are pardes-rashi-ocr's `layouts/`,
-from its commit c34117a1e. This branch holds nothing else: `.github/workflows/daf-release.yml` on main publishes them
+from its commit bb638c0ea. This branch holds nothing else: `.github/workflows/daf-release.yml` on main publishes them
 as a `daf-<n>` release, which Pardes for desktop downloads them from (1.0.8 and later).
 
 **Sources and licence**
