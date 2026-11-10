@@ -728,10 +728,13 @@ function daf() {
   if (marks.length === 0) return h("section", { class: "notice" }, h("h2", {}, "צורת הדף"), h("p", {}, "עוד לא נשלחו בדיקות של צורת הדף."));
   const tractates = new Map();
   for (const m of marks) {
-    const t = tractates.get(m.tractate) ?? { tractate: m.tractate, he: m.tractateHe || m.tractate, lines: 0, right: 0, wrong: 0, moved: 0, last: 0 };
+    const t = tractates.get(m.tractate) ??
+      { tractate: m.tractate, he: m.tractateHe || m.tractate, lines: 0, right: 0, wrong: 0, layout: 0, words: 0, moved: 0, last: 0 };
     t.lines++;
     if (m.ok === true) t.right++;
     if (m.ok === false) t.wrong++;
+    if (m.layout) t.layout++;
+    if (m.words) t.words++;
     if (m.cut) t.moved++;
     t.last = Math.max(t.last, m.atMs);
     tractates.set(m.tractate, t);
@@ -741,12 +744,17 @@ function daf() {
     { title: "שורות", value: (t) => t.lines, class: "num", cell: (t) => number.format(t.lines) },
     { title: "נכונות", value: (t) => t.right, class: "num", cell: (t) => number.format(t.right) },
     { title: "לא נכונות", value: (t) => t.wrong, class: "num", cell: (t) => number.format(t.wrong) },
+    { title: "עימוד לא נכון", value: (t) => t.layout, class: "num", cell: (t) => number.format(t.layout) },
+    { title: "טעות במילים", value: (t) => t.words, class: "num", cell: (t) => number.format(t.words) },
     { title: "תחילת שורה הוזזה", value: (t) => t.moved, class: "num", cell: (t) => number.format(t.moved) },
     { title: "לאחרונה", value: (t) => t.last, class: "when", cell: (t) => when(t.last) },
   ], [...tractates.values()], { title: "שורות", down: true });
   const filter = state.ui.dafFilter ?? "";
   const rows = marks.filter((m) => matches(m.t, filter) || matches(m.tractateHe, filter));
   const ok = (m) => (m.ok === true ? "נכונה" : m.ok === false ? "לא נכונה" : "—");
+  // What the reader said is wrong with the line, and of which of its words when not of them all (counted from 1)
+  const why = (m) => [m.layout && "עימוד", m.words && "מילים"].filter(Boolean).join(", ") || "—";
+  const part = (m) => (m.from == null && m.to == null ? "—" : `${(m.from ?? 0) + 1}–${m.to == null ? "סוף" : m.to + 1}`);
   const columns = [
     { title: "המסכת", value: (m) => m.tractateHe || m.tractate },
     { title: "עמוד", value: (m) => m.amud },
@@ -754,13 +762,15 @@ function daf() {
     { title: "שורה", value: (m) => m.i, class: "num", cell: (m) => String(m.i) },
     { title: "המילים", value: (m) => m.t, class: "text", cell: (m) => h("span", { dir: "auto" }, m.t) },
     { title: "השורה", value: ok },
+    { title: "מה לא נכון", value: why },
+    { title: "המילים שסומנו", value: part },
     { title: "הזזה", value: (m) => m.cut ?? 0, class: "num", cell: (m) => (m.cut ? String(m.cut) : "—") },
     { title: "מתי", value: (m) => m.atMs, class: "when", cell: (m) => when(m.atMs) },
   ];
   const bar = toolbarFor("dafFilter", "חיפוש בשורות", rows.length, marks.length, () =>
     download(`pardes-daf-${today()}.csv`, csv(
-      ["tractate", "tractateHe", "amud", "column", "line", "words", "ok", "cut", "at"],
-      marks.map((m) => [m.tractate, m.tractateHe, m.amud, m.c, m.i, m.t, m.ok, m.cut, m.at])),
+      ["tractate", "tractateHe", "amud", "column", "line", "words", "ok", "cut", "at", "layoutWrong", "wordsWrong", "from", "to"],
+      marks.map((m) => [m.tractate, m.tractateHe, m.amud, m.c, m.i, m.t, m.ok, m.cut, m.at, m.layout, m.words, m.from, m.to])),
     "text/csv;charset=utf-8"));
   return h("div", { class: "stack" },
     h("section", { class: "card" }, h("h2", {}, "המסכתות"), h("p", { class: "sub" }, "השורות שנבדקו בכל מסכת"), summary),

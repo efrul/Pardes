@@ -26,6 +26,7 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontOption
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafReviewsFolderLink
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsViewModel
@@ -151,6 +152,7 @@ private fun FontsSettingsView(
                     fontSize = 12.sp,
                     color = JewelTheme.globalColors.text.info,
                 )
+                if (state.dafReview) DafReviewsFolderLink()
             }
 
             Spacer(modifier = Modifier.height(8.dp))

@@ -234,7 +234,9 @@ function frame(p, sender, grades, searches) {
     tractate: r.tractate,
     tractateHe: r.tractateHe,
     library: r.library,
-    marks: r.marks.map((m) => ({ amud: m.amud, c: m.c, i: m.i, t: m.t, ok: m.ok, cut: m.cut, at: m.at })),
+    marks: r.marks.map((m) => ({
+      amud: m.amud, c: m.c, i: m.i, t: m.t, ok: m.ok, cut: m.cut, at: m.at, layout: m.layout, words: m.words, from: m.from, to: m.to,
+    })),
   }));
   return {
     format: p.format,
