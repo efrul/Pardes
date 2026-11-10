@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -102,6 +104,7 @@ import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -193,6 +196,8 @@ class DafControl {
     internal var edge: suspend (end: Boolean) -> Unit = {}
     internal var toLine: suspend (lineId: Long) -> Unit = {}
     internal var step: suspend (forward: Boolean) -> Boolean = { false }
+    internal var where: () -> DafPlace? = { null }
+    internal val scale = DafScale()
 
     suspend fun scrollPage(forward: Boolean) = page(forward)
 
@@ -205,6 +210,31 @@ class DafControl {
      * before it, and brings it into view; false when none is, for the arrows to step through the Gemara as in the text.
      */
     suspend fun stepComment(forward: Boolean): Boolean = step(forward)
+
+    /** Where the daf is, or was when it was last shown, for the text to open there; null before it was shown. */
+    fun place(): DafPlace? = where()
+}
+
+/**
+ * Where the daf is scrolled to: the Gemara's segment read at its top ([topLineId]), whether the tab's selected line is
+ * in view ([selectionShown]), and whether a comment of Rashi or Tosafot is selected by a click on itself ([onComment]).
+ */
+class DafPlace(
+    val topLineId: Long,
+    val selectionShown: Boolean,
+    val onComment: Boolean,
+)
+
+/**
+ * The scale the pages were last shown at ([perPoint], pixels a point; 0 before they were), and the place their list was
+ * moved to for it: its item, its pixels down it ([offset]) and what they are in [points], kept so that a zoom's frames do
+ * not add up each one's rounding.
+ */
+internal class DafScale {
+    var perPoint = 0f
+    var index = -1
+    var offset = -1
+    var points = 0f
 }
 
 private sealed interface DafLoad {
@@ -263,6 +293,8 @@ fun DafView(
     modifier: Modifier = Modifier,
     onWordInText: (DafAnchor) -> Unit = {},
     find: DafFind = DafFind.NONE,
+    openAt: Long? = null,
+    onScroll: (lineId: Long) -> Unit = {},
 ) {
     val layouts = rememberDafLayouts()
     val downloads = remember(layouts) { DafDownloads.of(layouts) }
@@ -301,6 +333,8 @@ fun DafView(
                     onContextLine = onContextLine,
                     onWordInText = onWordInText,
                     find = find,
+                    openAt = openAt,
+                    onScroll = onScroll,
                 )
         }
     }
@@ -334,6 +368,8 @@ private fun DafPages(
     onContextLine: (Long) -> Unit,
     onWordInText: (DafAnchor) -> Unit,
     find: DafFind,
+    openAt: Long?,
+    onScroll: (Long) -> Unit,
 ) {
     val graph = LocalAppGraph.current
     val density = LocalDensity.current
@@ -436,6 +472,22 @@ private fun DafPages(
         val viewportHeight = constraints.maxHeight.toFloat()
         val currentPlaces by rememberUpdatedState(places)
         val currentPerPoint by rememberUpdatedState(perPoint)
+        // The same place of the page at the view's top when its scale changes (the zoom, the view's width, also while
+        // the text was shown): the list keeps its pixels, which are another place then
+        SideEffect {
+            val shown = control.scale
+            val from = shown.perPoint
+            shown.perPoint = perPoint
+            if (from == 0f || from == perPoint) return@SideEffect
+            val index = listState.firstVisibleItemIndex
+            val offset = listState.firstVisibleItemScrollOffset
+            val points = if (index == shown.index && offset == shown.offset) shown.points else (offset - titleHeight) / from
+            if (points <= 0f) return@SideEffect
+            shown.index = index
+            shown.points = points
+            shown.offset = (titleHeight + points * perPoint).toInt()
+            listState.requestScrollToItem(index, shown.offset)
+        }
 
         // Brings the line of the library [id] into view, a little below the view's top, unless it is in view
         suspend fun reveal(
@@ -447,6 +499,14 @@ private fun DafPages(
             val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
             val shown = item != null && item.offset + y >= 0 && item.offset + y + titleHeight <= listState.layoutInfo.viewportEndOffset
             if (always || !shown) listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
+        }
+
+        // Opens at the Gemara's segment [id]: the line it begins on at the view's very top (an amud's first line: the
+        // amud's own top), where the daf's place reads that segment again (DafIndex.gemaraAt)
+        suspend fun openOn(id: Long) {
+            val (index, top) = currentPlaces[id] ?: return
+            val opensAmud = currentIndex?.gemaraTop(index) == top
+            listState.scrollToItem(index, if (opensAmud) 0 else (titleHeight + top * currentPerPoint).toInt())
         }
         control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
         control.edge = { end ->
@@ -491,11 +551,38 @@ private fun DafPages(
             }
         }
 
-        // The tab's line in view: once the places are known, then whenever it changes or the tab asks
+        // Where the daf is: the Gemara's segment read at the view's top, and whether the tab's line is in view
+        val currentLine by rememberUpdatedState(lineId)
+        control.where = where@{
+            val comments = currentIndex ?: return@where null
+            val first = listState.firstVisibleItemIndex
+            val top = (listState.firstVisibleItemScrollOffset - titleHeight) / currentPerPoint
+            val topLine = comments.gemaraAt(first, top) ?: return@where null
+            val shown =
+                currentLine?.let(comments.places::get)?.let { (index, y) ->
+                    val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                    val at = titleHeight + y * currentPerPoint
+                    item != null && item.offset + at >= 0 && item.offset + at <= listState.layoutInfo.viewportEndOffset
+                } == true
+            DafPlace(topLine, shown, onComment = focused?.let { it in currentPassage?.targetLineIds.orEmpty() } == true)
+        }
+
+        // The tab's line in view: once the places are known, then whenever it changes or the tab asks. At first the place
+        // the tab was at ([openAt], the text's top line or the daf's own when it was last shown), the selection where it is
         var revealed by remember(file) { mutableStateOf(false) }
         LaunchedEffect(lineId, scrollToLineTimestamp, places) {
-            val id = lineId?.takeIf { it > 0 } ?: return@LaunchedEffect
             if (places.isEmpty()) return@LaunchedEffect
+            val opening = openAt?.takeIf { !revealed && it > 0 }
+            // Back from the text, which was not scrolled: the daf is where it was left
+            if (opening != null && opening == control.where()?.topLineId) {
+                revealed = true
+                return@LaunchedEffect
+            }
+            val id = (opening ?: lineId)?.takeIf { it > 0 }
+            if (id == null) {
+                revealed = true
+                return@LaunchedEffect
+            }
             if (id == clicked && revealed) {
                 clicked = null
                 return@LaunchedEffect
@@ -517,10 +604,23 @@ private fun DafPages(
                 if (index >= 0 && (!revealed || listState.layoutInfo.visibleItemsInfo.none { it.index == index })) {
                     listState.scrollToItem(index)
                 }
+            } else if (opening != null) {
+                openOn(id)
             } else {
                 reveal(id, always = !revealed)
             }
             revealed = true
+        }
+
+        // Its place told once it rests there, for the tab to come back to it
+        val currentOnScroll by rememberUpdatedState(onScroll)
+        LaunchedEffect(listState) {
+            snapshotFlow { listState.isScrollInProgress to revealed }
+                .filter { (scrolling, placed) -> placed && !scrolling }
+                .collect {
+                    withFrameNanos { }
+                    control.where()?.let { currentOnScroll(it.topLineId) }
+                }
         }
 
         val hScroll = rememberScrollState()

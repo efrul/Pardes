@@ -41,7 +41,14 @@ class DafIndexTest {
                         line("R", 68f, 5002, 5003),
                         line("T", 60f, 9001, 9002),
                     ),
-                    amud("2b", line("G", 60f, 12), line("R", 60f, 5003, 5004), line("R", 68f, 3001), line("R", 76f, 3002)),
+                    amud(
+                        "2b",
+                        line("G", 60f, 12),
+                        line("G", 70f, 12),
+                        line("R", 60f, 5003, 5004),
+                        line("R", 68f, 3001),
+                        line("R", 76f, 3002),
+                    ),
                     amud("3a", line("G", 60f, 13), line("R", 60f, 3003), line("T", 60f, 9003)),
                 ),
         )
@@ -69,6 +76,26 @@ class DafIndexTest {
         assertNull(index.next(9003, forward = true))
         assertNull(index.next(5001, forward = false))
         assertNull(index.next(10, forward = true))
+    }
+
+    @Test
+    fun `the Gemara's segment read at a place is the first that begins on the line there, or the one going on`() {
+        assertEquals(10L, index.gemaraAt(0, 0f))
+        assertEquals(11L, index.gemaraAt(0, 15f), "segment 10 goes on through the line, 11 begins on it")
+        assertEquals(12L, index.gemaraAt(0, 25f), "past the amud's last line: the next amud's first")
+        assertEquals(12L, index.gemaraAt(1, 15f), "no segment begins on the line: the one that goes on through it")
+        assertEquals(13L, index.gemaraAt(2, 10f))
+        assertNull(index.gemaraAt(2, 11f))
+    }
+
+    @Test
+    fun `a view scrolled to a segment's place reads that segment again`() {
+        for (id in listOf(10L, 11L, 12L, 13L)) {
+            val (amud, top) = index.places.getValue(id)
+            assertEquals(id, index.gemaraAt(amud, top))
+        }
+        assertEquals(10f, index.gemaraTop(0))
+        assertNull(index.gemaraTop(5))
     }
 
     @Test
