@@ -135,6 +135,25 @@ class LibraryLinksTest {
     }
 
     @Test
+    fun aBooksNotesAndTheLinesTheyStartWith() {
+        connection.createStatement().use {
+            it.executeUpdate("INSERT INTO book VALUES (4, 'הערות על בית יוסף', 30, 10)")
+            it.executeUpdate(
+                "INSERT INTO line VALUES (41, 4, 0, '<b>(1)</b> הערה ראשונה ארוכה', null), (42, 4, 1, '<b>(2)</b> שנייה', null)",
+            )
+        }
+        assertEquals(mapOf(3L to 4L), LibraryLinks.booksWithNotes(connection))
+        link(31, 41, ConnectionType.COMMENTARY)
+        link(31, 42, ConnectionType.COMMENTARY)
+        link(31, 11, ConnectionType.OTHER)
+        assertEquals(
+            mapOf(31L to listOf(41L to "<b>(1)</b> הער", 42L to "<b>(2)</b> שני")),
+            LibraryLinks.linkedStarts(connection, 4, listOf(31L, 32L), 14),
+        )
+        assertTrue(LibraryLinks.linkedStarts(connection, 4, emptyList(), 14).isEmpty())
+    }
+
+    @Test
     fun noLinesNoLinks() {
         assertTrue(LibraryLinks.linked(connection, emptyList()).isEmpty())
         assertFalse(LibraryLinks.anyLinked(connection, emptyList()))

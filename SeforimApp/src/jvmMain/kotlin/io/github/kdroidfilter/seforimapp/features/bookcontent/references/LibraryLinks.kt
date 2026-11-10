@@ -46,6 +46,27 @@ class LibraryLinks(
         count: Int,
     ): List<Long> = read(emptyList()) { connection -> idsBefore(connection, line, count) }
 
+    /**
+     * The lines of the book [bookId] that each of [lineIds] is linked to, each with the [chars] letters it starts with:
+     * {line: (linked line, its start)}. A book's notes are told so, by the number each starts with.
+     */
+    suspend fun startsIn(
+        bookId: Long,
+        lineIds: Collection<Long>,
+        chars: Int,
+    ): Map<Long, List<Pair<Long, String>>> = read(emptyMap()) { connection -> linkedStarts(connection, bookId, lineIds, chars) }
+
+    /**
+     * The books that have a book of notes on them, each with it: {book: its notes}, the notes' book named for it
+     * ([NOTES_ON]). A few rows, read where it is called; empty when the database can't be read.
+     */
+    fun notedBooks(): Map<Long, Long> =
+        runCatching { readOnly(databasePathProvider.get()).use(::booksWithNotes) }
+            .getOrElse {
+                warnln { "[LibraryLinks] the library's books of notes could not be read: $it" }
+                emptyMap()
+            }
+
     /** The books right under [categories]; a few rows, read where it is called. Empty when the database can't be read. */
     fun booksOf(categories: Collection<Long>): Set<Long> =
         runCatching { readOnly(databasePathProvider.get()).use { connection -> booksIn(connection, categories) } }
@@ -72,6 +93,9 @@ class LibraryLinks(
             setOf(ConnectionType.QUOTATION, ConnectionType.MISHNAH_IN_TALMUD, ConnectionType.RELATED, ConnectionType.OTHER)
 
         private val KIND_IDS = "SELECT id FROM connection_type WHERE name IN (${KINDS.joinToString { "'${it.name}'" }})"
+
+        /** What the library names a book's notes by: הערות על חברותא על ברכות, the notes on חברותא על ברכות. */
+        const val NOTES_ON = "הערות על "
 
         // The library read only, by a property and not a file: URI, which a '#' or a '%' in the folder's name would break
         private fun readOnly(path: String): Connection =
@@ -190,6 +214,41 @@ class LibraryLinks(
                 statement.setInt(3, line.lineIndex)
                 statement.executeQuery().use { rows -> buildList { while (rows.next()) add(rows.getLong(1)) } }
             }
+        }
+
+        /** [LibraryLinks.startsIn] on [connection]. */
+        internal fun linkedStarts(
+            connection: Connection,
+            bookId: Long,
+            lineIds: Collection<Long>,
+            chars: Int,
+        ): Map<Long, List<Pair<Long, String>>> {
+            if (lineIds.isEmpty()) return emptyMap()
+            val sql =
+                """
+                SELECT k.sourceLineId, ol.id, substr(ol.content, 1, $chars)
+                FROM link k
+                JOIN line ol ON ol.id = k.targetLineId
+                WHERE k.sourceLineId IN (${lineIds.joinToString(",")}) AND +k.targetBookId = $bookId
+                """.trimIndent()
+            val found = HashMap<Long, MutableList<Pair<Long, String>>>()
+            connection.createStatement().use { statement ->
+                statement.executeQuery(sql).use { rows ->
+                    while (rows.next()) found.getOrPut(rows.getLong(1)) { ArrayList(2) } += rows.getLong(2) to rows.getString(3)
+                }
+            }
+            return found
+        }
+
+        /** [LibraryLinks.notedBooks] on [connection]. */
+        internal fun booksWithNotes(connection: Connection): Map<Long, Long> {
+            val books = HashMap<Long, Long>()
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT b.id, n.id FROM book b JOIN book n ON n.title = '$NOTES_ON' || b.title").use { rows ->
+                    while (rows.next()) books[rows.getLong(1)] = rows.getLong(2)
+                }
+            }
+            return books
         }
 
         /** [LibraryLinks.booksOf] on [connection]. */
