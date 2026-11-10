@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (146 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (148 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -914,13 +914,15 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +270 −37 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +277 −39 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
   - `CatBookRow.Category`: a category to search in. `catBookRows` orders references, books named by their title, a title
     being typed, categories named exactly, books named only by an acronym, authors, the text search (first when books or
-    categories are picked already, `textSearchFirst`), then the other authors, categories and books.
+    categories are picked already, `textSearchFirst`), then the other authors, categories and books. A book whose title
+    is typed has its authors right after it, with the authors named as it (`typedBooks`, `bookAuthors`): no category,
+    acronym or text search pushes them down.
   - `tocAddRows`: in a book, the other books and categories to add to its search.
   - `HomeSearchCallbacks` gains `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and `onNewBarOpened`
     (a new tab's bar opens empty, as Zayit's; null where it opens where its search looked).
@@ -934,7 +936,8 @@ The entries of this section by kind:
   - Ctrl+Enter and "search all books" are Enter when the scope's books are all searched (an author or a category).
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
-  (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`).
+  (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
+  be pushed down when the book typed bears his name.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: `HomeView.kt` is one of Zayit's largest files (some 1,900 lines), and the edits run through
   its search bar's key handling, its rows and its panels.
@@ -1023,14 +1026,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchHomeViewModel.kt`
 
-- **Change:** modified, +229 −15 lines. Feature: Search in categories, Book and author titles search.
+- **Change:** modified, +231 −15 lines. Feature: Search in categories, Book and author titles search.
 - **What:**
   - `SearchHomeUiState` gains `categorySuggestions`, `selectedScopeCategory` and `scopeItems` (the books and categories
     picked, in order).
   - A constructor parameter `libraryCategories: LibraryCategories` (the app's categories with their paths and books).
   - The bar's suggestions add the categories the text names (`CategorySuggestions.match`), and the authors of the books
     whose title is typed (`authorsOfBook`, `AuthorNames.withAuthorsOfBooks`); authors found by the title index skip the
-    word-by-word check; no authors while books or categories are being added.
+    word-by-word check; no authors while books or categories are being added. An author found by name keeps the book
+    typed that he wrote (`withTheirBooks`), for his row to come beside the book's.
   - In a book, the other books and categories the text names are offered to add (`booksAndCategoriesToAdd`).
   - `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and the private `applyScopeItems`: one book
     alone puts the bar in it (its TOC), more books or categories search them together.
@@ -1046,7 +1050,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** high: the edits run through Zayit's suggestion pipeline and its scope functions.
 - **Smaller:** the category and scope state could be a Pardes helper class the ViewModel delegates to; the suggestion
   pipeline's edits stay.
-- **Tests:** `CategorySuggestionsTest`, `ScopeItemsTest`, `CategoryScopeSearchTest`, `CategorySuggestionsE2ETest`.
+- **Tests:** `CategorySuggestionsTest`, `ScopeItemsTest`, `CategoryScopeSearchTest`, `CategorySuggestionsE2ETest`,
+  `AuthorBooksTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
@@ -2782,8 +2787,8 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 ### Books and authors found by name
 
 The bar finds books and authors by name as people type them (spellings, typos, word order, acronyms), from an in-memory
-index of the catalog, after Klei Kodesh's Kitvei Hakodesh. Hooks: `LuceneLookupSearchService.kt`, `AppCoreBindings.kt`,
-`SearchHomeViewModel.kt`, `AuthorNames.kt`, `HomeView.kt`.
+index of the catalog, after Klei Kodesh's Kitvei Hakodesh; a book typed by its title has its author right after it.
+Hooks: `LuceneLookupSearchService.kt`, `AppCoreBindings.kt`, `SearchHomeViewModel.kt`, `AuthorNames.kt`, `HomeView.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/titles/BookTitleIndex.kt`
 
@@ -2860,6 +2865,27 @@ index of the catalog, after Klei Kodesh's Kitvei Hakodesh. Hooks: `LuceneLookupS
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `…E2ETest`s on a real library.
 - **Tests:** it is one (end to end).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorBooks.kt`
+
+- **Feature:** Book and author titles search.
+- **Size:** 20 lines.
+- **What:** `withTheirBooks`: the authors found by name, each with the book he wrote among those the query names
+  (`ofBook`), so that `catBookRows` puts his row beside the book's and the row says whose book it is (בן איש חי: יוסף
+  חיים); an author whose name is the query itself gets none (רמבם).
+- **Reached from:** `SearchHomeViewModel.kt` (the bar's author suggestions).
+- **Follows:** `AuthorNames.withAuthorsOfBooks` beside it, which it feeds.
+- **Tests:** `AuthorBooksTest`, `CatBookRowsTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorBooksTest.kt`
+
+- **Feature:** Book and author titles search.
+- **Size:** 27 lines.
+- **What:** an author found by name keeps the first book typed that he wrote; one named as typed (רמבם, רש"י) is offered
+  for his name alone.
+- **Reached from:** the JVM tests.
+- **Follows:** `AuthorNamesTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/search/titles/TitleSearchBench.kt`
 
@@ -3025,10 +3051,11 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/CatBookRowsTest.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 99 lines.
+- **Size:** 166 lines.
 - **What:** the bar's rows: a category named as typed before the books whose titles begin so and before those an acronym
-  names so, a book's own title before it; acronym books first with no category named; a title being typed first; in a
-  book, a category before the other books to add (`catBookRows`, `tocAddRows`).
+  names so, a book's own title before it; acronym books first with no category named; a title being typed first; the
+  authors of the book typed, and those named as it, right after it, and after the categories and acronyms when no book
+  is titled so; in a book, a category before the other books to add (`catBookRows`, `tocAddRows`).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, `HomeView.kt`'s row order).

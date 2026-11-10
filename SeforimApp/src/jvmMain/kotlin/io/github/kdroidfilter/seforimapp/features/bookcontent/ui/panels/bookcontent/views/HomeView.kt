@@ -171,6 +171,8 @@ internal sealed interface CatBookRow {
  * the first book whose title it begins comes before the text search too. A category's name is no title being typed:
  * `משנה תורה` is the category, not the first of its books (משנה תורה, מסירת תורה שבעל פה), and it comes before the
  * books only an acronym names so (a library may call משנה תורה, הלכות שבת `משנה תורה`); a book's own title before it.
+ * A book whose title is typed has its authors right after it, and the authors named as it (`כף החיים`: the book, the two
+ * authors, then the category): no category, acronym or text search pushes them down.
  */
 internal fun catBookRows(
     query: String,
@@ -198,16 +200,19 @@ internal fun catBookRows(
                     .replace(",", "")
             namedBooks.isEmpty() && exactCategories.isEmpty() && ' ' in key && title.startsWith(key)
         }
+    val typedBooks = (titledBooks + listOfNotNull(typedTitle)).map { it.book.title }
+    val (bookAuthors, laterAuthors) = otherAuthors.partition { it.ofBook in typedBooks }
     return buildList {
         if (textSearch && textSearchFirst) add(CatBookRow.TextSearch)
         jumps.mapTo(this) { CatBookRow.Jump(it) }
         titledBooks.mapTo(this) { CatBookRow.Book(it) }
         typedTitle?.let { add(CatBookRow.Book(it)) }
+        if (typedBooks.isNotEmpty()) (exactAuthors + bookAuthors).mapTo(this) { CatBookRow.Author(it) }
         exactCategories.mapTo(this) { CatBookRow.Category(it) }
         acronymBooks.mapTo(this) { CatBookRow.Book(it) }
-        exactAuthors.mapTo(this) { CatBookRow.Author(it) }
+        if (typedBooks.isEmpty()) exactAuthors.mapTo(this) { CatBookRow.Author(it) }
         if (textSearch && !textSearchFirst) add(CatBookRow.TextSearch)
-        otherAuthors.mapTo(this) { CatBookRow.Author(it) }
+        laterAuthors.mapTo(this) { CatBookRow.Author(it) }
         otherCategories.mapTo(this) { CatBookRow.Category(it) }
         otherBooks.filter { it !== typedTitle }.mapTo(this) { CatBookRow.Book(it) }
     }.toImmutableList()

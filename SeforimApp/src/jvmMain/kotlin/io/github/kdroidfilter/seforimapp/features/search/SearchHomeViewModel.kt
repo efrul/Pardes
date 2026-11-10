@@ -18,6 +18,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Refere
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceResolver
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.RepositoryReferenceSource
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ResolvedReference
+import io.github.kdroidfilter.seforimapp.features.search.domain.withTheirBooks
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
@@ -309,7 +310,8 @@ class SearchHomeViewModel(
                                                     .filter { it.namesBook }
                                                     .take(MAX_NAMED_BOOKS)
                                                     .flatMap { book -> lookup.authorsOfBook(book.id).map { it.copy(ofBook = book.title) } }
-                                            AuthorNames.withAuthorsOfBooks(byName, ofBooks, MAX_AUTHOR_SUGGESTIONS) { it.id }
+                                            val named = byName.withTheirBooks(ofBooks, q)
+                                            AuthorNames.withAuthorsOfBooks(named, ofBooks, MAX_AUTHOR_SUGGESTIONS) { it.id }
                                         }
 
                                     val jumpsDeferred =
