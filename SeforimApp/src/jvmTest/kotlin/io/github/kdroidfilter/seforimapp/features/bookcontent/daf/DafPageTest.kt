@@ -9,12 +9,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.platform.Font
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.sp
 import org.jetbrains.skia.EncodedImageFormat
 import java.io.File
 import kotlin.test.Test
@@ -81,6 +84,29 @@ class DafPageTest {
         val shared = sizesOf(layout(amud, sizes))
         assertEquals(shared, sizesOf(layout(lower, sizes)), "the tractate's sizes give both amudim the same letters")
         assertTrue(shared.values.all { it.size == 1 }, "one size for the Gemara, one for the commentaries")
+    }
+
+    @Test
+    fun aLongRunsLinesStayOnTheirPitchAtAnyScale() {
+        val run = layout(amud()).runs.filter { !it.isBig }.maxBy { it.lines.size }
+        assertTrue(run.lines.size >= 20, "a run long enough to drift")
+        val density = Density(1f)
+        val measurer = TextMeasurer(createFontFamilyResolver(), density, LayoutDirection.Rtl)
+        // A line is drawn whole pixels high: at 0.75 this run's lines, a fraction of a pixel off each, ended half a line low
+        for (k in listOf(0.62f, 0.75f, 0.8f, 1f, 1.37f)) {
+            val style =
+                TextStyle(
+                    fontFamily = if (run.isGemara) gemara else rashi,
+                    fontSize = (run.size * k).sp,
+                    textDirection = TextDirection.Rtl,
+                )
+            val measured = measurer.measure(run.annotated(k, density, null), style, softWrap = false)
+            assertEquals(run.lines.size, measured.lineCount)
+            for (slot in run.lines.indices) {
+                val below = measured.getLineTop(slot) - measured.getLineTop(0)
+                assertEquals(slot * run.pitch * k, below, 0.75f, "line $slot of ${run.lines.size} at $k")
+            }
+        }
     }
 
     @Test
