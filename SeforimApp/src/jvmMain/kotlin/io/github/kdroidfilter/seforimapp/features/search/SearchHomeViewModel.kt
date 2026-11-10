@@ -10,7 +10,6 @@ import io.github.kdroidfilter.seforimapp.core.deeplink.parseZayitDeepLink
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
-import io.github.kdroidfilter.seforimapp.features.search.domain.CategorySuggestions
 import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItems
@@ -321,7 +320,7 @@ class SearchHomeViewModel(
 
                                     val categoriesDeferred =
                                         async(Dispatchers.IO) {
-                                            CategorySuggestions.match(q, allCategories(), limit = MAX_CATEGORY_SUGGESTIONS)
+                                            categoriesNamed(q, limit = MAX_CATEGORY_SUGGESTIONS)
                                         }
 
                                     Suggestions(
@@ -413,7 +412,7 @@ class SearchHomeViewModel(
                     .filter { it.id != book.id }
                     .take(MAX_ADD_BOOK_SUGGESTIONS)
                     .map { found -> BookSuggestionDto(found, buildCategoryPathTitlesCached(found.categoryId) + found.title) }
-            val categories = CategorySuggestions.match(q, allCategories(), limit = MAX_ADD_CATEGORY_SUGGESTIONS)
+            val categories = categoriesNamed(q, limit = MAX_ADD_CATEGORY_SUGGESTIONS)
             books to categories
         }
 
@@ -559,8 +558,11 @@ class SearchHomeViewModel(
             )
     }
 
-    // The library's categories with their paths, for the suggestions
-    private suspend fun allCategories(): List<CategoryHit> = runSuspendCatching { libraryCategories.categories() }.getOrDefault(emptyList())
+    // The categories [q] names, and the commentaries on a book it names by their time, for the suggestions
+    private suspend fun categoriesNamed(
+        q: String,
+        limit: Int,
+    ): List<CategoryHit> = runSuspendCatching { libraryCategories.named(q, limit) }.getOrDefault(emptyList())
 
     // [categoryId]'s chip, whole or in its base books alone; null for a category the library doesn't have
     private suspend fun categoryHit(

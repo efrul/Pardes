@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (164 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (166 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1104,12 +1104,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchHomeViewModel.kt`
 
-- **Change:** modified, +231 −15 lines. Feature: Search in categories, Book and author titles search.
+- **Change:** modified, +233 −15 lines. Feature: Search in categories, Book and author titles search.
 - **What:**
   - `SearchHomeUiState` gains `categorySuggestions`, `selectedScopeCategory` and `scopeItems` (the books and categories
     picked, in order).
   - A constructor parameter `libraryCategories: LibraryCategories` (the app's categories with their paths and books).
-  - The bar's suggestions add the categories the text names (`CategorySuggestions.match`), and the authors of the books
+  - The bar's suggestions add what the text names to search in (`categoriesNamed`, `LibraryCategories.named`: the
+    commentaries on a book by their time, `ראשונים על בבא בתרא`, then the categories), and the authors of the books
     whose title is typed (`authorsOfBook`, `AuthorNames.withAuthorsOfBooks`); authors found by the title index skip the
     word-by-word check; no authors while books or categories are being added. An author found by name keeps the book
     typed that he wrote (`withTheirBooks`), for his row to come beside the book's.
@@ -1123,17 +1124,17 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - Constants for the numbers of suggestions.
 - **Why:** search in a whole category (`54180126`), in several books and categories together (`574f3d55`), in a
   category's base books (`37d4fe60`), books and authors found by name (`67fe471e`), a new tab's bar empty as in Zayit
-  (`03c84c1f`).
+  (`03c84c1f`), the commentaries on a book by their time, which the user asked to type on 2026-11-09.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the edits run through Zayit's suggestion pipeline and its scope functions.
 - **Smaller:** the category and scope state could be a Pardes helper class the ViewModel delegates to; the suggestion
   pipeline's edits stay.
 - **Tests:** `CategorySuggestionsTest`, `ScopeItemsTest`, `CategoryScopeSearchTest`, `CategorySuggestionsE2ETest`,
-  `AuthorBooksTest`.
+  `AuthorBooksTest`, `CommentaryGroupsTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +312 −43 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs.
+- **Change:** modified, +314 −43 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1141,7 +1142,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - **Feedback mode:** `feedbackFlow` holds the grades of the search shown, read again when the search or the mode
     changes; `grade()` shows a grade at once and saves it in order (a `Mutex`) with the query, rank, scope and the
     semantic model in use (`InstalledPack`), or takes it back.
-  - **Category scopes:** `scopeLabel()` names category and multi scopes; `showScopeLabel`, `setScopeBaseBooksOnly`
+  - **Category scopes:** `scopeLabel()` names category and multi scopes (a group of commentaries searched as a
+    category, which the repository doesn't have, by its label); `showScopeLabel`, `setScopeBaseBooksOnly`
     (searches again, and tells the bar through `scopeChanges`); `scopeBookIds()` replaces Zayit's `authorBookIds()` and
     adds a category's books (or its base books alone) and several books and categories; a search narrowed to a book or
     TOC entry keeps its wider scope to go back to (`wideScope`).
@@ -3374,13 +3376,53 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/LibraryCategories.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 123 lines.
+- **Size:** 153 lines.
 - **What:** `LibraryCategories`, the library's categories for the search: each with its path (what the bar suggests), the
-  books it searches (all those under it, or its base books alone), whether it holds both kinds, and its chip (`hit`).
+  books it searches (all those under it, or its base books alone), whether it holds both kinds, and its chip (`hit`). It holds the commentaries on a book by their time too
+  (`CommentaryGroups`, read with the categories from the same links): `named(query, limit)` offers them before the
+  categories a text names, and `hit` and `bookIds` know them by their ids, so that one is searched, kept and restored as
+  a category is.
 - **Reached from:** `AppCoreBindings.kt`, `SearchHomeViewModel.kt`, `SearchResultViewModel.kt`.
 - **Follows:** Zayit's catalog (`CatalogCache`) and `CategoryNavigationUseCase`, whose `collectBookIdsUnderCategory` it
   replaces in the results.
 - **Tests:** `LibraryCategoriesTest`, `CategorySuggestionsE2ETest`, `CategoryScopeSearchTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommentaryGroups.kt`
+
+- **Feature:** Search in categories (commentaries on a book).
+- **Size:** 140 lines.
+- **What:** `CommentaryGroups`: the commentaries on one book that stand under one category named for their time
+  (גאונים, ראשונים, אחרונים, מחברי זמננו, מפרשים): "ראשונים על בבא בתרא" is the 18 books under תלמוד › בבלי › ראשונים that
+  comment on בבא בתרא, which the library keeps each in its commentator's category.
+  - `of(roots, links)`: the groups of the catalog. A commentary is on the book it has the most links to and on any
+    other that has a tenth of its links (the רי״ף on בבא מציעא is not on בבא בתרא, which a few of its lines are linked
+    to); the group's category must be in the root category of the book commented on, and a group has two books at
+    least. 608 groups on the library of 2026-10-12.
+  - `match(query, groups, limit)`: the groups a text names, a word of it beginning the time's name and the others the
+    book's title (`ראשונים על בבא בתרא`, `מפרשי השולחן ערוך אורח חיים`); the book named in full first. The book alone or
+    the time alone names none.
+  - `idOf(categoryId, bookId)`: the id a group is searched under, ten million at least, where a category's is a few
+    thousand: it is kept wherever a category's id is (`SearchScope.Category`, the tab's state, the history).
+- **Reached from:** `LibraryCategories.kt`.
+- **Follows:** `CategorySuggestions` (an object, `match` with a limit, `searchKey` words, `על` skipped) and `BaseBooks`
+  (a walk of the catalog with the library's commentary links).
+- **Tests:** `CommentaryGroupsTest`; `LibraryCategories.named` was run on the full library on 2026-11-10 (`ראשונים על
+  בבא בתרא`: 18 books, `אחרונים על ברכות`: 19, `ראשונים על בראשית`: 27, `מפרשים על הלכות שבת`: 68; ten milliseconds a text).
+- **Notes:** a group is no category of the library: code that asks the repository for a category by this id gets none
+  (the history's label falls back to the group's own, `SearchResultViewModel.scopeLabel`).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommentaryGroupsTest.kt`
+
+- **Feature:** Search in categories (commentaries on a book).
+- **Size:** 118 lines.
+- **What:** on a small catalog (two tractates, their ראשונים each in a category of his own, an אחרון, the Mishnah and
+  its commentators): a group is the commentaries on a book under a category named for a time, without the רי״ף on
+  another tractate, with its label and id, none of one book, the Mishnah's commentators on the Mishnah's tractate alone;
+  and a text names a group by its time and its book, the book named in full first, in any order and by the start of a
+  word, the book alone or the time alone naming none.
+- **Reached from:** the JVM tests.
+- **Follows:** `CategorySuggestionsTest` beside it.
+- **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CategorySuggestions.kt`
 
@@ -3407,12 +3449,13 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommentaryLinks.kt`
 
 - **Feature:** Search in categories (base books).
-- **Size:** 32 lines.
+- **Size:** 61 lines.
 - **What:** `CommentaryLinks`, the library's commentaries and the books they comment on, read from its database on a
-  read-only connection of its own (the repository has no such query).
+  read-only connection of its own (the repository has no such query): `read()` the pairs, `counted()` each pair with
+  its links, which say how much of a commentary is on each book (`CommentaryGroups`).
 - **Reached from:** `LibraryCategories.kt`.
 - **Follows:** `BookLevels.kt`'s `LibraryLines`, the same kind of connection.
-- **Tests:** `CategorySuggestionsE2ETest`.
+- **Tests:** `CategorySuggestionsE2ETest`; `counted()` was run on the full library (12,897 pairs in 1.1 s).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/ScopeItems.kt`
 
