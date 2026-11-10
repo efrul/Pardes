@@ -300,6 +300,112 @@ class DafPageTest {
         assertEquals((words.drop(2) + next.take(2)).joinToString(" "), amud.textOf(range))
     }
 
+    // A printed line of [column], its box [left] to [right] from [top] down, its dibbur's words [bold]
+    private fun line(
+        column: String,
+        left: Float,
+        top: Float,
+        right: Float,
+        text: String,
+        bold: List<Int> = emptyList(),
+        big: Int = 0,
+    ): DafLine {
+        val height =
+            when {
+                big == 1 -> 13f
+                column == "G" -> 10f
+                else -> 7.5f
+            }
+        return DafLine(c = column, b = listOf(left, top, right, top + height), t = text, d = bold, big = big)
+    }
+
+    private fun amudOf(lines: List<DafLine>) =
+        DafAmud(amud = "2a", page = listOf(600f, 850f), block = listOf(100f, 50f, 500f, 700f), lines = lines)
+
+    private val gemaraLines =
+        listOf(
+            line("G", 260f, 100f, 500f, "אמר רבי יוחנן הלכה כרבי יהודה בן בתירא"),
+            line("G", 260f, 111f, 500f, "ומי אמר רבי יוחנן הכי והאמר רבה בר"),
+        )
+
+    @Test
+    fun aDibbursFirstWordInTosafotIsInTheGemarasLettersALittleBigger() {
+        // Tosafot's first dibbur starts with a big word, its others inside lines: one goes on to the next line, one
+        // starts with a big word the line stands on both sides of. Rashi's are bold alone
+        val amud =
+            amudOf(
+                gemaraLines +
+                    listOf(
+                        line("T", 215f, 97f, 245f, "מאי", listOf(0), big = 1),
+                        line("T", 100f, 100f, 210f, "קא משמע לן. אע״ג דקא", listOf(0, 1, 2)),
+                        line("T", 100f, 110f, 245f, "לעיל: כי רצו מאי", listOf(1, 2, 3)),
+                        line("T", 100f, 120f, 245f, "הוי ניהדרו בהו. למ״ד", listOf(0, 1, 2)),
+                        line("T", 100f, 130f, 245f, "הכותל: קנין דברים. בפרק שני", listOf(1, 2)),
+                        line("T", 165f, 137f, 195f, "ואין", listOf(0), big = 1),
+                        line("T", 100f, 140f, 245f, "לו: הבור מתמלא מחוליתו. ועוד: רב אמר", listOf(1, 2, 3, 5)),
+                        line("R", 100f, 300f, 245f, "כיון דרצו. לחלוק ולקמן", listOf(0, 1)),
+                        line("R", 100f, 310f, 245f, "פריך מאי איריא: בונין כותל.", listOf(3, 4)),
+                    ),
+            )
+        for (sizes in listOf(null, DafSizes.of(amud.block[2] - amud.block[0]))) {
+            val laidOut = layout(amud, sizes)
+            val letters = laidOut.runs.first { it.isGemara && !it.isBig }.size
+            val leads =
+                laidOut.runs
+                    .filter { !it.isBig }
+                    .flatMap { it.lines.filterNotNull() }
+                    .associate { amud.lines[it.index].t.substringBefore(' ') to it.lead }
+            assertEquals(emptySet(), leads["קא"], "the words after a big first word go on with its dibbur")
+            assertEquals(setOf(1), leads["לעיל:"])
+            assertEquals(emptySet(), leads["הוי"], "a dibbur going on from the line above")
+            assertEquals(setOf(1), leads["הכותל:"])
+            assertEquals(setOf(5), leads["לו:"], "after the big word in the line, the next dibbur's first word")
+            assertEquals(emptySet(), leads["כיון"], "Rashi's dibbur is bold alone")
+            assertEquals(emptySet(), leads["פריך"])
+
+            val tosafot = laidOut.runs.filter { it.column == "T" }
+            for (run in tosafot.filter { !it.isBig }) {
+                val lead = assertNotNull(run.lead)
+                assertEquals(gemara, lead.family)
+                assertEquals(letters * 1.07f, lead.ratio * run.size, 0.01f, "1.07 of the Gemara's letters")
+            }
+            assertTrue(laidOut.runs.filter { it.column == "R" }.all { it.lead == null })
+            // A big first word of Tosafot is a dibbur's first word as the others: its box is two lines high, the word is not
+            val big = tosafot.filter { it.isBig }
+            assertEquals(2, big.size)
+            for (run in big) assertEquals(letters * 1.07f, run.size, 0.01f)
+        }
+    }
+
+    @Test
+    fun linesWithADibbursFirstWordStayOnTheirPitch() {
+        val amud = amudOf(gemaraLines + List(14) { line("T", 100f, 100f + 10f * it, 245f, "טעמא: כי רצו מאי הוי ניהדרו", listOf(1, 2, 3)) })
+        val run = layout(amud, DafSizes.of(amud.block[2] - amud.block[0])).runs.single { it.column == "T" }
+        assertEquals(14, run.lines.size)
+        assertTrue(run.lines.all { it?.lead == setOf(1) })
+        val density = Density(1f)
+        val measurer = TextMeasurer(createFontFamilyResolver(), density, LayoutDirection.Rtl)
+        for (k in listOf(0.62f, 0.75f, 0.8f, 1f, 1.37f)) {
+            val style = TextStyle(fontFamily = rashi, fontSize = (run.size * k).sp, textDirection = TextDirection.Rtl)
+            val lead = assertNotNull(run.lead)
+            val text =
+                run.annotated(k, density, null) { lineHeight, size ->
+                    measurer.leadLineHeight(style, lead, size, lineHeight, density)
+                }
+            // The first word of each line's dibbur is in the Gemara's letters, bigger than its line's
+            val word = run.rangeOf(0, 1)
+            val square = text.spanStyles.single { it.item.fontFamily == gemara && it.start == word.first }
+            assertEquals(word.last + 1, square.end)
+            assertTrue(square.item.fontSize.value > run.size * k)
+            val measured = measurer.measure(text, style, softWrap = false)
+            assertEquals(run.lines.size, measured.lineCount)
+            for (slot in run.lines.indices) {
+                val below = measured.getLineTop(slot) - measured.getLineTop(0)
+                assertEquals(slot * run.pitch * k, below, 0.75f, "line $slot of ${run.lines.size} at $k")
+            }
+        }
+    }
+
     @OptIn(ExperimentalComposeUiApi::class)
     @Test
     fun drawsThePage() {

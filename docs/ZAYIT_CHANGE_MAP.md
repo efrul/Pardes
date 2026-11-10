@@ -1662,35 +1662,46 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafSetting.kt`
 
 - **Feature:** Daf view.
-- **Size:** 605 lines.
+- **Size:** 690 lines.
 - **What:** typesetting an amud: `layoutAmud` sets every line in runs (a column's lines one below the other at its
   pitch), one size of letters per column, made smaller for a line only as far as its words need, its spaces widened to
   fill its box, a big word's neighbours set beside it, an overfull line given its empty neighbour's room. `DafSizes`
   is a tractate's usual box height for the Gemara and for a commentary, a set share of its block's width
   (`GEMARA_BOX`, `COMMENTARY_BOX`): given to `layoutAmud`, every amud's letters are that one size, whatever the height
   of its own boxes, which follows each scan (without it, as the tests lay out a lone amud, a column's own usual box).
-  The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`) and the constants of the printed page's
-  proportions.
+  In Tosafot the first word of each dibbur is set in the Gemara's square letters, bold, 1.07 of the Gemara's own
+  (`LEAD_SIZE`, measured on the scans: 162 such words of 12 tractates, pardes-rashi-ocr's
+  `docs/experiments/2026-11-10-tosafot-dibbur-size`): a word of a dibbur (`d`) after a word of none, but where the
+  dibbur goes on from the line above or after a big first word (`firsts`, `Marks`); a big first word of Tosafot is
+  such a word too, set that size and no longer by its box's height (the box is two lines high, the word is not).
+  Rashi's dibbur stays bold in its own script. The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`,
+  `Marks`) and the constants of the printed page's proportions.
 - **Reached from:** `DafView.kt` (`layoutAmud`, `DafSizes`).
 - **Follows:** Pardes's own.
-- **Tests:** `DafPageTest` (evenly spaced runs, words in order, one size of letters with a tractate's sizes).
-- **Notes:** with some 28 functions it passes `detekt.yml`'s 15 per file.
+- **Tests:** `DafPageTest` (evenly spaced runs, words in order, one size of letters with a tractate's sizes, the
+  first word of each dibbur of Tosafot and its size).
+- **Notes:** with some 32 functions it passes `detekt.yml`'s 15 per file.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPage.kt`
 
 - **Feature:** Daf view.
-- **Size:** 561 lines.
+- **Size:** 632 lines.
 - **What:** drawing a set amud: `DafAmudText` draws each run of lines as one text in the text's own components (a square
   letter for the Gemara, Rashi script for the commentaries), with highlights behind words, notes underlined, selection by
   click and drag in the reading order (`DafRange`, `textOf`, `lineRangeOf`), a right-click that opens the menu on its
   word and selects nothing, as on the text's lines, and lighter unsure lines when asked (`UNSURE_INK`). A run's lines
   are each given whole pixels of height that follow its pitch (`TextRun.annotated`): the text draws a line whole pixels
-  high, and at one height for all a long run ended up to half a line off, on the next run's first line. `DafWord`,
-  `DafHighlight`, `RunLine`, `TextRun` and `AmudLayout` are its model.
+  high, and at one height for all a long run ended up to half a line off, on the next run's first line. The first
+  word of a dibbur of Tosafot (`RunLine.lead`) is drawn in the Gemara's square letters, bold and bigger than its line's
+  (`LeadStyle`, `TextRun.lead`), as the Vilna Shas prints it; a line with one is drawn a pixel or two higher than its
+  line height (the square letters stand higher on their line than Rashi script), so it is given the line height that
+  is drawn as high as the line is (`leadLineHeight`, measured once for a run and a scale). `DafWord`, `DafHighlight`,
+  `RunLine`, `TextRun`, `LeadStyle` and `AmudLayout` are its model.
 - **Reached from:** `DafView.kt`, `DafSetting.kt`, `DafAnchors.kt`, `DafAmudLinks.kt`.
 - **Follows:** the text view's highlight and note marks (Zayit's `applyUserHighlights`), drawn the same way.
 - **Tests:** `DafPageTest` (a click reaches its word, a right-click its menu, a drag goes down a column, a range is
-  copied as printed, a long run's lines on their pitch at any scale, the page drawn to `build/reports/daf/`).
+  copied as printed, a long run's lines on their pitch at any scale, with a dibbur's first word in each too, the page
+  drawn to `build/reports/daf/`).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafIndex.kt`
 
@@ -1877,12 +1888,14 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPageTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 327 lines.
+- **Size:** 433 lines.
 - **What:** Berakhot 35b drawn from its layout (`berakhot-35b.json`): every line in a run of its column, evenly spaced, a
   run's text in order and searchable, the amud and a copy of it with lower boxes set in one size of letters by a
   tractate's sizes, a run of 52 lines each within a pixel of its pitch at five scales, a click reaching its callback, a right-click opening the menu on its word with nothing selected, a
   drag down a column, a range read in the amud's order and copied as printed; the drawing written to
-  `build/reports/daf/`.
+  `build/reports/daf/`. And an amud made for the dibburim of Tosafot: the first word of each in the Gemara's letters,
+  1.07 of the Gemara's size, but where a dibbur goes on from the line above or after a big first word (itself that
+  size), Rashi's bold alone; 14 lines with such a word each within a pixel of their pitch at five scales.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's screenshot tests: an `ImageComposeScene` drawn to PNG, pointer events sent to it.
 - **Tests:** it is one (Compose, off screen).
