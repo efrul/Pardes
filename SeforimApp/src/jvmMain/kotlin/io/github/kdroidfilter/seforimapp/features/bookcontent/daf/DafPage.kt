@@ -153,13 +153,16 @@ internal class TextRun(
         unsureInk: Color?,
     ): AnnotatedString =
         with(density) {
-            val lineHeight = (pitch * k).toSp()
+            // A line is drawn whole pixels high, so each is given the pixels that keep it where its pitch puts it: at one
+            // height for all, a run of 25 lines 21.6 pixels apart ended 10 pixels low, on the next run's first line
+            val step = pitch * k
             buildAnnotatedString {
                 append(text)
                 lines.forEachIndexed { slot, line ->
                     val start = lineStarts[slot]
                     val end = lineStarts.getOrNull(slot + 1) ?: text.length
                     val indent = line?.indent?.takeIf { it > 0f }?.let { TextIndent(firstLine = (it * k).toSp()) }
+                    val lineHeight = (((slot + 1) * step).roundToInt() - (slot * step).roundToInt()).toSp()
                     addStyle(ParagraphStyle(textIndent = indent, lineHeight = lineHeight, lineHeightStyle = CENTERED), start, end)
                     if (line == null) return@forEachIndexed
                     if (abs(line.size - size) > SAME_SIZE) addStyle(SpanStyle(fontSize = (line.size * k).toSp()), start, end)

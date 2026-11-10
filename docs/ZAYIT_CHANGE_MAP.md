@@ -1654,16 +1654,18 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPage.kt`
 
 - **Feature:** Daf view.
-- **Size:** 558 lines.
+- **Size:** 561 lines.
 - **What:** drawing a set amud: `DafAmudText` draws each run of lines as one text in the text's own components (a square
   letter for the Gemara, Rashi script for the commentaries), with highlights behind words, notes underlined, selection by
   click and drag in the reading order (`DafRange`, `textOf`, `lineRangeOf`), a right-click that opens the menu on its
-  word and selects nothing, as on the text's lines, and lighter unsure lines when asked (`UNSURE_INK`). `DafWord`,
+  word and selects nothing, as on the text's lines, and lighter unsure lines when asked (`UNSURE_INK`). A run's lines
+  are each given whole pixels of height that follow its pitch (`TextRun.annotated`): the text draws a line whole pixels
+  high, and at one height for all a long run ended up to half a line off, on the next run's first line. `DafWord`,
   `DafHighlight`, `RunLine`, `TextRun` and `AmudLayout` are its model.
 - **Reached from:** `DafView.kt`, `DafSetting.kt`, `DafAnchors.kt`, `DafAmudLinks.kt`.
 - **Follows:** the text view's highlight and note marks (Zayit's `applyUserHighlights`), drawn the same way.
 - **Tests:** `DafPageTest` (a click reaches its word, a right-click its menu, a drag goes down a column, a range is
-  copied as printed, the page drawn to `build/reports/daf/`).
+  copied as printed, a long run's lines on their pitch at any scale, the page drawn to `build/reports/daf/`).
 
 #### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/GemaraPage.kt`
 
@@ -1834,10 +1836,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPageTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 301 lines.
+- **Size:** 327 lines.
 - **What:** Berakhot 35b drawn from its layout (`berakhot-35b.json`): every line in a run of its column, evenly spaced, a
   run's text in order and searchable, the amud and a copy of it with lower boxes set in one size of letters by a
-  tractate's sizes, a click reaching its callback, a right-click opening the menu on its word with nothing selected, a
+  tractate's sizes, a run of 52 lines each within a pixel of its pitch at five scales, a click reaching its callback, a right-click opening the menu on its word with nothing selected, a
   drag down a column, a range read in the amud's order and copied as printed; the drawing written to
   `build/reports/daf/`.
 - **Reached from:** the JVM tests.
