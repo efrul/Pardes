@@ -31,6 +31,29 @@ internal fun lookupWord(selection: String): String? {
     return words.joinToString(" ").takeIf { words.size in 1..MAX_WORDS }
 }
 
+// The letters a word takes before it in a text (וה, בכל, מש) and the Aramaic ד; at most two are dropped
+private const val PREFIXES = "והבכלמשד"
+private const val MOST_PREFIXES = 2
+
+/**
+ * [query]'s entries, as [lookup]; a word no entry begins with is looked up as it stands in a text, without the letters
+ * before it (`והלל`: הלל, `דאמר`: אמר): the fewest dropped that leave a word of the dictionaries.
+ */
+internal fun lookupAsRead(
+    entries: List<DictionaryEntry>,
+    query: String,
+): List<DictionaryEntry> {
+    val found = lookup(entries, query)
+    if (found.isNotEmpty()) return found
+    var word = normalizeWord(query)
+    repeat(MOST_PREFIXES) {
+        if (word.length < 2 || word[0] !in PREFIXES) return found
+        word = word.drop(1)
+        if (entries.any { it.key == word }) return lookup(entries, word)
+    }
+    return found
+}
+
 /** The dictionary's window opened on a word from outside it (the reader's menu), which waits here for its field. */
 @Inject
 @SingleIn(AppScope::class)
