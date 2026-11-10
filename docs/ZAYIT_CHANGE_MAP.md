@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (161 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (164 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -321,12 +321,13 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/main.kt`
 
-- **Change:** modified, +71 −3 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Verse links.
+- **Change:** modified, +71 −3 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts.
 - **What:**
   - `val appId = Brand.APP_ID` instead of Zayit's literal `"io.github.kdroidfilter.seforimapp"` (FileKit's data folder).
   - Before the graph: `remember { PendingSemanticPack.runOnce() }` puts a pack unpacked in the settings in place of the
     old one, and `remember { PendingLibraryMove.read() }` reads a library move asked for in the settings.
-  - Once the graph is made, `VerseLinks.library = it.libraryLinks`: the open verse links read the library's links.
+  - Once the graph is made, `TextLinks.library = it.libraryLinks`: Pardes's links in the texts (the verses the Talmud
+    quotes, the Chavruta's notes) read the library's links.
   - With a move pending, the catalog is not warmed (`if (pendingLibraryMove == null) warmCatalog(it)`) and the window
     shows `LibraryMoveWindow(pendingLibraryMove)` before the onboarding and the database update.
   - Once the library is open: `LaunchedEffect`s that warm the search (`warmSearch`) and, outside E2E runs, open the
@@ -339,8 +340,8 @@ The entries of this section by kind:
   - Imports for all of these, among them `kotlinx.coroutines.runBlocking` and `flow.first`.
 - **Why:** each is the entry point of a Pardes feature: the data folder that keeps Pardes apart from an installed Zayit
   (`47626634`), the library location (`58586e1a`), the semantic packs (`20e2fa81`, `77f5349b`, `cb0f0a27`), Pardes's
-  dictionary copy (`722af188`), the feedback (`ddf604d8`) and the verse links, an object the reader reaches without the
-  graph (Zayit's `installedQuoteLinks`). They must run before the graph or beside the main window,
+  dictionary copy (`722af188`), the feedback (`ddf604d8`) and the links in the texts, an object the reader reaches without
+  the graph (Zayit's `installedQuoteLinks`). They must run before the graph or beside the main window,
   which only `main` can do.
 - **Kind:** branding hook and Pardes feature hooks.
 - **Merge risk:** high. `main.kt` is long and Zayit edits it in most releases; the hooks sit in five places (the
@@ -1052,16 +1053,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/addons/quotelinks/disabled/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/InstalledQuoteLinks.kt`
 
-- **Change:** modified, +5 −2 lines. Feature: Verse links.
+- **Change:** modified, +5 −2 lines. Feature: Links in the texts.
 - **What:** Zayit's community value `installedQuoteLinks = null` (the lines as they are in the DB) becomes
-  `VerseLinks`, with a KDoc: Pardes's own verse links, from the library's links, depending on no proprietary package.
+  `TextLinks`, with a KDoc: Pardes's own links in the texts, from the library's links, depending on no proprietary
+  package.
 - **Why:** Zayit's open-core seam is where a build plugs its quote links; Pardes's community build plugs its own there,
   so `ContentUseCase` and `LinesPagingSource` stay as Zayit wrote them (`CLAUDE.md` › Open Core). The user asked for
-  verse links as Zayit's on 2026-11-09; Zayit's are a private package Pardes may not use.
+  verse links as Zayit's on 2026-11-09 (Zayit's are a private package Pardes may not use), and for the Chavruta's notes
+  to be reached from their marks.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small: Zayit's file is two lines.
 - **Smaller:** already minimal.
-- **Tests:** `VerseQuotesTest`, `LibraryLinksTest`.
+- **Tests:** `VerseQuotesTest`, `NoteLinksTest`, `LibraryLinksTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/SemanticSearchEngine.kt`
 
@@ -2291,7 +2294,7 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinks.kt`
 
 - **Feature:** More links.
-- **Size:** 233 lines.
+- **Size:** 292 lines.
 - **What:** `LibraryLinks`, the library's links of the kinds no pane listed (`KINDS`: QUOTATION, MISHNAH_IN_TALMUD,
   RELATED, OTHER; 1,738,497 links in the library of 2026-10-12). `of(lineIds)` gives the lines they reach as the
   repository's `LineReference`s, in both directions (such a link is stored once, with no direction of its own), a line
@@ -2303,9 +2306,13 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
   For the verse links, `linesIn(categories, lineIds)` gives the lines of the books right under some categories that each
   line is linked to, by such a link or a reference (the other line's book told from the link itself, before its line is
   read), `booksOf(categories)` the books right under them, read where it is called, and `lineIdsBefore(line, count)` the
-  lines that come before a line in its book.
+  lines that come before a line in its book. For the note links, `notedBooks()` gives the books that have a book of
+  notes on them, each with it (the notes' book named `הערות על` and the book's title, `NOTES_ON`: the 38 books of
+  חברותא), and `startsIn(bookId, lineIds, chars)` the lines of a book each line is linked to, with the letters each
+  starts with.
 - **Reached from:** `LineReferences.kt` (`loadLinePlaces`, `ReferenceKind.of`), `VerticalBars.kt` (the pane's button),
-  through `AppGraph.libraryLinks`; `VerseLinks` (`linesIn`, `booksOf`, `lineIdsBefore`), given it by `main.kt`.
+  through `AppGraph.libraryLinks`; `VerseLinks` (`linesIn`, `booksOf`, `lineIdsBefore`) and `NoteLinks` (`notedBooks`, `startsIn`), given it by
+  `TextLinks`, which `main.kt` gives it.
 - **Follows:** `CommentaryLinks` (an `@Inject` class reading the library on a JDBC connection of its own, the
   repository having no query); Zayit's `getReferencesForLines` for what a place is (a line once, the asked lines out).
 - **Tests:** `LibraryLinksTest`.
@@ -2317,21 +2324,20 @@ tab of their own, "קישורים נוספים", as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinksTest.kt`
 
 - **Feature:** More links.
-- **Size:** 162 lines.
+- **Size:** 181 lines.
 - **What:** on a small library made for the test (the four tables the links are read by): a line's links are those
   that start from it and those that reach it, each with its book's title, category and order; the kinds the panes
   already list (a commentary, a reference, עין משפט, מסורת הש״ס) are left to them; a line reached by several links is
   listed once, and the selected lines not at all, lines linked to one another only having nothing to list; no lines, no
   links; and the other kinds group under `ReferenceKind.More`, a tab of its own after the references, a book listed
   once as a reference and once with its other links. For the verse links: the lines of some categories' books a line is
-  linked to, either way and once, a commentary's link being none, the books right under some categories, and the lines before a
-  line in its book.
+  linked to, either way and once, a commentary's link being none, the books right under some categories, the lines before a line in its book, and a book's book of notes with the letters its linked notes start with.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `LineReferencesTest` beside it (Kotlin Test, camel-case names); `LevelPrecedenceTest` for a
   SQLite file made in the test.
 - **Tests:** it is one (unit).
 
-### The verses the Talmud quotes, as links to them
+### Links in the texts: the verses the Talmud quotes, and the Chavruta's notes
 
 A verse quoted in the Bavli or the Yerushalmi is a link to it, as in Zayit's official builds, without Zayit's private
 package: from the library's own links (a line of the Talmud linked to a verse) and the verse's words found in the line,
@@ -2339,22 +2345,40 @@ and in the lines after it that quote the verse again. On the library of 2026-10-
 lines of the 76 tractates (22,611 in the lines the library links, 16,943 of them in the Bavli and 5,668 in the
 Yerushalmi, and 1,607 quoted again; Zayit's package has 24,817). As the user asked on 2026-11-09, with two pictures of
 Zayit on 2026-11-10 that set the rule: a quote alone is a link, not the Talmud's own words that a verse has too, and a
-verse quoted again two lines on is one. Hooks:
-`addons/quotelinks/disabled/…/InstalledQuoteLinks.kt`, `main.kt`.
+verse quoted again two lines on is one.
+
+The marks of the Chavruta's notes, `(3)` in small letters, are links to their notes too, as Otzaria makes them and the
+user asked on 2026-11-09: the library links each line of חברותא to its notes, and a note starts with its number. All
+59,040 marks of the 38 books have their note among their line's (measured on the library of 2026-10-12).
+
+Hooks: `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt`, `main.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/TextLinks.kt`
+
+- **Feature:** Links in the texts.
+- **Size:** 30 lines.
+- **What:** `TextLinks`, Zayit's `QuoteLinksFeature` as Pardes's two kinds of links: `VerseLinks` and `NoteLinks`, made
+  when `library` is given, once the app's graph is made. A book is covered when one of them covers it, and its lines
+  are decorated by that one; until `library` is given no book is covered, and the reader loads the lines as they are.
+- **Reached from:** `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt` (`installedQuoteLinks`), which Zayit's
+  `ContentUseCase.buildLinesPager` reads; `main.kt` sets `library`.
+- **Follows:** Zayit's `TalmudQuoteLinks` in `addons/quotelinks/enabled` (an object implementing the feature); Pardes's
+  `InstalledSemanticSearch` for a community build that plugs its own.
+- **Tests:** none of its own; `VerseQuotesTest`, `NoteLinksTest` and `LibraryLinksTest` for what it joins.
+- **Notes:** `library` is a global set at start, as the feature itself is one (`installedQuoteLinks`): the reader
+  reaches it without the graph.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/VerseLinks.kt`
 
-- **Feature:** Verse links.
-- **Size:** 67 lines.
-- **What:** `VerseLinks`, Zayit's `QuoteLinksFeature` on the library's links. `covers(bookId)`: a tractate of the Bavli
+- **Feature:** Links in the texts.
+- **Size:** 63 lines.
+- **What:** `VerseLinks(library)`, Zayit's `QuoteLinksFeature` on the library's links, one of `TextLinks`' two. `covers(bookId)`: a tractate of the Bavli
   or the Yerushalmi (the books right under their sedarim, `CatalogPresets`' categories, read once). `decorate`: the
   verses each line of the page, and each of the ten lines before it (`lineIdsBefore`), is linked to
   (`LibraryLinks.linesIn`, the Torah's, the Neviim's and the Ketuvim's books), and each line with its quotes made links
   (`withVerseLinks`): of its own verses, then of the verses of the ten lines before it, the nearest first (the library
   links a verse to the line that quotes it first alone). A line that quotes nothing is the same object.
-  `library` is given once the graph is made; until then no book is covered.
-- **Reached from:** `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt` (`installedQuoteLinks`), which Zayit's
-  `ContentUseCase.buildLinesPager` reads; `main.kt` sets `library`.
+- **Reached from:** `TextLinks`.
 - **Follows:** Zayit's `TalmudQuoteLinks` in `addons/quotelinks/enabled` (an object implementing the feature, a line
   left as it is when nothing is added); Pardes's `InstalledSemanticSearch` for a community build that plugs its own.
 - **Tests:** `VerseQuotesTest` and `LibraryLinksTest` for its two halves; none of its own.
@@ -2362,12 +2386,11 @@ verse quoted again two lines on is one. Hooks:
   for its own verses, 0.7 ms for those of the lines before), measured over the 2,081 pages of the Talmud on the full
   library. Looking two lines back links 1,152 verses more, five 1,486, ten 1,607, twenty 1,670, forty 1,707: ten was
   kept. `linesByIds`, by which Zayit's package checks its verses, is
-  not used: the verses are read with the links. `library` is a global set at start, as the feature itself is one
-  (`installedQuoteLinks`): the reader reaches it without the graph.
+  not used: the verses are read with the links.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/VerseQuotes.kt`
 
-- **Feature:** Verse links.
+- **Feature:** Links in the texts.
 - **Size:** 269 lines.
 - **What:** the finding and the writing of a verse's quote in a line, with no library.
   - `comparedLetters`: a word as it is compared, its letters without nikud and teamim and without ו and י, which a
@@ -2391,7 +2414,7 @@ verse quoted again two lines on is one. Hooks:
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/VerseQuotesTest.kt`
 
-- **Feature:** Verse links.
+- **Feature:** Links in the texts.
 - **Size:** 169 lines.
 - **What:** on lines and verses as the library keeps them: a verse's words are its letters alone, its note none of
   them; the Name is one word however written; a verse quoted in a line is a link to it; a quote spelled another way is
@@ -2403,6 +2426,33 @@ verse quoted again two lines on is one. Hooks:
   of a link the line already has are left to it.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `LineReferencesTest` (Kotlin Test, camel-case names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/NoteLinks.kt`
+
+- **Feature:** Links in the texts.
+- **Size:** 68 lines.
+- **What:** `NoteLinks(library)`: a book that has a book of notes on it is covered (`LibraryLinks.notedBooks`, read
+  once), and each of its lines that has a mark (`<small>(`) is given its notes' numbers (`startsIn`, the 48 letters a
+  linked note starts with) and its marks made links. `noteNumber(start)`: the number a note starts with, after its
+  tags (`<b>(3)</b>`); `withNoteLinks(html, notes)`: each mark `<small>(3)</small>` wrapped in the library's citation
+  link to its note, a mark with no note left, the same string when none has one.
+- **Reached from:** `TextLinks`.
+- **Follows:** `VerseLinks` beside it; the link itself is the library's own (`<a class="ref" href="seforim://line/…">`),
+  which the reader draws and opens in a new tab.
+- **Tests:** `NoteLinksTest`, `LibraryLinksTest` (`booksWithNotes`, `linkedStarts`).
+- **Notes:** the marks are links in the text of חברותא itself. Where חברותא is shown in the commentaries pane, beside
+  the Gemara, its marks are not: the pane's texts are loaded by Zayit's paging sources, which have no such seam.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/NoteLinksTest.kt`
+
+- **Feature:** Links in the texts.
+- **Size:** 44 lines.
+- **What:** a note's number is what it starts with, after its tags, and a line that starts with none has none; a line
+  of חברותא with two marks has each made a link to its note; a mark with no note is left, a line with none is the same
+  object, and a number in the line's own words is no mark.
+- **Reached from:** the JVM tests.
+- **Follows:** `VerseQuotesTest` beside it.
 - **Tests:** it is one (unit).
 
 ### Klei Kodesh's dictionaries in the dictionary card

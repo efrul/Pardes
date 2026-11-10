@@ -47,7 +47,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.window.DesktopTabs
 import io.github.kdroidfilter.seforimapp.core.presentation.window.MainAppWindow
 import io.github.kdroidfilter.seforimapp.earthwidget.LocalWidgetAntiAliasing
 import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
-import io.github.kdroidfilter.seforimapp.features.bookcontent.quotelinks.VerseLinks
+import io.github.kdroidfilter.seforimapp.features.bookcontent.quotelinks.TextLinks
 import io.github.kdroidfilter.seforimapp.features.database.move.LibraryMoveWindow
 import io.github.kdroidfilter.seforimapp.features.database.update.DatabaseUpdateWindow
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindowsHost
@@ -223,7 +223,7 @@ fun main(args: Array<String>) {
             remember {
                 createGraph<AppGraph>().also {
                     it.crashReporting.start()
-                    VerseLinks.library = it.libraryLinks
+                    TextLinks.library = it.libraryLinks
                     if (pendingLibraryMove == null) warmCatalog(it)
                 }
             }
