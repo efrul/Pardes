@@ -1,0 +1,6 @@
+as is              | same as the app in the first 10: 100.0% | source first: 100.0 of 157
+lexical shuffled   | same as the app in the first 10:  98.5% | source first: 100.0 of 157
+lexical reversed   | same as the app in the first 10:  98.1% | source first: 98.0 of 157
+semantic shuffled  | same as the app in the first 10:  20.3% | source first: 58.7 of 157
+lexical removed    | same as the app in the first 10:  92.2% | source first: 81.0 of 157
+semantic removed   | same as the app in the first 10:  25.4% | source first: 104.0 of 157

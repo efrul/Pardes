@@ -1,14 +1,14 @@
 // The feedback service in Miniflare (Cloudflare's runtime, here): receiving packages, the maintainer's list and
 // downloads, everyone's list and the site, deleting a sender's packages, and the limits. `npm test`.
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { after, before, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { MAX_BYTES, MAX_PER_DAY, MAX_QUERY } from "../src/package.js";
 
 const SRC = fileURLToPath(new URL("../src/", import.meta.url));
-const MIGRATION = new URL("../migrations/0001_packages.sql", import.meta.url);
+const MIGRATIONS = new URL("../migrations/", import.meta.url);
 const TOKEN = "test-admin-token";
 const A = "aaaaaaaa-1111-4111-8111-111111111111";
 const B = "bbbbbbbb-2222-4222-8222-222222222222";
@@ -35,8 +35,11 @@ async function service(limit = 1000, reads = 1000) {
   );
   try {
     const db = await mf.getD1Database("DB");
-    const sql = (await readFile(MIGRATION, "utf8")).replace(/--.*$/gm, "");
-    for (const statement of sql.split(";").map((s) => s.trim()).filter(Boolean)) await db.prepare(statement).run();
+    // Every migration, in order, as wrangler applies them
+    for (const name of (await readdir(MIGRATIONS)).filter((n) => n.endsWith(".sql")).sort()) {
+      const sql = (await readFile(new URL(name, MIGRATIONS), "utf8")).replace(/--.*$/gm, "");
+      for (const statement of sql.split(";").map((s) => s.trim()).filter(Boolean)) await db.prepare(statement).run();
+    }
     return mf;
   } catch (e) {
     // Its runtime would keep the tests from ending
@@ -146,6 +149,9 @@ describe("the feedback service", () => {
     const source = await readFile(new URL("../src/site/app.js", import.meta.url), "utf8");
     // Everyone's view reads the public route; only the maintainer, signed in, reads the packages as they came
     assert.match(source, /\/v1\/public\/packages/);
+    // What is uploaded on the site is published: every package it posts carries the consent, and the page says so
+    assert.match(source, /packagesIn\([^)]*\)\)\.map\(\(p\) => \(\{ \.\.\.p, publish: true \}\)\)/);
+    assert.match(source, /מה שמעלים כאן מתפרסם לכולם/);
     // No sender on the page, not even its alias: no column of one, and none in a download
     assert.doesNotMatch(source, /title: "שולח"|"sender"\]|\.sender\)\]/);
     const script = await site(mf, "/site/app.js");
@@ -190,7 +196,8 @@ describe("the feedback service", () => {
     // What counts a search and a grade comes through; their words are opaque ids
     const [search] = row.package.searches;
     assert.match(search.query, /^[0-9a-f]{12}$/);
-    assert.deepEqual({ ...search, query: "" }, { query: "", extended: false, count: 3, lastAt: 1793800000003 });
+    assert.equal(search.queryId, search.query);
+    assert.deepEqual({ ...search, query: "", queryId: "" }, { query: "", queryId: "", extended: false, count: 3, lastAt: 1793800000003 });
     const [grade] = row.package.grades;
     assert.match(grade.search, /^[0-9a-f]{12}$/);
     assert.deepEqual({ grade: grade.grade, rank: grade.rank, model: grade.model, gradedAt: grade.gradedAt },
@@ -212,6 +219,42 @@ describe("the feedback service", () => {
     assert.equal(capped.packages.length, 50);
     assert.equal(capped.more, true);
     assert.ok(capped.packages.every((p) => p.package && !p.package.sender.includes("-")));
+  });
+
+  test("shows everyone a package's words only when its sender agreed to publish it", async () => {
+    const words = "חיפוש שהשולח הסכים לפרסם";
+    const searches = [{ query: words, extended: false, count: 2, lastAt: 1793800000010, scope: "/תלמוד בבלי", ref: "חיפוש חכם",
+      timeUnknown: true, note: "שדה שהשולח הוסיף" }];
+    const grades = [{ ...pkg(A).grades[0], query: words, search: `search:g:${words}`, heRef: "בבא בתרא כט, א", bookTitle: "בבא בתרא",
+      docId: "17" }];
+    const open = await (await post(mf, pkg(A, { publish: true, searches, grades }))).json();
+    const closed = await (await post(mf, pkg(A, { searches, grades }))).json();
+    const listed = await (await everyones(mf, `?after=${open.id - 1}`)).json();
+    const [pub, priv] = listed.packages;
+    assert.equal(pub.id, open.id);
+    assert.equal(pub.public, true);
+    assert.equal(priv.public, false);
+    // The published one: its words, scope, options and place, the sender's alias, and nothing else the sender added
+    assert.equal(pub.package.searches[0].query, words);
+    assert.equal(pub.package.searches[0].scope, "/תלמוד בבלי");
+    assert.equal(pub.package.searches[0].ref, "חיפוש חכם");
+    assert.equal(pub.package.searches[0].timeUnknown, true);
+    assert.equal(pub.package.searches[0].note, undefined);
+    assert.deepEqual([pub.package.grades[0].query, pub.package.grades[0].heRef, pub.package.grades[0].bookTitle, pub.package.grades[0].docId,
+      pub.package.grades[0].lineId], [words, "בבא בתרא כט, א", "בבא בתרא", "17", 26579]);
+    assert.equal(pub.package.sender, pub.sender);
+    assert.match(pub.sender, /^[0-9a-f]{12}$/);
+    // The other, from the same sender: as before, opaque, with the same ids the published rows carry
+    const privText = JSON.stringify(priv);
+    assert.ok(!privText.includes(words) && !privText.includes("בבא בתרא כט"), "a package not published shows no words");
+    assert.match(priv.package.searches[0].query, /^[0-9a-f]{12}$/);
+    assert.equal(priv.package.searches[0].queryId, pub.package.searches[0].queryId);
+    assert.equal(priv.package.grades[0].resultId, pub.package.grades[0].resultId);
+    assert.ok(!JSON.stringify(listed).includes(A), "no sender's id, published or not");
+    // The maintainer sees which is which
+    const theirs = await (await admin(mf, `/v1/packages?after=${open.id - 1}`)).json();
+    assert.deepEqual(theirs.packages.slice(0, 2).map((p) => p.public), [true, false]);
+    assert.equal(closed.id, open.id + 1);
   });
 
   test("pages the list after an id", async () => {
@@ -245,6 +288,8 @@ describe("the feedback service", () => {
     const badMark = { ...pkg(A).daf[0], marks: [{ amud: "2a", c: "g", i: -1, t: "" }] };
     assert.deepEqual(await refused(pkg(A, { daf: [badMark] })), [400, "daf review 1 is not one (mark 1: i)"]);
     assert.deepEqual(await refused(pkg(A, { searches: "all" })), [400, "searches is not a list"]);
+    assert.deepEqual(await refused(pkg(A, { publish: "yes" })), [400, "publish is not true or false"]);
+    assert.equal((await post(mf, pkg(A, { publish: false }))).status, 201);
     const big = pkg(A, { searches: [{ query: "א".repeat(900), lastAt: 1 }] });
     big.searches = Array.from({ length: Math.ceil(MAX_BYTES / 1800) + 1 }, () => big.searches[0]);
     assert.equal((await post(mf, big)).status, 413);

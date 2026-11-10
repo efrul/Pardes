@@ -162,6 +162,7 @@ input[type="search"]:hover, select:hover { border-color: var(--axis); }
 .admin-line { display: flex; gap: 12px; align-items: center; font-size: 13px; }
 .admin-badge { color: var(--accent); font-weight: 600; }
 .words-note { margin: 0; max-width: 60ch; color: var(--text-2); }
+.publish-note { margin: -6px 0 16px; padding: 10px 12px; border-radius: 10px; background: var(--accent-wash); color: var(--text); font-size: 14px; }
 
 /* Signing in */
 .login { width: min(440px, 92vw); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 24px; background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
