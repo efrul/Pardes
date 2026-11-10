@@ -39,6 +39,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchTocUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocLineIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
 import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
+import io.github.kdroidfilter.seforimapp.features.search.semantic.SessionViews
 import io.github.kdroidfilter.seforimapp.features.search.semantic.otherTabCategories
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.plusBooks
@@ -80,6 +81,23 @@ private const val LAZY_PAGE_SIZE = 25
 
 // No book has it: a filter on it finds nothing
 private const val NO_BOOK_ID = -1L
+
+/**
+ * Where a search in the tabs picked runs: the top categories of [tabs] (in their order, each once: a category may be
+ * a tab of the results and of the library's others) that are among [picked], one category or several together; null
+ * when none is picked.
+ */
+internal fun scopeOfTabs(
+    tabs: List<Long>,
+    picked: Set<Long>,
+): SearchScope? {
+    val categories = tabs.distinct().filter { it in picked }
+    return when (categories.size) {
+        0 -> null
+        1 -> SearchScope.Category(categories.single())
+        else -> SearchScope.Multi(bookIds = emptyList(), categoryIds = categories)
+    }
+}
 
 @Stable
 data class SearchUiState(
@@ -348,6 +366,9 @@ class SearchResultViewModel(
 
     // Lazy loading: keep session open for on-demand pagination
     private var currentSession: SearchSession? = null
+
+    // The session of the search shown, when its list can be shown in part (SessionViews): the category tabs filter it
+    private var listed: SessionViews? = null
     private var currentTocAllowedLineIds: Set<Long> = emptySet()
     private var currentSearchQuery: String = ""
     private val lazyLoadMutex = Mutex()
@@ -1152,6 +1173,7 @@ class SearchResultViewModel(
         val q = _uiState.value.query.trim()
         if (q.isBlank()) return
         dropBeforeBook()
+        listed = null
         newSearchGeneration()
         // The tab is named after the search it shows (the draft stays: a restore re-running it keeps it)
         titleUpdateManager.updateTabTitle(tabId, q, TabType.SEARCH)
@@ -1309,6 +1331,7 @@ class SearchResultViewModel(
                     // Store session for lazy loading
                     lazyLoadMutex.withLock {
                         currentSession = session
+                        listed = session as? SessionViews
                         currentTocAllowedLineIds = tocAllowedLineIds
                         currentSearchQuery = q
                     }
@@ -1938,18 +1961,41 @@ class SearchResultViewModel(
         beforeBook = null
     }
 
-    /** Shows one top category's results only (a tab above the results), or all of them for null. */
+    /**
+     * Shows a top category's results (a tab above the results) with those of the tabs already picked, or no longer when
+     * it is one of them; all the results for null.
+     */
     fun showOnlyCategory(categoryId: Long?) {
         dropBeforeBook()
-        _selectedCategoryIds.value = emptySet()
+        val picked = _selectedCategoryIds.value
+        val categories = if (categoryId == null) emptySet() else picked
+        _selectedCategoryIds.value = categories
         _selectedBookIds.value = emptySet()
         _selectedTocIds.value = emptySet()
-        updatePersistedSearch { it.copy(selectedCategoryIds = emptySet(), selectedBookIds = emptySet(), selectedTocIds = emptySet()) }
+        updatePersistedSearch { it.copy(selectedCategoryIds = categories, selectedBookIds = emptySet(), selectedTocIds = emptySet()) }
         if (categoryId != null) {
-            setCategoryChecked(categoryId, true)
+            setCategoryChecked(categoryId, categoryId !in picked)
         } else {
             maybeClearFiltersIfNoneChecked()
             executeFilteredSearch()
+        }
+    }
+
+    /**
+     * Searches again in the categories picked as tabs alone, as if picked in the bar, which shows them ([scopeChanges]):
+     * the tabs filter the list found, and a category searched by itself gives more of its own. Only from a search in
+     * the whole library: another scope is the reader's choice already.
+     */
+    fun searchInPickedCategories() {
+        viewModelScope.launch {
+            val state = persistedSearchState()
+            if (state.wideScope != SearchScope.Global) return@launch
+            val tabs = (_searchTree.value + _otherTabCategories.value).map { it.category.id }
+            val scope = scopeOfTabs(tabs, _selectedCategoryIds.value) ?: return@launch
+            val query = state.query.ifBlank { _uiState.value.query }
+            if (query.isBlank()) return@launch
+            _scopeChanges.tryEmit(scope)
+            searchFromBar(query, scope)
         }
     }
 
@@ -2057,9 +2103,18 @@ class SearchResultViewModel(
                         currentSession = null
                     }
 
+                    // The category tabs alone, on a list that can be shown in part: its lines in them, no new search.
+                    // A category with no line in the list is searched, as before
+                    val viewed =
+                        listed
+                            ?.takeIf { lineIdsToFilter.isEmpty() && selectedBooks.isEmpty() }
+                            ?.view(bookIdsToFilter.takeIf { selectedCats.isNotEmpty() })
+                            ?.let { view -> view to view.nextPage(LAZY_PAGE_SIZE) }
+                            ?.takeIf { (_, page) -> page != null && page.hits.isNotEmpty() }
+
                     // Open search session with filter (use baseBookOnly for base-book-only search)
                     val session =
-                        when {
+                        viewed?.first ?: when {
                             // Chosen TOC entries and books are searched whole; a category keeps the base-books choice
                             lineIdsToFilter.isNotEmpty() -> {
                                 lucene.openSession(q, DEFAULT_NEAR, lineIds = lineIdsToFilter, baseBookOnly = false)
@@ -2094,7 +2149,7 @@ class SearchResultViewModel(
                     }
 
                     // Load first page
-                    val firstPage = session.nextPage(LAZY_PAGE_SIZE)
+                    val firstPage = if (viewed != null) viewed.second else session.nextPage(LAZY_PAGE_SIZE)
                     if (firstPage == null) {
                         _uiState.value =
                             _uiState.value.copy(

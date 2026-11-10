@@ -121,6 +121,8 @@ data class SearchShellActions(
     val onTocToggle: (io.github.kdroidfilter.seforimlibrary.core.models.TocEntry, Boolean) -> Unit,
     val onTocFilter: (io.github.kdroidfilter.seforimlibrary.core.models.TocEntry) -> Unit,
     val onShowOnlyCategory: (Long?) -> Unit = {},
+    // The tabs picked become the bar's categories, and the text is searched in them alone
+    val onSearchInPickedCategories: () -> Unit = {},
     val onOpenBookAt: (bookId: Long, lineId: Long) -> Unit = { _, _ -> },
     val onSelectResult: (lineId: Long) -> Unit = {},
     val onMoreFromBook: (bookId: Long) -> Unit = {},
@@ -407,7 +409,18 @@ private fun SearchResultContentMvi(
                             // Always there, as Google's, even with one category: "הכל" also undoes a kept filter
                             if (categories.isNotEmpty()) {
                                 Spacer(Modifier.height(10.dp))
-                                CategoryTabs(categories, selectedCategoryIds, actions.onShowOnlyCategory)
+                                // A search in the whole library can be made again in the tabs picked alone
+                                val everywhere =
+                                    homeSearchUi.scopeItems.isEmpty() &&
+                                        homeSearchUi.selectedScopeBook == null &&
+                                        homeSearchUi.selectedScopeAuthor == null &&
+                                        homeSearchUi.selectedScopeCategory == null
+                                CategoryTabs(
+                                    categories,
+                                    selectedCategoryIds,
+                                    actions.onShowOnlyCategory,
+                                    actions.onSearchInPickedCategories.takeIf { everywhere && !inBook },
+                                )
                             }
                             Spacer(Modifier.height(8.dp))
                             // Inside one book: the way back to all the results
@@ -1048,17 +1061,24 @@ internal fun ResultLink(
 
 /**
  * The results' top categories as tabs, as Google's "All · Images · News": "הכל", the five most
- * frequent, the rest behind "עוד". One at a time.
+ * frequent, the rest behind "עוד". Several at once: a tab picked shows its results with those of the others picked,
+ * and [onSearchIn], when there is one, searches the text again in the tabs picked alone.
  */
 @Composable
 private fun CategoryTabs(
     categories: List<SearchResultViewModel.SearchTreeCategory>,
     selectedCategoryIds: Set<Long>,
     onShowOnly: (Long?) -> Unit,
+    onSearchIn: (() -> Unit)? = null,
 ) {
     val sorted = remember(categories) { categories.sortedByDescending { it.count }.map { it.category.id to it.category.title } }
-    val selected = sorted.firstOrNull { it.first in selectedCategoryIds }?.first
-    FilterTabs(sorted, selected, onShowOnly)
+    val selected = remember(sorted, selectedCategoryIds) { sorted.map { it.first }.filterTo(HashSet()) { it in selectedCategoryIds } }
+    FilterTabs(sorted, selected, onShowOnly) {
+        if (onSearchIn != null && selected.isNotEmpty()) {
+            val accent = JewelTheme.globalColors.outlines.focused
+            ResultLink(stringResource(Res.string.search_tabs_search_in), accent, 13.sp, onClick = onSearchIn)
+        }
+    }
 }
 
 /**
@@ -1071,13 +1091,26 @@ internal fun FilterTabs(
     selected: Long?,
     onSelect: (Long?) -> Unit,
     modifier: Modifier = Modifier,
+) = FilterTabs(tabs, setOfNotNull(selected), onSelect, modifier)
+
+/**
+ * [FilterTabs] with several tabs picked at once ([selected]): "הכל" is the one picked when none is. [after] comes
+ * after the tabs, in their row.
+ */
+@Composable
+internal fun FilterTabs(
+    tabs: List<Pair<Long, String>>,
+    selected: Set<Long>,
+    onSelect: (Long?) -> Unit,
+    modifier: Modifier = Modifier,
+    after: @Composable () -> Unit = {},
 ) {
     var showAll by remember(tabs) { mutableStateOf(false) }
     val shown =
         if (showAll) {
             tabs
         } else {
-            tabs.take(TOP_TABS) + tabs.drop(TOP_TABS).filter { it.first == selected }
+            tabs.take(TOP_TABS) + tabs.drop(TOP_TABS).filter { it.first in selected }
         }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1085,9 +1118,9 @@ internal fun FilterTabs(
         itemVerticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxWidth(),
     ) {
-        CategoryTab(stringResource(Res.string.search_tab_all), selected == null) { onSelect(null) }
+        CategoryTab(stringResource(Res.string.search_tab_all), selected.isEmpty()) { onSelect(null) }
         shown.forEach { (id, title) ->
-            CategoryTab(title, selected == id) { onSelect(id) }
+            CategoryTab(title, id in selected) { onSelect(id) }
         }
         // Not a tab: a link, in the accent as the other links of the results
         if (tabs.size > TOP_TABS) {
@@ -1097,6 +1130,7 @@ internal fun FilterTabs(
                 13.sp,
             ) { showAll = !showAll }
         }
+        after()
     }
 }
 
