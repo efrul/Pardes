@@ -37,6 +37,8 @@ class DictionaryLookupTest {
         assertEquals(emptyList(), found("וגבר"))
         assertEquals(emptyList(), found("ואמ"))
         assertEquals(emptyList(), found("וכשאמר"))
+        // Nor is a word of two letters what is left of a longer one
+        assertEquals(emptyList(), found("ושה"))
     }
 
     @Test
