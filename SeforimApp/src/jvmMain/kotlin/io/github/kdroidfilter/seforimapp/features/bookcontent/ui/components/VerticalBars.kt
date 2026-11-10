@@ -91,6 +91,7 @@ fun EndVerticalBar(
     val selectedLine = uiState.content.primaryLine
     val providers = uiState.providers
     val repository = LocalAppGraph.current.repository
+    val libraryLinks = LocalAppGraph.current.libraryLinks
     // The places panes' lines: a heading's whole section, as their panes list it
     val placesLineIds = uiState.content.placesLines().map { it.id }
 
@@ -120,8 +121,8 @@ fun EndVerticalBar(
             }.getOrNull()?.isNotEmpty()
         val referencesAvailable =
             runSuspendCatching {
-                repository.getReferencesForLines(placesLineIds)
-            }.getOrNull()?.isNotEmpty()
+                repository.getReferencesForLines(placesLineIds).isNotEmpty() || libraryLinks.any(placesLineIds)
+            }.getOrNull()
 
         value =
             LineResourceAvailability(

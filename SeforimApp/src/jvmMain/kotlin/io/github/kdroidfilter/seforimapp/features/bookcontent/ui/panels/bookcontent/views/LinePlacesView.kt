@@ -70,6 +70,7 @@ import seforimapp.seforimapp.generated.resources.no_sources_for_line
 import seforimapp.seforimapp.generated.resources.references
 import seforimapp.seforimapp.generated.resources.references_ein_mishpat
 import seforimapp.seforimapp.generated.resources.references_mesorat_hashas
+import seforimapp.seforimapp.generated.resources.references_more
 import seforimapp.seforimapp.generated.resources.references_more_from_book
 import seforimapp.seforimapp.generated.resources.references_one_more_from_book
 import seforimapp.seforimapp.generated.resources.references_summary
@@ -103,7 +104,7 @@ fun LinePlacesView(
             if (lines.isEmpty()) {
                 LineReferences.Empty
             } else {
-                runSuspendCatching { loadLinePlaces(kind, graph.repository, lines) }
+                runSuspendCatching { loadLinePlaces(kind, graph.repository, lines, graph.libraryLinks) }
                     .getOrDefault(LineReferences.Empty)
             }
     }
@@ -292,6 +293,7 @@ private val ReferenceKind.label: StringResource?
             ReferenceKind.EinMishpat -> Res.string.references_ein_mishpat
             ReferenceKind.MesoratHashas -> Res.string.references_mesorat_hashas
             ReferenceKind.Reference -> null
+            ReferenceKind.More -> Res.string.references_more
         }
 
 @Composable

@@ -35,7 +35,8 @@ data class ReferencePlace(
 
 /**
  * The kinds of places that refer to a line, in their order in the pane: the codes that rule on it (עין משפט), the
- * same passage elsewhere (מסורת הש״ס), then the other references. Each of the first two is a filter tab of its own.
+ * same passage elsewhere (מסורת הש״ס), then the other references, then the links of the other kinds ([LibraryLinks]).
+ * Each but the other references is a filter tab of its own.
  */
 enum class ReferenceKind(
     val tabId: Long,
@@ -43,6 +44,7 @@ enum class ReferenceKind(
     EinMishpat(-1),
     MesoratHashas(-2),
     Reference(0),
+    More(-3),
     ;
 
     companion object {
@@ -50,6 +52,7 @@ enum class ReferenceKind(
             when (type) {
                 ConnectionType.EIN_MISHPAT -> EinMishpat
                 ConnectionType.MESORAT_HASHAS -> MesoratHashas
+                in LibraryLinks.KINDS -> More
                 else -> Reference
             }
     }
@@ -91,16 +94,20 @@ enum class LinePlaces {
     Sources,
 }
 
-/** The [kind] places of [lines], each with the line it is linked to (see [ReferencePlace.snippet]). */
+/**
+ * The [kind] places of [lines], each with the line it is linked to (see [ReferencePlace.snippet]); the references with
+ * the links of the other kinds, from [more].
+ */
 suspend fun loadLinePlaces(
     kind: LinePlaces,
     repository: SeforimRepository,
     lines: Collection<Line>,
+    more: LibraryLinks? = null,
 ): LineReferences {
     val ids = lines.map { it.id }
     val references =
         when (kind) {
-            LinePlaces.References -> repository.getReferencesForLines(ids)
+            LinePlaces.References -> repository.getReferencesForLines(ids) + more?.of(ids).orEmpty()
             LinePlaces.Sources -> repository.getSourcesForLines(ids)
         }
     if (references.isEmpty()) return LineReferences.Empty

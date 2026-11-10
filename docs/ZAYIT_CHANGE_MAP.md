@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (156 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (158 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 30 |
+| Pardes feature hook | 32 |
 | Pardes feature in Zayit's file | 30 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 6 |
@@ -350,20 +350,22 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +6 −0 lines. Feature: Reading time, Feedback mode, Dictionary window.
+- **Change:** modified, +9 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`.
   - `abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender`,
     with a KDoc line.
   - `abstract val dictionaryLookup: DictionaryLookup`, after Zayit's `toolWindows`, with its import.
+  - `abstract val libraryLinks: io.github.kdroidfilter.seforimapp.features.bookcontent.references.LibraryLinks`, with a
+    KDoc line.
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
-  lookup.
+  lookup, and the references pane and its button the links of the other kinds.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** three lines among Zayit's declarations, and an import.
+- **Merge risk:** four lines among Zayit's declarations, and an import.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`.
-- **Notes:** the first two types are written fully qualified instead of imported, unlike every other line of the file:
+- **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
+- **Notes:** the first two types and the last are written fully qualified instead of imported, unlike every other line of the file:
   fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
@@ -747,17 +749,50 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +30 −9 lines. Feature: Daf view.
+- **Change:** modified, +33 −11 lines. Feature: Daf view, More links.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf (`zoomIn/zoomOut`),
     are enabled by `MIN/MAX_DAF_ZOOM` and their tooltips say "400% max" / "30% min"; otherwise the text, as before.
-- **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`).
+  - The references pane's button is enabled for a line with a link of the other kinds too:
+    `repository.getReferencesForLines(placesLineIds).isNotEmpty() || libraryLinks.any(placesLineIds)`, with
+    `val libraryLinks = LocalAppGraph.current.libraryLinks`.
+- **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`); a button
+  is enabled exactly when its pane has something to show, as Zayit's comment there says.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; one button among the bar's, and `ZoomButtons`' body.
+- **Merge risk:** small; one button among the bar's, `ZoomButtons`' body, and the references' availability.
 - **Smaller:** already minimal.
-- **Tests:** `DafZoomTest`.
+- **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LineReferences.kt`
+
+- **Change:** modified, +10 −3 lines. Feature: More links.
+- **What:**
+  - `ReferenceKind.More(-3)`, after `Reference`: the kind of a link `LibraryLinks` reads (`in LibraryLinks.KINDS -> More`
+    in `ReferenceKind.of`), the enum's KDoc saying so. `groupReferences` is untouched: a kind that is not `Reference`
+    already has a filter tab of its own, and the kinds come in the enum's order, so these books come last.
+  - `loadLinePlaces(…, more: LibraryLinks? = null)`: the references are the repository's and `more?.of(ids).orEmpty()`,
+    its KDoc saying so.
+- **Why:** the pane listed three of the library's link kinds (a reference, מסורת הש״ס, עין משפט), and four others, some
+  1.7 million links, were in no pane; the user asked for them on 2026-11-09 (Otzaria lists every link that is no
+  commentary).
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; an enum entry, a `when` branch and a parameter with a default.
+- **Smaller:** already minimal.
+- **Tests:** `LibraryLinksTest` (the tab of its own, after the references); Zayit's `LineReferencesTest` passes unchanged.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LinePlacesView.kt`
+
+- **Change:** modified, +3 −1 lines. Feature: More links.
+- **What:** the pane loads its places with the links of the other kinds
+  (`loadLinePlaces(kind, graph.repository, lines, graph.libraryLinks)`), and `ReferenceKind.More` has its label,
+  `references_more` ("קישורים נוספים"), with its import: the tab's title, and the kind beside a place of it, as עין משפט's.
+- **Why:** as `LineReferences.kt`.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; an argument, a `when` branch and an import.
+- **Smaller:** already minimal.
+- **Tests:** none of its own (a composable); `LibraryLinksTest` for what it lists.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookSelection.kt`
 
@@ -1215,8 +1250,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +220 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 207 Hebrew strings added in thirteen blocks,
+- **Change:** modified, +221 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 208 Hebrew strings added in fourteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
@@ -1232,12 +1267,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
-  - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`.
+  - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
+  - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); thirteen insertion points, each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); fourteen insertion points, each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -2227,6 +2263,50 @@ asked on 2026-11-09. Hooks: `BookContentScreen.kt`, `strings.xml`.
   is told from one with marks.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The links of the other kinds in the references pane
+
+The references pane ("מראי מקומות") lists every link of a line that is no commentary: beside Zayit's three kinds (עין
+משפט, מסורת הש״ס, a reference), a quotation, a Mishnah in the Talmud, a related passage and the links of no kind, under a
+tab of their own, "קישורים נוספים", as the user asked on 2026-11-09 (Otzaria lists them). Hooks: `LineReferences.kt`,
+`LinePlacesView.kt`, `VerticalBars.kt`, `AppGraph.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinks.kt`
+
+- **Feature:** More links.
+- **Size:** 134 lines.
+- **What:** `LibraryLinks`, the library's links of the kinds no pane listed (`KINDS`: QUOTATION, MISHNAH_IN_TALMUD,
+  RELATED, OTHER; 1,738,497 links in the library of 2026-10-12). `of(lineIds)` gives the lines they reach as the
+  repository's `LineReference`s, in both directions (such a link is stored once, with no direction of its own), a line
+  once and the asked lines left out; `any(lineIds)` says whether there is one, from the links' indexes alone. Both read
+  the database on a read-only connection opened for the call (`open_mode` 1, by a property and not a `file:` URI, which
+  a `#` or a `%` in the folder's name would break), on `Dispatchers.IO`, and give nothing when it can't be read. The
+  kind is told first (`connectionTypeId IN (…)`, on `idx_link_type_source_line` and `idx_link_type_target_line`), so
+  that a line's commentaries, far more than these links, are never read.
+- **Reached from:** `LineReferences.kt` (`loadLinePlaces`, `ReferenceKind.of`), `VerticalBars.kt` (the pane's button),
+  through `AppGraph.libraryLinks`.
+- **Follows:** `CommentaryLinks` (an `@Inject` class reading the library on a JDBC connection of its own, the
+  repository having no query); Zayit's `getReferencesForLines` for what a place is (a line once, the asked lines out).
+- **Tests:** `LibraryLinksTest`.
+- **Notes:** measured on the full library on 2026-11-10: a connection opens in 0.3 to 0.5 ms, `any` answers in 1 to 2 ms,
+  a line's links are read in 3 to 15 ms, an amud's (17 lines, 190 places) in 10 ms, and 128 lines' (1,538 places, three
+  million letters) in 0.6 s; a heading never selects more than 128 lines (Zayit's limit in `ContentUseCase.selectLine`).
+  SeforimLibrary is not changed for it, so the SQL is here and not in `LinkQueries.sq`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LibraryLinksTest.kt`
+
+- **Feature:** More links.
+- **Size:** 125 lines.
+- **What:** on a small library made for the test (the four tables the links are read by): a line's links are those
+  that start from it and those that reach it, each with its book's title, category and order; the kinds the panes
+  already list (a commentary, a reference, עין משפט, מסורת הש״ס) are left to them; a line reached by several links is
+  listed once, and the selected lines not at all, lines linked to one another only having nothing to list; no lines, no
+  links; and the other kinds group under `ReferenceKind.More`, a tab of its own after the references, a book listed
+  once as a reference and once with its other links.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `LineReferencesTest` beside it (Kotlin Test, camel-case names); `LevelPrecedenceTest` for a
+  SQLite file made in the test.
 - **Tests:** it is one (unit).
 
 ### Klei Kodesh's dictionaries in the dictionary card
