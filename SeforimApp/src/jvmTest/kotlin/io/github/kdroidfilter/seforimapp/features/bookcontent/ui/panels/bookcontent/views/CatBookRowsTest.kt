@@ -124,7 +124,7 @@ class CatBookRowsTest {
     }
 
     @Test
-    fun `with no book titled so, an author named as typed stays after the categories and the acronyms`() {
+    fun `with no book titled so, an author named as typed comes before the categories and the acronyms`() {
         val responsa = book(50L, "שו\"ת חתם סופר").copy(exactAcronym = true)
         val category = CategoryHit(570L, listOf("הלכה", "מפרשים", "חתם סופר"))
         val sofer = AuthorHit(5L, "משה סופר", 19, alias = "חת\"ם סופר")
@@ -140,14 +140,62 @@ class CatBookRowsTest {
             )
         assertEquals(
             listOf(
+                CatBookRow.Author(sofer),
                 CatBookRow.Category(category),
                 CatBookRow.Book(responsa),
-                CatBookRow.Author(sofer),
                 CatBookRow.TextSearch,
                 CatBookRow.Author(ofVolume),
             ),
             rows,
         )
+    }
+
+    @Test
+    fun `the base books a word begins come right after the text search, before the authors and categories`() {
+        fun tanakh(
+            id: Long,
+            title: String,
+            base: Boolean = true,
+        ) = BookSuggestion(Book(id = id, categoryId = 3L, sourceId = 1L, title = title, isBaseBook = base), listOf("תנ״ך", title))
+
+        val books =
+            listOf(
+                tanakh(60L, "שמואל א"),
+                tanakh(61L, "שמואל ב"),
+                tanakh(62L, "מדרש שמואל"),
+                tanakh(63L, "שמואל הקטן", base = false),
+            )
+        val strashun = AuthorHit(7L, "שמואל שטראשון", 165, matchedByName = true)
+        val category = CategoryHit(580L, listOf("הלכה", "שולחן ערוך", "מפרשים", "בית שמואל"))
+        val rows =
+            catBookRows("שמואל", emptyList(), textSearch = true, authors = listOf(strashun), books = books, categories = listOf(category))
+        assertEquals(
+            listOf(
+                CatBookRow.TextSearch,
+                CatBookRow.Book(books[0]),
+                CatBookRow.Book(books[1]),
+                CatBookRow.Author(strashun),
+                CatBookRow.Category(category),
+                CatBookRow.Book(books[2]),
+                CatBookRow.Book(books[3]),
+            ),
+            rows,
+        )
+    }
+
+    @Test
+    fun `a text that begins many base books names none of them`() {
+        val laws =
+            (1L..6L).map {
+                val law = Book(id = 70L + it, categoryId = 45L, sourceId = 1L, title = "הלכות $it", isBaseBook = true)
+                BookSuggestion(law, listOf(law.title))
+            }
+        val author = AuthorHit(8L, "בעל הלכות גדולות", 1, matchedByName = true)
+        val rows = catBookRows("הלכות", emptyList(), textSearch = true, authors = listOf(author), books = laws)
+        assertEquals(listOf(CatBookRow.TextSearch, CatBookRow.Author(author)) + laws.map { CatBookRow.Book(it) }, rows)
+        // Five of them: all before the author
+        val five = catBookRows("הלכות", emptyList(), textSearch = true, authors = listOf(author), books = laws.take(5))
+        assertEquals(listOf(CatBookRow.TextSearch) + laws.take(5).map { CatBookRow.Book(it) } + CatBookRow.Author(author), five)
     }
 
     @Test

@@ -31,8 +31,10 @@ class TitleAuthor(
  * or as another spelling of it ([TitleText]), in the title, in the name of a category above the book or in an author's
  * name, the last word also as the start of a word (it is still being typed); an acronym as what it stands for. Words
  * may come in any order (`ערוך שולחן`, `משנה ברורה חפץ חיים`). When nothing is found so, one typo per word is forgiven
- * (two in a long word). Ranked: the title typed whole, then a title the query begins, then the most words found in the
- * title, a base book, a shorter title, and the library's order.
+ * (two in a long word), and when nothing is found still, every word may be the start of a word (`נביא שמואל`: שמואל א,
+ * of the נביאים). Ranked: the title typed whole, then a title the query begins, then the base books of a category the
+ * query names whole (`תנך`: בראשית, before אור הישר (תנך)), then the most words found in the title, a base book, a
+ * shorter title, and the library's order.
  */
 @Suppress("TooManyFunctions") // The matching and the ranking share the index's arrays
 class BookTitleIndex(
@@ -46,6 +48,9 @@ class BookTitleIndex(
     private val acronymKeys: Array<Set<String>> =
         Array(books.size) { i -> books[i].acronyms.flatMap { acronymKeys(TitleText.words(it)) }.toSet() }
     private val authorsById: Map<Long, TitleAuthor> = authors.associateBy { it.id }
+
+    // The names of the categories above the books, each as its words
+    private val categoryWords: Map<String, List<String>> = books.flatMapTo(HashSet()) { it.path }.associateWith(TitleText::words)
     private val authorNames: List<Pair<TitleAuthor, List<String>>> =
         authors.flatMap { a -> (listOf(a.name) + a.aliases).map { a to TitleText.words(it) } }.filter { it.second.isNotEmpty() }
     private val authorVocabulary: List<String> = authorNames.flatMapTo(HashSet()) { it.second }.toList()
@@ -96,6 +101,8 @@ class BookTitleIndex(
         val exactAcronym: Boolean,
         // In the library's order (the catalog's tree, depth first), as the books were given
         internal val position: Int,
+        // A base book of a category the query names whole, found by that name alone
+        internal val ofNamedCategory: Boolean = false,
     )
 
     /** The books named by [query], best first, at most [limit]. */
@@ -106,9 +113,27 @@ class BookTitleIndex(
         val tokens = TitleText.queryTokens(query)
         if (tokens.isEmpty()) return emptyList()
         val found = matchTokens(tokens, fuzzy = false).takeIf { m -> !m.all.isEmpty } ?: matchTokens(tokens, fuzzy = true)
+        val matches = matched(found, tokens).ifEmpty { matched(matchTokens(tokens, fuzzy = false, begun = true), tokens) }
+        val order =
+            compareByDescending<BookMatch> { it.tier }
+                .thenByDescending { it.ofNamedCategory }
+                // A named category's books in the library's order, whatever their titles
+                .thenByDescending { if (it.ofNamedCategory) 0 else it.titleHits }
+                .thenByDescending { it.book.isBaseBook }
+                .thenBy { if (it.ofNamedCategory) 0 else titleWords[it.position].size }
+                .thenBy { it.position }
+        return matches.sortedWith(order).take(limit)
+    }
+
+    // The books [found], each with what the ranking sees
+    private fun matched(
+        found: Found,
+        tokens: List<QueryToken>,
+    ): List<BookMatch> {
         if (found.all.isEmpty) return emptyList()
         val typedKeys = acronymKeys(tokens.flatMap { it.typed })
         val required = tokens.filterNot { isFiller(it, tokens) }
+        val named = categoryWords.filterValues { titleWhole(it, required) }.keys
         val matches = ArrayList<BookMatch>(found.all.cardinality())
         var i = found.all.nextSetBit(0)
         while (i >= 0) {
@@ -120,17 +145,19 @@ class BookTitleIndex(
                     titleBegins(titleWords[i], tokens) -> TIER_BEGUN
                     else -> 0
                 }
-            if (tier > 0 || acronym || wordsApart(i, tokens, found.fuzzy)) matches += BookMatch(books[i], tier, hits, acronym, i)
+            if (tier > 0 || acronym || wordsApart(i, tokens, found)) {
+                matches += BookMatch(books[i], tier, hits, acronym, i, tier == 0 && ofNamedCategory(books[i], named))
+            }
             i = found.all.nextSetBit(i + 1)
         }
-        val order =
-            compareByDescending<BookMatch> { it.tier }
-                .thenByDescending { it.titleHits }
-                .thenByDescending { it.book.isBaseBook }
-                .thenBy { titleWords[it.position].size }
-                .thenBy { it.position }
-        return matches.sortedWith(order).take(limit)
+        return matches
     }
+
+    // A base book of one of the categories [named], its own or of a category right under it (תנ״ך: בראשית, of its תורה)
+    private fun ofNamedCategory(
+        book: TitleBook,
+        named: Set<String>,
+    ): Boolean = named.isNotEmpty() && book.isBaseBook && book.path.takeLast(NAMED_CATEGORY_DEPTH).any { it in named }
 
     private val positionById: Map<Long, Int> = this.books.indices.associateBy { this.books[it].id }
 
@@ -216,19 +243,20 @@ class BookTitleIndex(
         return typed.size == words.size && assignable(words, typed, lastPrefix = false, fuzzy = false)
     }
 
-    // Each typed word matches a word of its own among [words]
+    // Each typed word matches a word of its own among [words]: the last as begun ([lastPrefix]), or each of them ([begun])
     private fun assignable(
         words: List<String>,
         typed: List<String>,
         lastPrefix: Boolean,
         fuzzy: Boolean,
+        begun: Boolean = false,
     ): Boolean {
         val used = BooleanArray(words.size)
 
         fun assign(i: Int): Boolean {
             if (i == typed.size) return true
             for (j in words.indices) {
-                if (used[j] || !wordMatches(words[j], typed[i], lastPrefix && i == typed.lastIndex, fuzzy)) continue
+                if (used[j] || !wordMatches(words[j], typed[i], begun || (lastPrefix && i == typed.lastIndex), fuzzy)) continue
                 used[j] = true
                 if (assign(i + 1)) return true
                 used[j] = false
@@ -266,22 +294,26 @@ class BookTitleIndex(
         // Per token, the books that have it in their title
         val title: List<BitSet>,
         val fuzzy: Boolean,
+        // Every typed word read as the start of a word, not the last alone
+        val begun: Boolean,
     )
 
     // Every typed word found in a word of its own: the lookup read one word twice (`בבא ב` found תוספתא בבא קמא)
     private fun wordsApart(
         book: Int,
         tokens: List<QueryToken>,
-        fuzzy: Boolean,
+        found: Found,
     ): Boolean {
         val typed = tokens.filter { it.isPlain && !isFiller(it, tokens) }.map { it.typed[0] }
         if (typed.size < 2) return true
-        return assignable(allWords[book], typed, lastPrefix = tokens.last().let { it.isPlain && !isFiller(it, tokens) }, fuzzy = fuzzy)
+        val lastPrefix = tokens.last().let { it.isPlain && !isFiller(it, tokens) }
+        return assignable(allWords[book], typed, lastPrefix, found.fuzzy, found.begun)
     }
 
     private fun matchTokens(
         tokens: List<QueryToken>,
         fuzzy: Boolean,
+        begun: Boolean = false,
     ): Found {
         val all = BitSet(books.size).apply { set(0, books.size) }
         val titles = ArrayList<BitSet>(tokens.size)
@@ -290,7 +322,7 @@ class BookTitleIndex(
             val title = BitSet(books.size)
             for (reading in token.readings) {
                 // A reading's words all found: AND
-                val found = reading.map { word -> wordBooks(word, prefix = i == tokens.lastIndex, fuzzy = fuzzy) }
+                val found = reading.map { word -> wordBooks(word, prefix = begun || i == tokens.lastIndex, fuzzy = fuzzy) }
                 found.map { it.first }.reduceOrNull { x, y -> x.apply { and(y) } }?.let(any::or)
                 found.map { it.second }.reduceOrNull { x, y -> x.apply { and(y) } }?.let(title::or)
             }
@@ -299,7 +331,7 @@ class BookTitleIndex(
             titles += title
             if (all.isEmpty) break
         }
-        return Found(all, titles, fuzzy)
+        return Found(all, titles, fuzzy, begun)
     }
 
     // The books with a word [typed] may stand for: anywhere, and in their title
@@ -394,6 +426,9 @@ class BookTitleIndex(
     companion object {
         const val TIER_WHOLE = 3
         const val TIER_BEGUN = 2
+
+        // A category's books are its own and those of the categories right under it; deeper, the name is too wide (הלכה)
+        private const val NAMED_CATEGORY_DEPTH = 2
         private val EMPTY = IntArray(0)
         private const val MIN_TYPO_LENGTH = 4
         private const val VOWEL_LETTERS = "אוי"
