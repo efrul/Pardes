@@ -7,8 +7,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The daf's own settings: its zoom (the zoom keys, buttons and menu zoom a tab's daf while it shows one, else the
- * text), and whether it marks the lines its alignment is not sure of.
+ * The daf's own settings: its zoom (the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
+ * shows one), and whether it marks the lines its alignment is not sure of.
  */
 class DafZoomTest {
     private val settings = testAppSettings()
@@ -23,15 +23,25 @@ class DafZoomTest {
     }
 
     @Test
-    fun `a tab showing its daf zooms the daf, level by level, the text left alone`() {
+    fun `a tab showing its daf zooms the daf, level by level, and the text beside it`() {
         settings.dafShown(tab)
-        settings.zoomOut(tab)
-        settings.zoomOut(tab)
-
-        assertEquals(0.8f, settings.getDafZoom())
-        assertEquals(AppSettings.DEFAULT_TEXT_SIZE, settings.getTextSize())
         settings.zoomIn(tab)
-        assertEquals(0.9f, settings.dafZoomFlow.value)
+        settings.zoomIn(tab)
+
+        assertEquals(1.25f, settings.getDafZoom())
+        // The commentaries beside the daf are drawn in the text's size
+        assertEquals(AppSettings.DEFAULT_TEXT_SIZE + 2 * AppSettings.TEXT_SIZE_INCREMENT, settings.getTextSize())
+        settings.zoomOut(tab)
+        assertEquals(1.1f, settings.dafZoomFlow.value)
+        assertEquals(AppSettings.DEFAULT_TEXT_SIZE + AppSettings.TEXT_SIZE_INCREMENT, settings.textSizeFlow.value)
+    }
+
+    @Test
+    fun `a daf's own zoom leaves the text alone`() {
+        settings.dafShown(tab)
+        settings.setDafZoom(0.8f)
+
+        assertEquals(AppSettings.DEFAULT_TEXT_SIZE, settings.getTextSize())
     }
 
     @Test

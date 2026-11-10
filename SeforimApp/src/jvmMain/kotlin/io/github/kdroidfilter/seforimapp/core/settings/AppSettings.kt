@@ -276,14 +276,17 @@ class AppSettings(
 
     fun showsDaf(tabId: String): Boolean = tabId in _dafViewsFlow.value
 
-    /** Zooms in the reading view of [tabId]: its daf to the next of [DAF_ZOOM_LEVELS] when it shows one, else the text. */
+    /**
+     * Zooms in the reading view of [tabId]: the text, and its daf to the next of [DAF_ZOOM_LEVELS] when it shows one. The
+     * panes beside a daf are drawn in the text's size (the commentaries, the references), and follow its zoom so; a
+     * pinch over the daf zooms it alone.
+     */
     fun zoomIn(tabId: String) {
         if (showsDaf(tabId)) {
             val zoom = getDafZoom()
             setDafZoom(DAF_ZOOM_LEVELS.firstOrNull { it > zoom + ZOOM_LEVEL_SLACK } ?: MAX_DAF_ZOOM)
-        } else {
-            increaseTextSize()
         }
+        increaseTextSize()
     }
 
     /** Zooms out the reading view of [tabId], as [zoomIn]. */
@@ -291,9 +294,8 @@ class AppSettings(
         if (showsDaf(tabId)) {
             val zoom = getDafZoom()
             setDafZoom(DAF_ZOOM_LEVELS.lastOrNull { it < zoom - ZOOM_LEVEL_SLACK } ?: MIN_DAF_ZOOM)
-        } else {
-            decreaseTextSize()
         }
+        decreaseTextSize()
     }
 
     // Max commentators per commentaries page (0 = automatic). Stored value is clamped to the
