@@ -173,6 +173,9 @@ internal fun CommentatorsGridScaffold(
     onVisibleChange: (List<String>) -> Unit = {},
     // The commentator of the passage selected in the text: its page is the one shown, whatever repaginates
     focusCommentator: String? = null,
+    // The commentator the reader is on, kept from line to line, and the line(s) the commentators are listed for
+    kept: KeptCommentator? = null,
+    line: Any? = null,
     column: @Composable (commentatorId: Long) -> Unit,
 ) {
     val selected = config.selectedCommentators
@@ -200,9 +203,11 @@ internal fun CommentatorsGridScaffold(
             remember(selected, perPage) {
                 selected.chunked(perPage)
             }
+        // On the reader's commentator from the first frame, when the line has him
+        val keptPage = kept?.among(selected)?.let { selected.indexOf(it) / perPage }
         val pagerState =
             rememberPagerState(
-                initialPage = initialPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0)),
+                initialPage = (keptPage ?: initialPage).coerceIn(0, (pages.size - 1).coerceAtLeast(0)),
                 pageCount = { pages.size },
             )
 
@@ -234,7 +239,7 @@ internal fun CommentatorsGridScaffold(
         LaunchedEffect(pagerState.settledPage) {
             val settled = pagerState.settledPage
             currentOnPageChange(settled)
-            pages.getOrNull(settled)?.firstOrNull()?.let { anchorName.value = it }
+            pages.getOrNull(settled)?.firstOrNull()?.let { anchorName.value = kept?.settledOn(it, selected, focusCommentator) ?: it }
         }
 
         // Detect newly added commentators and promote the last one as the anchor so the
@@ -245,11 +250,13 @@ internal fun CommentatorsGridScaffold(
         val recentlyAdded = remember { mutableStateOf<String?>(null) }
         LaunchedEffect(selected) {
             val prev = previousSelected.value
-            if (prev != null) {
+            // A commentator who comes back with a line was not added by the reader
+            if (kept?.tickedOn(line) != false && prev != null) {
                 val addedLast = selected.lastOrNull { it !in prev }
                 if (addedLast != null) {
                     anchorName.value = addedLast
                     recentlyAdded.value = addedLast
+                    kept?.chose(addedLast)
                 }
             }
             previousSelected.value = selected.toList()
@@ -259,6 +266,7 @@ internal fun CommentatorsGridScaffold(
         LaunchedEffect(focusCommentator, selected) {
             if (focusCommentator != null && focusCommentator in selected) anchorName.value = focusCommentator
         }
+        if (kept != null) KeepCommentator(kept, selected, line, focusCommentator) { anchorName.value = it }
         LaunchedEffect(recentlyAdded.value) {
             if (recentlyAdded.value != null) {
                 // Slightly longer than the underline draw + hold + fade-out cycle so the
@@ -285,7 +293,7 @@ internal fun CommentatorsGridScaffold(
         val multiPage = pages.size > 1
         Column(modifier = Modifier.fillMaxSize()) {
             if (multiPage) {
-                HorizontalPagerIndicator(pagerState = pagerState, pages = pages)
+                HorizontalPagerIndicator(pagerState = pagerState, pages = pages, kept = kept)
             }
             HorizontalPager(
                 state = pagerState,
@@ -293,7 +301,7 @@ internal fun CommentatorsGridScaffold(
                     Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .then(if (multiPage) Modifier.pageSwipe(pagerState) else Modifier),
+                        .then(if (multiPage) Modifier.pageSwipe(pagerState, kept) else Modifier),
                 beyondViewportPageCount = 1,
                 userScrollEnabled = false,
             ) { pageIdx ->
@@ -315,7 +323,10 @@ internal fun CommentatorsGridScaffold(
  * commentator's header tears him off into a pane of his own, and the page must stay where it is meanwhile.
  */
 @Composable
-internal fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
+internal fun Modifier.pageSwipe(
+    pagerState: PagerState,
+    kept: KeptCommentator? = null,
+): Modifier {
     val scope = rememberCoroutineScope()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     // A page change cut short (the selection changed again meanwhile) leaves the pager between two pages, and its
@@ -376,6 +387,7 @@ internal fun Modifier.pageSwipe(pagerState: PagerState): Modifier {
                         val forward = (accumulated > 0) != isRtl
                         val target = pagerState.currentPage + if (forward) 1 else -1
                         if (target in 0 until pagerState.pageCount) {
+                            kept?.turns()
                             scope.launch { pagerState.animateScrollToPage(target) }
                         }
                     }
@@ -470,6 +482,7 @@ private fun CommentatorCell(
 private fun HorizontalPagerIndicator(
     pagerState: PagerState,
     pages: List<List<String>>,
+    kept: KeptCommentator? = null,
 ) {
     val activeColor = JewelTheme.globalColors.text.normal
     // A muted-but-readable dot: the border color is nearly invisible in light mode, so use a
@@ -495,6 +508,7 @@ private fun HorizontalPagerIndicator(
                             // Wheel down: the next page
                             val target = pagerState.currentPage + if (delta > 0) 1 else -1
                             if (target in 0 until pagerState.pageCount && !pagerState.isScrollInProgress) {
+                                kept?.turns()
                                 scope.launch { pagerState.animateScrollToPage(target) }
                             }
                         }
@@ -516,6 +530,7 @@ private fun HorizontalPagerIndicator(
                             .pointerHoverIcon(PointerIcon.Hand)
                             .clickable {
                                 if (!isActive) {
+                                    kept?.turns()
                                     scope.launch { pagerState.animateScrollToPage(i) }
                                 }
                             },

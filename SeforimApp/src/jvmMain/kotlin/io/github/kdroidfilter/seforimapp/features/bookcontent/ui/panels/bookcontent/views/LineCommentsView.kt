@@ -146,6 +146,8 @@ fun LineCommentsView(
     val detachedCommentators = contentState.detachedCommentators
     val commentatorsListScrollIndex = contentState.commentatorsListScrollIndex
     val commentatorsListScrollOffset = contentState.commentatorsListScrollOffset
+    // The commentator the reader is on, whatever line comes next
+    val kept = remember(uiState.navigation.selectedBook?.id) { KeptCommentator() }
     val columnScroll =
         CommentariesColumnScroll(
             pageIndex = contentState.commentariesPageIndex,
@@ -153,6 +155,7 @@ fun LineCommentsView(
             fallbackScrollOffset = contentState.commentariesScrollOffset,
             indexByCommentator = contentState.commentariesColumnScrollIndexByCommentator,
             offsetByCommentator = contentState.commentariesColumnScrollOffsetByCommentator,
+            kept = kept,
         )
 
     // Animation settings with stable memorization
@@ -867,7 +870,11 @@ private fun CommentatorsGrid(
         focusCommentator =
             config.selectedPassage
                 ?.takeIf { it.lineId == (selection as? LineSelection.Single)?.lineId }
-                ?.let { passage -> config.selectedCommentators.firstOrNull { config.titleToIdMap[it] in passage.targetBookIds } },
+                ?.let { passage -> config.selectedCommentators.filter { config.titleToIdMap[it] in passage.targetBookIds } }
+                // The reader's commentator when he comments on the passage, else its first
+                ?.let { onPassage -> columnScroll.kept?.among(onPassage) ?: onPassage.firstOrNull() },
+        kept = columnScroll.kept,
+        line = selection,
     ) { commentatorId ->
         val pagerFlow =
             remember(commentatorId, pagerFlowCache) {
@@ -1536,6 +1543,8 @@ private data class CommentariesColumnScroll(
     val fallbackScrollOffset: Int,
     val indexByCommentator: Map<Long, Int>,
     val offsetByCommentator: Map<Long, Int>,
+    // The commentator the pages stay on from line to line; none in a commentator's own pane
+    val kept: KeptCommentator? = null,
 )
 
 /**
