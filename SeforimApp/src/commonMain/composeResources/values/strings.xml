@@ -852,6 +852,7 @@
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>
     <string name="search_tabs_more">עוד</string>
+    <string name="search_tabs_search_in">חיפוש חדש רק בקטגוריות שנבחרו</string>
     <string name="search_tabs_less">פחות</string>
     <string name="search_panel_author">מחבר</string>
     <string name="search_panel_parts">חלקי הספר</string>

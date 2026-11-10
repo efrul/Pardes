@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (166 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (168 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -577,7 +577,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +17 −0 lines. Feature: Search in categories, Feedback mode.
+- **Change:** modified, +18 −0 lines. Feature: Search in categories, Feedback mode, Result tabs.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches.
@@ -586,8 +586,8 @@ The entries of this section by kind:
   - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`.
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
     `onNewBarOpened` to `SearchHomeViewModel`.
-  - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`) and `onGrade` (event
-    `Grade`).
+  - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
+    `Grade`) and `onSearchInPickedCategories` (`viewModel::searchInPickedCategories`).
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks.
@@ -1134,7 +1134,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +314 −43 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs.
+- **Change:** modified, +375 −49 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1152,18 +1152,25 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `MeaningFacets` and `BuildSearchTreeUseCase.categoryIdsOf`), and the library's other top categories are tabs after
     the results' (`showOtherCategories`, `_otherTabCategories`).
   - `collectBookIdsUnderCategory` reads the app's catalog (`libraryCategories.bookIds`) instead of the database.
+  - **Result tabs:** `showOnlyCategory` picks a tab with those already picked, or lets it go (Zayit's showed one at a
+    time); `listed` keeps the search's session when its list can be shown in part (`SessionViews`), and
+    `executeFilteredSearch` then shows the tabs' categories from that list with no new search (a category with no line
+    in it is searched, as before); `searchInPickedCategories` searches again in the tabs picked alone, telling the bar
+    (`scopeChanges`), through the file-level `scopeOfTabs(tabs, picked)`.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
-  search's category tabs (`ac5447eb`, `d4711ac8`).
+  search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
+  the first lines found, and a tab that searched its category again gave another list, slowly.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
 - **Smaller:** feedback mode could live in a Pardes class the ViewModel holds (its flow and `grade`), and the scope
   labels in `LibraryCategories`; keeping Zayit's name `authorBookIds` would shrink the diff.
-- **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`.
+- **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`,
+  `ResultTabsTest`, `HybridSearchEngineFallbackTest` (the views).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +50 −16 lines. Feature: Search in categories, Feedback mode, Preview highlights.
+- **Change:** modified, +91 −23 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1171,13 +1178,19 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - The status line names the category or books searched (`state.scopeLabel`), and in a category with base books and
     others offers the other choice (`search_switch_scope_all` / `…_base`).
   - The preview's highlights come from `rememberPreviewHighlights(...)` instead of an inline `produceState`.
+  - The category tabs are picked several at once: `FilterTabs` has a form taking the set picked (`selected: Set<Long>`,
+    "הכל" the one picked when none is, and an `after` slot in the tabs' row), Zayit's one-at-a-time form calling it;
+    `CategoryTabs` marks every top category picked, and with a tab picked in a search of the whole library shows the
+    link `search_tabs_search_in` ("חיפוש חדש רק בקטגוריות שנבחרו"), which calls the new action
+    `onSearchInPickedCategories`.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
-  Pardes's semantic search (`20e2fa81`).
+  Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
+  several at once, and a way to put a category in the search bar.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over five
-  places.
+- **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over seven
+  places, and `FilterTabs`' body is now the set's form.
 - **Smaller:** already near minimal.
-- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`.
+- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `ResultTabsTest`; the tabs were tried in the app.
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt`
@@ -1278,8 +1291,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +221 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 208 Hebrew strings added in fourteen blocks,
+- **Change:** modified, +222 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 209 Hebrew strings added in fifteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
@@ -1296,12 +1309,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
   - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
-  - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`.
+  - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`;
+  - the result tabs: `search_tabs_search_in`, after Zayit's `search_tabs_more`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); fourteen insertion points, each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); fifteen insertion points, each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -2713,7 +2727,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 725 lines.
+- **Size:** 762 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -2722,7 +2736,9 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   read once from the library (`candidateLines`); then it keeps the first lexical hits at places 2 and 4 (`keepLeaders`),
   recognizes a quote held word for word (`holdsQuote`), applies the earlier level's precedence (`LevelPrecedence`),
   highlights by meaning, counts the meaning's lines in the facets (`MeaningFacets`), and falls back to the words alone
-  when the model or the index cannot load. A dense side whose walk came back short is searched again from the words'
+  when the model or the index cannot load. Its session gives views of its list (`SessionViews`: the lines of some
+  books, in the list's order, paged from the first with no search), for the category tabs; none when the list goes on
+  past what it holds (the words alone, past their candidates). A dense side whose walk came back short is searched again from the words'
   first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering.
 - **Reached from:** `InstalledSemanticSearch.kt` (`installedSemanticSearch.hybrid`).
 - **Follows:** Zayit's `SemanticSearchFeature` interface and its private `HybridSearchEngine`, of the same name and role
@@ -2732,6 +2748,29 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 - **Notes:** its KDoc opens with "Independent Hybrid Search Engine for Pardes Desktop:", a title rather than Zayit's
   plain sentence; with some 17 functions it passes `detekt.yml`'s 15. The fusion's measurements, before and after:
   `docs/fusion-compare/IMPLEMENTATION.md`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/SessionViews.kt`
+
+- **Feature:** Semantic search (result tabs).
+- **Size:** 16 lines.
+- **What:** `SessionViews`, what a search session offers when its results can be shown in part with no new search:
+  `view(bookIds)`, the lines of those books (all of them for null) in the list's order, or null when its list is not
+  all it finds.
+- **Reached from:** `HybridSearchEngine.kt` (its session), `SearchResultViewModel.kt` (`listed`, `executeFilteredSearch`).
+- **Follows:** `MeaningFacets`, the other thing a session of the hybrid engine offers beside Zayit's `SearchSession`
+  (SeforimLibrary's interface is not changed).
+- **Tests:** `HybridSearchEngineFallbackTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/ResultTabsTest.kt`
+
+- **Feature:** Semantic search (result tabs).
+- **Size:** 20 lines.
+- **What:** `scopeOfTabs`: the tabs picked are where the text is searched again, one category or several together in
+  the tabs' order, each once though a category may be a tab twice, a tab's subcategories picked with it not counted,
+  none picked giving nothing.
+- **Reached from:** the JVM tests.
+- **Follows:** `SearchUiStateTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/IndependentSemanticSearch.kt`
 
@@ -3026,9 +3065,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngineFallbackTest.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 134 lines.
+- **Size:** 198 lines.
 - **What:** when the dense side cannot load (a model failing, an `Error` too), the search goes on with its words alone;
-  past the fused candidates the lexical results go on, each once, with their total.
+  past the fused candidates the lexical results go on, each once, with their total; a view shows the lines of some
+  books of the same list, all of it for no books named, with no new search, none before the list is made, none of a
+  list that goes on past what it holds.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).

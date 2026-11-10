@@ -495,6 +495,7 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
                 viewModel.onEvent(SearchResultViewModel.SearchResultEvents.FilterByTocId(entry.id))
             },
             onShowOnlyCategory = viewModel::showOnlyCategory,
+            onSearchInPickedCategories = viewModel::searchInPickedCategories,
             onOpenBookAt = viewModel::openBookAt,
             onSelectResult = viewModel::selectResult,
             onMoreFromBook = viewModel::showMoreFromBook,

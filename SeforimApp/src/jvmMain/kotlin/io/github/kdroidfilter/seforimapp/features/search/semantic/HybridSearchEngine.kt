@@ -353,7 +353,8 @@ class HybridSearchEngine internal constructor(
         private val bookIds: Collection<Long>?,
         private val baseOnly: Boolean,
     ) : SearchSession,
-        MeaningFacets {
+        MeaningFacets,
+        SessionViews {
         private var fused: List<FusedEntry>? = null
         private var offset = 0
         private var lexicalTotal = 0L
@@ -432,6 +433,42 @@ class HybridSearchEngine internal constructor(
             val hit = resolveLine(lineId, query) ?: return null
             val text = SnippetSources.clean(hit.rawText)
             return hit.copy(rawText = text, lineStart = 0, lineEnd = text.length)
+        }
+
+        override suspend fun view(bookIds: Set<Long>?): SearchSession? {
+            val all = fused ?: return null
+            // Without the dense side the list goes on past its candidates, in a session of its own
+            if (lexicalOnly && lexicalTotal > CANDIDATES) return null
+            return View(if (bookIds == null) all else all.filter { it.bookId in bookIds })
+        }
+
+        /** Some of this session's list ([entries], in its order), paged from its first: no search, nothing to close. */
+        private inner class View(
+            private val entries: List<FusedEntry>,
+        ) : SearchSession,
+            MeaningFacets {
+            private var at = 0
+
+            override suspend fun nextPage(
+                limit: Int,
+                snippets: Boolean,
+            ): SearchPage? {
+                while (at < entries.size) {
+                    val end = minOf(at + limit, entries.size)
+                    val page = resolvePage(entries.subList(at, end), snippets)
+                    at = end
+                    if (page.isNotEmpty() || at >= entries.size) {
+                        return SearchPage(hits = page, totalHits = entries.size.toLong(), isLastPage = at >= entries.size)
+                    }
+                }
+                return null
+            }
+
+            override suspend fun meaningBookCounts(): Map<Long, Int> = this@HybridSession.meaningBookCounts()
+
+            override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = this@HybridSession.refinedSnippets(hits)
+
+            override fun close() = Unit
         }
 
         override suspend fun meaningBookCounts(): Map<Long, Int> {

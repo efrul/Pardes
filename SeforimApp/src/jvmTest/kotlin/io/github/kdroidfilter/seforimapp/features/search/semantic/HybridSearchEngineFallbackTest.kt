@@ -111,6 +111,70 @@ class HybridSearchEngineFallbackTest {
         }
 
     @Test
+    fun `a view shows the lines of some books of the same list, with no new search`(): Unit =
+        runBlocking {
+            var searches = 0
+            // Lines 1 to 6: the odd ones of book 1, the even ones of book 2
+            val words =
+                object : SearchEngine by Words() {
+                    override fun openSession(
+                        query: String,
+                        near: Int,
+                        bookFilter: Long?,
+                        categoryFilter: Long?,
+                        bookIds: Collection<Long>?,
+                        lineIds: Collection<Long>?,
+                        baseBookOnly: Boolean,
+                    ): SearchSession {
+                        searches++
+                        return object : SearchSession {
+                            override suspend fun nextPage(
+                                limit: Int,
+                                snippets: Boolean,
+                            ): SearchPage {
+                                val hits = (1L..6L).map { LineHit(2 - it % 2, "", it, 0, "", 1f, "") }
+                                return SearchPage(hits, totalHits = 6, isLastPage = true)
+                            }
+
+                            override fun close() {}
+                        }
+                    }
+                }
+            val failing: (Path) -> IndependentSemanticSearch? = { throw UnsatisfiedLinkError("no onnxruntime in java.library.path") }
+            val resolve: suspend (Long, String) -> LineHit? = { id, _ -> LineHit(1, "", id, 0, "", 0f, "") }
+            val engine = HybridSearchEngine(words, Path.of("unused"), resolve, true, openSemantic = failing)
+            val session = engine.openSession("שבת קודש", 5)!!
+            val views = session as SessionViews
+            // No view of a list that is not made yet
+            assertNull(views.view(null))
+            assertEquals(6, session.nextPage(4, snippets = false)!!.totalHits)
+            val searched = searches
+
+            suspend fun lines(view: SearchSession?): List<Long> {
+                val ids = ArrayList<Long>()
+                while (true) {
+                    val page = view?.nextPage(2, snippets = false) ?: break
+                    ids += page.hits.map { it.lineId }
+                    assertEquals(page.isLastPage, ids.size.toLong() == page.totalHits)
+                    if (page.isLastPage) break
+                }
+                return ids
+            }
+            assertEquals(listOf(2L, 4L, 6L), lines(views.view(setOf(2L))))
+            assertEquals(listOf(1L, 3L, 5L), lines(views.view(setOf(1L, 9L))))
+            // All of it again, from its first, whatever the session itself has shown
+            assertEquals((1L..6L).toList(), lines(views.view(null)))
+            assertTrue(lines(views.view(setOf(9L))).isEmpty())
+            assertEquals(searched, searches)
+
+            // A list that goes on past what it holds is searched instead
+            val long = HybridSearchEngine(ManyWords(400), Path.of("unused"), resolve, true, openSemantic = failing)
+            val all = long.openSession("שבת קודש", 5)!!
+            all.nextPage(25, snippets = false)
+            assertNull((all as SessionViews).view(setOf(1L)))
+        }
+
+    @Test
     fun `a model that fails to load, with an Error too, leaves the search to its words`(): Unit =
         runBlocking {
             var loads = 0
