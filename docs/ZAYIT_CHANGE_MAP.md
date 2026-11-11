@@ -34,7 +34,7 @@ every file Pardes adds.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (742 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (743 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -1436,8 +1436,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +289 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 271 Hebrew strings added in eighteen blocks,
+- **Change:** modified, +290 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 272 Hebrew strings added in eighteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1467,7 +1467,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     the open engine's screen adds to Zayit's (`siddur_reading_*` (6), `siddur_lulav_*` (6), `siddur_israeli_*` (7),
     `siddur_part_selichot`, `siddur_mincha_erev_*` (2), `siddur_hl_viduy_erev_yom_kippur`,
     `siddur_molad_announcement`, `siddur_choose_meal_food`, `siddur_meein_land_of_israel_note`), word for word from
-    the engine's author's fork; the three days of Iyar the engine names (`siddur_yom_hazikaron`, `…_haatzmaut`,
+    the engine's author's fork; `siddur_israeli_ordinary` ("כביום חול רגיל"), the custom Pardes adds, first among
+    them; the three days of Iyar the engine names (`siddur_yom_hazikaron`, `…_haatzmaut`,
     `…_yerushalayim`); and the switch, `settings_open_siddur` ("סידור חכם (ניסיוני)") with its description, which
     says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
@@ -4555,11 +4556,11 @@ reads `installedSiddur`, as it does for its own.
 #### `SeforimApp/addons/siddur/open/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/SiddurScreen.kt`
 
 - **Feature:** the open smart siddur.
-- **Size:** 1646 lines.
+- **Size:** 1654 lines.
 - **What:** the siddur's screen for the open engine: Zayit's screen (`addons/siddur/enabled/…/SiddurScreen.kt`, 1,449
   lines at 0.6.12) as Ariel Daniely adapted it in his fork of the app (arieldaniely/Zayit, AGPL v3 with the §7b term,
   `SeforimApp/src/jvmMain/…/features/siddur/SiddurScreen.kt` at `b9adccdc`, 2026-11-11). Against Zayit's screen (174
-  lines out, 371 in):
+  lines out, 379 in):
   - the day's book comes from `buildDayBook(civil, prefs, options, showAll, source, afterHalachicMidnight)`, with the
     library's siddurim as its `source` (`LibrarySiddurSource`); a nusach whose siddur the library lacks shows the
     "not available" line instead of falling back to Ashkenaz;
@@ -4570,8 +4571,10 @@ reads `installedSiddur`, as it does for its own.
     engine's, given their texts from `strings.xml`;
   - what is not said today, shown on request, is dimmed inside a line too (`SKIP_START`/`SKIP_END`), and turning
     "show all" on or off keeps the line being read in place (`retainedSiddurPosition`);
-  - on the State of Israel's days in Iyar the day bar names the day and offers the engine's four customs
-    (`IsraeliPrayerCustom`, kept by `AppSettings`), and the tefilot's titles name the day;
+  - on the State of Israel's days in Iyar the day bar offers the customs (`IsraeliPrayerCustom`, kept by
+    `AppSettings`): ordinary weekdays until one is picked (`israeliPrayerCustomOf`), then the engine's four. Under a
+    custom that keeps the days, the bar and the tefilot's titles name the day; the titles go by the engine's flags
+    of the days (`ISRAELI_DAY_FLAGS`), which a section lacks under the ordinary weekday;
   - the arrows and PageUp/PageDown scroll the text from wherever the focus is in it, as in a book
     (`rememberKeyScroll`): Zayit's own change to its screen after 0.6.12 (see the notes);
   - links in the text open through `rememberRefLinkUriHandler`; the slots the engine fills itself (the readings, the
@@ -4579,19 +4582,22 @@ reads `installedSiddur`, as it does for its own.
     `SiddurTemplates`, `readingOf`, `megilaOf`, `pirkeiAvos` and the E2E recorders.
 - **Reached from:** `InstalledSiddur.kt` (`SiddurTabContent`).
 - **Follows:** Zayit's `SiddurScreen.kt`, whose code and comments it keeps wherever the engine does not differ.
-- **Tests:** `SiddurScrollTest`, `LibrarySiddurSourceTest`; in the app, a weekday, Rosh Chodesh, Shabbat and a day of
-  Chanukah with its Torah reading were looked at on the full library (2026-11-11).
+- **Tests:** `SiddurScrollTest`, `LibrarySiddurSourceTest`, `OpenSiddurSwitchTest` (the default custom); in the app, a
+  weekday, Rosh Chodesh, Shabbat, a day of Chanukah with its Torah reading, and 5 Iyar as an ordinary weekday and
+  under a custom were looked at on the full library (2026-11-11).
 - **Notes:**
-  - One thing differs from the author's file: his imports the days' names from the `luach` module, which he
-    changed; here they are the addon's (`IsraeliOccasionNames.kt`), so Zayit's `luach` stays as it is.
+  - Two things differ from the author's file. His imports the days' names from the `luach` module, which he
+    changed; here they are the addon's (`IsraeliOccasionNames.kt`), so Zayit's `luach` stays as it is. And his
+    always names Yom HaZikaron, Yom HaAtzmaut and Yom Yerushalayim and leaves Tachanun out on the last two, under
+    each of the engine's four customs. The user asked on 2026-11-11 for an ordinary weekday as the default: the
+    engine's copy has a fifth custom for it (`siddur-open/README.md`), which this screen lists first, falls back to,
+    and under which it names no day.
   - The keyboard scrolling is Zayit's `21659516` ("fix(siddur): scroll with the arrow keys and PageUp/PageDown",
     2026-11-01, 44 lines), which the author's file holds. It is after 0.6.12, the one piece of Zayit's later code in
     Pardes: first left out, as Pardes stays on 0.6.12, then taken at the user's word on 2026-11-11. The commit is
     still AGPL v3 with the §7b term: it is an ancestor of the licence change (`1b9f1f21`), nine hours before it.
   - The file was then formatted by ktlint, which his fork does not run on it.
   - It is a second copy of a 1,449-line screen of Zayit's: a change Zayit makes to its own must be made here by hand.
-  - The engine omits Tachanun on Yom HaAtzmaut and Yom Yerushalayim under each of its four customs; there is no
-    choice of an ordinary weekday. Told to the user on 2026-11-11.
 
 #### `SeforimApp/addons/siddur/open/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/LibrarySiddurSource.kt`
 
@@ -4620,10 +4626,10 @@ reads `installedSiddur`, as it does for its own.
 #### `SeforimApp/addons/siddur/open-test/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/OpenSiddurSwitchTest.kt`
 
 - **Feature:** the open smart siddur.
-- **Size:** 56 lines.
+- **Size:** 57 lines.
 - **What:** three tests: no siddur until the switch is turned on, and none once it is turned off; the switch kept
-  for the next start, exported with the portable preferences and cleared by a reset; the custom of Iyar's days kept
-  by its name, an unknown one read as the first.
+  for the next start, exported with the portable preferences and cleared by a reset; Iyar's days ordinary weekdays
+  until a custom is picked, the custom kept by its name, and an unknown one read as the ordinary weekday.
 - **Reached from:** the JVM tests (`branding/brand.gradle` adds `addons/siddur/open-test/kotlin` to `jvmTest`).
 - **Follows:** Zayit's `addons/siddur/test` (the tests of the addon beside it); Kotlin Test, sentences in backticks,
   settings over `PropertiesSettings` as `TestAppSettings.kt`.
@@ -4707,7 +4713,7 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (742 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (743 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -4979,11 +4985,13 @@ the description where something needs saying.
 
 A copy of SeforimOpenSiddur by Ariel Daniely (https://github.com/arieldaniely/SeforimOpenSiddur, AGPL v3 with the §7b
 term) at commit `cbf530cc` (2026-11-08, version 0.1.0), which the app's experimental smart siddur is built on
-(section 2, "The open smart siddur"). Its sources, tests, data and tools are as their author wrote them.
+(section 2, "The open smart siddur"). Its sources, tests, data and tools are as their author wrote them, but for the
+custom of an ordinary weekday on the State of Israel's days, which Pardes added on 2026-11-11 (three files changed,
+one test added; `siddur-open/README.md`).
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `siddur-open/README.md` | English note on the copy: whose engine it is and that he offered it (efrul/Pardes#27), the pinned commit, date and version, what is copied as it is and what is left out, why a copy and not a submodule or a package, how the module is built (Pardes's Kotlin and catalog versions, ktlint and detekt off), where the app uses it, the three licences, and the steps of an update. It carries the line "Powered by the technologies that drive Zayit". | Pardes's own |
+| `siddur-open/README.md` | English note on the copy: whose engine it is and that he offered it (efrul/Pardes#27), the pinned commit, date and version, what is copied as it is and what is left out, why a copy and not a submodule or a package, how the module is built (Pardes's Kotlin and catalog versions, ktlint and detekt off), what Pardes changed in the copy and when (the ordinary-weekday custom), where the app uses it, the three licences, and the steps of an update. It carries the line "Powered by the technologies that drive Zayit". | Pardes's own |
 | `siddur-open/build.gradle.kts` | The `:siddur-open` module: Kotlin Multiplatform with a JVM target on the catalog's toolchain, `src/main/kotlin` added to `jvmMain` (where the engine's own build keeps its sources), kotlinx-datetime as `api` and KosherKotlin as `implementation` from the catalog, Kotlin Test and coroutines for the tests, and every ktlint and detekt task of the module turned off. *Note:* the engine's own build script (Kotlin 2.3.21, literal versions, `jvmToolchain(25)`) is not copied; the two dependencies are at the same versions in Zayit's catalog. | Pardes's own; follows `luach/build.gradle.kts` and the engine's build script |
 | `siddur-open/UPSTREAM_README.md` | The engine's own README, in Hebrew: what it builds, its sources and rules (the three siddurim and the machzorim of the library, KosherKotlin for the calendar, Amud's conditions with their commit, Hebcal Leyning's table with its commit, the Selichot by nusach), how to run its tests and regenerate its two data sets, its coverage (a reconstruction, partial for local customs, not compared in full with Zayit's closed engine) and its licences. *Note:* it speaks of the author's own app, Zayita. | SeforimOpenSiddur's `README.md` at `cbf530cc`, renamed |
 | `siddur-open/LICENSE` | The engine's licence: GNU AGPL v3 with the §7b attribution term and Elie Gambache's copyright line, the same bytes as this repository's `LICENSE`. | SeforimOpenSiddur at `cbf530cc`, unchanged |
@@ -4994,7 +5002,7 @@ term) at commit `cbf530cc` (2026-11-08, version 0.1.0), which the app's experime
 | `siddur-open/src/jvmMain/resources/open-siddur/readings.tsv.gz` | The table of readings, gzipped: by the kind of year (14), Israel or abroad, the day's offset and the service, the occasion's name and the passages of the Torah reading, the haftarah, the Sephardi haftarah and the megillah (book, first and last verse, aliyah). Binary. | SeforimOpenSiddur at `cbf530cc`, unchanged; made by `tools/generate_readings.mjs` from Hebcal Leyning (BSD 2-Clause) |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/SiddurBook.kt` | The engine's public model: `Nusach`, `SiddurPart` (24 parts with their options and `familyOf`), `SiddurPrefs`, `SiddurLine` (text, heading, note or slot, with its reading, molad announcement or lulav instruction), `BookSection`, `SourceBook`, `SourceHeading`, the `SiddurSource` the app implements, the marks of the day's additions and of what is skipped, `civilDayOf`, `siddurOfTheHour` and each nusach's siddur title. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/DayBook.kt` | `buildDayBook`: the civil day's parts (Selichot in season, Shacharit, the day's meal, Mincha, Neila) and the night's that follows (Chanukah candles, Kabbalat Shabbat, Maariv, Havdala, the omer, the night's meal, Kiddush Levana, the bedtime Shema), each a `BookSection` built from the siddur's outline or a machzor's, with its flags, readings and options. | SeforimOpenSiddur at `cbf530cc`, unchanged |
-| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/SiddurCalendar.kt` | `dayPartFor` (the weekday, Shabbat or festival form of a tefila) and `flagsFor`: the day's flags from KosherKotlin's calendar and `TefilaRules` (Shabbat, festival, Rosh Chodesh, fasts, Tachanun, Hallel, the season's insertions, the omer, Chanukah, the Israeli days and so on). | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/SiddurCalendar.kt` | `dayPartFor` (the weekday, Shabbat or festival form of a tefila) and `flagsFor`: the day's flags from KosherKotlin's calendar and `TefilaRules` (Shabbat, festival, Rosh Chodesh, fasts, Tachanun, Hallel, the season's insertions, the omer, Chanukah, the Israeli days and so on). | SeforimOpenSiddur at `cbf530cc`; changed by Pardes on 2026-11-11: in `flagsFor`, a custom that does not keep the State's days gives them none of their flags and leaves Tachanun as on any weekday, on the day and at Mincha before it |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/CorpusSections.kt` | `Outline`, a source book by its headings, and the keys that map each tefila to the headings of the library's siddur or machzor (`baseKeys`, `machzorTitle`, `machzorKeys`). | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/CorpusAnnotations.kt` | `annotateCorpus`: marks the siddur's lines as said, special or skipped by the instructions written in the text itself, and the choices among them (`selectMigdol`, `splitMealAdditions`, `selectFood`). | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/AmudAnnotations.kt` | `AmudAnnotations`: reads the two Amud tables and gives a paragraph's condition, or its ranges' conditions, by the SHA-256 of the library's text. | SeforimOpenSiddur at `cbf530cc`, unchanged |
@@ -5005,14 +5013,15 @@ term) at commit `cbf530cc` (2026-11-08, version 0.1.0), which the app's experime
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/Selichot.kt` | `hasSeasonalSelichot` and the Selichot book and section of a day of Elul or of the ten days, and of a minor fast, by nusach (Lita for Ashkenaz, Polin for Sefard, Edot HaMizrach). | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/TorahReadings.kt` | `readingsFor`: the Torah reading, maftir, haftarah and megillah of a service from the readings' table, with `ReadingKind`, `VerseAddress`, `ReadingPassage` and `SiddurReading`. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliOccasion.kt` | `IsraeliOccasion` and `israeliOccasion`: Yom HaZikaron, Yom HaAtzmaut (moved as the Independence Day Act says, by the year) and Yom Yerushalayim. | SeforimOpenSiddur at `cbf530cc`, unchanged |
-| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliPrayerCustom.kt` | `IsraeliPrayerCustom`: the four customs of those days (no Tachanun alone, Hallel without blessings, Hallel with them by day, and by night too) and when each says Hallel. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliPrayerCustom.kt` | `IsraeliPrayerCustom`: the customs of those days and when each says Hallel: the engine's four (no Tachanun alone, Hallel without blessings, Hallel with them by day, and by night too), and before them `ORDINARY_WEEKDAY`, under which the days are weekdays like any other (`keepsTheDays` false). | SeforimOpenSiddur at `cbf530cc`; changed by Pardes on 2026-11-11: the fifth custom, `keepsTheDays`, and `saysHallel` false under it |
 | `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliHallel.kt` | Hallel and the added prayers of those days in Maariv and Shacharit, by the custom. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/CalendarPassagesTest.kt` | Ten tests of the passages chosen by the calendar, on small made-up source books. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/DayBookTest.kt` | Ten tests of the day's book: its parts and their order on ordinary and special days, on made-up source books. | SeforimOpenSiddur at `cbf530cc`, unchanged |
-| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliOccasionTest.kt` | Four tests of the Israeli days' dates over the years and of the customs' Hallel. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliOccasionTest.kt` | Four tests of the Israeli days' dates over the years and of the Hallel of the customs that keep them. | SeforimOpenSiddur at `cbf530cc`; changed by Pardes on 2026-11-11: the loop over the customs takes those that keep the days |
 | `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/SelichotTest.kt` | Three tests of the season's and the fasts' Selichot by nusach. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/SukkotPrayersTest.kt` | Three tests of the lulav's blessings, the Hoshanot and the shaking's cues. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/TorahReadingsTest.kt` | Six tests of the readings: weekdays, Shabbat, festivals, the Sephardi haftarah and the walled city. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/OrdinaryWeekdayCustomTest.kt` | Three tests of the custom Pardes adds: under it Yom HaAtzmaut and Yom Yerushalayim have the flags of the weekdays beside them, with Tachanun, no Hallel and no added haftarah; Mincha of the day before keeps its Tachanun and the day before has no name, while the customs that keep the days are as they were; and the engine's own default is unchanged. | Pardes's own; written as the engine's tests beside it (on `flagsFor`), its tests named as Zayit names them |
 | `siddur-open/tools/generate_readings.mjs` | Node script that makes `readings.tsv.gz` from pinned versions of @hebcal/leyning, @hebcal/core and @hebcal/hdate. *Note:* kept as the source of the table; the build never runs it. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 | `siddur-open/tools/import_amud_annotations.py` | Python script that makes the two Amud tables: it matches Amud's corpus to the paragraphs of the library's three siddurim and writes the hashes and conditions of those matched without doubt. *Note:* kept as the source of the tables; the build never runs it. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 

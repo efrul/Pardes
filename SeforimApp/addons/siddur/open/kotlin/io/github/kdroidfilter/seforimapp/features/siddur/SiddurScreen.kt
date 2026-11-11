@@ -170,6 +170,7 @@ import seforimapp.seforimapp.generated.resources.siddur_israeli_daytime
 import seforimapp.seforimapp.generated.resources.siddur_israeli_hallel_blessed
 import seforimapp.seforimapp.generated.resources.siddur_israeli_hallel_unblessed
 import seforimapp.seforimapp.generated.resources.siddur_israeli_no_tachanun
+import seforimapp.seforimapp.generated.resources.siddur_israeli_ordinary
 import seforimapp.seforimapp.generated.resources.siddur_israeli_unblessed
 import seforimapp.seforimapp.generated.resources.siddur_levana_open
 import seforimapp.seforimapp.generated.resources.siddur_levana_window
@@ -298,14 +299,19 @@ private val NUSACH_TITLES =
 
 private val ISRAELI_CUSTOM_TITLES =
     mapOf(
+        IsraeliPrayerCustom.ORDINARY_WEEKDAY to Res.string.siddur_israeli_ordinary,
         IsraeliPrayerCustom.NO_TACHANUN to Res.string.siddur_israeli_no_tachanun,
         IsraeliPrayerCustom.HALLEL_WITHOUT_BLESSINGS to Res.string.siddur_israeli_unblessed,
         IsraeliPrayerCustom.DAYTIME_HALLEL to Res.string.siddur_israeli_daytime,
         IsraeliPrayerCustom.DAY_AND_NIGHT_HALLEL to Res.string.siddur_israeli_day_and_night,
     )
 
+/** The custom picked for the State of Israel's days in Iyar; ordinary weekdays until one is picked. */
 internal fun israeliPrayerCustomOf(code: String): IsraeliPrayerCustom =
-    IsraeliPrayerCustom.entries.firstOrNull { it.name == code } ?: IsraeliPrayerCustom.NO_TACHANUN
+    IsraeliPrayerCustom.entries.firstOrNull { it.name == code } ?: IsraeliPrayerCustom.ORDINARY_WEEKDAY
+
+// The engine's flags of those days; a section has none of them when the custom keeps the days ordinary
+private val ISRAELI_DAY_FLAGS = setOf("yom_hazikaron", "yom_haatzmaut", "yom_yerushalayim")
 
 /** The nusach picked in the siddur, or the one of the user's community. */
 internal fun nusachOf(
@@ -841,7 +847,7 @@ private fun BookHeader(
                 israeliOccasion(LocalDate.fromEpochDays(date.toEpochDays() + 1))?.hasThanksgivingPrayer == true
         }
     val occasion =
-        israeliDay?.localizedName()
+        israeliDay?.takeIf { israeliCustom.keepsTheDays }?.localizedName()
             ?: remember(day) {
                 listOf(hebrewFormatter.formatYomTov(day), hebrewFormatter.formatRoshChodesh(day))
                     .filter { it.isNotBlank() }
@@ -1183,7 +1189,9 @@ private fun sectionTitle(section: BookSection): String {
     val base = stringResource(PART_TITLES.getValue(section.part))
     if (section.part.familyOf() in setOf(SiddurPart.SHACHARIT, SiddurPart.MINCHA, SiddurPart.MAARIV)) {
         val occasion = remember(section.date) { israeliOccasion(section.date) }
-        if (occasion != null) return stringResource(Res.string.siddur_part_of, base, occasion.localizedName())
+        if (occasion != null && ISRAELI_DAY_FLAGS.any(section.flags::contains)) {
+            return stringResource(Res.string.siddur_part_of, base, occasion.localizedName())
+        }
     }
     // A blessing of any hour, at tonight's meal
     if (section.night &&

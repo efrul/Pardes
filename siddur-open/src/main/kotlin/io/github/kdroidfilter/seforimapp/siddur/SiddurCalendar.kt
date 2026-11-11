@@ -40,12 +40,13 @@ internal fun flagsFor(
     val tomorrow = date.plus(1, DateTimeUnit.DAY)
     val next = JewishCalendar(tomorrow, prefs.inIsrael)
     val minchaBeforeFestival = family == MINCHA && next.isYomTovAssurBemelacha
-    val occasion = israeliOccasion(day)
+    val keepsIsraeliDays = prefs.israeliPrayerCustom.keepsTheDays
+    val occasion = if (keepsIsraeliDays) israeliOccasion(day) else null
     val fast = day.yomTovIndex
     val tachanunMorning = rules.isTachanunRecitedShacharis(day)
     val fourParshiyot = day.specialShabbos in fourSpecialShabbatot
     val omitsTachanun = occasion?.hasThanksgivingPrayer == true ||
-        family == MINCHA && israeliOccasion(tomorrow)?.hasThanksgivingPrayer == true
+        keepsIsraeliDays && family == MINCHA && israeliOccasion(tomorrow)?.hasThanksgivingPrayer == true
     return buildSet {
         if (prefs.inIsrael) add("israel")
         if (prefs.minyan) add("minyan")

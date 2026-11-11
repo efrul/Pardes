@@ -34,7 +34,7 @@ class IsraeliOccasionTest {
         val independence = LocalDate(2024, 5, 14)
         val memorial = LocalDate(2024, 5, 13)
         val jerusalem = LocalDate(2026, 5, 15)
-        for (custom in IsraeliPrayerCustom.entries) {
+        for (custom in IsraeliPrayerCustom.entries.filter { it.keepsTheDays }) {
             val prefs = SiddurPrefs(Nusach.ASHKENAZ, true, true, false, israeliPrayerCustom = custom)
             for (occasion in listOf(independence, jerusalem)) {
                 val flags = flagsFor(occasion, SiddurPart.SHACHARIT, prefs)
