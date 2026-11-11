@@ -142,6 +142,8 @@ fun LineCommentsView(
         uiState.navigation.selectedBook
             ?.id
             ?.let { contentState.commentatorSelection(it) } ?: CommentatorSelection()
+    // The reader's own default commentators for the book, set and let go from the list
+    val commentatorsDefault = rememberCommentatorsDefault(uiState.navigation.selectedBook?.id, bookCommentators, onEvent)
     // Shown in panes of their own, not in this one's grid
     val detachedCommentators = contentState.detachedCommentators
     val commentatorsListScrollIndex = contentState.commentatorsListScrollIndex
@@ -205,6 +207,7 @@ fun LineCommentsView(
                             providers = providers,
                             primarySelectedLineId = primarySelectedLineId,
                             bookCommentators = bookCommentators,
+                            commentatorsDefault = commentatorsDefault,
                             commentatorsListScrollIndex = commentatorsListScrollIndex,
                             commentatorsListScrollOffset = commentatorsListScrollOffset,
                             columnScroll = columnScroll,
@@ -224,6 +227,7 @@ fun LineCommentsView(
                             selectedLineId = selectedLine.id,
                             providers = providers,
                             bookCommentators = bookCommentators,
+                            commentatorsDefault = commentatorsDefault,
                             commentatorsListScrollIndex = commentatorsListScrollIndex,
                             commentatorsListScrollOffset = commentatorsListScrollOffset,
                             columnScroll = columnScroll,
@@ -419,6 +423,7 @@ private fun CommentariesContent(
     selectedLineId: Long,
     providers: Providers,
     bookCommentators: CommentatorSelection,
+    commentatorsDefault: CommentatorsDefault,
     commentatorsListScrollIndex: Int,
     commentatorsListScrollOffset: Int,
     columnScroll: CommentariesColumnScroll,
@@ -480,6 +485,7 @@ private fun CommentariesContent(
                     onEvent(BookContentEvent.CommentatorsListScrolled(index, offset))
                 },
                 detachedCommentators = detachedCommentators,
+                default = commentatorsDefault,
                 onReattach = { name -> onEvent(BookContentEvent.ReattachCommentator(name)) },
                 onSelectionChange = { names, checked ->
                     selectedCommentators.value =
@@ -535,6 +541,7 @@ private fun MultiLineCommentariesContent(
     providers: Providers,
     primarySelectedLineId: Long?,
     bookCommentators: CommentatorSelection,
+    commentatorsDefault: CommentatorsDefault,
     commentatorsListScrollIndex: Int,
     commentatorsListScrollOffset: Int,
     columnScroll: CommentariesColumnScroll,
@@ -593,6 +600,7 @@ private fun MultiLineCommentariesContent(
                     onEvent(BookContentEvent.CommentatorsListScrolled(index, offset))
                 },
                 detachedCommentators = detachedCommentators,
+                default = commentatorsDefault,
                 onReattach = { name -> onEvent(BookContentEvent.ReattachCommentator(name)) },
                 onSelectionChange = { names, checked ->
                     selectedCommentators.value =
@@ -685,6 +693,8 @@ private fun CommentatorsList(
     onScroll: (Int, Int) -> Unit,
     // In panes of their own: their row gives them back to this pane
     detachedCommentators: List<String>,
+    // The reader's own default for the book, set and let go by the pin beside "כל המפרשים"
+    default: CommentatorsDefault,
     onReattach: (String) -> Unit,
     // Checks or unchecks these commentators: one, a group's or all of them
     onSelectionChange: (Collection<String>, Boolean) -> Unit,
@@ -718,9 +728,9 @@ private fun CommentatorsList(
                     modifier = Modifier.fillMaxHeight(),
                 ) {
                     val showGroupHeaders = groups.size > 1
-                    // All of them at once, rather than one by one
-                    if (allNames.size > 1) {
-                        item(key = "select-all") {
+                    // All of them at once, rather than one by one; the row ends with the pin of the reader's default
+                    item(key = "select-all") {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             CommentatorsCheckAllRow(
                                 text = stringResource(Res.string.commentators_select_all),
                                 names = allNames,
@@ -730,11 +740,14 @@ private fun CommentatorsList(
                                     onAllChange(checked)
                                 },
                                 fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f),
                             )
+                            // Clear of the list's scrollbar, which lies over the row's end
+                            CommentatorsDefaultPin(default, Modifier.padding(end = 10.dp))
                         }
-                        item(key = "select-all-divider") {
-                            HorizontalDivider()
-                        }
+                    }
+                    item(key = "select-all-divider") {
+                        HorizontalDivider()
                     }
                     groups.forEachIndexed { groupIndex, group ->
                         if (group.commentators.isEmpty()) return@forEachIndexed
@@ -1434,6 +1447,7 @@ private fun CommentatorsCheckAllRow(
     selectedCommentators: Set<String>,
     onSelectionChange: (Collection<String>, Boolean) -> Unit,
     fontWeight: FontWeight,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     val state = commentatorsCheckState(names, selectedCommentators)
     TriStateCheckboxRow(
@@ -1441,10 +1455,7 @@ private fun CommentatorsCheckAllRow(
         state = state,
         onClick = { onSelectionChange(names, state != ToggleableState.On) },
         textStyle = JewelTheme.defaultTextStyle.copy(fontWeight = fontWeight, fontSize = 13.sp),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp, horizontal = 8.dp),
+        modifier = modifier.padding(vertical = 2.dp, horizontal = 8.dp),
     )
 }
 

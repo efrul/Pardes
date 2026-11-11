@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (103 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (104 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (176 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (181 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 37 |
+| Pardes feature hook | 38 |
 | Pardes feature in Zayit's file | 29 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 6 |
@@ -198,13 +198,14 @@ The entries of this section by kind:
 
 #### `LINE_SELECTION_README.md`
 
-- **Change:** modified, +16 −0 lines. Feature: Commentator selection kept.
+- **Change:** modified, +24 −0 lines. Feature: Commentator selection kept, Reader's default commentators.
 - **What:** a section "Whole groups ("כל המפרשים", "ראשונים על התנ״ך")" before "Prefetching and Caching": a group's
   checkbox checks the group for the whole book (`commentatorGroupsByBook`), "כל המפרשים" checks all of them
   (`allCommentatorsBooks`), a group unchecked meanwhile is kept in `hiddenCommentatorGroupsByBook` and a commentator
   unchecked inside a checked group in `excludedCommentatorsByBook`; `CommentatorSelection` holds the rules, and a
   line's list is read with its groups (`listedCommentators`, `SelectedCommentatorsChanged.listed`,
-  `CommentariesUseCase.commentatorGroupOf`).
+  `CommentariesUseCase.commentatorGroupOf`). After it, "The reader's default": the pin of "כל המפרשים", what a book
+  opens with, and how the default is kept by names for the books beside it.
 - **Why:** Zayit documents the reader's line selection in this file, so the change of behaviour is documented in the
   same place (`3c6bae9b`, `49b456d4`).
 - **Kind:** documentation.
@@ -356,7 +357,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +11 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed.
+- **Change:** modified, +13 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`.
   - `abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender`,
@@ -364,13 +365,14 @@ The entries of this section by kind:
   - `abstract val dictionaryLookup: DictionaryLookup`, after Zayit's `toolWindows`, with its import.
   - `abstract val libraryLinks: io.github.kdroidfilter.seforimapp.features.bookcontent.references.LibraryLinks`, with a
     KDoc line.
-  - `abstract val libraryCategories: LibraryCategories`, after Zayit's `searchEngine`, with its import.
+  - `abstract val libraryCategories: LibraryCategories`, after Zayit's `searchEngine`, with its import, and
+    `abstract val commentatorDefaults: CommentatorDefaults` after it, with its import.
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
   lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
-  starts.
+  starts, and the commentators list reads the reader's default.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** five lines among Zayit's declarations, and two imports.
+- **Merge risk:** six lines among Zayit's declarations, and three imports.
 - **Smaller:** already minimal.
 - **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
 - **Notes:** the first two types and the last are written fully qualified instead of imported, unlike every other line of the file:
@@ -681,7 +683,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentEvent.kt`
 
-- **Change:** modified, +35 −0 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept.
+- **Change:** modified, +41 −0 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept, Reader's default commentators.
 - **What:**
   - `ToggleDafView`: shows a Talmud tractate as its Vilna page, or as its text again.
   - `DetachCommentator(name)`, `ReattachCommentator(name)` and `CloseCommentatorPane(name)`: a commentator out of the
@@ -690,12 +692,15 @@ The entries of this section by kind:
     when unknown), so a line unchecks only what it showed.
   - `AllCommentatorsChanged(lineId, checked, listed)` ("כל המפרשים") and
     `CommentatorGroupChanged(lineId, group, checked, listed)` (a group's checkbox, "ראשונים על התנ״ך").
+  - `CommentatorsDefaultSet` and `CommentatorsDefaultCleared`: the commentators the book shows set as the reader's
+    default for it and the books beside it, and that default let go.
 - **Why:** the daf view (`4efa3e3c`), the commentators' own panes (`d85afee7`, `831ad272`) and the selection kept from
-  line to line (`3c6bae9b`, `49b456d4`) are driven through the reader's events, as all of Zayit's reader actions are.
+  line to line (`3c6bae9b`, `49b456d4`) and the reader's default commentators are driven through the reader's events, as all of Zayit's reader actions are.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small: new members of the sealed interface, and one defaulted field at the end of an existing event.
 - **Smaller:** already minimal.
-- **Tests:** `CommentatorSelectionTest`, `DetachedCommentatorsTest`, `DafViewStateTest`.
+- **Tests:** `CommentatorSelectionTest`, `DetachedCommentatorsTest`, `DafViewStateTest`,
+  `CommentariesUseCaseReaderDefaultTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
@@ -731,11 +736,13 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +40 −5 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept.
+- **Change:** modified, +46 −5 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept, Reader's default commentators.
 - **What:**
   - `onEvent` handles `ToggleDafView` (flips `dafView`), `DetachCommentator`, `ReattachCommentator` and
     `CloseCommentatorPane` (through `DetachedCommentators.detach/reattach`), `AllCommentatorsChanged`
-    (`setAllCommentators`) and `CommentatorGroupChanged` (`setCommentatorGroup`), and passes `listed` on.
+    (`setAllCommentators`) and `CommentatorGroupChanged` (`setCommentatorGroup`), and passes `listed` on;
+    `CommentatorsDefaultSet` (`setCommentatorsDefault`) and `CommentatorsDefaultCleared`
+    (`clearCommentatorsDefault`).
   - The commentaries' prefetch reads the book's `commentatorSelection`: with whole groups checked, each line prefetches
     its own commentators of those groups (`shownOn`), not only those remembered by name.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`).
@@ -839,9 +846,21 @@ The entries of this section by kind:
 - **Tests:** `DafAnchorsTest`.
 - **Notes:** two KDocs start with "Pardes:", which Zayit's code does not do.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/usecases/BookContentUseCaseFactory.kt`
+
+- **Change:** modified, +3 −1 lines. Feature: Reader's default commentators.
+- **What:** a fifth constructor parameter, `commentatorDefaults: CommentatorDefaults`, injected and handed to
+  `CommentariesUseCase` in `createCommentariesUseCase`, with its import.
+- **Why:** each tab's `CommentariesUseCase` reads the reader's default commentators when a book opens, and this factory
+  is where Zayit builds it.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a parameter at the end and an argument.
+- **Smaller:** already minimal.
+- **Tests:** `CommentariesUseCaseReaderDefaultTest`; Zayit's `BookContentUseCaseFactoryTest` unchanged.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/usecases/CommentariesUseCase.kt`
 
-- **Change:** modified, +108 −41 lines. Feature: Commentator selection kept.
+- **Change:** modified, +137 −41 lines. Feature: Commentator selection kept, Reader's default commentators.
 - **What:**
   - `applyDefaultCommentatorsForBook` returns when the book has any selection, by name or by whole groups
     (`commentatorSelection(bookId).isEmpty`).
@@ -854,13 +873,19 @@ The entries of this section by kind:
   - `reapplySelectedCommentators` and its multi-line twin go through a new `reapplyCommentators`, which reads the
     selection again and applies `selection.shownOf(listed)`, also when whole groups are checked and nothing is left.
   - Two caches (`commentatorGroupCache`, `groupCategoryCache`) and imports.
+  - A fourth constructor parameter, `readerDefaults: CommentatorDefaults?` (none by default):
+    `applyDefaultCommentatorsForBook` takes the reader's own default, also one that shows no commentator, before the
+    library's; `setCommentatorsDefault()` keeps the book's selection as that default, and
+    `clearCommentatorsDefault()` lets it go, leaving what the tab shows.
 - **Why:** a commentator or group checked stays checked from line to line, and "כל המפרשים" checks every commentator of
-  every line (`3c6bae9b`, `49b456d4`; `LINE_SELECTION_README.md` › Whole groups).
+  every line (`3c6bae9b`, `49b456d4`; `LINE_SELECTION_README.md` › Whole groups). The reader's default is the user's
+  request of 2026-11-09: the library's default alone opened a book, and a choice lived only in its tab.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: the edits replace the bodies of three of Zayit's functions; a Zayit change to the selection's
   rules there conflicts.
 - **Smaller:** the rules already moved out to `CommentatorSelection.kt`; what is left are the calls.
-- **Tests:** `CommentariesUseCaseAllCommentatorsTest`, `CommentatorSelectionTest`, `CommentatorsCheckStateTest`.
+- **Tests:** `CommentariesUseCaseAllCommentatorsTest`, `CommentatorSelectionTest`, `CommentatorsCheckStateTest`,
+  `CommentariesUseCaseReaderDefaultTest`.
 - **Notes:** the KDoc of `updateSelectedCommentators` is extended in French, as Zayit's own text there is, although
   `CONTRIBUTING.md` asks for English comments.
 
@@ -1042,7 +1067,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineCommentsView.kt`
 
-- **Change:** modified, +348 −47 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept.
+- **Change:** modified, +362 −50 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default commentators.
 - **What:**
   - `LineCommentsView` reads the book's `CommentatorSelection` (`bookCommentators`) instead of the line's
     `selectedCommentatorIds`, and the split-off commentators, and passes both to the single- and multi-line contents.
@@ -1061,15 +1086,19 @@ The entries of this section by kind:
   - The reader's commentator (`KeptCommentator`, remembered for the book in `LineCommentsView`) goes down in
     `CommentariesColumnScroll.kept` to the grid, with the line(s) shown (`line = selection`); the commentator of the
     passage selected in the text is the reader's when he comments on it, else its first as before.
+  - The reader's default for the book (`rememberCommentatorsDefault`, in `LineCommentsView`) goes down to the list
+    as `commentatorsDefault`, and "כל המפרשים", now shown for a single commentator too, ends with its pin
+    (`CommentatorsDefaultPin`, clear of the scrollbar); `CommentatorsCheckAllRow` takes a `modifier` for it.
 - **Why:** a commentator in a pane of its own (`d85afee7`, `831ad272`) and whole groups checked from line to line
-  (`3c6bae9b`, `49b456d4`); the commentator the pages stay on from line to line, asked for on 2026-11-10.
+  (`3c6bae9b`, `49b456d4`); the commentator the pages stay on from line to line, asked for on 2026-11-10; the pin of the reader's default,
+  asked for on 2026-11-09 as "קבע כברירת מחדל".
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the edits run through both content composables, the list and the layout config of one of
   Zayit's largest files (some 1,400 lines).
 - **Smaller:** `DetachedCommentatorView` and its column could live in a Pardes file beside `CommentatorTearOffs.kt`;
   the rest is woven into Zayit's composables.
 - **Tests:** `CommentatorsCheckStateTest`, `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`,
-  `KeptCommentatorTest`.
+  `KeptCommentatorTest`; the pin was tried in the app.
 
 ### Search and history
 
@@ -1359,8 +1388,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +223 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 210 Hebrew strings added in fourteen blocks,
+- **Change:** modified, +229 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 215 Hebrew strings added in fourteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
@@ -1376,7 +1405,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה") and `search_sort_relevance`, after
     `search_switch_scope_base`;
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
-    `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`;
+    `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
+    the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
   - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
   - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`.
@@ -2346,6 +2376,90 @@ The hooks in Zayit's files are in `ReaderPanes.kt`, `LineCommentsView.kt`, `Comm
   one who comes back with a line.
 - **Reached from:** the JVM tests.
 - **Follows:** `CommentatorsCheckStateTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The reader's default commentators
+
+A pin at the end of "כל המפרשים" in the commentators list keeps the commentators checked as the reader's default, as
+the user asked on 2026-11-09 ("קבע כברירת מחדל"): the book opens with them in a tab that chose none, and so do the books
+beside it (its category's, then those under the category above: a default set on קידושין is every tractate's of the
+Bavli), each by its own commentators of those names. It comes before the library's own default, also when it shows no
+commentator. Pinned (the accent's colour on a wash of it) while the book shows it, and a click then lets it go, leaving
+what the tab shows; the tooltip says what a click does and names the category that shares it. Kept by names in the
+user's database, so in its backups, and whatever ids a new library gives its books. Hooks: `LineCommentsView.kt`,
+`CommentariesUseCase.kt`, `BookContentUseCaseFactory.kt`, `BookContentEvent.kt`, `BookContentViewModel.kt`,
+`AppGraph.kt`, `strings.xml`; in Pardes's `LibraryCategories.kt`, a book's place and commentaries.
+
+#### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/CommentatorDefaults.sq`
+
+- **Feature:** Reader's default commentators.
+- **Size:** 20 lines.
+- **What:** the user database's table `commentator_default` (`CREATE TABLE IF NOT EXISTS`, so made at the next start):
+  a row a book, keyed by its categories' titles (JSON) and its title, with the default as JSON and when it was set;
+  `upsert`, `selectAll` and `delete`.
+- **Reached from:** `CommentatorDefaults.kt` (`database.commentatorDefaultsQueries`).
+- **Follows:** `CategoryDisplaySettings.sq` beside it, a reader's setting kept by category, and `ReadingTime.sq`,
+  Pardes's other table there.
+- **Tests:** `CommentatorDefaultsTest` (an in-memory database).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/state/CommentatorDefaults.kt`
+
+- **Feature:** Reader's default commentators.
+- **Size:** 193 lines.
+- **What:**
+  - `CommentatorDefault`, a `CommentatorSelection` by names: the groups as the list names them, and the commentators
+    checked or unchecked one by one by their names beside the book (`sanitizeCommentatorName`); `of(selection, nameOf)`
+    and `selection(commentators)`, which leaves out a commentator the book does not have.
+  - `KeptCommentatorDefault.forBook(kept, categoryPath, bookTitle)`: the default a book takes, its own, else its
+    category's last one set, else the last one under the category above; none across the library's top categories.
+  - `CommentatorDefaultState`: the category that shares a default set on the book, whether one applies, and whether it
+    is what the book shows.
+  - `CommentatorDefaults` (injected, one for the app): `of(bookId)`, `stateOf(bookId, selection)`, `set`, `clear` (the
+    default the book takes, its own or another book's) and `revision`, over the table and the library's facts
+    (`LibraryCategories.bookPlace`, `commentariesOn`, `books`).
+- **Reached from:** `CommentariesUseCase.kt` (through `BookContentUseCaseFactory.kt`), `CommentatorsDefaultPin.kt`
+  (through `AppGraph.kt`).
+- **Follows:** `CommentatorSelection.kt` beside it, whose selection it keeps; Zayit's stores over `UserSettingsDb`
+  (`CategoryDisplaySettingsStore`, `HistoryStore` and its `revision`).
+- **Tests:** `CommentatorDefaultsTest`, `CommentariesUseCaseReaderDefaultTest`.
+- **Notes:** a commentator named after its book without "על" (רי״ף בבא בתרא) keeps that name, and is not found beside
+  another book; whole groups and "כל המפרשים" need no name.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/CommentatorsDefaultPin.kt`
+
+- **Feature:** Reader's default commentators.
+- **Size:** 134 lines.
+- **What:** `rememberCommentatorsDefault(bookId, selection, onEvent)`, the default's state for the book shown, read
+  again when the book, its commentators or a default changes; and `CommentatorsDefaultPin`, an icon button (Jewel's
+  `General.Pin`, `PinSelected` in the accent's colour on a wash of it while pinned) that sends
+  `CommentatorsDefaultSet` or `CommentatorsDefaultCleared`, under a tooltip of two lines; nothing for a book the catalog
+  doesn't have.
+- **Reached from:** `LineCommentsView.kt` (`LineCommentsView`, `CommentatorsList`).
+- **Follows:** Zayit's `FavoriteStarButton` (`BreadcrumbActionsView.kt`): an icon that keeps something, lit while it is
+  kept, under a tooltip; `ReattachCommentatorButton` for an icon button at a row's end of this list.
+- **Tests:** none of its own (its state is `CommentatorDefaultsTest`'s); tried in the app, both states and the tooltip.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/state/CommentatorDefaultsTest.kt`
+
+- **Feature:** Reader's default commentators.
+- **Size:** 192 lines.
+- **What:** a selection kept by names and read on a book by the ids it has for them; which default a book takes (its
+  own, its category's last, one under the category above, none across top categories); over an in-memory database
+  and a catalog of two categories, a default set on a book is that of the books beside it by their own commentators,
+  the list is told whether one applies and is shown, a default of no commentator is one until let go, and a book's own
+  default stays when one beside it lets its own go.
+- **Reached from:** the JVM tests.
+- **Follows:** `LibraryCategoriesTest` (a mocked catalog), `CommentatorSelectionTest` beside it.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/usecases/CommentariesUseCaseReaderDefaultTest.kt`
+
+- **Feature:** Reader's default commentators.
+- **Size:** 111 lines.
+- **What:** a book opens with its tab's commentators, else the reader's default (also one of no commentator), else the
+  library's; the default is set from what the book shows, and letting it go leaves what the tab shows.
+- **Reached from:** the JVM tests.
+- **Follows:** `CommentariesUseCaseAllCommentatorsTest` beside it (a state manager over a store, MockK).
 - **Tests:** it is one (unit).
 
 ### Reading time and the learning split widget
@@ -3674,7 +3788,7 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/LibraryCategories.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 200 lines.
+- **Size:** 232 lines.
 - **What:** `LibraryCategories`, the library's categories for the search: each with its path (what the bar suggests), the
   books it searches (all those under it, or its base books alone), whether it holds both kinds, and its chip (`hit`). It holds the commentaries on a book by their time too
   (`CommentaryGroups`, read with the categories from the same links): `named(query, limit)` offers them before the
@@ -3682,12 +3796,15 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
   a category is. `bookOrder()` gives every book its place in the library's order (a category's own books, then its
   subcategories'), read once, for a list of results in that order. `books()` gives every book by its id as the
   catalog has it (`CatalogBook.toBook`), for the results' tree, and `warmUp()` reads the categories and the books
-  ahead of their first use.
+  ahead of their first use. `bookPlace(bookId)` gives a book's title and its categories' titles, and
+  `commentariesOn(bookId)` the commentaries the library links to it, with their titles, for the reader's default
+  commentators (`CommentatorDefaults`).
 - **Reached from:** `AppCoreBindings.kt`, `SearchHomeViewModel.kt`, `SearchResultViewModel.kt`, `AppGraph.kt` and
-  `main.kt` (the warm-up).
+  `main.kt` (the warm-up), `CommentatorDefaults.kt`.
 - **Follows:** Zayit's catalog (`CatalogCache`) and `CategoryNavigationUseCase`, whose `collectBookIdsUnderCategory` it
   replaces in the results.
-- **Tests:** `LibraryCategoriesTest`, `CategorySuggestionsE2ETest`, `CategoryScopeSearchTest`, `CatalogOrderSessionTest`.
+- **Tests:** `LibraryCategoriesTest`, `CategorySuggestionsE2ETest`, `CategoryScopeSearchTest`, `CatalogOrderSessionTest`,
+  `CommentatorDefaultsTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommentaryGroups.kt`
 

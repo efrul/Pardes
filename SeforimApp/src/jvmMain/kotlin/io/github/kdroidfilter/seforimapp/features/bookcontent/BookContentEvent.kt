@@ -274,6 +274,12 @@ sealed interface BookContentEvent {
         val listed: Map<Long, String>,
     ) : BookContentEvent
 
+    // The commentators the book shows set as the reader's default for it and the books beside it (CommentatorDefaults)
+    data object CommentatorsDefaultSet : BookContentEvent
+
+    // The reader's default let go: the book opens with the library's own again
+    data object CommentatorsDefaultCleared : BookContentEvent
+
     // Targum events
     data class SelectedTargumSourcesChanged(
         val lineId: Long,

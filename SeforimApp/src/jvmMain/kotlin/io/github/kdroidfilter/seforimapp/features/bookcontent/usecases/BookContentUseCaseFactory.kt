@@ -4,6 +4,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.settings.CategoryDisplaySettingsStore
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentStateManager
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorDefaults
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
@@ -24,6 +25,7 @@ class BookContentUseCaseFactory(
     private val categoryDisplaySettingsStore: CategoryDisplaySettingsStore,
     private val catalogCache: CatalogCache,
     private val lookup: LuceneLookupSearchService,
+    private val commentatorDefaults: CommentatorDefaults,
 ) {
     /**
      * Creates a [TocUseCase] for managing table of contents.
@@ -62,7 +64,7 @@ class BookContentUseCaseFactory(
     fun createCommentariesUseCase(
         stateManager: BookContentStateManager,
         scope: CoroutineScope,
-    ): CommentariesUseCase = CommentariesUseCase(repository, stateManager, scope)
+    ): CommentariesUseCase = CommentariesUseCase(repository, stateManager, scope, commentatorDefaults)
 
     /**
      * Creates a [CategoryDisplaySettingsUseCase] for managing category display settings.

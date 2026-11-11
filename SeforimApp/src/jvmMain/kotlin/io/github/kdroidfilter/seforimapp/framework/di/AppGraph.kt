@@ -15,6 +15,7 @@ import io.github.kdroidfilter.seforimapp.core.selection.SelectionContext
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.core.settings.CategoryDisplaySettingsStore
 import io.github.kdroidfilter.seforimapp.core.shnayimmikra.ShnayimMikraStore
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorDefaults
 import io.github.kdroidfilter.seforimapp.features.database.update.DatabaseCleanupUseCase
 import io.github.kdroidfilter.seforimapp.features.database.update.DatabasePreparationUseCase
 import io.github.kdroidfilter.seforimapp.features.database.update.navigation.DatabaseUpdateProgressBarState
@@ -63,6 +64,7 @@ abstract class AppGraph : ViewModelGraph {
     abstract val repository: SeforimRepository
     abstract val searchEngine: SearchEngine
     abstract val libraryCategories: LibraryCategories
+    abstract val commentatorDefaults: CommentatorDefaults
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync
