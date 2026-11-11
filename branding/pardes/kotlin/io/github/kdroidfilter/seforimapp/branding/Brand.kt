@@ -14,4 +14,7 @@ object Brand {
 
     /** The app's preferences (java.util.prefs): its own node, where Zayit uses the root. */
     fun settings(): Settings = PreferencesSettings(Preferences.userRoot().node("io/github/efrul/pardes"))
+
+    /** The build carries the open smart siddur (addons/siddur/open, which branding/brand.gradle compiles for Pardes). */
+    const val OPEN_SIDDUR = true
 }

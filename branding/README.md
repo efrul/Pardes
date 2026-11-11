@@ -18,6 +18,10 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
     (identity `KdroidFilter.Zayit`, named זית);
   - fails if one of Zayit's private add-ons (smart siddur, semantic search, quote links) would be compiled: their
     licence is for Zayit only;
+  - compiles Pardes's own smart siddur where upstream's script compiles `addons/siddur/disabled`:
+    `SeforimApp/addons/siddur/open` (and its tests, `addons/siddur/open-test`) with the `:siddur-open` module, the
+    open engine vendored in `siddur-open/` (its `README.md`). `Brand.OPEN_SIDDUR` tells the app the build carries it,
+    and the app shows it only once the user turns it on in the settings;
   - lays `<brand>/composeResources` over `SeforimApp/src/commonMain/composeResources` and `<brand>/assets` over
     `src/jvmMain/assets` (task `BrandResources` in buildSrc). A file replaces the file at the same path; the brand's
     `values/strings.xml` holds only the strings that change, each replacing upstream's string of that name. The build
@@ -25,9 +29,11 @@ upstream's files keep Zayit's values. A new Zayit release then merges against a 
   - adds `<brand>/assetsExtra` to the package-time assets: files upstream does not have, which must stay so (the build
     fails if upstream adds one at the same path). `common/licenses` holds the licence texts of everything the app
     bundles, shipped as plain files in the install folder and indexed in its `README.md`; `brandLicences` copies in
-    three texts upstream keeps elsewhere (`LICENSE`, `limud/NOTICE.txt`, the sky's `CREDITS.md`). A new desktop
+    five texts kept elsewhere (`LICENSE`, `limud/NOTICE.txt`, the sky's `CREDITS.md`, and the two notices of the open
+    siddur's data, `siddur-open/COPYING.AMUD` and `COPYING.HEBCAL`). A new desktop
     dependency, font, icon set or data file needs its entry and text there.
-- `<brand>/kotlin` is compiled with the app: `Brand` (the data folder's id, the preferences node), `BrandInfo` (the
+- `<brand>/kotlin` is compiled with the app: `Brand` (the data folder's id, the preferences node, whether the
+  build carries the open siddur), `BrandInfo` (the
   source link, the error report's signature, the backup file name, the Linux launcher id, the User-Agent),
   `BrandUpdates` (where updates come from: Pardes's `desktop-*` releases, `PardesDesktopReleases`) and
   `BrandLibraries` (an installed Zayit's library, which Pardes offers to use in place). The app's code reads these

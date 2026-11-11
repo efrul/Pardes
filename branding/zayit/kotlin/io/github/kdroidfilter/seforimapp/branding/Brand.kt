@@ -9,4 +9,7 @@ object Brand {
 
     /** The app's preferences: java.util.prefs' user root. */
     fun settings(): Settings = Settings()
+
+    /** No open smart siddur: upstream's siddur is its own (addons/siddur/enabled) or none. */
+    const val OPEN_SIDDUR = false
 }

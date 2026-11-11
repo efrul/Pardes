@@ -28,14 +28,14 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (191 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (200 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (709 files: androidApp/, semantic-model/, branding/, docs/, workflows,
-  skills, …): a row each, what the file is and where it comes from.
+- **Section 3, Pardes's own trees** (742 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+  workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
 
@@ -60,9 +60,9 @@ The entries of this section by kind:
 | Pardes feature hook | 42 |
 | Pardes feature in Zayit's file | 29 |
 | Fix of Zayit's code | 12 |
-| Branding hook | 6 |
+| Branding hook | 5 |
 | Removed Zayit file | 5 |
-| Branding hook with Pardes feature hooks or a fix | 5 |
+| Branding hook with Pardes feature hooks or a fix | 6 |
 | Licence removal | 4 |
 | Documentation | 2 |
 | Renamed Zayit file | 2 |
@@ -183,7 +183,9 @@ The entries of this section by kind:
   - A section "Pardes stays Zayit: the change map": the `zayit-fidelity` skill, Zayit's guidelines, Conventional
     Commits, and this map in the same commit as every change, with `check_change_map.py`.
   - After Zayit's open-core paragraphs: Pardes builds only the community edition, never sets Zayit's private-package
-    tokens or `-P*.local` flags, and has its own open semantic search, whose pack comes from `semantic-*` releases.
+    tokens or `-P*.local` flags, has its own open smart siddur (SeforimOpenSiddur's engine in `siddur-open/`, its
+    screen in `addons/siddur/open`, experimental and off until turned on), and has its own open semantic search,
+    whose pack comes from `semantic-*` releases.
   - Security: the Kaggle account is never named in the repository, its workflows or their logs.
   - Git: commits as `efrul <342689225+efrul@users.noreply.github.com>`, author and committer, signed off.
 - **Why:** this file is what every Claude Code session reads first, so Pardes's rules go where they cannot be missed;
@@ -265,13 +267,16 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/graalvm/reachability-metadata.json`
 
-- **Change:** modified, +24 −0 lines. Feature: Semantic search.
+- **Change:** modified, +33 −0 lines. Feature: Semantic search, the open smart siddur.
 - **What:** eight resource globs for ONNX Runtime's native libraries on `win-x64`, `linux-aarch64`, `osx-aarch64` and
-  `osx-x64` (`onnxruntime` and `onnxruntime4j_jni`), beside the `linux-x64` ones Zayit already lists.
+  `osx-x64` (`onnxruntime` and `onnxruntime4j_jni`), beside the `linux-x64` ones Zayit already lists; and three for
+  the open siddur's data in the `:siddur-open` jar (`open-siddur/amud-annotations.tsv`, `amud-inline.tsv`,
+  `readings.tsv.gz`), before `org/sqlite/…`.
 - **Why:** the GraalVM native image carries only the resources this file names, so without them Pardes's semantic
-  search had no ONNX Runtime on those platforms (`20e2fa81`, `0c107b56`).
+  search had no ONNX Runtime on those platforms (`20e2fa81`, `0c107b56`), and the open siddur's engine would find
+  none of its tables, which it reads as resources (`AmudAnnotations`, `TorahReadings`).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** a block inserted inside a 2,900-line generated list; a conflict if Zayit regenerates the file.
+- **Merge risk:** two blocks inserted inside a 2,900-line generated list; a conflict if Zayit regenerates the file.
 - **Smaller:** already minimal.
 - **Tests:** the native builds of `desktop-release.yml`.
 
@@ -307,16 +312,18 @@ The entries of this section by kind:
 
 #### `settings.gradle.kts`
 
-- **Change:** modified, +6 −0 lines. Feature: Commentators in their own panes.
+- **Change:** modified, +7 −0 lines. Feature: Commentators in their own panes, the open smart siddur.
 - **What:** in `dependencyResolutionManagement.repositories`, an `exclusiveContent` repository `NucleusFork`
   (`nucleus-fork/maven`) that serves only `dev.nucleusframework:nucleus.decorated-window-tao` at
-  `3.0.0-dev-202610272317-1-tearoff`, with a two-line comment.
+  `3.0.0-dev-202610272317-1-tearoff`, with a two-line comment. And `include(":siddur-open")`, after Zayit's last
+  `include`: the open siddur's engine as a module of this build.
 - **Why:** as for `gradle/libs.versions.toml`: that one module from the repository, every other module from the
-  release (`0447981b`).
+  release (`0447981b`). The engine's copy (`siddur-open/README.md`) is compiled here, with this build's Kotlin and
+  versions, so it must be one of its modules.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** a block at the top of the repositories; a conflict only if Zayit edits those lines.
 - **Smaller:** already minimal.
-- **Tests:** the build.
+- **Tests:** the build; `:siddur-open:jvmTest`.
 
 ### The application shell, DI, windows, update and platform
 
@@ -555,7 +562,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +233 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode.
+- **Change:** modified, +261 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     lighter unsure lines (`daf_mark_unsure`), the review mode (`daf_review`) and its two fonts (`font_daf_gemara`,
@@ -574,15 +581,23 @@ The entries of this section by kind:
   - **Feedback:** `search_feedback` (the grade buttons, with a flow), the random sender id (`feedback_sender`,
     `renewFeedbackSender`), the start question's answer (`feedback_asked`, `feedback_auto_send`), and per kind of
     feedback whether it is sent and up to when (`feedback_kind_*`, `feedback_sent_*`).
-  - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`.
+  - **The open smart siddur:** `isOpenSiddurEnabled`/`setOpenSiddurEnabled` (`open_siddur`, off by default), which
+    also write `OpenSiddurSwitch.shown`, as the `init` block does at the start and `clearAll()` at a reset: the
+    siddur's addon reads the switch where it has no graph to take the settings from. And the custom of the State of
+    Israel's days in Iyar the open siddur asks on those days, with its flow (`siddur_israeli_prayer_custom`, an
+    `IsraeliPrayerCustom`'s name), after Zayit's three siddur preferences. Both are portable.
+  - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`, `OpenSiddurSwitch`.
 - **Why:** Zayit keeps every preference here with its flow, so Pardes's features keep theirs here too (`8d3825e7` and
-  the daf commits, `58586e1a`, `cb0f0a27`, `90f8a24a`, `ddf604d8`).
+  the daf commits, `58586e1a`, `cb0f0a27`, `90f8a24a`, `ddf604d8`). The siddur's switch is the one preference here
+  that is mirrored outside the class: `installedSiddur` is a top-level value Zayit's code reads in composition and
+  in `main.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high in size, low in conflicts: Zayit edits this file in most releases (0.6.12 added the search
   split), but Pardes's blocks are separate members, keys and list entries.
 - **Smaller:** the feedback and daf settings could be Pardes classes over the same `Settings`, leaving only the
   portable keys and `clearAll()`'s resets here.
-- **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`.
+- **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`,
+  `OpenSiddurSwitchTest`.
 
 ### Tabs, sessions and desktops
 
@@ -1420,8 +1435,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +256 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 240 Hebrew strings added in seventeen blocks,
+- **Change:** modified, +289 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 271 Hebrew strings added in eighteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1446,12 +1461,19 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - a desktop's link: `desktop_copy_link` ("העתק קישור למרחב"), after Zayit's `desktop_open_in_new_window`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
   - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
-  - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`.
+  - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`;
+  - the open smart siddur, under a comment after Zayit's last siddur string (`siddur_open_siddur`): the 26 strings
+    the open engine's screen adds to Zayit's (`siddur_reading_*` (6), `siddur_lulav_*` (6), `siddur_israeli_*` (7),
+    `siddur_part_selichot`, `siddur_mincha_erev_*` (2), `siddur_hl_viduy_erev_yom_kippur`,
+    `siddur_molad_announcement`, `siddur_choose_meal_food`, `siddur_meein_land_of_israel_note`), word for word from
+    the engine's author's fork; the three days of Iyar the engine names (`siddur_yom_hazikaron`, `…_haatzmaut`,
+    `…_yerushalayim`); and the switch, `settings_open_siddur` ("סידור חכם (ניסיוני)") with its description, which
+    says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); seventeen insertion points (the onboarding's two blocks stand together), each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); eighteen insertion points (the onboarding's two blocks stand together), each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -1570,14 +1592,16 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/GeneralSettingsScreen.kt`
 
-- **Change:** modified, +4 −2 lines. Feature: Branding.
+- **Change:** modified, +7 −2 lines. Feature: Branding, the open smart siddur.
 - **What:** the header's title is `stringResource(Res.string.app_name)` instead of the literal "זית", and its GitHub
-  button opens `BrandInfo.SOURCE_URL` instead of Zayit's repository; two imports.
+  button opens `BrandInfo.SOURCE_URL` instead of Zayit's repository; two imports. After the last of Zayit's three
+  cards, `OpenSiddurCard()`, with its import: the experimental siddur's switch.
 - **Why:** the settings name the app and link its AGPL source, which are Pardes's (`07e14dac`; `branding/README.md`).
-- **Kind:** branding hook.
+  The siddur's switch is a general setting of the app, as the three cards above it are, and belongs to no other page.
+- **Kind:** branding hook and Pardes feature hook.
 - **Merge risk:** small.
 - **Smaller:** already minimal; `app_name` itself is replaced by the brand overlay.
-- **Tests:** none.
+- **Tests:** none of its own; `OpenSiddurSwitchTest` (what the card switches).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsEvents.kt`
 
@@ -4472,6 +4496,159 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
 
+### The open smart siddur (experimental)
+
+Zayit's smart siddur is its private package, which Pardes may not use. Pardes's own is built on an open engine,
+SeforimOpenSiddur by Ariel Daniely (AGPL v3 with the §7b term), which he offered in efrul/Pardes#27: a copy of it at a
+pinned commit is the `:siddur-open` module (`siddur-open/`, section 3), and its screen is a third variant of Zayit's
+siddur addon, `SeforimApp/addons/siddur/open`, beside `enabled` (the private package's) and `disabled` (none).
+`branding/brand.gradle` compiles it for Pardes where Zayit's script compiles `disabled`. The engine reads the tefilot
+from the library's own siddurim, and its author says its coverage is partial, so the siddur is experimental: the app
+shows none until the user turns it on in Settings › כללי. The hooks in Zayit's files are `OpenSiddurCard()` in
+`GeneralSettingsScreen.kt`, the two preferences in `AppSettings.kt`, `include(":siddur-open")` in
+`settings.gradle.kts`, three resource globs in `reachability-metadata.json` and a block of `strings.xml`. Zayit's
+code that shows the siddur (`ToolsMenuButton`, `LuachWidgets`, `AppNativeMenuBar`, `TabsContent`) is unchanged: it
+reads `installedSiddur`, as it does for its own.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/OpenSiddurSwitch.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 20 lines.
+- **What:** the object `OpenSiddurSwitch` with `shown`, a Compose snapshot state that mirrors the `open_siddur`
+  preference and that only `AppSettings` writes (at its start, at a change, at a reset). The open addon's
+  `installedSiddur` is null while it is false.
+- **Reached from:** `AppSettings.kt` (which writes it), `addons/siddur/open`'s `InstalledSiddur.kt` and
+  `OpenSiddurCard.kt` (which read it).
+- **Follows:** Zayit's `SiddurFeature.kt` beside it, whose `installedSiddur` it serves. A global object is a
+  departure from `CLAUDE.md`'s "use the Metro graph instead of global singletons": `installedSiddur` is a top-level
+  value that Zayit's code reads in composition and in `main.kt`, with no graph at hand, and a snapshot state makes
+  the menus and the widget that show the siddur follow the switch at once.
+- **Tests:** `OpenSiddurSwitchTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/siddur/OpenSiddurCard.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 26 lines.
+- **What:** `OpenSiddurCard()`: Zayit's `SettingCard` with the title "סידור חכם (ניסיוני)", the description that says
+  what the siddur is, that it is experimental and whose work it is built on, and the checkbox that calls
+  `AppSettings.setOpenSiddurEnabled`. Nothing in a build without the open siddur (`Brand.OPEN_SIDDUR` false).
+- **Reached from:** `GeneralSettingsScreen.kt` (`GeneralSettingsView`).
+- **Follows:** the cards of Zayit's general settings (`SettingCard`); a card of its own beside the screen, as Pardes's
+  `LibraryLocationCard` and `SemanticPackCard`.
+- **Tests:** `OpenSiddurSwitchTest` (the preference and what it switches); the card itself was checked in the app.
+
+#### `SeforimApp/addons/siddur/open/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/InstalledSiddur.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 30 lines.
+- **What:** the addon's `installedSiddur`: a property whose getter gives the open siddur's `SiddurFeature` while
+  `OpenSiddurSwitch.shown`, and null otherwise. The feature's `TabContent` is `SiddurTabContent`, as in Zayit's
+  `enabled` variant; its `runE2e` does nothing (Zayit's siddur scenario walks the private package's templates).
+- **Reached from:** `branding/brand.gradle`, which adds `addons/siddur/open/kotlin` to `jvmMain` and leaves
+  `addons/siddur/disabled` out; then everything of Zayit's that reads `installedSiddur`.
+- **Follows:** Zayit's `addons/siddur/enabled/…/InstalledSiddur.kt`, of which it is the third variant.
+- **Tests:** `OpenSiddurSwitchTest`.
+- **Notes:** a siddur tab left open when the switch is turned off is drawn empty until it is closed, as a siddur tab
+  restored in a build without a siddur.
+
+#### `SeforimApp/addons/siddur/open/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/SiddurScreen.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 1604 lines.
+- **What:** the siddur's screen for the open engine: Zayit's screen (`addons/siddur/enabled/…/SiddurScreen.kt`, 1,449
+  lines at 0.6.12) as Ariel Daniely adapted it in his fork of the app (arieldaniely/Zayit, AGPL v3 with the §7b term,
+  `SeforimApp/src/jvmMain/…/features/siddur/SiddurScreen.kt` at `b9adccdc`, 2026-11-11). Against Zayit's screen (173
+  lines out, 328 in):
+  - the day's book comes from `buildDayBook(civil, prefs, options, showAll, source, afterHalachicMidnight)`, with the
+    library's siddurim as its `source` (`LibrarySiddurSource`); a nusach whose siddur the library lacks shows the
+    "not available" line instead of falling back to Ashkenaz;
+  - the readings (Torah, haftarah, megillah) are the engine's `SiddurReading`s, drawn by `ReadingBlock` with the
+    verses the source finds, each aliyah under its name, or "הקטע אינו זמין במאגר הספרים";
+  - Selichot is a part of its own, opened at night in its season; Mincha of the eves of Rosh Hashana and Yom Kippur
+    has its own title; the lulav's instructions, the molad's announcement and the notes of מעין שלוש are lines of the
+    engine's, given their texts from `strings.xml`;
+  - what is not said today, shown on request, is dimmed inside a line too (`SKIP_START`/`SKIP_END`), and turning
+    "show all" on or off keeps the line being read in place (`retainedSiddurPosition`);
+  - on the State of Israel's days in Iyar the day bar names the day and offers the engine's four customs
+    (`IsraeliPrayerCustom`, kept by `AppSettings`), and the tefilot's titles name the day;
+  - links in the text open through `rememberRefLinkUriHandler`; the slots the engine fills itself (the readings, the
+    molad, the omer's day, Pirkei Avot) are gone from `SiddurSlot`, and so are the private package's
+    `SiddurTemplates`, `readingOf`, `megilaOf`, `pirkeiAvos` and the E2E recorders.
+- **Reached from:** `InstalledSiddur.kt` (`SiddurTabContent`).
+- **Follows:** Zayit's `SiddurScreen.kt`, whose code and comments it keeps wherever the engine does not differ.
+- **Tests:** `SiddurScrollTest`, `LibrarySiddurSourceTest`; in the app, a weekday, Rosh Chodesh, Shabbat and a day of
+  Chanukah with its Torah reading were looked at on the full library (2026-11-11).
+- **Notes:**
+  - Two things differ from the author's file. His imports the days' names from the `luach` module, which he
+    changed; here they are the addon's (`IsraeliOccasionNames.kt`), so Zayit's `luach` stays as it is. And his holds
+    Zayit's keyboard scrolling of the siddur (`21659516`, 2026-11-01), which is after 0.6.12: its 44 lines are left
+    out. That commit is still AGPL v3 (it precedes the licence change, `1b9f1f21`, by nine hours, and is its
+    ancestor), so it can be added if the user decides to take it (section 5).
+  - The file was then formatted by ktlint, which his fork does not run on it.
+  - It is a second copy of a 1,449-line screen of Zayit's: a change Zayit makes to its own must be made here by hand.
+  - The engine omits Tachanun on Yom HaAtzmaut and Yom Yerushalayim under each of its four customs; there is no
+    choice of an ordinary weekday. Told to the user on 2026-11-11.
+
+#### `SeforimApp/addons/siddur/open/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/LibrarySiddurSource.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 66 lines.
+- **What:** `LibrarySiddurSource`, the engine's `SiddurSource` over the library: `book(title)` gives a book's lines
+  with its table of contents as headings by line index, read once and kept; `passage(passage)` gives the verses of a
+  reading between two addresses, from a map of the book's verses by chapter and verse read from each line's reference
+  (its Hebrew numerals), or null when the library lacks the book or an end of the passage.
+- **Reached from:** `SiddurScreen.kt` (`SiddurTabContent`, `ReadingBlock`).
+- **Follows:** Ariel Daniely's file of the same name in his fork, unchanged but for ktlint's formatting; it reads the
+  library through `SeforimRepository`, as Zayit's screen did for its readings (`passagesText`).
+- **Tests:** `LibrarySiddurSourceTest`.
+
+#### `SeforimApp/addons/siddur/open/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/IsraeliOccasionNames.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 20 lines.
+- **What:** `IsraeliOccasion.localizedName()`: the names of Yom HaZikaron, Yom HaAtzmaut and Yom Yerushalayim, from
+  `strings.xml`.
+- **Reached from:** `SiddurScreen.kt` (the day bar, the tefilot's titles).
+- **Follows:** the author's `luach/…/IsraeliOccasionNames.kt`, kept inside the addon so that Zayit's `luach` module
+  and its strings are not changed.
+- **Tests:** none of its own.
+
+#### `SeforimApp/addons/siddur/open-test/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/OpenSiddurSwitchTest.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 56 lines.
+- **What:** three tests: no siddur until the switch is turned on, and none once it is turned off; the switch kept
+  for the next start, exported with the portable preferences and cleared by a reset; the custom of Iyar's days kept
+  by its name, an unknown one read as the first.
+- **Reached from:** the JVM tests (`branding/brand.gradle` adds `addons/siddur/open-test/kotlin` to `jvmTest`).
+- **Follows:** Zayit's `addons/siddur/test` (the tests of the addon beside it); Kotlin Test, sentences in backticks,
+  settings over `PropertiesSettings` as `TestAppSettings.kt`.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/addons/siddur/open-test/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/SiddurScrollTest.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 23 lines.
+- **What:** one test of `retainedSiddurPosition`: turning the omitted text on or off keeps the same line at the same
+  offset, and a line that goes away gives the next one that stays.
+- **Reached from:** the JVM tests.
+- **Follows:** Ariel Daniely's test of the same name in his fork, unchanged.
+- **Tests:** it is one (unit).
+- **Notes:** its test is named in camelCase, where Zayit's tests are sentences in backticks.
+
+#### `SeforimApp/addons/siddur/open-test/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/LibrarySiddurSourceTest.kt`
+
+- **Feature:** the open smart siddur.
+- **Size:** 137 lines.
+- **What:** four tests on a real library (`SEFORIM_DB=/path/to/seforim.db`; skipped without it): the Selichot of the
+  season and of the fasts in the three nusachim; the eves of festivals without Tachanun and Mincha of Erev Yom Kippur
+  from its machzor; a haftarah and the readings of several days found verse by verse; and the core tefilot of a
+  weekday, a Friday night, Rosh Hashana and Shabbat Rosh Chodesh.
+- **Reached from:** the JVM tests.
+- **Follows:** Ariel Daniely's test of the same name in his fork, unchanged but for ktlint's formatting.
+- **Tests:** it is one (on a library). All four pass on the library release Pardes installs (2026-11-11).
+- **Notes:** CI has no library, so it does not run there; its tests are named in camelCase.
+
 ### Branding
 
 #### `buildSrc/src/main/kotlin/io/github/kdroidfilter/buildsrc/BrandResources.kt`
@@ -4526,7 +4703,7 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (640 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (742 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -4600,8 +4777,8 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `branding/README.md` | English guide to the brand overlay: how brand.gradle and BrandResources make the build Pardes for desktop, the brand Kotlin objects, the tables of every hook in Zayit's files (branding, library location, semantic search, fixes of Zayit's code), the licence-restricted files replaced in place, merging a Zayit release, and rules for ABOUT.md and CONDITIONS.md. *Note:* Says ForeignLibraries.kt is the only reader of BrandLibraries, but LibraryLocationViewModel.kt reads `OTHER_APP_NAME` too. Later features' hooks in Zayit files are not listed (e.g. `FeedbackSendCard()` in DataSettingsScreen.kt). | Pardes's own |
-| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). With the zayit brand it only adds branding/zayit/kotlin. | Pardes's own |
+| `branding/README.md` | English guide to the brand overlay: how brand.gradle and BrandResources make the build Pardes for desktop, the brand Kotlin objects, the open siddur's addon compiled for Pardes, the tables of every hook in Zayit's files (branding, library location, semantic search, fixes of Zayit's code), the licence-restricted files replaced in place, merging a Zayit release, and rules for ABOUT.md and CONDITIONS.md. *Note:* Says ForeignLibraries.kt is the only reader of BrandLibraries, but LibraryLocationViewModel.kt reads `OTHER_APP_NAME` too. Later features' hooks in Zayit files are not listed (e.g. `FeedbackSendCard()` in DataSettingsScreen.kt). | Pardes's own |
+| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, compiles Pardes's open smart siddur in the place of Zayit's (it leaves `addons/siddur/disabled` out of jvmMain with an exclude on its path, adds `addons/siddur/open/kotlin`, the `:siddur-open` module and the tests of `addons/siddur/open-test/kotlin`), and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). brandLicences also copies the two notices of the open siddur's data (`siddur-open/COPYING.AMUD` as GPL-3.0.txt, `COPYING.HEBCAL` as Hebcal-LICENSE.txt). With the zayit brand it only adds branding/zayit/kotlin. | Pardes's own |
 | `branding/pardes/assets/common/splash.png` | 800x533 splash picture laid over Zayit's package-time asset common/splash.png: Zayit's layout (a dark card with a gold border, the icon with a gold rim, the name under it) with the Pardes icon and the word פרדס in gold on dark olive. *Note:* Zayit's Rust installer wrapper (installer/), which also shows that splash, is not built for Pardes. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py (desktop mode); replaces Zayit's SeforimApp/src/jvmMain/assets/common/splash.png (the olive branch and זית on black) |
 | `branding/pardes/assetsExtra/common/licenses/ANGLE-LICENSE.txt` | BSD 3-Clause licence of ANGLE (libEGL and libGLESv2, also nucleus.angle-natives), which Nucleus's Tao window ships. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Zayit's packages carry no third-party licence texts; all of this folder is Pardes's. | copied from ANGLE (BSD-3-Clause); identical to META-INF/licenses/LICENSE-BSD-3-Clause-angle.txt in the Nucleus tao jar |
 | `branding/pardes/assetsExtra/common/licenses/AccessKit-LICENSE-MIT.txt` | MIT licence of AccessKit, the accessibility library compiled into Nucleus's Tao window binary (MIT or Apache-2.0). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from AccessKit (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-accesskit.txt |
@@ -4633,7 +4810,7 @@ the description where something needs saying.
 | `branding/pardes/assetsExtra/common/licenses/OFL-Open-Sans.txt` | SIL Open Font License 1.1 of Open Sans. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Open Sans (OFL-1.1) |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-LICENSE.txt` | MIT licence of ONNX Runtime, which runs the semantic search's model (1.17.1 on desktop). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from ONNX Runtime (MIT); same text as androidApp/app/src/androidMain/assets/licenses/ONNX-Runtime-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-ThirdPartyNotices.txt` | ONNX Runtime's third-party notices (6,508 lines). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Differs from androidApp's copy, which is ONNX Runtime 1.22.0's (a665f012). | copied from ONNX Runtime (MIT) |
-| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, plus the three texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
+| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
 | `branding/pardes/assetsExtra/common/licenses/Radix-Icons-LICENSE.txt` | MIT licence of Radix Icons, drawn in the app's icons module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Radix Icons (MIT); same text as androidApp/app/src/androidMain/assets/licenses/Radix-Icons-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/Robius-LICENSE-MIT.txt` | MIT licence of Project Robius's robius-share, derived source in Nucleus's share module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Project Robius (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-robius.txt |
 | `branding/pardes/assetsExtra/common/licenses/SLF4J-LICENSE.txt` | MIT licence of SLF4J. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from SLF4J (MIT) |
@@ -4660,12 +4837,12 @@ the description where something needs saying.
 | `branding/pardes/desktopAppIcons/LinuxIcon.png` | 1024x1024 Pardes icon of the Linux packages (deb, rpm, pacman), which brand.gradle sets as `linux.iconFile`. *Note:* Not an overlay: brand.gradle points Nucleus at it. The same bytes as the brand's AppIcon.png. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/LinuxIcon.png (the olive branch icon) |
 | `branding/pardes/desktopAppIcons/MacosIcon.icns` | macOS icon set (PNG entries from 32 to 1024 px) of the dmg and zip, which brand.gradle sets as `macOS.iconFile`. *Note:* Added with the macOS builds (0c107b56, desktop 1.0.2). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/MacosIcon.icns (one 1024 px image) |
 | `branding/pardes/desktopAppIcons/WindowsIcon.ico` | Windows icon (PNG entries at 16, 20, 24, 32, 40, 48, 64, 128 and 256 px) of the NSIS installer and the exe, which brand.gradle sets as `windows.iconFile`. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/WindowsIcon.ico (one 256 px entry) |
-| `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Pardes for desktop's `Brand`: `APP_ID`, FileKit's data-folder id (Pardes's own, as the Android applicationId), and `settings()`, java.util.prefs in a node of its own, so the library, notes and settings stay apart from an installed Zayit's. *Note:* Read by main.kt, AppCoreBindings.provideSettings() and PendingUserDataRestore in place of Zayit's literals. | Pardes's own |
+| `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Pardes for desktop's `Brand`: `APP_ID`, FileKit's data-folder id (Pardes's own, as the Android applicationId), and `settings()`, java.util.prefs in a node of its own, so the library, notes and settings stay apart from an installed Zayit's; and `OPEN_SIDDUR`, true: the build carries the open smart siddur, so the settings offer its switch (`OpenSiddurCard`). *Note:* Read by main.kt, AppCoreBindings.provideSettings() and PendingUserDataRestore in place of Zayit's literals. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandInfo.kt` | Pardes's names and links where Zayit has literals: SOURCE_URL (Pardes's GitHub source), ERROR_REPORT_SIGNATURE ("נשלח מתוך פרדס למחשב, המבוסס על זית"), BACKUP_FILE_PREFIX pardes_backup_, LINUX_DESKTOP_FILE_ID pardes.desktop, USER_AGENT, and LIBRARY_FOLDER_NAME "Pardes library". *Note:* Read by GeneralSettingsScreen, BookErrorReport, DataSettingsViewModel, AppLinuxQuicklist, HttpFileDownloader, SemanticPackReleases and LibraryLocation. LINUX_DESKTOP_FILE_ID must match brand.properties' packageName. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Where an installed desktop Zayit keeps its seforim.db, which Pardes offers on first run to use in place: Zayit's `database_path` preference in the java.util.prefs root (a lexical.db path ignored), then Zayit's default databases folder beside Pardes's data folder; `OTHER_APP_NAME` is "זית למחשב". `otherAppUserDatabases()`: where Zayit keeps its user database, whose searches the user may send with Pardes's own (beside Pardes's data folder, and under a Microsoft Store package's roaming folder). *Note:* Read by ForeignLibraries, LibraryLocationViewModel and ZayitSearches. Its KDoc names the Windows and Linux folders only, though macOS is built since 1.0.2. Leaves out SEFORIMAPP_DATABASE_PATH, which Pardes reads as its own. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandUpdates.kt` | Pardes's update source: `provider` is a `PardesDesktopReleases`, which AppUpdateService takes before Zayit's GitHubProvider, so a Pardes build never downloads Zayit's installer. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/PardesDesktopReleases.kt` | Nucleus `UpdateProvider` that reads the GitHub release list of Pardes's repository (unauthenticated API, per_page=100), takes the newest published `desktop-<x.y.z>-<run>[-r<attempt>]` release carrying this platform's latest*.yml (pre-releases only when Nucleus allows them), and gives its files' download URLs. *Note:* Needed because the repository's Latest release is Android's. Its KDoc says it was written against nucleus.updater-runtime 3.0.0-dev-202610200221; the app now uses 3.0.0-dev-202610272317. | Pardes's own |
-| `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Zayit's `Brand`, for `-Pseforimapp.brand=zayit`: `APP_ID` is Zayit's own data-folder id and `settings()` is multiplatform-settings' `Settings()` over the java.util.prefs root, as Zayit's code has them. | Pardes's own; holds the literals of Zayit's main.kt and AppCoreBindings.kt |
+| `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Zayit's `Brand`, for `-Pseforimapp.brand=zayit`: `APP_ID` is Zayit's own data-folder id and `settings()` is multiplatform-settings' `Settings()` over the java.util.prefs root, as Zayit's code has them; `OPEN_SIDDUR` is false, so a Zayit build offers no switch for a siddur it does not carry. | Pardes's own; holds the literals of Zayit's main.kt and AppCoreBindings.kt |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandInfo.kt` | Zayit's `BrandInfo` values: its GitHub source link, error report signature, zayit_backup_ prefix, zayit.desktop launcher id and User-Agent, plus LIBRARY_FOLDER_NAME "Zayit library" for the library-location feature. *Note:* LIBRARY_FOLDER_NAME has no Zayit counterpart: the library location is a Pardes feature written for both brands. | Pardes's own; holds the literals of Zayit's GeneralSettingsScreen, BookErrorReport, DataSettingsViewModel, AppLinuxQuicklist and HttpFileDownloader |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Zayit's `BrandLibraries`: no other app's library (`OTHER_APP_NAME` empty, `otherAppDatabases()` empty) and no other app's user database (`otherAppUserDatabases()` empty), so the onboarding and the library cleanup behave as Zayit's. | Pardes's own |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandUpdates.kt` | Zayit's `BrandUpdates`: `provider` is null, so AppUpdateService builds Zayit's GitHubProvider as released. | Pardes's own |
@@ -4793,6 +4970,47 @@ the description where something needs saying.
 | `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.module` | Gradle module metadata of the vendored tao: version 3.0.0-dev-202610272317-1-tearoff, apiElements and runtimeElements on the jar alone, and the Nucleus dependencies (decorated-window-core, core-runtime, energy-manager) at the release 3.0.0-dev-202610272317, with angle-natives 8037.1, Compose desktop 1.12.1 and Kotlin stdlib 2.4.20. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py (dependencies set back to the release, sources and javadoc variants dropped) |
 | `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.pom` | Maven POM of the vendored tao, with the fork's version and the same dependencies as its Gradle module, for tools that do not read Gradle metadata. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py |
 | `nucleus-fork/vendor.py` | Copies the fork's tao jar, POM and Gradle module from Maven Local into nucleus-fork/maven after the fork's scripts/publish-tearoff-local.sh, setting every other Nucleus dependency back to the base release 3.0.0-dev-202610272317 and keeping only the jar's variants. *Note:* Deletes and rewrites nucleus-fork/maven on every run. | Pardes's own |
+
+#### The open siddur's engine (`siddur-open/`)
+
+A copy of SeforimOpenSiddur by Ariel Daniely (https://github.com/arieldaniely/SeforimOpenSiddur, AGPL v3 with the §7b
+term) at commit `cbf530cc` (2026-11-08, version 0.1.0), which the app's experimental smart siddur is built on
+(section 2, "The open smart siddur"). Its sources, tests, data and tools are as their author wrote them.
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `siddur-open/README.md` | English note on the copy: whose engine it is and that he offered it (efrul/Pardes#27), the pinned commit, date and version, what is copied as it is and what is left out, why a copy and not a submodule or a package, how the module is built (Pardes's Kotlin and catalog versions, ktlint and detekt off), where the app uses it, the three licences, and the steps of an update. It carries the line "Powered by the technologies that drive Zayit". | Pardes's own |
+| `siddur-open/build.gradle.kts` | The `:siddur-open` module: Kotlin Multiplatform with a JVM target on the catalog's toolchain, `src/main/kotlin` added to `jvmMain` (where the engine's own build keeps its sources), kotlinx-datetime as `api` and KosherKotlin as `implementation` from the catalog, Kotlin Test and coroutines for the tests, and every ktlint and detekt task of the module turned off. *Note:* the engine's own build script (Kotlin 2.3.21, literal versions, `jvmToolchain(25)`) is not copied; the two dependencies are at the same versions in Zayit's catalog. | Pardes's own; follows `luach/build.gradle.kts` and the engine's build script |
+| `siddur-open/UPSTREAM_README.md` | The engine's own README, in Hebrew: what it builds, its sources and rules (the three siddurim and the machzorim of the library, KosherKotlin for the calendar, Amud's conditions with their commit, Hebcal Leyning's table with its commit, the Selichot by nusach), how to run its tests and regenerate its two data sets, its coverage (a reconstruction, partial for local customs, not compared in full with Zayit's closed engine) and its licences. *Note:* it speaks of the author's own app, Zayita. | SeforimOpenSiddur's `README.md` at `cbf530cc`, renamed |
+| `siddur-open/LICENSE` | The engine's licence: GNU AGPL v3 with the §7b attribution term and Elie Gambache's copyright line, the same bytes as this repository's `LICENSE`. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/COPYING.AMUD` | GNU GPL v3's text: the licence of the conditions that come from Amud (`amud-annotations.tsv`, `amud-inline.tsv`). The build copies it into the app's licences folder as `GPL-3.0.txt`. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/COPYING.HEBCAL` | Hebcal's BSD 2-Clause licence (Copyright (c) 2020, hebcal): the licence of the data the readings' table is made from. The build copies it into the app's licences folder as `Hebcal-LICENSE.txt`. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmMain/resources/open-siddur/amud-annotations.tsv` | 342 rows of nusach, SHA-256 of a paragraph of the library's siddur, and the condition under which it is said (flags joined by `&` and `|`, such as `sat`, `minyan`, `torah_reading`): whole paragraphs. It holds no text of the siddur. | SeforimOpenSiddur at `cbf530cc`, unchanged; made by `tools/import_amud_annotations.py` from Amud's corpus (GPL v3) and the library |
+| `siddur-open/src/jvmMain/resources/open-siddur/amud-inline.tsv` | 46 rows of the same kind for paragraphs said in part: ranges of characters inside the paragraph, each with its condition. | SeforimOpenSiddur at `cbf530cc`, unchanged; made by the same tool |
+| `siddur-open/src/jvmMain/resources/open-siddur/readings.tsv.gz` | The table of readings, gzipped: by the kind of year (14), Israel or abroad, the day's offset and the service, the occasion's name and the passages of the Torah reading, the haftarah, the Sephardi haftarah and the megillah (book, first and last verse, aliyah). Binary. | SeforimOpenSiddur at `cbf530cc`, unchanged; made by `tools/generate_readings.mjs` from Hebcal Leyning (BSD 2-Clause) |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/SiddurBook.kt` | The engine's public model: `Nusach`, `SiddurPart` (24 parts with their options and `familyOf`), `SiddurPrefs`, `SiddurLine` (text, heading, note or slot, with its reading, molad announcement or lulav instruction), `BookSection`, `SourceBook`, `SourceHeading`, the `SiddurSource` the app implements, the marks of the day's additions and of what is skipped, `civilDayOf`, `siddurOfTheHour` and each nusach's siddur title. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/DayBook.kt` | `buildDayBook`: the civil day's parts (Selichot in season, Shacharit, the day's meal, Mincha, Neila) and the night's that follows (Chanukah candles, Kabbalat Shabbat, Maariv, Havdala, the omer, the night's meal, Kiddush Levana, the bedtime Shema), each a `BookSection` built from the siddur's outline or a machzor's, with its flags, readings and options. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/SiddurCalendar.kt` | `dayPartFor` (the weekday, Shabbat or festival form of a tefila) and `flagsFor`: the day's flags from KosherKotlin's calendar and `TefilaRules` (Shabbat, festival, Rosh Chodesh, fasts, Tachanun, Hallel, the season's insertions, the omer, Chanukah, the Israeli days and so on). | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/CorpusSections.kt` | `Outline`, a source book by its headings, and the keys that map each tefila to the headings of the library's siddur or machzor (`baseKeys`, `machzorTitle`, `machzorKeys`). | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/CorpusAnnotations.kt` | `annotateCorpus`: marks the siddur's lines as said, special or skipped by the instructions written in the text itself, and the choices among them (`selectMigdol`, `splitMealAdditions`, `selectFood`). | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/AmudAnnotations.kt` | `AmudAnnotations`: reads the two Amud tables and gives a paragraph's condition, or its ranges' conditions, by the SHA-256 of the library's text. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/CalendarPassages.kt` | The passages the calendar adds or chooses inside a tefila (`calendarPassages`), Hoshienu split by the day, and the bedtime Shema's passages. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/ShabbatTransitions.kt` | Kabbalat Shabbat by the day, Maariv of Motzaei Shabbat, Havdala by its flags, and the festival's Kiddush. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/ShabbatAnnouncements.kt` | The coming Rosh Chodesh and announced fast, and the announcements' lines filled in (the month, its days, the molad). | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/SukkotPrayers.kt` | The lulav's blessings, the day's Hoshanot and the cues of the shaking inside Hallel. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/Selichot.kt` | `hasSeasonalSelichot` and the Selichot book and section of a day of Elul or of the ten days, and of a minor fast, by nusach (Lita for Ashkenaz, Polin for Sefard, Edot HaMizrach). | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/TorahReadings.kt` | `readingsFor`: the Torah reading, maftir, haftarah and megillah of a service from the readings' table, with `ReadingKind`, `VerseAddress`, `ReadingPassage` and `SiddurReading`. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliOccasion.kt` | `IsraeliOccasion` and `israeliOccasion`: Yom HaZikaron, Yom HaAtzmaut (moved as the Independence Day Act says, by the year) and Yom Yerushalayim. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliPrayerCustom.kt` | `IsraeliPrayerCustom`: the four customs of those days (no Tachanun alone, Hallel without blessings, Hallel with them by day, and by night too) and when each says Hallel. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/main/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliHallel.kt` | Hallel and the added prayers of those days in Maariv and Shacharit, by the custom. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/CalendarPassagesTest.kt` | Ten tests of the passages chosen by the calendar, on small made-up source books. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/DayBookTest.kt` | Ten tests of the day's book: its parts and their order on ordinary and special days, on made-up source books. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/IsraeliOccasionTest.kt` | Four tests of the Israeli days' dates over the years and of the customs' Hallel. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/SelichotTest.kt` | Three tests of the season's and the fasts' Selichot by nusach. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/SukkotPrayersTest.kt` | Three tests of the lulav's blessings, the Hoshanot and the shaking's cues. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/siddur/TorahReadingsTest.kt` | Six tests of the readings: weekdays, Shabbat, festivals, the Sephardi haftarah and the walled city. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/tools/generate_readings.mjs` | Node script that makes `readings.tsv.gz` from pinned versions of @hebcal/leyning, @hebcal/core and @hebcal/hdate. *Note:* kept as the source of the table; the build never runs it. | SeforimOpenSiddur at `cbf530cc`, unchanged |
+| `siddur-open/tools/import_amud_annotations.py` | Python script that makes the two Amud tables: it matches Amud's corpus to the paragraphs of the library's three siddurim and writes the hashes and conditions of those matched without doubt. *Note:* kept as the source of the tables; the build never runs it. | SeforimOpenSiddur at `cbf530cc`, unchanged |
 
 #### Scripts
 

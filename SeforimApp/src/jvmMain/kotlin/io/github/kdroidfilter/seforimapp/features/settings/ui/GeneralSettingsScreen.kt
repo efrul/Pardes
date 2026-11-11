@@ -35,6 +35,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.features.settings.general.GeneralSettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.general.GeneralSettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.general.GeneralSettingsViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.siddur.OpenSiddurCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.update.InstallInfo
 import io.github.kdroidfilter.seforimapp.framework.update.UpdateMode
@@ -145,6 +146,8 @@ private fun GeneralSettingsView(
                 checked = state.keepScreenAwakeOnBook,
                 onCheckedChange = { onEvent(GeneralSettingsEvents.SetKeepScreenAwakeOnBook(it)) },
             )
+
+            OpenSiddurCard()
         }
     }
 }

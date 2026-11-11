@@ -160,6 +160,7 @@ include(":network")
 include(":backup")
 include(":backup-drive")
 include(":releasefetcher")
+include(":siddur-open")
 includeBuild("SeforimLibrary")
 // The smart siddur's sources beside Zayit's (../SeforimSiddur), to work on both at once
 if (providers.gradleProperty("siddur.local").orNull == "true") includeBuild("../SeforimSiddur")

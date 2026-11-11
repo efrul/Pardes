@@ -32,6 +32,15 @@ def value = { String key ->
     }
 }
 
+// Pardes's own smart siddur, in the place of Zayit's private one: addons/siddur/open, on the open engine vendored as
+// :siddur-open (siddur-open/README.md), is compiled where upstream's script compiles addons/siddur/disabled. The app
+// shows it only once the user turns it on in the settings (OpenSiddurSwitch)
+def appSources = kotlin.sourceSets.jvmMain.kotlin
+appSources.exclude { it.file.path.replace('\\', '/').contains('/addons/siddur/disabled/') }
+appSources.srcDir('addons/siddur/open/kotlin')
+kotlin.sourceSets.jvmMain.dependencies { implementation(project(':siddur-open')) }
+kotlin.sourceSets.jvmTest.kotlin.srcDir('addons/siddur/open-test/kotlin')
+
 def app = nucleus.application
 app.graalvm.imageName = value('imageName')
 
@@ -69,11 +78,14 @@ dist.macOS.bundleID = value('macBundleId')
 dist.macOS.packageName = value('appName')
 
 // Texts upstream keeps elsewhere, copied next to the brand's licence texts (common/licenses) rather than duplicated:
-// the app's own licence (Nucleus packages no licenseFile), the learning schedules' notice and the sky's credits
+// the app's own licence (Nucleus packages no licenseFile), the learning schedules' notice, the sky's credits and the
+// notices of the open siddur's data (Amud's GPL v3, Hebcal's BSD)
 def licenceCopies = [
     'Pardes-LICENSE.txt': rootProject.file('LICENSE'),
     'Limud-NOTICE.txt'  : file('src/jvmMain/resources/limud/NOTICE.txt'),
     'Sky-CREDITS.md'    : rootProject.file('earthwidget/src/commonMain/composeResources/files/CREDITS.md'),
+    'GPL-3.0.txt'       : rootProject.file('siddur-open/COPYING.AMUD'),
+    'Hebcal-LICENSE.txt': rootProject.file('siddur-open/COPYING.HEBCAL'),
 ]
 licenceCopies.each { name, source ->
     if (!source.isFile()) throw new GradleException("$source is gone: update the licences in branding/brand.gradle")
