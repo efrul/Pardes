@@ -1436,8 +1436,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +290 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 272 Hebrew strings added in eighteen blocks,
+- **Change:** modified, +291 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 273 Hebrew strings added in eighteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1445,7 +1445,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - feedback: `feedback_send_*` (37), `feedback_consent_*` (20), `search_feedback_*` (6): among them the other apps'
     rows and the publication's, with what each means; and under a comment, after `onboarding_library_folder_*`, the
     onboarding's step: `onboarding_feedback_*` (7);
-  - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (4), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
+  - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (5), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
     `daf_view_tooltip`, `daf_missing`, `daf_missing_hint`, `daf_amud_missing`, `settings_daf_*` (4) and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
   - the existing Zayit library: `onboarding_existing_library_*` (5); and under a comment, after Zayit's
@@ -1919,7 +1919,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
 - **Feature:** Daf view.
-- **Size:** 1324 lines.
+- **Size:** 1334 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review mode; `DafMode` (what a click
@@ -1938,7 +1938,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   (`clickOn`, `segmentOf`), the links read for a page (`loadLinks`), the layouts folder (`rememberDafLayouts`), a missing
   layout's page with its download (`MissingLayout`, `DownloadLayout`), the review's menu items and tints, `DafFind`, and a
   sideways pan as the commentaries' pages turn. The review's items (`reviewItems`, while the settings' review is on) are
-  two checkboxes, "הקטע מעומד לא נכון" and "יש טעות במילים" (`ContextMenuCheck`), of the lines the right-clicked word's
+  three checkboxes, "הקטע מעומד לא נכון", "יש טעות במילים" and "הקטע תקין" (`ContextMenuCheck`; while the menu stays open they share what is said, so "הקטע תקין" unchecks the two faults and
+  either unchecks it), of the lines the right-clicked word's
   selection covers (`reviewedAt`: the reader's own selection when the word is in it, or the selected segment's or
   comment's words on the amud, else the word's line), each written through `DafReviews.say`, one write at a time
   (`reviewing`); a line marked before the two reasons has "ביטול הסימון של השורה" too. Over a tractate's pages,
@@ -1949,7 +1950,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
   composables have no UI test.
-- **Notes:** at 1,324 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
+- **Notes:** at 1,334 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
   parts (pages, review, missing layout, marks).
 
@@ -2081,11 +2082,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReview.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 287 lines.
+- **Size:** 315 lines.
 - **What:** a reader's review of a tractate's layout, for pardes-rashi-ocr: `DafReviewFile` and `DafMark`, a line
-  with what the reader said is wrong with it (`DafReason`: how it is set on the page, `layout`, or its words, `words`,
-  with `ok` false), of which of its words when the passage reviewed starts or ends inside it (`from`, `to`); a mark of
-  before the two reasons (a line right, wrong, or its first word moved: `isFormer`) is still read, its moves still made
+  with what the reader said of it (`DafReason`: it is set wrongly on the page, `layout`, its words are wrong, `words`,
+  both with `ok` false, or it is right, `RIGHT`, `ok` true: right takes both faults away, and either takes it away, `excludes`; `says`
+  tells whether one is said of a line), of
+  which of its words when the passage reviewed starts or ends inside it (`from`, `to`); a mark of before the two reasons
+  (a line wrong for no reason given, or its first word moved: `isFormer`) is still read, its moves still made
   (`withMarks`, a mark whose line now holds other words left out). `reviewed` gives the lines a review of a word is of:
   the selection's when the word is in it, each with the words of it meant, else the word's own (`ReviewedLine`).
   `lineBefore`/`lineAfter` in a column's reading order, and `DafReviews`, kept in the layouts' folder under
@@ -2100,9 +2103,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewMenu.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 94 lines.
-- **What:** `ContextMenuCheck`, an entry of the text's menu that is a checkbox (checked or not when the menu opens; a
-  click checks or unchecks it and the menu stays open, for another to be checked too), and its row
+- **Size:** 91 lines.
+- **What:** `ContextMenuCheck`, an entry of the text's menu that is a checkbox (a click checks or unchecks it and the menu
+  stays open, for another to be checked too; whether it is checked is read as the menu is drawn, so a box another one
+  excludes is seen unchecked at once), and its row
   (`ContextMenuCheckRow`: Jewel's `Checkbox` and the label, lit under the pointer as the menu's items are); and
   `DafReviewsFolderLink`, the settings' link that opens the folder the reviews are kept in.
 - **Reached from:** `BookContentScreen.kt` (`contextItems`, one branch), `DafView.kt` (`reviewItems`),
@@ -2292,14 +2296,16 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewTest.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 185 lines.
+- **Size:** 222 lines.
 - **What:** a line's start moved a word on or back with its library line and bold, a move that would empty a line left
   out, a mark of a changed line or another amud moving nothing, the review kept in the feedback folder (the new mark in
   place of the old), written to the file it was read from, and an unreadable file set aside. The two reasons: a review
   is of the selection's lines when the word is in it, with the words it holds (its column's lines alone, no big word),
   else of the word's line; a reason said of a passage's lines in one write and unsaid again, the other reason kept, no
   mark left with neither, each mark with the version of the layout it was made on; a mark of before the reasons kept
-  under them (its move still made) and told apart.
+  under them (its move still made) and told apart. The third answer: a passage said to be right has neither fault, a
+  fault said of it takes right away, and it is said of each line of a passage in one write, as a fault is; which answer excludes which (`excludes`,
+  `says`).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, `DafReview.kt`).

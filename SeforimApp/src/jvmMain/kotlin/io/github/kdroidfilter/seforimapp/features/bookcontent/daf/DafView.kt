@@ -135,6 +135,7 @@ import seforimapp.seforimapp.generated.resources.daf_missing
 import seforimapp.seforimapp.generated.resources.daf_missing_hint
 import seforimapp.seforimapp.generated.resources.daf_review_clear
 import seforimapp.seforimapp.generated.resources.daf_review_layout
+import seforimapp.seforimapp.generated.resources.daf_review_right
 import seforimapp.seforimapp.generated.resources.daf_review_words
 import seforimapp.seforimapp.generated.resources.notorashihebrew
 import java.io.File
@@ -894,6 +895,7 @@ private fun AmudItem(
 private class ReviewLabels(
     val layout: String,
     val words: String,
+    val right: String,
     val clear: String,
 )
 
@@ -902,6 +904,7 @@ private fun reviewLabels() =
     ReviewLabels(
         layout = stringResource(Res.string.daf_review_layout),
         words = stringResource(Res.string.daf_review_words),
+        right = stringResource(Res.string.daf_review_right),
         clear = stringResource(Res.string.daf_review_clear),
     )
 
@@ -926,10 +929,10 @@ private val REVIEW_WRONG = Color(0x40DC3545)
 private val REVIEW_MOVED = Color(0x40E0A000)
 
 /**
- * The review's actions on [lines] of [amud] (as the layout has it, before a former review's moves): two checkboxes,
- * what is wrong with them, how they are set on the page and their words, each checked when it is said of them all;
- * and, on a line ([index], the right-clicked one) marked before the two reasons (right, wrong, a word moved), that mark
- * taken away.
+ * The review's actions on [lines] of [amud] (as the layout has it, before a former review's moves): three checkboxes,
+ * what is wrong with them, how they are set on the page and their words, or that they are right, each checked when it
+ * is said of them all; and, on a line ([index], the right-clicked one) marked before the two reasons (wrong for no
+ * reason given, a word moved), that mark taken away.
  */
 private fun reviewItems(
     amud: DafAmud,
@@ -947,10 +950,17 @@ private fun reviewItems(
         return review.marks.firstOrNull { it.amud == amud.amud && it.i == i && it.t == line.t }
     }
     val marks = lines.map { markOf(it.index) }
+    // What is said of the lines, kept while the menu stays open: a box checked unchecks at once the ones it excludes
+    val said = DafReason.entries.associateWith { reason -> mutableStateOf(marks.all { it?.says(reason) == true }) }
+    val say: (DafReason, Boolean) -> Unit = { reason, checked ->
+        said.forEach { (answer, box) -> box.value = if (answer == reason) checked else box.value && !(checked && reason.excludes(answer)) }
+        onSay(lines, reason, checked)
+    }
     return buildList {
         add(ContextMenuDivider)
-        add(ContextMenuCheck(labels.layout, marks.all { it?.layout == true }) { onSay(lines, DafReason.LAYOUT, it) })
-        add(ContextMenuCheck(labels.words, marks.all { it?.words == true }) { onSay(lines, DafReason.WORDS, it) })
+        add(ContextMenuCheck(labels.layout, { said.getValue(DafReason.LAYOUT).value }) { say(DafReason.LAYOUT, it) })
+        add(ContextMenuCheck(labels.words, { said.getValue(DafReason.WORDS).value }) { say(DafReason.WORDS, it) })
+        add(ContextMenuCheck(labels.right, { said.getValue(DafReason.RIGHT).value }) { say(DafReason.RIGHT, it) })
         markOf(index)?.takeIf { it.isFormer }?.let { former ->
             val kept = if (former.layout || former.words) false else null
             add(ContextMenuItem(labels.clear) { onMark(former.copy(ok = kept, cut = 0, at = Instant.now().toString())) })

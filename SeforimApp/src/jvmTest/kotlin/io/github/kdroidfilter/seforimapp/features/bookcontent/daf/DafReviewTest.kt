@@ -138,9 +138,46 @@ class DafReviewTest {
         val unsaid = both.saying(DafReason.WORDS, said = false, from = null, to = 2)
         assertTrue(unsaid.cut == 1 && unsaid.ok == null && unsaid.to == null && !unsaid.isEmpty, "its move is still made")
 
-        assertTrue(DafMark("2a", "R", 3, "מאי", ok = true).isFormer)
+        assertTrue(!DafMark("2a", "R", 3, "מאי", ok = true).isFormer, "right is one of the menu's answers")
         assertTrue(DafMark("2a", "R", 3, "מאי", ok = false).isFormer, "wrong, with no reason given")
         assertTrue(!DafMark("2a", "R", 3, "מאי").saying(DafReason.LAYOUT, said = true, from = null, to = null).isFormer)
+    }
+
+    @Test
+    fun `a passage said to be right has neither fault, and a fault said of it takes right away`() {
+        val right = DafMark("2a", "R", 3, "מאי טעמא דהכא כתיב").saying(DafReason.RIGHT, said = true, from = 1, to = null)
+        assertTrue(right.ok == true && !right.layout && !right.words)
+        assertEquals(1 to null, right.from to right.to)
+        assertEquals(true, right.saying(DafReason.WORDS, said = false, from = 1, to = null).ok, "a fault it never had, unsaid")
+
+        val wrong = right.saying(DafReason.LAYOUT, said = true, from = 1, to = null)
+        assertTrue(wrong.ok == false && wrong.layout)
+        val both = wrong.saying(DafReason.WORDS, said = true, from = 1, to = null)
+        val rightAgain = both.saying(DafReason.RIGHT, said = true, from = 1, to = null)
+        assertTrue(rightAgain.ok == true && !rightAgain.layout && !rightAgain.words, "right takes both faults away")
+        assertTrue(rightAgain.saying(DafReason.RIGHT, said = false, from = 1, to = null).isEmpty, "unsaid, it leaves no mark")
+
+        assertTrue(DafReason.RIGHT.excludes(DafReason.WORDS) && DafReason.LAYOUT.excludes(DafReason.RIGHT))
+        assertTrue(!DafReason.LAYOUT.excludes(DafReason.WORDS), "the two faults stand together")
+        assertTrue(wrong.says(DafReason.LAYOUT) && !wrong.says(DafReason.RIGHT) && right.says(DafReason.RIGHT))
+
+        // A line marked wrong before the two reasons, said to be right
+        assertEquals(true, DafMark("2a", "R", 3, "מאי", ok = false).saying(DafReason.RIGHT, said = true, from = null, to = null).ok)
+    }
+
+    @Test
+    fun `right is said of each line of a passage in one write, as a fault is`() {
+        val dir = Files.createTempDirectory("daf-review").toFile()
+        val layout = DafLayoutFile(format = 2, tractate = "Bava Batra", tractateHe = "בבא בתרא", amudim = listOf(amud), version = 3)
+        val lines = listOf(ReviewedLine(1, from = 1), ReviewedLine(3))
+        DafReviews(dir).say(layout, amud, lines, DafReason.WORDS, said = true)
+
+        val right = DafReviews(dir).say(layout, amud, lines, DafReason.RIGHT, said = true)
+        assertEquals(listOf(1, 3), right.marks.map { it.i })
+        assertTrue(right.marks.all { it.ok == true && !it.words && it.version == 3 })
+        assertEquals(1, right.marks.first().from)
+        assertTrue(DafReviews(dir).say(layout, amud, lines, DafReason.RIGHT, said = false).marks.isEmpty())
+        dir.deleteRecursively()
     }
 
     @Test
