@@ -14,6 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.settings.library.isolatedPath
 import io.github.kdroidfilter.seforimapp.features.settings.library.problemText
 import io.github.kdroidfilter.seforimapp.framework.database.DatabaseVersionManager
@@ -52,8 +55,8 @@ fun InstallLocationRow(
     val appGraph = LocalAppGraph.current
     val appSettings = appGraph.appSettings
     var dir by remember { mutableStateOf(LibraryLocation.installDir(appSettings).path) }
-    var problem by remember { mutableStateOf<LibraryLocation.Problem?>(null) }
-    var libraryThere by remember { mutableStateOf<ForeignLibraries.ForeignLibrary?>(null) }
+    val chosen =
+        viewModel(viewModelStoreOwner = LocalWindowViewModelStoreOwner.current, key = "install-location") { InstallLocationChoice() }
     val scope = rememberCoroutineScope()
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -65,15 +68,15 @@ fun InstallLocationRow(
                         // Off the GTK event-loop thread, as the settings' pickers
                         val picked = withContext(Dispatchers.IO) { FileKit.openDirectoryPicker() } ?: return@launch
                         val found = withContext(Dispatchers.IO) { ForeignLibraries.inFolder(File(picked.path)) }
-                        libraryThere = (found as? ForeignLibraries.InFolder.Library)?.library
-                        problem = withContext(Dispatchers.IO) { LibraryLocation.chooseInstallDir(File(picked.path), appSettings) }
+                        chosen.libraryThere = (found as? ForeignLibraries.InFolder.Library)?.library
+                        chosen.problem = withContext(Dispatchers.IO) { LibraryLocation.chooseInstallDir(File(picked.path), appSettings) }
                         dir = LibraryLocation.installDir(appSettings).path
                         onChange()
                     }
                 },
             )
         }
-        val library = libraryThere
+        val library = chosen.libraryThere
         if (library != null) {
             // Not a problem to report: two lines, which leave the screen's banner its room
             Text(
@@ -88,7 +91,16 @@ fun InstallLocationRow(
                 },
             )
         } else {
-            problem?.let { InlineErrorBanner(text = problemText(it), modifier = Modifier.fillMaxWidth()) }
+            chosen.problem?.let { InlineErrorBanner(text = problemText(it), modifier = Modifier.fillMaxWidth()) }
         }
     }
+}
+
+/**
+ * What the folder chosen last gave, a problem or a library to use: the window's rather than the row's, which leaves the
+ * screen while the drive's space is measured again and would come back having forgotten it.
+ */
+internal class InstallLocationChoice : ViewModel() {
+    var problem by mutableStateOf<LibraryLocation.Problem?>(null)
+    var libraryThere by mutableStateOf<ForeignLibraries.ForeignLibrary?>(null)
 }
