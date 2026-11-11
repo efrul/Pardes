@@ -219,4 +219,13 @@ class SessionModelsTest {
         assertEquals(SearchScope.Book(3L), author.withScope(SearchScope.Book(3L)).scope)
         assertEquals(SearchScope.Global, author.withScope(SearchScope.Global).scope)
     }
+
+    @Test
+    fun `a search listed in the library's order stays so, in its scope`() {
+        val listed = SearchPersistedState(query = "שבת", catalogOrder = true).withScope(SearchScope.Category(12L))
+        val restored = ProtoBuf.decodeFromByteArray<SearchPersistedState>(ProtoBuf.encodeToByteArray(listed))
+        assertTrue(restored.catalogOrder)
+        assertEquals(SearchScope.Category(12L), restored.scope)
+        assertEquals(false, SearchPersistedState().catalogOrder)
+    }
 }

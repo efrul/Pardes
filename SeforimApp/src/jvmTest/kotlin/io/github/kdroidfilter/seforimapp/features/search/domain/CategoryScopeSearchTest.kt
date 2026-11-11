@@ -69,7 +69,7 @@ class CategoryScopeSearchTest : SearchIntegrationTestBase() {
                     savedStateHandle = SavedStateHandle(mapOf(StateKeys.TAB_ID to TAB)),
                     persistedStore = store,
                     repository = repository,
-                    lucene = requireSearchEngine(),
+                    engine = requireSearchEngine(),
                     titleUpdateManager = TabTitleUpdateManager(),
                     desktopManager = desktopManager,
                     historyStore =

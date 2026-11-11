@@ -57,7 +57,7 @@ class AuthorScopeSearchTest : SearchIntegrationTestBase() {
             savedStateHandle = SavedStateHandle(mapOf(StateKeys.TAB_ID to tabId)),
             persistedStore = store,
             repository = requireRepository(),
-            lucene = requireSearchEngine(),
+            engine = requireSearchEngine(),
             titleUpdateManager = TabTitleUpdateManager(),
             desktopManager = desktopManager,
             historyStore = HistoryStore(UserSettingsDb(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create))),
