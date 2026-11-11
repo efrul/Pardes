@@ -470,9 +470,12 @@ class DesktopManager(
     fun createDesktop(
         windowId: String,
         name: String,
+        // The tabs it opens with (a desktop's link, DesktopLink) rather than a fresh Home
+        tabs: WindowSnapshot? = null,
     ): String {
         val id = UUID.randomUUID().toString()
         _desktops.update { (it + VirtualDesktop(id = id, name = name)).toPersistentList() }
+        tabs?.let { dormantSnapshots[id] = DesktopTabsSnapshot(windows = listOf(it)) }
         val win = window(windowId) ?: return id
         if (win.isSwitching.value) return id
         win.markSwitching()

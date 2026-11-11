@@ -281,6 +281,7 @@ private fun DesktopDropdownContent(
                 color = JewelTheme.globalColors.text.info,
             )
         }
+        DesktopLinkRow(onDismiss)
     }
 }
 

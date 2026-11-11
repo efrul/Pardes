@@ -184,4 +184,31 @@ class DesktopManagerTest {
         assertEquals(first, window.desktopId.value)
         assertEquals(firstTabs, window.session.tabIds())
     }
+
+    @Test
+    fun `a desktop made with its tabs opens with them, in the window it was made from`() {
+        val dm = manager()
+        val window = dm.windows.value.single()
+        val before = window.desktopId.value
+        // A desktop's link: a book at its line and a search, the search shown
+        val book = TabsDestination.BookContent(bookId = 12, tabId = "t1", lineId = 345)
+        val search = TabsDestination.Search(searchQuery = "q", tabId = "t2")
+        val tabs =
+            WindowSnapshot(
+                destinations = listOf(book, search),
+                selectedIndex = 1,
+                titles = mapOf("t1" to SerializableTabTitle("Book", TabType.BOOK)),
+            )
+
+        val made = dm.createDesktop(window.id, "D2", tabs)
+
+        assertSame(window, dm.windows.value.single(), "switched in place")
+        assertEquals(made, window.desktopId.value)
+        assertEquals(listOf("t1", "t2"), window.session.tabIds())
+        assertEquals(book, window.session.item("t1")?.destination, "with the line it opens at")
+        assertEquals("Book", window.session.item("t1")?.title)
+        assertEquals(listOf("D1", "D2"), dm.desktops.value.map { it.name })
+        // The desktop left is as it was
+        assertTrue(before in dm.buildDesktopsState().snapshots)
+    }
 }
