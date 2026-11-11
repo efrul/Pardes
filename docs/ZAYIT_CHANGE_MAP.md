@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (175 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (176 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -321,7 +321,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/main.kt`
 
-- **Change:** modified, +71 −3 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts.
+- **Change:** modified, +73 −3 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts, Search speed.
 - **What:**
   - `val appId = Brand.APP_ID` instead of Zayit's literal `"io.github.kdroidfilter.seforimapp"` (FileKit's data folder).
   - Before the graph: `remember { PendingSemanticPack.runOnce() }` puts a pack unpacked in the settings in place of the
@@ -335,12 +335,14 @@ The entries of this section by kind:
     `feedbackAutoSender` ask whether to send feedback, after the session is restored, a window is open and the update
     dialog and the settings are closed.
   - `FeedbackConsentDialog(appGraph.feedbackAutoSender)` while its question is shown.
-  - The private `warmSearch(graph)`: a minimum-priority daemon thread that waits up to `LEXICON_WAIT_MS` (2 minutes)
-    for `PardesLexicon.awaitBuild`, then runs `searchEngine.warmUp()`; failures are logged with `warnln`.
+  - The private `warmSearch(graph)`: a minimum-priority daemon thread that first reads the bar's categories and the
+    library's books (`libraryCategories.warmUp()`, some 1.2 s of the library's links), then waits up to
+    `LEXICON_WAIT_MS` (2 minutes) for `PardesLexicon.awaitBuild` and runs `searchEngine.warmUp()`; failures are
+    logged with `warnln`.
   - Imports for all of these, among them `kotlinx.coroutines.runBlocking` and `flow.first`.
 - **Why:** each is the entry point of a Pardes feature: the data folder that keeps Pardes apart from an installed Zayit
   (`47626634`), the library location (`58586e1a`), the semantic packs (`20e2fa81`, `77f5349b`, `cb0f0a27`), Pardes's
-  dictionary copy (`722af188`), the feedback (`ddf604d8`) and the links in the texts, an object the reader reaches without
+  dictionary copy (`722af188`), the categories read ahead of the first letter typed in the bar, the feedback (`ddf604d8`) and the links in the texts, an object the reader reaches without
   the graph (Zayit's `installedQuoteLinks`). They must run before the graph or beside the main window,
   which only `main` can do.
 - **Kind:** branding hook and Pardes feature hooks.
@@ -354,7 +356,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +9 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links.
+- **Change:** modified, +11 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`.
   - `abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender`,
@@ -362,11 +364,13 @@ The entries of this section by kind:
   - `abstract val dictionaryLookup: DictionaryLookup`, after Zayit's `toolWindows`, with its import.
   - `abstract val libraryLinks: io.github.kdroidfilter.seforimapp.features.bookcontent.references.LibraryLinks`, with a
     KDoc line.
+  - `abstract val libraryCategories: LibraryCategories`, after Zayit's `searchEngine`, with its import.
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
-  lookup, and the references pane and its button the links of the other kinds.
+  lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
+  starts.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** four lines among Zayit's declarations, and an import.
+- **Merge risk:** five lines among Zayit's declarations, and two imports.
 - **Smaller:** already minimal.
 - **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
 - **Notes:** the first two types and the last are written fully qualified instead of imported, unlike every other line of the file:
@@ -1163,7 +1167,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +401 −50 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order.
+- **Change:** modified, +406 −52 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1192,19 +1196,26 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `lucene` the file searches with is `CatalogOrderEngine(engine, libraryCategories::bookOrder)`, which lists in
     the library's order while the tab's `catalogOrder` says so; `SearchUiState.catalogOrder` (restored from the
     tab's saved state), and the event `SetCatalogOrder`, which saves the choice and searches again.
+  - **Search speed:** the results' tree takes its books from the catalog (`BuildSearchTreeUseCase(repository,
+    libraryCategories::books)`); and the flow that builds a tree from the first results no longer sets it once the
+    facets' tree is in (`if (!facetsComputed)` in its `collect`): one finished late replaced the full tree with
+    the first page's.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
   the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
   the bar's categories are the user's choice of 2026-11-10 over a link that searched in them. The results in the
   library's order are the user's request of 2026-11-09 (a sort by the catalog): wrapping the engine here leaves
-  every search, filter and restore path of the file as it is.
+  every search, filter and restore path of the file as it is. The tree's books from the catalog are the speed fix
+  of `BuildSearchTreeUseCase.kt`; the guard is a fix of Zayit's code, seen once in the app when the first tree
+  from the catalog came in after the facets'.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
 - **Smaller:** feedback mode could live in a Pardes class the ViewModel holds (its flow and `grade`), and the scope
   labels in `LibraryCategories`; keeping Zayit's name `authorBookIds` would shrink the diff.
 - **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`,
-  `ResultTabsTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`.
+  `ResultTabsTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`,
+  `ResultsTreeLibraryBooksTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
@@ -1255,14 +1266,21 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/BuildSearchTreeUseCase.kt`
 
-- **Change:** modified, +10 −0 lines. Feature: Semantic search's category tabs.
-- **What:** `categoryIdsOf(bookId)`: the ids of a book's category and every category above it, the root first, through
-  the use case's caches.
-- **Why:** the lines found by meaning alone are counted in their categories' tabs (`d4711ac8`).
+- **Change:** modified, +26 −1 lines. Feature: Semantic search's category tabs, Search speed.
+- **What:**
+  - `categoryIdsOf(bookId)`: the ids of a book's category and every category above it, the root first, through
+    the use case's caches.
+  - A second constructor parameter, `libraryBooks` (the library's books by id, none by default), asked for once
+    (`libraryBook(bookId)`), and looked in before the cache and the database in the three places a book is
+    resolved (`resolveBook`, the facets' loop, `categoryIdsOf`).
+- **Why:** the lines found by meaning alone are counted in their categories' tabs (`d4711ac8`). The tree of a search
+  in all the books read each book from the database, one query a book, the first time in every tab: 0.2 to 0.8
+  seconds for 1,400 to 7,400 books on the whole library, 5 to 58 ms with the catalog's books (the user's request
+  of 2026-11-09 for a faster search).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** small; an added function.
+- **Merge risk:** small; an added function, a parameter, and one line or operand at each of Zayit's two lookups.
 - **Smaller:** already minimal.
-- **Tests:** `MeaningFacetsTest`.
+- **Tests:** `MeaningFacetsTest`, `ResultsTreeLibraryBooksTest`; Zayit's `BuildSearchTreeUseCaseTest` unchanged.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/history/HistoryStore.kt`
 
@@ -3656,14 +3674,17 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/LibraryCategories.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 171 lines.
+- **Size:** 200 lines.
 - **What:** `LibraryCategories`, the library's categories for the search: each with its path (what the bar suggests), the
   books it searches (all those under it, or its base books alone), whether it holds both kinds, and its chip (`hit`). It holds the commentaries on a book by their time too
   (`CommentaryGroups`, read with the categories from the same links): `named(query, limit)` offers them before the
   categories a text names, and `hit` and `bookIds` know them by their ids, so that one is searched, kept and restored as
   a category is. `bookOrder()` gives every book its place in the library's order (a category's own books, then its
-  subcategories'), read once, for a list of results in that order.
-- **Reached from:** `AppCoreBindings.kt`, `SearchHomeViewModel.kt`, `SearchResultViewModel.kt`.
+  subcategories'), read once, for a list of results in that order. `books()` gives every book by its id as the
+  catalog has it (`CatalogBook.toBook`), for the results' tree, and `warmUp()` reads the categories and the books
+  ahead of their first use.
+- **Reached from:** `AppCoreBindings.kt`, `SearchHomeViewModel.kt`, `SearchResultViewModel.kt`, `AppGraph.kt` and
+  `main.kt` (the warm-up).
 - **Follows:** Zayit's catalog (`CatalogCache`) and `CategoryNavigationUseCase`, whose `collectBookIdsUnderCategory` it
   replaces in the results.
 - **Tests:** `LibraryCategoriesTest`, `CategorySuggestionsE2ETest`, `CategoryScopeSearchTest`, `CatalogOrderSessionTest`.
@@ -3752,12 +3773,22 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/LibraryCategoriesTest.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 109 lines.
+- **Size:** 119 lines.
 - **What:** a category's books are its subcategories' too, all or its base books alone; the categories in the library's
   order with their paths, those with both kinds marked; every book's place in the library's order, a category's own
-  books before its subcategories'.
+  books before its subcategories'; the library's books known by id as the catalog has them.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/ResultsTreeLibraryBooksTest.kt`
+
+- **Feature:** Search speed.
+- **Size:** 55 lines.
+- **What:** the results' tree takes its books from the library's own (`BuildSearchTreeUseCase`'s `libraryBooks`), none
+  read from the database, a category's path too; a book that list lacks is read as before.
+- **Reached from:** the JVM tests.
+- **Follows:** `LibraryCategoriesTest` beside it (MockK, Kotlin Test with `runTest`).
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CategorySuggestionsTest.kt`

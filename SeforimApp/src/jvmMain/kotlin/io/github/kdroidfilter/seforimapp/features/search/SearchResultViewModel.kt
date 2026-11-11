@@ -202,7 +202,7 @@ class SearchResultViewModel(
         }.getOrNull()
 
     private val getBreadcrumbPieces = GetBreadcrumbPiecesUseCase(repository)
-    private val buildSearchTreeUseCase = BuildSearchTreeUseCase(repository)
+    private val buildSearchTreeUseCase = BuildSearchTreeUseCase(repository, libraryCategories::books)
     private val resultsIndexingUseCase = ResultsIndexingUseCase()
     private val categoryNavigationUseCase = CategoryNavigationUseCase(repository)
     private val searchTocUseCase = SearchTocUseCase(repository)
@@ -754,7 +754,10 @@ class SearchResultViewModel(
                                 }
                             }.flowOn(Dispatchers.Default)
                     }
-                }.collect { tree -> _searchTree.value = tree.toImmutableList() }
+                }.collect { tree ->
+                    // A tree built from the first results while the facets' tree came in must not replace it
+                    if (!facetsComputed) _searchTree.value = tree.toImmutableList()
+                }
         }
     }
 
