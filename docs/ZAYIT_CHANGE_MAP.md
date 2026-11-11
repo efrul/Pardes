@@ -3122,17 +3122,20 @@ which comes first and needs no free space for it. Hooks: `main.kt`,
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/diskspace/InstallLocationRow.kt`
 
 - **Feature:** Library location, Existing Zayit library.
-- **Size:** 94 lines.
+- **Size:** 106 lines.
 - **What:** `InstallLocationRow`, the folder the library will be installed to, with a link to choose another folder or
   drive (`FileKit.openDirectoryPicker` off the UI thread, `LibraryLocation.chooseInstallDir`) and the problem if it is
   refused. When the folder chosen already holds a library Pardes can open (`ForeignLibraries.inFolder`), two lines say
-  so, with its version and a link that uses it in place and calls `onUseLibrary`, instead of the problem.
+  so, with its version and a link that uses it in place and calls `onUseLibrary`, instead of the problem. What the
+  folder gave is the window's (`InstallLocationChoice`, a `ViewModel` of the window's store), not the row's.
 - **Reached from:** `AvailableDiskSpaceScreen.kt`.
 - **Follows:** the onboarding screens' components (Jewel `Link`, `InlineErrorBanner`); the link's text is
   `ExistingLibraryScreen`'s button's.
 - **Tests:** none of the row; `ForeignLibrariesTest` for what a folder holds. Seen in the app on 2026-11-11.
 - **Notes:** an inline banner for the offer, as first written, took the room of the screen's own banner under it, which
-  was cut; two plain lines leave it whole.
+  was cut; two plain lines leave it whole. The problem and the offer were the row's own state at first, and were lost
+  whenever a frame was drawn while the drive was measured again (the screen shows its spinner alone then, and the row
+  comes back new): seen on 2026-11-11, the offer gone right after the folder was chosen.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/library/LibraryLocationCard.kt`
 
