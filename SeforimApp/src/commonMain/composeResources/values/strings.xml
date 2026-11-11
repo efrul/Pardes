@@ -463,6 +463,12 @@
     <string name="no_commentaries_from_selected">אין מפרשים זמינים מהמפרשים שנבחרו לשורה זו</string>
     <string name="select_at_least_one_commentator">אנא בחר לפחות מפרש אחד מהרשימה</string>
     <string name="commentators_select_all">כל המפרשים</string>
+    <!-- The pin beside "כל המפרשים": the commentators checked as the reader's default for the book and the books beside it -->
+    <string name="commentators_default_set">קבע כברירת מחדל</string>
+    <string name="commentators_default_set_hint">המפרשים המסומנים יוצגו בכל פתיחה של הספר הזה, וגם בשאר הספרים של %1$s</string>
+    <string name="commentators_default_replace">קבע כברירת מחדל, במקום זו שקבעת</string>
+    <string name="commentators_default_on">זו ברירת המחדל שלך</string>
+    <string name="commentators_default_on_hint">לספר הזה ולשאר הספרים של %1$s. לחיצה מבטלת אותה, והם ייפתחו שוב עם ברירת המחדל של הספרייה</string>
     <string name="commentator_pane">מפרש</string>
     <string name="commentator_reattach">החזרה לחלונית המפרשים</string>
     <string name="commentator_detached_hint">בחלונית נפרדת. לחיצה מחזירה לכאן</string>

@@ -9,6 +9,7 @@ import androidx.paging.PagingSource
 import androidx.paging.cachedIn
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentStateManager
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorDefaults
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
@@ -60,6 +61,8 @@ class CommentariesUseCase(
     private val repository: SeforimRepository,
     private val stateManager: BookContentStateManager,
     private val scope: CoroutineScope,
+    // The reader's own default commentators, read before the library's
+    private val readerDefaults: CommentatorDefaults? = null,
 ) {
     private val commentatorBookCache: MutableMap<Long, Book> = ConcurrentHashMap()
     private val commentatorGroupCache: MutableMap<Long, String> = ConcurrentHashMap()
@@ -1044,6 +1047,12 @@ class CommentariesUseCase(
         // Commentators already chosen for the book, one by one or by whole groups ("כל המפרשים", "ראשונים על התנ״ך")
         if (!currentState.content.commentatorSelection(bookId).isEmpty) return
 
+        // The reader's own default, set on this book or on one beside it: also when it shows none
+        runSuspendCatching { readerDefaults?.of(bookId) }.getOrNull()?.let { own ->
+            stateManager.updateContent { withCommentatorSelection(bookId, own) }
+            return
+        }
+
         val defaults =
             runSuspendCatching {
                 repository.getDefaultCommentatorIdsForBook(bookId)
@@ -1056,6 +1065,26 @@ class CommentariesUseCase(
             byBook[bookId] = defaults.toSet()
             copy(selectedCommentatorsByBook = byBook)
         }
+    }
+
+    /** Sets the commentators the book shows as the reader's default for it and for the books beside it. */
+    suspend fun setCommentatorsDefault() {
+        val state = stateManager.state.first()
+        val bookId = state.navigation.selectedBook?.id ?: return
+        readerDefaults?.set(bookId, state.content.commentatorSelection(bookId))
+    }
+
+    /**
+     * Lets go of the reader's default the book takes: it opens with the library's own again. What the tab shows now
+     * stays, so that setting it again brings the same default back.
+     */
+    suspend fun clearCommentatorsDefault() {
+        val bookId =
+            stateManager.state
+                .first()
+                .navigation.selectedBook
+                ?.id ?: return
+        readerDefaults?.clear(bookId)
     }
 
     /**

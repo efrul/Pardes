@@ -52,6 +52,10 @@ class LibraryCategories(
     @Volatile
     private var groups: Map<Long, Entry> = emptyMap()
 
+    // Each book's commentaries (the books linked to it as such), read with the categories; none without a catalog
+    @Volatile
+    private var commentaries: Map<Long, LongArray> = emptyMap()
+
     // Without a catalog, the books of the categories searched so far: all of them, and the base ones
     private val booksFromDatabase = ConcurrentHashMap<Long, Pair<List<Long>, List<Long>>>()
 
@@ -145,6 +149,33 @@ class LibraryCategories(
             byId.also { if (it.isNotEmpty()) books = it }
         }
 
+    /**
+     * [bookId]'s title and the titles of its categories, the root first: where the book stands, whatever ids a library
+     * gives it. Null for a book the catalog doesn't have.
+     */
+    suspend fun bookPlace(bookId: Long): Pair<String, List<String>>? {
+        val book = books()[bookId] ?: return null
+        val path = entries()[book.categoryId]?.hit?.path ?: return null
+        return book.title to path
+    }
+
+    /** The commentaries on [bookId] (the books the library links to it as such), by id, with their titles. */
+    suspend fun commentariesOn(bookId: Long): Map<Long, String> {
+        entries()
+        val ids = commentaries[bookId] ?: return emptyMap()
+        val books = books()
+        val titles = LinkedHashMap<Long, String>()
+        for (id in ids) books[id]?.let { titles[id] = it.title }
+        return titles
+    }
+
+    // {a book: its commentaries}, from the links' {commentary: {a book it comments on: its links}}
+    private fun commentariesByBook(links: Map<Long, Map<Long, Int>>): Map<Long, LongArray> {
+        val byBook = HashMap<Long, MutableList<Long>>()
+        links.forEach { (commentary, commented) -> commented.keys.forEach { byBook.getOrPut(it) { ArrayList() } += commentary } }
+        return byBook.mapValues { (_, ids) -> ids.toLongArray() }
+    }
+
     // A category of the library, or a group of commentaries searched as one
     private suspend fun entry(categoryId: Long): Entry? = entries()[categoryId] ?: groups[categoryId]
 
@@ -160,6 +191,7 @@ class LibraryCategories(
         val links = commentaryLinks.counted()
         val books = BaseBooks.of(roots, links.mapValues { (_, commented) -> commented.keys.toLongArray() })
         groups = CommentaryGroups.of(roots, links).associate { it.hit.id to Entry(it.hit, it.bookIds, it.bookIds) }
+        commentaries = commentariesByBook(links)
         val result = LinkedHashMap<Long, Entry>()
 
         // Lists [category] before its subcategories

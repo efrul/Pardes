@@ -733,6 +733,12 @@ class BookContentViewModel(
                 is BookContentEvent.CommentatorGroupChanged ->
                     commentariesUseCase.setCommentatorGroup(event.lineId, event.group, event.checked, event.listed)
 
+                BookContentEvent.CommentatorsDefaultSet ->
+                    commentariesUseCase.setCommentatorsDefault()
+
+                BookContentEvent.CommentatorsDefaultCleared ->
+                    commentariesUseCase.clearCommentatorsDefault()
+
                 is BookContentEvent.SelectedTargumSourcesChanged ->
                     commentariesUseCase.updateSelectedLinkSources(event.lineId, event.selectedIds)
 

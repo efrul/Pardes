@@ -1,0 +1,20 @@
+-- Pardes: the commentators a reader set as a book's default (features/bookcontent/state/CommentatorDefaults.kt), kept by
+-- names: the book's title under its categories' titles, and its commentators' names and groups (JSON). The books beside
+-- it take them too, and a new library, whatever ids it gives its books, keeps them.
+CREATE TABLE IF NOT EXISTS commentator_default (
+    categoryPath TEXT NOT NULL,
+    bookTitle TEXT NOT NULL,
+    selection TEXT NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    PRIMARY KEY (categoryPath, bookTitle)
+);
+
+upsert:
+INSERT OR REPLACE INTO commentator_default(categoryPath, bookTitle, selection, updatedAt)
+VALUES (:categoryPath, :bookTitle, :selection, :updatedAt);
+
+selectAll:
+SELECT categoryPath, bookTitle, selection, updatedAt FROM commentator_default;
+
+delete:
+DELETE FROM commentator_default WHERE categoryPath = :categoryPath AND bookTitle = :bookTitle;

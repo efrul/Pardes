@@ -696,6 +696,14 @@ reports each change with that list (`SelectedCommentatorsChanged.listed`), so th
 be unchecked by it. A group checked or unchecked counts the group's commentators of other lines that the book remembers
 or hides too (`CommentariesUseCase.commentatorGroupOf`).
 
+### The reader's default
+
+A book opening in a tab that chose no commentators takes the reader's own default before the library's
+(`applyDefaultCommentatorsForBook`). The pin at the end of "כל המפרשים" sets it from the book's selection
+(`CommentatorsDefaultSet`), and lets it go when pinned (`CommentatorsDefaultCleared`). `CommentatorDefaults` keeps it in
+the user's database by names (the commentators' beside the book, the groups' labels), so the books beside it take it
+too: its category's, then those under the category above (`KeptCommentatorDefault.forBook`).
+
 ## Prefetching and Caching
 
 ### LineConnectionsSnapshot
