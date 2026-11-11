@@ -40,6 +40,7 @@ import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
+import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberDesktopOpener
 import io.github.kdroidfilter.seforimapp.features.author.AuthorTabContent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentScreen
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentViewModel
@@ -129,8 +130,9 @@ fun TabsContent() {
     }
 
     // Collect navigation events from SearchHomeViewModel and perform navigation
+    val openDesktop = rememberDesktopOpener()
     LaunchedEffect(searchHomeViewModel, tabsViewModel) {
-        searchHomeViewModel.navigationEvents.collect { event -> navigate(event, tabsViewModel) }
+        searchHomeViewModel.navigationEvents.collect { event -> navigate(event, tabsViewModel, openDesktop) }
     }
 
     // Holds per-tab saveable UI state across a destination change of the same tab.
@@ -290,8 +292,9 @@ private fun SearchTabContent(
             desktopManager.newSearchBarViewModel().apply { showScope(viewModel.searchScope) }
         }
     val homeSearchUi by barViewModel.uiState.collectAsState()
+    val openDesktop = rememberDesktopOpener()
     LaunchedEffect(barViewModel, tabsViewModel) {
-        barViewModel.navigationEvents.collect { event -> navigate(event, tabsViewModel) }
+        barViewModel.navigationEvents.collect { event -> navigate(event, tabsViewModel, openDesktop) }
     }
     // The search moved by itself (a category's base books or all its books), or its tabs were picked: its bar shows
     // where it searches now, and the tabs picked are its categories (none: everywhere)
@@ -369,6 +372,7 @@ private fun SearchTabContent(
 private fun navigate(
     event: SearchHomeNavigationEvent,
     tabsViewModel: TabsViewModel,
+    openDesktop: (SearchHomeNavigationEvent.OpenDesktop) -> Unit,
 ) {
     when (event) {
         is SearchHomeNavigationEvent.NavigateToSearch -> {
@@ -391,6 +395,7 @@ private fun navigate(
         is SearchHomeNavigationEvent.NavigateToDeepLink -> {
             tabsViewModel.replaceCurrentTabDestination(event.destination)
         }
+        is SearchHomeNavigationEvent.OpenDesktop -> openDesktop(event)
     }
 }
 

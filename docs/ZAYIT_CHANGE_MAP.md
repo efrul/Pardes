@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (105 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (107 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (182 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (186 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 39 |
+| Pardes feature hook | 41 |
 | Pardes feature in Zayit's file | 29 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 6 |
@@ -588,7 +588,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +29 −0 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order.
+- **Change:** modified, +36 −2 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -603,10 +604,13 @@ The entries of this section by kind:
     `onNewBarOpened` to `SearchHomeViewModel`.
   - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
     `Grade`) and `onCatalogOrderChange` (event `SetCatalogOrder`).
+  - `navigate` takes `openDesktop` and gives it a search bar's `SearchHomeNavigationEvent.OpenDesktop`; the two places
+    that collect a bar's navigation (the window's, and a results tab's own) pass `rememberDesktopOpener()`.
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
-  link of their own: a search made again from the bar searches in them).
+  link of their own: a search made again from the bar searches in them). A desktop's link pasted into a bar opens
+  its desktop from here, where the window and the desktops are at hand (the bar's view model has neither).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: one-line additions inside Zayit's callback and action builders, which Zayit extends
   when it adds a search action.
@@ -651,6 +655,29 @@ The entries of this section by kind:
 - **Smaller:** already minimal.
 - **Tests:** none.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManager.kt`
+
+- **Change:** modified, +3 −0 lines. Feature: Desktop link.
+- **What:** `createDesktop(windowId, name, tabs: WindowSnapshot? = null)`: the tabs given are kept as the new
+  desktop's dormant snapshot before it opens, so it opens with them rather than a fresh Home.
+- **Why:** a desktop's link opens as a new desktop holding its tabs, through the path a dormant desktop reopens by
+  (its titles shown at once, each tab read only when shown), instead of opening and selecting forty tabs one by one.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a parameter with a default and one line.
+- **Smaller:** already minimal.
+- **Tests:** `DesktopManagerTest` (a desktop made with its tabs opens with them).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DesktopSwitcher.kt`
+
+- **Change:** modified, +1 −0 lines. Feature: Desktop link.
+- **What:** `DesktopLinkRow(onDismiss)` at the end of the desktops' menu, under its "new desktop" row.
+- **Why:** the menu is where a desktop is made, named and deleted: its link is copied there, as the user asked on
+  2026-11-09.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** one line.
+- **Smaller:** already minimal.
+- **Tests:** none of the menu; `DesktopLinkTest` for the link.
+
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModelsTest.kt`
 
 - **Change:** modified, +59 −8 lines. Feature: Search in categories, Results in the library's order.
@@ -670,11 +697,12 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManagerTest.kt`
 
-- **Change:** modified, +7 −1 lines. Feature: Search in categories.
+- **Change:** modified, +34 −1 lines. Feature: Search in categories, Desktop link.
 - **What:** the test's `SearchHomeViewModel` takes a fifth argument, a relaxed `mockk` for `LibraryCategories`; the call
-  is broken over lines.
-- **Why:** `SearchHomeViewModel`'s constructor gained `libraryCategories` (`37d4fe60`).
-- **Kind:** Pardes feature hook (a test kept compiling).
+  is broken over lines. A test added at the end: a desktop made with its tabs (`createDesktop`'s third argument) opens
+  with them in the window it was made from, a book at the line it opens at and its title, and the desktop left is kept.
+- **Why:** `SearchHomeViewModel`'s constructor gained `libraryCategories` (`37d4fe60`); the desktop a link opens.
+- **Kind:** Pardes feature hook (a test kept compiling, and one added).
 - **Merge risk:** small.
 - **Smaller:** already minimal.
 - **Tests:** it is one.
@@ -1166,7 +1194,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchHomeViewModel.kt`
 
-- **Change:** modified, +233 −15 lines. Feature: Search in categories, Book and author titles search.
+- **Change:** modified, +254 −15 lines. Feature: Search in categories, Book and author titles search, Desktop link.
 - **What:**
   - `SearchHomeUiState` gains `categorySuggestions`, `selectedScopeCategory` and `scopeItems` (the books and categories
     picked, in order).
@@ -1184,15 +1212,19 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - `onNewTabBarOpened`: a new tab's bar opens empty, as Zayit's.
   - `barScope()` returns the picked items' scope (`ScopeItems.scopeOf`) or the one being restored.
   - Constants for the numbers of suggestions.
+  - `SearchHomeNavigationEvent.OpenDesktop(name, tabs)`, and in `submitSearch`, before Zayit's own link: a desktop's
+    link (`parseDesktopLink`) whose books the library has (`asWindow(libraryCategories.books())`) sends it instead
+    of a search of the link's text.
 - **Why:** search in a whole category (`54180126`), in several books and categories together (`574f3d55`), in a
   category's base books (`37d4fe60`), books and authors found by name (`67fe471e`), a new tab's bar empty as in Zayit
-  (`03c84c1f`), the commentaries on a book by their time, which the user asked to type on 2026-11-09.
+  (`03c84c1f`), the commentaries on a book by their time, which the user asked to type on 2026-11-09. A desktop's
+  link is opened where Zayit opens a tab's, pasted into the bar, and by the bar's same navigation events.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the edits run through Zayit's suggestion pipeline and its scope functions.
 - **Smaller:** the category and scope state could be a Pardes helper class the ViewModel delegates to; the suggestion
   pipeline's edits stay.
 - **Tests:** `CategorySuggestionsTest`, `ScopeItemsTest`, `CategoryScopeSearchTest`, `CategorySuggestionsE2ETest`,
-  `AuthorBooksTest`, `CommentaryGroupsTest`.
+  `AuthorBooksTest`, `CommentaryGroupsTest`, `DesktopLinkPasteTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
@@ -1388,8 +1420,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +239 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 224 Hebrew strings added in fifteen blocks,
+- **Change:** modified, +240 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 225 Hebrew strings added in sixteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1409,6 +1441,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
     the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
+  - a desktop's link: `desktop_copy_link` ("העתק קישור למרחב"), after Zayit's `desktop_open_in_new_window`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
   - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
   - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`.
@@ -1416,7 +1449,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); sixteen insertion points, each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); seventeen insertion points, each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -2685,6 +2718,75 @@ and `MeaningFacets.kt`.
 - **Follows:** `MeaningFacetsTest` and `HybridSearchEngineFallbackTest` (a fake `SearchEngine` listing given hits),
   Kotlin Test with `runTest`.
 - **Tests:** it is one (unit).
+
+### A desktop as one link
+
+A whole desktop is copied as one link from the desktops' menu ("העתק קישור למרחב"), and pasted into a search bar it
+opens as a new desktop with the same tabs, as the user asked on 2026-11-09: `zayit://desktop/<name>?t=<tab>&t=<tab>&s=<shown>`,
+each tab its own Zayit link without the scheme (a book at a line, a search), up to forty. A tab is linked to where it
+is read now (the book it shows, the line at the top of the screen), not where it was opened; the Home and the other
+pages without a link are left out. A book the library lacks is left out when the link opens, and a name a desktop here
+already has gives way to the next default one. Pardes registers no URL scheme (`branding/brand.gradle`), so the system
+never hands it a link: the search bar is the way in, as for a tab's link. Hooks: `DesktopSwitcher.kt`,
+`DesktopManager.kt`, `SearchHomeViewModel.kt`, `TabsContent.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/deeplink/DesktopLink.kt`
+
+- **Feature:** Desktop link.
+- **Size:** 118 lines.
+- **What:** the link's form and what stands on either side of it. `desktopShareLink(name, tabs, selected)` writes it
+  from the tabs' own links (`toShareLink`), those without one left out and the tab shown found again among the rest;
+  `parseDesktopLink` reads it back through `parseZayitDeepLink`, tab by tab, with fresh tab ids (`DesktopLink`: the
+  name cut to the menu's eight letters, at most `MAX_LINKED_TABS`, the tab shown kept in range).
+  `TabsDestination.asItStands(state)` turns a tab into what it shows now from its kept state (the book selected, the
+  content's anchor line, else the line selected; a search's last words); `DesktopTabsSnapshot.shareLink(name)` is the
+  link of a desktop's snapshot, its windows' tabs in order; `DesktopLink.asWindow(books)` is the window a new desktop
+  opens with: the tabs whose books the library has, titled from the catalog.
+- **Reached from:** `DesktopLinkRow.kt` (the link copied), `SearchHomeViewModel.kt` (the link pasted).
+- **Follows:** Zayit's `ZayitDeepLink.kt`, in its package, for the scheme and each tab's link; the session's models
+  (`WindowSnapshot`, `SerializableTabTitle`, `DesktopSession.titleFor`) for the window.
+- **Tests:** `DesktopLinkTest`, `DesktopLinkPasteTest`.
+- **Notes:** a search's scope and a book's view (the daf, its panes, its commentators) are not in the link, as they
+  are not in Zayit's tab links. Hebrew is percent-encoded, six characters a letter: a desktop of ten tabs is some 450
+  characters.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DesktopLinkRow.kt`
+
+- **Feature:** Desktop link.
+- **Size:** 106 lines.
+- **What:** `DesktopLinkRow`, the desktops' menu's last row: the link of this window's desktop, read as the menu opens
+  (`DesktopManager.snapshotOpenDesktop(...).shareLink(name)`), copied to the window's clipboard on a click, the menu
+  closed once it is copied; not shown for a desktop none of whose tabs has a link. `rememberDesktopOpener`, for
+  `TabsContent`: a link's desktop made in this window (`DesktopManager.createDesktop` with its tabs), named as the
+  link says unless a desktop here has the name, or the link has none: the next default name then.
+- **Reached from:** `DesktopSwitcher.kt` (the row), `TabsContent.kt` (the opener).
+- **Follows:** `DesktopSwitcher`'s own "new desktop" row for the row's look (its helper `HoverableRow` and its shape
+  are private there, so the row repeats their few lines) and for the next default name; `Clipboard.setText`.
+- **Tests:** none of the composables. Seen in the app on 2026-11-11: a desktop copied as its ten tabs that have a
+  link (its Home left out), and the link typed into a new tab's bar opened "מרחב ב׳" with the ten tabs, titled, the
+  one shown at its line.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/deeplink/DesktopLinkTest.kt`
+
+- **Feature:** Desktop link.
+- **Size:** 155 lines.
+- **What:** eight tests: the link written and read back (the words of a search with `&`, `=` and `/`, Hebrew), tabs
+  without a link left out and the tab shown followed, forty tabs at most both ways, what is no desktop's link and a
+  careless one, a tab linked to where it is read, a snapshot of two windows, and the window a link opens with (a
+  book the library lacks left out, titles, the tab shown).
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/DesktopLinkPasteTest.kt`
+
+- **Feature:** Desktop link.
+- **Size:** 75 lines.
+- **What:** a desktop's link submitted in the search bar sends `OpenDesktop` with the tabs the library has (a
+  catalog of one book), and one whose books it all lacks is searched as any text.
+- **Reached from:** the JVM tests.
+- **Follows:** `LibraryCategoriesTest` for the catalog, `DesktopManagerTest` for the bar's view model.
+- **Tests:** it is one (unit, the view model with mocks).
 
 ### The links of the other kinds in the references pane
 

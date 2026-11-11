@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.core.deeplink.asWindow
+import io.github.kdroidfilter.seforimapp.core.deeplink.parseDesktopLink
 import io.github.kdroidfilter.seforimapp.core.deeplink.parseZayitDeepLink
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
@@ -23,6 +25,7 @@ import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchServ
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimapp.framework.session.SearchPersistedState
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedStateStore
+import io.github.kdroidfilter.seforimapp.framework.session.WindowSnapshot
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
@@ -80,6 +83,16 @@ sealed class SearchHomeNavigationEvent {
      */
     data class NavigateToDeepLink(
         val destination: TabsDestination,
+    ) : SearchHomeNavigationEvent()
+
+    /**
+     * Open the desktop a link pasted into the search bar names (DesktopLink), as a new desktop.
+     * @param name The desktop's name; blank for the next default one
+     * @param tabs Its tabs, those whose books the library has
+     */
+    data class OpenDesktop(
+        val name: String,
+        val tabs: WindowSnapshot,
     ) : SearchHomeNavigationEvent()
 }
 
@@ -806,6 +819,14 @@ class SearchHomeViewModel(
         query: String,
         currentTabId: String,
     ) {
+        // A desktop's link opens that desktop, with the tabs whose books the library has
+        parseDesktopLink(query.trim())?.let { link ->
+            link.asWindow(libraryCategories.books())?.let { tabs ->
+                _navigationEvents.send(SearchHomeNavigationEvent.OpenDesktop(link.name, tabs))
+                return
+            }
+        }
+
         // A zayit:// link pasted into the search bar opens the target instead of running a search.
         parseZayitDeepLink(query.trim())?.let { destination ->
             val resolvable =
