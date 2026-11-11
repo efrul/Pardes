@@ -51,7 +51,8 @@ jobs:
           test -n "$KAGGLE_API_TOKEN" || { echo "::error::The secret KAGGLE_API_TOKEN is not set"; exit 1; }
           case "$DATASET" in */*) echo "::error::Name the dataset without its owner: this log is public"; exit 1 ;; esac
           python3 -m venv "$RUNNER_TEMP/kaggle"
-          "$RUNNER_TEMP/kaggle/bin/pip" install --quiet "kaggle>=2"
+          # kaggle imports six without asking for it, and python-dateutil stopped bringing it in its 3.0
+          "$RUNNER_TEMP/kaggle/bin/pip" install --quiet "kaggle>=2" six
           kaggle() { "$RUNNER_TEMP/kaggle/bin/kaggle" "$@"; }
           # Kaggle takes the owner from the token, and prints it with every file ("Dataset URL: …"): masked from here on
           owner="$("$RUNNER_TEMP/kaggle/bin/python" -c 'from kaggle import api; print(api.get_config_value("username") or "")' | tail -n 1)"
