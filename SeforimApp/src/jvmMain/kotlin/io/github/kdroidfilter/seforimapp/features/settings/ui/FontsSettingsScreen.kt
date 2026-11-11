@@ -42,6 +42,8 @@ import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.settings_font_book_label
 import seforimapp.seforimapp.generated.resources.settings_font_commentary_label
+import seforimapp.seforimapp.generated.resources.settings_font_daf_commentary_label
+import seforimapp.seforimapp.generated.resources.settings_font_daf_gemara_label
 import seforimapp.seforimapp.generated.resources.settings_font_reset_defaults
 import seforimapp.seforimapp.generated.resources.settings_font_sources_label
 import seforimapp.seforimapp.generated.resources.settings_font_targum_label
@@ -104,6 +106,22 @@ private fun FontsSettingsView(
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetSourceFont(code)) },
             )
 
+            FontSettingCard(
+                label = Res.string.settings_font_daf_gemara_label,
+                fontCode = state.dafGemaraFontCode,
+                options = options,
+                optionLabels = optionLabels,
+                onFontChange = { code -> onEvent(FontsSettingsEvents.SetDafGemaraFont(code)) },
+            )
+
+            FontSettingCard(
+                label = Res.string.settings_font_daf_commentary_label,
+                fontCode = state.dafCommentaryFontCode,
+                options = options,
+                optionLabels = optionLabels,
+                onFontChange = { code -> onEvent(FontsSettingsEvents.SetDafCommentaryFont(code)) },
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
@@ -117,7 +135,7 @@ private fun FontsSettingsView(
 }
 
 @Composable
-internal fun FontSettingCard(
+private fun FontSettingCard(
     label: StringResource,
     fontCode: String,
     options: ImmutableList<FontOption>,

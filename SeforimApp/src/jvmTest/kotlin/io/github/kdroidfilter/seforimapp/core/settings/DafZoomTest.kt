@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 
 /**
  * The daf's own settings: its zoom (the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
- * shows one), and whether it marks the lines its alignment is not sure of.
+ * shows one; a pinch over the daf zooms both by its ratio), and whether it marks the lines its alignment is not sure of.
  */
 class DafZoomTest {
     private val settings = testAppSettings()
@@ -37,11 +37,21 @@ class DafZoomTest {
     }
 
     @Test
-    fun `a daf's own zoom leaves the text alone`() {
+    fun `a pinch over the daf zooms the text by the same ratio, and back`() {
         settings.dafShown(tab)
-        settings.setDafZoom(0.8f)
+        settings.zoomDaf(1.5f)
 
+        assertEquals(1.5f, settings.getDafZoom())
+        assertEquals(AppSettings.DEFAULT_TEXT_SIZE * 1.5f, settings.getTextSize())
+        // Out past the text's smallest size and back: the text is the size it was, not the smallest size zoomed in
+        settings.zoomDaf(0.5f)
+        assertEquals(AppSettings.MIN_TEXT_SIZE, settings.getTextSize())
+        settings.zoomDaf(1f)
         assertEquals(AppSettings.DEFAULT_TEXT_SIZE, settings.getTextSize())
+        // The text's size changed some other way meanwhile: the next pinch goes on from it
+        settings.setTextSize(20f)
+        settings.zoomDaf(2f)
+        assertEquals(40f, settings.getTextSize())
     }
 
     @Test

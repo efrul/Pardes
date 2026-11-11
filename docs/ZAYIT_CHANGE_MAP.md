@@ -549,7 +549,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +215 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode.
+- **Change:** modified, +233 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     lighter unsure lines (`daf_mark_unsure`), the review mode (`daf_review`) and its two fonts (`font_daf_gemara`,
@@ -558,7 +558,10 @@ The entries of this section by kind:
   - **Zoom of the selected tab:** `dafShown`/`dafHidden`/`showsDaf` count the views that show a daf per tab
     (`dafViewsFlow`), and `zoomIn`/`zoomOut(tabId)` zoom the text as before, and the daf with it to its next level
     when the tab shows one: the panes beside a daf (the commentaries, the references) are drawn in the text's size,
-    and did not follow the zoom until the user asked on 2026-11-10; a pinch over the daf still zooms it alone.
+    and did not follow the zoom until the user asked on 2026-11-10. `zoomDaf(zoom)`, the daf's own pointer zoom (a
+    pinch, Ctrl + wheel over it), zooms the text by the same ratio, as the same gestures over the text zoom the panes
+    (asked on 2026-11-11); the text's size before its limits is kept (`dafText`), so zooming out and back gives the
+    size it was.
   - **Library location:** `getLibraryInstallDir`/`setLibraryInstallDir` (`library_install_dir`, not portable) and
     `flush()`, which writes the preferences now, before a step that relies on them.
   - **Semantic packs:** `semantic_pack_prompt`, whether a start without a pack opens the settings on it.
@@ -923,12 +926,13 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +377 −219 lines. Feature: Daf view.
+- **Change:** modified, +378 −219 lines. Feature: Daf view.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
     `DafView` in place of the lines' `LazyColumn`.
   - The daf's own `LazyListState` and `DafControl`; its own zoom by the same gestures (`rememberTextZoom` over
-    `dafZoomFlow`, in percent, `PERCENT = 100f`); `dafShown`/`dafHidden` while it is shown, so the zoom keys know.
+    `dafZoomFlow`, in percent, `PERCENT = 100f`, given to `AppSettings.zoomDaf`, which zooms the text with it);
+    `dafShown`/`dafHidden` while it is shown, so the zoom keys know.
   - The content is not hidden for initial positioning on the daf (its lines' list is not laid out there).
   - Find in page, Ctrl+Home/End and Page Up/Down act on the daf through `dafControl` (`scrollToLine`, `scrollToEdge`,
     `scrollPage`); the find bar's matches are drawn on the daf (`DafFind`).
@@ -1434,8 +1438,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 - **Change:** modified, +4 −0 lines. Feature: Daf view.
 - **What:** `SettingsDestination.Daf`, the daf view's settings page, after `Data`, with a comment.
-- **Why:** the daf view's settings stood in two pages (its fonts, marks and review among the fonts, its layouts among
-  the data); the user asked on 2026-11-10 for an ordered category of their own.
+- **Why:** the daf view's settings stood in two pages (its marks and review among the fonts, its layouts among the
+  data); the user asked on 2026-11-10 for an ordered category of their own. Its two fonts stay among the fonts.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small; one object at the end of Zayit's sealed interface.
 - **Smaller:** already minimal.
@@ -1496,12 +1500,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsViewModel.kt`
 
-- **Change:** modified, +48 −18 lines. Feature: Daf view.
+- **Change:** modified, +44 −18 lines. Feature: Daf view.
 - **What:**
   - Four more flows (`dafGemaraFont`, `dafCommentaryFont`, `dafMarkUnsure`, `dafReview`) and a private `current()`.
   - `state` combines eight flows as `combine<Any, FontsSettingsState>(…) { current() }` instead of Zayit's typed
     four-flow lambda, and starts from `current()`.
-  - `onEvent` handles the four new events; `ResetToDefaults` resets the daf's fonts and switches too.
+  - `onEvent` handles the four new events; `ResetToDefaults` resets the daf's two fonts too (not its switches, which
+    are in the daf's own settings page since 2026-11-10).
 - **Why:** as for `FontsSettingsEvents.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: Zayit's `state` builder was rewritten.
@@ -1512,14 +1517,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontsSettingsScreen.kt`
 
-- **Change:** modified, +1 −1 lines. Feature: Daf view.
-- **What:** `FontSettingCard` is `internal` (it was `private`): the daf's settings page draws the daf's two fonts with
-  it. The daf's cards and checkboxes that stood here after Zayit's last card are in `DafSettingsScreen.kt` since
-  2026-11-10.
-- **Why:** the daf view's settings in a page of their own, as the user asked.
+- **Change:** modified, +18 −0 lines. Feature: Daf view.
+- **What:** two `FontSettingCard`s after Zayit's last, the daf's Gemara and its Rashi and Tosafot; their two imports.
+  The daf's checkboxes that stood here too (the unsure lines, the review) are in `DafSettingsScreen.kt` since
+  2026-11-10; the fonts stay here, with the other fonts, as the user asked on 2026-11-11.
+- **Why:** as for `FontsSettingsEvents.kt`.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** minimal; one word.
-- **Smaller:** already minimal.
+- **Merge risk:** small; a block after Zayit's last card.
+- **Smaller:** already near minimal.
 - **Tests:** none of the screen.
 
 ### Home widgets
@@ -1993,15 +1998,14 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafSettingsScreen.kt`
 
 - **Feature:** Daf view.
-- **Size:** 106 lines.
-- **What:** `DafSettingsScreen`, Settings › צורת הדף: the daf view's settings in one page, in order: its two fonts (the
-  Gemara's, Rashi's and Tosafot's), the lighter unsure lines with their note, the review mode with its note and the
-  link to its folder, then the layouts' card (`DafLayoutsCard`). They stood among the fonts and among the data until
-  2026-11-10, when the user asked for a category of their own.
+- **Size:** 82 lines.
+- **What:** `DafSettingsScreen`, Settings › צורת הדף: the daf view's settings in one page, in order: the lighter unsure
+  lines with their note, the review mode with its note and the link to its folder, then the layouts' card
+  (`DafLayoutsCard`). They stood among the fonts and among the data until 2026-11-10, when the user asked for a
+  category of their own; the daf's two fonts stay among the fonts (the user's word of 2026-11-11).
 - **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Daf`), from `SettingsSidebar.kt`'s item.
 - **Follows:** Zayit's `FontsSettingsScreen` (a screen over a view of state and events, the same column of cards), whose
-  view model it reads: the daf's fonts and switches are kept there (`FontsSettingsState`, `FontsSettingsEvents`), and
-  the fonts' reset still resets them.
+  view model it reads: the daf's switches are kept there with its fonts (`FontsSettingsState`, `FontsSettingsEvents`).
 - **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its card.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LocatedSelection.kt`
@@ -2019,10 +2023,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/settings/DafZoomTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 106 lines.
+- **Size:** 116 lines.
 - **What:** the daf's own settings: the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
-  shows one, level by level; the daf's own zoom (a pinch) leaves the text alone and goes on from the next level; the
-  views' count; the unsure lines and the review mode off until asked and reset; the zoom kept and reset.
+  shows one, level by level; the daf's own zoom (a pinch) zooms the text by the same ratio, the same text back at the
+  same zoom, and goes on from the next level; the views' count; the unsure lines and the review mode off until asked and reset; the zoom kept and reset.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's settings tests (`testAppSettings()`).
 - **Tests:** it is one (unit, `AppSettings`).

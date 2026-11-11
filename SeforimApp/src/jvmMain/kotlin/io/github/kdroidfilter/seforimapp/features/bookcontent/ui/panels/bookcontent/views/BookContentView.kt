@@ -206,14 +206,15 @@ fun BookContentView(
     // Ctrl/Cmd + wheel, a trackpad pinch or two fingers zoom the text
     val zoom = rememberAppTextZoom(onPointerZoomInProgressChange)
     val textSize = zoom.textSize
-    // The daf's own zoom, by the same gestures, in percent; the zoom keys, buttons and menu zoom it while it is shown
+    // The daf's own zoom, by the same gestures, in percent, the text following it; the zoom keys, buttons and menu zoom
+    // it while it is shown
     val dafZoomValue by appSettings.dafZoomFlow.collectAsState()
     val dafZoom =
         rememberTextZoom(
             textSize = dafZoomValue * PERCENT,
             minTextSize = AppSettings.MIN_DAF_ZOOM * PERCENT,
             maxTextSize = AppSettings.MAX_DAF_ZOOM * PERCENT,
-            onTextSize = { appSettings.setDafZoom(it / PERCENT) },
+            onTextSize = { appSettings.zoomDaf(it / PERCENT) },
             animate = isTabSelected,
             onZoomingChange = onPointerZoomInProgressChange,
         )
