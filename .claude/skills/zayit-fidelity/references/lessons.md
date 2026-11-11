@@ -71,6 +71,12 @@ tools and the code did when it was written.
 - **The library's flags lie for 75 books.** `hasCommentaryConnection` and `hasSourceConnection` are 0 for the 38 books
   of the Chavruta, their notes and four others, though the links exist: a fault of SeforimLibrary's generator, worked
   around in the app. Ask the links, not the flags.
+- **The library's links, counted** (release 20261012193827, 4,428,487 in all): COMMENTARY 2,347,737; OTHER 1,615,544;
+  EIN_MISHPAT 137,621; RELATED 89,145; REFERENCE 88,869; MESORAT_HASHAS 45,654; TARGUM 34,729; QUOTATION 31,418;
+  SUPER_COMMENTARY 24,886; MIDRASH 6,880; MISHNAH_IN_TALMUD 2,390; PARSHANUT 1,963; DIBUR_HAMATCHIL 1,651. The
+  generator put under OTHER and RELATED what it could not sort: the Bavli's links to the Tanakh are OTHER (8,894 one
+  way, 15,079 the other; 17,195 lines of the Bavli have one). Count a kind before building on it:
+  `sqlite3 "file:seforim.db?mode=ro"`, on the whole library, not a cut one.
 - Zayit's code checks category ids with `> 0`: a made-up category (a group of commentaries of one time) takes a large
   positive id, from 10,000,000.
 - The reader's selection is never empty: a line is selected as a book opens, a heading selects up to 128 lines.
