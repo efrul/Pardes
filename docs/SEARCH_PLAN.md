@@ -34,6 +34,20 @@ spellings only to words it has. A hook in `LuceneSearchEngine.kt` that puts a wo
 measurement build does it (`docs/fusion-compare/tools/ExtraForms.kt`, `extra_forms_patch.py`). Otzaria's rule (an
 inner yod left out) turns לפגיעין into לפגעין.
 
+A word spelled like a base of its own gets only that base's forms, as `expansionFor` prefers the base spelled like the
+word:
+- "עני רוכב על חמור" finds nothing of Zechariah 9:9, which writes "עני ורכב על חמור". רוכב is a base of its own (the
+  noun, 18 forms) and a form of the root רכב (99 forms, ורכב at place 4 or 5); רוכב gets the noun's list, which has no
+  ורכב;
+- "עני ורוכב על חמור" (as the Gemara quotes it) and "עני רכב על חמור" get the root's list, and the app puts Zechariah
+  first. The dense side does not find the verse either; quoted, the search is exact and never can;
+- 7,056 of the dictionary's 28,397 bases are spelled like a form of a larger root (יוצא and מוציא against יצא's 619 forms,
+  דומה against דמה's 136, רוכב against רכב's 99).
+
+So the hook should give a word both lists, its own forms first: its base's and its root's. Without the hook,
+`PardesLexicon` could give such a base its root's forms too. That is worth measuring on the four sets, but it is not
+clearly better: for a noun like יציאה, the root's 619 forms cut at 32 by frequency could push out its own (יציאתו).
+
 1. **Measure first**, in the measurement build only, which needs no change to SeforimLibrary:
    - the forms: Otzaria's spelling forms (an inner ו or י added or left out), plus the plural ים↔ין, which no rule
      covers yet (`CASE_LIMONI.md`);
