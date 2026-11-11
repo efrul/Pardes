@@ -4555,11 +4555,11 @@ reads `installedSiddur`, as it does for its own.
 #### `SeforimApp/addons/siddur/open/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/SiddurScreen.kt`
 
 - **Feature:** the open smart siddur.
-- **Size:** 1604 lines.
+- **Size:** 1646 lines.
 - **What:** the siddur's screen for the open engine: Zayit's screen (`addons/siddur/enabled/…/SiddurScreen.kt`, 1,449
   lines at 0.6.12) as Ariel Daniely adapted it in his fork of the app (arieldaniely/Zayit, AGPL v3 with the §7b term,
-  `SeforimApp/src/jvmMain/…/features/siddur/SiddurScreen.kt` at `b9adccdc`, 2026-11-11). Against Zayit's screen (173
-  lines out, 328 in):
+  `SeforimApp/src/jvmMain/…/features/siddur/SiddurScreen.kt` at `b9adccdc`, 2026-11-11). Against Zayit's screen (174
+  lines out, 371 in):
   - the day's book comes from `buildDayBook(civil, prefs, options, showAll, source, afterHalachicMidnight)`, with the
     library's siddurim as its `source` (`LibrarySiddurSource`); a nusach whose siddur the library lacks shows the
     "not available" line instead of falling back to Ashkenaz;
@@ -4572,6 +4572,8 @@ reads `installedSiddur`, as it does for its own.
     "show all" on or off keeps the line being read in place (`retainedSiddurPosition`);
   - on the State of Israel's days in Iyar the day bar names the day and offers the engine's four customs
     (`IsraeliPrayerCustom`, kept by `AppSettings`), and the tefilot's titles name the day;
+  - the arrows and PageUp/PageDown scroll the text from wherever the focus is in it, as in a book
+    (`rememberKeyScroll`): Zayit's own change to its screen after 0.6.12 (see the notes);
   - links in the text open through `rememberRefLinkUriHandler`; the slots the engine fills itself (the readings, the
     molad, the omer's day, Pirkei Avot) are gone from `SiddurSlot`, and so are the private package's
     `SiddurTemplates`, `readingOf`, `megilaOf`, `pirkeiAvos` and the E2E recorders.
@@ -4580,11 +4582,12 @@ reads `installedSiddur`, as it does for its own.
 - **Tests:** `SiddurScrollTest`, `LibrarySiddurSourceTest`; in the app, a weekday, Rosh Chodesh, Shabbat and a day of
   Chanukah with its Torah reading were looked at on the full library (2026-11-11).
 - **Notes:**
-  - Two things differ from the author's file. His imports the days' names from the `luach` module, which he
-    changed; here they are the addon's (`IsraeliOccasionNames.kt`), so Zayit's `luach` stays as it is. And his holds
-    Zayit's keyboard scrolling of the siddur (`21659516`, 2026-11-01), which is after 0.6.12: its 44 lines are left
-    out. That commit is still AGPL v3 (it precedes the licence change, `1b9f1f21`, by nine hours, and is its
-    ancestor), so it can be added if the user decides to take it (section 5).
+  - One thing differs from the author's file: his imports the days' names from the `luach` module, which he
+    changed; here they are the addon's (`IsraeliOccasionNames.kt`), so Zayit's `luach` stays as it is.
+  - The keyboard scrolling is Zayit's `21659516` ("fix(siddur): scroll with the arrow keys and PageUp/PageDown",
+    2026-11-01, 44 lines), which the author's file holds. It is after 0.6.12, the one piece of Zayit's later code in
+    Pardes: first left out, as Pardes stays on 0.6.12, then taken at the user's word on 2026-11-11. The commit is
+    still AGPL v3 with the §7b term: it is an ancestor of the licence change (`1b9f1f21`), nine hours before it.
   - The file was then formatted by ktlint, which his fork does not run on it.
   - It is a second copy of a 1,449-line screen of Zayit's: a change Zayit makes to its own must be made here by hand.
   - The engine omits Tachanun on Yom HaAtzmaut and Yom Yerushalayim under each of its four customs; there is no
@@ -5757,7 +5760,9 @@ bumps filament-kmp to 0.7.12 in `gradle/libs.versions.toml`.
   - **Section 5, trademarks:** no right to the names "Zayit" or "זית" or their logos, beyond the attribution and
     saying where the software comes from. A modified version must not be presented as an official build.
 - **For Pardes:**
-  - Everything Pardes has is Zayit 0.6.12 or earlier, released under the AGPL v3 with §7b, and stays under it.
+  - Everything Pardes has is Zayit 0.6.12 or earlier, released under the AGPL v3 with §7b, and stays under it. The
+    one exception is the siddur's keyboard scrolling (`21659516`), which is later than 0.6.12 but was committed
+    under the same licence, before `1b9f1f21`.
   - Merging 0.6.13 or a later release brings code under the new licence, and with it Section 3's grant back on
     Pardes's own modifications of that code.
   - That is the user's decision, not part of a routine merge (the `zayit-fidelity` skill › Merging a Zayit release).
@@ -5769,7 +5774,8 @@ bumps filament-kmp to 0.7.12 in `gradle/libs.versions.toml`.
   - Ctrl+Tab follows the tab strip's right-to-left order (`f1f41116`; `MainAppWindow.kt`, `CycledTabIndexTest.kt`);
   - a heart in the Windows title bar opens a dialog that supports the author's work (`b121a5b3`;
     `features/support/SupportDialog.kt`, `TitleBarActionsButtonsView.kt`, three `support_app_*.png`);
-  - the private siddur scrolls with the keyboard (`21659516`);
+  - the private siddur scrolls with the keyboard (`21659516`, 2026-11-01, before the licence change and under the
+    AGPL v3): Pardes's open siddur's screen has these 44 lines since 2026-11-11, at the user's word;
   - Nucleus 3.0.0-dev-202611011507 (`df678943`; `gradle/libs.versions.toml`);
   - the website, release CI and the Microsoft Store package.
 - **Where a merge would meet Pardes's changes:** ten files Pardes also changes:
