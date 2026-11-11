@@ -54,13 +54,15 @@ Keep this list short and exact; every line here is a possible merge conflict.
 | `SeforimApp/.../framework/database/PendingDbCleanup.kt` | drops pending deletions in a foreign folder |
 | `SeforimApp/.../features/onboarding/licence/LicenceScreen.kt` | offers `ExistingLibraryScreen` when `ForeignLibraries.find()` finds one |
 | `SeforimApp/.../features/onboarding/navigation/OnBoardingDestination.kt`, `OnBoardingNavHost.kt` | the `ExistingLibraryScreen` destination |
+| `SeforimApp/.../features/onboarding/offline/OfflineFileSelectionScreen.kt` | `LibraryFolderChoice(navController)`: a folder that already holds a library is used in place |
 | `SeforimApp/.../framework/crashreporting/CrashReporting.kt`, `DataSettingsViewModel.kt`, `DataSettingsScreen.kt` | `isAvailable` (a Sentry DSN): without one the error reports' switch is not shown, as Pardes sends none; a fix for any community build |
 | `buildSrc/.../Versioning.kt` | a local build takes its version from the latest `v*` tag only (`--match v[0-9]*`): a fork's `android-*`, `desktop-*` and `semantic-*` tags are not versions, and Nucleus refused to configure with one |
-| `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `onboarding_existing_library_*` strings (one block) |
+| `SeforimApp/src/commonMain/composeResources/values/strings.xml` | the `onboarding_existing_library_*` strings (one block) and the `onboarding_library_folder_*` strings (another) |
 
 New files in upstream folders (no conflict, but generic code a Zayit merge must still compile with):
 `framework/database/ForeignLibraries.kt` (the only reader of `BrandLibraries`),
-`features/onboarding/existinglibrary/ExistingLibraryScreen.kt` and `jvmTest/.../ForeignLibrariesTest.kt`.
+`features/onboarding/existinglibrary/ExistingLibraryScreen.kt`, `features/onboarding/offline/LibraryFolderChoice.kt`
+(a library in a folder the user chooses, used in place the same way) and `jvmTest/.../ForeignLibrariesTest.kt`.
 
 Pardes features that are not branding, written to fit Zayit as well, also touch upstream files. The library
 location (install anywhere, move between drives, kept copies; `framework/database/LibraryLocation.kt`,
@@ -74,7 +76,7 @@ location (install anywhere, move between drives, kept copies; `framework/databas
 | `SeforimApp/.../features/onboarding/extract/ExtractUseCase.kt` | extracts to `LibraryLocation.installDir` |
 | `SeforimApp/.../features/onboarding/download/DownloadUseCase.kt` | `targetDir` parameter |
 | `SeforimApp/.../features/onboarding/diskspace/AvailableDiskSpaceUseCase.kt` | `targetDir` parameter (its drive is measured) |
-| `SeforimApp/.../features/onboarding/diskspace/AvailableDiskSpaceScreen.kt` | `InstallLocationRow(...)` |
+| `SeforimApp/.../features/onboarding/diskspace/AvailableDiskSpaceScreen.kt` | `InstallLocationRow(...)`, and `onUseLibrary`: on to the user's details when a library in the folder chosen is used in place |
 | `SeforimApp/.../framework/di/modules/OnboardingBindings.kt` | both use cases get `LibraryLocation.installDir` |
 | `SeforimApp/.../features/database/update/DatabaseCleanupUseCase.kt` | also cleans the install folder; skips kept copies |
 | `SeforimApp/.../features/settings/ui/DataSettingsScreen.kt` | `LibraryLocationCard()` |

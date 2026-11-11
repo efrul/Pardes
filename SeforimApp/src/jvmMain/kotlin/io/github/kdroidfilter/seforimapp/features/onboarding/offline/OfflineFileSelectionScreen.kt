@@ -138,6 +138,9 @@ fun OfflineFileSelectionScreen(
             ) {
                 Text(stringResource(Res.string.onboarding_choose_files))
             }
+
+            // Or a folder that already holds a library, used where it is
+            LibraryFolderChoice(navController)
         }
     }
 }

@@ -65,6 +65,42 @@ class ForeignLibrariesTest {
         assertNull(appSettings.getDatabasePath())
     }
 
+    @Test
+    fun `a folder the user chooses holds a library to use, in it or in the library's own folder inside it`() {
+        val chosen = wholeLibraryIn(File(root, "drive/books"))
+
+        val found = assertIs<ForeignLibraries.InFolder.Library>(ForeignLibraries.inFolder(chosen))
+        assertEquals(File(chosen, "seforim.db"), found.library.database)
+        assertEquals(VERSION, found.library.version)
+
+        // Where an install to a chosen folder puts the library
+        val outer = File(root, "drive2")
+        val inside = wholeLibraryIn(LibraryLocation.destination(outer))
+        val inOuter = assertIs<ForeignLibraries.InFolder.Library>(ForeignLibraries.inFolder(outer))
+        assertEquals(File(inside, "seforim.db"), inOuter.library.database)
+
+        ForeignLibraries.useInPlace(found.library, appSettings, databasePathProvider)
+        assertEquals(File(chosen, "seforim.db").absolutePath, appSettings.getDatabasePath())
+        assertTrue(ForeignLibraries.isForeign(chosen))
+    }
+
+    @Test
+    fun `a folder with no library this app can open says why`() {
+        assertEquals(ForeignLibraries.InFolder.NoLibrary, ForeignLibraries.inFolder(File(root, "empty").apply { mkdirs() }))
+
+        // A copy of seforim.db alone
+        assertEquals(ForeignLibraries.InFolder.NoSearchIndex, ForeignLibraries.inFolder(libraryIn(File(root, "one file"))))
+
+        val pieces = wholeLibraryIn(File(root, "phone card")).also { File(it, "seforim.db001").writeText("") }
+        assertEquals(ForeignLibraries.InFolder.InPieces, ForeignLibraries.inFolder(pieces))
+
+        val unknown = wholeLibraryIn(File(root, "no release")).also { File(it, "release_info.txt").delete() }
+        assertEquals(ForeignLibraries.InFolder.UnknownRelease, ForeignLibraries.inFolder(unknown))
+
+        val old = wholeLibraryIn(File(root, "old")).also { File(it, "release_info.txt").writeText(OLD_VERSION) }
+        assertEquals(ForeignLibraries.InFolder.TooOld(OLD_VERSION), ForeignLibraries.inFolder(old))
+    }
+
     private fun useInPlace(dir: File) =
         ForeignLibraries.useInPlace(
             ForeignLibraries.ForeignLibrary(File(dir, "seforim.db"), VERSION, "other app"),
@@ -79,8 +115,12 @@ class ForeignLibrariesTest {
             File(this, "release_info.txt").writeText(VERSION)
         }
 
+    // A library with its search index, as an install leaves it
+    private fun wholeLibraryIn(dir: File): File = libraryIn(dir).also { File(it, "seforim.db.lucene").mkdirs() }
+
     private companion object {
         const val TEST_APP_ID = "seforimapp-tests"
         const val VERSION = "20261012193827"
+        const val OLD_VERSION = "20250101000000"
     }
 }
