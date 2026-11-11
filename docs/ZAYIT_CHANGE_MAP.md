@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (173 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (175 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -582,7 +582,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +26 −0 lines. Feature: Search in categories, Feedback mode, Result tabs.
+- **Change:** modified, +29 −0 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -595,8 +595,8 @@ The entries of this section by kind:
   - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`.
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
     `onNewBarOpened` to `SearchHomeViewModel`.
-  - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`) and `onGrade` (event
-    `Grade`).
+  - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
+    `Grade`) and `onCatalogOrderChange` (event `SetCatalogOrder`).
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
@@ -609,21 +609,22 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModels.kt`
 
-- **Change:** modified, +47 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
-  Search in categories.
+- **Change:** modified, +49 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
+  Search in categories, Results in the library's order.
 - **What:**
   - `BookContentPersistedState` gains, appended last for ProtoBuf: `detachedCommentators` (by name; 1.0.5's slot list
     is still read), `allCommentatorsBooks`, `excludedCommentatorsByBook`, `commentatorGroupsByBook`,
     `hiddenCommentatorGroupsByBook` and `dafView`.
-  - `SearchPersistedState` gains `fetchBookIds`, `fetchCategoryIds` and `fetchBaseOnlyCategoryIds`; the comment of
+  - `SearchPersistedState` gains `fetchBookIds`, `fetchCategoryIds`, `fetchBaseOnlyCategoryIds` and, last,
+    `catalogOrder` (the results listed in the library's order); the comment of
     `fetchCategoryId` says it is used again.
   - `scope` falls back to a new `wideScope`: the author's, the several books' and categories' (`SearchScope.Multi`), the
     category's (with `baseBooksOnly`), else everywhere. A search narrowed to one book goes back to it.
   - `withScope` writes `"category"` and `"multi"` scopes and their ids instead of turning a category into everywhere; a
     private `SearchScope.categoriesInBaseBooks()` lists the categories searched in their base books.
 - **Why:** a tab restored at start must come back with its torn-off commentators (`831ad272`), its commentator
-  selection (`3c6bae9b`, `49b456d4`), its daf view (`4efa3e3c`) and its search scope (`54180126`, `574f3d55`,
-  `37d4fe60`).
+  selection (`3c6bae9b`, `49b456d4`), its daf view (`4efa3e3c`), its search scope (`54180126`, `574f3d55`,
+  `37d4fe60`) and the order of its results.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium. The new fields are appended last, as Zayit's own comment asks, but a Zayit release that
   appends fields of its own to the same classes conflicts, and their ProtoBuf numbers would then clash with Pardes's
@@ -646,13 +647,14 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModelsTest.kt`
 
-- **Change:** modified, +50 −8 lines. Feature: Search in categories.
+- **Change:** modified, +59 −8 lines. Feature: Search in categories, Results in the library's order.
 - **What:**
   - Zayit's test `a search saved scoped to a category runs everywhere` is replaced by
     `a search scoped to a category keeps it, and a book scope drops it`.
   - New tests: several books and categories are kept and gone back to from one of their books; a category in its base
     books alone stays so, alone, with others and from one of its books; a search narrowed to one book goes back to its
-    category's or author's books. Each checks a ProtoBuf round trip.
+    category's or author's books; a search listed in the library's order stays so. Each checks a ProtoBuf round
+    trip.
 - **Why:** the behaviour Zayit's test asserted is the one Pardes changed (`54180126`, `574f3d55`, `37d4fe60`).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** if Zayit adds tests near the replaced one, a conflict; if it changes the category behaviour again,
@@ -1161,7 +1163,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +382 −49 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs.
+- **Change:** modified, +401 −50 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1186,21 +1188,27 @@ alone. Every entry below that says "Search in categories" is part of that revers
     (`showTabsInBar`, through `scopeChanges` and the file-level `scopeOfTabs(tabs, picked)`; `SearchScope.Global` when
     none is picked any longer), so the text searched again from the bar is searched in them, and `unpickCategoryTab`
     lets a tab go when its category is taken out of the bar.
+  - **Results in the library's order:** the constructor's `lucene` is a plain parameter named `engine`, and the
+    `lucene` the file searches with is `CatalogOrderEngine(engine, libraryCategories::bookOrder)`, which lists in
+    the library's order while the tab's `catalogOrder` says so; `SearchUiState.catalogOrder` (restored from the
+    tab's saved state), and the event `SetCatalogOrder`, which saves the choice and searches again.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
   the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
-  the bar's categories are the user's choice of 2026-11-10 over a link that searched in them.
+  the bar's categories are the user's choice of 2026-11-10 over a link that searched in them. The results in the
+  library's order are the user's request of 2026-11-09 (a sort by the catalog): wrapping the engine here leaves
+  every search, filter and restore path of the file as it is.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
 - **Smaller:** feedback mode could live in a Pardes class the ViewModel holds (its flow and `grade`), and the scope
   labels in `LibraryCategories`; keeping Zayit's name `authorBookIds` would shrink the diff.
 - **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`,
-  `ResultTabsTest`, `HybridSearchEngineFallbackTest` (the views).
+  `ResultTabsTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +71 −28 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book.
+- **Change:** modified, +89 −29 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1216,16 +1224,22 @@ alone. Every entry below that says "Search in categories" is part of that revers
     lines is `PassageText` (the text selected, the menu of a right click); a line's `clickable` and its hand pointer are
     `passageLine`, which still opens the book on a click of its own; and the view goes to the found line only until
     lines are added before the passage (`!passage.grownBefore`).
+  - `SearchShellActions` gains `onCatalogOrderChange`; `SearchStatusLine` takes `catalogOrder` and ends with a link
+    to the other order (`search_sort_catalog` / `search_sort_relevance`); and in the library's order every passage
+    is listed (`flattenResults`' `oneBook` is `everyPassage`: no "more in this book" link, a book's lines stand
+    together).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
   screen's. The passage read as a book is the user's request of 2026-11-10: its text selected and copied, the book's
-  menu on a right click, and scrolling up and down past it.
+  menu on a right click, and scrolling up and down past it. The link to the library's order is the user's request
+  of 2026-11-09, beside the status line's other choice.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over eleven
+- **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
 - **Smaller:** already near minimal.
-- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `ResultTabsTest`; the tabs were tried in the app.
+- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `ResultTabsTest`; the tabs and the link to the
+  library's order were tried in the app.
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt`
@@ -1302,10 +1316,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorScopeSearchTest.kt`
 
-- **Change:** modified, +6 −0 lines. Feature: Feedback mode, Search in categories.
+- **Change:** modified, +7 −1 lines. Feature: Feedback mode, Search in categories, Results in the library's order.
 - **What:** the test's `SearchResultViewModel` gets a `feedbackStore` (an in-memory `SearchFeedbackStore`) and a
-  `libraryCategories` (a `LibraryCategories` without a catalog).
-- **Why:** the ViewModel's constructor gained both (`90f8a24a`, `37d4fe60`).
+  `libraryCategories` (a `LibraryCategories` without a catalog), and its engine by the parameter's new name, `engine`.
+- **Why:** the ViewModel's constructor gained both (`90f8a24a`, `37d4fe60`), and wraps the engine it is given
+  (`CatalogOrderEngine`), which keeps the name `lucene` for the wrapped one.
 - **Kind:** Pardes feature hook (a test kept compiling).
 - **Merge risk:** small.
 - **Smaller:** already minimal.
@@ -1326,8 +1341,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +221 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 208 Hebrew strings added in fourteen blocks,
+- **Change:** modified, +223 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 210 Hebrew strings added in fourteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (2);
@@ -1340,6 +1355,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - search in categories and by name: `search_text_row_in_category`, `search_text_row_in_scope`,
     `search_switch_scope_all`, `search_switch_scope_base`, `row_action_add_to_search`, `row_action_search_category`,
     `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
+  - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה") and `search_sort_relevance`, after
+    `search_switch_scope_base`;
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`;
   - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
@@ -2467,6 +2484,59 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
 - **Follows:** `SearchUiStateTest` beside it (Kotlin Test, backtick names), `BreadcrumbNavigatorTest` for the test scope.
 - **Tests:** it is one (unit).
 
+### The search's results in the library's order
+
+A link in the results' status line, "מיון לפי סדר הספרייה", lists the lines found as the library has its books (the
+Tanakh's before the Mishnah's, a book's lines as they stand in it) instead of by relevance, as the user asked on
+2026-11-09; "מיון לפי רלוונטיות" goes back. Every line the words find is listed, a book's together, and with the meaning
+search the lines it alone found stand among them in their place. The choice is the tab's, kept with it. Nothing of
+SeforimLibrary's index changes: the books that have lines found are known from the facets, and are read a few at a time
+in the library's order, each sorted by its lines' places. On the whole library the first page comes in 0.03 to 0.9
+seconds, a search of 1.7 million lines included. Hooks: `SearchResultViewModel.kt`, `SearchResultScreen.kt`,
+`TabsContent.kt`, `SessionModels.kt`, `strings.xml`; in Pardes's files, `LibraryCategories.kt`, `HybridSearchEngine.kt`
+and `MeaningFacets.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSearch.kt`
+
+- **Feature:** Results in the library's order.
+- **Size:** 198 lines.
+- **What:**
+  - `CatalogOrderEngine(engine, bookOrder, byCatalog)`, a `SearchEngine` that is `engine` in everything (`by engine`)
+    but its sessions: while `byCatalog()` says so, `openSession` gives a `CatalogOrderSession` over the engine's words
+    (`WordsEngine.words`, else the engine itself), with the engine's own session beside it when that one lists lines
+    found by meaning (`MeaningFacets`).
+  - `CatalogOrderSession`, a `SearchSession` and `MeaningFacets`: on its first page it counts the books that have lines
+    found (`computeFacets`) and reads the engine's own list once (some 300 lines, and how many of each book's the words
+    don't find); then it reads the books in the library's order (`bookOrder`, a book without a place last), as many as
+    fill the page asked for (200 books at most in one reading), each group in one session of the words, sorted by book
+    and `lineIndex`; the meaning's own lines of those books join them, each line once. Its pages show the words in bold
+    (`attachSnippets`), a line the meaning alone found its text and then its passage closest in meaning
+    (`refinedSnippets`, the engine's own session's); its total counts both.
+- **Reached from:** `SearchResultViewModel.kt` (its `lucene`).
+- **Follows:** Zayit's `SearchEngine` and `SearchSession` contract (pages asked one after the other, `snippets = false`
+  to skip, a `Mutex` around the cursor as `LuceneSearchEngine`'s session), and `HybridSearchEngine`'s session beside
+  it, the other session Pardes adds.
+- **Tests:** `CatalogOrderSessionTest`; the order, the tabs in it and the choice kept over a restart were tried in the
+  app on the whole library.
+- **Notes:** nothing is ranked, so a book with thousands of lines found is read whole when its turn comes (2,000 lines
+  at a time). The passage beside the results still highlights by the engine's rule (by meaning with a pack), while
+  the list shows the words in bold.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSessionTest.kt`
+
+- **Feature:** Results in the library's order.
+- **Size:** 285 lines.
+- **What:** the lines come book by book in the library's order, each book's as they stand in it; the books are read as
+  the pages ask for them, those with a line or two together, and the last page says so; a line the meaning alone found
+  stands in its place and is counted, one the words found too comes once; the words' lines show the words, the
+  meaning's own its text and then its passage; a search in some lines reads them alone; the session closes the
+  engine's own; and the engine gives its own session unless the library's order is asked for, reading the words of an
+  engine that adds lines by meaning.
+- **Reached from:** the JVM tests.
+- **Follows:** `MeaningFacetsTest` and `HybridSearchEngineFallbackTest` (a fake `SearchEngine` listing given hits),
+  Kotlin Test with `runTest`.
+- **Tests:** it is one (unit).
+
 ### The links of the other kinds in the references pane
 
 The references pane ("מראי מקומות") lists every link of a line that is no commentary: beside Zayit's three kinds (עין
@@ -2887,7 +2957,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 762 lines.
+- **Size:** 766 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -2898,7 +2968,8 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   highlights by meaning, counts the meaning's lines in the facets (`MeaningFacets`), and falls back to the words alone
   when the model or the index cannot load. Its session gives views of its list (`SessionViews`: the lines of some
   books, in the list's order, paged from the first with no search), for the category tabs; none when the list goes on
-  past what it holds (the words alone, past their candidates). A dense side whose walk came back short is searched again from the words'
+  past what it holds (the words alone, past their candidates). It is a `WordsEngine`: its words' search (`words`) can
+  be asked apart, for a list of every line they find in the library's order (`CatalogOrderSession`). A dense side whose walk came back short is searched again from the words'
   first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering.
 - **Reached from:** `InstalledSemanticSearch.kt` (`installedSemanticSearch.hybrid`).
 - **Follows:** Zayit's `SemanticSearchFeature` interface and its private `HybridSearchEngine`, of the same name and role
@@ -3060,11 +3131,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacets.kt`
 
 - **Feature:** Semantic search's category tabs.
-- **Size:** 52 lines.
+- **Size:** 62 lines.
 - **What:** `MeaningFacets`, a session whose list holds lines its facets don't count (the lines found by meaning alone);
   `plusBooks` counts them into their books and categories; `otherTabCategories` offers the library's other top
-  categories as tabs when the search runs by meaning in the whole library.
-- **Reached from:** `HybridSearchEngine.kt`, `SearchResultViewModel.kt`.
+  categories as tabs when the search runs by meaning in the whole library. `WordsEngine`, an engine whose search of
+  the words can be asked apart from the lines it adds by meaning (`HybridSearchEngine`), for `CatalogOrderSession`.
+- **Reached from:** `HybridSearchEngine.kt`, `SearchResultViewModel.kt`, `CatalogOrderSearch.kt`.
 - **Follows:** Zayit's `SearchFacets` and category tabs, which it extends.
 - **Tests:** `MeaningFacetsTest`.
 
@@ -3584,16 +3656,17 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/LibraryCategories.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 153 lines.
+- **Size:** 171 lines.
 - **What:** `LibraryCategories`, the library's categories for the search: each with its path (what the bar suggests), the
   books it searches (all those under it, or its base books alone), whether it holds both kinds, and its chip (`hit`). It holds the commentaries on a book by their time too
   (`CommentaryGroups`, read with the categories from the same links): `named(query, limit)` offers them before the
   categories a text names, and `hit` and `bookIds` know them by their ids, so that one is searched, kept and restored as
-  a category is.
+  a category is. `bookOrder()` gives every book its place in the library's order (a category's own books, then its
+  subcategories'), read once, for a list of results in that order.
 - **Reached from:** `AppCoreBindings.kt`, `SearchHomeViewModel.kt`, `SearchResultViewModel.kt`.
 - **Follows:** Zayit's catalog (`CatalogCache`) and `CategoryNavigationUseCase`, whose `collectBookIdsUnderCategory` it
   replaces in the results.
-- **Tests:** `LibraryCategoriesTest`, `CategorySuggestionsE2ETest`, `CategoryScopeSearchTest`.
+- **Tests:** `LibraryCategoriesTest`, `CategorySuggestionsE2ETest`, `CategoryScopeSearchTest`, `CatalogOrderSessionTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommentaryGroups.kt`
 
@@ -3679,9 +3752,10 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/LibraryCategoriesTest.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 84 lines.
+- **Size:** 109 lines.
 - **What:** a category's books are its subcategories' too, all or its base books alone; the categories in the library's
-  order with their paths, those with both kinds marked.
+  order with their paths, those with both kinds marked; every book's place in the library's order, a category's own
+  books before its subcategories'.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).

@@ -25,6 +25,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.StateKeys
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.features.search.domain.BuildSearchTreeUseCase
+import io.github.kdroidfilter.seforimapp.features.search.domain.CatalogOrderEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryNavigationUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.ExecuteSearchUseCase
@@ -108,6 +109,8 @@ data class SearchUiState(
     // The bar's text as typed, kept apart from the searched query so a restore searches what was shown
     val draftQuery: String = "",
     val globalExtended: Boolean = false,
+    // The results in the library's order, every one of a book's shown, not by relevance
+    val catalogOrder: Boolean = false,
     val baseBooksHadNoResults: Boolean = false,
     val isLoading: Boolean = false,
     val results: List<SearchResult> = emptyList(),
@@ -136,7 +139,7 @@ class SearchResultViewModel(
     @Assisted savedStateHandle: SavedStateHandle,
     private val persistedStore: TabPersistedStateStore,
     private val repository: SeforimRepository,
-    private val lucene: SearchEngine,
+    engine: SearchEngine,
     private val titleUpdateManager: TabTitleUpdateManager,
     private val desktopManager: DesktopManager,
     private val historyStore: HistoryStore,
@@ -157,6 +160,9 @@ class SearchResultViewModel(
     internal val tabId: String = savedStateHandle.get<String>(StateKeys.TAB_ID) ?: ""
 
     private fun persistedSearchState(): SearchPersistedState = persistedStore.get(tabId)?.search ?: SearchPersistedState()
+
+    // The engine, its sessions in the library's order while the tab asks for it
+    private val lucene: SearchEngine = CatalogOrderEngine(engine, libraryCategories::bookOrder) { persistedSearchState().catalogOrder }
 
     private fun updatePersistedSearch(transform: (SearchPersistedState) -> SearchPersistedState) {
         persistedStore.update(tabId) { current ->
@@ -273,6 +279,11 @@ class SearchResultViewModel(
             val baseBooksOnly: Boolean,
         ) : SearchResultEvents()
 
+        // The results in the library's order, or by relevance
+        data class SetCatalogOrder(
+            val catalogOrder: Boolean,
+        ) : SearchResultEvents()
+
         // Pardes: feedback mode, a grade given to a result (again: taken back)
         data class Grade(
             val result: SearchResult,
@@ -351,6 +362,12 @@ class SearchResultViewModel(
             }
 
             is SearchResultEvents.SetScopeBaseBooksOnly -> setScopeBaseBooksOnly(event.baseBooksOnly)
+
+            is SearchResultEvents.SetCatalogOrder -> {
+                _uiState.value = _uiState.value.copy(catalogOrder = event.catalogOrder)
+                updatePersistedSearch { it.copy(catalogOrder = event.catalogOrder) }
+                executeSearch()
+            }
 
             is SearchResultEvents.Grade -> grade(event.result, event.grade)
         }
@@ -987,6 +1004,7 @@ class SearchResultViewModel(
                 query = initialQuery,
                 draftQuery = persisted.draftQuery.ifBlank { initialQuery },
                 globalExtended = persisted.globalExtended,
+                catalogOrder = persisted.catalogOrder,
                 scrollIndex = persisted.scrollIndex,
                 scrollOffset = persisted.scrollOffset,
                 anchorId = persisted.anchorId,

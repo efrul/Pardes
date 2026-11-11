@@ -473,6 +473,9 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
             onScopeBaseBooksChange = { baseBooksOnly ->
                 viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetScopeBaseBooksOnly(baseBooksOnly))
             },
+            onCatalogOrderChange = { catalogOrder ->
+                viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetCatalogOrder(catalogOrder))
+            },
             onScroll = { anchorId, anchorIndex, index, offset ->
                 viewModel.onEvent(
                     SearchResultViewModel.SearchResultEvents.OnScroll(anchorId, anchorIndex, index, offset),

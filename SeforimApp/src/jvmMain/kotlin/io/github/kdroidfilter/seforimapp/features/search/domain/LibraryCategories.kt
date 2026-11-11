@@ -98,6 +98,24 @@ class LibraryCategories(
         return if (baseBooksOnly) base else all
     }
 
+    // Each book's place in the library's order; empty without a catalog
+    @Volatile
+    private var order: Map<Long, Int>? = null
+
+    /**
+     * Every book's place in the library's order (a category's own books, then its subcategories'), for a list of
+     * results in that order; empty when the library has no catalog.
+     */
+    suspend fun bookOrder(): Map<Long, Int> =
+        order ?: run {
+            val placed = HashMap<Long, Int>()
+            // A top category holds every book under it, in order
+            entries().values.filter { it.hit.path.size == 1 }.forEach { top ->
+                top.bookIds?.forEach { book -> placed.getOrPut(book) { placed.size } }
+            }
+            placed.also { if (it.isNotEmpty()) order = it }
+        }
+
     // A category of the library, or a group of commentaries searched as one
     private suspend fun entry(categoryId: Long): Entry? = entries()[categoryId] ?: groups[categoryId]
 

@@ -108,6 +108,8 @@ data class SearchShellActions(
     val onSubmit: (query: String) -> Unit,
     val onQueryChange: (String) -> Unit,
     val onGlobalExtendedChange: (Boolean) -> Unit,
+    // The results in the library's order, or by relevance
+    val onCatalogOrderChange: (Boolean) -> Unit = {},
     // In a category holding base books and others: its base books alone (the texts without their commentaries), or all
     val onScopeBaseBooksChange: (Boolean) -> Unit = {},
     val onScroll: (anchorId: Long, anchorIndex: Int, index: Int, offset: Int) -> Unit,
@@ -230,7 +232,9 @@ private fun SearchResultContentMvi(
     // all its passages show
     val inBook = bookFilterIds.isNotEmpty()
     val oneBook = inBook || state.scopeBook != null || state.scopeTocId != null
-    val items = remember(visibleResults, bookCounts, oneBook) { flattenResults(visibleResults, bookCounts, oneBook) }
+    // In the library's order every passage shows too: a book's stand together, as it has them
+    val everyPassage = oneBook || state.catalogOrder
+    val items = remember(visibleResults, bookCounts, everyPassage) { flattenResults(visibleResults, bookCounts, everyPassage) }
     val lineToItemIndex =
         remember(items) {
             buildMap {
@@ -462,6 +466,8 @@ private fun SearchResultContentMvi(
                                     onGlobalExtendedChange = actions.onGlobalExtendedChange,
                                     scopeBaseBooksOnly = if (oneBook) null else state.scopeBaseBooksOnly,
                                     onScopeBaseBooksChange = actions.onScopeBaseBooksChange,
+                                    catalogOrder = state.catalogOrder,
+                                    onCatalogOrderChange = actions.onCatalogOrderChange,
                                     modifier = Modifier.padding(end = 12.dp),
                                 )
 
@@ -1230,6 +1236,8 @@ private fun SearchStatusLine(
     modifier: Modifier = Modifier,
     scopeBaseBooksOnly: Boolean? = null,
     onScopeBaseBooksChange: (Boolean) -> Unit = {},
+    catalogOrder: Boolean = false,
+    onCatalogOrderChange: (Boolean) -> Unit = {},
 ) {
     val grey = readingSecondary()
     val count = remember(total) { NumberFormat.getIntegerInstance().format(total) }
@@ -1261,6 +1269,15 @@ private fun SearchStatusLine(
                 JewelTheme.globalColors.outlines.focused,
                 13.sp,
             ) { onScopeBaseBooksChange(!scopeBaseBooksOnly) }
+        }
+        // The order of the list: by relevance, or as the library has its books
+        if (!isLoading) {
+            Text("·", color = grey, fontSize = 13.sp)
+            ResultLink(
+                stringResource(if (catalogOrder) Res.string.search_sort_relevance else Res.string.search_sort_catalog),
+                JewelTheme.globalColors.outlines.focused,
+                13.sp,
+            ) { onCatalogOrderChange(!catalogOrder) }
         }
     }
 }

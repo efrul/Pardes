@@ -44,7 +44,11 @@ class HybridSearchEngine internal constructor(
     private val library: LibraryLines? = LibraryLines.beside(indexDir),
     // What loads the model and its vector index
     private val openSemantic: (Path) -> IndependentSemanticSearch?,
-) : SearchEngine {
+) : SearchEngine,
+    WordsEngine {
+    /** The search of the words alone, every line that has them: what a list in the library's order reads. */
+    override val words: SearchEngine get() = lexical
+
     constructor(
         lexical: SearchEngine,
         indexDir: Path,

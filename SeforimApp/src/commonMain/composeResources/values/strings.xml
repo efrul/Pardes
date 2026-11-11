@@ -848,6 +848,8 @@
     <!-- A category holding base books and others: in all its books, its commentaries too, or in its base books alone -->
     <string name="search_switch_scope_all">חיפוש גם במפרשים</string>
     <string name="search_switch_scope_base">חיפוש בלי המפרשים</string>
+    <string name="search_sort_catalog">מיון לפי סדר הספרייה</string>
+    <string name="search_sort_relevance">מיון לפי רלוונטיות</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>

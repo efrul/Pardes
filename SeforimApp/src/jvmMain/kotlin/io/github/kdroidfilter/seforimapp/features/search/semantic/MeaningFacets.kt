@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
+import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import io.github.kdroidfilter.seforimlibrary.search.SearchFacets
 
 /**
@@ -14,6 +15,15 @@ interface MeaningFacets {
      * first page is read; empty before it, and without a meaning search.
      */
     suspend fun meaningBookCounts(): Map<Long, Int>
+}
+
+/**
+ * An engine whose search of the words can be asked apart from the lines it adds to it by meaning: [HybridSearchEngine],
+ * whose own list is the first lines found. A list of every line the words find, in the library's order, reads [words]
+ * (CatalogOrderSession).
+ */
+interface WordsEngine {
+    val words: SearchEngine
 }
 
 /**

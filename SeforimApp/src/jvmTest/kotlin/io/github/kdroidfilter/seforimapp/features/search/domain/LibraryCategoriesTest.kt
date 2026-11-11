@@ -81,4 +81,29 @@ class LibraryCategoriesTest {
                 categories.hit(12L, baseBooksOnly = true),
             )
         }
+
+    @Test
+    fun `every book has its place in the library's order, a category's own books before its subcategories'`() =
+        runBlocking {
+            // הלכה: book 9 of its own, then book 4 in טור; after it מוסר, with book 1
+            val library =
+                PrecomputedCatalog(
+                    rootCategories =
+                        listOf(
+                            CatalogCategory(
+                                id = 50L,
+                                title = "הלכה",
+                                level = 0,
+                                books = listOf(book(9L, 50L, true)),
+                                subcategories = listOf(CatalogCategory(51L, "טור", 1, 50L, listOf(book(4L, 51L, true)), emptyList())),
+                            ),
+                            CatalogCategory(60L, "מוסר", 0, null, listOf(book(1L, 60L, true)), emptyList()),
+                        ),
+                )
+            val cache = mockk<CatalogCache> { every { getCatalog() } returns library }
+            val ordered = LibraryCategories(cache, mockk(), mockk { every { counted() } returns emptyMap() })
+
+            assertEquals(mapOf(9L to 0, 4L to 1, 1L to 2), ordered.bookOrder())
+            assertEquals(mapOf(1L to 0, 2L to 1, 3L to 2), categories.bookOrder())
+        }
 }
