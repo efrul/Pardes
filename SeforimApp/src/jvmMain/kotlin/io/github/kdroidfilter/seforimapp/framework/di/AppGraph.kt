@@ -22,6 +22,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindows
 import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryLookup
 import io.github.kdroidfilter.seforimapp.features.onboarding.data.OnboardingProcessRepository
 import io.github.kdroidfilter.seforimapp.features.onboarding.navigation.ProgressBarState
+import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
 import io.github.kdroidfilter.seforimapp.framework.crashreporting.CrashReporting
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
@@ -61,6 +62,7 @@ abstract class AppGraph : ViewModelGraph {
     abstract val noteStore: NoteStore
     abstract val repository: SeforimRepository
     abstract val searchEngine: SearchEngine
+    abstract val libraryCategories: LibraryCategories
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync

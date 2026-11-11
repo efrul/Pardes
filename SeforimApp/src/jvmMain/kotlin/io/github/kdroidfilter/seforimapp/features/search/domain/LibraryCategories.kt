@@ -4,8 +4,10 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
+import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.CatalogCategory
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
+import io.github.kdroidfilter.seforimlibrary.core.models.toBook
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -114,6 +116,33 @@ class LibraryCategories(
                 top.bookIds?.forEach { book -> placed.getOrPut(book) { placed.size } }
             }
             placed.also { if (it.isNotEmpty()) order = it }
+        }
+
+    /** Reads the categories and the books ahead of their first use: the bar's first letter, a search's tree. */
+    suspend fun warmUp() {
+        entries()
+        books()
+    }
+
+    // The library's books by id, as the catalog has them; null until read
+    @Volatile
+    private var books: Map<Long, Book>? = null
+
+    /**
+     * Every book of the library by its id, as its catalog has it ([toBook]: its title, category, order and flags, what a
+     * tree of books shows), read once; empty when the library has no catalog. The results' tree of the thousands of
+     * books a search found then reads none of them from the database.
+     */
+    suspend fun books(): Map<Long, Book> =
+        books ?: withContext(Dispatchers.IO) {
+            val byId = HashMap<Long, Book>()
+
+            fun walk(category: CatalogCategory) {
+                category.books.forEach { byId[it.id] = it.toBook() }
+                category.subcategories.forEach(::walk)
+            }
+            catalogCache.getCatalog()?.rootCategories?.forEach(::walk)
+            byId.also { if (it.isNotEmpty()) books = it }
         }
 
     // A category of the library, or a group of commentaries searched as one

@@ -536,6 +536,8 @@ private const val LEXICON_WAIT_MS = 120_000L
 
 private fun warmSearch(graph: AppGraph) {
     Thread({
+        // The bar's categories and the library's books, ahead of the first letter typed and the first results' tree
+        runCatching { runBlocking { graph.libraryCategories.warmUp() } }.onFailure { warnln(it) { "Categories warm-up failed" } }
         runCatching {
             val engine = graph.searchEngine
             // After a library install or update Pardes's dictionary is rebuilt first: the warm-up's searches open it

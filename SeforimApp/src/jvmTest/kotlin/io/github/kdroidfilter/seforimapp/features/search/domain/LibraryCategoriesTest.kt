@@ -106,4 +106,14 @@ class LibraryCategoriesTest {
             assertEquals(mapOf(9L to 0, 4L to 1, 1L to 2), ordered.bookOrder())
             assertEquals(mapOf(1L to 0, 2L to 1, 3L to 2), categories.bookOrder())
         }
+
+    @Test
+    fun `the library's books are known by id as the catalog has them`() =
+        runBlocking {
+            val books = categories.books()
+
+            assertEquals(setOf(1L, 2L, 3L), books.keys)
+            assertEquals(listOf("3", 212L, false), books.getValue(3L).let { listOf(it.title, it.categoryId, it.isBaseBook) })
+            assertEquals(true, books.getValue(1L).isBaseBook)
+        }
 }

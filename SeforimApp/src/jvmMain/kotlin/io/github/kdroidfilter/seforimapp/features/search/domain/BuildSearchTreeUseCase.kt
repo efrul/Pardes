@@ -10,9 +10,18 @@ import kotlinx.coroutines.ensureActive
 
 class BuildSearchTreeUseCase(
     private val repository: SeforimRepository,
+    // The library's books by id, known without reading them (the catalog's): a tree of thousands of books then asks
+    // the database for none
+    private val libraryBooks: suspend () -> Map<Long, Book> = { emptyMap() },
 ) {
     private val bookCache: MutableMap<Long, Book> = mutableMapOf()
     private val categoryPathCache: MutableMap<Long, List<Category>> = mutableMapOf()
+
+    // The library's books, asked for once
+    @Volatile
+    private var knownBooks: Map<Long, Book>? = null
+
+    private suspend fun libraryBook(bookId: Long): Book? = (knownBooks ?: libraryBooks().also { knownBooks = it })[bookId]
 
     /**
      * Build search tree from search results (original implementation).
@@ -27,6 +36,7 @@ class BuildSearchTreeUseCase(
         val categoriesById = mutableMapOf<Long, Category>()
 
         suspend fun resolveBook(bookId: Long): Book? {
+            libraryBook(bookId)?.let { return it }
             bookCache[bookId]?.let { return it }
             val b = repository.getBookCore(bookId)
             if (b != null) bookCache[bookId] = b
@@ -78,7 +88,8 @@ class BuildSearchTreeUseCase(
         for (bookId in facetBookCounts.keys) {
             currentCoroutineContext().ensureActive()
             val book =
-                bookCache[bookId]
+                libraryBook(bookId)
+                    ?: bookCache[bookId]
                     ?: repository.getBookCore(bookId)?.also { bookCache[bookId] = it }
             if (book != null) {
                 booksById[book.id] = book
@@ -97,7 +108,11 @@ class BuildSearchTreeUseCase(
 
     /** The ids of [bookId]'s category and of every category above it, the root first; null for a book that can't be read. */
     suspend fun categoryIdsOf(bookId: Long): List<Long>? {
-        val book = bookCache[bookId] ?: repository.getBookCore(bookId)?.also { bookCache[bookId] = it } ?: return null
+        val book =
+            libraryBook(bookId)
+                ?: bookCache[bookId]
+                ?: repository.getBookCore(bookId)?.also { bookCache[bookId] = it }
+                ?: return null
         val path =
             categoryPathCache[book.categoryId] ?: buildCategoryPath(book.categoryId).also {
                 categoryPathCache[book.categoryId] = it
