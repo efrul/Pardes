@@ -276,10 +276,28 @@ class AppSettings(
 
     fun showsDaf(tabId: String): Boolean = tabId in _dafViewsFlow.value
 
+    // The text's size as the daf's own zoom last left it, before the size's limits: zoomed out and back, the text is as it was
+    private var dafText: Pair<Float, Float>? = null
+
+    /**
+     * Zooms the daf to [zoom], as a pinch or Ctrl + wheel over it does, and the text with it by the same ratio: the
+     * panes beside a daf (the commentaries, the references) are drawn in the text's size, and the same gestures over the
+     * text zoom them too.
+     */
+    fun zoomDaf(zoom: Float) {
+        val before = getDafZoom()
+        setDafZoom(zoom)
+        val after = getDafZoom()
+        if (after == before) return
+        val kept = dafText?.takeIf { (at, size) -> at == before && size.coerceIn(MIN_TEXT_SIZE, MAX_TEXT_SIZE) == getTextSize() }
+        val text = (kept?.second ?: getTextSize()) * after / before
+        dafText = after to text
+        setTextSize(text.coerceIn(MIN_TEXT_SIZE, MAX_TEXT_SIZE))
+    }
+
     /**
      * Zooms in the reading view of [tabId]: the text, and its daf to the next of [DAF_ZOOM_LEVELS] when it shows one. The
-     * panes beside a daf are drawn in the text's size (the commentaries, the references), and follow its zoom so; a
-     * pinch over the daf zooms it alone.
+     * panes beside a daf are drawn in the text's size (the commentaries, the references), and follow its zoom so.
      */
     fun zoomIn(tabId: String) {
         if (showsDaf(tabId)) {

@@ -88,10 +88,6 @@ class FontsSettingsViewModel(
                 dafReview.value = event.enabled
             }
             is FontsSettingsEvents.ResetToDefaults -> {
-                appSettings.setDafMarkUnsureEnabled(false)
-                dafMarkUnsure.value = false
-                appSettings.setDafReviewEnabled(false)
-                dafReview.value = false
                 appSettings.setDafGemaraFontCode(AppSettings.DEFAULT_DAF_GEMARA_FONT)
                 appSettings.setDafCommentaryFontCode(AppSettings.DEFAULT_DAF_COMMENTARY_FONT)
                 dafGemaraFont.value = AppSettings.DEFAULT_DAF_GEMARA_FONT
