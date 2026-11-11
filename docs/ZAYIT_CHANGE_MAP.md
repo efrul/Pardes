@@ -184,8 +184,9 @@ The entries of this section by kind:
     Commits, and this map in the same commit as every change, with `check_change_map.py`.
   - After Zayit's open-core paragraphs: Pardes builds only the community edition, never sets Zayit's private-package
     tokens or `-P*.local` flags, has its own open smart siddur (SeforimOpenSiddur's engine in `siddur-open/`, its
-    screen in `addons/siddur/open`, experimental and off until turned on), and has its own open semantic search,
-    whose pack comes from `semantic-*` releases.
+    screen in `addons/siddur/open`, experimental and off until turned on), its own links in the texts (`TextLinks`,
+    handed over by `addons/quotelinks/disabled`), and its own open semantic search, whose pack comes from
+    `semantic-*` releases.
   - Security: the Kaggle account is never named in the repository, its workflows or their logs.
   - Git: commits as `efrul <342689225+efrul@users.noreply.github.com>`, author and committer, signed off.
 - **Why:** this file is what every Claude Code session reads first, so Pardes's rules go where they cannot be missed;
