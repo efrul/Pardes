@@ -37,6 +37,7 @@ import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CheckboxRow
@@ -49,6 +50,8 @@ import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.feedback_consent_publish
+import seforimapp.seforimapp.generated.resources.feedback_consent_publish_hint
 import seforimapp.seforimapp.generated.resources.feedback_send_all
 import seforimapp.seforimapp.generated.resources.feedback_send_auto
 import seforimapp.seforimapp.generated.resources.feedback_send_auto_hint
@@ -67,6 +70,7 @@ import seforimapp.seforimapp.generated.resources.feedback_send_now
 import seforimapp.seforimapp.generated.resources.feedback_send_offline
 import seforimapp.seforimapp.generated.resources.feedback_send_offline_auto
 import seforimapp.seforimapp.generated.resources.feedback_send_open_folder
+import seforimapp.seforimapp.generated.resources.feedback_send_otzaria
 import seforimapp.seforimapp.generated.resources.feedback_send_privacy
 import seforimapp.seforimapp.generated.resources.feedback_send_privacy_online
 import seforimapp.seforimapp.generated.resources.feedback_send_reading
@@ -84,6 +88,7 @@ import seforimapp.seforimapp.generated.resources.feedback_send_sending
 import seforimapp.seforimapp.generated.resources.feedback_send_sent
 import seforimapp.seforimapp.generated.resources.feedback_send_title
 import seforimapp.seforimapp.generated.resources.feedback_send_too_many
+import seforimapp.seforimapp.generated.resources.feedback_send_zayit
 import java.awt.Desktop
 import java.io.File
 import java.io.IOException
@@ -111,6 +116,8 @@ fun FeedbackSendCard() {
                 grades = viewModel::setGrades,
                 searches = viewModel::setSearches,
                 daf = viewModel::setDaf,
+                otherApp = viewModel::setOtherApp,
+                publish = viewModel::setPublish,
                 query = viewModel::setQuery,
                 all = viewModel::setAll,
                 renewSender = viewModel::renewSender,
@@ -136,6 +143,10 @@ internal class FeedbackSendActions(
     val grades: (Boolean) -> Unit = {},
     val searches: (Boolean) -> Unit = {},
     val daf: (Boolean) -> Unit = {},
+    // Another app's searches sent too, or not
+    val otherApp: (OtherApp, Boolean) -> Unit = { _, _ -> },
+    // Whether what is sent may be shown to everyone
+    val publish: (Boolean) -> Unit = {},
     // A query kept in the package or left out of it
     val query: (String, Boolean) -> Unit = { _, _ -> },
     val all: (Boolean) -> Unit = {},
@@ -171,7 +182,7 @@ internal fun FeedbackSendCardContent(
         if (contents == null) {
             Text(text = stringResource(Res.string.feedback_send_reading), fontSize = 13.sp)
         } else {
-            Kinds(contents, state.choice, actions)
+            Kinds(contents, state.choice, state.otherApps, actions)
             if (contents.isEmpty) Text(text = nothingText(state), fontSize = 13.sp)
         }
         // Once a package was made: the next one holds what is newer, unless the user wants all again
@@ -183,6 +194,7 @@ internal fun FeedbackSendCardContent(
                 enabled = !state.busy,
             )
         }
+        if (state.online) Publish(state.choice.publish, actions)
         if (state.online) Auto(state.auto, actions)
         Privacy(state.sender, state.online, actions)
         WorkStatus(state)
@@ -200,6 +212,18 @@ private fun Auto(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         CheckboxRow(text = stringResource(Res.string.feedback_send_auto), checked = on, onCheckedChange = actions.auto)
         Hint(stringResource(Res.string.feedback_send_auto_hint))
+    }
+}
+
+/** Whether the service may show to everyone what is sent, by the card and by itself: its words, never the sender. */
+@Composable
+private fun Publish(
+    on: Boolean,
+    actions: FeedbackSendActions,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        CheckboxRow(text = stringResource(Res.string.feedback_consent_publish), checked = on, onCheckedChange = actions.publish)
+        Hint(stringResource(Res.string.feedback_consent_publish_hint))
     }
 }
 
@@ -231,6 +255,7 @@ private fun DeleteSent(
 private fun Kinds(
     contents: FeedbackContents,
     choice: FeedbackChoice,
+    otherApps: Set<OtherApp>,
     actions: FeedbackSendActions,
 ) {
     // What each kind would send, the queries left out gone, whether it is on or not
@@ -252,9 +277,31 @@ private fun Kinds(
             checked = choice.daf,
             onCheckedChange = actions.daf,
         )
+        // The other apps on this computer: read, and so counted, only once checked
+        otherApps.forEach { app ->
+            val rows = contents.others[app]?.without(choice.leftOut) ?: OtherAppRows()
+            CheckboxRow(
+                text =
+                    if (app in choice.others) {
+                        stringResource(app.countLabel, rows.searches.size, rows.grades.size)
+                    } else {
+                        stringResource(app.label)
+                    },
+                checked = app in choice.others,
+                onCheckedChange = { actions.otherApp(app, it) },
+            )
+            Hint(stringResource(app.hint))
+        }
         Review(contents, choice, actions)
     }
 }
+
+private val OtherApp.countLabel: StringResource
+    get() =
+        when (this) {
+            OtherApp.ZAYIT -> Res.string.feedback_send_zayit
+            OtherApp.OTZARIA -> Res.string.feedback_send_otzaria
+        }
 
 /** The queries of the kinds sent, each with its checkbox: one left out goes in neither its grades nor its searches. */
 @Composable
@@ -263,7 +310,7 @@ private fun Review(
     choice: FeedbackChoice,
     actions: FeedbackSendActions,
 ) {
-    val queries = remember(contents, choice.grades, choice.searches) { contents.queries(choice) }
+    val queries = remember(contents, choice.grades, choice.searches, choice.others) { contents.queries(choice) }
     if (queries.isEmpty()) return
     var open by remember { mutableStateOf(false) }
     val kept = queries.count { it !in choice.leftOut }

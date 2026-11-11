@@ -12,4 +12,7 @@ object BrandLibraries {
 
     /** Where another app keeps the library this app offers to use in place: nowhere. */
     fun otherAppDatabases(): List<File> = emptyList()
+
+    /** Where another app keeps the user database whose searches this app may send: nowhere. */
+    fun otherAppUserDatabases(): List<File> = emptyList()
 }

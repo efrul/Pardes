@@ -259,6 +259,8 @@
     <string name="feedback_send_searches">היסטוריית החיפושים: %1$d</string>
     <string name="feedback_send_searches_hint">כל החיפושים שעשיתם, גם אלה שלא נתתם להם ציון: הם מראים מה מחפשים.</string>
     <string name="feedback_send_daf">סימונים של שורות בצורת הדף: %1$d (במסכתות: %2$d)</string>
+    <string name="feedback_send_zayit">החיפושים שעשיתם בזית: %1$d</string>
+    <string name="feedback_send_otzaria">החיפושים שעשיתם באוצריא: %1$d (ודירוגים: %2$d)</string>
     <string name="feedback_send_review">עיון בחיפושים שיישלחו (%1$d מתוך %2$d)</string>
     <string name="feedback_send_review_hint">חיפוש שמורידים ממנו את הסימון לא יישלח, לא הציונים שלו ולא ההיסטוריה שלו.</string>
     <string name="feedback_send_all">הכל מההתחלה, לא רק מה שחדש מאז הפעם הקודמת</string>
@@ -297,6 +299,12 @@
     <string name="feedback_consent_searches_hint">מה חיפשתם, באיזה היקף וכמה פעמים, גם בלי ציון: הם מראים מה מחפשים.</string>
     <string name="feedback_consent_daf">הסימונים של שורות בצורת הדף</string>
     <string name="feedback_consent_daf_hint">במצב הבדיקה של צורת הדף, שמדליקים בהגדרות › צורת הדף.</string>
+    <string name="feedback_consent_zayit">גם החיפושים שעשיתם בזית, במחשב הזה</string>
+    <string name="feedback_consent_zayit_hint">מהיסטוריית החיפושים של זית: מה חיפשתם, באיזה היקף וכמה פעמים. בלי הסימון הם לא נקראים ולא נשלחים.</string>
+    <string name="feedback_consent_otzaria">גם החיפושים שעשיתם באוצריא, במחשב הזה</string>
+    <string name="feedback_consent_otzaria_hint">מהיסטוריית החיפושים של אוצריא, ומהדירוגים שנתתם בחיפוש החכם שלה. בלי הסימון הם לא נקראים ולא נשלחים.</string>
+    <string name="feedback_consent_publish">פרסום במאגר הפתוח</string>
+    <string name="feedback_consent_publish_hint">מה שתשלחו יוצג לכולם באתר "מאגר החיפושים הפתוח": המילים שחיפשתם והתוצאות שדירגתם, בלי מזהה השולח ובלי שום דבר שמזהה אתכם. בלי הסימון רואה אותם רק המתחזק של פרדס.</string>
     <string name="feedback_consent_privacy">לא נשלחים ההערות, ההדגשות, המועדפים, הספרים שפתחתם, ושום דבר שמזהה אתכם או את המחשב, והשרת שומר את המשוב בלי כתובת ה־IP. בהגדרות › ניהול נתונים › שליחת משוב אפשר לשנות את הבחירה, לעצור את השליחה ולמחוק את מה שנשלח.</string>
     <string name="feedback_consent_agree">אישור</string>
     <string name="feedback_consent_decline">לא, תודה</string>
@@ -767,6 +775,14 @@
     <string name="onboarding_library_folder_no_index">בתיקייה יש את הקובץ seforim.db בלי אינדקס החיפוש (התיקייה seforim.db.lucene). צריך את כל התיקייה של מסד הנתונים, לא את הקובץ לבדו.</string>
     <string name="onboarding_library_folder_unknown">אי אפשר לדעת מה הגרסה של מסד הנתונים שבתיקייה (חסר הקובץ release_info.txt).</string>
     <string name="onboarding_library_folder_old">מסד הנתונים שבתיקייה (גרסה %1$s) ישן מדי לגרסה הזו של האפליקציה. צריך להתקין מסד נתונים חדש.</string>
+    <!-- The onboarding's step that asks whether to send feedback by itself (FeedbackStepScreen) -->
+    <string name="onboarding_feedback_title">שליחת משוב לשיפור פרדס</string>
+    <string name="onboarding_feedback_description">כדי לשפר את החיפוש, פרדס שולח לבד את מה שחיפשתם, את הציונים שנתתם לתוצאות ואת הסימונים בצורת הדף, בלי שום דבר שמזהה אתכם או את המחשב. מה שלא תרצו לשלוח, הסירו ממנו את הסימון. אפשר לשנות הכול אחר כך בהגדרות › ניהול נתונים.</string>
+    <string name="onboarding_feedback_send">שליחה אוטומטית של נתוני החיפוש שלי</string>
+    <string name="onboarding_feedback_sources">מאיפה:</string>
+    <string name="onboarding_feedback_zayit">זית</string>
+    <string name="onboarding_feedback_otzaria">אוצריא</string>
+    <string name="onboarding_feedback_publish_hint">המילים שחיפשתם יוצגו לכולם באתר "מאגר החיפושים הפתוח", בלי שום דבר שמזהה אתכם. בלי הסימון רואה אותן רק המתחזק של פרדס.</string>
     <string name="onboarding_extracting_message">אנא המתן בזמן שאנו מחלצים את מסד הנתונים</string>
     <string name="onboarding_verifying_version">בודק תאימות גרסה...</string>
     <string name="onboarding_version_error_title">הגרסה אינה תואמת</string>

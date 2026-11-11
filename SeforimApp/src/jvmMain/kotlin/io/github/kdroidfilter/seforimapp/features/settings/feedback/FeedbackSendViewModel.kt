@@ -9,6 +9,7 @@ import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.logger.warnln
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -76,6 +78,8 @@ class FeedbackSendViewModel(
         val online: Boolean = false,
         /** Whether feedback is sent by itself, at every start and connection of the network. */
         val auto: Boolean = false,
+        /** The other apps on this computer whose searches may be sent too. */
+        val otherApps: Set<OtherApp> = emptySet(),
     ) {
         val busy: Boolean get() = work == Work.Saving || work is Work.Sending || work == Work.Deleting
     }
@@ -117,12 +121,14 @@ class FeedbackSendViewModel(
                     }
                 // A read the user's next change made stale
                 ensureActive()
+                val otherApps = runSuspendCatching { withContext(Dispatchers.IO) { sender.otherApps() } }.getOrDefault(emptySet())
                 _state.update {
                     it.copy(
                         contents = contents,
                         sender = sender.sender(),
                         lastSent = sender.lastSent(),
                         auto = appSettings.isFeedbackAutoSend(),
+                        otherApps = otherApps,
                     )
                 }
             }.also { reading = it }
@@ -133,6 +139,18 @@ class FeedbackSendViewModel(
     fun setSearches(on: Boolean) = keep { it.copy(searches = on) }
 
     fun setDaf(on: Boolean) = keep { it.copy(daf = on) }
+
+    /** [app]'s searches sent too, or not: its files are read from now on, or no longer. */
+    fun setOtherApp(
+        app: OtherApp,
+        on: Boolean,
+    ) {
+        keep { it.copy(others = if (on) it.others + app else it.others - app) }
+        refresh()
+    }
+
+    /** Whether the service may show what is sent to everyone. */
+    fun setPublish(on: Boolean) = keep { it.copy(publish = on) }
 
     /** [query] in this package or left out of it, its grades and its searches both. */
     fun setQuery(

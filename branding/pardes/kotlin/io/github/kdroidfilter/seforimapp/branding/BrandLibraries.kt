@@ -47,4 +47,27 @@ object BrandLibraries {
             }.getOrNull()
         return listOfNotNull(setting, inDefaultFolder).distinct()
     }
+
+    /**
+     * Where desktop Zayit keeps its user database (its searches' history, which the user may send with Pardes's own,
+     * `ZayitSearches`): `databases/settings/user_settings.db` under its data folder, beside Pardes's own; and, for a
+     * Zayit installed from the Microsoft Store, under its package's roaming folder.
+     */
+    fun otherAppUserDatabases(): List<File> {
+        val inDataFolder =
+            runCatching { File(FileKit.filesDir.path).resolveSibling(ZAYIT_APP_ID).resolve(USER_DATABASE) }.getOrNull()
+        val inStorePackages =
+            runCatching {
+                File(System.getenv("LOCALAPPDATA").orEmpty(), "Packages")
+                    .listFiles { file -> file.isDirectory && file.name.startsWith(ZAYIT_STORE_PACKAGE) }
+                    .orEmpty()
+                    .map { it.resolve("LocalCache/Roaming").resolve(ZAYIT_APP_ID).resolve(USER_DATABASE) }
+            }.getOrDefault(emptyList())
+        return (listOfNotNull(inDataFolder) + inStorePackages).distinct()
+    }
+
+    private const val USER_DATABASE = "databases/settings/user_settings.db"
+
+    /** The folder of a Zayit installed from the Microsoft Store begins with this, under `%LOCALAPPDATA%\Packages`. */
+    private const val ZAYIT_STORE_PACKAGE = "KdroidFilter.Zayit_"
 }

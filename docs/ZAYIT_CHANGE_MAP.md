@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (107 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (108 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (186 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (191 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 41 |
+| Pardes feature hook | 42 |
 | Pardes feature in Zayit's file | 29 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 6 |
@@ -1420,13 +1420,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +240 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 225 Hebrew strings added in sixteen blocks,
+- **Change:** modified, +256 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 240 Hebrew strings added in seventeen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
   - semantic packs: `semantic_pack_*` (31), `semantic_problem_*` (6);
-  - feedback: `feedback_send_*` (35), `feedback_consent_*` (14), `search_feedback_*` (6);
+  - feedback: `feedback_send_*` (37), `feedback_consent_*` (20), `search_feedback_*` (6): among them the other apps'
+    rows and the publication's, with what each means; and under a comment, after `onboarding_library_folder_*`, the
+    onboarding's step: `onboarding_feedback_*` (7);
   - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (4), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
     `daf_view_tooltip`, `daf_missing`, `daf_missing_hint`, `daf_amud_missing`, `settings_daf_*` (4) and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
@@ -1449,7 +1451,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); seventeen insertion points, each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); seventeen insertion points (the onboarding's two blocks stand together), each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -1765,9 +1767,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/navigation/OnBoardingDestination.kt`
 
-- **Change:** modified, +3 −0 lines. Feature: Existing Zayit library.
-- **What:** `@Serializable data object ExistingLibraryScreen`.
-- **Why:** the new onboarding step's destination (`07e14dac`).
+- **Change:** modified, +6 −0 lines. Feature: Existing Zayit library, Feedback from other apps.
+- **What:** `@Serializable data object ExistingLibraryScreen`, and `FeedbackScreen` before `FinishScreen`.
+- **Why:** the new onboarding steps' destinations (`07e14dac`; the feedback's question, 2026-11-11).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small.
 - **Smaller:** already minimal.
@@ -1775,9 +1777,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/navigation/OnBoardingNavHost.kt`
 
-- **Change:** modified, +4 −0 lines. Feature: Existing Zayit library.
+- **Change:** modified, +8 −0 lines. Feature: Existing Zayit library, Feedback from other apps.
 - **What:** `noAnimatedComposable<OnBoardingDestination.ExistingLibraryScreen> { ExistingLibraryScreen(navController) }`
-  and its import.
+  and its import; the same for `FeedbackScreen` and `FeedbackStepScreen`.
 - **Why:** as for `OnBoardingDestination.kt`.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small.
@@ -1794,6 +1796,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** small; one call at the end of the screen's column.
 - **Smaller:** already minimal.
 - **Tests:** `ForeignLibrariesTest` (what a chosen folder holds); the screen has none.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/region/RegionConfigScreen.kt`
+
+- **Change:** modified, +3 −1 lines. Feature: Feedback from other apps.
+- **What:** the step's "next" goes to `OnBoardingDestination.FeedbackScreen` while the feedback's question is open
+  (`feedbackAutoSender.isQuestionOpen()`, read once above), and to `FinishScreen` as before otherwise.
+- **Why:** the user asked on 2026-11-11 that the install itself ask whether to send the search data, to publish it,
+  and from which apps; the region is the onboarding's last step before its end.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one value and one line of the "next" handler.
+- **Smaller:** already minimal.
+- **Tests:** `FeedbackStepTest`, `FeedbackAutoSenderTest` (the question open); the navigation has none.
 
 ### Zayit's tests that Pardes adjusts
 
@@ -4151,9 +4165,14 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 
 Feedback mode puts grade buttons under each search result, to train the semantic search; the grades, the searches made
 and the daf's line review are sent to Pardes's own service (`feedback-service/`, a Cloudflare Worker), from the settings
-or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, `SearchResultViewModel.kt`,
+or by themselves once the user agrees. Since 2026-11-11, as the user asked, the question is a step of the onboarding
+(a user from before it is still asked at start), and it offers two things more: the searches the user made in Zayit
+and in Otzaria on the same computer, read from those apps' own files only once the user agreed, and the publication
+of what is sent on the service's open site (`publish`). Everything is checked at first, the user's decision of that
+day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.kt`, `SearchResultViewModel.kt`,
 `TabsContent.kt`, `main.kt`, `AppGraph.kt`, `AppCoreBindings.kt`, `AppSettings.kt`, `DataSettingsScreen.kt`,
-`build.gradle.kts` (`FEEDBACK_URL`), `strings.xml`.
+`build.gradle.kts` (`FEEDBACK_URL`), `strings.xml`, and the onboarding's `OnBoardingDestination.kt`,
+`OnBoardingNavHost.kt` and `RegionConfigScreen.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/feedback/SearchFeedbackStore.kt`
 
@@ -4169,12 +4188,15 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/SearchFeedback.sq`
 
 - **Feature:** Feedback mode.
-- **Size:** 54 lines.
+- **Size:** 76 lines.
 - **What:** the table `search_feedback` (one grade per search key and line) with an index on its time, and its queries
-  `upsertGrade`, `deleteGrade`, `gradesForSearch`, `countGrades`, `deleteAll`, `gradesSince` and `searchesSince`.
-- **Reached from:** `SearchFeedbackStore.kt` (SQLDelight's `UserSettingsDb`).
+  `upsertGrade`, `deleteGrade`, `gradesForSearch`, `countGrades`, `deleteAll`, `gradesSince` and `searchesSince`. And
+  the table `other_app_feedback` (made at the next start, `CREATE TABLE IF NOT EXISTS`): a row of another app, by a
+  hash of its key, with when Pardes first found it and whether it was sent (`otherAppRows`, `otherAppFound`,
+  `otherAppSent`, `otherAppGone`).
+- **Reached from:** `SearchFeedbackStore.kt`, `OtherAppLedger.kt` (SQLDelight's `UserSettingsDb`).
 - **Follows:** Zayit's user-DB `.sq` files.
-- **Tests:** `SearchFeedbackStoreTest`.
+- **Tests:** `SearchFeedbackStoreTest`, `OtherAppSearchesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchFeedbackButtons.kt`
 
@@ -4190,15 +4212,20 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackPackage.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 293 lines.
+- **Size:** 419 lines.
 - **What:** what a user sends, one JSON document: `FeedbackPackage` (grades, searches, the daf's marks, the sender's
   random id), `GradeRow`, `SearchRow`, `FeedbackContents`, `FeedbackChoice` (the kinds kept, the queries left out),
   `FeedbackSent` (each kind's last time); `feedbackPackage`, `toJson`, `parts` (under the service's `PART_BYTES`), queries
   longer than `MAX_QUERY_CHARS` left out, and `FeedbackSource`, which reads what is new from the user database and the daf
-  reviews.
-- **Reached from:** `FeedbackSender.kt`, `FeedbackSendViewModel.kt`, `FeedbackAutoSender.kt`, `FeedbackConsentDialog.kt`.
+  reviews. For the other apps: `OtherApp` (Zayit, Otzaria, as a row's `source` names them), the rows' fields a row of
+  theirs carries (`source`, `scope`, `ref`, `timeUnknown`; a grade's `bookTitle`, `heRef`, `docId`), `OtherAppRows`,
+  `FeedbackContents.others`, `FeedbackChoice.others` and `publish` (the package's `publish`, left out unless true), and
+  `FeedbackSource.read(sent, others, everything)`, which reads the apps the user sends: Zayit's searches since the
+  last package, Otzaria's by the ledger. A package of Pardes's own rows alone is what it was, byte for byte.
+- **Reached from:** `FeedbackSender.kt`, `FeedbackSendViewModel.kt`, `FeedbackAutoSender.kt`, `FeedbackConsentDialog.kt`,
+  `FeedbackSendCard.kt`, `OtherAppSearches.kt`, `OtherAppLedger.kt`, `FeedbackStepScreen.kt`.
 - **Follows:** the service's package format (`feedback-service/src/package.js`) and pardes-semantic's `collect.py`.
-- **Tests:** `FeedbackPackageTest`.
+- **Tests:** `FeedbackPackageTest`, `OtherAppSearchesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackService.kt`
 
@@ -4213,31 +4240,42 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSender.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 216 lines.
+- **Size:** 250 lines.
 - **What:** `FeedbackSender`, the sending shared by the card and the automatic sending: what there is since the last
   package, the kinds the user sends (in the settings), the package sent to the service or saved to a file, each kind
-  marked sent up to its newest time.
+  marked sent up to its newest time. The other apps the user sends and `publish` are kept with the kinds
+  (`AppSettings.isFeedbackKindSent`, by `OtherApp.source` and `PUBLISH`), as is whether the user was asked of them
+  (`ASKED_OF_OTHERS`); `otherApps()` looks for the apps without reading them; Zayit's searches are marked sent up to
+  their newest time, Otzaria's in the ledger. The readers are `internal var`s the tests replace, as
+  `FeedbackAutoSender.connections` is.
 - **Reached from:** `FeedbackSendViewModel.kt`, `FeedbackAutoSender.kt`.
 - **Follows:** Pardes's own.
-- **Tests:** `FeedbackSendViewModelTest`, `FeedbackAutoSenderTest`.
+- **Tests:** `FeedbackSendViewModelTest`, `FeedbackAutoSenderTest`, `OtherAppSearchesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackAutoSender.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 157 lines.
+- **Size:** 175 lines.
 - **What:** `FeedbackAutoSender`: once, at a start of a build with the service, the user is asked whether to send feedback
   and which kinds (`askVisible`, the dialog); while they agree, what is new is sent at each start and each new network
   connection (`NetworkWatch`, the interfaces read every period); a build without the service neither asks nor sends.
-- **Reached from:** `main.kt` (`run`), `AppGraph.kt`, `FeedbackConsentDialog.kt`, `FeedbackSendCard.kt`.
+  `isQuestionOpen` lets the onboarding ask the question first. `choice()` offers the other apps found here and
+  publishing checked until the user answered of them; a user who agreed before they were offered is asked once more,
+  when one of the apps is on the computer (`askOfOthers`), and one who said no is not.
+- **Reached from:** `main.kt` (`run`), `AppGraph.kt`, `FeedbackConsentDialog.kt`, `FeedbackSendCard.kt`,
+  `FeedbackStepScreen.kt`, `RegionConfigScreen.kt`.
 - **Follows:** Pardes's own.
 - **Tests:** `FeedbackAutoSenderTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackConsentDialog.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 171 lines.
+- **Size:** 212 lines.
 - **What:** `FeedbackConsentDialog`, the question at start, once: send feedback by itself, which kinds (all checked at
   first), and the grade buttons under the results for whom has them off; closed without an answer, asked again next start.
+  Under the kinds, a row for each other app found on the computer and one for publishing ("פרסום במאגר הפתוח"), each
+  with what it means; the kinds scroll (Jewel's `VerticallyScrollableContainer`) over the buttons, which stay. Another
+  app's searches alone are something to agree to. `OtherApp.label` and `.hint` are the card's too.
 - **Reached from:** `main.kt`.
 - **Follows:** Zayit's decorated dialogs (`JewelDecoratedDialog` in a `NucleusApplicationScope`).
 - **Tests:** `FeedbackConsentUiTest`.
@@ -4245,10 +4283,12 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendCard.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 397 lines.
+- **Size:** 444 lines.
 - **What:** Settings › ניהול נתונים's card: each kind of feedback with how much of it is new, the queries to look over and
   leave out, send now or save to a file, the automatic sending, deleting from the service what this sender sent, and what is
-  never sent with the sender's id to copy or renew.
+  never sent with the sender's id to copy or renew. A row for each other app found on the computer: checked, it says
+  how many of its searches (and grades) there are, which are read only then; and the publication's checkbox, by the
+  automatic sending's.
 - **Reached from:** `DataSettingsScreen.kt` (`FeedbackSendCard()`).
 - **Follows:** Zayit's data settings cards.
 - **Tests:** `FeedbackSendCardUiTest`.
@@ -4256,12 +4296,62 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendViewModel.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 214 lines.
+- **Size:** 232 lines.
 - **What:** `FeedbackSendViewModel`: what there is to send, what the user keeps of it (the kinds, kept in the settings;
-  the queries left out), and the sending or saving with its result.
+  the queries left out), and the sending or saving with its result. `State.otherApps` (found off the UI thread),
+  `setOtherApp` (kept, and what there is read again) and `setPublish`.
 - **Reached from:** `FeedbackSendCard.kt`.
 - **Follows:** Zayit's settings ViewModels.
 - **Tests:** `FeedbackSendViewModelTest`, `FeedbackSendCardUiTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/OtherAppSearches.kt`
+
+- **Feature:** Feedback from other apps.
+- **Size:** 352 lines.
+- **What:** the searches made in other apps on this computer, read from the apps' own files, never written to.
+  `ZayitSearches`: its user database's `visit_history` (the table Pardes has from it), a row a search with its scope,
+  count and time; the copies `BrandLibraries.otherAppUserDatabases` names, a search in two of them once; a Zayit from
+  before a column reads without it; an author's scope from the row's key. `OtzariaSearches`: its history
+  (`user_state.db`, table `lists`, the row `history`, a JSON list whose `isSearch` entries are searches, with
+  Otzaria's title and facets) and its smart search's events (`search_feedback/*.jsonl`: a search a session, a vote
+  only with the search of its session, the last vote on a result standing, a debug build's file skipped), each row
+  with the key the ledger keeps it by (`Keyed`); `otzariaDataRoots()`, where Otzaria keeps its data on each system.
+  `found()` only looks for the files.
+- **Reached from:** `FeedbackPackage.kt` (`FeedbackSource`), `FeedbackSender.kt`.
+- **Follows:** efrul/semantic-query-telemetry's readers (`SeforimAppReader.cs`, `OtzariaReader.cs`), whose facts and
+  wording of a scope these keep, so that pardes-semantic's `collect.py` reads both alike; `LibraryLinks.readOnly` for
+  a database opened read only by a property; Otzaria's `AppPaths` for its data folder (a fact, no code of it).
+- **Tests:** `OtherAppSearchesTest`.
+- **Notes:** a portable Otzaria, which keeps its data beside itself, is not looked for; the telemetry tool takes a
+  folder for it.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/OtherAppLedger.kt`
+
+- **Feature:** Feedback from other apps.
+- **Size:** 54 lines.
+- **What:** `OtherAppLedger`, which of another app's rows were found and sent, for an app that keeps no time for a
+  search (Otzaria's history): `found` gives each key its entry, a new one found now, and forgets the rows the app no
+  longer holds (a search back in the history was made again); `sent` marks them. A key is kept as its SHA-256.
+- **Reached from:** `FeedbackPackage.kt` (`FeedbackSource`).
+- **Follows:** `SearchFeedbackStore` (the user database's queries).
+- **Tests:** `OtherAppSearchesTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/feedback/FeedbackStepScreen.kt`
+
+- **Feature:** Feedback from other apps.
+- **Size:** 190 lines.
+- **What:** `FeedbackStepScreen`, the onboarding's step before its end, in a build that has the service and where the
+  question was not answered: whether to send the search data by itself, from which apps (this one, and Zayit and
+  Otzaria where they are), the grade buttons, and "פרסום במאגר הפתוח"; laid out as the steps beside it (an
+  information banner, the choices, a large picture), everything checked at first. `feedbackStepAnswer` turns the
+  boxes into `FeedbackAutoSender`'s answer: sending from no app is a no, the buttons count only with this app's
+  grades.
+- **Reached from:** `OnBoardingNavHost.kt`.
+- **Follows:** `UserProfileScreen` and `RegionConfigScreen` for the layout (`OnBoardingScaffold`,
+  `InlineInformationBanner`, an icon filling half the row); `FeedbackConsentDialog` for what is asked.
+- **Tests:** `FeedbackStepTest` (the answer). Seen in the app on 2026-11-11.
+- **Notes:** first written as a plain list of checkboxes, none checked; the user asked on 2026-11-11 for the app's
+  design ("שיהיה בסגנון העיצוב של פרדס") and for everything checked at first ("ברירת מחדל הכל יהיה מסומן").
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/feedback/SearchFeedbackStoreTest.kt`
 
@@ -4317,9 +4407,11 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackAutoSenderTest.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 145 lines.
+- **Size:** 219 lines.
 - **What:** asked once and sent when agreed, again at each connection; a no sends nothing and is not asked again; closed
-  without an answer, asked again; no network at start, sent at the next connection; a build without the service.
+  without an answer, asked again; no network at start, sent at the next connection; a build without the service. Whom
+  agreed before another app's searches were offered is asked once more where the app is, and whom said no is not; the
+  other apps and publishing are offered checked, and what the user unchecks stays so.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
@@ -4327,9 +4419,10 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackConsentUiTest.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 94 lines.
+- **Size:** 119 lines.
 - **What:** the answer carries the kinds checked and the buttons, agreeing needs a kind; the buttons not offered to whom
-  has them; the buttons can be left off.
+  has them; the buttons can be left off; another app's searches are offered where the app is, and with publishing go
+  into the answer when checked.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).
@@ -4347,12 +4440,37 @@ or by themselves once the user agrees at start. Hooks: `SearchResultScreen.kt`, 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackTestDoubles.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 104 lines.
+- **Size:** 133 lines.
 - **What:** `ServiceDouble`, the feedback service as the Worker answers, in memory over Ktor's `MockEngine` (what it took,
-  its moods), and helpers: an in-memory feedback database, a grade, a search, `eventually`.
+  its moods), and helpers: an in-memory feedback database, a grade, a search, `eventually`; a Zayit user database
+  with searches (`zayitDatabase`), and `withOtherApps`, which makes a sender look for the other apps where the test
+  says rather than on the machine it runs on.
 - **Reached from:** the feedback tests.
 - **Follows:** the Worker's answers (`feedback-service/src/index.js`).
 - **Tests:** a helper of the tests.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/OtherAppSearchesTest.kt`
+
+- **Feature:** Feedback from other apps.
+- **Size:** 394 lines.
+- **What:** eleven tests on temporary databases and files: Zayit's searches with their scope, count and time, two
+  copies, an old table, no Zayit; Otzaria's history and its smart search's searches and votes, no Otzaria; an app
+  read only when the user sends it; Otzaria's searches sent once each, at the time first found, and again when made
+  again; a history that cannot be read forgetting nothing; the package's rows saying their app, and `publish`; the
+  sender sending an app's searches once chosen, and not twice.
+- **Reached from:** the JVM tests.
+- **Follows:** `FeedbackPackageTest`.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/feedback/FeedbackStepTest.kt`
+
+- **Feature:** Feedback from other apps.
+- **Size:** 41 lines.
+- **What:** the step's answer: nothing checked or no app is a no; this app is its three kinds, with the buttons as
+  checked; the apps checked are sent from, this one or not, and published only when checked.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
 
 ### Branding
 
@@ -4537,19 +4655,19 @@ the description where something needs saying.
 | `branding/pardes/composeResources/drawable/zayit_new_logo_text.png` | 1556x715 white mask of the word פרדס, which `LogoImage` paints over the base layer in gold in light mode and in the accent colour in dark mode. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_new_logo_text.png (the mask of זית) |
 | `branding/pardes/composeResources/drawable/zayit_transparent.png` | 645x746 picture of the onboarding's welcome (InitScreen): the Pardes icon, 560 px, centred on a transparent ground. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_transparent.png (a gold olive branch) |
 | `branding/pardes/composeResources/files/ABOUT.md` | Pardes for desktop's About page (Settings › אודות, AboutSettingsScreen), in Hebrew: based on Zayit by Elie Gambache and not on his behalf, built from Zayit 0.6.12's open source, his copyright, AGPL v3, the §7b line, Pardes's source, Zayit's private modules left out, and thanks (Zayit and SeforimLibrary, Sefaria and Otzaria, Klei Kodesh's book search and dictionary data, the libraries, fonts, Emoji One, the licences folder, the temple picture's painting). *Note:* The §7b line ends with a space before U+2069, so the autolinker keeps the mark out of the link (branding/README.md › Texts); Klei Kodesh's line, whose address stood right before the mark and was no link, has it as a Markdown link, and no longer says how Klei Kodesh came by Torat Emet's dictionary (the user's request of 2026-11-10; the licences index still does). It does not credit Dicta's model, which CONDITIONS.md and the licences index do. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/ABOUT.md (the author's first-person About) |
-| `branding/pardes/composeResources/files/CONDITIONS.md` | Pardes for desktop's terms (the onboarding's licence step and Settings › תנאים, through `ConditionsText`), in Hebrew: the books' sources and rights, Rashi Amiti left out, Culmus, Emoji One, the temple painting, the app's licence (based on Zayit and not on his behalf, his copyright, AGPL v3, §7b, built from 0.6.12), the private modules left out, Dicta's model (CC BY 4.0) and privacy: no error reports, and the feedback sent only with the user's consent (what, where to, what the open site shows everyone: the figures and the daf marks, the searches' words only to the maintainer, never the sender's id; how to stop it and delete it, and that copies others downloaded stay). *Note:* Keeps Zayit's `<!-- if:self-update -->` and `<!-- if:update-helper -->` blocks. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/CONDITIONS.md |
+| `branding/pardes/composeResources/files/CONDITIONS.md` | Pardes for desktop's terms (the onboarding's licence step and Settings › תנאים, through `ConditionsText`), in Hebrew: the books' sources and rights, Rashi Amiti left out, Culmus, Emoji One, the temple painting, the app's licence (based on Zayit and not on his behalf, his copyright, AGPL v3, §7b, built from 0.6.12), the private modules left out, Dicta's model (CC BY 4.0) and privacy: no error reports, and the feedback sent only with the user's consent (what, where to, the question asked at the first install with its boxes checked at first, the searches made in Zayit and in Otzaria on the same computer when the user leaves them checked, their files read only then and never changed; what the open site shows everyone: the figures and the daf marks, and the searches' words only when "פרסום במאגר הפתוח" stayed checked, else to the maintainer alone, never the sender's id; how to stop it and delete it, and that copies others downloaded stay). *Note:* Keeps Zayit's `<!-- if:self-update -->` and `<!-- if:update-helper -->` blocks. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/CONDITIONS.md |
 | `branding/pardes/composeResources/values/strings.xml` | The ten strings Pardes for desktop changes, each put by BrandResources in place of Zayit's string of the same name: app_name (פרדס), the onboarding's title bar, welcome title and subtitle, extraction tip and finish message, the Settings › כללי header's created-by, licence and private-modules lines (the §7b line in LRI…PDI), and update_dialog_message. *Note:* Never Zayit's "נוצר על ידי אליהו גמבש" or "שנבנה באהבה…" (the zayit-android skill's authorship rules). | Pardes's own; overrides those names in Zayit's SeforimApp/src/commonMain/composeResources/values/strings.xml |
 | `branding/pardes/desktopAppIcons/LinuxIcon.png` | 1024x1024 Pardes icon of the Linux packages (deb, rpm, pacman), which brand.gradle sets as `linux.iconFile`. *Note:* Not an overlay: brand.gradle points Nucleus at it. The same bytes as the brand's AppIcon.png. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/LinuxIcon.png (the olive branch icon) |
 | `branding/pardes/desktopAppIcons/MacosIcon.icns` | macOS icon set (PNG entries from 32 to 1024 px) of the dmg and zip, which brand.gradle sets as `macOS.iconFile`. *Note:* Added with the macOS builds (0c107b56, desktop 1.0.2). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/MacosIcon.icns (one 1024 px image) |
 | `branding/pardes/desktopAppIcons/WindowsIcon.ico` | Windows icon (PNG entries at 16, 20, 24, 32, 40, 48, 64, 128 and 256 px) of the NSIS installer and the exe, which brand.gradle sets as `windows.iconFile`. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/WindowsIcon.ico (one 256 px entry) |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Pardes for desktop's `Brand`: `APP_ID`, FileKit's data-folder id (Pardes's own, as the Android applicationId), and `settings()`, java.util.prefs in a node of its own, so the library, notes and settings stay apart from an installed Zayit's. *Note:* Read by main.kt, AppCoreBindings.provideSettings() and PendingUserDataRestore in place of Zayit's literals. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandInfo.kt` | Pardes's names and links where Zayit has literals: SOURCE_URL (Pardes's GitHub source), ERROR_REPORT_SIGNATURE ("נשלח מתוך פרדס למחשב, המבוסס על זית"), BACKUP_FILE_PREFIX pardes_backup_, LINUX_DESKTOP_FILE_ID pardes.desktop, USER_AGENT, and LIBRARY_FOLDER_NAME "Pardes library". *Note:* Read by GeneralSettingsScreen, BookErrorReport, DataSettingsViewModel, AppLinuxQuicklist, HttpFileDownloader, SemanticPackReleases and LibraryLocation. LINUX_DESKTOP_FILE_ID must match brand.properties' packageName. | Pardes's own |
-| `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Where an installed desktop Zayit keeps its seforim.db, which Pardes offers on first run to use in place: Zayit's `database_path` preference in the java.util.prefs root (a lexical.db path ignored), then Zayit's default databases folder beside Pardes's data folder; `OTHER_APP_NAME` is "זית למחשב". *Note:* Read by ForeignLibraries and LibraryLocationViewModel. Its KDoc names the Windows and Linux folders only, though macOS is built since 1.0.2. Leaves out SEFORIMAPP_DATABASE_PATH, which Pardes reads as its own. | Pardes's own |
+| `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Where an installed desktop Zayit keeps its seforim.db, which Pardes offers on first run to use in place: Zayit's `database_path` preference in the java.util.prefs root (a lexical.db path ignored), then Zayit's default databases folder beside Pardes's data folder; `OTHER_APP_NAME` is "זית למחשב". `otherAppUserDatabases()`: where Zayit keeps its user database, whose searches the user may send with Pardes's own (beside Pardes's data folder, and under a Microsoft Store package's roaming folder). *Note:* Read by ForeignLibraries, LibraryLocationViewModel and ZayitSearches. Its KDoc names the Windows and Linux folders only, though macOS is built since 1.0.2. Leaves out SEFORIMAPP_DATABASE_PATH, which Pardes reads as its own. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandUpdates.kt` | Pardes's update source: `provider` is a `PardesDesktopReleases`, which AppUpdateService takes before Zayit's GitHubProvider, so a Pardes build never downloads Zayit's installer. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/PardesDesktopReleases.kt` | Nucleus `UpdateProvider` that reads the GitHub release list of Pardes's repository (unauthenticated API, per_page=100), takes the newest published `desktop-<x.y.z>-<run>[-r<attempt>]` release carrying this platform's latest*.yml (pre-releases only when Nucleus allows them), and gives its files' download URLs. *Note:* Needed because the repository's Latest release is Android's. Its KDoc says it was written against nucleus.updater-runtime 3.0.0-dev-202610200221; the app now uses 3.0.0-dev-202610272317. | Pardes's own |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Zayit's `Brand`, for `-Pseforimapp.brand=zayit`: `APP_ID` is Zayit's own data-folder id and `settings()` is multiplatform-settings' `Settings()` over the java.util.prefs root, as Zayit's code has them. | Pardes's own; holds the literals of Zayit's main.kt and AppCoreBindings.kt |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandInfo.kt` | Zayit's `BrandInfo` values: its GitHub source link, error report signature, zayit_backup_ prefix, zayit.desktop launcher id and User-Agent, plus LIBRARY_FOLDER_NAME "Zayit library" for the library-location feature. *Note:* LIBRARY_FOLDER_NAME has no Zayit counterpart: the library location is a Pardes feature written for both brands. | Pardes's own; holds the literals of Zayit's GeneralSettingsScreen, BookErrorReport, DataSettingsViewModel, AppLinuxQuicklist and HttpFileDownloader |
-| `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Zayit's `BrandLibraries`: no other app's library (`OTHER_APP_NAME` empty, `otherAppDatabases()` empty), so the onboarding and the library cleanup behave as Zayit's. | Pardes's own |
+| `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Zayit's `BrandLibraries`: no other app's library (`OTHER_APP_NAME` empty, `otherAppDatabases()` empty) and no other app's user database (`otherAppUserDatabases()` empty), so the onboarding and the library cleanup behave as Zayit's. | Pardes's own |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandUpdates.kt` | Zayit's `BrandUpdates`: `provider` is null, so AppUpdateService builds Zayit's GitHubProvider as released. | Pardes's own |
 
 #### Pardes for desktop's changelog
@@ -4650,20 +4768,20 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `feedback-service/.gitignore` | Keeps node_modules/, wrangler's .wrangler/ state and the local .dev.vars secrets out of git. | Pardes's own |
-| `feedback-service/README.md` | Hebrew guide to Pardes's feedback service, a Cloudflare Worker with a D1 database: what it keeps (each package as sent, and whether its sender agreed to publish it) and what not (no IP, user agent, headers or request log), its routes and limits, the site at its root ("מאגר החיפושים הפתוח": what the packages add up to shown to everyone; the words of a package sent with "publish": true, as the search data sender tool, the site's uploads and Pardes's next version send them, shown to everyone; any other package's searches and graded results opaque ids on the public route, their words shown only to the maintainer after the admin sign-in; each sender an alias of a digest of its id; uploads of package files, published; /admin leads to it), how to delete a package that should not be there, the one-time Cloudflare setup (the account, its workers.dev subdomain, an API token, the repository's secrets) and how the maintainer reads the packages (pardes-semantic's fetch.py). *Note:* Written in Hebrew. Zayit has no counterpart. | Pardes's own |
+| `feedback-service/README.md` | Hebrew guide to Pardes's feedback service, a Cloudflare Worker with a D1 database: what it keeps (each package as sent, and whether its sender agreed to publish it) and what not (no IP, user agent, headers or request log), its routes and limits, the site at its root ("מאגר החיפושים הפתוח": what the packages add up to shown to everyone; the words of a package sent with "publish": true, as the search data sender tool, the site's uploads and Pardes with "פרסום במאגר הפתוח" checked send them, shown to everyone; the fields a row of another app carries, and their lengths; any other package's searches and graded results opaque ids on the public route, their words shown only to the maintainer after the admin sign-in; each sender an alias of a digest of its id; uploads of package files, published; /admin leads to it), how to delete a package that should not be there, the one-time Cloudflare setup (the account, its workers.dev subdomain, an API token, the repository's secrets) and how the maintainer reads the packages (pardes-semantic's fetch.py). *Note:* Written in Hebrew. Zayit has no counterpart. | Pardes's own |
 | `feedback-service/migrations/0001_packages.sql` | First D1 migration: table `packages` (sender, received_at, app and library versions, counts of grades, searches and daf marks, size, the JSON body) with an index on sender and time, and table `deletions` (the senders whose packages were deleted, for the maintainer's fetch). | Pardes's own |
 | `feedback-service/migrations/0002_public.sql` | Second D1 migration: column `public` of `packages` (0 or 1, 0 by default), whether the sender agreed to publish the package ("publish": true), which index.js sets on receiving it and reads for the public route. Packages from before stay 0. | Pardes's own |
 | `feedback-service/package-lock.json` | npm lockfile (v3) of the service's dev dependencies, wrangler 4.151.2 and miniflare 5.20261019.0-beta, and their dependencies. *Note:* Miniflare is pinned at a beta version. | generated by npm |
 | `feedback-service/package.json` | npm manifest of the private package pardes-feedback (ES modules, Node 22 or later): the scripts dev (wrangler dev), test (node --test) and deploy (wrangler deploy), and the dev dependencies wrangler and miniflare. | Pardes's own |
 | `feedback-service/src/index.js` | The Worker: POST /v1/packages keeps a checked package (at most 1,000,000 bytes, 200 a day per sender, 20 packages or deletions a minute per address through the LIMITER binding), with `public` 1 when it says "publish": true; DELETE /v1/senders/:id deletes a sender's packages and records it; GET /v1/public/packages gives everyone the packages (at most 50 a request, 300 requests a minute per address through READ_LIMITER), each with `public` and each sender, in the package too, the first 6 bytes of a SHA-256 of its id in hex: a published package as published cuts it (the words, scope, options and graded place of its searches and grades, nothing else a sender added), any other as forEveryone cuts it (each search and graded result an opaque id, an HMAC-SHA-256 under a key from ADMIN_TOKEN, in place of its words, scope and place), every row with its opaque id (queryId, resultId) so the site counts a row sent both ways once, the daf reviews with each mark's own fields (its line and words, right or wrong, a move, what is wrong with it, `layout` or `words`, of which of its words, `from` and `to`, and the layout's `version` it was made on) and nothing a sender added to one; the maintainer's GET routes list the packages with `public` (with their bodies on request, at most 50) and return one with the ADMIN_TOKEN, and GET / serves the site (site.js), to which /admin leads. *Note:* Plain JavaScript, while Zayit's own web code (website/) is TypeScript. Any error answers a bare 500, with nothing logged. | Pardes's own |
-| `feedback-service/src/package.js` | What a package must be: format 1 of app "Pardes", a UUID sender, sentAt, optional versions, an optional boolean "publish" (the sender's consent to show its words to everyone), and lists of grades (0, 2 or 3), searches (a pasted passage too) and daf reviews with their marks (a mark's two reasons true or false, the words they are of and the layout's version counts), every field checked by type and length, and a refusal that names the row and the reason; exports MAX_BYTES, MAX_PER_DAY, MAX_QUERY and SENDER. | Pardes's own; follows the app's FeedbackPackage.kt format |
+| `feedback-service/src/package.js` | What a package must be: format 1 of app "Pardes", a UUID sender, sentAt, optional versions, an optional boolean "publish" (the sender's consent to show its words to everyone), and lists of grades (0, 2 or 3), searches (a pasted passage too) and daf reviews with their marks (a mark's two reasons true or false, the words they are of and the layout's version counts), a row of another app's with its `source`, `scope`, `ref`, `timeUnknown`, `bookTitle`, `heRef` and `docId` within their lengths, every field checked by type and length, and a refusal that names the row and the reason; exports MAX_BYTES, MAX_PER_DAY, MAX_QUERY and SENDER. | Pardes's own; follows the app's FeedbackPackage.kt format |
 | `feedback-service/src/site.js` | The site's route (GET /): serves its page, script, style and font, which hold no data, with a CSP that runs no script but its own and reaches no other address, no framing and no referrer; the page and script uncached, the font for 30 days; /admin redirects to it. | Pardes's own; replaces the maintainer's page (admin.js) |
 | `feedback-service/src/site/OFL-Frank-Ruhl-Libre.txt` | The SIL Open Font License 1.1 of Frank Ruhl Libre (Copyright 2015 The Frank Ruhl Libre Project Authors), the site's display font. | Frank Ruhl Libre's licence, as published |
 | `feedback-service/src/site/app.js` | The search data site's script (1,131 lines). Everyone sees what the data adds up to, read page by page from the public route: a summary (searches, grades, senders, daf lines, the days of the last 30, the grades by search model, the app of each row: Pardes, and Zayit and Otzaria through the search telemetry tool); the common searches and the searches' and grades' tabs from published packages only (their tabs shown once there are any, with a word that the rest are counted but not shown); the daf marks' table (each line with what its reader said is wrong with it, its setting on the page or its words, of which of its words, and on which version of the layout; the tractates' counts of each) with search, sorting and a CSV download; the packages as the public route gives them; and an upload of package files, each posted with "publish": true under a line that says what is uploaded is published (split into parts of at most 900,000 bytes, waiting out the rate limit). Rows are counted once across senders, and across a published and an unpublished copy by their opaque ids, showing the words. The admin sign-in (the admin token, kept in the browser only if asked) reads the maintainer's route and shows every search. It shows no sender, alias or id, and every text from a package only as text. | Pardes's own; replaces the maintainer's page (admin/app.js) |
 | `feedback-service/src/site/display.woff2` | Frank Ruhl Libre, subset to Hebrew, digits and punctuation (binary), the font of the site's headings and searches, served by the Worker itself. | Frank Ruhl Libre (SIL OFL 1.1), subset for the site |
 | `feedback-service/src/site/index.html` | The open site's page, "מאגר החיפושים הפתוח" (Hebrew, right to left, light and dark): its masthead (the figures open to everyone, the searches only from those who agreed to publish them), the admin sign-in's button and dialog, the tabs and the sections the script fills, and a footer saying the same; no data in it. | Pardes's own; replaces the maintainer's page (admin/index.html) |
 | `feedback-service/src/site/style.css` | The open site's styles, in no app's branding: an index of a library rather than an admin panel, a Hebrew serif title, figures between hairlines, sticky tabs, one techelet accent and a chart hue checked for contrast in light and dark, the admin sign-in's dialog, and the upload's note that what is uploaded is published. | Pardes's own; replaces the maintainer's page (admin/style.css) |
-| `feedback-service/test/service.test.js` | node:test suite that runs the Worker in Miniflare with every migration applied in order: the site at the root and nothing else without a route, keeping and listing a package with its counts and bodies, the site with no data in it, its CSP, its upload posting with "publish": true and saying so, the public route without a search's words and with each sender an alias that does not give its id away, a package's words shown to everyone only with "publish": true (and the same opaque ids on both forms, a mixed pair from one sender, `public` for the maintainer), paging, refusing non-packages with the row and reason (a "publish" that is not true or false too, and a daf mark whose reason is not true or false, whose word is below 0 or whose version is no number), a daf mark's reasons and words shown to everyone without what a sender added to it, the token on the maintainer's routes, deleting a sender's packages (told to everyone by its alias), the daily limit and the per-address rate limit. | Pardes's own |
+| `feedback-service/test/service.test.js` | node:test suite that runs the Worker in Miniflare with every migration applied in order: the site at the root and nothing else without a route, keeping and listing a package with its counts and bodies, the site with no data in it, its CSP, its upload posting with "publish": true and saying so, the public route without a search's words and with each sender an alias that does not give its id away, a package's words shown to everyone only with "publish": true (and the same opaque ids on both forms, a mixed pair from one sender, `public` for the maintainer), paging, refusing non-packages with the row and reason (a "publish" that is not true or false too, a daf mark whose reason is not true or false, whose word is below 0 or whose version is no number, and a row of another app whose scope or reference is too long or whose app, time flag or own id is of the wrong type), a daf mark's reasons and words shown to everyone without what a sender added to it, the token on the maintainer's routes, deleting a sender's packages (told to everyone by its alias), the daily limit and the per-address rate limit. | Pardes's own |
 | `feedback-service/wrangler.toml` | Wrangler configuration of the Worker pardes-feedback: src/index.js, compatibility date 2026-10-01, workers.dev on, observability off (no request logs), the D1 binding DB with migrations/, the LIMITER rate limit of 20 packages or deletions a minute and READ_LIMITER's of 300 public reads a minute, and rules that bundle the site's page, script and style as text and its font as data. *Note:* Holds no account id; its D1 database id is all zeros, written in by feedback-service.yml for its run only. | Pardes's own |
 
 #### The Nucleus fork (the commentators' tear-off)

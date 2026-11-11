@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.LayoutDirection
 import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
@@ -60,6 +61,7 @@ class FeedbackConsentUiTest {
     private fun ComposeUiTest.question(
         offerButtons: Boolean,
         answers: MutableList<Answer>,
+        otherApps: Set<OtherApp> = emptySet(),
     ) = setContent {
         IntUiTheme(isDark = false) {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -67,10 +69,33 @@ class FeedbackConsentUiTest {
                     initial = FeedbackChoice(),
                     onAnswer = { agree, choice, buttons -> answers += Answer(agree, choice, buttons) },
                     offerButtons = offerButtons,
+                    otherApps = otherApps,
                 )
             }
         }
     }
+
+    @Test
+    fun `another app's searches are offered where the app is, and with publishing unchecked until the user checks them`() =
+        runDesktopComposeUiTest(width = 560, height = 600) {
+            val answers = mutableListOf<Answer>()
+            question(offerButtons = false, answers, otherApps = setOf(OtherApp.ZAYIT))
+            // Otzaria is not on this computer
+            onAllNodesWithText("גם החיפושים שעשיתם באוצריא, במחשב הזה").assertCountEquals(0)
+            onNodeWithText("אישור").performClick()
+            assertEquals(Answer(true, FeedbackChoice(), false), answers.last())
+
+            onNodeWithText("גם החיפושים שעשיתם בזית, במחשב הזה").performScrollTo().performClick()
+            onNodeWithText("פרסום במאגר הפתוח").performScrollTo().performClick()
+            onNodeWithText("אישור").performClick()
+            assertEquals(Answer(true, FeedbackChoice(others = setOf(OtherApp.ZAYIT), publish = true), false), answers.last())
+
+            // Zayit's searches alone are something to send
+            onNodeWithText("הציונים שנתתם לתוצאות החיפוש").performScrollTo().performClick()
+            onNodeWithText("היסטוריית החיפושים").performScrollTo().performClick()
+            onNodeWithText("הסימונים של שורות בצורת הדף").performScrollTo().performClick()
+            onNodeWithText("אישור").assertIsEnabled()
+        }
 
     @Test
     fun `the buttons are not offered to whom has them already`() =
