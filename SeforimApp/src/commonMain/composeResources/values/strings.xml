@@ -1116,6 +1116,7 @@
     <string name="siddur_israeli_daytime">הלל בברכה בשחרית</string>
     <string name="siddur_israeli_hallel_blessed">הלל שלם בברכה</string>
     <string name="siddur_israeli_hallel_unblessed">הלל שלם בלי ברכות</string>
+    <string name="siddur_israeli_ordinary">כביום חול רגיל</string>
     <string name="siddur_israeli_no_tachanun">השמטת תחנון בלבד</string>
     <string name="siddur_israeli_unblessed">הלל בשחרית בלי ברכות</string>
     <string name="siddur_lulav_ari_directions">מנענעים שלוש פעמים לכל כיוון. סדר הנענועים לפי מנהג האר״י: דרום, צפון, מזרח, מעלה, מטה ומערב.</string>

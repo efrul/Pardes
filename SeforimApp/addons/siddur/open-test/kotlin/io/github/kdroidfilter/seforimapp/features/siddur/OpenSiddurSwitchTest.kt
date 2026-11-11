@@ -45,12 +45,13 @@ class OpenSiddurSwitchTest {
     }
 
     @Test
-    fun `the custom of Iyar's days is kept by name, and an unknown one reads as the first`() {
+    fun `Iyar's days are ordinary weekdays until a custom is picked, and the custom is kept by name`() {
         val settings = AppSettings(PropertiesSettings(Properties()))
-        assertEquals(IsraeliPrayerCustom.NO_TACHANUN, israeliPrayerCustomOf(settings.getSiddurIsraeliPrayerCustom()))
+        assertEquals(IsraeliPrayerCustom.ORDINARY_WEEKDAY, israeliPrayerCustomOf(settings.getSiddurIsraeliPrayerCustom()))
 
         settings.setSiddurIsraeliPrayerCustom(IsraeliPrayerCustom.DAYTIME_HALLEL.name)
         assertEquals(IsraeliPrayerCustom.DAYTIME_HALLEL, israeliPrayerCustomOf(settings.siddurIsraeliPrayerCustomFlow.value))
-        assertEquals(IsraeliPrayerCustom.NO_TACHANUN, israeliPrayerCustomOf("gone"))
+        // A custom this version does not know
+        assertEquals(IsraeliPrayerCustom.ORDINARY_WEEKDAY, israeliPrayerCustomOf("gone"))
     }
 }
