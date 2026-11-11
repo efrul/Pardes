@@ -28,7 +28,8 @@ import kotlin.time.Duration.Companion.seconds
  * Feedback sent by itself. Once, at a start of a build that has the service ([FeedbackService.available]), the user is
  * asked whether to send feedback and which kinds ([askVisible], FeedbackConsentDialog); then, while they agree, what is
  * new is sent at every start and again whenever the computer's network comes back ([NetworkWatch]). Without a network,
- * it is sent at the next connection, or tried again within [RETRY].
+ * it is sent at the next connection, or tried again within [RETRY]. A user who agreed before the question offered
+ * another app's searches is asked once more, when one of those apps is on the computer.
  */
 @Inject
 @SingleIn(AppScope::class)
@@ -47,8 +48,24 @@ class FeedbackAutoSender(
     // A sending asked for: at start, at a connection, by the user; one waiting is enough
     private val triggers = Channel<Unit>(Channel.CONFLATED)
 
-    /** The kinds the question offers checked: those the user sends. */
-    fun choice(): FeedbackChoice = sender.choice()
+    /**
+     * What the question offers checked: the kinds the user sends, and, until the user answered of them, the other apps
+     * found on this computer and publishing (checked at first, as the user decided on 2026-11-11). Nothing of those
+     * is read or sent before the answer.
+     */
+    fun choice(): FeedbackChoice {
+        val kept = sender.choice()
+        return if (sender.isAskedOfOthers()) kept else kept.copy(others = sender.otherApps(), publish = true)
+    }
+
+    /** Whether the question is still to be asked: a build that has the service, and no answer yet (the onboarding asks it). */
+    fun isQuestionOpen(): Boolean = sender.service.available && !appSettings.isFeedbackAsked()
+
+    /** The other apps on this computer whose searches the question offers. */
+    fun otherApps(): Set<OtherApp> = sender.otherApps()
+
+    // Asked, and agreed, before the question offered the other apps that are here
+    private fun askOfOthers(): Boolean = appSettings.isFeedbackAutoSend() && !sender.isAskedOfOthers() && sender.otherApps().isNotEmpty()
 
     /**
      * Runs while the app does (main.kt): asks once [ready] says nothing else is in the way, unless the user answered
@@ -57,7 +74,7 @@ class FeedbackAutoSender(
     suspend fun run(ready: suspend () -> Unit): Unit =
         coroutineScope {
             if (!sender.service.available) return@coroutineScope
-            if (!appSettings.isFeedbackAsked()) {
+            if (!appSettings.isFeedbackAsked() || askOfOthers()) {
                 ready()
                 _askVisible.value = true
             }
@@ -103,6 +120,7 @@ class FeedbackAutoSender(
         if (agree && buttons && choice.grades) appSettings.setSearchFeedbackEnabled(true)
         appSettings.setFeedbackAutoSend(agree)
         appSettings.setFeedbackAsked(true)
+        sender.setAskedOfOthers()
         appSettings.flush()
         _askVisible.value = false
         if (agree) kick()

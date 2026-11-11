@@ -17,6 +17,7 @@ import io.github.kdroidfilter.seforimapp.features.onboarding.diskspace.Available
 import io.github.kdroidfilter.seforimapp.features.onboarding.download.DownloadScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.existinglibrary.ExistingLibraryScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.extract.ExtractScreen
+import io.github.kdroidfilter.seforimapp.features.onboarding.feedback.FeedbackStepScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.finish.FinishScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.init.InitScreen
 import io.github.kdroidfilter.seforimapp.features.onboarding.licence.LicenceScreen
@@ -64,6 +65,9 @@ fun OnBoardingNavHost(navController: NavHostController) {
             }
             noAnimatedComposable<OnBoardingDestination.VersionVerificationScreen> {
                 VersionVerificationScreen(navController)
+            }
+            noAnimatedComposable<OnBoardingDestination.FeedbackScreen> {
+                FeedbackStepScreen(navController)
             }
             noAnimatedComposable<OnBoardingDestination.FinishScreen> {
                 FinishScreen()

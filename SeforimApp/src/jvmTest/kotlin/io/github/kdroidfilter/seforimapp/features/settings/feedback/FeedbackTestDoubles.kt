@@ -13,7 +13,9 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.io.IOException
+import java.sql.DriverManager
 import java.util.concurrent.CopyOnWriteArrayList
 
 /** The feedback service as the Worker answers (feedback-service/src/index.js), in memory: what it took, and its moods. */
@@ -96,6 +98,33 @@ internal fun UserSettingsDb.search(
     searchTocId = null,
     searchExtended = false,
 )
+
+/** A Zayit user database in [folder] whose history holds [searches], each with when it was made. */
+internal fun zayitDatabase(
+    folder: File,
+    vararg searches: Pair<String, Long>,
+): File {
+    val file = File(folder.apply { mkdirs() }, "user_settings.db")
+    DriverManager.getConnection("jdbc:sqlite:${file.path}").use { connection ->
+        connection.createStatement().use { statement ->
+            statement.execute(
+                "CREATE TABLE visit_history (key TEXT NOT NULL PRIMARY KEY, kind TEXT NOT NULL, searchQuery TEXT, " +
+                    "visitedAt INTEGER NOT NULL, visitCount INTEGER NOT NULL DEFAULT 1)",
+            )
+            searches.forEach { (query, at) ->
+                statement.execute("INSERT INTO visit_history VALUES ('search:g:$query', 'search', '$query', $at, 1)")
+            }
+        }
+    }
+    return file
+}
+
+/** This sender looking for the other apps where the tests say, not on the machine they run on: [zayit]'s copies, no Otzaria. */
+internal fun FeedbackSender.withOtherApps(zayit: List<File> = emptyList()): FeedbackSender =
+    apply {
+        this.zayit = ZayitSearches { zayit }
+        this.otzaria = OtzariaSearches { emptyList() }
+    }
 
 /** Waits, a while at most, for [done]. */
 internal suspend fun eventually(done: () -> Boolean) =

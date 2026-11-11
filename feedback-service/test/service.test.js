@@ -298,6 +298,20 @@ describe("the feedback service", () => {
     assert.deepEqual(await refused(pkg(A, { daf: [badWord] })), [400, "daf review 1 is not one (mark 1: from)"]);
     const badVersion = { ...pkg(A).daf[0], marks: [{ ...mark, version: "3" }] };
     assert.deepEqual(await refused(pkg(A, { daf: [badVersion] })), [400, "daf review 1 is not one (mark 1: version)"]);
+    // Another app's rows: which app, where it searched and what it found, each within its length
+    const elsewhere = { query: "שור שנגח", lastAt: 1793800000000, source: "otzaria", scope: "תלמוד בבלי", ref: "שור שנגח (מדויק)",
+      timeUnknown: true };
+    assert.equal((await post(mf, pkg(A, { searches: [elsewhere] }))).status, 201);
+    assert.deepEqual(await refused(pkg(A, { searches: [{ ...elsewhere, scope: "א".repeat(501) }] })),
+      [400, "search 1 is not one (scope: 501 characters, at most 500)"]);
+    assert.deepEqual(await refused(pkg(A, { searches: [{ ...elsewhere, source: 7 }] })), [400, "search 1 is not one (source)"]);
+    assert.deepEqual(await refused(pkg(A, { searches: [{ ...elsewhere, timeUnknown: "yes" }] })),
+      [400, "search 1 is not one (timeUnknown)"]);
+    const voted = { ...pkg(A).grades[0], lineId: 0, bookId: 0, source: "otzaria", bookTitle: "בבא בתרא", heRef: "בבא בתרא ב.", docId: "41" };
+    assert.equal((await post(mf, pkg(A, { grades: [voted] }))).status, 201);
+    assert.deepEqual(await refused(pkg(A, { grades: [{ ...voted, heRef: "א".repeat(301) }] })),
+      [400, "grade 1 is not one (heRef: 301 characters, at most 300)"]);
+    assert.deepEqual(await refused(pkg(A, { grades: [{ ...voted, docId: 41 }] })), [400, "grade 1 is not one (docId)"]);
     assert.deepEqual(await refused(pkg(A, { searches: "all" })), [400, "searches is not a list"]);
     assert.deepEqual(await refused(pkg(A, { publish: "yes" })), [400, "publish is not true or false"]);
     assert.equal((await post(mf, pkg(A, { publish: false }))).status, 201);

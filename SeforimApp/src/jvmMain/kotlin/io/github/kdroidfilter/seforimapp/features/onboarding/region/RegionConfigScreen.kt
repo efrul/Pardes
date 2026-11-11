@@ -48,6 +48,7 @@ fun RegionConfigScreen(
     progressBarState: ProgressBarState = LocalAppGraph.current.onboardingProgressBarState,
 ) {
     val appSettings = LocalAppGraph.current.appSettings
+    val feedbackAsked = LocalAppGraph.current.feedbackAutoSender.isQuestionOpen()
     val viewModel: RegionConfigViewModel =
         metroViewModel(viewModelStoreOwner = LocalWindowViewModelStoreOwner.current)
     val state by viewModel.state.collectAsState()
@@ -66,7 +67,8 @@ fun RegionConfigScreen(
                 appSettings.setRegionCountry(country)
                 appSettings.setRegionCity(city)
             }
-            navController.navigate(OnBoardingDestination.FinishScreen)
+            // Before the end, the question of sending feedback, where it was not answered yet
+            navController.navigate(if (feedbackAsked) OnBoardingDestination.FeedbackScreen else OnBoardingDestination.FinishScreen)
         },
     )
 }

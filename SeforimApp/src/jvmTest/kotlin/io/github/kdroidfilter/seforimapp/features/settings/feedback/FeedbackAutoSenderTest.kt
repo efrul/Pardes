@@ -25,8 +25,12 @@ class FeedbackAutoSenderTest {
     private val service = ServiceDouble()
     private val connections = MutableSharedFlow<Unit>()
 
-    private fun autoSender(double: ServiceDouble = service): Pair<FeedbackSender, FeedbackAutoSender> {
-        val sender = FeedbackSender(settings, database, double.service)
+    // [zayit]: the copies of Zayit's data on this computer, none unless said
+    private fun autoSender(
+        double: ServiceDouble = service,
+        zayit: List<File> = emptyList(),
+    ): Pair<FeedbackSender, FeedbackAutoSender> {
+        val sender = FeedbackSender(settings, database, double.service).withOtherApps(zayit)
         return sender to FeedbackAutoSender(settings, sender).also { it.connections = connections }
     }
 
@@ -94,6 +98,76 @@ class FeedbackAutoSenderTest {
             delay(300)
             assertFalse(again.askVisible.value)
             second.cancelAndJoin()
+        }
+
+    @Test
+    fun `whom agreed before another app's searches were offered is asked once more, where the app is`() =
+        runBlocking {
+            settings.setFeedbackAsked(true)
+            settings.setFeedbackAutoSend(true)
+            val zayit = listOf(zayitDatabase(createTempDirectory("zayit").toFile(), "שנים אוחזין" to 100L))
+            // No other app here: nothing to ask
+            val (_, alone) = autoSender()
+            val first = running(alone)
+            delay(300)
+            assertFalse(alone.askVisible.value)
+            first.cancelAndJoin()
+
+            val (_, auto) = autoSender(zayit = zayit)
+            val job = running(auto)
+            withTimeout(10_000) { auto.askVisible.first { it } }
+            assertEquals(setOf(OtherApp.ZAYIT), auto.otherApps())
+            // Offered checked, the app found here and publishing; nothing of Zayit's goes before the answer
+            assertEquals(setOf(OtherApp.ZAYIT) to true, auto.choice().others to auto.choice().publish)
+            delay(200)
+            assertTrue(service.received.isEmpty())
+            auto.answer(true, auto.choice())
+            eventually { service.received.size == 1 }
+            assertEquals(listOf("שנים אוחזין" to "zayit"), service.received[0].searches.map { it.query to it.source })
+            assertEquals(true, service.received[0].publish)
+            job.cancelAndJoin()
+
+            val (_, again) = autoSender(zayit = zayit)
+            val second = running(again)
+            delay(300)
+            assertFalse(again.askVisible.value)
+            second.cancelAndJoin()
+        }
+
+    @Test
+    fun `the other apps and publishing are offered checked, and what the user unchecks stays so`() =
+        runBlocking {
+            val zayit = listOf(zayitDatabase(createTempDirectory("zayit").toFile(), "שנים אוחזין" to 100L))
+            database.search("משלי", at = 50)
+            val (_, auto) = autoSender(zayit = zayit)
+            val job = running(auto)
+            withTimeout(10_000) { auto.askVisible.first { it } }
+            assertEquals(FeedbackChoice(others = setOf(OtherApp.ZAYIT), publish = true), auto.choice())
+
+            // Unchecked, both: only this app's, and not to publish
+            auto.answer(true, auto.choice().copy(others = emptySet(), publish = false))
+            eventually { service.received.size == 1 }
+            assertEquals(listOf("משלי" to null), service.received[0].searches.map { it.query to it.source })
+            assertEquals(null, service.received[0].publish)
+            // The answer stands: they are not offered checked again
+            assertEquals(FeedbackChoice(), auto.choice())
+            job.cancelAndJoin()
+        }
+
+    @Test
+    fun `whom said no is not asked about another app's searches, and nothing of them is sent`() =
+        runBlocking {
+            settings.setFeedbackAsked(true)
+            settings.setFeedbackAutoSend(false)
+            val zayit = listOf(zayitDatabase(createTempDirectory("zayit").toFile(), "שנים אוחזין" to 100L))
+            val (_, auto) = autoSender(zayit = zayit)
+            assertFalse(auto.isQuestionOpen())
+            val job = running(auto)
+            connect()
+            delay(300)
+            assertFalse(auto.askVisible.value)
+            assertTrue(service.received.isEmpty())
+            job.cancelAndJoin()
         }
 
     @Test

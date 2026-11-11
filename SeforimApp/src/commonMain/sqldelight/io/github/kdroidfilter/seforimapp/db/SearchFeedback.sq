@@ -52,3 +52,25 @@ SELECT * FROM search_feedback WHERE gradedAt > :since ORDER BY gradedAt;
 searchesSince:
 SELECT searchQuery, searchCategoryId, searchBookId, searchTocId, searchExtended, visitCount, visitedAt FROM visit_history
 WHERE kind = 'search' AND searchQuery IS NOT NULL AND visitedAt > :since ORDER BY visitedAt;
+
+-- Pardes: the rows found in another app whose searches carry no time of their own (Otzaria's, OtherAppLedger), each by
+-- a hash of what tells it from the app's others, with when Pardes first found it and whether it went in a package.
+CREATE TABLE IF NOT EXISTS other_app_feedback (
+    source TEXT NOT NULL,
+    key TEXT NOT NULL,
+    foundAt INTEGER NOT NULL,
+    sent INTEGER AS kotlin.Boolean NOT NULL DEFAULT 0,
+    PRIMARY KEY (source, key)
+);
+
+otherAppRows:
+SELECT key, foundAt, sent FROM other_app_feedback WHERE source = :source;
+
+otherAppFound:
+INSERT OR IGNORE INTO other_app_feedback(source, key, foundAt, sent) VALUES (:source, :key, :foundAt, 0);
+
+otherAppSent:
+UPDATE other_app_feedback SET sent = 1 WHERE source = :source AND key = :key;
+
+otherAppGone:
+DELETE FROM other_app_feedback WHERE source = :source AND key = :key;

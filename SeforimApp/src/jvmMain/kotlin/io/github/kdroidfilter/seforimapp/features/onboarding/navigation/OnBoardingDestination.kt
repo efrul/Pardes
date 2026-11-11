@@ -38,5 +38,8 @@ sealed interface OnBoardingDestination {
     data object RegionConfigScreen : OnBoardingDestination
 
     @Serializable
+    data object FeedbackScreen : OnBoardingDestination
+
+    @Serializable
     data object FinishScreen : OnBoardingDestination
 }

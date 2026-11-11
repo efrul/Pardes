@@ -54,19 +54,30 @@ class FeedbackSender(
         ) : Status
     }
 
-    private val source = FeedbackSource(database) { FeedbackSource.dafFolderOf(LibraryLocation.currentDir(appSettings)) }
+    /** Where the other apps' searches are read from on this computer; the tests give their own, before anything is read. */
+    internal var zayit: ZayitSearches = ZayitSearches()
+    internal var otzaria: OtzariaSearches = OtzariaSearches()
+
+    private val source by lazy {
+        FeedbackSource(database, zayit, otzaria) { FeedbackSource.dafFolderOf(LibraryLocation.currentDir(appSettings)) }
+    }
     private val mutex = Mutex()
     private val _status = MutableStateFlow<Status>(Status.Idle)
 
     /** The last sending's, by the card or by itself. */
     val status: StateFlow<Status> = _status.asStateFlow()
 
-    /** The kinds the user sends, as the settings keep them: all three, at first. */
+    /**
+     * The kinds the user sends, as the settings keep them: all three, at first; of the other apps' searches and of
+     * publishing, nothing until the user says.
+     */
     fun choice(): FeedbackChoice =
         FeedbackChoice(
             grades = appSettings.isFeedbackKindSent(GRADES, true),
             searches = appSettings.isFeedbackKindSent(SEARCHES, true),
             daf = appSettings.isFeedbackKindSent(DAF, true),
+            others = OtherApp.entries.filterTo(LinkedHashSet()) { appSettings.isFeedbackKindSent(it.source, false) },
+            publish = appSettings.isFeedbackKindSent(PUBLISH, false),
         )
 
     /** The kinds of [choice] kept as the ones the user sends. */
@@ -74,17 +85,33 @@ class FeedbackSender(
         appSettings.setFeedbackKindSent(GRADES, choice.grades)
         appSettings.setFeedbackKindSent(SEARCHES, choice.searches)
         appSettings.setFeedbackKindSent(DAF, choice.daf)
+        OtherApp.entries.forEach { appSettings.setFeedbackKindSent(it.source, it in choice.others) }
+        appSettings.setFeedbackKindSent(PUBLISH, choice.publish)
     }
+
+    /** The other apps whose searches are on this computer, to offer them: looked for, not read. */
+    fun otherApps(): Set<OtherApp> = source.otherApps()
+
+    /** Whether the user was asked about the other apps' searches and about publishing (the question's second time). */
+    fun isAskedOfOthers(): Boolean = appSettings.isFeedbackKindSent(ASKED_OF_OTHERS, false)
+
+    fun setAskedOfOthers() = appSettings.setFeedbackKindSent(ASKED_OF_OTHERS, true)
 
     /** When the last package was sent or saved, epoch millis, 0 for never. */
     fun lastSent(): Long = appSettings.getFeedbackSentAt(LAST)
 
     fun sender(): String = appSettings.getFeedbackSender()
 
-    /** What there is to send: what is newer than the last package, or [all] of it. */
-    suspend fun read(all: Boolean = false): FeedbackContents =
+    /**
+     * What there is to send: what is newer than the last package, or [all] of it; of the other apps, those [others]
+     * names, the ones the user sends unless said.
+     */
+    suspend fun read(
+        all: Boolean = false,
+        others: Set<OtherApp> = choice().others,
+    ): FeedbackContents =
         withContext(Dispatchers.IO) {
-            source.read(if (all) FeedbackSent() else sent())
+            source.read(if (all) FeedbackSent() else sent(), others, everything = all)
         }
 
     /**
@@ -157,6 +184,7 @@ class FeedbackSender(
             grades = appSettings.getFeedbackSentAt(GRADES),
             searches = appSettings.getFeedbackSentAt(SEARCHES),
             daf = appSettings.getFeedbackSentAt(DAF),
+            zayit = appSettings.getFeedbackSentAt(OtherApp.ZAYIT.source),
         )
 
     /** The kinds [choice] sent, up to the newest of [contents] (what the user left out of them is not offered again). */
@@ -169,6 +197,8 @@ class FeedbackSender(
         if (choice.grades) advance(GRADES, newest.grades)
         if (choice.searches) advance(SEARCHES, newest.searches)
         if (choice.daf) advance(DAF, newest.daf)
+        if (OtherApp.ZAYIT in choice.others) advance(OtherApp.ZAYIT.source, newest.zayit)
+        if (OtherApp.OTZARIA in choice.others) contents.others[OtherApp.OTZARIA]?.let { source.sent(OtherApp.OTZARIA, it.keys) }
         appSettings.setFeedbackSentAt(LAST, now)
         appSettings.flush()
     }
@@ -187,6 +217,10 @@ class FeedbackSender(
         const val GRADES = "grades"
         const val SEARCHES = "searches"
         const val DAF = "daf"
+
+        /** Kept with the kinds: whether the service may show what is sent to everyone, and whether that was asked. */
+        const val PUBLISH = "publish"
+        const val ASKED_OF_OTHERS = "asked-of-others"
 
         /** When the last package was made. */
         const val LAST = "package"
