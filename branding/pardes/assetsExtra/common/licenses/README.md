@@ -54,6 +54,14 @@ Powered by the technologies that drive Zayit — https://zayitapp.com/
 
 - **neodictabert-bilingual-embed** של דיקטה, המרכז הישראלי לניתוח טקסטים: https://huggingface.co/dicta-il/neodictabert-bilingual-embed. CC BY 4.0: https://creativecommons.org/licenses/by/4.0/. פרדס המיר אותו ל־ONNX (עם ה־pooling בגרף) וכימת אותו ל־int8, ובגרסאות שאומנו על הספרייה גם המשיך לאמן אותו על הקישורים שבה. דיקטה אינם קשורים לפרדס ואינם נותנים לו תמיכה.
 
+### הסידור החכם (ניסיוני)
+
+הסידור החכם כבוי עד שמדליקים אותו בהגדרות. את נוסחי התפילה הוא לוקח מהסידורים שבספרייה, ואת סדר היום ממנוע פתוח:
+
+- **SeforimOpenSiddur**, מנוע הסידור, מאת אריאל דניאלי: https://github.com/arieldaniely/SeforimOpenSiddur. לפי התיעוד שלו הוא שחזור עצמאי מהקוד הפתוח של מסך הסידור של זית (Copyright (C) 2025 Elie Gambache). גם מסך הסידור שבפרדס הותאם למנוע בידי אריאל דניאלי. GNU AGPL v3 עם תנאי הייחוס לפי סעיף 7ב, באותו נוסח של הרישיון של פרדס: Pardes-LICENSE.txt.
+- **Amud**, התנאים של הפסקאות והחלופות (מה אומרים באיזה יום): https://github.com/Nt-f/amud. GNU GPL v3: GPL-3.0.txt.
+- **Hebcal Leyning**, טבלת קריאות התורה, ההפטרות והמגילות: https://github.com/hebcal/hebcal-leyning. Copyright (c) 2020, hebcal. BSD 2-Clause: Hebcal-LICENSE.txt.
+
 ### אייקונים
 
 - **Bootstrap Icons**. Copyright (c) 2019-2024 The Bootstrap Authors. MIT: [Bootstrap-Icons-LICENSE.txt](Bootstrap-Icons-LICENSE.txt).
@@ -99,4 +107,4 @@ Powered by the technologies that drive Zayit — https://zayitapp.com/
 
 ### מקור הקבצים
 
-הקבצים שבתיקייה זו הם נוסחי הרישיון שהרכיבים מפיצים בעצמם (בקובצי ה־jar שלהם או במאגרי הקוד שלהם), וחלקם מועתקים מרשימת הרישיונות של פרדס לאנדרואיד. Fonts-NOTICE.txt נבנה מטבלת השמות של כל גופן. בקוד המקור התיקייה הזו היא branding/pardes/assetsExtra/common/licenses, וביישום המותקן היא licenses שבתיקיית ההתקנה. שלושה קבצים מועתקים אליה בזמן הבנייה ממקומם בקוד המקור, ולכן אינם בה במאגר: Pardes-LICENSE.txt (LICENSE), Limud-NOTICE.txt (SeforimApp/src/jvmMain/resources/limud/NOTICE.txt) ו־Sky-CREDITS.md (earthwidget/src/commonMain/composeResources/files/CREDITS.md).
+הקבצים שבתיקייה זו הם נוסחי הרישיון שהרכיבים מפיצים בעצמם (בקובצי ה־jar שלהם או במאגרי הקוד שלהם), וחלקם מועתקים מרשימת הרישיונות של פרדס לאנדרואיד. Fonts-NOTICE.txt נבנה מטבלת השמות של כל גופן. בקוד המקור התיקייה הזו היא branding/pardes/assetsExtra/common/licenses, וביישום המותקן היא licenses שבתיקיית ההתקנה. חמישה קבצים מועתקים אליה בזמן הבנייה ממקומם בקוד המקור, ולכן אינם בה במאגר: Pardes-LICENSE.txt (LICENSE), Limud-NOTICE.txt (SeforimApp/src/jvmMain/resources/limud/NOTICE.txt), Sky-CREDITS.md (earthwidget/src/commonMain/composeResources/files/CREDITS.md), GPL-3.0.txt (siddur-open/COPYING.AMUD) ו־Hebcal-LICENSE.txt (siddur-open/COPYING.HEBCAL).

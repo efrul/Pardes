@@ -9,6 +9,7 @@ import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.IntUiThemes
 import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
+import io.github.kdroidfilter.seforimapp.features.siddur.OpenSiddurSwitch
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import kotlinx.coroutines.channels.BufferOverflow
@@ -99,6 +100,7 @@ class AppSettings(
     init {
         // The Home widgets' options were one opaque string per widget, now typed settings: not carried over
         settings.keys.filter { it.startsWith(LEGACY_HOME_WIDGET_OPTIONS_PREFIX) }.forEach(settings::remove)
+        OpenSiddurSwitch.shown = isOpenSiddurEnabled()
     }
 
     // StateFlow for homepage wallpaper visibility
@@ -722,6 +724,27 @@ class AppSettings(
         _siddurBeitAvelFlow.value = value
     }
 
+    // Siddur: the custom of the State of Israel's days in Iyar (an IsraeliPrayerCustom's name), which the open siddur
+    // asks on those days
+    private val _siddurIsraeliPrayerCustomFlow = MutableStateFlow(getSiddurIsraeliPrayerCustom())
+    val siddurIsraeliPrayerCustomFlow: StateFlow<String> = _siddurIsraeliPrayerCustomFlow.asStateFlow()
+
+    fun getSiddurIsraeliPrayerCustom(): String = settings[KEY_SIDDUR_ISRAELI_PRAYER_CUSTOM, ""]
+
+    fun setSiddurIsraeliPrayerCustom(value: String) {
+        settings[KEY_SIDDUR_ISRAELI_PRAYER_CUSTOM] = value
+        _siddurIsraeliPrayerCustomFlow.value = value
+    }
+
+    // The open smart siddur (addons/siddur/open) is experimental: shown once turned on. OpenSiddurSwitch mirrors the
+    // preference for installedSiddur, which is read where there is no graph to take the settings from
+    fun isOpenSiddurEnabled(): Boolean = settings[KEY_OPEN_SIDDUR, false]
+
+    fun setOpenSiddurEnabled(enabled: Boolean) {
+        settings[KEY_OPEN_SIDDUR] = enabled
+        OpenSiddurSwitch.shown = enabled
+    }
+
     // Theme mode (Light/Dark/System) setting
     fun getThemeMode(): IntUiThemes {
         val storedValue: String = settings[KEY_THEME_MODE, IntUiThemes.System.name]
@@ -802,6 +825,7 @@ class AppSettings(
         _sourceFontCodeFlow.value = DEFAULT_SOURCE_FONT
         _dafGemaraFontCodeFlow.value = DEFAULT_DAF_GEMARA_FONT
         _dafCommentaryFontCodeFlow.value = DEFAULT_DAF_COMMENTARY_FONT
+        OpenSiddurSwitch.shown = false
     }
 
     /** The preferences that follow the user to another machine (see [PORTABLE_KEYS]). */
@@ -843,6 +867,8 @@ class AppSettings(
                 KEY_SIDDUR_NUSACH,
                 KEY_SIDDUR_MINYAN,
                 KEY_SIDDUR_BEIT_AVEL,
+                KEY_SIDDUR_ISRAELI_PRAYER_CUSTOM,
+                KEY_OPEN_SIDDUR,
                 KEY_USER_COMMUNITY,
                 KEY_THEME_MODE,
                 KEY_ACCENT_COLOR,
@@ -964,6 +990,8 @@ class AppSettings(
         private const val KEY_SIDDUR_NUSACH = "siddur_nusach"
         private const val KEY_SIDDUR_MINYAN = "siddur_minyan"
         private const val KEY_SIDDUR_BEIT_AVEL = "siddur_beit_avel"
+        private const val KEY_SIDDUR_ISRAELI_PRAYER_CUSTOM = "siddur_israeli_prayer_custom"
+        private const val KEY_OPEN_SIDDUR = "open_siddur"
         private const val KEY_USER_COMMUNITY = "user_community" // stores a stable code (e.g., "SEPHARADE")
 
         // Theme configuration

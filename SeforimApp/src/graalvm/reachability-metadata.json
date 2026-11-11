@@ -2923,6 +2923,15 @@
             "glob": "natives/macos-arm64/libfilament-c.dylib.sha256"
         },
         {
+            "glob": "open-siddur/amud-annotations.tsv"
+        },
+        {
+            "glob": "open-siddur/amud-inline.tsv"
+        },
+        {
+            "glob": "open-siddur/readings.tsv.gz"
+        },
+        {
             "glob": "org/sqlite/native/Mac/aarch64/libsqlitejdbc.dylib"
         },
         {

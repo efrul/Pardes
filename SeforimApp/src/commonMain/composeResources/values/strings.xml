@@ -1108,4 +1108,37 @@
     <string name="siddur_zman_tzeit">צאת הכוכבים %1$s</string>
     <string name="siddur_open_siddur">פתח סידור</string>
 
+    <!-- The open smart siddur (addons/siddur/open): what SeforimOpenSiddur's engine adds to the siddur's screen -->
+    <string name="siddur_choose_meal_food">בחרו למעלה על מה מברכים: מזונות, יין, או פירות משבעת המינים.</string>
+    <string name="siddur_hl_viduy_erev_yom_kippur">וידוי של ערב יום כיפור</string>
+    <string name="siddur_israeli_custom">מנהגי תפילה למועדי אייר</string>
+    <string name="siddur_israeli_day_and_night">הלל בברכה גם בליל העצמאות</string>
+    <string name="siddur_israeli_daytime">הלל בברכה בשחרית</string>
+    <string name="siddur_israeli_hallel_blessed">הלל שלם בברכה</string>
+    <string name="siddur_israeli_hallel_unblessed">הלל שלם בלי ברכות</string>
+    <string name="siddur_israeli_no_tachanun">השמטת תחנון בלבד</string>
+    <string name="siddur_israeli_unblessed">הלל בשחרית בלי ברכות</string>
+    <string name="siddur_lulav_ari_directions">מנענעים שלוש פעמים לכל כיוון. סדר הנענועים לפי מנהג האר״י: דרום, צפון, מזרח, מעלה, מטה ומערב.</string>
+    <string name="siddur_lulav_ashkenaz_directions">מנענעים שלוש פעמים לכל כיוון. סדר הנענועים למנהג אשכנז: מזרח, דרום, מערב, צפון, מעלה ומטה.</string>
+    <string name="siddur_lulav_congregation">הקהל מנענע ב״הודו״.</string>
+    <string name="siddur_lulav_leader">שליח הציבור מנענע ב״יאמר נא ישראל״.</string>
+    <string name="siddur_lulav_shake">כאן מנענעים את הלולב. אין מנענעים בתיבת השם.</string>
+    <string name="siddur_lulav_shake_twice">מנענעים בכל אחת משתי האמירות. אין מנענעים בתיבת השם.</string>
+    <string name="siddur_meein_land_of_israel_note">על פירות או יין שאינם מארץ ישראל אומרים ״הפירות״ ו״פרי הגפן״, ועל מזונות ״המחיה ועל הכלכלה״.</string>
+    <string name="siddur_mincha_erev_rosh_hashana">מנחה לערב ראש השנה</string>
+    <string name="siddur_mincha_erev_yom_kippur">מנחה לערב יום כיפור</string>
+    <string name="siddur_molad_announcement">המולד ביום %1$s בשעה %2$s ו־%3$d חלקים</string>
+    <string name="siddur_part_selichot">סליחות</string>
+    <string name="siddur_reading_haftarah">הפטרה</string>
+    <string name="siddur_reading_maftir">מפטיר</string>
+    <string name="siddur_reading_megillah">קריאת המגילה</string>
+    <string name="siddur_reading_torah">קריאת התורה</string>
+    <string name="siddur_reading_unavailable">הקטע אינו זמין במאגר הספרים</string>
+    <string name="siddur_reading_unblessed_haftarah">הפטרה בלי ברכות</string>
+    <string name="siddur_yom_hazikaron">יום הזיכרון</string>
+    <string name="siddur_yom_haatzmaut">יום העצמאות</string>
+    <string name="siddur_yom_yerushalayim">יום ירושלים</string>
+    <string name="settings_open_siddur">סידור חכם (ניסיוני)</string>
+    <string name="settings_open_siddur_description">סידור שמציג את תפילות היום לפי הנוסח, הלוח והמקום, מתוך הסידורים שבספרייה. הוא נפתח מתפריט הכלים ומווידג׳ט הלוח. הסידור ניסיוני: הכיסוי שלו חלקי וייתכנו בו טעויות, ואין לסמוך עליו לבדו. הוא בנוי על המנוע הפתוח SeforimOpenSiddur של אריאל דניאלי, עם תיוגים מ־Amud וטבלת קריאות מ־Hebcal.</string>
+
 </resources>
