@@ -49,6 +49,12 @@ fun AvailableDiskSpaceScreen(
         state = state,
         onEvent = viewModel::onEvent,
         onNext = { navController.navigate(OnBoardingDestination.TypeOfInstallationScreen) },
+        // A library in the folder chosen is used where it is: no install, straight to the user's details
+        onUseLibrary = {
+            navController.navigate(OnBoardingDestination.UserProfilScreen) {
+                popUpTo<OnBoardingDestination.AvailableDiskSpaceScreen> { inclusive = true }
+            }
+        },
     )
 }
 
@@ -58,6 +64,7 @@ fun AvailableDiskSpaceView(
     state: AvailableDiskSpaceState,
     onEvent: (AvailableDiskSpaceEvents) -> Unit,
     onNext: () -> Unit = {},
+    onUseLibrary: () -> Unit = {},
 ) {
     val requiredBytes = AvailableDiskSpaceUseCase.REQUIRED_SPACE_BYTES
     // Space breakdown: permanent (8.5 GB) + temporary (2.5 GB) = total required (11 GB)
@@ -113,7 +120,7 @@ fun AvailableDiskSpaceView(
                 }
             }
 
-            InstallLocationRow(onChange = { onEvent(AvailableDiskSpaceEvents.Refresh) })
+            InstallLocationRow(onChange = { onEvent(AvailableDiskSpaceEvents.Refresh) }, onUseLibrary = onUseLibrary)
 
             Row(modifier = Modifier.weight(0.2f)) {
                 val recheckLabel = stringResource(Res.string.recheck_button)

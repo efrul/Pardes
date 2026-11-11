@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (104 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (105 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (181 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (182 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 38 |
+| Pardes feature hook | 39 |
 | Pardes feature in Zayit's file | 29 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 6 |
@@ -1388,17 +1388,19 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +229 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 215 Hebrew strings added in fourteen blocks,
+- **Change:** modified, +239 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 224 Hebrew strings added in fifteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
-    `library_install_*` (2);
+    `library_install_*` (3, the last the library found in the folder chosen for the install);
   - semantic packs: `semantic_pack_*` (31), `semantic_problem_*` (6);
   - feedback: `feedback_send_*` (35), `feedback_consent_*` (14), `search_feedback_*` (6);
   - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (4), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
     `daf_view_tooltip`, `daf_missing`, `daf_missing_hint`, `daf_amud_missing`, `settings_daf_*` (4) and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
-  - the existing Zayit library: `onboarding_existing_library_*` (5);
+  - the existing Zayit library: `onboarding_existing_library_*` (5); and under a comment, after Zayit's
+    `onboarding_choose_files`, the offline install's folder that holds a library: `onboarding_library_folder_*` (8:
+    the question, its link, the note, and why a folder is not used);
   - search in categories and by name: `search_text_row_in_category`, `search_text_row_in_scope`,
     `search_switch_scope_all`, `search_switch_scope_base`, `row_action_add_to_search`, `row_action_search_category`,
     `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
@@ -1414,7 +1416,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); fifteen insertion points, each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); sixteen insertion points, each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -1662,14 +1664,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/diskspace/AvailableDiskSpaceScreen.kt`
 
-- **Change:** modified, +2 −0 lines. Feature: Library location.
-- **What:** `InstallLocationRow(onChange = { onEvent(AvailableDiskSpaceEvents.Refresh) })` above the buttons.
+- **Change:** modified, +9 −0 lines. Feature: Library location, Existing Zayit library.
+- **What:** `InstallLocationRow(onChange = { onEvent(AvailableDiskSpaceEvents.Refresh) }, onUseLibrary = onUseLibrary)`
+  above the buttons; `AvailableDiskSpaceView` takes `onUseLibrary` (empty by default, as `onNext`), and the screen
+  gives it the way to the user's details, this screen popped.
 - **Why:** the onboarding lets the user install the library on another folder or drive, and measures that drive
-  (`58586e1a`).
+  (`58586e1a`). A folder chosen there that already holds a library is used where it is: this screen stands before the
+  offline install's, and lets no one past without room for an install, which a library used in place does not need.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** one line.
-- **Smaller:** already minimal.
-- **Tests:** `LibraryLocationTest`.
+- **Merge risk:** small: the row's line, a parameter of the view and an argument of its call.
+- **Smaller:** the row could find the navigation itself (a composition local of the onboarding's `navController`),
+  which would leave this file its one line.
+- **Tests:** `LibraryLocationTest`, `ForeignLibrariesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/diskspace/AvailableDiskSpaceUseCase.kt`
 
@@ -1744,6 +1750,17 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** small.
 - **Smaller:** already minimal.
 - **Tests:** none.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/offline/OfflineFileSelectionScreen.kt`
+
+- **Change:** modified, +3 −0 lines. Feature: Existing Zayit library.
+- **What:** `LibraryFolderChoice(navController)` under the files' button, with its comment.
+- **Why:** the offline install also takes a folder that already holds a library, and uses it where it is, with nothing
+  extracted or copied: the user's request of 2026-11-09.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; one call at the end of the screen's column.
+- **Smaller:** already minimal.
+- **Tests:** `ForeignLibrariesTest` (what a chosen folder holds); the screen has none.
 
 ### Zayit's tests that Pardes adjusts
 
@@ -2955,7 +2972,10 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
 ### Library location, and an installed Zayit's library used in place
 
 The library can be installed in any folder or drive, moved between drives (at the next start, before anything opens
-it), with copies kept; and an installed Zayit's library can be used in place instead of a second download. Hooks: `main.kt`,
+it), with copies kept; and an installed Zayit's library can be used in place instead of a second download. So can a
+library in a folder the user chooses in the onboarding (brought from another computer, on an external drive), as the
+user asked on 2026-11-09: in the offline install, under its files' button, and where the install's folder is chosen,
+which comes first and needs no free space for it. Hooks: `main.kt`,
 `AppSettings.kt`, the onboarding's use cases and screens, `OnboardingBindings.kt`, `DatabaseCleanupUseCase.kt`,
 `PendingDbCleanup.kt`, `DataSettingsViewModel.kt`, `DataSettingsScreen.kt`, `strings.xml` (`branding/README.md` lists them).
 
@@ -2999,14 +3019,18 @@ it), with copies kept; and an installed Zayit's library can be used in place ins
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/diskspace/InstallLocationRow.kt`
 
-- **Feature:** Library location.
-- **Size:** 66 lines.
+- **Feature:** Library location, Existing Zayit library.
+- **Size:** 94 lines.
 - **What:** `InstallLocationRow`, the folder the library will be installed to, with a link to choose another folder or
   drive (`FileKit.openDirectoryPicker` off the UI thread, `LibraryLocation.chooseInstallDir`) and the problem if it is
-  refused.
+  refused. When the folder chosen already holds a library Pardes can open (`ForeignLibraries.inFolder`), two lines say
+  so, with its version and a link that uses it in place and calls `onUseLibrary`, instead of the problem.
 - **Reached from:** `AvailableDiskSpaceScreen.kt`.
-- **Follows:** the onboarding screens' components (Jewel `Link`, `InlineErrorBanner`).
-- **Tests:** none of the row.
+- **Follows:** the onboarding screens' components (Jewel `Link`, `InlineErrorBanner`); the link's text is
+  `ExistingLibraryScreen`'s button's.
+- **Tests:** none of the row; `ForeignLibrariesTest` for what a folder holds. Seen in the app on 2026-11-11.
+- **Notes:** an inline banner for the offer, as first written, took the room of the screen's own banner under it, which
+  was cut; two plain lines leave it whole.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/library/LibraryLocationCard.kt`
 
@@ -3033,13 +3057,17 @@ it), with copies kept; and an installed Zayit's library can be used in place ins
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/database/ForeignLibraries.kt`
 
 - **Feature:** Existing Zayit library.
-- **Size:** 102 lines.
+- **Size:** 154 lines.
 - **What:** `ForeignLibraries`, another app's library on this machine that Pardes may use in place: `find` (the other
   app named by `BrandLibraries`: its `database_path` preference, then its default folder, when recent enough),
   `useInPlace` (points `database_path` at it, with no copy), and `isForeign` (a folder Pardes uses but must never delete
-  from).
-- **Reached from:** `LicenceScreen.kt`, `ExistingLibraryScreen.kt`, `DatabaseCleanupUseCase.kt`, `PendingDbCleanup.kt`,
-  `DataSettingsViewModel.kt`, `LibraryLocation.kt`, `LibraryLocationViewModel.kt`.
+  from). `inFolder` says what a folder the user chose holds (`InFolder`): a library to use in place, in the folder
+  itself or in the library's own folder inside it (`LibraryLocation.destination`), or why Pardes cannot open what is
+  there: no `seforim.db`, one cut in pieces, one without its search index (a copy of the file alone), no release
+  named, or a release older than the minimum.
+- **Reached from:** `LicenceScreen.kt`, `ExistingLibraryScreen.kt`, `LibraryFolderChoice.kt`, `InstallLocationRow.kt`,
+  `DatabaseCleanupUseCase.kt`, `PendingDbCleanup.kt`, `DataSettingsViewModel.kt`, `LibraryLocation.kt`,
+  `LibraryLocationViewModel.kt`.
 - **Follows:** Zayit's `DatabaseVersionManager` for the version check; `branding/README.md` names it the only reader of
   `BrandLibraries`, which `LibraryLocationViewModel` now reads too.
 - **Tests:** `ForeignLibrariesTest`.
@@ -3055,12 +3083,31 @@ it), with copies kept; and an installed Zayit's library can be used in place ins
 - **Tests:** none of the screen.
 - **Notes:** two comments in a row say the same about the path's direction, one left over from an earlier version.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/onboarding/offline/LibraryFolderChoice.kt`
+
+- **Feature:** Existing Zayit library.
+- **Size:** 103 lines.
+- **What:** `LibraryFolderChoice`, the offline install's other way, in the two lines left under its files' button: a
+  question with a link that opens the folder picker (off the UI thread), and under it a note, or why the folder chosen
+  is not used (`ForeignLibraries.inFolder`'s answer in the reader's words, the version as the onboarding shows it). A
+  library found is used in place (`ForeignLibraries.useInPlace`) and the onboarding goes on to the user's details, the
+  files' screen popped, as `ExistingLibraryScreen` does.
+- **Reached from:** `OfflineFileSelectionScreen.kt`.
+- **Follows:** `ExistingLibraryScreen` (the same use in place and the same way on); `pickDatabaseParts` for the picker
+  off the Tao event loop; Jewel's `Link`.
+- **Tests:** `ForeignLibrariesTest` (what a folder holds); none of the composable. Seen in the app on 2026-11-11: a
+  folder with `seforim.db` alone says so, a whole library leads to the user's details.
+- **Notes:** a button under the files' one, as first written, fell below the fixed window's edge (the screen's icon is
+  192 dp); the link and its note fit without changing Zayit's layout.
+
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/database/ForeignLibrariesTest.kt`
 
 - **Feature:** Existing Zayit library.
-- **Size:** 86 lines.
+- **Size:** 126 lines.
 - **What:** a library used in place is foreign while Pardes's own and other folders are not, and a full install's cleanup
-  leaves it alone and empties Pardes's own folder.
+  leaves it alone and empties Pardes's own folder. A folder the user chooses holds a library to use, in it or in the
+  library's own folder inside it, and using it records its folder; a folder with no library Pardes can open says why
+  (none, the file alone, in pieces, no release, too old).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, on temporary folders).
