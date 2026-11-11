@@ -8,11 +8,11 @@ import java.nio.file.StandardCopyOption
 import java.time.Instant
 
 /**
- * A reader's review of a tractate's daf (its layout file's lines), for pardes-rashi-ocr: which lines are wrong, and
- * what is wrong with them (how they are set on the page, their words). Kept in the layouts' folder, under feedback/,
- * one file a tractate, which the reader sends; pardes-rashi-ocr's feedback.py measures the layouts by it. A review of
- * before the two reasons also says which lines are right and where a line's first word really is (its moves are
- * still made on the page, and put in the layouts by feedback.py).
+ * A reader's review of a tractate's daf (its layout file's lines), for pardes-rashi-ocr: which lines are right, which
+ * are wrong, and what is wrong with them (how they are set on the page, their words). Kept in the layouts' folder,
+ * under feedback/, one file a tractate, which the reader sends; pardes-rashi-ocr's feedback.py measures the layouts by
+ * it. A review of before the two reasons also says where a line's first word really is (its moves are still made on
+ * the page, and put in the layouts by feedback.py).
  */
 @Serializable
 data class DafReviewFile(
@@ -33,10 +33,11 @@ data class DafReviewFile(
  * when it was reviewed (a mark whose line has other words now, the layout made again, is not applied). What the reader
  * said is wrong with it: how it is set on the page ([layout]), its words ([words]); of its words [from] to [to] alone
  * (counted in [t] from 0; null: from its first, to its last), when the passage reviewed starts or ends inside it. [ok]
- * is false for a line either is said of (a review of before the two reasons: whether its words are the printed line's,
- * null not said), and [cut] how many words the line's start moves in the column's text, in such a review: 1 its first
- * word is the line before's last, -1 the line before's last word is its first. [at] when it was marked, [version] the
- * version of the tractate's layout file it was marked on (null: a file of before each tractate had one).
+ * is false for a line either is said of, true for one the reader said is right (null: not said; false with neither
+ * reason is a review of before them), and [cut] how many words the line's start moves in the column's text, in a
+ * review of before the two reasons: 1 its first word is the line before's last, -1 the line before's last word is its
+ * first. [at] when it was marked, [version] the version of the tractate's layout file it was marked on (null: a file
+ * of before each tractate had one).
  */
 @Serializable
 data class DafMark(
@@ -55,32 +56,59 @@ data class DafMark(
 ) {
     val isEmpty: Boolean get() = ok == null && cut == 0
 
-    /** Whether it says something the two reasons do not: the line is right, wrong for no reason given, or moved. */
-    val isFormer: Boolean get() = cut != 0 || ok == true || (ok == false && !layout && !words)
+    /** Whether [reason] is said of the line. */
+    fun says(reason: DafReason): Boolean =
+        when (reason) {
+            DafReason.LAYOUT -> layout
+            DafReason.WORDS -> words
+            DafReason.RIGHT -> ok == true
+        }
 
-    /** The mark with [reason] said of the line ([said]) or no longer, of its words [from] to [to]. */
+    /** Whether it says something the menu's answers do not: the line is wrong for no reason given, or moved. */
+    val isFormer: Boolean get() = cut != 0 || (ok == false && !layout && !words)
+
+    /**
+     * The mark with [reason] said of the line ([said]) or no longer, of its words [from] to [to]. Right and wrong
+     * exclude each other: a line said to be right has neither fault, and a fault said of it takes "right" away.
+     */
     fun saying(
         reason: DafReason,
         said: Boolean,
         from: Int?,
         to: Int?,
     ): DafMark {
-        val layout = if (reason == DafReason.LAYOUT) said else layout
-        val words = if (reason == DafReason.WORDS) said else words
+        // Each answer as it was, but the one said or unsaid, and those it excludes once it is said
+        fun now(answer: DafReason) = if (answer == reason) said else says(answer) && !(said && reason.excludes(answer))
+        val right = now(DafReason.RIGHT)
+        val layout = now(DafReason.LAYOUT)
+        val words = now(DafReason.WORDS)
         val wrong = layout || words
         return copy(
             layout = layout,
             words = words,
-            ok = if (wrong) false else null,
-            from = from.takeIf { wrong },
-            to = to.takeIf { wrong },
+            ok =
+                when {
+                    wrong -> false
+                    right -> true
+                    else -> null
+                },
+            from = from.takeIf { wrong || right },
+            to = to.takeIf { wrong || right },
             at = Instant.now().toString(),
         )
     }
 }
 
-/** What a reader says is wrong with a passage of the daf: how it is set on the page, or its words. */
-enum class DafReason { LAYOUT, WORDS }
+/** What a reader says of a passage of the daf: what is wrong with it (how it is set on the page, its words), or that it is right. */
+enum class DafReason {
+    LAYOUT,
+    WORDS,
+    RIGHT,
+    ;
+
+    /** Whether saying this of a line takes [other] away from it: right and a fault do not stand together. */
+    fun excludes(other: DafReason): Boolean = (this == RIGHT) != (other == RIGHT)
+}
 
 /** A line a review is of, by its [index] in its amud, and the words of it meant, [from] to [to] (null: its first, its last). */
 data class ReviewedLine(

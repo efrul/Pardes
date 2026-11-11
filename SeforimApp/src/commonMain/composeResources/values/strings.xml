@@ -46,6 +46,7 @@
     <string name="settings_daf_review_info">לחיצה ימנית בצורת הדף מוסיפה לתפריט שתי תיבות סימון: "הקטע מעומד לא נכון" ו"יש טעות במילים". הן חלות על הקטע המסומן כשהלחיצה בתוכו, ואחרת על השורה שנלחצה. הסימונים נשמרים בתיקייה feedback שליד קובצי צורת הדף, קובץ לכל מסכת, ושולחים אותם מ"שליחת משוב" שבניהול הנתונים.</string>
     <string name="daf_review_layout">הקטע מעומד לא נכון</string>
     <string name="daf_review_words">יש טעות במילים</string>
+    <string name="daf_review_right">הקטע תקין</string>
     <string name="daf_review_clear">ביטול הסימון של השורה</string>
     <string name="daf_review_open_folder">פתיחת תיקיית המשוב</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
