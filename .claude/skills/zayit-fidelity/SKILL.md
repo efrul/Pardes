@@ -28,7 +28,11 @@ The rules below are mandatory for every change, in every session, desktop or And
    sections of `CLAUDE.md`, `.editorconfig`, `detekt.yml`, `SeforimLibrary/AGENTS.md`.
    [references/eli-style.md](references/eli-style.md) sums them up with what his code and history show: structure,
    state and events, Metro, settings, comments, KDoc, tests, commits. Before writing, read the Zayit file you change
-   and two or three of its neighbours, and copy their structure, names and comment voice. In short:
+   and two or three of its neighbours, and copy their structure, names and comment voice.
+   [references/lessons.md](references/lessons.md) holds what went wrong and what was found while Pardes's features
+   were built (the linters, Compose and Jewel, the data, the map, an add-on of Pardes's own, someone else's code,
+   Zayit's later code, a testers' build, what the user asked to be done again): read the part that fits the change
+   before starting it, and add to it what a change teaches. In short:
    - comments in English, short, saying what the code is for;
    - every user-visible text in `strings.xml`;
    - tests beside the code;
@@ -62,11 +66,13 @@ The rules below are mandatory for every change, in every session, desktop or And
    issue to it (his largest files are already past the size limits; don't make them grow more than the hook needs).
    - `androidApp/` has neither ktlint nor detekt yet (the map's section 4): keep its code to the same 140 columns
      and `detekt.yml` limits by hand.
-   - Run Gradle with `LC_ALL=C.UTF-8` (`pardes-desktop-run` › The locale) and with a `gh` on `PATH` that exits 1, so
-     the build never reads Zayit's private packages.
-   - In the cloud container, Maven Central often answers 429 through the proxy, and a cold build may not get
-     through. Then say so, and let CI do it: its lint and test jobs run on a pull request to `main`, so open one when
-     the user asks.
+   - Run Gradle through `.claude/skills/pardes-desktop-run/scripts/gradle.sh`: it sets `LC_ALL=C.UTF-8`, puts a `gh`
+     that exits 1 first on `PATH`, so the build never reads Zayit's private packages, and refuses while the app
+     runs.
+   - In the cloud container, Maven Central often answers 429 through the proxy: `pardes-desktop-run`'s `setup.sh`
+     gives Gradle a mirror of it.
+   - Only the Change map check runs on a push to a branch. CI's lint and test jobs run on a pull request to `main`:
+     run them here before every push, and open a pull request when the user asks.
 5. **Commit as he commits:** `type(scope): summary`, signed off, as efrul (references/eli-style.md › How he works, and
    › Pardes in his style for Pardes's own scopes).
 6. **Never**:
@@ -124,6 +130,10 @@ Two entries as the map has them, and a row:
 Kinds: branding hook; Pardes feature hook; Pardes feature in Zayit's file; fix of Zayit's code; licence removal;
 removed Zayit file; renamed Zayit file; documentation; build or CI.
 
+`scripts/mapedit.py` edits the map by entry, for a script written for one change: a file's line counts or size as
+they are now, a text inside one entry, a row, a block before a heading. Run alone it prints each section's count of
+entries, which the header's "(N files)" must say. Never edit the map with a global `sed`.
+
 To see what a file's entry must describe:
 ```bash
 B=$(sed -n 's/.*zayit-base: v[^ ]* \([0-9a-f]*\).*/\1/p' docs/ZAYIT_CHANGE_MAP.md)
@@ -159,7 +169,8 @@ main into it, describe its files in the map, then merge it. Never rename the job
 
    It is not an OSI licence. Merging 0.6.13 or later brings that licence into Pardes, so it is the user's decision:
    ask before merging, with the facts. On 2026-11-09 the user decided to stay on 0.6.12 for now; a later release is
-   asked about again, its licence first.
+   asked about again, its licence first. How to read Zayit's later code without merging it, and how to tell whether
+   one commit is still under the AGPL: references/lessons.md › Zayit's later code.
 2. **Merge** as `branding/README.md` › Merging a Zayit release says:
    - fetch the tag into a private ref (`git fetch --no-tags https://github.com/kdroidFilter/Zayit
      'refs/tags/v<x.y.z>:refs/zayit/v<x.y.z>'`) and never push it;

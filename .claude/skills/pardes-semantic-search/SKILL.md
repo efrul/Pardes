@@ -57,6 +57,29 @@ what is left of `semantic-model/`, their tests) described in `docs/ZAYIT_CHANGE_
   each the others' neighbors, and a walk that enters such a cluster can't leave it: `vec` returns 33 of 150 for "שבת",
   "יין נסך" and "חמץ בפסח" (all identical). With a books filter Lucene then falls back to an exact search of the whole
   filter (0.4 to 1 s in תלמוד or הלכה). The fix is an index with each text once (SEMANTIC_SEARCH.md, known limitations).
+  Until a pack has one, the app gets out of the trap itself (`49574d08`, 2026-11-10): the dense search walks the
+  graph on its own, and a walk that comes back short starts again from the words' first 64 hits (4 seeds stayed
+  trapped; seeds in base books are not in the `vec` graph). 150 lines in 20 to 30 ms, the Talmud's first page in 56 to
+  82 ms where it took 272 to 326; only a search the words find nothing for still scores a whole scope. Lucene 10.5's
+  `searchNearestVectors` takes `AcceptDocs`, not `Bits`. `DenseTrapTest` asserts three in four of the exact
+  neighbours, which is what the walk reaches.
+- **Measure a search by scope on a real library before and after** (`ScopeSearchBench`, run alone; a debug line in the
+  log times each stage of a search): the query's vector about 10 ms (the last queries' vectors are kept), the dense
+  side 1 to 36 ms, the words 20 to 80, the facets 2 to 22. The slow parts found were around the search, not in it: the
+  results' tree read each book from the database (0.2 to 0.8 s the first time in a tab; from the catalog now, 5 to
+  58 ms), and the bar's categories read the commentary links at the first letter typed (1.2 s; at start now).
+- **The tabs above the results are views of the list found** (`SessionViews`, `67e79fdd`): a hybrid search lists the
+  first lines it finds, so searching a category again gave another list. A category with no line in the list is
+  still searched. The tabs picked become the bar's chips, and a repeated search searches in them.
+- **The library's order** (`CatalogOrderEngine`, `CatalogOrderSession`, `c7394579`): the books that have lines found
+  (from the facets) are read a few at a time in the catalog's order, each group in one session of the words; the
+  lines the meaning search alone found stand among them. Open since 2026-11-11: in that order every line found has
+  the same standing, so a line the meaning search found with a faint link to the query stands above the words' own
+  lines whenever its book comes first. A threshold, or the words' lines alone, is the user's decision (stage 2).
+- **Searches of other apps** reach the feedback packages since `e525a560` (an installed Zayit's and Otzaria's, each
+  row with its `source`; Otzaria's with its `scope`, `bookTitle`, `heRef` and no line id). efrul/pardes-semantic's
+  `feedback/collect.py` keeps the source, and places Otzaria's votes by book title and reference when they name
+  exactly one line.
 - A filtered search keeping few vectors (at most `EXACT_LIMIT` and one in `EXACT_SHARE` of the field's) is exact in
   `IndependentSemanticSearch.searchField`: Lucene's filtered graph search is slower there and misses some. Lucene's own
   exact search needs `--add-modules jdk.incubator.vector` for SIMD (3 to 5 times faster); the app's JVM doesn't pass it.
