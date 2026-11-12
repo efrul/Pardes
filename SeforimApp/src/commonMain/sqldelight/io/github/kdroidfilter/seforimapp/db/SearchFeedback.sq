@@ -39,13 +39,10 @@ DELETE FROM search_feedback WHERE searchKey = :searchKey AND lineId = :lineId;
 gradesForSearch:
 SELECT lineId, grade FROM search_feedback WHERE searchKey = :searchKey;
 
-countGrades:
-SELECT COUNT(*) FROM search_feedback;
-
 deleteAll:
 DELETE FROM search_feedback;
 
--- For sending feedback (Settings › ניהול נתונים): the grades given, and the searches made, since a time
+-- For sending feedback (Settings › משוב): the grades given, and the searches made, since a time
 gradesSince:
 SELECT * FROM search_feedback WHERE gradedAt > :since ORDER BY gradedAt;
 

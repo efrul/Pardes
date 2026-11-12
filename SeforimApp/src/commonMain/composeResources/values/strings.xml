@@ -44,7 +44,7 @@
     <string name="daf_review_words">יש טעות במילים</string>
     <string name="daf_review_right">הקטע תקין</string>
     <string name="daf_review_clear">ביטול הסימון של השורה</string>
-    <string name="daf_review_open_folder">פתיחת תיקיית המשוב</string>
+    <string name="daf_review_open_folder">פתיחת תיקיית הסימונים של צורת הדף</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>
@@ -134,6 +134,7 @@
     <string name="settings_category_about">אודות</string>
     <string name="settings_category_conditions">תנאים</string>
     <string name="settings_category_data">ניהול נתונים</string>
+    <string name="settings_category_feedback">משוב</string>
     <string name="data_export_title">ייצוא הנתונים שלי</string>
     <string name="data_export_description">שמירת גיבוי של ההערות, ההדגשות וההגדרות.</string>
     <string name="data_export_action">ייצוא</string>
@@ -243,8 +244,7 @@
     <string name="semantic_pack_prompt">לפתוח את המסך הזה בכל הפעלה, עד שהחיפוש לפי משמעות מותקן</string>
     <!-- Pardes: feedback mode, the grades of search results (SearchFeedbackStore) -->
     <string name="search_feedback_setting">משוב על תוצאות החיפוש</string>
-    <string name="search_feedback_setting_hint">מתחת לכל תוצאת חיפוש יופיעו שלושה כפתורים: בדיוק זה, רלוונטי, לא רלוונטי. לחיצה נוספת על הכפתור שנבחר מבטלת אותו. הציונים נשמרים במחשב הזה, יחד עם היסטוריית החיפושים, ויוצאים ממנו רק כששולחים אותם מ"שליחת משוב" שלמטה.</string>
-    <string name="search_feedback_count">ציונים שנשמרו עד עכשיו: %1$d</string>
+    <string name="search_feedback_setting_hint">מתחת לכל תוצאת חיפוש יופיעו שלושה כפתורים: בדיוק זה, רלוונטי, לא רלוונטי. לחיצה נוספת על הכפתור שנבחר מבטלת אותו. הציונים נשמרים במחשב הזה, יחד עם היסטוריית החיפושים, ויוצאים ממנו רק כששולחים אותם, מהעמוד הזה.</string>
     <string name="search_feedback_exact">בדיוק זה</string>
     <string name="search_feedback_relevant">רלוונטי</string>
     <string name="search_feedback_not_relevant">לא רלוונטי</string>
@@ -252,7 +252,11 @@
     <string name="feedback_send_title">שליחת משוב</string>
     <string name="feedback_send_description">המשוב שנתתם עוזר לשפר את החיפוש לפי משמעות ואת צורת הדף. כאן רואים מה יש לשלוח, ובוחרים מה מתוכו.</string>
     <string name="feedback_send_reading">בודק מה יש לשלוח…</string>
-    <string name="feedback_send_nothing">עוד אין משוב לשלוח. ציונים לתוצאות החיפוש נותנים כשהמשוב על תוצאות החיפוש דלוק (בכרטיס "חיפוש לפי משמעות" שלמעלה), וסימונים בצורת הדף כשבדיקת השורות שלה דלוקה (בהגדרות הגופנים).</string>
+    <string name="feedback_send_waiting">מחכים לשליחה: ציונים %1$d, חיפושים %2$d, סימונים בצורת הדף %3$d.</string>
+    <string name="feedback_send_last">הפעם הקודמת: %1$s.</string>
+    <string name="feedback_send_what">מה נשלח</string>
+    <string name="feedback_send_privacy_title">פרטיות ומחיקה</string>
+    <string name="feedback_send_nothing">עוד אין משוב לשלוח. ציונים לתוצאות החיפוש נותנים כש"משוב על תוצאות החיפוש" שבהמשך העמוד דלוק, וסימונים בצורת הדף נותנים בלחיצה ימנית על שורה בדף.</string>
     <string name="feedback_send_nothing_new">אין משוב חדש מאז הפעם הקודמת, מ־%1$s.</string>
     <string name="feedback_send_grades">ציונים לתוצאות החיפוש: %1$d (בחיפושים: %2$d)</string>
     <string name="feedback_send_searches">היסטוריית החיפושים: %1$d</string>
@@ -273,7 +277,7 @@
     <string name="feedback_send_open_folder">פתיחת התיקייה</string>
     <string name="feedback_send_privacy_online">המשוב נשלח לשרת של פרדס ב־Cloudflare, ונשמר שם בלי כתובת ה־IP.</string>
     <string name="feedback_send_auto">שליחה אוטומטית, בכל הפעלה ובכל חיבור לרשת</string>
-    <string name="feedback_send_auto_hint">נשלח רק מה שחדש מאז הפעם הקודמת, מהסוגים שמסומנים למעלה.</string>
+    <string name="feedback_send_auto_hint">נשלח רק מה שחדש מאז הפעם הקודמת, מהסוגים שמסומנים ב"מה נשלח".</string>
     <string name="feedback_send_now">שליחה עכשיו</string>
     <string name="feedback_send_sending">שולח… (חלק %1$d מתוך %2$d)</string>
     <string name="feedback_send_sent">המשוב נשלח ב־%1$s. תודה! בפעם הבאה יישלח רק מה שחדש.</string>
@@ -293,18 +297,18 @@
     <string name="feedback_consent_grades">הציונים שנתתם לתוצאות החיפוש</string>
     <string name="feedback_consent_grades_hint">שנותנים בכפתורי המשוב שמתחת לתוצאות החיפוש.</string>
     <string name="feedback_consent_buttons">להציג מעכשיו מתחת לכל תוצאת חיפוש את כפתורי המשוב</string>
-    <string name="feedback_consent_buttons_hint">בדיוק זה, רלוונטי, לא רלוונטי: הציונים עוזרים יותר מכל דבר אחר לשפר את החיפוש. אפשר לכבות אותם בהגדרות › ניהול נתונים › חיפוש לפי משמעות.</string>
+    <string name="feedback_consent_buttons_hint">בדיוק זה, רלוונטי, לא רלוונטי: הציונים עוזרים יותר מכל דבר אחר לשפר את החיפוש. אפשר לכבות אותם בהגדרות › משוב.</string>
     <string name="feedback_consent_searches">היסטוריית החיפושים</string>
     <string name="feedback_consent_searches_hint">מה חיפשתם, באיזה היקף וכמה פעמים, גם בלי ציון: הם מראים מה מחפשים.</string>
     <string name="feedback_consent_daf">הסימונים של שורות בצורת הדף</string>
-    <string name="feedback_consent_daf_hint">במצב הבדיקה של צורת הדף, שמדליקים בהגדרות › צורת הדף.</string>
+    <string name="feedback_consent_daf_hint">שנותנים בלחיצה ימנית על שורה בצורת הדף.</string>
     <string name="feedback_consent_zayit">גם החיפושים שעשיתם בזית, במחשב הזה</string>
     <string name="feedback_consent_zayit_hint">מהיסטוריית החיפושים של זית: מה חיפשתם, באיזה היקף וכמה פעמים. בלי הסימון הם לא נקראים ולא נשלחים.</string>
     <string name="feedback_consent_otzaria">גם החיפושים שעשיתם באוצריא, במחשב הזה</string>
     <string name="feedback_consent_otzaria_hint">מהיסטוריית החיפושים של אוצריא, ומהדירוגים שנתתם בחיפוש החכם שלה. בלי הסימון הם לא נקראים ולא נשלחים.</string>
     <string name="feedback_consent_publish">פרסום במאגר הפתוח</string>
     <string name="feedback_consent_publish_hint">מה שתשלחו יוצג לכולם באתר "מאגר החיפושים הפתוח": המילים שחיפשתם והתוצאות שדירגתם, בלי מזהה השולח ובלי שום דבר שמזהה אתכם. בלי הסימון רואה אותם רק המתחזק של פרדס.</string>
-    <string name="feedback_consent_privacy">לא נשלחים ההערות, ההדגשות, המועדפים, הספרים שפתחתם, ושום דבר שמזהה אתכם או את המחשב, והשרת שומר את המשוב בלי כתובת ה־IP. בהגדרות › ניהול נתונים › שליחת משוב אפשר לשנות את הבחירה, לעצור את השליחה ולמחוק את מה שנשלח.</string>
+    <string name="feedback_consent_privacy">לא נשלחים ההערות, ההדגשות, המועדפים, הספרים שפתחתם, ושום דבר שמזהה אתכם או את המחשב, והשרת שומר את המשוב בלי כתובת ה־IP. בהגדרות › משוב אפשר לשנות את הבחירה, לעצור את השליחה ולמחוק את מה שנשלח.</string>
     <string name="feedback_consent_agree">אישור</string>
     <string name="feedback_consent_decline">לא, תודה</string>
     <string name="semantic_pack_no_library">צריך להתקין קודם את הספרייה.</string>
@@ -780,7 +784,7 @@
     <string name="onboarding_library_folder_old">מסד הנתונים שבתיקייה (גרסה %1$s) ישן מדי לגרסה הזו של האפליקציה. צריך להתקין מסד נתונים חדש.</string>
     <!-- The onboarding's step that asks whether to send feedback by itself (FeedbackStepScreen) -->
     <string name="onboarding_feedback_title">שליחת משוב לשיפור פרדס</string>
-    <string name="onboarding_feedback_description">כדי לשפר את החיפוש, פרדס שולח לבד את מה שחיפשתם, את הציונים שנתתם לתוצאות ואת הסימונים בצורת הדף, בלי שום דבר שמזהה אתכם או את המחשב. מה שלא תרצו לשלוח, הסירו ממנו את הסימון. אפשר לשנות הכול אחר כך בהגדרות › ניהול נתונים.</string>
+    <string name="onboarding_feedback_description">כדי לשפר את החיפוש, פרדס שולח לבד את מה שחיפשתם, את הציונים שנתתם לתוצאות ואת הסימונים בצורת הדף, בלי שום דבר שמזהה אתכם או את המחשב. מה שלא תרצו לשלוח, הסירו ממנו את הסימון. אפשר לשנות הכול אחר כך בהגדרות › משוב.</string>
     <string name="onboarding_feedback_send">שליחה אוטומטית של נתוני החיפוש שלי</string>
     <string name="onboarding_feedback_sources">מאיפה:</string>
     <string name="onboarding_feedback_zayit">זית</string>

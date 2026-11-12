@@ -28,4 +28,8 @@ sealed interface SettingsDestination {
     // The daf view's settings, in a page of their own
     @Serializable
     data object Daf : SettingsDestination
+
+    // The feedback's settings and its sending, in a page of their own
+    @Serializable
+    data object Feedback : SettingsDestination
 }

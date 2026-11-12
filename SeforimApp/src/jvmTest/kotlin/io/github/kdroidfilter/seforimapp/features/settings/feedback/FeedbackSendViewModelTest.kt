@@ -9,6 +9,7 @@ import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -134,5 +135,16 @@ class FeedbackSendViewModelTest {
         viewModel.renewSender()
         assertNotEquals(first, settings.getFeedbackSender())
         assertEquals(settings.getFeedbackSender(), viewModel.state.value.sender)
+    }
+
+    @Test
+    fun `the grade buttons are turned on and off from the page, and the settings keep it`() {
+        val viewModel = viewModel()
+        assertFalse(viewModel.state.value.buttons)
+        viewModel.setButtons(true)
+        assertTrue(viewModel.state.value.buttons && settings.isSearchFeedbackEnabled())
+        assertTrue(viewModel().state.value.buttons, "read back when the page is opened again")
+        viewModel.setButtons(false)
+        assertFalse(settings.isSearchFeedbackEnabled())
     }
 }
