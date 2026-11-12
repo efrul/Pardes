@@ -57,7 +57,6 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToC
 import io.github.kdroidfilter.seforimapp.core.reading.LastInput
 import io.github.kdroidfilter.seforimapp.core.reading.noteInput
 import io.github.kdroidfilter.seforimapp.core.selectionCopyShortcut
-import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
@@ -293,17 +292,6 @@ fun NucleusApplicationScope.MainAppWindow(
             }
             JoinSatelliteWorkspace(session.panesOf(groupId, navigation = true), nucleusWin.unsafe.taoWindow)
             JoinSatelliteWorkspace(session.panesOf(groupId, navigation = false), nucleusWin.unsafe.taoWindow)
-        }
-
-        // Settings dialog, composed inside the window it was opened from so it
-        // picks up this window's modal counter and native transient-for
-        // relationship — modal to this window only, the others stay usable.
-        val settingsDialogState by settingsWindowViewModel.state.collectAsState()
-        if (settingsDialogState.isVisible && settingsDialogState.ownerWindowId == openWindow.id) {
-            SettingsWindow(
-                onClose = { settingsWindowViewModel.onEvent(SettingsWindowEvents.OnClose) },
-                initialDestination = settingsDialogState.initialDestination,
-            )
         }
 
         CompositionLocalProvider(

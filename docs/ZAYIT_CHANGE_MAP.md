@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (108 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (111 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (205 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (206 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -330,7 +330,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/main.kt`
 
-- **Change:** modified, +73 −3 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts, Search speed.
+- **Change:** modified, +76 −8 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts, Search speed,
+  Settings window.
 - **What:**
   - `val appId = Brand.APP_ID` instead of Zayit's literal `"io.github.kdroidfilter.seforimapp"` (FileKit's data folder).
   - Before the graph: `remember { PendingSemanticPack.runOnce() }` puts a pack unpacked in the settings in place of the
@@ -344,6 +345,8 @@ The entries of this section by kind:
     `feedbackAutoSender` ask whether to send feedback, after the session is restored, a window is open and the update
     dialog and the settings are closed.
   - `FeedbackConsentDialog(appGraph.feedbackAutoSender)` while its question is shown.
+  - The settings window, Zayit's app-scope fallback for an owner window gone, is composed here whenever the settings
+    are open (they are a window of their own, which blocks no window), with `reopened`; its comment says so.
   - The private `warmSearch(graph)`: a minimum-priority daemon thread that first reads the bar's categories and the
     library's books (`libraryCategories.warmUp()`, some 1.2 s of the library's links), then waits up to
     `LEXICON_WAIT_MS` (2 minutes) for `PardesLexicon.awaitBuild` and runs `searchEngine.warmUp()`; failures are
@@ -352,7 +355,8 @@ The entries of this section by kind:
 - **Why:** each is the entry point of a Pardes feature: the data folder that keeps Pardes apart from an installed Zayit
   (`47626634`), the library location (`58586e1a`), the semantic packs (`20e2fa81`, `77f5349b`, `cb0f0a27`), Pardes's
   dictionary copy (`722af188`), the categories read ahead of the first letter typed in the bar, the feedback (`ddf604d8`) and the links in the texts, an object the reader reaches without
-  the graph (Zayit's `installedQuoteLinks`). They must run before the graph or beside the main window,
+  the graph (Zayit's `installedQuoteLinks`); and the settings, a window of their own since 2026-11-12 (see
+  `SettingsWindow.kt`). They must run before the graph or beside the main window,
   which only `main` can do.
 - **Kind:** branding hook and Pardes feature hooks.
 - **Merge risk:** high. `main.kt` is long and Zayit edits it in most releases; the hooks sit in five places (the
@@ -424,16 +428,18 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +5 −0 lines. Feature: Reading time.
+- **Change:** modified, +5 −12 lines. Feature: Reading time, Settings window.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
+- **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
+  its comment and its import: the settings are a window of their own, composed once in `main.kt`.
 - **Why:** the reading time counts only while the user is at the window, and stops after five minutes without mouse or
-  keyboard (`ReadingTimeStore`, `0083381e`).
+  keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small, but Zayit edits this file (0.6.13 changes Ctrl+Tab here): the two lines sit in the window's
   modifier chain and key handler.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none.
+- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none; `SettingsWindowReopenTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/WindowUtils.kt`
 
@@ -1518,6 +1524,53 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Tests:** `FontCatalogTest` counts 27 fonts.
 
 ### Settings and fonts
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindow.kt`
+
+- **Change:** modified, +21 −11 lines. Feature: Settings window.
+- **What:** the settings are a window (`JewelDecoratedWindow`, with `rememberWindowState` at the same place and size,
+  700x500 in the middle) instead of a dialog (`JewelDecoratedDialog`), and its title bar `JewelTitleBar` instead of
+  `JewelDialogTitleBar`: no window is blocked, and the settings minimize apart. `SettingsWindow` takes `reopened`: at
+  each one the window comes back (`setMinimized(false)`, `toFront`, `requestFocus`, as `DefaultToolWindow` does), and the
+  page asked for is gone to again (`LaunchedEffect(initialDestination, reopened)`). A comment marked "Pardes:".
+- **Why:** the user asked on 2026-11-11 (request 35 of `docs/DESKTOP_STAGE2.md`) to minimize the settings apart from the main
+  window and use the app while they are open; Zayit's settings were a dialog modal to the window they were opened from.
+  A window of its own, opened once and brought back to the front when asked for again, is how Zayit opens its tool
+  windows (the dictionary's among them, `ToolWindows.kt`).
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** medium: the window's wrapper and title bar are replaced; a Zayit change of the dialog's parameters or
+  title bar conflicts there. The window's content (sidebar, pages, the close button) is Zayit's, unchanged.
+- **Smaller:** already near minimal: the wrapper, its state, the title bar and one effect.
+- **Tests:** `SettingsWindowReopenTest` (the reopening's state); the window was tried in the app (the main window usable
+  behind it, the app closed with it open); minimizing needs a window manager, which the cloud's display has not.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindowState.kt`
+
+- **Change:** modified, +3 −3 lines. Feature: Settings window.
+- **What:** `reopened`, how many times the open settings were asked for again, with a comment marked "Pardes:"; the
+  comment of `ownerWindowId` says only what it holds (the window composed inside it is gone).
+- **Why:** the user asked on 2026-11-11 (request 35 of `docs/DESKTOP_STAGE2.md`) to minimize the settings apart from the main
+  window and use the app while they are open; Zayit's settings were a dialog modal to the window they were opened from.
+  A window of its own, opened once and brought back to the front when asked for again, is how Zayit opens its tool
+  windows (the dictionary's among them, `ToolWindows.kt`).
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a field at the end of the data class.
+- **Smaller:** already minimal.
+- **Tests:** `SettingsWindowReopenTest`; Zayit's `SettingsWindowStateTest`, unchanged, still passes.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindowViewModel.kt`
+
+- **Change:** modified, +5 −0 lines. Feature: Settings window.
+- **What:** `OnOpen` and `OnOpenTo` set `reopened` from the private `reopened()`: one more than before while the
+  settings are open, 0 when they open; a comment marked "Pardes:".
+- **Why:** the user asked on 2026-11-11 (request 35 of `docs/DESKTOP_STAGE2.md`) to minimize the settings apart from the main
+  window and use the app while they are open; Zayit's settings were a dialog modal to the window they were opened from.
+  A window of its own, opened once and brought back to the front when asked for again, is how Zayit opens its tool
+  windows (the dictionary's among them, `ToolWindows.kt`).
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one argument in each of the two events and a function after them.
+- **Smaller:** already minimal.
+- **Tests:** `SettingsWindowReopenTest`; Zayit's `SettingsWindowViewModelTest`, unchanged, still passes.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/FontCatalog.kt`
 
@@ -4635,6 +4688,23 @@ grade buttons' switch stood in the semantic search's card and the reviews' folde
   checked; the apps checked are sent from, this one or not, and published only when checked.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+### The settings in a window of their own
+
+The settings are a window, not a dialog, since 2026-11-12, as the user asked: they minimize apart from the main window,
+the app can be used while they are open, and asked for again (the button, Ctrl+comma, the menu) they come back to the
+front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowState.kt`, `SettingsWindowViewModel.kt`,
+`MainAppWindow.kt`, `main.kt`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindowReopenTest.kt`
+
+- **Feature:** Settings window.
+- **Size:** 61 lines.
+- **What:** settings asked for again while open are reopened (the count goes up), at the page asked for; closed and
+  opened again they are a new window (the count starts again).
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `SettingsWindowViewModelTest` (its `DesktopManager`, Kotlin Test).
 - **Tests:** it is one (unit).
 
 ### The open smart siddur (experimental)
