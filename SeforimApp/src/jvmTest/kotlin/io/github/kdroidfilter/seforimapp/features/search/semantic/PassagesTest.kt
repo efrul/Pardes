@@ -129,6 +129,15 @@ class PassagesTest {
         search.close()
     }
 
+    @Test
+    fun `work told to stop runs no more of the model, and gives none`() {
+        val provider = KeywordProvider("שבת")
+        val search = IndependentSemanticSearch(emptyIndex(), provider)
+        assertNull(search.bestPassages("שבת", listOf("משפט ראשון כאן במקום. ומשפט שני אחריו כאן."), keepGoing = { false }))
+        assertEquals(0, provider.passages)
+        search.close()
+    }
+
     private fun emptyIndex(): java.nio.file.Path =
         root.toPath().resolve("index").also { dir ->
             FSDirectory.open(dir).use { IndexWriter(it, IndexWriterConfig()).use(IndexWriter::commit) }
@@ -152,8 +161,11 @@ class PassagesTest {
             return vector(text)
         }
 
-        override fun embedPassages(texts: List<String>): List<FloatArray>? {
-            if (!canEmbedPassages) return null
+        override fun embedPassages(
+            texts: List<String>,
+            keepGoing: () -> Boolean,
+        ): List<FloatArray>? {
+            if (!canEmbedPassages || !keepGoing()) return null
             passages += texts.size
             return texts.map(::vector)
         }

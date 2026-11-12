@@ -1,0 +1,302 @@
+categories 1798 ms
+engine warm-up 8953 ms
+r0 קל וחומר | כל הספרייה | search: first 369 tabs 488 done 807 hits 253
+tab 1: מדרש, 993 hits
+r0 קל וחומר | כל הספרייה | tab 1: first 52 tabs NaN done 53 hits 73
+r0 קל וחומר | כל הספרייה | all 1: first 27 tabs NaN done 32 hits 253
+tab 2: תלמוד, 587 hits
+r0 קל וחומר | כל הספרייה | tab 2: first 16 tabs NaN done 16 hits 178
+r0 קל וחומר | כל הספרייה | all 2: first 17 tabs NaN done 17 hits 253
+r0 קל וחומר | כל הספרייה | catalog: first 258 tabs 261 done 563 hits 1599
+r0 קל וחומר | כל הספרייה | catalog tab: first 327 tabs NaN done 328 hits 987
+r0 קל וחומר | בבא בתרא | search: first 74 tabs 75 done 82 hits 150
+r0 קל וחומר | שלוש הבבות | search: first 106 tabs 106 done 111 hits 162
+r0 קל וחומר | סדר נזיקין | search: first 121 tabs 123 done 130 hits 198
+r0 קל וחומר | תלמוד | search: first 431 tabs 535 done 1091 hits 272
+r0 קל וחומר | תלמוד | catalog: first 593 tabs 600 done 918 hits 7962
+r0 קל וחומר | תלמוד | catalog tab: first NaN tabs NaN done 288 hits 7962
+r0 קל וחומר | הלכה | search: first 289 tabs 346 done 655 hits 297
+r0 קל וחומר | הלכה | catalog: first 651 tabs 653 done 974 hits 3333
+r0 קל וחומר | הלכה | catalog tab: first NaN tabs NaN done 663 hits 3333
+r0 קל וחומר | אחרונים על הבבלי | search: first 240 tabs 283 done 584 hits 286
+r0 קל וחומר | ראשונים ואחרונים על הבבלי | search: first 226 tabs 301 done 609 hits 277
+r0 המפקיד | כל הספרייה | search: first 171 tabs 186 done 487 hits 256
+tab 1: הלכה, 330 hits
+r0 המפקיד | כל הספרייה | tab 1: first 205 tabs NaN done 212 hits 151
+r0 המפקיד | כל הספרייה | all 1: first 142 tabs NaN done 143 hits 256
+tab 2: מדרש, 194 hits
+r0 המפקיד | כל הספרייה | tab 2: first 11 tabs NaN done 13 hits 24
+r0 המפקיד | כל הספרייה | all 2: first 24 tabs NaN done 30 hits 256
+r0 המפקיד | כל הספרייה | catalog: first 173 tabs 174 done 476 hits 684
+r0 המפקיד | כל הספרייה | catalog tab: first 241 tabs NaN done 243 hits 307
+r0 המפקיד | בבא בתרא | search: first 69 tabs 70 done 73 hits 150
+r0 המפקיד | שלוש הבבות | search: first 72 tabs 75 done 387 hits 167
+r0 המפקיד | סדר נזיקין | search: first 115 tabs 115 done 119 hits 177
+r0 המפקיד | תלמוד | search: first 300 tabs 614 done 661 hits 286
+r0 המפקיד | תלמוד | catalog: first 376 tabs 379 done 680 hits 7898
+r0 המפקיד | תלמוד | catalog tab: first NaN tabs NaN done 284 hits 7898
+r0 המפקיד | הלכה | search: first 68 tabs 99 done 400 hits 288
+r0 המפקיד | הלכה | catalog: first 144 tabs 147 done 448 hits 6786
+r0 המפקיד | הלכה | catalog tab: first NaN tabs NaN done 141 hits 6786
+r0 המפקיד | אחרונים על הבבלי | search: first 51 tabs 66 done 370 hits 273
+r0 המפקיד | ראשונים ואחרונים על הבבלי | search: first 101 tabs 136 done 448 hits 277
+r0 ארבעה אבות נזיקין | כל הספרייה | search: first 233 tabs 233 done 535 hits 179
+tab 1: תלמוד, 68 hits
+r0 ארבעה אבות נזיקין | כל הספרייה | tab 1: first 24 tabs NaN done 24 hits 68
+r0 ארבעה אבות נזיקין | כל הספרייה | all 1: first 13 tabs NaN done 13 hits 179
+tab 2: הלכה, 67 hits
+r0 ארבעה אבות נזיקין | כל הספרייה | tab 2: first 640 tabs NaN done 640 hits 67
+r0 ארבעה אבות נזיקין | כל הספרייה | all 2: first 257 tabs NaN done 258 hits 179
+r0 ארבעה אבות נזיקין | כל הספרייה | catalog: first 366 tabs 366 done 370 hits 45
+r0 ארבעה אבות נזיקין | כל הספרייה | catalog tab: first 176 tabs NaN done 181 hits 15
+r0 ארבעה אבות נזיקין | בבא בתרא | search: first 58 tabs 58 done 59 hits 150
+r0 ארבעה אבות נזיקין | שלוש הבבות | search: first 406 tabs 406 done 410 hits 148
+r0 ארבעה אבות נזיקין | סדר נזיקין | search: first 145 tabs 145 done 155 hits 148
+r0 ארבעה אבות נזיקין | תלמוד | search: first 188 tabs 234 done 535 hits 254
+r0 ארבעה אבות נזיקין | תלמוד | catalog: first 443 tabs 444 done 445 hits 811
+r0 ארבעה אבות נזיקין | תלמוד | catalog tab: first NaN tabs NaN done 361 hits 811
+r0 ארבעה אבות נזיקין | הלכה | search: first 198 tabs 231 done 532 hits 292
+r0 ארבעה אבות נזיקין | הלכה | catalog: first 575 tabs 577 done 879 hits 751
+r0 ארבעה אבות נזיקין | הלכה | catalog tab: first NaN tabs NaN done 408 hits 751
+r0 ארבעה אבות נזיקין | אחרונים על הבבלי | search: first 260 tabs 261 done 567 hits 269
+r0 ארבעה אבות נזיקין | ראשונים ואחרונים על הבבלי | search: first 183 tabs 235 done 535 hits 265
+r0 תפילין | כל הספרייה | search: first 64 tabs 83 done 134 hits 262
+tab 1: מדרש, 371 hits
+r0 תפילין | כל הספרייה | tab 1: first 31 tabs NaN done 31 hits 75
+r0 תפילין | כל הספרייה | all 1: first 22 tabs NaN done 23 hits 262
+tab 2: תלמוד, 356 hits
+r0 תפילין | כל הספרייה | tab 2: first 269 tabs NaN done 269 hits 115
+r0 תפילין | כל הספרייה | all 2: first 16 tabs NaN done 17 hits 262
+r0 תפילין | כל הספרייה | catalog: first 104 tabs 104 done 106 hits 1070
+r0 תפילין | כל הספרייה | catalog tab: first 61 tabs NaN done 61 hits 370
+r0 תפילין | בבא בתרא | search: first 23 tabs 24 done 25 hits 150
+r0 תפילין | שלוש הבבות | search: first 38 tabs 40 done 343 hits 149
+r0 תפילין | סדר נזיקין | search: first 35 tabs 35 done 43 hits 155
+r0 תפילין | תלמוד | search: first 161 tabs 638 done 639 hits 295
+r0 תפילין | תלמוד | catalog: first 305 tabs 312 done 613 hits 14553
+r0 תפילין | תלמוד | catalog tab: first NaN tabs NaN done 161 hits 14553
+r0 תפילין | הלכה | search: first 65 tabs 97 done 340 hits 294
+r0 תפילין | הלכה | catalog: first 131 tabs 133 done 434 hits 11703
+r0 תפילין | הלכה | catalog tab: first NaN tabs NaN done 111 hits 11703
+r0 תפילין | אחרונים על הבבלי | search: first 56 tabs 69 done 332 hits 276
+r0 תפילין | ראשונים ואחרונים על הבבלי | search: first 61 tabs 86 done 129 hits 296
+r0 שכח ולא התפלל ערבית | כל הספרייה | search: first 103 tabs 103 done 410 hits 155
+tab 1: הלכה, 106 hits
+r0 שכח ולא התפלל ערבית | כל הספרייה | tab 1: first 21 tabs NaN done 23 hits 106
+r0 שכח ולא התפלל ערבית | כל הספרייה | all 1: first 19 tabs NaN done 20 hits 155
+tab 2: תלמוד, 43 hits
+r0 שכח ולא התפלל ערבית | כל הספרייה | tab 2: first 10 tabs NaN done 14 hits 43
+r0 שכח ולא התפלל ערבית | כל הספרייה | all 2: first 23 tabs NaN done 23 hits 155
+r0 שכח ולא התפלל ערבית | כל הספרייה | catalog: first 244 tabs 244 done 252 hits 21
+r0 שכח ולא התפלל ערבית | כל הספרייה | catalog tab: first 299 tabs NaN done 300 hits 16
+r0 שכח ולא התפלל ערבית | בבא בתרא | search: first 61 tabs 62 done 63 hits 150
+r0 שכח ולא התפלל ערבית | שלוש הבבות | search: first 118 tabs 118 done 119 hits 150
+r0 שכח ולא התפלל ערבית | סדר נזיקין | search: first 154 tabs 154 done 154 hits 150
+r0 שכח ולא התפלל ערבית | תלמוד | search: first 189 tabs 790 done 793 hits 261
+r0 שכח ולא התפלל ערבית | תלמוד | catalog: first 385 tabs 386 done 392 hits 260
+r0 שכח ולא התפלל ערבית | תלמוד | catalog tab: first NaN tabs NaN done 291 hits 260
+r0 שכח ולא התפלל ערבית | הלכה | search: first 123 tabs 152 done 455 hits 272
+r0 שכח ולא התפלל ערבית | הלכה | catalog: first 364 tabs 365 done 368 hits 372
+r0 שכח ולא התפלל ערבית | הלכה | catalog tab: first NaN tabs NaN done 402 hits 372
+r0 שכח ולא התפלל ערבית | אחרונים על הבבלי | search: first 189 tabs 190 done 197 hits 187
+r0 שכח ולא התפלל ערבית | ראשונים ואחרונים על הבבלי | search: first 153 tabs 201 done 340 hits 257
+r1 קל וחומר | כל הספרייה | search: first 96 tabs 157 done 470 hits 253
+tab 1: מדרש, 993 hits
+r1 קל וחומר | כל הספרייה | tab 1: first 14 tabs NaN done 14 hits 73
+r1 קל וחומר | כל הספרייה | all 1: first 11 tabs NaN done 11 hits 253
+tab 2: תלמוד, 587 hits
+r1 קל וחומר | כל הספרייה | tab 2: first 11 tabs NaN done 11 hits 178
+r1 קל וחומר | כל הספרייה | all 2: first 7 tabs NaN done 8 hits 253
+r1 קל וחומר | כל הספרייה | catalog: first 149 tabs 149 done 150 hits 1599
+r1 קל וחומר | כל הספרייה | catalog tab: first 117 tabs NaN done 117 hits 987
+r1 קל וחומר | בבא בתרא | search: first 37 tabs 37 done 45 hits 150
+r1 קל וחומר | שלוש הבבות | search: first 76 tabs 76 done 76 hits 162
+r1 קל וחומר | סדר נזיקין | search: first 96 tabs 96 done 99 hits 198
+r1 קל וחומר | תלמוד | search: first 273 tabs 963 done 963 hits 272
+r1 קל וחומר | תלמוד | catalog: first 455 tabs 458 done 758 hits 7962
+r1 קל וחומר | תלמוד | catalog tab: first NaN tabs NaN done 171 hits 7962
+r1 קל וחומר | הלכה | search: first 149 tabs 180 done 484 hits 297
+r1 קל וחומר | הלכה | catalog: first 296 tabs 296 done 597 hits 3333
+r1 קל וחומר | הלכה | catalog tab: first NaN tabs NaN done 326 hits 3333
+r1 קל וחומר | אחרונים על הבבלי | search: first 130 tabs 157 done 462 hits 286
+r1 קל וחומר | ראשונים ואחרונים על הבבלי | search: first 135 tabs 179 done 482 hits 277
+r1 המפקיד | כל הספרייה | search: first 54 tabs 71 done 378 hits 256
+tab 1: הלכה, 330 hits
+r1 המפקיד | כל הספרייה | tab 1: first 122 tabs NaN done 122 hits 151
+r1 המפקיד | כל הספרייה | all 1: first 8 tabs NaN done 10 hits 256
+tab 2: מדרש, 194 hits
+r1 המפקיד | כל הספרייה | tab 2: first 5 tabs NaN done 11 hits 24
+r1 המפקיד | כל הספרייה | all 2: first 17 tabs NaN done 17 hits 256
+r1 המפקיד | כל הספרייה | catalog: first 105 tabs 106 done 414 hits 684
+r1 המפקיד | כל הספרייה | catalog tab: first 80 tabs NaN done 80 hits 307
+r1 המפקיד | בבא בתרא | search: first 28 tabs 28 done 28 hits 150
+r1 המפקיד | שלוש הבבות | search: first 31 tabs 31 done 39 hits 167
+r1 המפקיד | סדר נזיקין | search: first 50 tabs 50 done 56 hits 177
+r1 המפקיד | תלמוד | search: first 261 tabs 1114 done 1119 hits 286
+r1 המפקיד | תלמוד | catalog: first 260 tabs 261 done 562 hits 7898
+r1 המפקיד | תלמוד | catalog tab: first NaN tabs NaN done 264 hits 7898
+r1 המפקיד | הלכה | search: first 57 tabs 73 done 374 hits 288
+r1 המפקיד | הלכה | catalog: first 144 tabs 146 done 447 hits 6786
+r1 המפקיד | הלכה | catalog tab: first NaN tabs NaN done 106 hits 6786
+r1 המפקיד | אחרונים על הבבלי | search: first 49 tabs 60 done 360 hits 273
+r1 המפקיד | ראשונים ואחרונים על הבבלי | search: first 117 tabs 143 done 444 hits 277
+r1 ארבעה אבות נזיקין | כל הספרייה | search: first 124 tabs 125 done 430 hits 179
+tab 1: תלמוד, 68 hits
+r1 ארבעה אבות נזיקין | כל הספרייה | tab 1: first 15 tabs NaN done 15 hits 68
+r1 ארבעה אבות נזיקין | כל הספרייה | all 1: first 12 tabs NaN done 16 hits 179
+tab 2: הלכה, 67 hits
+r1 ארבעה אבות נזיקין | כל הספרייה | tab 2: first 754 tabs NaN done 754 hits 67
+r1 ארבעה אבות נזיקין | כל הספרייה | all 2: first 13 tabs NaN done 16 hits 179
+r1 ארבעה אבות נזיקין | כל הספרייה | catalog: first 187 tabs 188 done 493 hits 45
+r1 ארבעה אבות נזיקין | כל הספרייה | catalog tab: first 84 tabs NaN done 85 hits 15
+r1 ארבעה אבות נזיקין | בבא בתרא | search: first 37 tabs 38 done 38 hits 150
+r1 ארבעה אבות נזיקין | שלוש הבבות | search: first 62 tabs 62 done 63 hits 148
+r1 ארבעה אבות נזיקין | סדר נזיקין | search: first 52 tabs 52 done 59 hits 148
+r1 ארבעה אבות נזיקין | תלמוד | search: first 205 tabs 250 done 554 hits 254
+r1 ארבעה אבות נזיקין | תלמוד | catalog: first 384 tabs 385 done 686 hits 811
+r1 ארבעה אבות נזיקין | תלמוד | catalog tab: first NaN tabs NaN done 366 hits 811
+r1 ארבעה אבות נזיקין | הלכה | search: first 206 tabs 232 done 533 hits 292
+r1 ארבעה אבות נזיקין | הלכה | catalog: first 363 tabs 364 done 368 hits 751
+r1 ארבעה אבות נזיקין | הלכה | catalog tab: first NaN tabs NaN done 595 hits 751
+r1 ארבעה אבות נזיקין | אחרונים על הבבלי | search: first 414 tabs 415 done 720 hits 269
+r1 ארבעה אבות נזיקין | ראשונים ואחרונים על הבבלי | search: first 183 tabs 239 done 539 hits 265
+r1 תפילין | כל הספרייה | search: first 84 tabs 97 done 403 hits 262
+tab 1: מדרש, 371 hits
+r1 תפילין | כל הספרייה | tab 1: first 847 tabs NaN done 847 hits 75
+r1 תפילין | כל הספרייה | all 1: first 21 tabs NaN done 21 hits 262
+tab 2: תלמוד, 356 hits
+r1 תפילין | כל הספרייה | tab 2: first 8 tabs NaN done 8 hits 115
+r1 תפילין | כל הספרייה | all 2: first 12 tabs NaN done 12 hits 262
+r1 תפילין | כל הספרייה | catalog: first 60 tabs 61 done 363 hits 1070
+r1 תפילין | כל הספרייה | catalog tab: first 58 tabs NaN done 60 hits 370
+r1 תפילין | בבא בתרא | search: first 25 tabs 25 done 26 hits 150
+r1 תפילין | שלוש הבבות | search: first 29 tabs 30 done 30 hits 149
+r1 תפילין | סדר נזיקין | search: first 35 tabs 35 done 35 hits 155
+r1 תפילין | תלמוד | search: first 166 tabs 739 done 739 hits 295
+r1 תפילין | תלמוד | catalog: first 327 tabs 345 done 645 hits 14553
+r1 תפילין | תלמוד | catalog tab: first NaN tabs NaN done 139 hits 14553
+r1 תפילין | הלכה | search: first 47 tabs 62 done 298 hits 294
+r1 תפילין | הלכה | catalog: first 124 tabs 125 done 426 hits 11703
+r1 תפילין | הלכה | catalog tab: first NaN tabs NaN done 118 hits 11703
+r1 תפילין | אחרונים על הבבלי | search: first 50 tabs 61 done 367 hits 276
+r1 תפילין | ראשונים ואחרונים על הבבלי | search: first 102 tabs 129 done 290 hits 296
+r1 שכח ולא התפלל ערבית | כל הספרייה | search: first 62 tabs 62 done 363 hits 155
+tab 1: הלכה, 106 hits
+r1 שכח ולא התפלל ערבית | כל הספרייה | tab 1: first 21 tabs NaN done 21 hits 106
+r1 שכח ולא התפלל ערבית | כל הספרייה | all 1: first 18 tabs NaN done 18 hits 155
+tab 2: תלמוד, 43 hits
+r1 שכח ולא התפלל ערבית | כל הספרייה | tab 2: first 14 tabs NaN done 16 hits 43
+r1 שכח ולא התפלל ערבית | כל הספרייה | all 2: first 28 tabs NaN done 29 hits 155
+r1 שכח ולא התפלל ערבית | כל הספרייה | catalog: first 232 tabs 232 done 233 hits 21
+r1 שכח ולא התפלל ערבית | כל הספרייה | catalog tab: first 205 tabs NaN done 205 hits 16
+r1 שכח ולא התפלל ערבית | בבא בתרא | search: first 51 tabs 51 done 52 hits 150
+r1 שכח ולא התפלל ערבית | שלוש הבבות | search: first 324 tabs 324 done 324 hits 150
+r1 שכח ולא התפלל ערבית | סדר נזיקין | search: first 297 tabs 297 done 297 hits 150
+r1 שכח ולא התפלל ערבית | תלמוד | search: first 193 tabs 333 done 546 hits 261
+r1 שכח ולא התפלל ערבית | תלמוד | catalog: first 328 tabs 330 done 331 hits 260
+r1 שכח ולא התפלל ערבית | תלמוד | catalog tab: first NaN tabs NaN done 340 hits 260
+r1 שכח ולא התפלל ערבית | הלכה | search: first 97 tabs 124 done 430 hits 272
+r1 שכח ולא התפלל ערבית | הלכה | catalog: first 272 tabs 272 done 275 hits 372
+r1 שכח ולא התפלל ערבית | הלכה | catalog tab: first NaN tabs NaN done 170 hits 372
+r1 שכח ולא התפלל ערבית | אחרונים על הבבלי | search: first 96 tabs 96 done 402 hits 187
+r1 שכח ולא התפלל ערבית | ראשונים ואחרונים על הבבלי | search: first 201 tabs 250 done 402 hits 257
+r2 קל וחומר | כל הספרייה | search: first 79 tabs 132 done 433 hits 253
+tab 1: מדרש, 993 hits
+r2 קל וחומר | כל הספרייה | tab 1: first 12 tabs NaN done 12 hits 73
+r2 קל וחומר | כל הספרייה | all 1: first 33 tabs NaN done 33 hits 253
+tab 2: תלמוד, 587 hits
+r2 קל וחומר | כל הספרייה | tab 2: first 73 tabs NaN done 74 hits 178
+r2 קל וחומר | כל הספרייה | all 2: first 9 tabs NaN done 9 hits 253
+r2 קל וחומר | כל הספרייה | catalog: first 91 tabs 92 done 393 hits 1599
+r2 קל וחומר | כל הספרייה | catalog tab: first 86 tabs NaN done 87 hits 987
+r2 קל וחומר | בבא בתרא | search: first 28 tabs 28 done 29 hits 150
+r2 קל וחומר | שלוש הבבות | search: first 33 tabs 34 done 334 hits 162
+r2 קל וחומר | סדר נזיקין | search: first 49 tabs 53 done 353 hits 198
+r2 קל וחומר | תלמוד | search: first 237 tabs 297 done 597 hits 272
+r2 קל וחומר | תלמוד | catalog: first 284 tabs 288 done 589 hits 7962
+r2 קל וחומר | תלמוד | catalog tab: first NaN tabs NaN done 164 hits 7962
+r2 קל וחומר | הלכה | search: first 139 tabs 157 done 460 hits 297
+r2 קל וחומר | הלכה | catalog: first 436 tabs 438 done 739 hits 3333
+r2 קל וחומר | הלכה | catalog tab: first NaN tabs NaN done 466 hits 3333
+r2 קל וחומר | אחרונים על הבבלי | search: first 144 tabs 167 done 468 hits 286
+r2 קל וחומר | ראשונים ואחרונים על הבבלי | search: first 179 tabs 225 done 533 hits 277
+r2 המפקיד | כל הספרייה | search: first 58 tabs 75 done 376 hits 256
+tab 1: הלכה, 330 hits
+r2 המפקיד | כל הספרייה | tab 1: first 15 tabs NaN done 16 hits 151
+r2 המפקיד | כל הספרייה | all 1: first 13 tabs NaN done 13 hits 256
+tab 2: מדרש, 194 hits
+r2 המפקיד | כל הספרייה | tab 2: first 9 tabs NaN done 12 hits 24
+r2 המפקיד | כל הספרייה | all 2: first 14 tabs NaN done 14 hits 256
+r2 המפקיד | כל הספרייה | catalog: first 93 tabs 93 done 394 hits 684
+r2 המפקיד | כל הספרייה | catalog tab: first 71 tabs NaN done 71 hits 307
+r2 המפקיד | בבא בתרא | search: first 24 tabs 25 done 26 hits 150
+r2 המפקיד | שלוש הבבות | search: first 45 tabs 45 done 51 hits 167
+r2 המפקיד | סדר נזיקין | search: first 39 tabs 40 done 47 hits 177
+r2 המפקיד | תלמוד | search: first 239 tabs 974 done 974 hits 286
+r2 המפקיד | תלמוד | catalog: first 254 tabs 257 done 558 hits 7898
+r2 המפקיד | תלמוד | catalog tab: first NaN tabs NaN done 253 hits 7898
+r2 המפקיד | הלכה | search: first 50 tabs 66 done 366 hits 288
+r2 המפקיד | הלכה | catalog: first 104 tabs 106 done 406 hits 6786
+r2 המפקיד | הלכה | catalog tab: first NaN tabs NaN done 109 hits 6786
+r2 המפקיד | אחרונים על הבבלי | search: first 58 tabs 71 done 372 hits 273
+r2 המפקיד | ראשונים ואחרונים על הבבלי | search: first 94 tabs 129 done 435 hits 277
+r2 ארבעה אבות נזיקין | כל הספרייה | search: first 137 tabs 137 done 442 hits 179
+tab 1: תלמוד, 68 hits
+r2 ארבעה אבות נזיקין | כל הספרייה | tab 1: first 8 tabs NaN done 8 hits 68
+r2 ארבעה אבות נזיקין | כל הספרייה | all 1: first 205 tabs NaN done 206 hits 179
+tab 2: הלכה, 67 hits
+r2 ארבעה אבות נזיקין | כל הספרייה | tab 2: first 353 tabs NaN done 353 hits 67
+r2 ארבעה אבות נזיקין | כל הספרייה | all 2: first 590 tabs NaN done 590 hits 179
+r2 ארבעה אבות נזיקין | כל הספרייה | catalog: first 207 tabs 207 done 208 hits 45
+r2 ארבעה אבות נזיקין | כל הספרייה | catalog tab: first 198 tabs NaN done 198 hits 15
+r2 ארבעה אבות נזיקין | בבא בתרא | search: first 72 tabs 72 done 73 hits 150
+r2 ארבעה אבות נזיקין | שלוש הבבות | search: first 337 tabs 337 done 342 hits 148
+r2 ארבעה אבות נזיקין | סדר נזיקין | search: first 64 tabs 64 done 64 hits 148
+r2 ארבעה אבות נזיקין | תלמוד | search: first 236 tabs 295 done 596 hits 254
+r2 ארבעה אבות נזיקין | תלמוד | catalog: first 357 tabs 357 done 358 hits 811
+r2 ארבעה אבות נזיקין | תלמוד | catalog tab: first NaN tabs NaN done 380 hits 811
+r2 ארבעה אבות נזיקין | הלכה | search: first 159 tabs 179 done 480 hits 292
+r2 ארבעה אבות נזיקין | הלכה | catalog: first 583 tabs 584 done 884 hits 751
+r2 ארבעה אבות נזיקין | הלכה | catalog tab: first NaN tabs NaN done 266 hits 751
+r2 ארבעה אבות נזיקין | אחרונים על הבבלי | search: first 231 tabs 232 done 239 hits 269
+r2 ארבעה אבות נזיקין | ראשונים ואחרונים על הבבלי | search: first 103 tabs 154 done 455 hits 265
+r2 תפילין | כל הספרייה | search: first 49 tabs 73 done 374 hits 262
+tab 1: מדרש, 371 hits
+r2 תפילין | כל הספרייה | tab 1: first 441 tabs NaN done 441 hits 75
+r2 תפילין | כל הספרייה | all 1: first 366 tabs NaN done 368 hits 262
+tab 2: תלמוד, 356 hits
+r2 תפילין | כל הספרייה | tab 2: first 688 tabs NaN done 689 hits 115
+r2 תפילין | כל הספרייה | all 2: first 10 tabs NaN done 11 hits 262
+r2 תפילין | כל הספרייה | catalog: first 75 tabs 75 done 76 hits 1070
+r2 תפילין | כל הספרייה | catalog tab: first 56 tabs NaN done 56 hits 370
+r2 תפילין | בבא בתרא | search: first 31 tabs 31 done 32 hits 150
+r2 תפילין | שלוש הבבות | search: first 19 tabs 20 done 324 hits 149
+r2 תפילין | סדר נזיקין | search: first 51 tabs 57 done 358 hits 155
+r2 תפילין | תלמוד | search: first 138 tabs 547 done 552 hits 295
+r2 תפילין | תלמוד | catalog: first 232 tabs 236 done 537 hits 14553
+r2 תפילין | תלמוד | catalog tab: first NaN tabs NaN done 137 hits 14553
+r2 תפילין | הלכה | search: first 48 tabs 71 done 372 hits 294
+r2 תפילין | הלכה | catalog: first 99 tabs 100 done 401 hits 11703
+r2 תפילין | הלכה | catalog tab: first NaN tabs NaN done 99 hits 11703
+r2 תפילין | אחרונים על הבבלי | search: first 43 tabs 54 done 293 hits 276
+r2 תפילין | ראשונים ואחרונים על הבבלי | search: first 50 tabs 65 done 108 hits 296
+r2 שכח ולא התפלל ערבית | כל הספרייה | search: first 55 tabs 55 done 356 hits 155
+tab 1: הלכה, 106 hits
+r2 שכח ולא התפלל ערבית | כל הספרייה | tab 1: first 17 tabs NaN done 17 hits 106
+r2 שכח ולא התפלל ערבית | כל הספרייה | all 1: first 17 tabs NaN done 20 hits 155
+tab 2: תלמוד, 43 hits
+r2 שכח ולא התפלל ערבית | כל הספרייה | tab 2: first 6 tabs NaN done 6 hits 43
+r2 שכח ולא התפלל ערבית | כל הספרייה | all 2: first 12 tabs NaN done 13 hits 155
+r2 שכח ולא התפלל ערבית | כל הספרייה | catalog: first 214 tabs 214 done 220 hits 21
+r2 שכח ולא התפלל ערבית | כל הספרייה | catalog tab: first 254 tabs NaN done 254 hits 16
+r2 שכח ולא התפלל ערבית | בבא בתרא | search: first 33 tabs 33 done 33 hits 150
+r2 שכח ולא התפלל ערבית | שלוש הבבות | search: first 52 tabs 52 done 53 hits 150
+r2 שכח ולא התפלל ערבית | סדר נזיקין | search: first 413 tabs 417 done 417 hits 150
+r2 שכח ולא התפלל ערבית | תלמוד | search: first 220 tabs 444 done 570 hits 261
+r2 שכח ולא התפלל ערבית | תלמוד | catalog: first 313 tabs 314 done 315 hits 260
+r2 שכח ולא התפלל ערבית | תלמוד | catalog tab: first NaN tabs NaN done 323 hits 260
+r2 שכח ולא התפלל ערבית | הלכה | search: first 127 tabs 151 done 452 hits 272
+r2 שכח ולא התפלל ערבית | הלכה | catalog: first 263 tabs 264 done 264 hits 372
+r2 שכח ולא התפלל ערבית | הלכה | catalog tab: first NaN tabs NaN done 229 hits 372
+r2 שכח ולא התפלל ערבית | אחרונים על הבבלי | search: first 104 tabs 104 done 405 hits 187
+r2 שכח ולא התפלל ערבית | ראשונים ואחרונים על הבבלי | search: first 159 tabs 204 done 315 hits 257
