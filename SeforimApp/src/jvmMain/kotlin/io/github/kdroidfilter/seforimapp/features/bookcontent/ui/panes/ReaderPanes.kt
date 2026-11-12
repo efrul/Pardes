@@ -267,6 +267,9 @@ val LineLayeredSides = setOf(DockSide.Left, DockSide.Right)
 /** The commentaries run under the text and the links, as the vertical split did. */
 val LineSideOrder = listOf(DockSide.Bottom, DockSide.Left, DockSide.Right, DockSide.Top)
 
+/** Pardes: the side panes run the whole height, the commentaries under the text alone (Settings › תצוגה). */
+val SidePanesFullHeightOrder = listOf(DockSide.Left, DockSide.Right, DockSide.Bottom, DockSide.Top)
+
 /**
  * The panes of one reader window, declared at application scope so they belong to the window, not
  * to a tab: a tab change creates or destroys no panel, it changes what the panels draw and which
@@ -902,16 +905,21 @@ fun PaneCard(
     Box(modifier) { content() }
 }
 
-/** A docked pane's frame by its side of the text: [bottomOpen] is whether a pane is docked under it. */
+/**
+ * A docked pane's frame by its side of the text: [bottomOpen] is whether a pane is docked under it; [sidesFullHeight],
+ * whether the side panes run past it to the window's edge (SidePanesFullHeightOrder).
+ */
 @Composable
 fun SatelliteScope.DockedPaneCard(
     bottomOpen: Boolean,
+    sidesFullHeight: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val side = (satellite.placement as? SatellitePlacement.Docked)?.side
     when {
         side == DockSide.Bottom -> PaneCard(top = 3.dp, content = content)
-        side == DockSide.Left || side == DockSide.Right -> PaneCard(bottom = if (bottomOpen) 3.dp else 6.dp, content = content)
+        side == DockSide.Left || side == DockSide.Right ->
+            PaneCard(bottom = if (bottomOpen && !sidesFullHeight) 3.dp else 6.dp, content = content)
         else -> PaneCard(content = content)
     }
 }
