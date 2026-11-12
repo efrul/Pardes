@@ -65,8 +65,10 @@ class SemanticPackViewModel(
             val progress: Float,
         ) : Work
 
-        /** Unpacked and checked, waiting for the next start. */
-        data object Ready : Work
+        /** Unpacked and checked, waiting for the next start; [pack] its number, when its manifest gave one. */
+        data class Ready(
+            val pack: Int? = null,
+        ) : Work
 
         data class Failed(
             val problem: Throwable,
@@ -100,8 +102,8 @@ class SemanticPackViewModel(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val ready = PendingSemanticPack.read() != null
-            _state.update { it.copy(startFailure = PendingSemanticPack.takeFailure(), work = if (ready) Work.Ready else it.work) }
+            val waiting = PendingSemanticPack.read()?.let { Work.Ready(SemanticPackInstaller.stagedInfo(it.libraryDir)?.pack) }
+            _state.update { it.copy(startFailure = PendingSemanticPack.takeFailure(), work = waiting ?: it.work) }
         }
         refresh()
         viewModelScope.launch(Dispatchers.IO) {
@@ -193,8 +195,8 @@ class SemanticPackViewModel(
         source: SemanticPackInstaller.Source,
     ) {
         _state.update { it.copy(work = Work.Unpacking(0f), startFailure = null) }
-        installer.stage(source) { progress -> _state.update { it.copy(work = Work.Unpacking(progress)) } }
+        val staged = installer.stage(source) { progress -> _state.update { it.copy(work = Work.Unpacking(progress)) } }
         installer.schedule()
-        _state.update { it.copy(work = Work.Ready) }
+        _state.update { it.copy(work = Work.Ready(staged.info?.pack)) }
     }
 }
