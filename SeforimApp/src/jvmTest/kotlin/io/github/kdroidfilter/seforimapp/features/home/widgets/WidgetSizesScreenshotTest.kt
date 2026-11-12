@@ -185,8 +185,9 @@ class WidgetSizesScreenshotTest {
         val FILAMENT_WIDGETS = setOf("earth", "sky", "solar_system")
 
         // The learning split reads its books' titles and places in the library too (LearningSplitCardUiTest draws it), and
-        // the study plans their books' tables of contents (StudyCardUiTest draws their card)
-        val LIBRARY_DB_WIDGETS = setOf("dictionary", "learning_split", "study_plans")
+        // the study plans their books' tables of contents (StudyCardUiTest draws their card); the PDF reader, an experiment
+        // behind a hidden switch, draws a file opened and is no card
+        val LIBRARY_DB_WIDGETS = setOf("dictionary", "learning_split", "study_plans", "pdf_reader")
 
         const val HOUR = 3_600_000L
 

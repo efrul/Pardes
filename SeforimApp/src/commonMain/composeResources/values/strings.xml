@@ -1161,5 +1161,13 @@
     <string name="siddur_yom_yerushalayim">יום ירושלים</string>
     <string name="settings_open_siddur">סידור חכם (ניסיוני)</string>
     <string name="settings_open_siddur_description">סידור שמציג את תפילות היום לפי הנוסח, הלוח והמקום, מתוך הסידורים שבספרייה. הוא נפתח מתפריט הכלים ומווידג׳ט הלוח. הסידור ניסיוני: הכיסוי שלו חלקי וייתכנו בו טעויות, ואין לסמוך עליו לבדו. הוא בנוי על המנוע הפתוח SeforimOpenSiddur של אריאל דניאלי, עם תיוגים מ־Amud וטבלת קריאות מ־Hebcal.</string>
+    <!-- Pardes: reading a PDF file, an experiment behind a hidden switch (PdfReaderTool) -->
+    <string name="pdf_experiment_title">קריאת PDF (ניסוי)</string>
+    <string name="pdf_experiment_open">פתיחת קובץ PDF…</string>
+    <string name="pdf_experiment_hint">פותחים כאן קובץ PDF כדי לבדוק את הקריאה בו: הגלילה, ההגדלה, הזיכרון וההעתקה של טקסט.</string>
+    <string name="pdf_experiment_status">%1$s · %2$d עמודים · %3$d מ״ב · נפתח ב־%4$d אלפיות שנייה · זיכרון Java %5$d מ״ב</string>
+    <string name="pdf_experiment_failed">הקובץ לא נפתח: %1$s</string>
+    <string name="pdf_experiment_zoom_in">הגדלה</string>
+    <string name="pdf_experiment_zoom_out">הקטנה</string>
 
 </resources>

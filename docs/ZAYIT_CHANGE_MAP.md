@@ -28,13 +28,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (233 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (235 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (773 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (774 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -268,14 +268,17 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/graalvm/reachability-metadata.json`
 
-- **Change:** modified, +33 −0 lines. Feature: Semantic search, the open smart siddur.
+- **Change:** modified, +39 −0 lines. Feature: Semantic search, the open smart siddur, PDF reading experiment.
 - **What:** eight resource globs for ONNX Runtime's native libraries on `win-x64`, `linux-aarch64`, `osx-aarch64` and
-  `osx-x64` (`onnxruntime` and `onnxruntime4j_jni`), beside the `linux-x64` ones Zayit already lists; and three for
+  `osx-x64` (`onnxruntime` and `onnxruntime4j_jni`), beside the `linux-x64` ones Zayit already lists, followed by two
+  for PDFium's on `win32-x86-64` (`pdfium.dll`, `pdfiumjni.dll`, from `dev.nucleusframework:pdfium-jvm`); and three for
   the open siddur's data in the `:siddur-open` jar (`open-siddur/amud-annotations.tsv`, `amud-inline.tsv`,
   `readings.tsv.gz`), before `org/sqlite/…`.
 - **Why:** the GraalVM native image carries only the resources this file names, so without them Pardes's semantic
   search had no ONNX Runtime on those platforms (`20e2fa81`, `0c107b56`), and the open siddur's engine would find
-  none of its tables, which it reads as resources (`AmudAnnotations`, `TorahReadings`).
+  none of its tables, which it reads as resources (`AmudAnnotations`, `TorahReadings`). PDFium's loader extracts its
+  libraries from the classpath when they are not beside the app: the Windows x64 ones only, the PDF experiment's
+  testers' builds being Windows ones (its JAR holds every platform's, some 48 MB).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** two blocks inserted inside a 2,900-line generated list; a conflict if Zayit regenerates the file.
 - **Smaller:** already minimal.
@@ -1620,7 +1623,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +310 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +318 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 291 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -1661,7 +1664,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     the engine's author's fork; `siddur_israeli_ordinary` ("כביום חול רגיל"), the custom Pardes adds, first among
     them; the three days of Iyar the engine names (`siddur_yom_hazikaron`, `…_haatzmaut`,
     `…_yerushalayim`); and the switch, `settings_open_siddur` ("סידור חכם (ניסיוני)") with its description, which
-    says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal.
+    says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal;
+  - the PDF reading experiment, under a comment after the open siddur's switch: `pdf_experiment_title` ("קריאת PDF
+    (ניסוי)"), `…_open`, `…_hint`, `…_status` (the file, its pages and size, the time it took and the Java memory),
+    `…_failed`, `…_zoom_in` and `…_zoom_out`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -2136,10 +2142,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetSizesScreenshotTest.kt`
 
-- **Change:** modified, +14 −2 lines. Feature: Learning split widget, Home widgets loading, Daily study plans.
+- **Change:** modified, +15 −2 lines. Feature: Learning split widget, Home widgets loading, Daily study plans, PDF reading experiment.
 - **What:** it waits until no card shows `WIDGET_LOADING_TAG` (`OFF_MAIN_TIMEOUT_MS`, 10 s) before measuring, and leaves
   out the learning split widget, which reads its books' titles in the library, and the study plans, whose parts come from
-  their books' tables of contents, as the dictionary is left out; the class KDoc and the list's comment say so.
+  their books' tables of contents, as the dictionary is left out, and the PDF reader, an experiment that draws a file
+  opened and is no card; the class KDoc and the list's comment say so.
 - **Why:** the cards read off the UI thread were measured while loading (`022af5bb`); the learning split widget has no
   library in the test (`0083381e`; `LearningSplitCardUiTest` draws it), nor do the study plans (`StudyCardUiTest` draws
   their card).
@@ -3010,6 +3017,44 @@ book and lines ("רשב״א על בבא בתרא ב."), not the title of the boo
   Gemara's lines to Zayit's; a commentary on the Talmud is cited by its daf.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### Reading PDF files: the experiment
+
+The first step of request 28 (`docs/DESKTOP_STAGE2_PLAN.md`), behind a hidden switch as the user decided on
+2026-11-12: a PDF file drawn by Nucleus's PDFium binding (`dev.nucleusframework:pdfium-jvm`, added by
+`branding/brand.gradle`) in a tool window of its own, which the Tools menu lists only while the switch is on, to
+answer whether it draws on Pardes's Tao window and in the native image, what a large scan costs in memory, and whether
+its text is copied. Hooks: `strings.xml`, `reachability-metadata.json`; the Tools menu finds the tool by itself
+(`availableTools`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfReaderTool.kt`
+
+- **Feature:** PDF reading experiment.
+- **Size:** 170 lines.
+- **What:**
+  - `PdfExperiment.enabled`: the hidden switch, on when the environment variable `PARDES_EXPERIMENTS` or the system
+    property `pardes.experiments` lists "pdf" (`listsPdf`); no setting shows it.
+  - `PdfReaderTool`, a `HomeWidget` with a tool window (820 by 900 dp) that is supported only while the switch is on,
+    so that the Tools menu and the widgets' gallery offer it then alone.
+  - Its view: a button that opens a file with FileKit's picker and reads it whole into `PdfReaderState.open`, a line
+    that says the file, its pages and size, the time it took and the Java memory, zoom buttons, and the pages one
+    under the other with `PdfPage(…, selectableText = true)` (the binding's `PdfReader` leaves the text unselectable),
+    as wide as the zoom asks and scrolled sideways; an error, a missing native library's too, is said in the window.
+- **Reached from:** the Tools menu (`ToolsMenuButton`, `AppNativeMenuBar`) through `availableTools`, the widgets'
+  registry generated by KSP.
+- **Follows:** Zayit's tool widgets, as the dictionary (`DictionaryWidget`): an `object` with `toolWindowSize` and
+  `toolSymbol`, and DafView's FileKit picker off the event loop.
+- **Tests:** `PdfExperimentTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfExperimentTest.kt`
+
+- **Feature:** PDF reading experiment.
+- **Size:** 22 lines.
+- **What:** the switch is on when the environment or the property lists "pdf", in any case and among others, and off
+  otherwise; the tool is offered exactly when the switch is on.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's unit tests (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is
@@ -5560,7 +5605,7 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (773 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (774 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -5642,7 +5687,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `branding/README.md` | English guide to the brand overlay: how brand.gradle and BrandResources make the build Pardes for desktop, the brand Kotlin objects, the open siddur's addon compiled for Pardes, the tables of every hook in Zayit's files (branding, library location, semantic search, fixes of Zayit's code), the licence-restricted files replaced in place, merging a Zayit release, and rules for ABOUT.md and CONDITIONS.md. *Note:* Says ForeignLibraries.kt is the only reader of BrandLibraries, but LibraryLocationViewModel.kt reads `OTHER_APP_NAME` too. Later features' hooks in Zayit files are not listed (e.g. `FeedbackSendCard()` in DataSettingsScreen.kt). | Pardes's own |
-| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, compiles Pardes's open smart siddur in the place of Zayit's (it leaves `addons/siddur/disabled` out of jvmMain with an exclude on its path, adds `addons/siddur/open/kotlin`, the `:siddur-open` module and the tests of `addons/siddur/open-test/kotlin`), and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). brandLicences also copies the two notices of the open siddur's data (`siddur-open/COPYING.AMUD` as GPL-3.0.txt, `COPYING.HEBCAL` as Hebcal-LICENSE.txt). With the zayit brand it only adds branding/zayit/kotlin. | Pardes's own |
+| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, compiles Pardes's open smart siddur in the place of Zayit's (it leaves `addons/siddur/disabled` out of jvmMain with an exclude on its path, adds `addons/siddur/open/kotlin`, the `:siddur-open` module and the tests of `addons/siddur/open-test/kotlin`), adds Nucleus's PDFium binding (`dev.nucleusframework:pdfium-jvm`) for the PDF reading experiment, and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). brandLicences also copies the two notices of the open siddur's data (`siddur-open/COPYING.AMUD` as GPL-3.0.txt, `COPYING.HEBCAL` as Hebcal-LICENSE.txt). With the zayit brand it only adds branding/zayit/kotlin. | Pardes's own |
 | `branding/pardes/assets/common/splash.png` | 800x533 splash picture laid over Zayit's package-time asset common/splash.png: Zayit's layout (a dark card with a gold border, the icon with a gold rim, the name under it) with the Pardes icon and the word פרדס in gold on dark olive. *Note:* Zayit's Rust installer wrapper (installer/), which also shows that splash, is not built for Pardes. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py (desktop mode); replaces Zayit's SeforimApp/src/jvmMain/assets/common/splash.png (the olive branch and זית on black) |
 | `branding/pardes/assetsExtra/common/licenses/ANGLE-LICENSE.txt` | BSD 3-Clause licence of ANGLE (libEGL and libGLESv2, also nucleus.angle-natives), which Nucleus's Tao window ships. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Zayit's packages carry no third-party licence texts; all of this folder is Pardes's. | copied from ANGLE (BSD-3-Clause); identical to META-INF/licenses/LICENSE-BSD-3-Clause-angle.txt in the Nucleus tao jar |
 | `branding/pardes/assetsExtra/common/licenses/AccessKit-LICENSE-MIT.txt` | MIT licence of AccessKit, the accessibility library compiled into Nucleus's Tao window binary (MIT or Apache-2.0). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from AccessKit (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-accesskit.txt |
@@ -5674,6 +5719,7 @@ the description where something needs saying.
 | `branding/pardes/assetsExtra/common/licenses/OFL-Open-Sans.txt` | SIL Open Font License 1.1 of Open Sans. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Open Sans (OFL-1.1) |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-LICENSE.txt` | MIT licence of ONNX Runtime, which runs the semantic search's model (1.17.1 on desktop). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from ONNX Runtime (MIT); same text as androidApp/app/src/androidMain/assets/licenses/ONNX-Runtime-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-ThirdPartyNotices.txt` | ONNX Runtime's third-party notices (6,508 lines). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Differs from androidApp's copy, which is ONNX Runtime 1.22.0's (a665f012). | copied from ONNX Runtime (MIT) |
+| `branding/pardes/assetsExtra/common/licenses/PDFium-LICENSES.txt` | PDFium's licence (BSD 3-Clause) and those of the components of others it is built with (Abseil, AGG 2.3, Brotli, Dragonbox, fast_float, FreeType, HarfBuzz, Highway, ICU, Little CMS, libjpeg-turbo, libyuv, LLVM libc, OpenJPEG, libpng, LibTIFF, simdutf, zlib) and of pdfium-binaries, word for word under a header each (1,739 lines), for the PDF reading experiment, whose Windows builds carry PDFium. Shipped as a plain file in the install folder's licenses/ and listed in its README.md. | the texts the PDFium binaries' build ships, as pypdfium2 5.15.2's wheel carries them (its dist-info licenses/BUILD_LICENSES; FreeType's converted from Latin-1) |
 | `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
 | `branding/pardes/assetsExtra/common/licenses/Radix-Icons-LICENSE.txt` | MIT licence of Radix Icons, drawn in the app's icons module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Radix Icons (MIT); same text as androidApp/app/src/androidMain/assets/licenses/Radix-Icons-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/Robius-LICENSE-MIT.txt` | MIT licence of Project Robius's robius-share, derived source in Nucleus's share module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Project Robius (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-robius.txt |
