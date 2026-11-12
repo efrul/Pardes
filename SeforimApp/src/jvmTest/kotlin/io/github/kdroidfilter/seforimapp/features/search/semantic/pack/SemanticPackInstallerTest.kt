@@ -11,6 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SemanticPackInstallerTest {
@@ -115,6 +116,7 @@ class SemanticPackInstallerTest {
         PackFixtures.zip(withInfo, SemanticPack.INDEX_DIR, downloads, SemanticPack.INDEX_ZIP)
 
         assertEquals(info, runBlocking { installer.stage(installer.resolve(model)) }.info)
+        assertEquals(info, SemanticPackInstaller.stagedInfo(library), "kept with the staged pack, for the card to name it")
     }
 
     @Test
@@ -133,6 +135,7 @@ class SemanticPackInstallerTest {
 
         assertTrue(File(source, "pardes-model/model.int8.onnx").isFile)
         assertEquals(PackFixtures.contents(source).keys, PackFixtures.contents(installer.stagingDir).keys - marks())
+        assertNull(SemanticPackInstaller.stagedInfo(library), "folders that carry no manifest name no pack")
     }
 
     @Test

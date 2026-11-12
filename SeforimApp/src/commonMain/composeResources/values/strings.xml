@@ -223,6 +223,8 @@
     <string name="semantic_pack_description">מוצא גם שורות שאומרות את מה שחיפשתם במילים אחרות. בשבילו מורידים פעם אחת שני קבצים: מודל ואינדקס של הספרייה.</string>
     <string name="semantic_pack_installed">מותקן: גרסה %1$s של הקבצים, עם %2$s שורות.</string>
     <string name="semantic_pack_installed_unnumbered">מותקן, עם %1$s שורות.</string>
+    <string name="semantic_pack_in_use">בשימוש עד ההפעלה הבאה: גרסה %1$s של הקבצים, עם %2$s שורות.</string>
+    <string name="semantic_pack_in_use_unnumbered">בשימוש עד ההפעלה הבאה: הקבצים הקודמים, עם %1$s שורות.</string>
     <string name="semantic_pack_not_installed">לא מותקן: החיפוש מוצא רק את המילים שחיפשתם.</string>
     <string name="semantic_pack_no_model">חסר המודל, ולכן החיפוש לפי משמעות כבוי.</string>
     <string name="semantic_pack_no_index">חסר האינדקס, למשל אחרי עדכון מלא של הספרייה, ולכן החיפוש לפי משמעות כבוי.</string>
@@ -315,6 +317,8 @@
     <string name="semantic_pack_downloading">מוריד: %1$s מתוך %2$s</string>
     <string name="semantic_pack_unpacking">פורס ובודק את הקבצים…</string>
     <string name="semantic_pack_ready">הקבצים מוכנים, והחיפוש לפי משמעות יפעל מההפעלה הבאה של פרדס.</string>
+    <string name="semantic_pack_ready_version">גרסה %1$s של הקבצים מוכנה, ותיכנס לשימוש בהפעלה הבאה של פרדס.</string>
+    <string name="semantic_pack_ready_new">הקבצים החדשים מוכנים, וייכנסו לשימוש בהפעלה הבאה של פרדס.</string>
     <string name="semantic_pack_restart">הפעלה מחדש עכשיו</string>
     <string name="semantic_pack_start_failed">בהפעלה הקודמת הקבצים לא הותקנו, ומה שהיה מותקן נשאר. אפשר לנסות שוב.</string>
     <string name="semantic_problem_not_a_pack">הקובץ %1$s אינו מקובצי החיפוש לפי משמעות. בוחרים את %2$s שהורד מדף ההורדות.</string>

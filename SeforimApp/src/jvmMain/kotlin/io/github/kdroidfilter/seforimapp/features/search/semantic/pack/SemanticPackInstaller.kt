@@ -412,10 +412,7 @@ class SemanticPackInstaller(
             throw damaged().apply { initCause(e) }
         }
 
-    private fun stagedInfo(): PackInfo? {
-        val file = File(stagingDir, "${SemanticPack.MODEL_DIR}/${SemanticPack.INFO_NAME}")
-        return if (file.isFile) PackInfo.parseOrNull(file.readText()) else null
-    }
+    private fun stagedInfo(): PackInfo? = stagedInfo(libraryDir)
 
     /** The staged folders checked as IndependentSemanticSearch opens them. */
     private fun verify(
@@ -478,6 +475,12 @@ class SemanticPackInstaller(
         private const val LUCENE_LOCK = "write.lock"
 
         fun stagingDirOf(libraryDir: File) = File(libraryDir, STAGING_DIR_NAME)
+
+        /** What the pack staged beside [libraryDir] holds, as its manifest said, or null when it carries none. */
+        fun stagedInfo(libraryDir: File): PackInfo? {
+            val file = File(stagingDirOf(libraryDir), "${SemanticPack.MODEL_DIR}/${SemanticPack.INFO_NAME}")
+            return if (file.isFile) PackInfo.parseOrNull(file.readText()) else null
+        }
 
         fun unpackedEstimate(bundleBytes: Long): Long = (bundleBytes * UNPACK_RATIO).toLong()
 

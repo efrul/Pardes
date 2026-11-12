@@ -1439,12 +1439,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +289 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 271 Hebrew strings added in eighteen blocks,
+- **Change:** modified, +293 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 275 Hebrew strings added in eighteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
-  - semantic packs: `semantic_pack_*` (31), `semantic_problem_*` (6);
+  - semantic packs: `semantic_pack_*` (35), `semantic_problem_*` (6);
   - feedback: `feedback_send_*` (37), `feedback_consent_*` (20), `search_feedback_*` (6): among them the other apps'
     rows and the publication's, with what each means; and under a comment, after `onboarding_library_folder_*`, the
     onboarding's step: `onboarding_feedback_*` (7);
@@ -3533,14 +3533,14 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackInstaller.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 513 lines.
+- **Size:** 516 lines.
 - **What:** `SemanticPackInstaller`: a pack downloaded (`download`) or found among files the user downloaded (`resolve`:
   a bundle in parts with its manifest, zips a browser renamed, unzipped folders), unpacked into a staging folder,
-  checked part by part and against the library and the model, then scheduled for the next start; `PackProblem`, why not.
+  checked part by part and against the library and the model, then scheduled for the next start; `stagedInfo`, what the staged pack's manifest said of it; `PackProblem`, why not.
 - **Reached from:** `SemanticPackViewModel.kt`, `PendingSemanticPack.kt`, `LibraryLocation.kt` (its leftovers).
 - **Follows:** Zayit's library install (`BundleManifest`, the parts and their checks) in spirit.
 - **Tests:** `SemanticPackInstallerTest`.
-- **Notes:** with some 21 functions it passes `detekt.yml`'s 15.
+- **Notes:** with some 22 functions it passes `detekt.yml`'s 15.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPack.kt`
 
@@ -3567,9 +3567,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCard.kt`
 
 - **Feature:** Semantic search packs, Feedback mode.
-- **Size:** 423 lines.
+- **Size:** 446 lines.
 - **What:** Settings › ניהול נתונים's card for the semantic search: the pack in use or offered, its download or import,
-  the work's progress and problems, how to install one with or without internet, and feedback mode's switch with the
+  the work's progress and problems, a pack that waits for the restart named by its version while the one above it is
+  said to be in use until then (the user took the old pack's line for the import's result, 2026-11-11), how to install one with or without internet, and feedback mode's switch with the
   number of results graded; the card comes into view when the settings were opened for it.
 - **Reached from:** `DataSettingsScreen.kt` (`SemanticPackCard()`).
 - **Follows:** Zayit's data settings cards.
@@ -3578,9 +3579,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackViewModel.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 200 lines.
+- **Size:** 202 lines.
 - **What:** `SemanticPackViewModel`: the pack beside the library, the newest release for it, and installing one,
-  downloaded or imported, with its progress.
+  downloaded or imported, with its progress; a pack that waits for the next start is known by its number (`Work.Ready`,
+  from what was staged, also when the settings are opened again before the restart).
 - **Reached from:** `SemanticPackCard.kt`.
 - **Follows:** Zayit's settings ViewModels.
 - **Tests:** `SemanticPackCardUiTest`.
@@ -3749,9 +3751,9 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackInstallerTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 222 lines.
+- **Size:** 225 lines.
 - **What:** fourteen tests: a bundle in parts unpacked and checked, any part finding the rest, damaged or missing parts,
-  renamed zips found by what they hold, unzipped folders copied, a pack of another library release staged, an index of
+  renamed zips found by what they hold, unzipped folders copied (naming no pack, as the zips' copy of the manifest does), a pack of another library release staged, an index of
   another model or a stray file refused, staging scheduled, the installed pack read as the search opens it.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
@@ -3780,9 +3782,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCardUiTest.kt`
 
 - **Feature:** Semantic search packs, Feedback mode.
-- **Size:** 138 lines.
+- **Size:** 155 lines.
 - **What:** the card says how to install a pack while none is in use (only the zips without a connection), offers nothing
-  once one is ready or in use, turns feedback mode on and counts the graded results, and comes into view when opened for.
+  once one is ready or in use, names the version that waits for the restart and says the one in use is in use until
+  then (with a number or without), turns feedback mode on and counts the graded results, and comes into view when opened for.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).

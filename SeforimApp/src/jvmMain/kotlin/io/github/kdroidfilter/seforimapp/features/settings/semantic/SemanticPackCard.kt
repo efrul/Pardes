@@ -64,6 +64,8 @@ import seforimapp.seforimapp.generated.resources.semantic_pack_dismiss
 import seforimapp.seforimapp.generated.resources.semantic_pack_download
 import seforimapp.seforimapp.generated.resources.semantic_pack_downloading
 import seforimapp.seforimapp.generated.resources.semantic_pack_import
+import seforimapp.seforimapp.generated.resources.semantic_pack_in_use
+import seforimapp.seforimapp.generated.resources.semantic_pack_in_use_unnumbered
 import seforimapp.seforimapp.generated.resources.semantic_pack_installed
 import seforimapp.seforimapp.generated.resources.semantic_pack_installed_unnumbered
 import seforimapp.seforimapp.generated.resources.semantic_pack_no_index
@@ -78,6 +80,8 @@ import seforimapp.seforimapp.generated.resources.semantic_pack_online_label
 import seforimapp.seforimapp.generated.resources.semantic_pack_other_model
 import seforimapp.seforimapp.generated.resources.semantic_pack_prompt
 import seforimapp.seforimapp.generated.resources.semantic_pack_ready
+import seforimapp.seforimapp.generated.resources.semantic_pack_ready_new
+import seforimapp.seforimapp.generated.resources.semantic_pack_ready_version
 import seforimapp.seforimapp.generated.resources.semantic_pack_releases_page
 import seforimapp.seforimapp.generated.resources.semantic_pack_restart
 import seforimapp.seforimapp.generated.resources.semantic_pack_start_failed
@@ -220,9 +224,10 @@ private fun PackSection(
     // No pack in use: the card says how to install one, and opens at every start until one is (SemanticPackPrompt)
     val missing = state.installed !is InstalledPack.InUse
     // While a pack is downloaded, unpacked or waits for the restart, the releases and how to install say nothing more
-    val settled = !state.busy && work != SemanticPackViewModel.Work.Ready
+    val waiting = work is SemanticPackViewModel.Work.Ready
+    val settled = !state.busy && !waiting
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = installedText(state.installed), fontSize = 13.sp)
+        Text(text = installedText(state.installed, waiting), fontSize = 13.sp)
         if (settled) {
             Text(text = availableText(state.available, state.installed), fontSize = 12.sp, color = JewelTheme.globalColors.text.info)
             // With internet while the button is or will be there; from the zips whenever a pack is out
@@ -231,7 +236,7 @@ private fun PackSection(
             }
         }
 
-        WorkStatus(work)
+        WorkStatus(work, replacing = state.installed is InstalledPack.InUse)
         // Why, in the log (PendingSemanticPack.runOnce)
         if (state.startFailure != null) {
             InlineInformationBanner(text = stringResource(Res.string.semantic_pack_start_failed), modifier = Modifier.fillMaxWidth())
@@ -247,9 +252,15 @@ private fun PackSection(
     }
 }
 
-/** The download's or the unpacking's progress, a pack ready for the restart, or why it was not installed. */
+/**
+ * The download's or the unpacking's progress, a pack ready for the restart (named by its number when it takes the
+ * place of one in use, [replacing]), or why it was not installed.
+ */
 @Composable
-private fun WorkStatus(work: SemanticPackViewModel.Work) {
+private fun WorkStatus(
+    work: SemanticPackViewModel.Work,
+    replacing: Boolean,
+) {
     // Nothing at all while idle, not even the card's spacing
     if (work == SemanticPackViewModel.Work.Idle) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -269,8 +280,15 @@ private fun WorkStatus(work: SemanticPackViewModel.Work) {
                 AnimatedHorizontalProgressBar(value = work.progress, modifier = Modifier.fillMaxWidth())
                 Text(text = stringResource(Res.string.semantic_pack_unpacking), fontSize = 12.sp, color = JewelTheme.globalColors.text.info)
             }
-            SemanticPackViewModel.Work.Ready ->
-                InlineSuccessBanner(text = stringResource(Res.string.semantic_pack_ready), modifier = Modifier.fillMaxWidth())
+            is SemanticPackViewModel.Work.Ready -> {
+                val text =
+                    when {
+                        !replacing -> stringResource(Res.string.semantic_pack_ready)
+                        work.pack != null -> stringResource(Res.string.semantic_pack_ready_version, work.pack)
+                        else -> stringResource(Res.string.semantic_pack_ready_new)
+                    }
+                InlineSuccessBanner(text = text, modifier = Modifier.fillMaxWidth())
+            }
             is SemanticPackViewModel.Work.Failed ->
                 InlineErrorBanner(text = problemText(work.problem), modifier = Modifier.fillMaxWidth())
             SemanticPackViewModel.Work.Idle -> Unit
@@ -290,7 +308,7 @@ private fun PackButtons(
         when {
             state.busy ->
                 OutlinedButton(onClick = actions.cancel) { Text(stringResource(Res.string.semantic_pack_cancel)) }
-            work == SemanticPackViewModel.Work.Ready ->
+            work is SemanticPackViewModel.Work.Ready ->
                 DefaultButton(onClick = actions.restart) { Text(stringResource(Res.string.semantic_pack_restart)) }
             else -> {
                 offered(state.available, state.installed)?.let { pack ->
@@ -370,14 +388,19 @@ private fun offered(
     return pack.takeUnless { installed is InstalledPack.InUse && installed.pack != null && installed.pack >= it.pack }
 }
 
+/** The pack beside the library; one in use while another waits for the restart ([waiting]) is said to be in use until then. */
 @Composable
-private fun installedText(installed: InstalledPack): String =
+private fun installedText(
+    installed: InstalledPack,
+    waiting: Boolean,
+): String =
     when (installed) {
         InstalledPack.None -> stringResource(Res.string.semantic_pack_not_installed)
         is InstalledPack.InUse -> {
             val lines = installed.lines?.let { "%,d".format(it) } ?: "?"
-            installed.pack?.let { stringResource(Res.string.semantic_pack_installed, it, lines) }
-                ?: stringResource(Res.string.semantic_pack_installed_unnumbered, lines)
+            val numbered = if (waiting) Res.string.semantic_pack_in_use else Res.string.semantic_pack_installed
+            val unnumbered = if (waiting) Res.string.semantic_pack_in_use_unnumbered else Res.string.semantic_pack_installed_unnumbered
+            installed.pack?.let { stringResource(numbered, it, lines) } ?: stringResource(unnumbered, lines)
         }
         InstalledPack.NoModel -> stringResource(Res.string.semantic_pack_no_model)
         InstalledPack.NoIndex -> stringResource(Res.string.semantic_pack_no_index)
