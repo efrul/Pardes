@@ -10,8 +10,6 @@ data class FontsSettingsState(
     val sourceFontCode: String = "frankruhllibre",
     val dafGemaraFontCode: String = "frankruehlclm",
     val dafCommentaryFontCode: String = "notorashihebrew",
-    val dafMarkUnsure: Boolean = false,
-    val dafReview: Boolean = false,
 ) {
     companion object {
         val preview =

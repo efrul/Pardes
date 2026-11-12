@@ -408,11 +408,11 @@ private fun DafPages(
     var selection by remember(file) { mutableStateOf<Pair<String, DafRange>?>(null) }
     val copyToClipboard = rememberCopyToClipboard()
     val keys = remember { FocusRequester() }
-    // The reader's review of the tractate (DafReview.kt), while the settings' review is on: its moves made on the
-    // pages, its marks and actions in the menu
-    val reviewOn by graph.appSettings.dafReviewFlow.collectAsState()
+    // The reader's review of the tractate (DafReview.kt): its actions in the menu always, its marks on the lines and
+    // its moves on the pages while the daf's marks are shown (the end bar's button)
+    val marksShown by graph.appSettings.dafMarksFlow.collectAsState()
     var review by remember(file) { mutableStateOf<DafReviewFile?>(null) }
-    LaunchedEffect(file, reviewOn) { review = if (reviewOn) withContext(Dispatchers.IO) { reviews.of(file) } else null }
+    LaunchedEffect(file) { review = withContext(Dispatchers.IO) { reviews.of(file) } }
     val scope = rememberCoroutineScope()
     // One write of the review at a time, each from what the one before it left
     val reviewing = remember { Mutex() }
@@ -446,7 +446,7 @@ private fun DafPages(
                 when {
                     (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C -> {
                         // The amud as it is shown: the range is the shown amud's, with the review's moves made
-                        byName[name]?.let { a -> copyToClipboard((review?.let { a.withMarks(it.marks) } ?: a).textOf(range)) }
+                        byName[name]?.let { a -> copyToClipboard(a.asShown(review, marksShown).textOf(range)) }
                         true
                     }
                     event.key == Key.Escape -> {
@@ -671,7 +671,11 @@ private fun DafPages(
                                 onFocusComment = { focused = it },
                                 onContextLine = onContextLine,
                                 review = review,
-                                onSay = { lines, reason, said -> onReview { it.say(file, amud, lines, reason, said) } },
+                                onSay = { lines, reason, said ->
+                                    onReview { it.say(file, amud, lines, reason, said) }
+                                    // What the reader has just said is seen on the page
+                                    if (said) graph.appSettings.setDafMarksShown(true)
+                                },
                                 onMark = { mark -> onReview { it.mark(file, mark) } },
                                 onWordInText = onWordInText,
                                 find = find,
@@ -749,9 +753,10 @@ private fun AmudItem(
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
-    val markUnsure by graph.appSettings.dafMarkUnsureFlow.collectAsState()
-    // The amud as the review has it: its moves made (as printed), the lines it marked tinted
-    val shown = remember(amud, review) { review?.let { amud.withMarks(it.marks) } ?: amud }
+    val marksShown by graph.appSettings.dafMarksFlow.collectAsState()
+    // The amud as the review has it, while the daf's marks are shown: its moves made (as printed), the lines it marked
+    // tinted
+    val shown = remember(amud, review, marksShown) { amud.asShown(review, marksShown) }
     // Laid out once, off the UI thread (some 160 lines measured), and kept while scrolled away
     val layout by produceState(layouts[shown], shown, layouts) {
         value = layouts[shown]
@@ -764,7 +769,7 @@ private fun AmudItem(
     }
     // The page's comments and the Gemara lines they are on, read once for the page
     val links by produceState<DafAmudLinks?>(null, book.id, shown) { value = loadLinks(graph.repository, book.id, shown) }
-    val reviewed = remember(amud, review) { review?.let { reviewColors(amud, it) }.orEmpty() }
+    val reviewed = remember(amud, review, marksShown) { review?.takeIf { marksShown }?.let { reviewColors(amud, it) }.orEmpty() }
     // The user's highlights and notes, kept in the library's text, on the words they are on (DafAnchors.kt): the
     // highlights of the page's books, the notes of the main book (the text's notes are its own)
     val highlightStore = graph.highlightStore
@@ -836,7 +841,7 @@ private fun AmudItem(
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else {
                 // The text's own menu (copy, copy with source, search, find in page…), on the amud's selection, and
-                // the review's actions on the line right-clicked, while the review is on
+                // the review's actions on the line right-clicked
                 val text = remember(shown, range) { range?.let { shown.textOf(it) }.orEmpty() }
                 val manager = remember(text, copyToClipboard) { dafTextManager(text, copyToClipboard) }
                 ContextMenuDataProvider(
@@ -879,7 +884,7 @@ private fun AmudItem(
                                     contextWord = null
                                     onPress()
                                 },
-                                markUnsure = markUnsure,
+                                markUnsure = marksShown,
                                 underlined = noted,
                                 underlineColor = JewelTheme.globalColors.text.info,
                             )
@@ -890,6 +895,15 @@ private fun AmudItem(
         }
     }
 }
+
+/**
+ * The amud as the daf shows it: with the [review]'s moves made while its marks are shown ([marksShown]), else as its
+ * layout has it.
+ */
+internal fun DafAmud.asShown(
+    review: DafReviewFile?,
+    marksShown: Boolean,
+): DafAmud = review?.takeIf { marksShown }?.let { withMarks(it.marks) } ?: this
 
 /** The review's actions, in the menu's language. */
 private class ReviewLabels(
