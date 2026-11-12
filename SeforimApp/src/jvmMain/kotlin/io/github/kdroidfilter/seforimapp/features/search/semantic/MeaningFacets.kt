@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
+import io.github.kdroidfilter.seforimlibrary.search.LineHit
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import io.github.kdroidfilter.seforimlibrary.search.SearchFacets
 
@@ -21,15 +22,23 @@ interface MeaningFacets {
      * another order (CatalogOrderSession) keeps those that stand out alone. Empty where [meaningBookCounts] is.
      */
     suspend fun meaningLines(): List<MeaningLine>
+
+    /**
+     * Those of [meaningLines] whose ids are [lineIds], read as the list shows them, in its order: a list that keeps some
+     * of them reads those alone (CatalogOrderSession). Empty without a meaning search.
+     */
+    suspend fun meaningHits(lineIds: Collection<Long>): List<LineHit> = emptyList()
 }
 
 /**
- * A line the meaning search alone found ([MeaningFacets.meaningLines]), and how far its closeness to the query stands
- * above that of the search's other candidates, in standard deviations of theirs ([standing]; 0 when they are all alike).
+ * A line the meaning search alone found ([MeaningFacets.meaningLines]), its book, and how far its closeness to the query
+ * stands above that of the search's other candidates, in standard deviations of theirs ([standing]; 0 when they are all
+ * alike).
  */
 data class MeaningLine(
     val lineId: Long,
     val standing: Double,
+    val bookId: Long,
 )
 
 /**

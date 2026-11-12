@@ -100,7 +100,9 @@ class MeaningFacetsTest {
                 session.nextPage(25, snippets = false)
                 // All alike in meaning here: none stands out of the others
                 val listed = (session as MeaningFacets).meaningLines().sortedBy { it.lineId }
-                assertEquals(listOf(MeaningLine(2L, 0.0), MeaningLine(3L, 0.0)), listed)
+                assertEquals(listOf(MeaningLine(2L, 0.0, 10L), MeaningLine(3L, 0.0, 20L)), listed)
+                // Those asked for read as the list shows them, the others not
+                assertEquals(listOf(3L), (session as MeaningFacets).meaningHits(listOf(3L, 1L)).map { it.lineId })
                 session.close()
             }
         }
