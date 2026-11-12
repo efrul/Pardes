@@ -436,15 +436,13 @@ fun main(args: Array<String>) {
 
                         // App-level dialogs: single instance shared by all windows. They inherit the
                         // Rtl layout direction and theme from the providers above.
-                        // The settings dialog is normally composed inside its owner window
-                        // (see MainAppWindow) so it is modal to that window only; this
-                        // app-scope fallback only covers an owner window that disappeared,
-                        // making the dialog app-modal instead of silently dropping it.
+                        // Pardes: the settings are a window of their own, composed once here, which blocks no window
                         val settingsWindowState by settingsWindowViewModel.state.collectAsState()
-                        if (settingsWindowState.isVisible && windows.none { it.id == settingsWindowState.ownerWindowId }) {
+                        if (settingsWindowState.isVisible) {
                             SettingsWindow(
                                 onClose = { settingsWindowViewModel.onEvent(SettingsWindowEvents.OnClose) },
                                 initialDestination = settingsWindowState.initialDestination,
+                                reopened = settingsWindowState.reopened,
                             )
                         }
                         val updateDialogVisible by appGraph.appUpdateService.dialogVisible.collectAsState()
