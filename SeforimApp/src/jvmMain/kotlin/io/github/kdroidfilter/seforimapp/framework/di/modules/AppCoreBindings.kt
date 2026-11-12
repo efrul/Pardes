@@ -30,6 +30,7 @@ import io.github.kdroidfilter.seforimapp.core.selection.SelectionContext
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.core.settings.CategoryDisplaySettingsStore
 import io.github.kdroidfilter.seforimapp.core.shnayimmikra.ShnayimMikraStore
+import io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeViewModel
 import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
@@ -172,6 +173,11 @@ object AppCoreBindings {
     @Provides
     @SingleIn(AppScope::class)
     fun provideReadingTimeStore(database: UserSettingsDb): ReadingTimeStore = ReadingTimeStore(database)
+
+    /** Pardes: the user's daily study plans, the Home's "הלימוד שלי" (StudyWidget). */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideStudyPlanStore(database: UserSettingsDb): StudyPlanStore = StudyPlanStore(database)
 
     /** Pardes's feedback service, at the build's FEEDBACK_URL (none without it: feedback is then only saved to files). */
     @Provides

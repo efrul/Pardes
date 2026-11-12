@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (223 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (231 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -370,9 +370,10 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +13 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators.
+- **Change:** modified, +14 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans.
 - **What:**
-  - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`.
+  - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
+    `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
   - `abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender`,
     with a KDoc line.
   - `abstract val dictionaryLookup: DictionaryLookup`, after Zayit's `toolWindows`, with its import.
@@ -380,24 +381,26 @@ The entries of this section by kind:
     KDoc line.
   - `abstract val libraryCategories: LibraryCategories`, after Zayit's `searchEngine`, with its import, and
     `abstract val commentatorDefaults: CommentatorDefaults` after it, with its import.
-- **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`) and the
+- **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
+  study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
   lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
   starts, and the commentators list reads the reader's default.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** six lines among Zayit's declarations, and three imports.
+- **Merge risk:** seven lines among Zayit's declarations, and three imports.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
+- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
 - **Notes:** the first two types and the last are written fully qualified instead of imported, unlike every other line of the file:
   fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
 
-- **Change:** modified, +36 −3 lines. Feature: Branding, Reading time, Feedback mode, Book and author titles search,
-  Search in categories, Lexicon.
+- **Change:** modified, +42 −3 lines. Feature: Branding, Reading time, Feedback mode, Book and author titles search,
+  Search in categories, Lexicon, Daily study plans.
 - **What:**
   - `provideSettings()` returns `Brand.settings()` (Pardes's own preferences node) instead of `Settings()`.
-  - New providers: `provideSearchFeedbackStore`, `provideReadingTimeStore` (KDoc: the learning split's data) and
+  - New providers: `provideSearchFeedbackStore`, `provideReadingTimeStore` (KDoc: the learning split's data),
+    `provideStudyPlanStore` after it (KDoc marked "Pardes:": the Home's study plans), with its import, and
     `provideFeedbackService(client)`, at `BuildConfig.FEEDBACK_URL`.
   - The search engine's dictionary is `PardesLexicon.dictionaryFor(lexical.db, indexPath)`: `lexical.db` with its
     empty bases dropped and each word's commonest forms first.
@@ -412,7 +415,7 @@ The entries of this section by kind:
   service, the desktop manager) besides three new ones.
 - **Smaller:** the new providers could sit in a Pardes `@BindingContainer` (for example `PardesBindings`) included by
   the graph; the edits inside Zayit's providers stay.
-- **Tests:** `SearchFeedbackStoreTest`, `ReadingTimeStoreTest`, `FeedbackServiceTest`, `PardesLexiconTest`,
+- **Tests:** `SearchFeedbackStoreTest`, `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackServiceTest`, `PardesLexiconTest`,
   `BookTitleIndexTest`, `CategoryScopeSearchTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/OnboardingBindings.kt`
@@ -1556,7 +1559,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +309 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +310 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 291 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -1586,7 +1589,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
     the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
   - a desktop's link: `desktop_copy_link` ("העתק קישור למרחב"), after Zayit's `desktop_open_in_new_window`;
-  - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
+  - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings`, `home_widget_name_learning_split` and after it
+    `home_widget_name_study_plans` ("הלימוד שלי");
   - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
   - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`;
   - the open smart siddur, under a comment after Zayit's last siddur string (`siddur_open_siddur`): the 26 strings
@@ -2071,12 +2075,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetSizesScreenshotTest.kt`
 
-- **Change:** modified, +12 −2 lines. Feature: Learning split widget, Home widgets loading.
+- **Change:** modified, +14 −2 lines. Feature: Learning split widget, Home widgets loading, Daily study plans.
 - **What:** it waits until no card shows `WIDGET_LOADING_TAG` (`OFF_MAIN_TIMEOUT_MS`, 10 s) before measuring, and leaves
-  out the learning split widget, which reads its books' titles in the library, as the dictionary is left out; the class
-  KDoc says so.
+  out the learning split widget, which reads its books' titles in the library, and the study plans, whose parts come from
+  their books' tables of contents, as the dictionary is left out; the class KDoc and the list's comment say so.
 - **Why:** the cards read off the UI thread were measured while loading (`022af5bb`); the learning split widget has no
-  library in the test (`0083381e`; `LearningSplitCardUiTest` draws it).
+  library in the test (`0083381e`; `LearningSplitCardUiTest` draws it), nor do the study plans (`StudyCardUiTest` draws
+  their card).
 - **Kind:** fix of Zayit's code (its tests), and a Pardes widget left out.
 - **Merge risk:** small.
 - **Smaller:** already minimal.
@@ -5325,6 +5330,126 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
 - **Follows:** Zayit's update tests (Kotlin Test, sentences in backticks); a temporary folder and a JDBC database as
   Pardes's `VectorIndexBuilderTest` makes them.
 - **Tests:** it is one (unit).
+
+### The daily study plans
+
+The user's own daily study, since 2026-11-12 (request 19 of `docs/DESKTOP_STAGE2.md`, built as the mock-up the user
+approved that day): a Home widget, "הלימוד שלי", lists the user's plans, each a book studied by the entries of its table
+of contents at one depth, so many a day, from a chosen unit and date, on chosen days (without Shabbat, without Yom Tov
+too), again from the start at its end if asked. The day's part is reckoned from the date, never stored; a tick marks it
+learnt; a click opens the book on it, marked through its end. The plans and ticks are kept in the user DB, so the
+backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no licence. Hooks: `AppGraph.kt`,
+`AppCoreBindings.kt`, `strings.xml`, `WidgetSizesScreenshotTest.kt`.
+
+#### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/StudyPlans.sq`
+
+- **Feature:** Daily study plans.
+- **Size:** 58 lines.
+- **What:** the tables `study_plan` (the book by id, title and categories' titles; the depth; the first unit by its
+  headings, `\u001F` between two; how many a day; the first day as an epoch day; the weekdays as bits, Sunday lowest;
+  whether to start again; the order) and `study_plan_done` (a plan's days marked learnt, key `planId, day`), and their
+  queries `selectAll`, `insert` (last in order), `lastInsertId`, `update`, `delete`, `deleteDoneOf`, `markDone`,
+  `unmarkDone` and `selectDoneOn`.
+- **Reached from:** `StudyPlanStore.kt` (through SQLDelight's generated `UserSettingsDb`).
+- **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`, and `CommentatorDefaults.sq`, which
+  keeps a book by names so that a new library finds it.
+- **Tests:** `StudyPlanStoreTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStore.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 146 lines.
+- **What:** `StudyPlan` (a plan's book, depth, first unit, pace, first day, weekdays and restart) and `StudyPlanStore`,
+  the plans and their ticks in the user DB: `plans`, `save` (a new one last, its id), `delete` (with its ticks),
+  `doneOn` and `setDone`, and a `revision` flow; the weekdays as one number (`toMask`, `weekdaysOf`).
+- **Reached from:** `AppCoreBindings.kt` (`provideStudyPlanStore`), `AppGraph.kt`, `StudyWidget.kt`,
+  `StudyPlanEditor.kt`.
+- **Follows:** Zayit's user-DB stores (`ShnayimMikraStore`: a SQLDelight table, `Dispatchers.IO`, a `revision` flow).
+- **Tests:** `StudyPlanStoreTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyParts.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 271 lines.
+- **What:** the units of a plan and the day's part, plain functions: a table of contents in reading order
+  (`readingOrder`), the depths worth studying by (`studyLevels`, more than one entry each), a depth's units with their
+  headings and the line the next one starts on (`studyUnits`), where a plan starts by headings (`startIndexOf`), what a
+  depth is called (`unitNameOf`, the headings' first word, an amud for the Bavli's "דף ב."), whether a day is learnt
+  (`isStudyDay`: one of its weekdays, and not Yom Tov while Shabbat is not one of them, KosherKotlin's
+  `isYomTovAssurBemelacha`, in Israel or abroad), the days learnt between two dates, the day's part (`dayPart`: on from
+  the days before, past the end from the start again or done), and the texts (`partLabel` "פרקים כג–כז",
+  `perDayLabel`, `weekdaysLabel`).
+- **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
+- **Follows:** the luach widgets' day reckoning (`LuachData.kt`: `JewishCalendar` by date and region).
+- **Tests:** `StudyPartsTest`.
+- **Notes:** the Hebrew texts are literals in Kotlin, as in Pardes's other widgets, not `strings.xml` keys.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyWidget.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 344 lines.
+- **What:** the Home widget `StudyWidget` ("הלימוד שלי", 6×4 cells, from 4×3 to 12×8) and its card `StudyCard`: a row
+  for each plan with the box ticked once the day's part is learnt, the book, the part, its pace, its day of study and a
+  bar of how far into the book it reaches, a pencil on hover to edit it, and "+ תוכנית חדשה"; `shownPlan` reads a plan's
+  book (by id while its title is the same, else by title) and table of contents and reckons the day shown on the Home;
+  `linesOf`, the part's first line and its last, for the tab to mark (`TabsDestination.BookContent`'s `endLineId`); the
+  plan being edited is kept per Home's state (`editedPlan`) and its editor composed in `Detached`; its menu has "תוכנית
+  חדשה…".
+- **Reached from:** the widget registry (`availableHomeWidgets`, generated by `:widgetprocessor` from every `HomeWidget`
+  object).
+- **Follows:** Zayit's `ShnayimMikraWidget` (a tick per part of the day, a click that opens it marked, the shown date),
+  and Pardes's `LearningSplitWidget` (a card fed by a store, read off the UI thread with `produceState`).
+- **Tests:** `StudyCardUiTest`; tried in the app (a plan made in the editor, two more and a tick kept over a restart, a
+  click that opened משנה ברורה on the day's סימן).
+- **Notes:** the Hebrew texts are literals in Kotlin; the header's gear of the mock-up is left out (the menu and the
+  pencil edit a plan).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 444 lines.
+- **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
+  the book, looked up by title as it is typed (`booksLike`: an exact title first); the depths of its table of contents
+  as buttons; where to start (`ListComboBox` of the units); how many a day; the first day (the luach's
+  `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least); to
+  start again at the end; the day's part beneath, as the card will show it; "שמור", "ביטול", and for a plan saved,
+  "מחק תוכנית", which deletes on a second click within four seconds. The book's categories' titles are saved with it.
+- **Reached from:** `StudyWidget.kt` (`Detached`).
+- **Follows:** Zayit's `WidgetOptionsDialog` (the window, its title bar and bottom bar) and its settings' fields.
+- **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז").
+- **Notes:** the Hebrew texts are literals in Kotlin.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPartsTest.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 122 lines.
+- **What:** a book's units at a depth in reading order, under the headings above them, and where each ends; a start found
+  by headings, or by its own heading in a new library; the depths' names, the Bavli's by the amud; Yom Tov skipped with
+  Shabbat, the second day abroad, Chol HaMoed learnt; the day's part on from the days before, done or again at the end;
+  the parts' names, the paces and the days in words.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's widget tests (`LearningSplitTest`), Kotlin Test.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStoreTest.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 69 lines.
+- **What:** a plan kept with every field, a new one last, changed in place; a day's tick marked and unmarked; a plan
+  deleted with its ticks; the weekdays as one number and back.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's store tests (an in-memory `UserSettingsDb`).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyCardUiTest.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 115 lines.
+- **What:** the card with three plans: the day's parts, the paces and days, one ticked ("סיימת להיום"), one with no
+  study that day; a click on a part opens it.
+- **Reached from:** the JVM tests.
+- **Follows:** `LearningSplitCardUiTest` (the card drawn with its data, `runDesktopComposeUiTest`).
+- **Tests:** it is one (UI).
 
 ## 3. Pardes's own trees
 

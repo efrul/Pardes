@@ -664,6 +664,7 @@
     <string name="home_widget_name_molad">מולד וקידוש לבנה</string>
     <string name="home_widget_name_history">היסטוריה</string>
     <string name="home_widget_name_learning_split">חלוקת הלימוד</string>
+    <string name="home_widget_name_study_plans">הלימוד שלי</string>
     <string name="home_widget_name_favorites">מועדפים</string>
     <string name="home_widget_name_notes">ההערות שלי</string>
     <string name="home_widget_name_measures">ממיר מידות</string>
