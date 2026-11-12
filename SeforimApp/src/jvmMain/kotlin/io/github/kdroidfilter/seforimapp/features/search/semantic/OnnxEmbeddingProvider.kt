@@ -39,7 +39,10 @@ class OnnxEmbeddingProvider(
 
     override fun embedQuery(text: String): FloatArray = embedFloat(text)
 
-    override fun embedPassages(texts: List<String>): List<FloatArray>? {
+    override fun embedPassages(
+        texts: List<String>,
+        keepGoing: () -> Boolean,
+    ): List<FloatArray>? {
         val encodeOne = encodePassage ?: return null
         val tokens = texts.map(encodeOne)
         val out = arrayOfNulls<FloatArray>(texts.size)
@@ -47,6 +50,7 @@ class OnnxEmbeddingProvider(
         val order = tokens.indices.sortedBy { tokens[it].size }
         var i = 0
         while (i < order.size) {
+            if (!keepGoing()) return null
             var j = i + 1
             while (j < order.size && (j - i + 1) * tokens[order[j]].size <= PASSAGE_BATCH_TOKENS) j++
             val batch = order.subList(i, j)

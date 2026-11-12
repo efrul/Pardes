@@ -18,6 +18,7 @@ import io.github.kdroidfilter.seforimlibrary.search.WARMUP_ROUNDS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -66,6 +67,11 @@ class HybridSearchEngine internal constructor(
 
     @Volatile private var semanticTried = false
     private val semanticMutex = Mutex()
+
+    // The passages closest in meaning, worked out one request at a time: the model's runs never hold every thread of the
+    // default dispatcher, which the searches run on (tabs picked one after another waited up to 1.8 s behind the earlier
+    // pages' passages, docs/scope-search-speed)
+    private val passageWork = Dispatchers.Default.limitedParallelism(1)
 
     private suspend fun ensureSemantic(): IndependentSemanticSearch? {
         if (semanticTried) return semantic
@@ -147,8 +153,9 @@ class HybridSearchEngine internal constructor(
         texts: List<String>,
     ): List<String?>? {
         val semantic = ensureSemantic() ?: return null
-        return withContext(Dispatchers.Default) {
-            runSuspendCatching { semantic.bestPassages(query, texts) { lexical.highlightRanges(it, query) } }
+        return withContext(passageWork) {
+            // Cancelled (its page no longer shown, Refining), it stops at the model's next run
+            runSuspendCatching { semantic.bestPassages(query, texts, keepGoing = { isActive }) { lexical.highlightRanges(it, query) } }
                 .onFailure { warnln(it) { "[HybridSearchEngine] Passages by meaning failed; the query's words instead." } }
                 .getOrNull()
         }
@@ -378,6 +385,9 @@ class HybridSearchEngine internal constructor(
         private var rest: SearchSession? = null
         private val shown = HashSet<Long>()
 
+        // Its pages' passages being worked out, stopped when it closes
+        private val refining = Refining()
+
         override suspend fun nextPage(
             limit: Int,
             snippets: Boolean,
@@ -482,9 +492,12 @@ class HybridSearchEngine internal constructor(
 
             override suspend fun meaningLines(): List<MeaningLine> = this@HybridSession.meaningLines()
 
-            override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = this@HybridSession.refinedSnippets(hits)
+            // Its own: the session it views closes when it is shown, and goes on being viewed
+            private val refining = Refining()
 
-            override fun close() = Unit
+            override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = refining.run(emptyMap()) { refined(hits) }
+
+            override fun close() = refining.close()
         }
 
         override suspend fun meaningBookCounts(): Map<Long, Int> = meaningOnly().groupingBy { it.bookId }.eachCount()
@@ -512,7 +525,10 @@ class HybridSearchEngine internal constructor(
                     .mapTo(HashSet()) { it.lineId }
             }.getOrDefault(emptySet())
 
-        override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> {
+        override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = refining.run(emptyMap()) { refined(hits) }
+
+        // [hits]' snippets with the passage closest in meaning in bold
+        private suspend fun refined(hits: List<LineHit>): Map<Long, String> {
             val shown = hits.filter { it.rawText.isNotBlank() && it.lineEnd > it.lineStart }
             if (shown.isEmpty()) return emptyMap()
             // The found line alone, not the neighbors its snippet shows around it
@@ -526,6 +542,7 @@ class HybridSearchEngine internal constructor(
         }
 
         override fun close() {
+            refining.close()
             rest?.close()
         }
     }

@@ -1,0 +1,21 @@
+// Runs a main of SeforimApp's JVM tests (a bench), as SeforimApp's build has no task for them:
+//   bash .claude/skills/pardes-desktop-run/scripts/gradle.sh -I docs/scope-search-speed/tools/bench.init.gradle \
+//     --no-configuration-cache :SeforimApp:runBench -PbenchMain=<class> -PbenchArgs="<args>" -PbenchDb=<seforim.db>
+// -PbenchQuery=<one query> passes BENCH_QUERY; -PbenchJfr=<file> records a Java Flight Recording of the run.
+allprojects { p ->
+    p.afterEvaluate {
+        if (p.name == 'SeforimApp') {
+            p.tasks.register('runBench', JavaExec) { t ->
+                def test = p.kotlin.jvm().compilations.getByName('test')
+                t.classpath = p.files(test.output.allOutputs, test.runtimeDependencyFiles)
+                t.mainClass.set(p.findProperty('benchMain').toString())
+                t.args((p.findProperty('benchArgs') ?: '').toString().tokenize())
+                t.jvmArgs('-Xmx5g', '--add-modules=jdk.incubator.vector')
+                t.environment('SEFORIMAPP_DATABASE_PATH', p.findProperty('benchDb').toString())
+                if (p.findProperty('benchQuery') != null) t.environment('BENCH_QUERY', p.findProperty('benchQuery').toString())
+                if (p.findProperty('benchJfr') != null) t.jvmArgs("-XX:StartFlightRecording=filename=${p.findProperty('benchJfr')},settings=profile")
+                t.dependsOn('jvmTestClasses')
+            }
+        }
+    }
+}

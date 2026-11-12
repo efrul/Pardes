@@ -263,13 +263,16 @@ class IndependentSemanticSearch(
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, FloatArray>?) = size > PASSAGE_CACHE
         }
 
-    // [passages]' vectors, each embedded once and in one batch, the known ones from the cache
-    private fun passageVectors(passages: List<String>): List<FloatArray>? {
+    // [passages]' vectors, each embedded once and in one batch, the known ones from the cache; null when [keepGoing] stops it
+    private fun passageVectors(
+        passages: List<String>,
+        keepGoing: () -> Boolean,
+    ): List<FloatArray>? {
         val vectors = HashMap<String, FloatArray>()
         synchronized(passageCache) { for (passage in passages) passageCache[passage]?.let { vectors[passage] = it } }
         val missing = passages.filterNot(vectors::containsKey).distinct()
         if (missing.isNotEmpty()) {
-            val fresh = embeddingProvider.embedPassages(missing) ?: return null
+            val fresh = embeddingProvider.embedPassages(missing, keepGoing) ?: return null
             synchronized(passageCache) {
                 missing.forEachIndexed { i, passage ->
                     vectors[passage] = fresh[i]
@@ -282,20 +285,22 @@ class IndependentSemanticSearch(
 
     /**
      * For each of [texts] (found lines, plain), the passage closest in meaning to [query], a verbatim part of it
-     * ([Passages]); null for a text that is a single passage. Null when the model can't embed passages. Of a text of more
-     * than [MAX_PASSAGES] passages, the first ones are weighed (what its vector holds: the corpus's embedding reads a
-     * line's first tokens) and, as many more, those holding one of [matches] (the query's words in a text).
+     * ([Passages]); null for a text that is a single passage. Null when the model can't embed passages, or when
+     * [keepGoing], asked before each run of the model, says to stop. Of a text of more than [MAX_PASSAGES] passages, the
+     * first ones are weighed (what its vector holds: the corpus's embedding reads a line's first tokens) and, as many
+     * more, those holding one of [matches] (the query's words in a text).
      */
     fun bestPassages(
         query: String,
         texts: List<String>,
+        keepGoing: () -> Boolean = { true },
         matches: (String) -> List<IntRange> = { emptyList() },
     ): List<String?>? {
         val ranges = texts.map { text -> candidates(Passages.split(text)) { matches(text) } }
         val passages = texts.indices.flatMap { i -> if (ranges[i].size > 1) ranges[i].map(texts[i]::substring) else emptyList() }
         if (passages.isEmpty()) return texts.map { null }
         val query = queryVector(query) ?: return null
-        val vectors = passageVectors(passages) ?: return null
+        val vectors = passageVectors(passages, keepGoing) ?: return null
         var next = 0
         return texts.indices.map { i ->
             if (ranges[i].size <= 1) {

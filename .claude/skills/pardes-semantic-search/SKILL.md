@@ -68,14 +68,23 @@ what is left of `semantic-model/`, their tests) described in `docs/ZAYIT_CHANGE_
   side 1 to 36 ms, the words 20 to 80, the facets 2 to 22. The slow parts found were around the search, not in it: the
   results' tree read each book from the database (0.2 to 0.8 s the first time in a tab; from the catalog now, 5 to
   58 ms), and the bar's categories read the commentary links at the first letter typed (1.2 s; at start now).
+- **Measure what the reader waits for with the app's own view model** (`ScopeFlowBench`, docs/scope-search-speed:
+  `SearchResultViewModel` on the app's engines, the screen's flows collected, a tab and "all" after the search, at a
+  reader's pace of 300 ms; `tools/bench.init.gradle` runs it, with a JFR recording on demand). A tab waited 0.9 to
+  1.8 s (2026-11-12) though the search itself took 25 to 220 ms: every page's passages by meaning (a second and more
+  of the model on 4 CPUs) held a thread of the default dispatcher, none stopped when its page was replaced, and the
+  tab's code queued behind them; the JFR profile showed no CPU in it. The passages now run one request at a time
+  (`passageWork`) and a closed session's stop between the model's runs (`Refining`, `keepGoing`). A bench that waits
+  for each page's bold passages before the next click, or one that closes the engine while they run (SIGSEGV in
+  onnxruntime), measures something else.
 - **The tabs above the results are views of the list found** (`SessionViews`, `67e79fdd`): a hybrid search lists the
   first lines it finds, so searching a category again gave another list. A category with no line in the list is
   still searched. The tabs picked become the bar's chips, and a repeated search searches in them.
 - **The library's order** (`CatalogOrderEngine`, `CatalogOrderSession`, `c7394579`): the books that have lines found
   (from the facets) are read a few at a time in the catalog's order, each group in one session of the words; the
-  lines the meaning search alone found stand among them. Open since 2026-11-11: in that order every line found has
-  the same standing, so a line the meaning search found with a faint link to the query stands above the words' own
-  lines whenever its book comes first. A threshold, or the words' lines alone, is the user's decision (stage 2).
+  lines the meaning search alone found stand among them, only those that stand out of the dense side's candidates by
+  2 standard deviations or more (`STANDOUT`, `HybridSearchEngine.standingOf`; decided 2026-11-12 after a fixed 10 was
+  found wrong, docs/catalog-order); the others are counted in the status line ("ועוד N קרובות פחות").
 - **Searches of other apps** reach the feedback packages since `e525a560` (an installed Zayit's and Otzaria's, each
   row with its `source`; Otzaria's with its `scope`, `bookTitle`, `heRef` and no line id). efrul/pardes-semantic's
   `feedback/collect.py` keeps the source, and places Otzaria's votes by book title and reference when they name

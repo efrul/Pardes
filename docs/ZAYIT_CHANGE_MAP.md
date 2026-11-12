@@ -28,13 +28,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (216 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (219 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (765 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (772 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -3523,7 +3523,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 797 lines.
+- **Size:** 814 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -3537,12 +3537,16 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   books, in the list's order, paged from the first with no search), for the category tabs; none when the list goes on
   past what it holds (the words alone, past their candidates). It is a `WordsEngine`: its words' search (`words`) can
   be asked apart, for a list of every line they find in the library's order (`CatalogOrderSession`). A dense side whose walk came back short is searched again from the words'
-  first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering.
+  first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering. The
+  passages closest in meaning (`passagesByMeaning`) are worked out one request at a time (`passageWork`, the default
+  dispatcher's threads left to the searches), and stop between the model's runs when cancelled; a session's pages'
+  passages stop when it closes (`Refining`), each view of it with its own.
 - **Reached from:** `InstalledSemanticSearch.kt` (`installedSemanticSearch.hybrid`).
 - **Follows:** Zayit's `SemanticSearchFeature` interface and its private `HybridSearchEngine`, of the same name and role
   (not its code, which Pardes has not).
 - **Tests:** `HybridSearchEngineDenseTest`, `HybridSearchEngineFallbackTest`, `HybridSearchEngineFusionTest`,
-  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`, `DenseTrapTest`.
+  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`, `DenseTrapTest`, `RefiningTest`;
+  measured by `ScopeFlowBench` (docs/scope-search-speed).
 - **Notes:** its KDoc opens with "Independent Hybrid Search Engine for Pardes Desktop:", a title rather than Zayit's
   plain sentence; with some 17 functions it passes `detekt.yml`'s 15. The fusion's measurements, before and after:
   `docs/fusion-compare/IMPLEMENTATION.md`.
@@ -3573,10 +3577,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/IndependentSemanticSearch.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 472 lines.
+- **Size:** 477 lines.
 - **What:** `IndependentSemanticSearch`, the dense search: the query embedded (`EmbeddingProvider`), the nearest lines in
   the pack's vector index (`pardes.vec.lucene`), in the base books or a set of books, as `DenseHit`s; `bestPassages`, the
-  passage of a found line closest in meaning; it opens the pack beside the library and checks that the index and the
+  passage of a found line closest in meaning, which stops between the model's runs when told (`keepGoing`); it opens the pack beside the library and checks that the index and the
   model share their id. A small scope is scored exactly (`exactSearch`); any other is walked on the graph by itself
   (`graphWalk`), without Lucene's exact search of every vector, and a walk that comes back short, fallen among a
   repeated line's identical vectors, starts again at the `seeds` it is given (`SeededKnnVectorQuery`) or tells its
@@ -3592,8 +3596,9 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/EmbeddingProvider.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 20 lines.
-- **What:** `EmbeddingProvider`, the interface between the model and the search: a query's vector, passages' vectors.
+- **Size:** 23 lines.
+- **What:** `EmbeddingProvider`, the interface between the model and the search: a query's vector, passages' vectors
+  (stopped before a run of the model when `keepGoing` says so).
 - **Reached from:** `IndependentSemanticSearch.kt`, `OnnxEmbeddingProvider.kt`.
 - **Follows:** Pardes's own.
 - **Tests:** `HybridSearchEngineDenseTest`, `PassagesTest`, `MeaningFacetsTest` (fakes of it).
@@ -3601,10 +3606,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/OnnxEmbeddingProvider.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 140 lines.
+- **Size:** 144 lines.
 - **What:** `OnnxEmbeddingProvider`, a query embedded with the ONNX model into the int8 vector the index is searched with:
   the model's cleaning, prefix and tokenizer (`HfTokenizer`; `HebrewNormalizer` and `WordPieceTokenizer` for the legacy
-  model), ONNX Runtime's session, the sentence embedding's output.
+  model), ONNX Runtime's session, the sentence embedding's output; passages in runs of similar lengths, stopped before
+  a run when told.
 - **Reached from:** `IndependentSemanticSearch.kt`, `VectorIndexBuilder.kt`.
 - **Follows:** Pardes's own; ONNX Runtime's Java API.
 - **Tests:** `VectorIndexBuilderTest`, `HfTokenizerParityTest` (its tokenizer).
@@ -3931,11 +3937,34 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/PassagesTest.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 165 lines.
+- **Size:** 177 lines.
 - **What:** a line cut into sentences and clauses, each verbatim, covering the line in order; the passage closest in
-  meaning picked; a passage embedded once; a very long line's passages; a model that cannot embed passages.
+  meaning picked; a passage embedded once; a very long line's passages; a model that cannot embed passages; work told
+  to stop runs no more of the model.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/Refining.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 47 lines.
+- **What:** `Refining`, the refined snippets of a session's pages being worked out, run as its own child coroutine and
+  cancelled when the session closes (`close`): the caller gets nothing and goes on, and a closed session works out no more.
+- **Reached from:** `HybridSearchEngine.kt` (its session and each view of it).
+- **Follows:** kotlinx.coroutines' structured concurrency (a child cancelled, its parent going on).
+- **Tests:** `RefiningTest`; measured by `ScopeFlowBench` (docs/scope-search-speed).
+- **Notes:** the pages of a search and of the tabs picked after it held every thread of the default dispatcher with
+  their model runs (1.2 to 1.8 s for a tab), and went on after their page was replaced.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/RefiningTest.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 56 lines.
+- **What:** an open session's work gives its result; closing it stops the work running, the caller getting nothing; a
+  closed session works out nothing more.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, `runBlocking`.
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HfTokenizerParityTest.kt`
@@ -4431,6 +4460,20 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
   `SEFORIMAPP_DATABASE_PATH` names.
 - **Reached from:** run by hand.
 - **Follows:** SeforimLibrary's engine and its filter caching (`StableFiltersCachingPolicy`), mimicked.
+- **Tests:** a bench.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/ScopeFlowBench.kt`
+
+- **Feature:** Search in categories.
+- **Size:** 315 lines.
+- **What:** a `main` that times a search as the reader waits for it: `SearchResultViewModel` over the engines the app
+  builds (`provideSearchEngine`'s, `LibraryCategories` over catalog.pb), on the library `SEFORIMAPP_DATABASE_PATH`
+  names, the screen's flows collected; from a search's start to its first results, its tabs and its end, in eight
+  scopes (the whole library, a book, three books, a small category, תלמוד, הלכה, אחרונים on the Bavli, ראשונים and
+  אחרונים together), then the first two tabs picked and all again, and the library's order with a tab in it; the cold
+  first round apart.
+- **Reached from:** run by hand (docs/scope-search-speed/README.md).
+- **Follows:** `CategoryScopeSearchTest` (the view model built in a test), `ScopeSearchBench` and `CategorySearchBench`.
 - **Tests:** a bench.
 
 #### `SeforimApp/src/jvmTest/resources/search/common-sources-e100.json.gz`
@@ -5190,7 +5233,7 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (765 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (772 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -5219,7 +5262,7 @@ the description where something needs saying.
 | `.claude/skills/pardes-desktop-run/scripts/onb.sh` | Skill script that drives the install wizard opened by onboarding.sh: `to-disk` (welcome and licence, on to the disk-space step), `pick <path>` (types into the Swing folder chooser), `click x y` at the wizard's own coordinates, `shot <name>` (the display and the wizard alone). | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/onboarding.sh` | Skill script: as start.sh, but with preferences of a first run (no library, the onboarding not done, `INSTALL_DIR` as the folder offered), so the app opens its install wizard; it sets a test address as the feedback service's, so the wizard shows its feedback step. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/stop.sh` | Skill script that closes the app's main window (or the wizard's, `stop.sh wizard`) and waits until its process has ended, after which Gradle may run again. | Pardes's own |
-| `.claude/skills/pardes-semantic-search/SKILL.md` | Claude Code skill for Pardes's open semantic search: the app side here (features/search/semantic/, its packs), the model's pipeline in the efrul/pardes-semantic repository since 2026-11-05 (export, benchmark, fine-tuning, distillation, Kaggle runs, the vector index), the invariants (one cleaner and tokenizer for queries and corpus, the model id in the index, int8 with reduce_range, pooling in the ONNX graph), the pitfalls solved (among them the trap of a repeated line's vectors and the app's way out of it, the search measured by scope, the tabs as views of the list found, the library's order and its open question, other apps' searches in the feedback), the Android port, an outside question set kept for measuring only, and Klei Kodesh's data; and the zayit-fidelity skill's rules for every change of the app side. *Note:* Says never to use Zayit's private semantic package or its model for Pardes, and to name Kaggle datasets and kernels without their owner. | Pardes's own |
+| `.claude/skills/pardes-semantic-search/SKILL.md` | Claude Code skill for Pardes's open semantic search: the app side here (features/search/semantic/, its packs), the model's pipeline in the efrul/pardes-semantic repository since 2026-11-05 (export, benchmark, fine-tuning, distillation, Kaggle runs, the vector index), the invariants (one cleaner and tokenizer for queries and corpus, the model id in the index, int8 with reduce_range, pooling in the ONNX graph), the pitfalls solved (among them the trap of a repeated line's vectors and the app's way out of it, the search measured by scope, what the reader waits for measured with the app's view model and the passages that held the search's threads, the tabs as views of the list found, the library's order and its rule, other apps' searches in the feedback), the Android port, an outside question set kept for measuring only, and Klei Kodesh's data; and the zayit-fidelity skill's rules for every change of the app side. *Note:* Says never to use Zayit's private semantic package or its model for Pardes, and to name Kaggle datasets and kernels without their owner. | Pardes's own |
 | `.claude/skills/zayit-android/SKILL.md` | Claude Code skill for Pardes for Android (androidApp/): the name and authorship rules every Pardes text follows, talking to the user, the site and the CI release, a fresh session to a running emulator, the inner loop, the library on the device, matching desktop Zayit 0.6.12, the architecture, offline Lucene and semantic search, and the pitfalls that cost the most. *Note:* Keeps the name zayit-android from before the app became Pardes (2026-10-15). Since 2026-11-05 it asks for Zayit's Conventional Commits (`feat(android): …`) and a change-map row for every file of androidApp/, as the zayit-fidelity skill does. | Pardes's own |
 | `.claude/skills/zayit-android/evals/evals.json` | Four test prompts for the zayit-android skill, in skill-creator's format (prompt, expected output, expectations): a Jelly Star settings screenshot, the ClassValue search crash, fetching the library and a subset DB, and About and welcome parity that keeps the authorship texts. | Pardes's own |
 | `.claude/skills/zayit-android/references/architecture.md` | zayit-android reference on androidApp's architecture: the separate Gradle build and the SeforimLibrary code it compiles unchanged (the submodule at 4f07145), the runtime flow, a source map, state and navigation, data and storage, and conventions. | Pardes's own |
@@ -5388,6 +5431,18 @@ the description where something needs saying.
 | `docs/catalog-order/tools/build.sh` | Builds the harness with a standalone Kotlin compiler, outside Gradle, against this checkout's search code, with fusion-compare's `CategoryStub.kt` and `LoggerStub.kt`; its jars from the Gradle cache or Maven Central. | Pardes's own; follows `docs/fusion-compare/tools/build.sh` |
 | `docs/catalog-order/tools/judged.py` | The README's tables from the judges' grades: by place, by score gap, by standing (with `--run`, Meant.kt's output), the rules side by side with how many lines each keeps a search, and against eval-real's own grades of the same lines; writes `judged.tsv`. | Pardes's own |
 | `docs/catalog-order/tools/sample.py` | The blind sample: 30 searches drawn with seed 31, the lines at eight places of each, shuffled, in two files for two judges, and its key. | Pardes's own |
+
+#### The scoped search's speed (docs/scope-search-speed/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/scope-search-speed/README.md` | Hebrew report (2026-11-12) for request 37: where a search in chosen books or a large category, and a tab picked after it, keep the reader waiting. What was run (ScopeFlowBench: the app's own search view model on the whole library with pack 3, five searches in eight scopes, two tabs and the library's order, at a reader's pace), what was found (the search itself 25 to 220 ms; a tab waiting 0.9 to 1.8 s behind the passages by meaning of the pages before it, which held every thread of the default dispatcher, as a JFR profile showed; the cold first search reading seconds off the cloud's disk), what was fixed (the passages one request at a time, a replaced page's stopped), before and after, and what is left (the library's order, the status line's 300 ms, a cold start). | Pardes's own |
+| `docs/scope-search-speed/runs/1-unpaced-before.txt` | ScopeFlowBench's step lines (times, scopes, hits; no text) of the run before the fix with no pause between steps and none of the screen's flows collected: a tab waiting 0.9 to 1.8 s. | Pardes's own; measured |
+| `docs/scope-search-speed/runs/2-paced-before.txt` | Its step lines before the fix at a reader's pace (300 ms between steps, the screen's flows collected). | Pardes's own; measured |
+| `docs/scope-search-speed/runs/3-paced-after.txt` | Its step lines after the fix, at the same pace. | Pardes's own; measured |
+| `docs/scope-search-speed/tools/bench.init.gradle` | A Gradle init script that adds `:SeforimApp:runBench`, a `main` of the JVM tests run on the library named (`-PbenchMain`, `-PbenchArgs`, `-PbenchDb`, `-PbenchQuery`), with a JFR recording on demand (`-PbenchJfr`): the app's build has no task for its benches. | Pardes's own |
+| `docs/scope-search-speed/tools/compare.py` | Two runs of ScopeFlowBench side by side: per scope and step, the median and slowest time to the first results. | Pardes's own |
+| `docs/scope-search-speed/tools/table.py` | One run of ScopeFlowBench as a table: per scope and step, the cold first round and the warm rounds, to the first results and to the end. | Pardes's own |
 
 #### The search's measurements (docs/fusion-compare/)
 
