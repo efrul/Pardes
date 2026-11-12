@@ -112,10 +112,6 @@ class AppSettings(
     private val _compactModeFlow = MutableStateFlow(isCompactModeEnabled())
     val compactModeFlow: StateFlow<Boolean> = _compactModeFlow.asStateFlow()
 
-    // Pardes: whether the reader's side panes run the whole height, the bottom one under the text alone (SidePanesCard)
-    private val _sidePanesFullHeightFlow = MutableStateFlow(isSidePanesFullHeight())
-    val sidePanesFullHeightFlow: StateFlow<Boolean> = _sidePanesFullHeightFlow.asStateFlow()
-
     // The 3D views' anti-aliasing (Earth, solar system), app-wide
     private val _antiAliasingFlow = MutableStateFlow(getAntiAliasing())
     val antiAliasingFlow: StateFlow<WidgetAntiAliasing> = _antiAliasingFlow.asStateFlow()
@@ -606,14 +602,6 @@ class AppSettings(
         _compactModeFlow.value = enabled
     }
 
-    // Pardes: the side panes at full height (off: the bottom pane under the text and the side panes, as Zayit has it)
-    fun isSidePanesFullHeight(): Boolean = settings[KEY_SIDE_PANES_FULL_HEIGHT, false]
-
-    fun setSidePanesFullHeight(enabled: Boolean) {
-        settings[KEY_SIDE_PANES_FULL_HEIGHT] = enabled
-        _sidePanesFullHeightFlow.value = enabled
-    }
-
     // ponytail: a mode no longer offered (hand edit, TAA carried to Linux) falls back to off
     fun getAntiAliasing(): WidgetAntiAliasing =
         AVAILABLE_ANTI_ALIASING.firstOrNull { it.name == settings.getStringOrNull(KEY_ANTI_ALIASING) } ?: WidgetAntiAliasing.OFF
@@ -833,7 +821,6 @@ class AppSettings(
         typedSettings.values.forEach { it.reset() }
         _showHomeWallpaperFlow.value = true
         _compactModeFlow.value = false
-        _sidePanesFullHeightFlow.value = false
         _antiAliasingFlow.value = WidgetAntiAliasing.OFF
         _bookFontCodeFlow.value = DEFAULT_BOOK_FONT
         _commentaryFontCodeFlow.value = DEFAULT_COMMENTARY_FONT
@@ -892,7 +879,6 @@ class AppSettings(
                 KEY_HOME_WIDGETS_LAYOUT,
                 KEY_SHOW_HOME_WALLPAPER,
                 KEY_COMPACT_MODE,
-                KEY_SIDE_PANES_FULL_HEIGHT,
             )
 
         private fun isPortableKey(key: String): Boolean = key in PORTABLE_KEYS || key.startsWith(HOME_WIDGET_SETTINGS_PREFIX)
@@ -1037,7 +1023,6 @@ class AppSettings(
 
         // Compact mode for vertical bars
         private const val KEY_COMPACT_MODE = "compact_mode"
-        private const val KEY_SIDE_PANES_FULL_HEIGHT = "side_panes_full_height"
 
         // Not portable: what a machine's GPU handles
         private const val KEY_ANTI_ALIASING = "anti_aliasing_3d"

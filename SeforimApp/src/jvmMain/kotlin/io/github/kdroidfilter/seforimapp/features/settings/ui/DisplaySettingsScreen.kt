@@ -36,7 +36,6 @@ import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsViewModel
-import io.github.kdroidfilter.seforimapp.features.settings.display.SidePanesCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.theme.PreviewContainer
@@ -111,9 +110,6 @@ private fun DisplaySettingsView(
                 checked = state.compactMode,
                 onCheckedChange = { onEvent(DisplaySettingsEvents.SetCompactMode(it)) },
             )
-
-            // Pardes: the side panes at full height
-            SidePanesCard()
 
             MaxCommentatorsPerPageCard(
                 value = state.maxCommentatorsPerPage,
