@@ -15,9 +15,11 @@ import androidx.compose.ui.focus.focusRequester
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.lettersOnly
+import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.home.widgets.DefaultToolWindow
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindows
+import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 
@@ -56,19 +58,72 @@ internal fun lookupAsRead(
     return found
 }
 
-/** The dictionary's window opened on a word from outside it (the reader's menu), which waits here for its field. */
+/**
+ * What of [selection] (as [lookupWord] gives it) the dictionaries' [entries] have: the selection itself, a word or an
+ * expression (קל וחומר), else the first of its words they have, each found as the window finds it ([lookupAsRead]).
+ * Null when they have none of it.
+ */
+internal fun entryIn(
+    entries: List<DictionaryEntry>,
+    selection: String,
+): String? = (listOf(selection) + selection.split(' ')).firstOrNull { lookupAsRead(entries, it).isNotEmpty() }
+
+/**
+ * The dictionary's window opened on a word from outside it (the reader's menu), which waits here for its field; and
+ * what the dictionaries have of a selection, for the menu to offer the window only for that.
+ */
 @Inject
 @SingleIn(AppScope::class)
 class DictionaryLookup(
     private val toolWindows: ToolWindows,
+    private val appSettings: AppSettings,
 ) {
     internal var word by mutableStateOf<String?>(null)
+
+    // The dictionaries searched and their entries, once read for the menus (read); null until then
+    @Volatile
+    private var known: Pair<List<Dictionary>, List<DictionaryEntry>>? = null
 
     /** Opens the dictionary's window, or brings it back, with [word] in its field. */
     fun open(word: String) {
         this.word = word
         toolWindows.open(DictionaryWidget)
     }
+
+    /**
+     * What of [selection] the dictionary's window would find ([entryIn]), or null when the dictionaries have none of
+     * it. Until they are read ([read]) it is the selection itself, as the menus offered it before they asked.
+     */
+    fun entryOf(selection: String): String? {
+        val (dictionaries, entries) = known ?: return selection
+        return if (dictionaries == searched()) entryIn(entries, selection) else selection
+    }
+
+    /** Reads the dictionaries searched for [entryOf], once, and again when others are ticked; off the UI thread. */
+    internal suspend fun read(graph: AppGraph) {
+        val dictionaries = searched()
+        if (known?.first == dictionaries) return
+        val read = readDictionaries(graph, dictionaries)
+        // One that failed to read is left out of the map: asked again at the next selection
+        if (read.keys.containsAll(dictionaries)) known = dictionaries to dictionaries.flatMap { read.getValue(it) }
+    }
+
+    // The dictionaries ticked in the card's options, as the card takes them: every one when none is
+    private fun searched(): List<Dictionary> {
+        val ticked = appSettings[DictionarySettings.shown]
+        return Dictionary.entries.filter { it in ticked }.ifEmpty { Dictionary.entries }
+    }
+}
+
+/**
+ * Has the dictionaries read for the menus ([DictionaryLookup.entryOf]) once [selection] is one the dictionary is
+ * offered for, so that the menu opened on it knows what they have.
+ */
+@Composable
+internal fun DictionaryReadFor(selection: String) {
+    val graph = LocalAppGraph.current
+    val offered = lookupWord(selection) != null
+    LaunchedEffect(offered) { if (offered) graph.dictionaryLookup.read(graph) }
 }
 
 /** Whether the dictionary is drawn in its own window, the Tools menu's; on the Home it is a card among others. */
