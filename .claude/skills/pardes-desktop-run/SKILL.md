@@ -37,7 +37,7 @@ $K/gradle.sh :SeforimApp:jvmTest ktlintCheck detekt     # every Gradle run here 
    `start.sh` writes `onboarding_finished`, `database_path` (the library's `seforim.db`), a region in Israel, and
    turns off the semantic pack prompt and the update check, which would open windows over the main one. It replaces
    what an earlier run saved there. More preferences, or other values, go in `PREFS`, as `key=value` words:
-   `PREFS="open_siddur=true daf_review=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants.
+   `PREFS="open_siddur=true daf_marks=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants.
 4. **The locale.** The container's locale is POSIX. With it, Gradle cannot write test classes whose names have
    non-ASCII characters (`InvalidPathException: Malformed input`), xdotool cannot type Hebrew, and window titles
    read `(failure in conversion from UTF8_STRING to ANSI_X3.4-1968)`. The scripts set `LC_ALL=C.UTF-8`
@@ -76,7 +76,7 @@ Coordinates on the maximised 1440x900 window:
 | Top bar, from the left: settings, theme, tools menu, history, notes, bookmarks, search, home | 20, 60, 100, 140, 180, 220, 260, 300 at y 20 |
 | Close the window (`stop.sh` does it and waits) | 1420, 20 |
 | Home's "תלמוד בבלי" chip, then its first tractate (ברכות) | 733, 156, then 758, 218 |
-| The reader's end bar (left in RTL): zoom in / out, ניקוד, צורת הדף | 33, 78 / 33, 145 / 33, 215 / 33, 285 |
+| The reader's end bar (left in RTL): zoom in / out, ניקוד (סימונים while a daf is shown), צורת הדף | 33, 78 / 33, 145 / 33, 215 / 33, 285 |
 | The daf view's header: previous amud (right) / next amud (left) | 987, 66 / 93, 66 |
 | Table of contents entries (right pane) | 1105, 100 + 33 a row |
 | The tools menu's rows (the siddur first when it is on) | 127, 59 + 25 a row |

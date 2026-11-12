@@ -1,6 +1,8 @@
 package io.github.kdroidfilter.seforimapp.core.settings
 
+import com.russhwolf.settings.PropertiesSettings
 import io.github.kdroidfilter.seforimapp.testAppSettings
+import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -8,7 +10,7 @@ import kotlin.test.assertTrue
 
 /**
  * The daf's own settings: its zoom (the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
- * shows one; a pinch over the daf zooms both by its ratio), and whether it marks the lines its alignment is not sure of.
+ * shows one; a pinch over the daf zooms both by its ratio), and whether it shows its marks.
  */
 class DafZoomTest {
     private val settings = testAppSettings()
@@ -83,25 +85,26 @@ class DafZoomTest {
     }
 
     @Test
-    fun `the daf marks its unsure lines only when asked, and the reset turns it off`() {
-        assertFalse(settings.isDafMarkUnsureEnabled())
-        settings.setDafMarkUnsureEnabled(true)
-        assertTrue(settings.dafMarkUnsureFlow.value)
+    fun `the daf shows its marks only when asked, and the reset hides them`() {
+        assertFalse(settings.isDafMarksShown())
+        settings.setDafMarksShown(true)
+        assertTrue(settings.dafMarksFlow.value)
 
         settings.clearAll()
-        assertFalse(settings.dafMarkUnsureFlow.value)
-        assertFalse(settings.isDafMarkUnsureEnabled())
+        assertFalse(settings.dafMarksFlow.value)
+        assertFalse(settings.isDafMarksShown())
     }
 
     @Test
-    fun `the daf's review is off until asked, and the reset turns it off`() {
-        assertFalse(settings.isDafReviewEnabled())
-        settings.setDafReviewEnabled(true)
-        assertTrue(settings.dafReviewFlow.value)
+    fun `the marks start shown for whoever had turned on one of the two settings before the button`() {
+        for (former in listOf("daf_mark_unsure", "daf_review")) {
+            val stored = PropertiesSettings(Properties()).apply { putBoolean(former, true) }
+            assertTrue(AppSettings(stored).dafMarksFlow.value, former)
 
-        settings.clearAll()
-        assertFalse(settings.dafReviewFlow.value)
-        assertFalse(settings.isDafReviewEnabled())
+            // The button pressed once, the former setting says nothing more
+            AppSettings(stored).setDafMarksShown(false)
+            assertFalse(AppSettings(stored).isDafMarksShown(), former)
+        }
     }
 
     @Test

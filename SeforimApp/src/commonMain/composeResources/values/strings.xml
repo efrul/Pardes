@@ -40,10 +40,6 @@
     <string name="settings_font_sources_label">גופן למקורות</string>
     <string name="settings_font_daf_gemara_label">גופן לגמרא בצורת הדף</string>
     <string name="settings_font_daf_commentary_label">גופן לרש״י ותוספות בצורת הדף</string>
-    <string name="settings_daf_mark_unsure">סימון בצבע בהיר של שורות לא ודאיות בצורת הדף</string>
-    <string name="settings_daf_mark_unsure_info">שורות שבהן ההתאמה בין הדפוס לנוסח שבספרייה לא בטוחה במילה הראשונה או האחרונה, וייתכן שמילה בהן אינה כבדפוס (כ־4% מהשורות). מועיל לבדיקת קובצי צורת הדף; כשזה כבוי, הדף אחיד כמו בדפוס.</string>
-    <string name="settings_daf_review">בדיקת השורות של צורת הדף, כדי לשלוח משוב על הזיהוי</string>
-    <string name="settings_daf_review_info">לחיצה ימנית בצורת הדף מוסיפה לתפריט שתי תיבות סימון: "הקטע מעומד לא נכון" ו"יש טעות במילים". הן חלות על הקטע המסומן כשהלחיצה בתוכו, ואחרת על השורה שנלחצה. הסימונים נשמרים בתיקייה feedback שליד קובצי צורת הדף, קובץ לכל מסכת, ושולחים אותם מ"שליחת משוב" שבניהול הנתונים.</string>
     <string name="daf_review_layout">הקטע מעומד לא נכון</string>
     <string name="daf_review_words">יש טעות במילים</string>
     <string name="daf_review_right">הקטע תקין</string>
@@ -389,6 +385,8 @@
     <string name="shnayim_mikra_mode_tooltip">שנים מקרא ואחד תרגום: כל פסוק פעמיים ואחריו התרגום</string>
     <string name="daf_view">צורת הדף</string>
     <string name="daf_view_tooltip">צורת הדף: הגמרא, רש״י ותוספות כפי שנדפסו בש״ס וילנא, שורה בשורה</string>
+    <string name="daf_marks">סימונים</string>
+    <string name="daf_marks_tooltip">סימוני הדף: שורות שההתאמה שלהן לדפוס אינה ודאית מוצגות בהיר, והקטעים שדיווחת עליהם צבועים</string>
     <string name="daf_amud_missing">עמוד זה עוד חסר בצורת הדף</string>
     <string name="daf_missing">צורת הדף של מסכת %1$s עוד לא הוכנה</string>
     <string name="daf_missing_hint">קובץ צורת הדף של מסכת נטען מהתיקייה %1$s שליד הספרייה. אפשר לייבא אותו לשם מכאן.</string>

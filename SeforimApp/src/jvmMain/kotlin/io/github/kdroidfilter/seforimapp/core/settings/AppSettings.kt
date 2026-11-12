@@ -42,13 +42,10 @@ class AppSettings(
     private val _dafZoomFlow = MutableStateFlow(getDafZoom())
     val dafZoomFlow: StateFlow<Float> = _dafZoomFlow.asStateFlow()
 
-    // Whether the daf draws lighter the lines its alignment is not sure of (to check the layouts; off, as printed)
-    private val _dafMarkUnsureFlow = MutableStateFlow(isDafMarkUnsureEnabled())
-    val dafMarkUnsureFlow: StateFlow<Boolean> = _dafMarkUnsureFlow.asStateFlow()
-
-    // The daf's review: its lines marked right or wrong, for pardes-rashi-ocr (DafReview.kt)
-    private val _dafReviewFlow = MutableStateFlow(isDafReviewEnabled())
-    val dafReviewFlow: StateFlow<Boolean> = _dafReviewFlow.asStateFlow()
+    // Whether the daf shows its marks: the lines its alignment is not sure of drawn lighter, and the lines the
+    // reader's review named tinted, its moves made (the end bar's button; off, as printed)
+    private val _dafMarksFlow = MutableStateFlow(isDafMarksShown())
+    val dafMarksFlow: StateFlow<Boolean> = _dafMarksFlow.asStateFlow()
 
     // The tabs whose reading view shows a daf now, each with its views' count (a tab dragged to another window is
     // composed there before it leaves this one): the zoom keys, buttons and menu zoom their daf, not the text
@@ -250,18 +247,12 @@ class AppSettings(
         _dafZoomFlow.value = value
     }
 
-    fun isDafMarkUnsureEnabled(): Boolean = settings[KEY_DAF_MARK_UNSURE, false]
+    // Until the button is first pressed: on for whoever had turned on one of the two settings it replaced
+    fun isDafMarksShown(): Boolean = settings[KEY_DAF_MARKS, settings[KEY_DAF_MARK_UNSURE, false] || settings[KEY_DAF_REVIEW, false]]
 
-    fun setDafMarkUnsureEnabled(enabled: Boolean) {
-        settings[KEY_DAF_MARK_UNSURE] = enabled
-        _dafMarkUnsureFlow.value = enabled
-    }
-
-    fun isDafReviewEnabled(): Boolean = settings[KEY_DAF_REVIEW, false]
-
-    fun setDafReviewEnabled(enabled: Boolean) {
-        settings[KEY_DAF_REVIEW] = enabled
-        _dafReviewFlow.value = enabled
+    fun setDafMarksShown(shown: Boolean) {
+        settings[KEY_DAF_MARKS] = shown
+        _dafMarksFlow.value = shown
     }
 
     /** The reading view of [tabId] shows a daf, until [dafHidden]. */
@@ -807,8 +798,7 @@ class AppSettings(
         settings.clear()
         _textSizeFlow.value = DEFAULT_TEXT_SIZE
         _dafZoomFlow.value = DEFAULT_DAF_ZOOM
-        _dafMarkUnsureFlow.value = false
-        _dafReviewFlow.value = false
+        _dafMarksFlow.value = false
         _lineHeightFlow.value = DEFAULT_LINE_HEIGHT
         _maxCommentatorsPerPageFlow.value = DEFAULT_MAX_COMMENTATORS_PER_PAGE
         _closeTreeOnNewBookFlow.value = false
@@ -845,6 +835,7 @@ class AppSettings(
             setOf(
                 KEY_TEXT_SIZE,
                 KEY_DAF_ZOOM,
+                KEY_DAF_MARKS,
                 KEY_DAF_MARK_UNSURE,
                 KEY_DAF_REVIEW,
                 KEY_LINE_HEIGHT,
@@ -948,6 +939,9 @@ class AppSettings(
 
         private const val KEY_TEXT_SIZE = "text_size"
         private const val KEY_DAF_ZOOM = "daf_zoom"
+        private const val KEY_DAF_MARKS = "daf_marks"
+
+        // The two settings the daf's marks button replaced, read for its first value
         private const val KEY_DAF_MARK_UNSURE = "daf_mark_unsure"
         private const val KEY_DAF_REVIEW = "daf_review"
         private const val KEY_LINE_HEIGHT = "line_height"
