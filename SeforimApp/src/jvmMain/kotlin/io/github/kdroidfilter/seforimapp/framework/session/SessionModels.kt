@@ -235,6 +235,8 @@ data class SearchPersistedState(
     val fetchBaseOnlyCategoryIds: List<Long> = emptyList(),
     // The results listed in the library's order (CatalogOrderEngine), not by relevance
     val catalogOrder: Boolean = false,
+    // In that order: how many lines found by meaning alone, less close, the list leaves out (CatalogOrderSession)
+    val fartherLines: Int = 0,
 ) {
     /** The scope the search runs in: its fetch scope, else its view filter. */
     val scope: SearchScope

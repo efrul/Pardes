@@ -468,6 +468,7 @@ private fun SearchResultContentMvi(
                                     onScopeBaseBooksChange = actions.onScopeBaseBooksChange,
                                     catalogOrder = state.catalogOrder,
                                     onCatalogOrderChange = actions.onCatalogOrderChange,
+                                    fartherLines = if (totalResults > 0) state.fartherLines else 0,
                                     modifier = Modifier.padding(end = 12.dp),
                                 )
 
@@ -1238,6 +1239,7 @@ private fun SearchStatusLine(
     onScopeBaseBooksChange: (Boolean) -> Unit = {},
     catalogOrder: Boolean = false,
     onCatalogOrderChange: (Boolean) -> Unit = {},
+    fartherLines: Int = 0,
 ) {
     val grey = readingSecondary()
     val count = remember(total) { NumberFormat.getIntegerInstance().format(total) }
@@ -1273,6 +1275,11 @@ private fun SearchStatusLine(
         // The order of the list: by relevance, or as the library has its books
         if (!isLoading) {
             Text("·", color = grey, fontSize = 13.sp)
+            // In the library's order, the lines found by meaning alone that it leaves out (CatalogOrderSession): the
+            // other order, the link after them, lists them
+            if (catalogOrder && fartherLines > 0) {
+                Text(stringResource(Res.string.search_farther_lines, fartherLines), color = grey, fontSize = 13.sp, maxLines = 1)
+            }
             ResultLink(
                 stringResource(if (catalogOrder) Res.string.search_sort_relevance else Res.string.search_sort_catalog),
                 JewelTheme.globalColors.outlines.focused,

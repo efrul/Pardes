@@ -470,18 +470,25 @@ class HybridSearchEngine internal constructor(
 
             override suspend fun meaningBookCounts(): Map<Long, Int> = this@HybridSession.meaningBookCounts()
 
+            override suspend fun meaningLines(): List<Long> = this@HybridSession.meaningLines()
+
             override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = this@HybridSession.refinedSnippets(hits)
 
             override fun close() = Unit
         }
 
-        override suspend fun meaningBookCounts(): Map<Long, Int> {
+        override suspend fun meaningBookCounts(): Map<Long, Int> = meaningOnly().groupingBy { it.bookId }.eachCount()
+
+        override suspend fun meaningLines(): List<Long> = meaningOnly().map { it.lineId }
+
+        // The list's lines that the words don't find, in its order
+        private suspend fun meaningOnly(): List<FusedEntry> {
             val meaningOnly = fused.orEmpty().filter { it.lexical == null && it.bookId > 0 }
-            if (meaningOnly.isEmpty()) return emptyMap()
+            if (meaningOnly.isEmpty()) return emptyList()
             // Past the fused list's CANDIDATES the words find more lines, which their facets count already: those of these
             // lines the words find too are not the meaning search's own
             val alsoWords = if (lexicalTotal > CANDIDATES) wordHitsAmong(meaningOnly.map { it.lineId }) else emptySet()
-            return meaningOnly.filterNot { it.lineId in alsoWords }.groupingBy { it.bookId }.eachCount()
+            return meaningOnly.filterNot { it.lineId in alsoWords }
         }
 
         // Which of [lineIds] the words find, where this session searches; none when the lexical side fails

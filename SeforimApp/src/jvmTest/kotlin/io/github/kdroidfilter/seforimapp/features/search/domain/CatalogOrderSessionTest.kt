@@ -102,10 +102,10 @@ class CatalogOrderSessionTest {
         override fun close() = Unit
     }
 
-    // An engine's own list: [lines], of which [meant] (book to how many) the words don't find
+    // An engine's own list: [lines], the closest first, of which the words don't find [meant]
     private class Fused(
         private val lines: List<LineHit>,
-        private val meant: Map<Long, Int>,
+        private val meant: List<LineHit>,
     ) : SearchSession,
         MeaningFacets {
         var closed = false
@@ -115,7 +115,9 @@ class CatalogOrderSessionTest {
             snippets: Boolean,
         ) = SearchPage(lines.take(limit), lines.size.toLong(), true)
 
-        override suspend fun meaningBookCounts(): Map<Long, Int> = meant
+        override suspend fun meaningBookCounts(): Map<Long, Int> = meant.groupingBy { it.bookId }.eachCount()
+
+        override suspend fun meaningLines(): List<Long> = meant.map { it.lineId }
 
         override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> =
             hits.associate {
@@ -151,13 +153,15 @@ class CatalogOrderSessionTest {
 
     // The words find [found]; the meaning adds a line of book 10 and one of book 40, where the words find none, and
     // lists a line the words find too
-    private val fused = Fused(listOf(hit(10, 3, "אחד שנים"), hit(30, 7), hit(40, 1, "שלשה ארבעה")), mapOf(10L to 1, 40L to 1))
+    private val own = listOf(hit(10, 3, "אחד שנים"), hit(40, 1, "שלשה ארבעה"))
+    private val fused = Fused(listOf(own[0], hit(30, 7), own[1]), own)
 
     private fun session(
         words: Lines,
         fused: Fused? = null,
         where: CatalogOrderSession.Where = CatalogOrderSession.Where(),
-    ) = CatalogOrderSession(words, words, fused, "מילה", 5, where, bookOrder = { order })
+        closest: Int = CatalogOrderSession.CLOSEST_LINES,
+    ) = CatalogOrderSession(words, words, fused, "מילה", 5, where, bookOrder = { order }, closest)
 
     private suspend fun SearchSession.all(limit: Int): List<LineHit> {
         val lines = ArrayList<LineHit>()
@@ -223,6 +227,27 @@ class CatalogOrderSessionTest {
             )
             assertEquals(9L, first?.totalHits)
             assertEquals(mapOf(10L to 1, 40L to 1), session.meaningBookCounts())
+            assertEquals(0, session.fartherLines())
+        }
+
+    @Test
+    fun `of the lines the meaning alone found only the closest stand in the list, and the others are counted`() =
+        runTest {
+            // Four of the meaning's own, the closest first: books 40 and 20 have the two closest, 30 and 10 the others
+            val meant = listOf(hit(40, 1), hit(20, 2), hit(30, 5), hit(10, 3))
+            val session = session(Lines(found), Fused(meant + hit(30, 7), meant), closest = 2)
+
+            val first = session.nextPage(20, snippets = false)
+
+            assertEquals(
+                listOf(30L to 2, 30L to 7, 10L to 1, 10L to 5, 10L to 9, 20L to 0, 20L to 2, 20L to 4, 40L to 1),
+                first?.hits?.places(),
+            )
+            assertEquals(9L, first?.totalHits)
+            assertEquals(2, session.fartherLines())
+            assertEquals(listOf(40_001L, 20_002L), session.meaningLines())
+            // The category tabs count them all, as the order of relevance does
+            assertEquals(mapOf(40L to 1, 20L to 1, 30L to 1, 10L to 1), session.meaningBookCounts())
         }
 
     @Test

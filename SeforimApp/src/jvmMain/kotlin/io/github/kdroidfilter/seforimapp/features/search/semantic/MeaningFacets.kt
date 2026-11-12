@@ -15,6 +15,12 @@ interface MeaningFacets {
      * first page is read; empty before it, and without a meaning search.
      */
     suspend fun meaningBookCounts(): Map<Long, Int>
+
+    /**
+     * Those lines themselves, in the list's order, the closest in meaning first: a list in another order
+     * (CatalogOrderSession) keeps the first of them alone. Empty where [meaningBookCounts] is.
+     */
+    suspend fun meaningLines(): List<Long>
 }
 
 /**

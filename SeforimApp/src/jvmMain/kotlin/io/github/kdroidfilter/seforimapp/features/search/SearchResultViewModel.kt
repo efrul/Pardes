@@ -39,6 +39,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchStatePersi
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchTocUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocLineIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
+import io.github.kdroidfilter.seforimapp.features.search.domain.fartherLinesOf
 import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
 import io.github.kdroidfilter.seforimapp.features.search.semantic.SessionViews
 import io.github.kdroidfilter.seforimapp.features.search.semantic.otherTabCategories
@@ -111,6 +112,8 @@ data class SearchUiState(
     val globalExtended: Boolean = false,
     // The results in the library's order, every one of a book's shown, not by relevance
     val catalogOrder: Boolean = false,
+    // In that order: how many lines found by meaning alone, less close, the list leaves out
+    val fartherLines: Int = 0,
     val baseBooksHadNoResults: Boolean = false,
     val isLoading: Boolean = false,
     val results: List<SearchResult> = emptyList(),
@@ -1008,6 +1011,7 @@ class SearchResultViewModel(
                 draftQuery = persisted.draftQuery.ifBlank { initialQuery },
                 globalExtended = persisted.globalExtended,
                 catalogOrder = persisted.catalogOrder,
+                fartherLines = persisted.fartherLines,
                 scrollIndex = persisted.scrollIndex,
                 scrollOffset = persisted.scrollOffset,
                 anchorId = persisted.anchorId,
@@ -1383,6 +1387,7 @@ class SearchResultViewModel(
                             progressCurrent = results.size,
                             progressTotal = firstPage.totalHits,
                         )
+                    showFartherLines(session)
                     applyFacets(withMeaningHits(facets, session))
                     showOtherCategories(q, persisted)
                     refineSnippets(session, filteredHits)
@@ -1496,6 +1501,13 @@ class SearchResultViewModel(
             }
         val safeSession = session ?: return null
         return safeSession to tocAllowedLineIds
+    }
+
+    // How many lines found by meaning alone [session]'s list leaves out (the library's order), kept for the tab's restore
+    private suspend fun showFartherLines(session: SearchSession) {
+        val farther = fartherLinesOf(session)
+        _uiState.value = _uiState.value.copy(fartherLines = farther)
+        updatePersistedSearch { it.copy(fartherLines = farther) }
     }
 
     /**
@@ -1832,6 +1844,7 @@ class SearchResultViewModel(
 
                     // Update progress but DON'T rebuild tree - keep original tree for navigation
                     _uiState.value = _uiState.value.copy(progressTotal = firstPage.totalHits)
+                    showFartherLines(session)
 
                     val results = hitsToResults(firstPage.hits, q)
                     _uiState.value =
@@ -2190,6 +2203,7 @@ class SearchResultViewModel(
 
                     // Update progress but DON'T rebuild tree - keep original tree for navigation
                     _uiState.value = _uiState.value.copy(progressTotal = firstPage.totalHits)
+                    showFartherLines(session)
 
                     val results = hitsToResults(firstPage.hits, q)
                     _uiState.value =

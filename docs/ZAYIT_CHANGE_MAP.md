@@ -34,7 +34,7 @@ every file Pardes adds.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (758 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (765 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -636,14 +636,15 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModels.kt`
 
-- **Change:** modified, +49 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
+- **Change:** modified, +51 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
   Search in categories, Results in the library's order.
 - **What:**
   - `BookContentPersistedState` gains, appended last for ProtoBuf: `detachedCommentators` (by name; 1.0.5's slot list
     is still read), `allCommentatorsBooks`, `excludedCommentatorsByBook`, `commentatorGroupsByBook`,
     `hiddenCommentatorGroupsByBook` and `dafView`.
   - `SearchPersistedState` gains `fetchBookIds`, `fetchCategoryIds`, `fetchBaseOnlyCategoryIds` and, last,
-    `catalogOrder` (the results listed in the library's order); the comment of
+    `catalogOrder` (the results listed in the library's order) and `fartherLines` (how many lines found by meaning
+    alone that order leaves out); the comment of
     `fetchCategoryId` says it is used again.
   - `scope` falls back to a new `wideScope`: the author's, the several books' and categories' (`SearchScope.Multi`), the
     category's (with `baseBooksOnly`), else everywhere. A search narrowed to one book goes back to it.
@@ -1249,7 +1250,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +406 −52 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
+- **Change:** modified, +420 −52 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1277,7 +1278,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - **Results in the library's order:** the constructor's `lucene` is a plain parameter named `engine`, and the
     `lucene` the file searches with is `CatalogOrderEngine(engine, libraryCategories::bookOrder)`, which lists in
     the library's order while the tab's `catalogOrder` says so; `SearchUiState.catalogOrder` (restored from the
-    tab's saved state), and the event `SetCatalogOrder`, which saves the choice and searches again.
+    tab's saved state), and the event `SetCatalogOrder`, which saves the choice and searches again;
+    `SearchUiState.fartherLines`, set from each first page by `showFartherLines` and kept with the tab: how many
+    lines found by meaning alone that order leaves out.
   - **Search speed:** the results' tree takes its books from the catalog (`BuildSearchTreeUseCase(repository,
     libraryCategories::books)`); and the flow that builds a tree from the first results no longer sets it once the
     facets' tree is in (`if (!facetsComputed)` in its `collect`): one finished late replaced the full tree with
@@ -1301,7 +1304,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +89 −29 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
+- **Change:** modified, +96 −29 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1318,7 +1321,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `passageLine`, which still opens the book on a click of its own; and the view goes to the found line only until
     lines are added before the passage (`!passage.grownBefore`).
   - `SearchShellActions` gains `onCatalogOrderChange`; `SearchStatusLine` takes `catalogOrder` and ends with a link
-    to the other order (`search_sort_catalog` / `search_sort_relevance`); and in the library's order every passage
+    to the other order (`search_sort_catalog` / `search_sort_relevance`), and, in the library's order, `fartherLines`:
+    the lines found by meaning alone it leaves out are counted before that link (`search_farther_lines`); and in the library's order every passage
     is listed (`flattenResults`' `oneBook` is `everyPassage`: no "more in this book" link, a book's lines stand
     together).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
@@ -1441,8 +1445,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +297 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 279 Hebrew strings added in eighteen blocks,
+- **Change:** modified, +298 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 280 Hebrew strings added in eighteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1461,7 +1465,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - search in categories and by name: `search_text_row_in_category`, `search_text_row_in_scope`,
     `search_switch_scope_all`, `search_switch_scope_base`, `row_action_add_to_search`, `row_action_search_category`,
     `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
-  - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה") and `search_sort_relevance`, after
+  - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה"), `search_sort_relevance` and
+    `search_farther_lines` (the lines found by meaning alone the library's order leaves out), after
     `search_switch_scope_base`;
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
@@ -2769,7 +2774,8 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
 A link in the results' status line, "מיון לפי סדר הספרייה", lists the lines found as the library has its books (the
 Tanakh's before the Mishnah's, a book's lines as they stand in it) instead of by relevance, as the user asked on
 2026-11-09; "מיון לפי רלוונטיות" goes back. Every line the words find is listed, a book's together, and with the meaning
-search the lines it alone found stand among them in their place. The choice is the tab's, kept with it. Nothing of
+search the closest of the lines it alone found (10, measured in `docs/catalog-order/`; all of them until 2026-11-12, as
+the user asked that day) stand among them in their place, the others counted in the status line. The choice is the tab's, kept with it. Nothing of
 SeforimLibrary's index changes: the books that have lines found are known from the facets, and are read a few at a time
 in the library's order, each sorted by its lines' places. On the whole library the first page comes in 0.03 to 0.9
 seconds, a search of 1.7 million lines included. Hooks: `SearchResultViewModel.kt`, `SearchResultScreen.kt`,
@@ -2779,7 +2785,7 @@ and `MeaningFacets.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSearch.kt`
 
 - **Feature:** Results in the library's order.
-- **Size:** 198 lines.
+- **Size:** 222 lines.
 - **What:**
   - `CatalogOrderEngine(engine, bookOrder, byCatalog)`, a `SearchEngine` that is `engine` in everything (`by engine`)
     but its sessions: while `byCatalog()` says so, `openSession` gives a `CatalogOrderSession` over the engine's words
@@ -2789,7 +2795,9 @@ and `MeaningFacets.kt`.
     found (`computeFacets`) and reads the engine's own list once (some 300 lines, and how many of each book's the words
     don't find); then it reads the books in the library's order (`bookOrder`, a book without a place last), as many as
     fill the page asked for (200 books at most in one reading), each group in one session of the words, sorted by book
-    and `lineIndex`; the meaning's own lines of those books join them, each line once. Its pages show the words in bold
+    and `lineIndex`; the closest of the meaning's own lines (`CLOSEST_LINES`, 10, in the engine's own order,
+    `MeaningFacets.meaningLines`) join them in their books, each line once, and how many others there are is
+    `fartherLines` (`fartherLinesOf` for any session). Its pages show the words in bold
     (`attachSnippets`), a line the meaning alone found its text and then its passage closest in meaning
     (`refinedSnippets`, the engine's own session's); its total counts both.
 - **Reached from:** `SearchResultViewModel.kt` (its `lucene`).
@@ -2798,17 +2806,22 @@ and `MeaningFacets.kt`.
   it, the other session Pardes adds.
 - **Tests:** `CatalogOrderSessionTest`; the order, the tabs in it and the choice kept over a restart were tried in the
   app on the whole library.
-- **Notes:** nothing is ranked, so a book with thousands of lines found is read whole when its turn comes (2,000 lines
+- **Notes:** the meaning's lines were all listed until 2026-11-12, when the user asked for the closest alone (request
+  31 of `docs/DESKTOP_STAGE2.md`): in the library's order a weak line came first because its book does. Their number
+  is measured in `docs/catalog-order/` (the first 6 related to the search in 64%, the 12th and the 25th in 47%); the
+  category tabs still count them all, as the order of relevance does. Nothing is ranked, so a book with thousands of
+  lines found is read whole when its turn comes (2,000 lines
   at a time). The passage beside the results still highlights by the engine's rule (by meaning with a pack), while
   the list shows the words in bold.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSessionTest.kt`
 
 - **Feature:** Results in the library's order.
-- **Size:** 285 lines.
+- **Size:** 310 lines.
 - **What:** the lines come book by book in the library's order, each book's as they stand in it; the books are read as
   the pages ask for them, those with a line or two together, and the last page says so; a line the meaning alone found
-  stands in its place and is counted, one the words found too comes once; the words' lines show the words, the
+  stands in its place and is counted, one the words found too comes once; of the meaning's own lines only the
+  closest stand in the list, the others counted; the words' lines show the words, the
   meaning's own its text and then its passage; a search in some lines reads them alone; the session closes the
   engine's own; and the engine gives its own session unless the library's order is asked for, reading the words of an
   engine that adds lines by meaning.
@@ -3345,7 +3358,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 766 lines.
+- **Size:** 773 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -3353,7 +3366,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   out; every line gains for the query's words close together in its best window, `coverage`), on the candidates' lines
   read once from the library (`candidateLines`); then it keeps the first lexical hits at places 2 and 4 (`keepLeaders`),
   recognizes a quote held word for word (`holdsQuote`), applies the earlier level's precedence (`LevelPrecedence`),
-  highlights by meaning, counts the meaning's lines in the facets (`MeaningFacets`), and falls back to the words alone
+  highlights by meaning, counts the meaning's lines in the facets and lists them (`MeaningFacets`), and falls back to the words alone
   when the model or the index cannot load. Its session gives views of its list (`SessionViews`: the lines of some
   books, in the list's order, paged from the first with no search), for the category tabs; none when the list goes on
   past what it holds (the words alone, past their candidates). It is a `WordsEngine`: its words' search (`words`) can
@@ -3519,8 +3532,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacets.kt`
 
 - **Feature:** Semantic search's category tabs.
-- **Size:** 62 lines.
-- **What:** `MeaningFacets`, a session whose list holds lines its facets don't count (the lines found by meaning alone);
+- **Size:** 68 lines.
+- **What:** `MeaningFacets`, a session whose list holds lines its facets don't count (the lines found by meaning alone),
+  by book (`meaningBookCounts`) and themselves in the list's order (`meaningLines`, which `CatalogOrderSession` keeps
+  the first of);
   `plusBooks` counts them into their books and categories; `otherTabCategories` offers the library's other top
   categories as tabs when the search runs by meaning in the whole library. `WordsEngine`, an engine whose search of
   the words can be asked apart from the lines it adds by meaning (`HybridSearchEngine`), for `CatalogOrderSession`.
@@ -4832,7 +4847,7 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (758 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (765 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -4851,7 +4866,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `.claude/settings.json` | Claude Code's project settings for this repository: `attribution.sessionUrl` false, which turns off the session link Claude Code adds to the commits it writes (f353d5dc's message). *Note:* Zayit has no .claude/ folder. Later Pardes commits still carry `Claude-Session:` trailers (e.g. 6be0f42b, 0c107b56). | Pardes's own |
-| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard and focus a new window, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
+| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/make-library.sh` | Skill script that makes the small library the headless app runs on (default /home/user/pardes-lib): the released library without its full-text index, cut to the base books given (default 103, Berakhot) with their commentaries and targumim, plus the lookup index, lexical.db, catalog.pb and release_info.txt; it then deletes the full seforim.db and copies the Talmud layouts into pardes-daf/. *Note:* Calls zayit-android's fetch-desktop-library.sh (`--no-fulltext`) and androidApp/tools/make_subset_db.sh (CONN_TYPES=1,3); needs about 8.2 GB free while it runs. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/setup.sh` | Skill script that apt-installs what the container lacks to run the desktop app headless: Xvfb, xdotool, x11-utils, ImageMagick, zstd, sqlite3, xclip, Mesa's EGL, GLES and DRI drivers, mesa-utils and Noto fonts, after an `apt-get update` (stale lists once hid libegl1); it then copies central-mirror.init.gradle.kts into ~/.gradle/init.d. Idempotent. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/shot.sh` | Skill script: a screenshot of display :99 (ImageMagick `import -window root`), optionally after an xdotool click at x y and a wait, into $SHOTS (default /tmp/pardes-desktop-shots); with `CROP=<geometry>` also that region alone, to read small text. *Note:* The same as zayit-android's desktop-shot.sh, which shoots the released Zayit instead. | Pardes's own |
@@ -4995,7 +5010,7 @@ the description where something needs saying.
 |---|---|---|
 | `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
 | `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
-| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
+| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it; for 31 what was measured and the rule chosen), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |
 | `docs/SEARCH_FUSION_RESEARCH.md` | Hebrew research note (2026-11-08) on merging the words' search and the meaning's: what plain RRF implies (a line only the words found, from their 11th place on, ranks below every line only the meaning found), rank against score fusion and their normalizations, calibration (ProbFuse, SSL, score distributions), weights by kind of query, a small learned ranker, and an offline measuring plan, which docs/fusion-compare/ carries out. *Note:* Written in Hebrew. | Pardes's own |
@@ -5018,6 +5033,18 @@ the description where something needs saying.
 | `docs/agents/2026-11-11-stage2-code-maps/semantic-pack-install.md` | English reading (2026-11-11, read-only, main at `abcb687` and efrul/Nucleus at `65ccd12`) of a semantic pack's path for request 36: found, brought, staged, scheduled, put in place at the next start and shown, and the four places that fit "the old model's details" after an import (the card until the restart, a failed swap that throws the staged pack away, a restart that starts the new app before the old one has ended, a pack with no pardes-pack.json installed without its number). *Note:* Nothing in it was reproduced in the app. | Pardes's own: the reading of the session that wrote the plan, not an agent's |
 | `docs/agents/2026-11-11-stage2-code-maps/settings-feedback-startup.md` | English code map (2026-11-11, read-only, main at `abcb687`) for stage 2 of Pardes for desktop, requests 30, 35 and 29: the settings window (a dialog composed inside its owner window), its state, call sites, navigation and pages, Zayit's tool windows as the precedent for a window of its own, `SettingCard` and the cards not built from it, every feedback control with its key, and the order of the start in main.kt; its header records that the library's delta update has no screen on desktop; with the brief the agent got. | Pardes's own: an Explore agent's report as it came back, under a header by the session that ran it |
 | `docs/agents/README.md` | Index of the reports that the agents of Claude Code sessions gave back, kept as they came so that a later session starts from them: a folder per run and a file per report (what it was for, the commit read, what was checked by hand, the report, the brief), a row per run; it points to the two earlier researches of stage 2 kept in the private daf repository. | Pardes's own |
+
+#### The library order's measurement (docs/catalog-order/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/catalog-order/README.md` | Hebrew report (2026-11-12) for request 31: how many of the lines a search found by meaning alone stay in the library's order. What was run (eval-real's 155 searches through the app's engines, in the app's scope, on the whole library with pack 3), what was found (a median of 149 such lines a search against 13 the words find, 91% of that list; a blind sample of 30 searches judged by place, half of it so far; why no fixed score serves), the rule chosen (the 10 closest) and the files. | Pardes's own |
+| `docs/catalog-order/judged.tsv` | The sample's lines judged so far (half B, 120 lines): item, search, line id, place among the meaning's lines, dense rank, score gap from the closest, grade (0 to 3), judge, reference; no text. | Pardes's own; graded by Claude |
+| `docs/catalog-order/tools/DebugStub.kt` | Stand-in for the app's `debugln` (Logger.kt), which the semantic package writes, for the harness build. | Pardes's own |
+| `docs/catalog-order/tools/Meant.kt` | The harness: runs searches through the app's own engines (LongQuerySearchEngine with PardesLexicon, HybridSearchEngine, IndependentSemanticSearch) and writes, per search, the fused list's lines the words don't find, in its order, with their rank and score on the dense side, as JSON lines. | Pardes's own; follows `docs/fusion-compare/tools/FeedbackHistory.kt` and pardes-semantic's `eval-100/harness/Eval.kt` |
+| `docs/catalog-order/tools/build.sh` | Builds the harness with a standalone Kotlin compiler, outside Gradle, against this checkout's search code, with fusion-compare's `CategoryStub.kt` and `LoggerStub.kt`; its jars from the Gradle cache or Maven Central. | Pardes's own; follows `docs/fusion-compare/tools/build.sh` |
+| `docs/catalog-order/tools/judged.py` | The README's tables from the judges' grades: by place, by score gap, against eval-real's own grades of the same lines; writes `judged.tsv`. | Pardes's own |
+| `docs/catalog-order/tools/sample.py` | The blind sample: 30 searches drawn with seed 31, the lines at eight places of each, shuffled, in two files for two judges, and its key. | Pardes's own |
 
 #### The search's measurements (docs/fusion-compare/)
 
