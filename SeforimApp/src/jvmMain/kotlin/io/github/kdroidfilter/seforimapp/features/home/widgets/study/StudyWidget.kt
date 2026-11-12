@@ -69,7 +69,11 @@ import java.util.WeakHashMap
 // book on the part, marked through its end. The plans are kept in the user DB (core/study/StudyPlanStore.kt) and edited
 // in StudyPlanEditor.kt. Ideas only from Otzaria's "לשקוד" add-on, which has no licence.
 
-/** A plan as the card shows it on a day: its book in this library (null: not there), its units and the day's part. */
+/**
+ * A plan as the card shows it on a day: its book in this library (null: not there), its units and the day's part; the
+ * part a click opens ([held]): the day's, or on a day without study (before the plan starts too) where it holds, the
+ * next day of study's.
+ */
 @Immutable
 internal data class ShownPlan(
     val plan: StudyPlan,
@@ -77,6 +81,7 @@ internal data class ShownPlan(
     val name: UnitName,
     val units: List<StudyUnit>,
     val part: DayPart,
+    val held: DayPart.Part? = part as? DayPart.Part,
 )
 
 /** [plan]'s book in this library: by its id while it has the same title, else by its title. */
@@ -96,17 +101,15 @@ internal suspend fun SeforimRepository.shownPlan(
 
     fun studyDay(date: LocalDate) = isStudyDay(date, plan.weekdays, inIsrael)
     val before = day < plan.startDay
-    val part =
-        dayPart(
-            startIndex = startIndexOf(units, plan.start),
-            count = units.size,
-            perDay = plan.perDay,
-            restart = plan.restart,
-            daysBefore = if (before) 0 else studyDaysBetween(plan.startDay, day, ::studyDay),
-            studyDay = studyDay(day),
-            beforeStart = before,
-        )
-    return ShownPlan(plan, book, name, units, part)
+    val startIndex = startIndexOf(units, plan.start)
+    val daysBefore = if (before) 0 else studyDaysBetween(plan.startDay, day, ::studyDay)
+    val part = dayPart(startIndex, units.size, plan.perDay, plan.restart, daysBefore, studyDay(day), before)
+    // On a day without study, a click opens where the plan holds: the next day of study's part
+    val held =
+        part as? DayPart.Part
+            ?: (dayPart(startIndex, units.size, plan.perDay, plan.restart, daysBefore, studyDay = true) as? DayPart.Part)
+                .takeIf { part == DayPart.Rest || part == DayPart.NotYet }
+    return ShownPlan(plan, book, name, units, part, held)
 }
 
 /** Where a part is in its book: the line its first unit starts on, and the last line of its last one. */
@@ -174,8 +177,8 @@ internal object StudyWidget : HomeWidget {
             onDone = { plan, checked -> scope.launch { store.setDone(plan.id, day, checked) } },
             onOpen = { plan ->
                 val book = plan.book
-                val part = plan.part
-                if (book != null && part is DayPart.Part) {
+                val part = plan.held
+                if (book != null && part != null) {
                     scope.launch {
                         val (lineId, endLineId) = graph.repository.linesOf(book, plan.units, part.indexes)
                         state.openTab(
@@ -284,7 +287,7 @@ private fun PlanRow(
             modifier = Modifier.padding(top = 2.dp),
         )
         HoverBox(
-            onClick = if (part is DayPart.Part) ({ onOpen(plan) }) else null,
+            onClick = if (plan.held != null) ({ onOpen(plan) }) else null,
             modifier = Modifier.weight(1f).alpha(if (isDone) 0.55f else 1f),
         ) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp)) {
