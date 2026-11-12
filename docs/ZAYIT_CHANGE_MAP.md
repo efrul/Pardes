@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (119 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (118 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (237 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (235 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,12 +57,12 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 45 |
-| Pardes feature in Zayit's file | 30 |
+| Pardes feature hook | 50 |
+| Pardes feature in Zayit's file | 31 |
 | Fix of Zayit's code | 12 |
-| Branding hook | 5 |
+| Branding hook | 4 |
 | Removed Zayit file | 5 |
-| Branding hook with Pardes feature hooks or a fix | 6 |
+| Branding hook with Pardes feature hooks or a fix | 7 |
 | Licence removal | 4 |
 | Documentation | 2 |
 | Renamed Zayit file | 2 |
@@ -459,23 +459,23 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
 
-- **Change:** modified, +11 −2 lines. Feature: Side panes at full height.
-- **What:** the window reads `AppSettings.sidePanesFullHeightFlow` after `bottomOpen`, under a comment marked
-  "Pardes:", into `lineSideOrder`: `SidePanesFullHeightOrder` while it is on, else Zayit's `LineSideOrder`. The
-  reader's `DockLayout` takes it as its `sideOrder`, and `DockedPaneCard` too (whether a pane stands under a side
-  pane); and the dock takes `outerBandSides = LineOuterBandSides`, under a comment marked "Pardes:" (a pane dropped at
-  the window's edge runs its full length); three imports.
-- **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, step 1 of its plan, 2026-11-12) that a side pane run
-  from the top of the window to its bottom while something is open under the text: with the switch in Settings ›
-  תצוגה the side panes run the whole height and the commentaries sit under the text alone. Off, the default, is Zayit's
-  layout. Eli's own reader demo in Nucleus has the same switch ("Navigation outermost"). The outer bands (step 4) let
-  the user choose it pane by pane, by where the pane is dropped (the mock-up approved on 2026-11-12).
+- **Change:** modified, +3 −0 lines. Feature: A pane at the window's edge.
+- **What:** the reader's `DockLayout` takes `outerBandSides = LineOuterBandSides`, under a comment marked "Pardes:" (a
+  pane dropped at the window's edge runs its full length), and its import.
+- **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, steps 1 and 4 of the docking in its plan,
+  2026-11-12) that a side pane run from the top of the window to its bottom while something is open under the text.
+  It is done pane by pane, by the drop (the mock-up approved on 2026-11-12): a pane released on the strip along the
+  window's very edge runs its full length and takes the corners from the panes beside it (Nucleus's outer band, from
+  Pardes's fork, `nucleus-fork/README.md`), one released beside the text stays where Zayit's `LineSideOrder` puts its
+  side, and the corner goes to the pane dropped last. A switch in Settings › תצוגה that laid every side pane at full
+  height (step 1) was taken out on 2026-11-13 at the user's word: the edge does it pane by pane, and Zayit's display
+  page and preferences stay as they are.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small: three arguments of the `DockLayout` call and three lines after `bottomOpen`, which a Zayit
-  change of the dock's call meets; `outerBandSides` needs Pardes's fork of Nucleus.
+- **Merge risk:** small: one argument of the `DockLayout` call, which a Zayit change of that call meets;
+  `outerBandSides` needs Pardes's fork of Nucleus.
 - **Smaller:** already minimal.
-- **Tests:** `SidePanesFullHeightTest` (the preference); both layouts tried in the app, and the drops: the links pane
-  to the left edge (the full height), back beside the text, and the commentaries to the bottom edge (the full width).
+- **Tests:** the drops tried in the app: the links pane to the left edge (the full height), back beside the text, and
+  the commentaries to the bottom edge (the full width).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/WindowUtils.kt`
 
@@ -607,7 +607,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +285 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur, Side panes at full height.
+- **Change:** modified, +270 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     its marks shown or hidden (`daf_marks`, `dafMarksFlow`: the unsure lines drawn lighter and the review's marks, the end
@@ -634,8 +634,6 @@ The entries of this section by kind:
     siddur's addon reads the switch where it has no graph to take the settings from. And the custom of the State of
     Israel's days in Iyar the open siddur asks on those days, with its flow (`siddur_israeli_prayer_custom`, an
     `IsraeliPrayerCustom`'s name), after Zayit's three siddur preferences. Both are portable.
-  - **The side panes at full height:** `side_panes_full_height` with its flow (`isSidePanesFullHeight`,
-    `setSidePanesFullHeight`), off by default, after Zayit's compact mode: portable, reset by `clearAll()`.
   - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`, `OpenSiddurSwitch`.
 - **Why:** Zayit keeps every preference here with its flow, so Pardes's features keep theirs here too (`8d3825e7` and
   the daf commits, `58586e1a`, `cb0f0a27`, `90f8a24a`, `ddf604d8`). The siddur's switch is the one preference here
@@ -647,7 +645,7 @@ The entries of this section by kind:
 - **Smaller:** the feedback and daf settings could be Pardes classes over the same `Settings`, leaving only the
   portable keys and `clearAll()`'s resets here.
 - **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`, `StartOffersTest`,
-  `OpenSiddurSwitchTest`, `SidePanesFullHeightTest`.
+  `OpenSiddurSwitchTest`.
 
 ### Tabs, sessions and desktops
 
@@ -1013,8 +1011,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +210 −34 lines. Feature: Commentators in their own panes, Side panes at full height, Pane
-  layout kept.
+- **Change:** modified, +203 −34 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+  Pane layout kept.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
     `ReaderPane.standard`, and a `data class Commentator(name)` is a pane per split-off commentator, closed by
@@ -1031,22 +1029,21 @@ The entries of this section by kind:
   - `desiredPanes` adds each split-off commentator's pane; `BookPaneBody` draws it with `DetachedCommentatorPane`.
   - `ReaderPane.entries` becomes `ReaderPane.standard` in `innerWidthPx`; `writeBack` and `position` handle
     `Commentator`.
-  - The side panes at full height: `SidePanesFullHeightOrder` after `LineSideOrder` (the sides before the bottom, so
-    the side panes run the whole height and the commentaries sit under the text alone), and `LineOuterBandSides` (left,
-    right, bottom: the sides a pane dropped at the window's edge runs the full length of). `DockedPaneCard` takes the
-    dock's `sideOrder` and gives a side pane the 3 dp gap above a pane open under the text only when that pane's band
-    is laid outside the side pane's own (`bottomPaneOutside`, private, the bands in Nucleus's order: the outer ones
-    first, by `outerBandOrder`); otherwise its full bottom margin. Its KDoc says so.
+  - A pane at the window's edge: `LineOuterBandSides` after `LineSideOrder` (left, right, bottom: the sides a pane
+    dropped at the window's edge runs the full length of). `DockedPaneCard` gives a side pane the 3 dp gap above a pane
+    open under the text only when that pane's band is laid outside the side pane's own (`bottomPaneOutside`, private,
+    the bands in Nucleus's order: the outer ones first, by `outerBandOrder`, then the others in `LineSideOrder`);
+    otherwise its full bottom margin. Its KDoc says so.
   - The pane layout kept: `WindowPanes` gives each pane first the place it had when its window was saved
     (`DesktopSession.savedPlacement`, on one of its `sides` or floating if it may), its sides read once into `sides`.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
-  anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). The side panes at full height: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
+  anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). A pane at the window's edge: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the enum's every entry was rewritten, so any Zayit change to a pane's declaration, or a new pane,
   conflicts; `PaneSync` and `WindowPanes` are edited in their core loops.
 - **Smaller:** hard. The commentator panes could be a second list of satellites declared by a Pardes composable, leaving
   Zayit's enum as it is, but `PaneSync` needs to know them.
-- **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`; the side order tried in the app.
+- **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`; the drops at the window's edge tried in the app.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/PostSelectLineTest.kt`
 
@@ -1626,8 +1623,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +318 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 291 Hebrew strings added in nineteen blocks,
+- **Change:** modified, +316 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 297 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1647,8 +1644,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `search_switch_scope_all`, `search_switch_scope_base`, `row_action_add_to_search`, `row_action_search_category`,
     `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
   - the user fonts' card, after `settings_font_reset_defaults`: `settings_user_fonts_*` (8) and
-    `settings_user_font_missing`; after them the side panes' switch, `settings_side_panes_full_height` ("חלוניות הצד
-    לכל הגובה") with its description;
+    `settings_user_font_missing`;
   - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה"), `search_sort_relevance` and
     `search_farther_lines` (the lines found by meaning alone the library's order leaves out), after
     `search_switch_scope_base`;
@@ -1862,16 +1858,6 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** small.
 - **Smaller:** already minimal; `app_name` itself is replaced by the brand overlay.
 - **Tests:** none of its own; `OpenSiddurSwitchTest` (what the card switches).
-
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DisplaySettingsScreen.kt`
-
-- **Change:** modified, +4 −0 lines. Feature: Side panes at full height.
-- **What:** `SidePanesCard()` after Zayit's compact mode card, under a comment marked "Pardes:", and its import.
-- **Why:** as for `WindowBody.kt`; the switch is one for the whole app, on the display page (decided on 2026-11-12).
-- **Kind:** Pardes feature hook.
-- **Merge risk:** small: one call between two of Zayit's cards.
-- **Smaller:** already minimal.
-- **Tests:** none of the screen; `SidePanesFullHeightTest`; the switch tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsEvents.kt`
 
@@ -5250,36 +5236,6 @@ is read once for a while. Hooks: `main.kt`, `AppSettings.kt`, `SettingsSidebar.k
   page's mark taken once; a release list read lately is not read again, one read ten minutes ago or that failed is.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
-- **Tests:** it is one (unit).
-
-### The side panes at full height
-
-The reader's side panes can run the window's whole height, the commentaries under the text alone, since 2026-11-12, as
-the user asked (request ב of `docs/DESKTOP_STAGE2.md`, step 1 of the docking in its plan): a switch in Settings ›
-תצוגה, off by default, which keeps Zayit's layout (the bottom pane under the text and the side panes). And, the same day
-(step 4), pane by pane by the drop: a pane released on the strip along the window's very edge runs its full length and
-takes the corners from the panes beside it (Nucleus's outer band, from Pardes's fork, `nucleus-fork/README.md`), one
-released beside the text stays where the switch puts its side, and the corner goes to the pane dropped last. Hooks:
-`WindowBody.kt`, `ReaderPanes.kt`, `DisplaySettingsScreen.kt`, `AppSettings.kt`, `strings.xml`.
-
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/SidePanesCard.kt`
-
-- **Feature:** Side panes at full height.
-- **Size:** 26 lines.
-- **What:** `SidePanesCard`, the display page's switch, bound to `AppSettings.sidePanesFullHeightFlow`.
-- **Reached from:** `DisplaySettingsScreen.kt`.
-- **Follows:** Zayit's `SettingCard` checkboxes on the same page (the compact mode's).
-- **Tests:** none of the card; `SidePanesFullHeightTest`; tried in the app, the main window following the switch while
-  the settings are open.
-
-#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/settings/SidePanesFullHeightTest.kt`
-
-- **Feature:** Side panes at full height.
-- **Size:** 40 lines.
-- **What:** the preference is off by default, kept once turned on, reset by `clearAll()`, and carried by a backup's
-  portable preferences.
-- **Reached from:** the JVM tests.
-- **Follows:** Zayit's settings tests (`testAppSettings`, `PropertiesSettings`), Kotlin Test.
 - **Tests:** it is one (unit).
 
 ### The reader's pane layout kept

@@ -55,8 +55,6 @@
     <string name="settings_user_fonts_no_hebrew">הגופן %1$s נוסף, אבל אין בו אותיות עבריות: טקסט עברי יוצג בו בגופן אחר.</string>
     <string name="settings_user_fonts_failed">הקובץ לא נטען כגופן (%1$s).</string>
     <string name="settings_user_font_missing">%1$s (חסר)</string>
-    <string name="settings_side_panes_full_height">חלוניות הצד לכל הגובה</string>
-    <string name="settings_side_panes_full_height_description">החלוניות שבצדי הטקסט עוברות לכל גובה החלון, והחלונית שמתחתיו נמצאת רק מתחת לטקסט. כשהאפשרות כבויה, החלונית שמתחת לטקסט עוברת גם מתחת לחלוניות שבצדדים.</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>
     <string name="font_noto_rashi_hebrew">נוטו רש"י עברית</string>

@@ -267,9 +267,6 @@ val LineLayeredSides = setOf(DockSide.Left, DockSide.Right)
 /** The commentaries run under the text and the links, as the vertical split did. */
 val LineSideOrder = listOf(DockSide.Bottom, DockSide.Left, DockSide.Right, DockSide.Top)
 
-/** Pardes: the side panes run the whole height, the commentaries under the text alone (Settings › תצוגה). */
-val SidePanesFullHeightOrder = listOf(DockSide.Left, DockSide.Right, DockSide.Bottom, DockSide.Top)
-
 /**
  * Pardes: the sides a pane dropped at the window's very edge runs the full length of (Nucleus's outer band), taking the
  * corners from the panes beside it; dropped beside the text, it stays where [LineSideOrder] puts its side.
@@ -918,12 +915,11 @@ fun PaneCard(
 
 /**
  * A docked pane's frame by its side of the text: [bottomOpen] is whether a pane is docked under the text; Pardes: a side
- * pane stands on it only when that pane's band is laid outside its own, in the dock's [sideOrder].
+ * pane stands on it only when that pane's band is laid outside its own.
  */
 @Composable
 fun SatelliteScope.DockedPaneCard(
     bottomOpen: Boolean,
-    sideOrder: List<DockSide> = LineSideOrder,
     content: @Composable () -> Unit,
 ) {
     val docked = satellite.placement as? SatellitePlacement.Docked
@@ -931,7 +927,7 @@ fun SatelliteScope.DockedPaneCard(
     when {
         side == DockSide.Bottom -> PaneCard(top = 3.dp, content = content)
         side == DockSide.Left || side == DockSide.Right ->
-            PaneCard(bottom = if (bottomOpen && workspace.bottomPaneOutside(docked, sideOrder)) 3.dp else 6.dp, content = content)
+            PaneCard(bottom = if (bottomOpen && workspace.bottomPaneOutside(docked)) 3.dp else 6.dp, content = content)
         else -> PaneCard(content = content)
     }
 }
@@ -939,16 +935,13 @@ fun SatelliteScope.DockedPaneCard(
 /**
  * Pardes: whether an open pane of the bottom side is laid outside [docked]'s band, so that it runs under it. Nucleus
  * lays the outer bands first, the one docked into last outermost ([SatelliteWorkspace.outerBandOrder]) and the others in
- * [sideOrder], then the inner bands in [sideOrder].
+ * [LineSideOrder], then the inner bands in [LineSideOrder].
  */
-private fun SatelliteWorkspace.bottomPaneOutside(
-    docked: SatellitePlacement.Docked,
-    sideOrder: List<DockSide>,
-): Boolean {
-    val outerOrder = (outerBandOrder + sideOrder).distinct()
+private fun SatelliteWorkspace.bottomPaneOutside(docked: SatellitePlacement.Docked): Boolean {
+    val outerOrder = (outerBandOrder + LineSideOrder).distinct()
 
     fun rank(placement: SatellitePlacement.Docked): Int =
-        if (placement.outer) outerOrder.indexOf(placement.side) else outerOrder.size + sideOrder.indexOf(placement.side)
+        if (placement.outer) outerOrder.indexOf(placement.side) else outerOrder.size + LineSideOrder.indexOf(placement.side)
     val own = rank(docked)
     return satellites.any { entry ->
         val bottom = entry.placement as? SatellitePlacement.Docked
