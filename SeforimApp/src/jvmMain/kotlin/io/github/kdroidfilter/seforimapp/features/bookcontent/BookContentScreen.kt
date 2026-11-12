@@ -69,6 +69,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveComposeSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveRange
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryReadFor
 import io.github.kdroidfilter.seforimapp.features.home.widgets.library.lookupWord
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -521,6 +522,7 @@ fun BookTextMenus(
                     val bookSelection = LocalBookSelection.current
                     val shiftRange = bookSelection?.range
                     val rawText = textManager.selectedText.text
+                    DictionaryReadFor(rawText)
                     // Mirror the current selection into the SelectionContext so the AWT
                     // keyboard dispatcher can read it without touching Compose state directly.
                     // A new Compose selection (a drag) replaces the Shift+click one; a Shift+click leaves Compose's as is
@@ -672,14 +674,16 @@ fun BookTextMenus(
                                         },
                                     )
                                 }
-                                // Its word, or its few, in the dictionary's window
+                                // Its word, or its few, in the dictionary's window: lit for what the dictionaries have
                                 lookupWord(copiedText)?.let { word ->
+                                    val entry = dictionaryLookup.entryOf(word)
                                     add(
                                         ContextMenuItemOption(
                                             icon = AllIconsKeys.Toolwindows.Documentation,
+                                            enabled = entry != null,
                                             label = openInDictionaryLabel,
                                         ) {
-                                            dictionaryLookup.open(word)
+                                            entry?.let(dictionaryLookup::open)
                                         },
                                     )
                                 }

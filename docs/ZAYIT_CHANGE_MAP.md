@@ -749,7 +749,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
-- **Change:** modified, +92 −10 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window.
+- **Change:** modified, +96 −10 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window.
 - **What:**
   - In `BookTextMenus`, `LocalLocatedSelection.current`: when the content locates its own selection in the library (the
     daf's printed words), the context menu's link, note and highlight take that location instead of searching the
@@ -760,8 +760,10 @@ The entries of this section by kind:
   - In `BookTextMenus`, the item "העתק טקסט בלבד" (`context_menu_copy_letters_only`) after "copy without nikud", when the
     copied text has anything but letters, digits and spaces (`hasMoreThanLetters`): it copies `lettersOnly(copiedText)`.
   - In `BookTextMenus`, the item "פתח במילון" (`context_menu_open_in_dictionary`) after "search the selected text", when
-    the copied text is a word or up to four (`lookupWord`): it opens the dictionary's window on it
-    (`dictionaryLookup.open`, read from the graph beside the repository).
+    the copied text is a word or up to four (`lookupWord`): it opens the dictionary's window on what the dictionaries
+    have of it (`dictionaryLookup.entryOf`, then `open`, read from the graph beside the repository), and is shown
+    disabled when they have none of it; `DictionaryReadFor(rawText)` in the menu's area has them read at the first
+    such selection.
   - In `contextItems`, a branch for `ContextMenuCheck` (the daf review's checkboxes): a passive item drawing
     `ContextMenuCheckRow`, so that a click on it leaves the menu open.
   - In `BookContentScreen`, a `LaunchedEffect` that tracks the book's reading time (`readingTimeStore.track`) while its
@@ -1683,14 +1685,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWidget.kt`
 
-- **Change:** modified, +170 −22 lines. Feature: Klei Kodesh dictionary, Dictionary window.
+- **Change:** modified, +171 −23 lines. Feature: Klei Kodesh dictionary, Dictionary window.
 - **What:**
   - `Dictionary` gains a `source` (`BOOK`, `INDEX`, `TEXT`) and an `attribution`, and six entries: four books of the
     library read through Klei Kodesh's index of headwords (מצודת ציון, the Malbim's ביאור המילות, מיקרופדיה תלמודית,
     מחברת מנחם) and two dictionaries of text (Torat Emet's Aramaic-Hebrew dictionary, from Klei Kodesh's data with
     their permission; Hebrew Wikipedia's acronyms, CC BY-SA), with `Dictionary.of(name, source)`.
   - `DictionaryEntry.text` for a word of no book.
-  - Reading by source: `readBook` (Zayit's code, moved out of `readDictionaries`), `readIndexed` (each index entry
+  - Reading by source (`readDictionaries`, now internal: `DictionaryLookup` reads through it for the menus): `readBook`
+    (Zayit's code, moved out of it), `readIndexed` (each index entry
     checked against its line; the counts logged), `titleVariants` (באור/ביאור, " and ״), and the text dictionaries from
     `KleiKodeshPack.shipped`.
   - Each word's synonyms and spellings from Klei Kodesh (`RelatedWords`), under the field and on the entry's page; one
@@ -2702,7 +2705,7 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/PassageReading.kt`
 
 - **Feature:** Passage read as a book.
-- **Size:** 399 lines.
+- **Size:** 407 lines.
 - **What:**
   - `PassageReading`, the state of one result's passage: its `lines` (the result's own, then those read before and
     after them, `more(before)`: 30 at a time by `lineIndex`, one reading at a time, none past the book's ends or 600
@@ -2714,14 +2717,15 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
   - `Modifier.readPastEnds(passage, scroll)`: the nested scroll connection, and the wheel's own events at an end (a
     passage shorter than its pane scrolls nothing).
   - `PassageText`: a `SelectionContainer` under a `TextContextMenu` that adds the menu's items (`PassageActions`) to the
-    app's own (Jewel's "העתקה"), and the lines added before those read kept out of the way: drawn above the view
+    app's own (Jewel's "העתקה"; "פתח במילון" lit for what the dictionaries have of the selection, as in the reader:
+    `DictionaryLookup.entryOf`, `DictionaryReadFor`), and the lines added before those read kept out of the way: drawn above the view
     (`offset`) until the scroll takes their height (`dispatchRawDelta`), so what is read stays in its place.
   - `Modifier.passageLine(passage, lineId, onOpen)`: a click of its own opens (not a drag, not a click that lets a
     selection go, not the first of two on a word, waited for `doubleTapTimeoutMillis`), nothing consumed, so the
     selection takes the same presses; the line pressed and the line right-clicked are kept.
 - **Reached from:** `SearchResultScreen.kt` (`PassagePreview`).
 - **Follows:** the reader's `BookTextMenus` (`BookContentScreen.kt`) for the menu's items, labels and icons, and its
-  helpers (`buildCopyWithSourcePayload`, `bookShareLink`, `lettersOnly`, `lookupWord`); `PreviewHighlights.kt` beside
+  helpers (`buildCopyWithSourcePayload`, `bookShareLink`, `lettersOnly`, `lookupWord`, `DictionaryLookup`); `PreviewHighlights.kt` beside
   it, the other part of the passage Pardes adds.
 - **Tests:** `PassageReadingTest`; the selection, the menu, the clicks and the scroll were tried in the app.
 - **Notes:** what needs the book open is left to the reader: a note, a highlight, the find bar, a report of an error.
@@ -3107,18 +3111,23 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWindow.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 107 lines.
+- **Size:** 162 lines.
 - **What:** `DictionaryToolWindow`, the dictionary's tool window: Zayit's `DefaultToolWindow` under
   `LocalDictionaryWindow` set to true. `Modifier.focusedInItsWindow()` gives the field the focus there, when the window
   opens, each time it is asked for again (`ToolWindows.reopened`) and back from an entry's page; on the Home the local is
   false and the card takes no focus by itself. `DictionaryLookup` (app-scoped) opens that window on a word from outside
-  it, or brings it back: the word waits in it until `LookupAskedFor`, in the window alone, hands it to the field.
+  it, or brings it back: the word waits in it until `LookupAskedFor`, in the window alone, hands it to the field. It
+  also says what of a selection the dictionaries have (`entryOf`, by `entryIn`: the selection itself, else the first of
+  its words the window would find), for a menu to light its item only for that; the dictionaries ticked are read for
+  it once, off the UI thread, when a selection short enough is first made (`read`, called by `DictionaryReadFor`), and
+  until then the selection itself is offered, as before.
   `lookupWord` is a selection as the dictionary is asked for it: its words alone (`lettersOnly`), or null when it is
   empty or longer than four words. `lookupAsRead` is Zayit's `lookup`, and for a word no entry begins with, the same
   word without the letters before it in a text (והלל: הלל, דאמר: אמר), at most two and down to three letters, when
   what is left is an entry.
 - **Reached from:** `DictionaryWidget.kt` (`ToolWindow`, the field's modifier, `LookupAskedFor`, `lookupAsRead`),
-  `BookContentScreen.kt` (`lookupWord`, `DictionaryLookup.open`), `AppGraph.kt`.
+  `BookContentScreen.kt` and `PassageReading.kt` (`lookupWord`, `DictionaryReadFor`, `DictionaryLookup.entryOf` and
+  `open`), `AppGraph.kt`.
 - **Follows:** Zayit's `SolarSystemWidget`, whose `ToolWindow` is a window of its own, and his composable modifiers
   (`Modifier.pageSwipe`, `Modifier.trackedDrag`); `DictionaryLookup` is injected as his `ToolWindows` is.
 - **Tests:** `DictionaryWindowUiTest`, `DictionaryLookupTest`.
@@ -3136,9 +3145,10 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryLookupTest.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 55 lines.
+- **Size:** 73 lines.
 - **What:** a selected word is asked for as its letters alone; no word, or more than four, is not looked up; a word of
-  a text is found without the letters before it, a word of the dictionaries as itself; a lookup opens the dictionary's
+  a text is found without the letters before it, a word of the dictionaries as itself; a selection is looked up whole when the dictionaries have it, else by the
+  first of its words they have, and offered as it is until they are read; a lookup opens the dictionary's
   window and brings it back for the next word.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `DictionaryWidgetTest` beside it (Kotlin Test, backtick names).

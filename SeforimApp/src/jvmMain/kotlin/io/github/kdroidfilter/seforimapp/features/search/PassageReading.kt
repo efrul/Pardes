@@ -48,6 +48,8 @@ import io.github.kdroidfilter.seforimapp.core.deeplink.bookShareLink
 import io.github.kdroidfilter.seforimapp.core.hasMoreThanLetters
 import io.github.kdroidfilter.seforimapp.core.lettersOnly
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryLookup
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryReadFor
 import io.github.kdroidfilter.seforimapp.features.home.widgets.library.lookupWord
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -241,6 +243,7 @@ internal fun PassageText(
                     content: @Composable () -> Unit,
                 ) {
                     val selected = textManager.selectedText.text
+                    DictionaryReadFor(selected)
                     SideEffect { passage.selectedText = selected }
                     ContextMenuDataProvider(items = { actions.items(textManager.selectedText.text) }) {
                         base.Area(textManager, state, content)
@@ -325,7 +328,7 @@ private class PassageActions(
     private val labels: PassageLabels,
     private val copy: (String) -> Unit,
     private val search: (String) -> Unit,
-    private val lookUp: (String) -> Unit,
+    private val dictionary: DictionaryLookup,
     private val openLine: (Long) -> Unit,
 ) {
     fun items(selected: String): List<ContextMenuItem> =
@@ -348,7 +351,11 @@ private class PassageActions(
             add(option(AllIconsKeys.ToolbarDecorator.AddLink, labels.link) { copy(bookShareLink(preview.hit.bookId, lineOf(selected))) })
             val query = selected.replace(SPACES, " ").trim()
             if (query.isNotEmpty()) add(option(AllIconsKeys.Actions.Find, labels.search) { search(query) })
-            lookupWord(selected)?.let { word -> add(option(AllIconsKeys.Toolwindows.Documentation, labels.dictionary) { lookUp(word) }) }
+            // Lit for what the dictionaries have of it, as in the reader
+            lookupWord(selected)?.let { word ->
+                val entry = dictionary.entryOf(word)
+                add(option(AllIconsKeys.Toolwindows.Documentation, labels.dictionary, entry != null) { entry?.let(dictionary::open) })
+            }
             add(option(AllIconsKeys.Actions.MenuOpen, labels.openBook) { openLine(passage.menuLineId ?: preview.hit.lineId) })
         }
 
@@ -358,8 +365,9 @@ private class PassageActions(
     private fun option(
         icon: IconKey,
         label: String,
+        enabled: Boolean = true,
         action: () -> Unit,
-    ) = ContextMenuItemOption(icon = icon, label = label, action = action)
+    ) = ContextMenuItemOption(icon = icon, enabled = enabled, label = label, action = action)
 }
 
 @Composable
@@ -387,7 +395,7 @@ private fun rememberPassageActions(
             copy,
             // In a tab of its own, as the reader's
             search = { query -> tabs.openTab(TabsDestination.Search(searchQuery = query, tabId = UUID.randomUUID().toString())) },
-            lookUp = dictionary::open,
+            dictionary = dictionary,
             openLine = { openLine(it) },
         )
     }
