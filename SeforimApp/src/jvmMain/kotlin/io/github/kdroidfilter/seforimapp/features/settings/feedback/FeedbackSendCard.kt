@@ -16,27 +16,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.zacsweers.metrox.viewmodel.metroViewModel
-import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.settings.library.isolatedPath
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
-import io.github.vinceglb.filekit.path
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -50,11 +39,7 @@ import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.feedback_consent_publish
-import seforimapp.seforimapp.generated.resources.feedback_consent_publish_hint
 import seforimapp.seforimapp.generated.resources.feedback_send_all
-import seforimapp.seforimapp.generated.resources.feedback_send_auto
-import seforimapp.seforimapp.generated.resources.feedback_send_auto_hint
 import seforimapp.seforimapp.generated.resources.feedback_send_daf
 import seforimapp.seforimapp.generated.resources.feedback_send_delete
 import seforimapp.seforimapp.generated.resources.feedback_send_delete_no
@@ -64,6 +49,7 @@ import seforimapp.seforimapp.generated.resources.feedback_send_deleted
 import seforimapp.seforimapp.generated.resources.feedback_send_description
 import seforimapp.seforimapp.generated.resources.feedback_send_failed
 import seforimapp.seforimapp.generated.resources.feedback_send_grades
+import seforimapp.seforimapp.generated.resources.feedback_send_last
 import seforimapp.seforimapp.generated.resources.feedback_send_nothing
 import seforimapp.seforimapp.generated.resources.feedback_send_nothing_new
 import seforimapp.seforimapp.generated.resources.feedback_send_now
@@ -88,57 +74,15 @@ import seforimapp.seforimapp.generated.resources.feedback_send_sending
 import seforimapp.seforimapp.generated.resources.feedback_send_sent
 import seforimapp.seforimapp.generated.resources.feedback_send_title
 import seforimapp.seforimapp.generated.resources.feedback_send_too_many
+import seforimapp.seforimapp.generated.resources.feedback_send_waiting
 import seforimapp.seforimapp.generated.resources.feedback_send_zayit
-import java.awt.Desktop
 import java.io.File
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/**
- * Settings › ניהול נתונים: sending the feedback given, the search results' grades (feedback mode), the searches made,
- * and the daf view's line review. The user sees what there is, keeps what they want of it, and sends it to Pardes's
- * service or saves it to a file; turns the automatic sending (FeedbackAutoSender) on or off, and deletes what was sent.
- */
-@Composable
-fun FeedbackSendCard() {
-    val viewModel: FeedbackSendViewModel =
-        metroViewModel(viewModelStoreOwner = LocalWindowViewModelStoreOwner.current)
-    val state by viewModel.state.collectAsState()
-    val scope = rememberCoroutineScope()
-    // Each time the card is shown: the user may have given feedback since
-    LaunchedEffect(viewModel) { viewModel.refresh() }
-    FeedbackSendCardContent(
-        state = state,
-        actions =
-            FeedbackSendActions(
-                grades = viewModel::setGrades,
-                searches = viewModel::setSearches,
-                daf = viewModel::setDaf,
-                otherApp = viewModel::setOtherApp,
-                publish = viewModel::setPublish,
-                query = viewModel::setQuery,
-                all = viewModel::setAll,
-                renewSender = viewModel::renewSender,
-                auto = viewModel::setAuto,
-                send = viewModel::send,
-                deleteSent = viewModel::deleteSent,
-                save = {
-                    scope.launch {
-                        // Off the GTK event-loop thread, as the data screen's other pickers (see pickDatabaseParts)
-                        val folder = withContext(Dispatchers.IO) { FileKit.openDirectoryPicker() }
-                        folder?.let { viewModel.saveTo(File(it.path)) }
-                    }
-                },
-                openFolder = { file ->
-                    scope.launch(Dispatchers.IO) { runCatching { Desktop.getDesktop().open(file.absoluteFile.parentFile) } }
-                },
-            ),
-    )
-}
-
-/** What the card's checkboxes and buttons do. */
+/** What the feedback page's checkboxes and buttons do. */
 internal class FeedbackSendActions(
     val grades: (Boolean) -> Unit = {},
     val searches: (Boolean) -> Unit = {},
@@ -153,14 +97,20 @@ internal class FeedbackSendActions(
     val renewSender: () -> Unit = {},
     // The automatic sending on or off
     val auto: (Boolean) -> Unit = {},
+    // The grade buttons under each search result, shown or not
+    val buttons: (Boolean) -> Unit = {},
     val send: () -> Unit = {},
     val deleteSent: () -> Unit = {},
     val save: () -> Unit = {},
     val openFolder: (File) -> Unit = {},
 )
 
+/**
+ * Sending the feedback given, the search results' grades, the searches made and the daf view's line review: how much
+ * of each waits, when the last package was made, and sending it to Pardes's service or saving it to a file.
+ */
 @Composable
-internal fun FeedbackSendCardContent(
+internal fun FeedbackSendCard(
     state: FeedbackSendViewModel.State,
     actions: FeedbackSendActions,
     modifier: Modifier = Modifier,
@@ -179,52 +129,64 @@ internal fun FeedbackSendCardContent(
         Text(text = stringResource(Res.string.feedback_send_title), fontSize = 15.sp)
         Hint(stringResource(Res.string.feedback_send_description))
         val contents = state.contents
-        if (contents == null) {
-            Text(text = stringResource(Res.string.feedback_send_reading), fontSize = 13.sp)
-        } else {
-            Kinds(contents, state.choice, state.otherApps, actions)
-            if (contents.isEmpty) Text(text = nothingText(state), fontSize = 13.sp)
+        when {
+            contents == null -> Text(text = stringResource(Res.string.feedback_send_reading), fontSize = 13.sp)
+            contents.isEmpty -> Text(text = nothingText(state), fontSize = 13.sp)
+            else -> Waiting(contents.kept(state.choice), state.lastSent)
         }
-        // Once a package was made: the next one holds what is newer, unless the user wants all again
-        if (state.lastSent > 0 && contents != null) {
-            CheckboxRow(
-                text = stringResource(Res.string.feedback_send_all),
-                checked = state.all,
-                onCheckedChange = actions.all,
-                enabled = !state.busy,
-            )
-        }
-        if (state.online) Publish(state.choice.publish, actions)
-        if (state.online) Auto(state.auto, actions)
-        Privacy(state.sender, state.online, actions)
         WorkStatus(state)
         Buttons(state, actions)
-        if (state.online && state.lastSent > 0) DeleteSent(state.busy, actions)
     }
 }
 
-/** The automatic sending: what is new, at every start and connection of the network, of the kinds checked above. */
+/** How much of each kind [kept] holds, the other apps' with Pardes's own, and when the last package was made. */
 @Composable
-private fun Auto(
-    on: Boolean,
-    actions: FeedbackSendActions,
+private fun Waiting(
+    kept: FeedbackContents,
+    lastSent: Long,
 ) {
+    val grades = kept.grades.size + kept.others.values.sumOf { it.grades.size }
+    val searches = kept.searches.size + kept.others.values.sumOf { it.searches.size }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        CheckboxRow(text = stringResource(Res.string.feedback_send_auto), checked = on, onCheckedChange = actions.auto)
-        Hint(stringResource(Res.string.feedback_send_auto_hint))
+        Text(text = stringResource(Res.string.feedback_send_waiting, grades, searches, kept.dafMarks), fontSize = 13.sp)
+        if (lastSent > 0) Hint(stringResource(Res.string.feedback_send_last, dateOf(lastSent)))
     }
 }
 
-/** Whether the service may show to everyone what is sent, by the card and by itself: its words, never the sender. */
+/**
+ * What is sent, by the page and by itself: each kind with how much of it is new, the other apps' searches, the queries
+ * to look over, and, once a package was made, everything again.
+ */
 @Composable
-private fun Publish(
-    on: Boolean,
+internal fun FeedbackKinds(
+    state: FeedbackSendViewModel.State,
     actions: FeedbackSendActions,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        CheckboxRow(text = stringResource(Res.string.feedback_consent_publish), checked = on, onCheckedChange = actions.publish)
-        Hint(stringResource(Res.string.feedback_consent_publish_hint))
+    val contents = state.contents
+    if (contents == null) {
+        Text(text = stringResource(Res.string.feedback_send_reading), fontSize = 13.sp)
+        return
     }
+    Kinds(contents, state.choice, state.otherApps, actions)
+    // Once a package was made: the next one holds what is newer, unless the user wants all again
+    if (state.lastSent > 0) {
+        CheckboxRow(
+            text = stringResource(Res.string.feedback_send_all),
+            checked = state.all,
+            onCheckedChange = actions.all,
+            enabled = !state.busy,
+        )
+    }
+}
+
+/** What is never sent, the sender's id, and deleting from the service what was sent. */
+@Composable
+internal fun FeedbackPrivacy(
+    state: FeedbackSendViewModel.State,
+    actions: FeedbackSendActions,
+) {
+    Privacy(state.sender, state.online, actions)
+    if (state.online && state.lastSent > 0) DeleteSent(state.busy, actions)
 }
 
 /** Deleting from the service what this sender sent, once the user says yes. */

@@ -9,7 +9,7 @@
 # and no start-up prompts (the semantic pack's, the update check), or the app opens on its first-run flow. This
 # replaces whatever preferences an earlier run saved.
 #
-#   PREFS="open_siddur=true daf_review=true" start.sh     more preferences, or other values for the ones below
+#   PREFS="open_siddur=true daf_marks=true" start.sh     more preferences, or other values for the ones below
 set -uo pipefail
 ROOT=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 LIB="${LIB:-/home/user/pardes-lib}"

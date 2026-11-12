@@ -114,22 +114,6 @@ class SemanticPackCardUiTest {
         }
 
     @Test
-    fun `feedback mode is turned on from the card, which says how many results are graded`() =
-        runDesktopComposeUiTest(width = 520, height = 700) {
-            var turnedOn: Boolean? = null
-            show {
-                SemanticPackCardContent(
-                    State(installed = inUse, available = Available.Pack(pack), feedbackGrades = 12),
-                    SemanticPackActions({}, {}, {}, {}, {}, {}, feedback = { turnedOn = it }),
-                )
-            }
-            onNodeWithText("ציונים שנשמרו עד עכשיו: 12").assertIsDisplayed()
-            onNodeWithText("משוב על תוצאות החיפוש").performClick()
-            waitForIdle()
-            assertEquals(true, turnedOn)
-        }
-
-    @Test
     fun `the card the settings were opened for comes into view`() =
         runDesktopComposeUiTest(width = 520, height = 500) {
             showBelowTheFold(marked = true)

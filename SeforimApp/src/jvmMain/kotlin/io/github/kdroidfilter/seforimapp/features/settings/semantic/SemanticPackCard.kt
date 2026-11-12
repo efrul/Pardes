@@ -53,9 +53,6 @@ import org.jetbrains.jewel.ui.component.InlineSuccessBanner
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.search_feedback_count
-import seforimapp.seforimapp.generated.resources.search_feedback_setting
-import seforimapp.seforimapp.generated.resources.search_feedback_setting_hint
 import seforimapp.seforimapp.generated.resources.semantic_pack_available
 import seforimapp.seforimapp.generated.resources.semantic_pack_cancel
 import seforimapp.seforimapp.generated.resources.semantic_pack_checking
@@ -125,7 +122,6 @@ fun SemanticPackCard() {
                 restart = viewModel::restart,
                 dismiss = viewModel::dismiss,
                 promptAtStart = viewModel::setPromptAtStart,
-                feedback = viewModel::setFeedback,
             ),
         marked = prompted,
     )
@@ -139,8 +135,6 @@ internal class SemanticPackActions(
     val restart: () -> Unit,
     val dismiss: () -> Unit,
     val promptAtStart: (Boolean) -> Unit,
-    // Feedback mode on or off
-    val feedback: (Boolean) -> Unit = {},
 )
 
 /** The card for [state], its buttons calling [actions]; [marked] when the settings were opened for it: it comes into view. */
@@ -180,37 +174,8 @@ internal fun SemanticPackCardContent(
         )
         if (state.hasLibrary) {
             PackSection(state, actions)
-            FeedbackSection(state, actions)
         } else {
             Text(text = stringResource(Res.string.semantic_pack_no_library), fontSize = 13.sp)
-        }
-    }
-}
-
-/** Feedback mode: the results' grade buttons on or off, what they are for, and how many results are graded. */
-@Composable
-private fun FeedbackSection(
-    state: SemanticPackViewModel.State,
-    actions: SemanticPackActions,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        CheckboxRow(
-            text = stringResource(Res.string.search_feedback_setting),
-            checked = state.feedback,
-            onCheckedChange = actions.feedback,
-        )
-        Text(
-            text = stringResource(Res.string.search_feedback_setting_hint),
-            fontSize = 12.sp,
-            color = JewelTheme.globalColors.text.info,
-        )
-        val graded = state.feedbackGrades
-        if (graded != null && graded > 0) {
-            Text(
-                text = stringResource(Res.string.search_feedback_count, graded),
-                fontSize = 12.sp,
-                color = JewelTheme.globalColors.text.info,
-            )
         }
     }
 }

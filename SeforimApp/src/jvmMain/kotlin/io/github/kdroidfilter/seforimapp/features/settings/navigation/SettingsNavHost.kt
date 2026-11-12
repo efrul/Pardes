@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import io.github.kdroidfilter.seforim.navigation.NavigationAnimations
 import io.github.kdroidfilter.seforimapp.features.settings.daf.DafSettingsScreen
+import io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackSettingsScreen
 import io.github.kdroidfilter.seforimapp.features.settings.ui.AboutSettingsScreen
 import io.github.kdroidfilter.seforimapp.features.settings.ui.ConditionsSettingsScreen
 import io.github.kdroidfilter.seforimapp.features.settings.ui.DataSettingsScreen
@@ -50,6 +51,9 @@ fun SettingsNavHost(navController: NavHostController) {
         }
         noAnimatedComposable<SettingsDestination.Daf> {
             DafSettingsScreen()
+        }
+        noAnimatedComposable<SettingsDestination.Feedback> {
+            FeedbackSettingsScreen()
         }
     }
 }

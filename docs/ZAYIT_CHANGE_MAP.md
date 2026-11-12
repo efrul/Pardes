@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (202 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (205 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1441,14 +1441,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +293 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 275 Hebrew strings added in eighteen blocks,
+- **Change:** modified, +297 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 279 Hebrew strings added in eighteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
   - semantic packs: `semantic_pack_*` (35), `semantic_problem_*` (6);
-  - feedback: `feedback_send_*` (37), `feedback_consent_*` (20), `search_feedback_*` (6): among them the other apps'
-    rows and the publication's, with what each means; and under a comment, after `onboarding_library_folder_*`, the
+  - feedback: `feedback_send_*` (41), `feedback_consent_*` (20), `search_feedback_*` (5): among them the other apps'
+    rows and the publication's, with what each means, and what the settings' feedback page says of what waits; the
+    page's name in the sidebar, `settings_category_feedback`, after Zayit's `settings_category_data`; and under a comment, after `onboarding_library_folder_*`, the
     onboarding's step: `onboarding_feedback_*` (7);
   - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (5), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
     `daf_view_tooltip`, `daf_marks` and `daf_marks_tooltip` (the marks' button), `daf_missing`, `daf_missing_hint`,
@@ -1553,48 +1554,54 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DataSettingsScreen.kt`
 
-- **Change:** modified, +19 −7 lines. Feature: Library location, Semantic search packs, Feedback sending,
-  No error reports.
+- **Change:** modified, +16 −7 lines. Feature: Library location, Semantic search packs, No error reports.
 - **What:**
-  - Three Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()` and `FeedbackSendCard()` (the
-    daf's layouts card stood among them until 2026-11-10; it is in the daf's own settings page).
+  - Two Pardes cards before the reset: `LibraryLocationCard()` and `SemanticPackCard()` (the daf's layouts card stood
+    among them until 2026-11-10, and the feedback's sending card until 2026-11-12: each is in a settings page of its
+    own).
   - The error-reports card only when `isErrorReportingAvailable`, with a comment.
-- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`, `3e365d16`, `e14ce828`); a build
+- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`); a build
   without a DSN sends no reports (`fabcf4e8`).
 - **Kind:** Pardes feature hooks.
 - **Merge risk:** small: one call per card in Zayit's column, and one `if` around its last card.
-- **Smaller:** the three cards could be one `PardesDataCards()` call.
-- **Tests:** `SemanticPackCardUiTest`, `FeedbackSendCardUiTest`; the other cards have none.
+- **Smaller:** the two cards could be one `PardesDataCards()` call.
+- **Tests:** `SemanticPackCardUiTest`; the other card has none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsDestination.kt`
 
-- **Change:** modified, +4 −0 lines. Feature: Daf view.
-- **What:** `SettingsDestination.Daf`, the daf view's settings page, after `Data`, with a comment.
+- **Change:** modified, +8 −0 lines. Feature: Daf view, Feedback sending.
+- **What:** `SettingsDestination.Daf`, the daf view's settings page, after `Data`, and `SettingsDestination.Feedback`,
+  the feedback's, after it, each with a comment.
 - **Why:** the daf view's settings stood in two pages (its marks and review among the fonts, its layouts among the
-  data); the user asked on 2026-11-10 for an ordered category of their own. Its two fonts stay among the fonts.
+  data); the user asked on 2026-11-10 for an ordered category of their own. Its two fonts stay among the fonts. The feedback's controls stood in three places (its
+  sending and the grade buttons' switch in two cards among the data, the reviews' folder in the daf's page); the user
+  asked on 2026-11-11 for a category of the settings where all of it is in order (request 30 of
+  `docs/DESKTOP_STAGE2.md`).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; one object at the end of Zayit's sealed interface.
+- **Merge risk:** small; two objects at the end of Zayit's sealed interface.
 - **Smaller:** already minimal.
 - **Tests:** none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsNavHost.kt`
 
-- **Change:** modified, +4 −0 lines. Feature: Daf view.
-- **What:** the `SettingsDestination.Daf` route draws `DafSettingsScreen()`; its import.
+- **Change:** modified, +8 −0 lines. Feature: Daf view, Feedback sending.
+- **What:** the `SettingsDestination.Daf` route draws `DafSettingsScreen()`, and the `SettingsDestination.Feedback`
+  route `FeedbackSettingsScreen()`; their imports.
 - **Why:** as for `SettingsDestination.kt`.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; one route after Zayit's last.
+- **Merge risk:** small; two routes after Zayit's last.
 - **Smaller:** already minimal.
 - **Tests:** none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/SettingsSidebar.kt`
 
-- **Change:** modified, +8 −0 lines. Feature: Daf view.
+- **Change:** modified, +16 −0 lines. Feature: Daf view, Feedback sending.
 - **What:** a sidebar item "צורת הדף" (`daf_view`, the reader's own label, with its icon `GemaraPage`) between the fonts
-  and the data, and its branch in the `when` that marks the page shown; two imports.
+  and the data, and an item "משוב" (`settings_category_feedback`, with the icon `TablerMessage`) between the data and
+  About; each one's branch in the `when` that marks the page shown; four imports.
 - **Why:** as for `SettingsDestination.kt`.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; an item in Zayit's list and a branch in its `when`, which must stay exhaustive.
+- **Merge risk:** small; two items in Zayit's list and two branches in its `when`, which must stay exhaustive.
 - **Smaller:** already minimal.
 - **Tests:** none.
 
@@ -2062,6 +2069,20 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Notes:** one of three proposals shown to the user on 2026-11-12, who had not yet chosen when it went in; Android
   compiles the module's folder as it is, so the file stays a plain `ImageVector`.
 
+#### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/TablerMessage.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 94 lines.
+- **What:** the icon of the settings' feedback page in the sidebar, `TablerMessage`: Tabler's "message", a speech bubble
+  with two lines.
+- **Reached from:** `SettingsSidebar.kt`.
+- **Follows:** Zayit's `TablerInfoSquare.kt` and `License.kt` in the module, the sidebar's other Tabler icons: the same
+  stroked paths, and Tabler's MIT licence at the file's head (its text is shipped already,
+  `branding/pardes/assetsExtra/common/licenses/Tabler-Icons-LICENSE.txt`).
+- **Tests:** none; the icon is seen in the settings' sidebar.
+- **Notes:** listed here, with the daf's icons, though its feature is the feedback: the module's added icons stand
+  together.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAnchors.kt`
 
 - **Feature:** Daf view.
@@ -2128,9 +2149,9 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   stays open, for another to be checked too; whether it is checked is read as the menu is drawn, so a box another one
   excludes is seen unchecked at once), and its row
   (`ContextMenuCheckRow`: Jewel's `Checkbox` and the label, lit under the pointer as the menu's items are); and
-  `DafReviewsFolderLink`, the settings' link that opens the folder the reviews are kept in.
+  `DafReviewsFolderLink`, the settings' link that opens the folder the reviews are kept in (in Settings › משוב).
 - **Reached from:** `BookContentScreen.kt` (`contextItems`, one branch), `DafView.kt` (`reviewItems`),
-  `DafSettingsScreen.kt` (the link).
+  `FeedbackSettingsScreen.kt` (the link).
 - **Follows:** Zayit's `ContextMenuHighlightColorPicker` and its row in `BookContentScreen.kt` (a passive item of the
   menu, its own hover and content color); Jewel's `Checkbox` and `Link`.
 - **Tests:** none of the composables; the marks they make are `DafReviewTest`'s.
@@ -2188,11 +2209,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafSettingsScreen.kt`
 
 - **Feature:** Daf view.
-- **Size:** 28 lines.
-- **What:** `DafSettingsScreen`, Settings › צורת הדף: the layouts' card (`DafLayoutsCard`) and under it the link to the
-  folder of the reader's reviews. The page had the switches of the unsure lines and of the review mode until
-  2026-11-12, when the review went into the menu for good and the marks to the button beside the daf; the daf's two
-  fonts stay among the fonts (the user's word of 2026-11-11).
+- **Size:** 27 lines.
+- **What:** `DafSettingsScreen`, Settings › צורת הדף: the layouts' card (`DafLayoutsCard`). The page had the switches of
+  the unsure lines and of the review mode until 2026-11-12, when the review went into the menu for good and the
+  marks to the button beside the daf, and under the card the link to the folder of the reader's reviews, which is in
+  Settings › משוב since that day; the daf's two fonts stay among the fonts (the user's word of 2026-11-11).
 - **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Daf`), from `SettingsSidebar.kt`'s item.
 - **Follows:** Zayit's settings screens (a scrolling column of cards with the same paddings).
 - **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its card.
@@ -3579,12 +3600,13 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCard.kt`
 
-- **Feature:** Semantic search packs, Feedback mode.
-- **Size:** 446 lines.
+- **Feature:** Semantic search packs.
+- **Size:** 411 lines.
 - **What:** Settings › ניהול נתונים's card for the semantic search: the pack in use or offered, its download or import,
   the work's progress and problems, a pack that waits for the restart named by its version while the one above it is
-  said to be in use until then (the user took the old pack's line for the import's result, 2026-11-11), how to install one with or without internet, and feedback mode's switch with the
-  number of results graded; the card comes into view when the settings were opened for it.
+  said to be in use until then (the user took the old pack's line for the import's result, 2026-11-11), and how to install one with or without internet; the card comes into view when the settings were opened for it.
+  Feedback mode's switch stood in it until 2026-11-12 (it is a row of Settings › משוב), with the number of results
+  graded, which no page shows now: the feedback page says how many wait to be sent.
 - **Reached from:** `DataSettingsScreen.kt` (`SemanticPackCard()`).
 - **Follows:** Zayit's data settings cards.
 - **Tests:** `SemanticPackCardUiTest`.
@@ -3592,7 +3614,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackViewModel.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 208 lines.
+- **Size:** 189 lines.
 - **What:** `SemanticPackViewModel`: the pack beside the library, the newest release for it, and installing one,
   downloaded or imported, with its progress; a pack that waits for the next start is known by its number (`Work.Ready`,
   from what was staged, also when the settings are opened again before the restart); a pack in use with no number is
@@ -3797,11 +3819,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCardUiTest.kt`
 
-- **Feature:** Semantic search packs, Feedback mode.
-- **Size:** 155 lines.
+- **Feature:** Semantic search packs.
+- **Size:** 139 lines.
 - **What:** the card says how to install a pack while none is in use (only the zips without a connection), offers nothing
   once one is ready or in use, names the version that waits for the restart and says the one in use is in use until
-  then (with a number or without), turns feedback mode on and counts the graded results, and comes into view when opened for.
+  then (with a number or without), and comes into view when opened for.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).
@@ -4247,18 +4269,21 @@ or by themselves once the user agrees. Since 2026-11-11, as the user asked, the 
 (a user from before it is still asked at start), and it offers two things more: the searches the user made in Zayit
 and in Otzaria on the same computer, read from those apps' own files only once the user agreed, and the publication
 of what is sent on the service's open site (`publish`). Everything is checked at first, the user's decision of that
-day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.kt`, `SearchResultViewModel.kt`,
-`TabsContent.kt`, `main.kt`, `AppGraph.kt`, `AppCoreBindings.kt`, `AppSettings.kt`, `DataSettingsScreen.kt`,
-`build.gradle.kts` (`FEEDBACK_URL`), `strings.xml`, and the onboarding's `OnBoardingDestination.kt`,
-`OnBoardingNavHost.kt` and `RegionConfigScreen.kt`.
+day, and what is unchecked is neither read nor sent. Since 2026-11-12 all of it is set in one page of the settings,
+Settings › משוב (`FeedbackSettingsScreen.kt`), as the user asked: until then the sending was a card among the data, the
+grade buttons' switch stood in the semantic search's card and the reviews' folder in the daf's page. Hooks:
+`SearchResultScreen.kt`, `SearchResultViewModel.kt`, `TabsContent.kt`, `main.kt`, `AppGraph.kt`, `AppCoreBindings.kt`,
+`AppSettings.kt`, `SettingsDestination.kt`, `SettingsNavHost.kt`, `SettingsSidebar.kt`, `build.gradle.kts`
+(`FEEDBACK_URL`), `strings.xml`, and the onboarding's `OnBoardingDestination.kt`, `OnBoardingNavHost.kt` and
+`RegionConfigScreen.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/feedback/SearchFeedbackStore.kt`
 
 - **Feature:** Feedback mode.
-- **Size:** 112 lines.
+- **Size:** 96 lines.
 - **What:** `FeedbackGrade` (exactly this, relevant, not relevant, on the evaluations' scale), `SearchFeedback` (a result
   graded: its search keyed as the history keys it, line, book, place, scope, model, time) and `SearchFeedbackStore`, kept in
-  the user database: save, clear, a search's grades, counts, and what was graded since a time.
+  the user database: save, clear, and a search's grades (what was graded since a time is read by `FeedbackSource`).
 - **Reached from:** `AppCoreBindings.kt`, `SearchResultViewModel.kt`, `FeedbackPackage.kt` (`FeedbackSource`).
 - **Follows:** Zayit's `HistoryStore` (the user database, the history's search key).
 - **Tests:** `SearchFeedbackStoreTest`.
@@ -4266,9 +4291,9 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 #### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/SearchFeedback.sq`
 
 - **Feature:** Feedback mode.
-- **Size:** 76 lines.
+- **Size:** 73 lines.
 - **What:** the table `search_feedback` (one grade per search key and line) with an index on its time, and its queries
-  `upsertGrade`, `deleteGrade`, `gradesForSearch`, `countGrades`, `deleteAll`, `gradesSince` and `searchesSince`. And
+  `upsertGrade`, `deleteGrade`, `gradesForSearch`, `deleteAll`, `gradesSince` and `searchesSince`. And
   the table `other_app_feedback` (made at the next start, `CREATE TABLE IF NOT EXISTS`): a row of another app, by a
   hash of its key, with when Pardes first found it and whether it was sent (`otherAppRows`, `otherAppFound`,
   `otherAppSent`, `otherAppGone`).
@@ -4301,7 +4326,7 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
   `FeedbackSource.read(sent, others, everything)`, which reads the apps the user sends: Zayit's searches since the
   last package, Otzaria's by the ledger. A package of Pardes's own rows alone is what it was, byte for byte.
 - **Reached from:** `FeedbackSender.kt`, `FeedbackSendViewModel.kt`, `FeedbackAutoSender.kt`, `FeedbackConsentDialog.kt`,
-  `FeedbackSendCard.kt`, `OtherAppSearches.kt`, `OtherAppLedger.kt`, `FeedbackStepScreen.kt`.
+  `FeedbackSendCard.kt`, `FeedbackSettingsScreen.kt`, `OtherAppSearches.kt`, `OtherAppLedger.kt`, `FeedbackStepScreen.kt`.
 - **Follows:** the service's package format (`feedback-service/src/package.js`) and pardes-semantic's `collect.py`.
 - **Tests:** `FeedbackPackageTest`, `OtherAppSearchesTest`.
 
@@ -4340,7 +4365,7 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
   `isQuestionOpen` lets the onboarding ask the question first. `choice()` offers the other apps found here and
   publishing checked until the user answered of them; a user who agreed before they were offered is asked once more,
   when one of the apps is on the computer (`askOfOthers`), and one who said no is not.
-- **Reached from:** `main.kt` (`run`), `AppGraph.kt`, `FeedbackConsentDialog.kt`, `FeedbackSendCard.kt`,
+- **Reached from:** `main.kt` (`run`), `AppGraph.kt`, `FeedbackConsentDialog.kt`, `FeedbackSendViewModel.kt`,
   `FeedbackStepScreen.kt`, `RegionConfigScreen.kt`.
 - **Follows:** Pardes's own.
 - **Tests:** `FeedbackAutoSenderTest`.
@@ -4358,29 +4383,68 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 - **Follows:** Zayit's decorated dialogs (`JewelDecoratedDialog` in a `NucleusApplicationScope`).
 - **Tests:** `FeedbackConsentUiTest`.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSettingsScreen.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 125 lines.
+- **What:** `FeedbackSettingsScreen`, Settings › משוב, the page the user asked for on 2026-11-11 (request 30 of
+  `docs/DESKTOP_STAGE2.md`: a category of the settings where everything about the feedback is in order, and rows that
+  open at a click against the clutter). `FeedbackSettingsContent` is the page for a state: the sending card
+  (`FeedbackSendCard`), then a row each, closed until its arrow is clicked: what is sent (`ExpandableCard` over
+  `FeedbackKinds`), the automatic sending and the publication (Zayit's `SettingCard`, with the service alone), the
+  search results' grade buttons (`SettingCard`; the switch stood in the semantic search's card), and privacy
+  (`ExpandableCard` over `FeedbackPrivacy`). Under them the link to the folder of the daf view's reviews
+  (`DafReviewsFolderLink`, which stood in the daf's page). The screen gives the page its ViewModel's actions and the
+  folder picker of the saving.
+- **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Feedback`), from `SettingsSidebar.kt`'s item.
+- **Follows:** Zayit's settings screens (a scrolling column of cards with the same paddings) and its `SettingCard` rows
+  of the General page.
+- **Tests:** `FeedbackSettingsUiTest`.
+- **Notes:** shown to the user as a screenshot on 2026-11-12, for his word on the rows' order and names.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/ExpandableCard.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 74 lines.
+- **What:** `ExpandableCard`, a settings row that opens: a title and an arrow, and under them, once the row or the arrow
+  is clicked, its content. For a row that holds more than a switch and its description, which is all Zayit's
+  `SettingCard` takes.
+- **Reached from:** `FeedbackSettingsScreen.kt`.
+- **Follows:** `SettingCard` in `SettingsComponents.kt`, beside which it stands: the same frame, paddings, arrow
+  (`ExpandCollapseIcon`) and `AnimatedVisibility`.
+- **Tests:** `FeedbackSettingsUiTest` (a row's content is not there until it is opened).
+- **Notes:** the user decided on 2026-11-12 to try the rows that open in the feedback page first, and Pardes's other
+  cards after he has seen it.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendCard.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 444 lines.
-- **What:** Settings › ניהול נתונים's card: each kind of feedback with how much of it is new, the queries to look over and
-  leave out, send now or save to a file, the automatic sending, deleting from the service what this sender sent, and what is
-  never sent with the sender's id to copy or renew. A row for each other app found on the computer: checked, it says
-  how many of its searches (and grades) there are, which are read only then; and the publication's checkbox, by the
-  automatic sending's.
-- **Reached from:** `DataSettingsScreen.kt` (`FeedbackSendCard()`).
+- **Size:** 406 lines.
+- **What:** the pieces of Settings › משוב. `FeedbackSendCard`, the page's first card: how much of each kind waits to be
+  sent, when the last package was made, the sending's progress and result, and send now or save to a file.
+  `FeedbackKinds`, what the row "מה נשלח" opens: each kind with how much of it is new, a row for each other app found
+  on the computer (checked, it says how many of its searches and grades there are, which are read only then), the
+  queries to look over and leave out, and everything again once a package was made. `FeedbackPrivacy`, what the row
+  "פרטיות ומחיקה" opens: what is never sent, the sender's id to copy or renew, and deleting from the service what this
+  sender sent. `FeedbackSendActions`, what the page's checkboxes and buttons do. Until 2026-11-12 all of it was one
+  long card of Settings › ניהול נתונים, with the automatic sending's and the publication's checkboxes, which are rows
+  of the page now.
+- **Reached from:** `FeedbackSettingsScreen.kt`.
 - **Follows:** Zayit's data settings cards.
-- **Tests:** `FeedbackSendCardUiTest`.
+- **Tests:** `FeedbackSettingsUiTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendViewModel.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 232 lines.
+- **Size:** 245 lines.
 - **What:** `FeedbackSendViewModel`: what there is to send, what the user keeps of it (the kinds, kept in the settings;
   the queries left out), and the sending or saving with its result. `State.otherApps` (found off the UI thread),
-  `setOtherApp` (kept, and what there is read again) and `setPublish`.
-- **Reached from:** `FeedbackSendCard.kt`.
+  `setOtherApp` (kept, and what there is read again) and `setPublish`. `State.buttons` and `setButtons`: feedback
+  mode, the grade buttons under each search result (the semantic search's ViewModel held them until 2026-11-12); its
+  `dismiss`, which nothing called, went out that day, the class at detekt's fifteen functions.
+- **Reached from:** `FeedbackSettingsScreen.kt`, `FeedbackSendCard.kt`.
 - **Follows:** Zayit's settings ViewModels.
-- **Tests:** `FeedbackSendViewModelTest`, `FeedbackSendCardUiTest`.
+- **Tests:** `FeedbackSendViewModelTest`, `FeedbackSettingsUiTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/OtherAppSearches.kt`
 
@@ -4434,7 +4498,7 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/feedback/SearchFeedbackStoreTest.kt`
 
 - **Feature:** Feedback mode.
-- **Size:** 46 lines.
+- **Size:** 45 lines.
 - **What:** a search's grades come back by its key, each line's last; the same query in another scope is another search;
   a grade taken back is gone.
 - **Reached from:** the JVM tests.
@@ -4475,9 +4539,10 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendViewModelTest.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 138 lines.
+- **Size:** 150 lines.
 - **What:** a package holds what the user kept and the next one only what came after; sent in the kinds kept, which the
-  automatic sending keeps too; without a network nothing marked sent; nothing kept, nothing saved; the sender's id kept.
+  automatic sending keeps too; without a network nothing marked sent; nothing kept, nothing saved; the sender's id kept;
+  the grade buttons turned on and off, and kept in the settings.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
@@ -4505,12 +4570,14 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).
 
-#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendCardUiTest.kt`
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSettingsUiTest.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 146 lines.
-- **What:** a query left out leaves the counts and saving waits for something kept; with the service, sending now, the
-  automatic sending and deleting what was sent once the user says yes; nothing new says when the last package was.
+- **Size:** 175 lines.
+- **What:** the feedback page (`FeedbackSettingsContent`): what waits is said at once and each kind once its row is
+  opened; a query left out leaves the counts and saving waits for something kept; with the service, sending now, the
+  switches of the automatic sending and of the grade buttons, and deleting what was sent once the user says yes;
+  nothing new says when the last package was. `FeedbackSendCardUiTest` until 2026-11-12, when the card became a page.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).
@@ -4928,7 +4995,7 @@ the description where something needs saying.
 |---|---|---|
 | `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
 | `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
-| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
+| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |
 | `docs/SEARCH_FUSION_RESEARCH.md` | Hebrew research note (2026-11-08) on merging the words' search and the meaning's: what plain RRF implies (a line only the words found, from their 11th place on, ranks below every line only the meaning found), rank against score fusion and their normalizations, calibration (ProbFuse, SSL, score distributions), weights by kind of query, a small learned ranker, and an offline measuring plan, which docs/fusion-compare/ carries out. *Note:* Written in Hebrew. | Pardes's own |
