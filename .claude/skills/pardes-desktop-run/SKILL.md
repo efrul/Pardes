@@ -80,7 +80,7 @@ Coordinates on the maximised 1440x900 window:
 | The daf view's header: previous amud (right) / next amud (left) | 987, 66 / 93, 66 |
 | Table of contents entries (right pane) | 1105, 100 + 33 a row |
 | The tools menu's rows (the siddur first when it is on) | 127, 59 + 25 a row |
-| Settings (a 700x500 window at +370+200): its pages from כללי down, its "סגור" | 1000, 270 + 34 a row / 422, 669 |
+| Settings (a 700x500 window at +370+200): its pages from כללי down (כללי, תצוגה, פרופיל, גופנים, צורת הדף, ניהול נתונים, משוב, אודות, תנאים), its "סגור" | 1000, 270 + 34 a row / 422, 669 |
 | The siddur: the day's name (opens the date picker), the first part in the contents | 1000, 67 / 1304, 99 |
 
 - A row of controls moves with the width of the text before it (the siddur's day arrows, a settings card below an
@@ -97,6 +97,13 @@ Coordinates on the maximised 1440x900 window:
   `xdotool key --window <id> …` or `type --window <id> …`. `xwininfo -root -tree` lists the windows; the main one is
   `xdotool search --name "פרדס"`.
 - Wheel: `xdotool mousemove x y` over the list, then `click 5` (down) or `click 4`, some 10 to 60 times.
+- **Selecting text:** a double click selects nothing here. Drag: `xdotool mousemove x1 y mousedown 1 mousemove x2 y
+  mouseup 1`, then a right click inside the selection for the text's menu.
+- **The settings' file picker is a GTK dialog** (the wizard's folder chooser is Swing): focus it
+  (`xdotool search --name` its title, `windowfocus`), `key ctrl+l`, type the path, `Return`.
+- **Settings › משוב as an official build shows it** (send now, the automatic sending, the publication) needs the
+  service's address: `PARDES_FEEDBACK_URL=http://127.0.0.1:9 PREFS="feedback_asked=true" $K/start.sh`. Nothing is
+  sent unless "שליחה עכשיו" is clicked; without the preference the consent dialog opens over the window.
 - **Read small text only from a crop**: `CROP=700x500+370+200 $K/shot.sh name`. A status line misread from the whole
   screenshot once sent a check after a bug that was not there.
 - Send what you show the user with SendUserFile, one Hebrew line of caption each.
@@ -137,6 +144,12 @@ its stale report (`rm -f SeforimApp/build/reports/ktlint/*/*.txt`) if ktlint the
 - `pgrep -f "Xvfb :99"` (or any pattern) also matches the shell running it, whose command line holds the pattern:
   test the display with `xwininfo -root`, and use `pgrep -f "[a]lign_lines"`-style patterns.
 - `pgrep -f` with Hebrew in the pattern finds nothing in the POSIX locale (the command lines read as `?`).
+- **"הפעלה מחדש עכשיו" cannot be tried here:** `AppRestarter` starts the app's own launcher, and in a Gradle run that
+  is a bare `java` with nothing to run. Close and start again by hand (`stop.sh`, `start.sh`); what depends on the
+  restart itself (a pack put in place while the old process still closes, on Windows) is the user's to check.
+- A test that waits on a timer or a local server may fail once when a batch runs beside a compilation
+  (`FeedbackAutoSenderTest`'s "without a network at start" did, on 2026-11-12, and passed alone and in the next
+  batch): run it again alone before looking for a cause.
 - Foreground `sleep` loops are refused by the harness: wait with `timeout N bash -c 'until …; do sleep 5; done'`
   or a background command. A background task has a time limit too: give a long run `timeout: 7200000`.
 - llvmpipe is slow: a frame can take a second; give a screen 3 to 8 s after a click before the screenshot, 15 after
