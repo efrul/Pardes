@@ -152,6 +152,11 @@ its stale report (`rm -f SeforimApp/build/reports/ktlint/*/*.txt`) if ktlint the
   batch): run it again alone before looking for a cause.
 - Foreground `sleep` loops are refused by the harness: wait with `timeout N bash -c 'until …; do sleep 5; done'`
   or a background command. A background task has a time limit too: give a long run `timeout: 7200000`.
+- **A drag's ghost is black without a compositor:** the card that follows the pointer while a pane or a tab is dragged
+  is a translucent window of its own, and Xvfb alone draws its transparent pixels black over the screenshot. Run one
+  first: `apt-get install -y xcompmgr`, then `DISPLAY=:99 xcompmgr -n &`. Drive the drag with
+  `xdotool mousedown 1`, a few `mousemove` steps 0.25 s apart, `import -window root` while the button is held, then
+  `mouseup 1`. Grab a pane's header far from where it is aimed, so the ghost does not cover the preview.
 - llvmpipe is slow: a frame can take a second; give a screen 3 to 8 s after a click before the screenshot, 15 after
   opening a book, a search or the siddur. A menu item "missing" from a screenshot was twice only a frame not drawn yet.
 - `shot.sh name 0 0 5` clicks at (0, 0): pass no coordinates to wait without a click.

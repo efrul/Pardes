@@ -15,8 +15,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * Where a reader pane was in its window, saved with the window ([PaneLayouts]): docked on [side] (a [DockSide]'s
- * name) at [order], with its own [extent] and [weight], or floating ([side] null) where its positioner put it, [width]
- * by [height]. [id] is the pane's own (ReaderPane.id), without the window's: a restored window has a new one.
+ * name) at [order], with its own [extent] and [weight], in the side's [outer] band (the full length of the window) or
+ * its inner one, or floating ([side] null) where its positioner put it, [width] by [height]. [id] is the pane's own
+ * (ReaderPane.id), without the window's: a restored window has a new one.
  */
 @Serializable
 data class SavedPane(
@@ -31,18 +32,22 @@ data class SavedPane(
     val y: Float = 0f,
     val width: Float = 0f,
     val height: Float = 0f,
+    val outer: Boolean = false,
 )
 
 /**
- * A reader window's two docks as the user left them (SessionModels' WindowSnapshot.panes): every pane's place, and the
- * thickness of each split side (a [DockSide]'s name to dp), of the navigation dock and of the one around the text.
- * Which panes are open is the tab's (PaneSync), not kept here.
+ * A reader window's two docks as the user left them (SessionModels' WindowSnapshot.panes): every pane's place, the
+ * thickness of each split side (a [DockSide]'s name to dp) and the order of the outer bands (the sides' names, the
+ * one that owns the corners first), of the navigation dock and of the one around the text. Which panes are open is
+ * the tab's (PaneSync), not kept here.
  */
 @Serializable
 data class SavedPanes(
     val panes: List<SavedPane> = emptyList(),
     val navigationExtents: Map<String, Float> = emptyMap(),
     val lineExtents: Map<String, Float> = emptyMap(),
+    val navigationOuterBands: List<String> = emptyList(),
+    val lineOuterBands: List<String> = emptyList(),
 ) {
     /**
      * The place saved for pane [paneId], when it can be given again: on one of its [sides], or floating if it is
@@ -63,12 +68,23 @@ data class SavedPanes(
     /** The thickness saved for each split side of a window's [navigation] dock, or of its other one. */
     fun extentsOf(navigation: Boolean): Map<DockSide, Float> =
         (if (navigation) navigationExtents else lineExtents).mapNotNull { (side, dp) -> dockSide(side)?.let { it to dp } }.toMap()
+
+    /**
+     * What a window's [navigation] dock, or its other one, gets back before its panes are declared: its sides'
+     * thickness and its outer bands' order, as a snapshot naming no pane (SatelliteWorkspace.restore leaves those alone).
+     */
+    fun dockOf(navigation: Boolean): SatelliteLayoutSnapshot =
+        SatelliteLayoutSnapshot(
+            satellites = emptyMap(),
+            dockExtents = extentsOf(navigation).mapValues { (_, dp) -> dp.dp },
+            outerBandOrder = (if (navigation) navigationOuterBands else lineOuterBands).mapNotNull(::dockSide),
+        )
 }
 
 /**
  * A reader window's pane docks saved with the window and given back when it is restored, as the user asked (request ב
- * of docs/DESKTOP_STAGE2.md, step 3 of the docking): a pane moved to another side, sized or pulled out stays so after a
- * restart. Read from the docks' own [SatelliteLayoutSnapshot]s; given back as each pane's first placement
+ * of docs/DESKTOP_STAGE2.md, step 3 of the docking): a pane moved to another side or to the full length of the window,
+ * sized or pulled out stays so after a restart. Read from the docks' own [SatelliteLayoutSnapshot]s; given back as each pane's first placement
  * (ReaderPanes.WindowPanes) rather than by the workspace's restore, which would also set the panes open or closed:
  * that is the selected tab's, which PaneSync applies.
  */
@@ -91,6 +107,8 @@ object PaneLayouts {
             panes = panes.sortedBy { it.id },
             navigationExtents = extentsOf(navigation),
             lineExtents = extentsOf(line),
+            navigationOuterBands = navigation?.outerBandOrder.orEmpty().map { it.name },
+            lineOuterBands = line?.outerBandOrder.orEmpty().map { it.name },
         )
     }
 
@@ -107,7 +125,7 @@ object PaneLayouts {
         val side = saved.side
         if (side != null) {
             val dockSide = dockSide(side) ?: return null
-            return SatellitePlacement.Docked(dockSide, saved.order, saved.extent?.dp, saved.weight)
+            return SatellitePlacement.Docked(dockSide, saved.order, saved.extent?.dp, saved.weight, saved.outer)
         }
         val parent = anchor(saved.parentAnchor) ?: return null
         val child = anchor(saved.childAnchor) ?: return null
@@ -124,7 +142,7 @@ object PaneLayouts {
     ): SavedPane? =
         when (placement) {
             is SatellitePlacement.Docked ->
-                SavedPane(id, placement.side.name, placement.order, placement.extent?.value, placement.weight)
+                SavedPane(id, placement.side.name, placement.order, placement.extent?.value, placement.weight, outer = placement.outer)
             // A pane floating where it was anchored to a part of the window only would land elsewhere: not kept
             is SatellitePlacement.Floating ->
                 placement.takeIf { it.anchorRect == null }?.let {

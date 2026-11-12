@@ -37,6 +37,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.isBookTextShown
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.DockedPaneCard
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.LineLayeredSides
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.LineOuterBandSides
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.LineSideOrder
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.NavigationLayeredSides
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.PaneCard
@@ -80,6 +81,7 @@ fun WindowBody(openWindow: OpenWindow) {
     // Pardes: the side panes at full height, the bottom one under the text alone (Settings › תצוגה)
     val appSettings = LocalAppGraph.current.appSettings
     val sidesFullHeight by appSettings.sidePanesFullHeightFlow.collectAsState()
+    val lineSideOrder = if (sidesFullHeight) SidePanesFullHeightOrder else LineSideOrder
 
     val density = LocalDensity.current
     var outerWidth by remember { mutableIntStateOf(0) }
@@ -112,10 +114,12 @@ fun WindowBody(openWindow: OpenWindow) {
                 DockLayout(
                     workspace = lineWorkspace,
                     modifier = Modifier.weight(1f).fillMaxWidth().onSizeChanged { innerSize = it },
-                    sideOrder = if (sidesFullHeight) SidePanesFullHeightOrder else LineSideOrder,
+                    sideOrder = lineSideOrder,
                     layeredSides = LineLayeredSides,
+                    // Pardes: a pane dropped at the window's edge runs its full length
+                    outerBandSides = LineOuterBandSides,
                     splitter = { ReaderSplitter() },
-                    panel = { panel -> DockedPaneCard(bottomOpen, sidesFullHeight) { panel() } },
+                    panel = { panel -> DockedPaneCard(bottomOpen, lineSideOrder) { panel() } },
                 ) {
                     // A book's text first lays out once its panes are in place, as with the split panes.
                     CompositionLocalProvider(LocalBookTextReady provides { tabId -> openWindow.panesReadyFor == tabId }) {

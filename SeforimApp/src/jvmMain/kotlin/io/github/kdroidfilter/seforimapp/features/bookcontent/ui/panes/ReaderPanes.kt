@@ -271,6 +271,12 @@ val LineSideOrder = listOf(DockSide.Bottom, DockSide.Left, DockSide.Right, DockS
 val SidePanesFullHeightOrder = listOf(DockSide.Left, DockSide.Right, DockSide.Bottom, DockSide.Top)
 
 /**
+ * Pardes: the sides a pane dropped at the window's very edge runs the full length of (Nucleus's outer band), taking the
+ * corners from the panes beside it; dropped beside the text, it stays where [LineSideOrder] puts its side.
+ */
+val LineOuterBandSides = setOf(DockSide.Left, DockSide.Right, DockSide.Bottom)
+
+/**
  * The panes of one reader window, declared at application scope so they belong to the window, not
  * to a tab: a tab change creates or destroys no panel, it changes what the panels draw and which
  * are open — each tab keeps its own open panes (its ViewModel's visibility flags).
@@ -911,21 +917,42 @@ fun PaneCard(
 }
 
 /**
- * A docked pane's frame by its side of the text: [bottomOpen] is whether a pane is docked under it; [sidesFullHeight],
- * whether the side panes run past it to the window's edge (SidePanesFullHeightOrder).
+ * A docked pane's frame by its side of the text: [bottomOpen] is whether a pane is docked under the text; Pardes: a side
+ * pane stands on it only when that pane's band is laid outside its own, in the dock's [sideOrder].
  */
 @Composable
 fun SatelliteScope.DockedPaneCard(
     bottomOpen: Boolean,
-    sidesFullHeight: Boolean = false,
+    sideOrder: List<DockSide> = LineSideOrder,
     content: @Composable () -> Unit,
 ) {
-    val side = (satellite.placement as? SatellitePlacement.Docked)?.side
+    val docked = satellite.placement as? SatellitePlacement.Docked
+    val side = docked?.side
     when {
         side == DockSide.Bottom -> PaneCard(top = 3.dp, content = content)
         side == DockSide.Left || side == DockSide.Right ->
-            PaneCard(bottom = if (bottomOpen && !sidesFullHeight) 3.dp else 6.dp, content = content)
+            PaneCard(bottom = if (bottomOpen && workspace.bottomPaneOutside(docked, sideOrder)) 3.dp else 6.dp, content = content)
         else -> PaneCard(content = content)
+    }
+}
+
+/**
+ * Pardes: whether an open pane of the bottom side is laid outside [docked]'s band, so that it runs under it. Nucleus
+ * lays the outer bands first, the one docked into last outermost ([SatelliteWorkspace.outerBandOrder]) and the others in
+ * [sideOrder], then the inner bands in [sideOrder].
+ */
+private fun SatelliteWorkspace.bottomPaneOutside(
+    docked: SatellitePlacement.Docked,
+    sideOrder: List<DockSide>,
+): Boolean {
+    val outerOrder = (outerBandOrder + sideOrder).distinct()
+
+    fun rank(placement: SatellitePlacement.Docked): Int =
+        if (placement.outer) outerOrder.indexOf(placement.side) else outerOrder.size + sideOrder.indexOf(placement.side)
+    val own = rank(docked)
+    return satellites.any { entry ->
+        val bottom = entry.placement as? SatellitePlacement.Docked
+        entry.isOpen && bottom?.side == DockSide.Bottom && rank(bottom) < own
     }
 }
 
