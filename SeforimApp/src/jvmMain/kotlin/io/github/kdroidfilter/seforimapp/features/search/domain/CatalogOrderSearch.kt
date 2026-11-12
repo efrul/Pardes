@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.search.domain
 
 import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
+import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningLine
 import io.github.kdroidfilter.seforimapp.features.search.semantic.WordsEngine
 import io.github.kdroidfilter.seforimlibrary.search.LineHit
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
@@ -57,10 +58,11 @@ internal suspend fun fartherLinesOf(session: SearchSession): Int = (session as? 
  * few at a time, as many as fill the page asked for, each book's lines as they stand in it. Nothing is ranked: a book
  * with thousands of lines found is read whole when its turn comes.
  *
- * Of the lines the engine finds by meaning alone ([fused], its own session's list) only the [closest] stand among them,
- * each in its place: where nothing is ranked every line found has the same standing, and a line whose tie to the search
- * is weak came first because its book does. The others are counted ([fartherLines]), and are listed by relevance alone.
- * All of them are counted for the category tabs, as that order counts them ([meaningBookCounts]).
+ * Of the lines the engine finds by meaning alone ([fused], its own session's list) only those that stand out of its
+ * candidates by [standout] or more ([MeaningLine.standing]) stand among them, each in its place: where nothing is ranked
+ * every line found has the same standing, and a line whose tie to the search is weak came first because its book does.
+ * How many stay is the search's own, as close as its lines are. The others are counted ([fartherLines]), and are listed
+ * by relevance alone. All of them are counted for the category tabs, as that order counts them ([meaningBookCounts]).
  */
 internal class CatalogOrderSession(
     private val words: SearchEngine,
@@ -70,8 +72,8 @@ internal class CatalogOrderSession(
     private val near: Int,
     private val where: Where,
     private val bookOrder: suspend () -> Map<Long, Int>,
-    // How many of the meaning's own lines stand in the list
-    private val closest: Int = CLOSEST_LINES,
+    // How far above the search's other candidates a line of the meaning's own stands, to stand in the list
+    private val standout: Double = STANDOUT,
 ) : SearchSession,
     MeaningFacets {
     /** Where the search runs, as [SearchEngine.openSession] takes it. */
@@ -91,9 +93,10 @@ internal class CatalogOrderSession(
     private var total = 0L
     private var nextBook = 0
 
-    // The meaning's own lines that stand in the list, the closest first; all of them counted by book, and how many
-    // the list leaves out
+    // The meaning's own lines that stand in the list, in the engine's order, with how far each stands out; all of them
+    // counted by book, and how many the list leaves out
     private var listed: List<LineHit> = emptyList()
+    private var standing: List<MeaningLine> = emptyList()
     private var meaningCounts: Map<Long, Int> = emptyMap()
     private var farther = 0
 
@@ -130,10 +133,11 @@ internal class CatalogOrderSession(
                     ?.hits
                     .orEmpty()
                     .associateBy { it.lineId }
-            // The meaning's own lines, as the engine ranks them
-            val own = (fused as? MeaningFacets)?.meaningLines().orEmpty().mapNotNull { lines[it] }
-            listed = own.take(closest)
-            meaningCounts = own.groupingBy { it.bookId }.eachCount()
+            // The meaning's own lines, as the engine ranks them, and of them those that stand out
+            val own = (fused as? MeaningFacets)?.meaningLines().orEmpty().filter { it.lineId in lines }
+            standing = own.filter { it.standing >= standout }
+            listed = standing.map { lines.getValue(it.lineId) }
+            meaningCounts = own.groupingBy { lines.getValue(it.lineId).bookId }.eachCount()
             farther = own.size - listed.size
         }
         total = counts.values.sumOf { it.toLong() } + listed.size
@@ -187,7 +191,7 @@ internal class CatalogOrderSession(
 
     override suspend fun meaningBookCounts(): Map<Long, Int> = mutex.withLock { meaningCounts }
 
-    override suspend fun meaningLines(): List<Long> = mutex.withLock { listed.map { it.lineId } }
+    override suspend fun meaningLines(): List<MeaningLine> = mutex.withLock { standing }
 
     /** How many lines the meaning alone found are not in this list, less close than those that are; 0 before its first page. */
     suspend fun fartherLines(): Int = mutex.withLock { farther }
@@ -204,11 +208,12 @@ internal class CatalogOrderSession(
 
     companion object {
         /**
-         * The lines found by meaning alone that a list in the library's order holds: the closest of up to 150. Judged blind
-         * on eval-real (docs/catalog-order), the first 6 of them were related to the search in 64%, the 12th and the 25th
-         * in 47%, from the 50th on in 31%.
+         * How far above its search's other candidates a line found by meaning alone stands, in standard deviations of
+         * their closeness to the query, to be listed in the library's order. Judged blind on eval-real (docs/catalog-order),
+         * the lines from 2 up were related to the search in 61% (from 3 up in 71%), those below in 34%; a search keeps
+         * 5 to 13 of them, 8 at the median.
          */
-        const val CLOSEST_LINES = 10
+        const val STANDOUT = 2.0
 
         // The engine's own list holds this many lines at most (its words' first and its meaning's)
         private const val MEANING_LINES = 300

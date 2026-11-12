@@ -22,6 +22,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
+import kotlin.math.sqrt
 
 /**
  * Independent Hybrid Search Engine for Pardes Desktop:
@@ -212,6 +213,8 @@ class HybridSearchEngine internal constructor(
         val lexical: LineHit?,
         // The line's book: the lexical hit's, else the dense hit's (-1 when the vector index doesn't store it)
         val bookId: Long = lexical?.bookId ?: -1L,
+        // How far the dense side's closeness of the line stands above its other candidates' (standingOf); 0 off it
+        val standing: Double = 0.0,
     )
 
     private suspend fun fuse(
@@ -289,6 +292,7 @@ class HybridSearchEngine internal constructor(
 
             val lexById = lexHits.associateBy { it.lineId }
             val denseBooks = denseHits.associate { it.lineId to it.bookId }
+            val standings = standingOf(denseHits)
             val order = rrf.entries.sortedWith(compareByDescending<Map.Entry<Long, Double>> { it.value }.thenBy { it.key }).map { it.key }
             // The lexical side's first hits that hold the query as a quote keep a place on the first page; the others rank
             // as fused. On real searches the lexical first hit was mostly a long line the query's words are scattered in:
@@ -306,7 +310,13 @@ class HybridSearchEngine internal constructor(
             (if (bookIds?.size == 1) page else withPrecedence(page, query, lines))
                 .map { lineId ->
                     val lexicalHit = lexById[lineId]
-                    FusedEntry(lineId, rrf.getValue(lineId).toFloat(), lexicalHit, lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L)
+                    FusedEntry(
+                        lineId,
+                        rrf.getValue(lineId).toFloat(),
+                        lexicalHit,
+                        lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L,
+                        standings[lineId] ?: 0.0,
+                    )
                 }.also {
                     // The two sides run at once: the list waits for the slower one, then for the lines
                     debugln {
@@ -470,7 +480,7 @@ class HybridSearchEngine internal constructor(
 
             override suspend fun meaningBookCounts(): Map<Long, Int> = this@HybridSession.meaningBookCounts()
 
-            override suspend fun meaningLines(): List<Long> = this@HybridSession.meaningLines()
+            override suspend fun meaningLines(): List<MeaningLine> = this@HybridSession.meaningLines()
 
             override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = this@HybridSession.refinedSnippets(hits)
 
@@ -479,7 +489,7 @@ class HybridSearchEngine internal constructor(
 
         override suspend fun meaningBookCounts(): Map<Long, Int> = meaningOnly().groupingBy { it.bookId }.eachCount()
 
-        override suspend fun meaningLines(): List<Long> = meaningOnly().map { it.lineId }
+        override suspend fun meaningLines(): List<MeaningLine> = meaningOnly().map { MeaningLine(it.lineId, it.standing) }
 
         // The list's lines that the words don't find, in its order
         private suspend fun meaningOnly(): List<FusedEntry> {
@@ -609,6 +619,20 @@ class HybridSearchEngine internal constructor(
 
         /** The words of a [verbatimKey]. */
         private fun wordCount(key: String): Int = if (key.isEmpty()) 0 else key.count { it == ' ' } + 1
+
+        /**
+         * How far each of [hits] stands out of them: its score's distance above their mean, in standard deviations of
+         * their scores (a line repeated keeps its first, closest one); 0 for each when their scores are all alike.
+         */
+        internal fun standingOf(hits: List<DenseHit>): Map<Long, Double> {
+            if (hits.isEmpty()) return emptyMap()
+            val scores = hits.map { it.score.toDouble() }
+            val mean = scores.average()
+            val spread = sqrt(scores.sumOf { (it - mean) * (it - mean) } / scores.size)
+            val standings = LinkedHashMap<Long, Double>()
+            for (hit in hits) standings.putIfAbsent(hit.lineId, if (spread > 0.0) (hit.score - mean) / spread else 0.0)
+            return standings
+        }
 
         /** The query's distinct words of two letters or more, as [stem]s, in their order ([coverage]). */
         internal fun queryWords(query: String): List<String> =

@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.search.domain
 
 import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
+import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningLine
 import io.github.kdroidfilter.seforimapp.features.search.semantic.WordsEngine
 import io.github.kdroidfilter.seforimlibrary.search.LineHit
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
@@ -102,10 +103,12 @@ class CatalogOrderSessionTest {
         override fun close() = Unit
     }
 
-    // An engine's own list: [lines], the closest first, of which the words don't find [meant]
+    // An engine's own list: [lines], of which the words don't find [meant], each standing out of its candidates by
+    // [standings] (by default enough to be listed in the library's order)
     private class Fused(
         private val lines: List<LineHit>,
         private val meant: List<LineHit>,
+        private val standings: List<Double> = meant.map { CatalogOrderSession.STANDOUT + 1 },
     ) : SearchSession,
         MeaningFacets {
         var closed = false
@@ -117,7 +120,7 @@ class CatalogOrderSessionTest {
 
         override suspend fun meaningBookCounts(): Map<Long, Int> = meant.groupingBy { it.bookId }.eachCount()
 
-        override suspend fun meaningLines(): List<Long> = meant.map { it.lineId }
+        override suspend fun meaningLines(): List<MeaningLine> = meant.mapIndexed { i, line -> MeaningLine(line.lineId, standings[i]) }
 
         override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> =
             hits.associate {
@@ -160,8 +163,7 @@ class CatalogOrderSessionTest {
         words: Lines,
         fused: Fused? = null,
         where: CatalogOrderSession.Where = CatalogOrderSession.Where(),
-        closest: Int = CatalogOrderSession.CLOSEST_LINES,
-    ) = CatalogOrderSession(words, words, fused, "מילה", 5, where, bookOrder = { order }, closest)
+    ) = CatalogOrderSession(words, words, fused, "מילה", 5, where, bookOrder = { order })
 
     private suspend fun SearchSession.all(limit: Int): List<LineHit> {
         val lines = ArrayList<LineHit>()
@@ -231,11 +233,11 @@ class CatalogOrderSessionTest {
         }
 
     @Test
-    fun `of the lines the meaning alone found only the closest stand in the list, and the others are counted`() =
+    fun `of the lines the meaning alone found only those that stand out stand in the list, and the others are counted`() =
         runTest {
-            // Four of the meaning's own, the closest first: books 40 and 20 have the two closest, 30 and 10 the others
+            // Four of the meaning's own: those of books 40 and 20 stand out of the search's candidates, 30's and 10's not
             val meant = listOf(hit(40, 1), hit(20, 2), hit(30, 5), hit(10, 3))
-            val session = session(Lines(found), Fused(meant + hit(30, 7), meant), closest = 2)
+            val session = session(Lines(found), Fused(meant + hit(30, 7), meant, standings = listOf(3.2, 2.0, 1.9, 0.4)))
 
             val first = session.nextPage(20, snippets = false)
 
@@ -245,9 +247,24 @@ class CatalogOrderSessionTest {
             )
             assertEquals(9L, first?.totalHits)
             assertEquals(2, session.fartherLines())
-            assertEquals(listOf(40_001L, 20_002L), session.meaningLines())
+            assertEquals(listOf(MeaningLine(40_001L, 3.2), MeaningLine(20_002L, 2.0)), session.meaningLines())
             // The category tabs count them all, as the order of relevance does
             assertEquals(mapOf(40L to 1, 20L to 1, 30L to 1, 10L to 1), session.meaningBookCounts())
+        }
+
+    @Test
+    fun `how many lines found by meaning stay is the search's own`() =
+        runTest {
+            val meant = listOf(hit(40, 1), hit(20, 2), hit(30, 5), hit(10, 3))
+
+            // None stands out: the words' lines alone, the meaning's all counted
+            val none = session(Lines(found), Fused(meant, meant, standings = listOf(1.5, 1.2, 0.8, 0.1)))
+            assertEquals(found.size, none.all(limit = 20).size)
+            assertEquals(4, none.fartherLines())
+            // All stand out: all of them in their places
+            val all = session(Lines(found), Fused(meant, meant, standings = listOf(4.0, 3.5, 3.1, 2.6)))
+            assertEquals(found.size + 4, all.all(limit = 20).size)
+            assertEquals(0, all.fartherLines())
         }
 
     @Test
