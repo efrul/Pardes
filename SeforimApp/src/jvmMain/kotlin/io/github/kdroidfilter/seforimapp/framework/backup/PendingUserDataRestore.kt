@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.framework.backup
 
 import io.github.kdroidfilter.seforimapp.backup.writeBytesAtomically
 import io.github.kdroidfilter.seforimapp.branding.Brand
+import io.github.kdroidfilter.seforimapp.core.presentation.typography.UserFonts
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.framework.database.getUserSettingsDatabasePath
 import io.github.kdroidfilter.seforimapp.logger.infoln
@@ -51,6 +52,8 @@ object PendingUserDataRestore {
             File(dbFile.path + "-journal").delete()
             dbFile.writeBytesAtomically(database)
             AppSettings.importPortablePreferences(Brand.settings(), manifest.preferences)
+            // Pardes: and the fonts the user added (UserFonts)
+            UserFonts.sharedOrNull()?.restoreFrom(pending.readBytes())
             pending.delete()
             infoln { "[PendingUserDataRestore] Restored the backup of ${manifest.createdAtEpochMs}" }
         }.onFailure {

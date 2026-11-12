@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (114 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (115 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (211 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (214 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -502,13 +502,15 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/PendingUserDataRestore.kt`
 
-- **Change:** modified, +2 −2 lines. Feature: Branding.
+- **Change:** modified, +5 −2 lines. Feature: Branding, User fonts.
 - **What:** a restored backup's preferences go into `Brand.settings()` instead of `Settings()`; the import changes.
-- **Why:** Pardes's preferences live in their own node, so a restore must write there (`47626634`).
-- **Kind:** branding hook.
-- **Merge risk:** one line.
+  And the backup's fonts are put back (`UserFonts.restoreFrom`), with a comment marked "Pardes:" and its import.
+- **Why:** Pardes's preferences live in their own node, so a restore must write there (`47626634`). The fonts: as
+  for `UserDataBackup.kt`.
+- **Kind:** branding hook; Pardes feature hook.
+- **Merge risk:** small: one line each.
 - **Smaller:** already minimal.
-- **Tests:** none.
+- **Tests:** `UserFontsTest` (the fonts read back from an archive).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/database/PendingDbCleanup.kt`
 
@@ -1201,6 +1203,22 @@ The entries of this section by kind:
 - **Smaller:** already minimal.
 - **Tests:** `TypeToSearchTest`; tried in the app.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/UserDataBackup.kt`
+
+- **Change:** modified, +3 −0 lines. Feature: User fonts.
+- **What:** a backup's archive (`Snapshot.toArchive`) holds, after the user database, the fonts the user added
+  (`UserFonts.writeTo`: `fonts/<file name>`), with a comment marked "Pardes:". The manifest's format stays 1: an older
+  app's restore reads the database and the manifest by their names and leaves the fonts alone, where a format 2 would
+  have refused the whole backup.
+- **Why:** the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12
+  that they go into the backup.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call after the archive's database entry.
+- **Smaller:** already minimal.
+- **Tests:** `UserFontsTest` (the archive's fonts written and read back); `UserDataBackupTest`, unchanged, still passes.
+- **Notes:** the snapshot's fingerprint, by which an unchanged backup is not uploaded again, does not count the fonts: a
+  font added alone goes to the Drive with the next change of the data.
+
 ### Search and history
 
 A note on the whole group: Zayit dropped the search in a category on purpose. Its `SearchScope.Category` is "read back
@@ -1496,8 +1514,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +298 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 280 Hebrew strings added in eighteen blocks,
+- **Change:** modified, +307 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 289 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1516,6 +1534,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - search in categories and by name: `search_text_row_in_category`, `search_text_row_in_scope`,
     `search_switch_scope_all`, `search_switch_scope_base`, `row_action_add_to_search`, `row_action_search_category`,
     `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
+  - the user fonts' card, after `settings_font_reset_defaults`: `settings_user_fonts_*` (8) and
+    `settings_user_font_missing`;
   - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה"), `search_sort_relevance` and
     `search_farther_lines` (the lines found by meaning alone the library's order leaves out), after
     `search_switch_scope_base`;
@@ -1619,13 +1639,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/FontCatalog.kt`
 
-- **Change:** modified, +0 −7 lines. Feature: Licences.
-- **What:** the Rashi Amiti option (`rashiamiti`), its family and its imports are removed.
-- **Why:** the font is not in Pardes (see `RashiAmiti.ttf`).
-- **Kind:** licence removal.
+- **Change:** modified, +4 −8 lines. Feature: Licences, User fonts.
+- **What:** the Rashi Amiti option (`rashiamiti`), its family and its imports are removed. And `familyFor`'s last
+  branch first asks `UserFonts` for a font the user added (a `user:` code), with a comment marked "Pardes:"; an
+  unknown code, or a user font whose file is gone, still gets the default family.
+- **Why:** the font is not in Pardes (see `RashiAmiti.ttf`). The user fonts: the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup.
+- **Kind:** licence removal; Pardes feature hook.
 - **Merge risk:** small; a conflict if Zayit edits the lines around the option.
 - **Smaller:** already minimal.
-- **Tests:** `FontCatalogTest`.
+- **Tests:** `FontCatalogTest`, `UserFontsTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/database/update/DatabaseCleanupUseCase.kt`
 
@@ -1763,15 +1785,20 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontsSettingsScreen.kt`
 
-- **Change:** modified, +18 −0 lines. Feature: Daf view.
+- **Change:** modified, +38 −10 lines. Feature: Daf view, User fonts.
 - **What:** two `FontSettingCard`s after Zayit's last, the daf's Gemara and its Rashi and Tosafot; their two imports.
   The daf's checkboxes that stood here too (the unsure lines, the review) are in `DafSettingsScreen.kt` since
   2026-11-10; the fonts stay here, with the other fonts, as the user asked on 2026-11-11.
-- **Why:** as for `FontsSettingsEvents.kt`.
+  - The user fonts (comments marked "Pardes:"): the lists offer the fonts the user added after the catalog's
+    (`UserFonts.fonts`), so `FontSettingCard` takes the fonts' codes in place of `FontOption`s, and a user font of
+    the setting whose file is gone is listed as missing (`withMissingFont`); `UserFontsCard()` after the six cards;
+    the `FontOption` import gone, four imports.
+- **Why:** as for `FontsSettingsEvents.kt`; the user fonts, the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; a block after Zayit's last card.
+- **Merge risk:** small to medium: a block after Zayit's last card, and the card's list of fonts from codes, which a
+  Zayit change of the card meets.
 - **Smaller:** already near minimal.
-- **Tests:** none of the screen.
+- **Tests:** none of the screen; `UserFontsTest`; the font added and chosen were tried in the app.
 
 ### Home widgets
 
@@ -4755,6 +4782,52 @@ front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowStat
   opened again they are a new window (the count starts again).
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `SettingsWindowViewModelTest` (its `DesktopManager`, Kotlin Test).
+- **Tests:** it is one (unit).
+
+### Fonts of one's own
+
+A font from a TTF or OTF file can be added in Settings › גופנים since 2026-11-12, as the user asked: it is copied into
+the app's data folder (fonts/), offered in all six lists of fonts after the catalog's, can be taken out, and goes into the
+backup. A font whose file is gone shows the default font and is listed as missing; one without Hebrew letters is added
+with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`, `PendingUserDataRestore.kt`,
+`strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFonts.kt`
+
+- **Feature:** User fonts.
+- **Size:** 142 lines.
+- **What:** `UserFonts`, the fonts in a folder (`shared`: the data folder's fonts/, `FileKit.filesDir`; `sharedOrNull`
+  where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, whether
+  its file is there): `add` (a TTF or OTF that Skia loads, copied under a name of its own, and whether it has an alef),
+  `remove`, `familyFor` (a `FontFamily` from the file, kept), `fontOf` (a code's font, one whose file is gone included),
+  `writeTo` and `restoreFrom` (the backup archive's fonts/ entries).
+- **Reached from:** `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserFontsCard.kt`, `UserDataBackup.kt`,
+  `PendingUserDataRestore.kt`.
+- **Follows:** Zayit's `FontCatalog` (codes in the settings, a family for each); Skia's `FontMgr` as Compose loads fonts.
+- **Tests:** `UserFontsTest`; a font added from a file, chosen for the book's text and seen there, tried in the app.
+- **Notes:** a font loaded from a file in the Windows build (a native image) is for the testers' build.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/UserFontsCard.kt`
+
+- **Feature:** User fonts.
+- **Size:** 176 lines.
+- **What:** `UserFontsCard`, Settings › גופנים's card after the six lists: the fonts added, each with a link that takes
+  it out, a button that adds one (FileKit's picker, TTF or OTF), and what the last one came to (added; added without
+  Hebrew letters, a warning; not a font). `withMissingFont`, a list's fonts with the setting's user font whose file is
+  gone, listed as missing.
+- **Reached from:** `FontsSettingsScreen.kt`.
+- **Follows:** Zayit's settings cards (their frame and components) and the data page's file pickers.
+- **Tests:** none of the card (`UserFontsTest` for what it calls); tried in the app.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFontsTest.kt`
+
+- **Feature:** User fonts.
+- **Size:** 76 lines.
+- **What:** a font file added under a name of its own (twice, two files), listed and offered by its code; one without
+  Hebrew letters said to be so, a file that is not a font refused; a font taken out, or gone, listed as missing and shown
+  in the default font; the fonts written into a backup archive and read back from it.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, on temporary folders and the app's own font files.
 - **Tests:** it is one (unit).
 
 ### Typing over a side pane

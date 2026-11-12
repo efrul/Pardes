@@ -46,6 +46,15 @@
     <string name="daf_review_clear">ביטול הסימון של השורה</string>
     <string name="daf_review_open_folder">פתיחת תיקיית הסימונים של צורת הדף</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
+    <string name="settings_user_fonts_title">גופנים שהוספתם</string>
+    <string name="settings_user_fonts_hint">גופן מקובץ TTF או OTF שבמחשב. הוא מועתק לתיקיית הנתונים של פרדס, מופיע בכל רשימות הגופנים שלמעלה ונשמר בגיבוי.</string>
+    <string name="settings_user_fonts_none">עוד לא הוספתם גופן.</string>
+    <string name="settings_user_fonts_add">הוספת גופן…</string>
+    <string name="settings_user_fonts_remove">הסרה</string>
+    <string name="settings_user_fonts_added">הגופן %1$s נוסף, ואפשר לבחור בו ברשימות שלמעלה.</string>
+    <string name="settings_user_fonts_no_hebrew">הגופן %1$s נוסף, אבל אין בו אותיות עבריות: טקסט עברי יוצג בו בגופן אחר.</string>
+    <string name="settings_user_fonts_failed">הקובץ לא נטען כגופן (%1$s).</string>
+    <string name="settings_user_font_missing">%1$s (חסר)</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>
     <string name="font_noto_rashi_hebrew">נוטו רש"י עברית</string>
