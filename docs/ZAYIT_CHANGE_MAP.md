@@ -3532,9 +3532,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/InstalledPack.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 54 lines.
+- **Size:** 73 lines.
 - **What:** `InstalledPack`, the pack beside a library as the settings show it (none, in use, unusable, waiting for the
-  next start), checked as `IndependentSemanticSearch` opens it.
+  next start), checked as `IndependentSemanticSearch` opens it. `named` gives a pack in use that carries no number (its
+  folders were copied with no manifest) the newest release's, when it is that pack: the same model over as many lines
+  of the same library release (packs 2 and 3 share a model and differ by their lines), and writes it beside the model.
 - **Reached from:** `SemanticPackViewModel.kt`, `SemanticPackCard.kt`, `SemanticPackPrompt.kt`,
   `SearchResultViewModel.kt` (the model recorded with a grade).
 - **Follows:** Pardes's own.
@@ -3566,9 +3568,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleases.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 122 lines.
+- **Size:** 128 lines.
 - **What:** `SemanticPackReleases`, the packs released with `semantic-*` tags: the GitHub API's list, or the site's copy
-  when the API cannot be reached; the newest pack, and of its builds the installed library's, else the newest library's.
+  when the API cannot be reached; the newest pack, and of its builds the installed library's, else the newest library's;
+  what a pack's manifest says it holds (`infoOf`).
 - **Reached from:** `SemanticPackViewModel.kt`, `SemanticPackCard.kt`, `SemanticPackInstaller.kt`,
   `PendingSemanticPack.kt`, `IndependentSemanticSearch.kt`.
 - **Follows:** Zayit's `GitHubReleaseFetcher` use for library releases.
@@ -3589,10 +3592,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackViewModel.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 202 lines.
+- **Size:** 208 lines.
 - **What:** `SemanticPackViewModel`: the pack beside the library, the newest release for it, and installing one,
   downloaded or imported, with its progress; a pack that waits for the next start is known by its number (`Work.Ready`,
-  from what was staged, also when the settings are opened again before the restart).
+  from what was staged, also when the settings are opened again before the restart); a pack in use with no number is
+  given the newest release's when it is that pack (`InstalledPack.named`), and so is not offered again as an update.
 - **Reached from:** `SemanticPackCard.kt`.
 - **Follows:** Zayit's settings ViewModels.
 - **Tests:** `SemanticPackCardUiTest`.
@@ -3761,10 +3765,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackInstallerTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 225 lines.
-- **What:** fourteen tests: a bundle in parts unpacked and checked, any part finding the rest, damaged or missing parts,
+- **Size:** 245 lines.
+- **What:** fifteen tests: a bundle in parts unpacked and checked, any part finding the rest, damaged or missing parts,
   renamed zips found by what they hold, unzipped folders copied (naming no pack, as the zips' copy of the manifest does), a pack of another library release staged, an index of
-  another model or a stray file refused, staging scheduled, the installed pack read as the search opens it.
+  another model or a stray file refused, staging scheduled, the installed pack read as the search opens it, a pack in
+  use with no number named after the newest release when it is that one (its model, lines and library release).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, on temporary folders).
@@ -3782,9 +3787,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleasesTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 97 lines.
+- **Size:** 108 lines.
 - **What:** the newest published pack chosen whatever its library release, the installed library's build preferred, the
-  API's list read and the site's when the API cannot be, a library release the same in a tag and in `release_info`.
+  API's list read and the site's when the API cannot be, a library release the same in a tag and in `release_info`,
+  a pack's manifest read for what it holds (nothing when it cannot be).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
@@ -4922,7 +4928,7 @@ the description where something needs saying.
 |---|---|---|
 | `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
 | `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
-| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks, the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done, not what was: the commits and the changelog say that. | Pardes's own |
+| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |
 | `docs/SEARCH_FUSION_RESEARCH.md` | Hebrew research note (2026-11-08) on merging the words' search and the meaning's: what plain RRF implies (a line only the words found, from their 11th place on, ranks below every line only the meaning found), rank against score fusion and their normalizations, calibration (ProbFuse, SSL, score distributions), weights by kind of query, a small learned ranker, and an offline measuring plan, which docs/fusion-compare/ carries out. *Note:* Written in Hebrew. | Pardes's own |
