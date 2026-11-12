@@ -27,7 +27,10 @@ import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** The study plans' card: each plan's part of the day, its pace and day, the tick once learnt, and a click to learn it. */
+/**
+ * The study plans' card: each plan's part of the day, its pace and day, the tick once learnt, and a click to learn it,
+ * on a day without study where the plan holds.
+ */
 @OptIn(ExperimentalTestApi::class)
 class StudyCardUiTest {
     private val start = LocalDate.of(2026, 11, 12)
@@ -40,6 +43,7 @@ class StudyCardUiTest {
         part: DayPart,
         perDay: Int = 1,
         weekdays: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
+        held: DayPart.Part? = part as? DayPart.Part,
     ) = ShownPlan(
         plan =
             StudyPlan(
@@ -56,6 +60,7 @@ class StudyCardUiTest {
         name = name,
         units = headings.mapIndexed { i, h -> StudyUnit(i.toLong(), 1, h, i.toLong()) },
         part = part,
+        held = held,
     )
 
     private val plans =
@@ -76,7 +81,15 @@ class StudyCardUiTest {
                 UnitName("סימן", "סימנים"),
                 DayPart.Part(listOf(0), day = 41, progress = 0.24f),
             ),
-            shown(3, "ספר החינוך", listOf(listOf("מצוה א")), UnitName("מצוה", "מצוות"), DayPart.Rest),
+            // A day without study: a click opens where the plan holds
+            shown(
+                3,
+                "ספר החינוך",
+                listOf(listOf("מצוה א")),
+                UnitName("מצוה", "מצוות"),
+                DayPart.Rest,
+                held = DayPart.Part(listOf(0), 5, 0.01f),
+            ),
         )
 
     @Test
@@ -108,6 +121,9 @@ class StudyCardUiTest {
             onNodeWithText("פרקים כג–כז").performClick()
             waitForIdle()
             assertEquals(listOf(1L), opened)
+            onNodeWithText("אין לימוד היום").performClick()
+            waitForIdle()
+            assertEquals(listOf(1L, 3L), opened)
             onNodeWithTag("study-new-plan").assertIsDisplayed()
             System.getenv("STUDY_CARD_SHOT")?.let { ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", File(it)) }
             assertEquals(emptyList(), ticked)

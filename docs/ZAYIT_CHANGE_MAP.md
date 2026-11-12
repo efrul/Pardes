@@ -5539,11 +5539,13 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyWidget.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 344 lines.
+- **Size:** 347 lines.
 - **What:** the Home widget `StudyWidget` ("הלימוד שלי", 6×4 cells, from 4×3 to 12×8) and its card `StudyCard`: a row
   for each plan with the box ticked once the day's part is learnt, the book, the part, its pace, its day of study and a
   bar of how far into the book it reaches, a pencil on hover to edit it, and "+ תוכנית חדשה"; `shownPlan` reads a plan's
-  book (by id while its title is the same, else by title) and table of contents and reckons the day shown on the Home;
+  book (by id while its title is the same, else by title) and table of contents and reckons the day shown on the Home,
+  and the part a click opens (`ShownPlan.held`: the day's, or on a day without study, or before the plan starts, where
+  it holds, the next day of study's, as the user asked on 2026-11-13);
   `linesOf`, the part's first line and its last, for the tab to mark (`TabsDestination.BookContent`'s `endLineId`); the
   plan being edited is kept per Home's state (`editedPlan`) and its editor composed in `Detached`; its menu has "תוכנית
   חדשה…".
@@ -5596,9 +5598,9 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyCardUiTest.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 115 lines.
+- **Size:** 131 lines.
 - **What:** the card with three plans: the day's parts, the paces and days, one ticked ("סיימת להיום"), one with no
-  study that day; a click on a part opens it.
+  study that day; a click on a part opens it, and on the day without study opens where the plan holds.
 - **Reached from:** the JVM tests.
 - **Follows:** `LearningSplitCardUiTest` (the card drawn with its data, `runDesktopComposeUiTest`).
 - **Tests:** it is one (UI).
