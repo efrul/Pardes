@@ -8,7 +8,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev.nucleusframework</groupId>
   <artifactId>nucleus.decorated-window-tao</artifactId>
-  <version>3.0.0-dev-202610272317-1-tearoff</version>
+  <version>3.0.0-dev-202610272317-2-tearoff</version>
   <name>Nucleus Decorated Window Tao</name>
   <description>Experimental no-AWT decorated window backend for Compose Desktop, powered by Tao via direct JNI for macOS, Windows, and Linux.</description>
   <url>https://github.com/NucleusFramework/Nucleus</url>

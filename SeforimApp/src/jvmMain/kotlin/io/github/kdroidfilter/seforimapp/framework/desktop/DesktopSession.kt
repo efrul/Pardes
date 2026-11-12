@@ -106,8 +106,8 @@ class DesktopSession internal constructor(
                     gripIcon = PointerIcon.Hand
                     gripDraggingIcon = PointerIcon.Hand
                 }
-                // Pardes: the split sides' thickness as the window had it
-                restoredPanes[groupId]?.extentsOf(navigation)?.forEach { (side, extent) -> setDockExtent(side, extent.dp) }
+                // Pardes: the split sides' thickness and the outer bands' order as the window had them
+                restoredPanes[groupId]?.let { restore(it.dockOf(navigation)) }
             }
         }
 

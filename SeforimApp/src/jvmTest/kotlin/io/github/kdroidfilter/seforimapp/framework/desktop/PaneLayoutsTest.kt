@@ -85,6 +85,33 @@ class PaneLayoutsTest {
     }
 
     @Test
+    fun `a pane at the window's full length keeps its band, and the dock its outer bands' order`() {
+        val links = SatellitePlacement.Docked(DockSide.Left, 0, 220.dp, 1f, outer = true)
+        val dock =
+            SatelliteLayoutSnapshot(
+                satellites = mapOf("w-1-links" to SatelliteSnapshot(links, isOpen = true)),
+                dockExtents = mapOf(DockSide.Bottom to 180.dp),
+                outerBandOrder = listOf(DockSide.Left, DockSide.Bottom),
+            )
+        val saved = PaneLayouts.save("w-1", null, dock)!!
+
+        assertEquals(links, saved.placementOf("links", LINE_SIDES, floatable = true))
+        assertEquals(
+            SatelliteLayoutSnapshot(emptyMap(), mapOf(DockSide.Bottom to 180.dp), listOf(DockSide.Left, DockSide.Bottom)),
+            saved.dockOf(navigation = false),
+        )
+        assertEquals(SatelliteLayoutSnapshot(emptyMap(), emptyMap(), emptyList()), saved.dockOf(navigation = true))
+        // A side name this version does not know is left out
+        assertEquals(listOf(DockSide.Left), SavedPanes(lineOuterBands = listOf("Middle", "Left")).dockOf(navigation = false).outerBandOrder)
+        // In the session file; a file written before the outer bands has none
+        assertEquals(saved, ProtoBuf.decodeFromByteArray<SavedPanes>(ProtoBuf.encodeToByteArray(saved)))
+        val olderFile = ProtoBuf.encodeToByteArray(OlderSavedPanes(listOf(OlderSavedPane("links", "Left"))))
+        val older = ProtoBuf.decodeFromByteArray<SavedPanes>(olderFile)
+        assertEquals(SatellitePlacement.Docked(DockSide.Left), older.placementOf("links", LINE_SIDES, floatable = true))
+        assertEquals(emptyList(), older.lineOuterBands)
+    }
+
+    @Test
     fun `the docks go into the session file, and an older file has none`() {
         val window = WindowSnapshot(selectedIndex = 1, panes = PaneLayouts.save("w-1", navigation, line))
 
@@ -100,6 +127,29 @@ class PaneLayoutsTest {
         val selectedIndex: Int = 0,
         val titles: Map<String, String> = emptyMap(),
         val geometry: String? = null,
+    )
+
+    // A pane and the docks as the session file had them before the outer bands
+    @Serializable
+    private data class OlderSavedPane(
+        val id: String,
+        val side: String? = null,
+        val order: Int = 0,
+        val extent: Float? = null,
+        val weight: Float = 1f,
+        val parentAnchor: String? = null,
+        val childAnchor: String? = null,
+        val x: Float = 0f,
+        val y: Float = 0f,
+        val width: Float = 0f,
+        val height: Float = 0f,
+    )
+
+    @Serializable
+    private data class OlderSavedPanes(
+        val panes: List<OlderSavedPane> = emptyList(),
+        val navigationExtents: Map<String, Float> = emptyMap(),
+        val lineExtents: Map<String, Float> = emptyMap(),
     )
 
     private companion object {

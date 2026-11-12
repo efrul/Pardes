@@ -300,11 +300,11 @@ The entries of this section by kind:
 
 - **Change:** modified, +5 −1 lines. Feature: Commentators in their own panes.
 - **What:**
-  - A version `nucleusTao = "3.0.0-dev-202610272317-1-tearoff"`, with a three-line comment.
+  - A version `nucleusTao = "3.0.0-dev-202610272317-2-tearoff"`, with a three-line comment.
   - `nucleus-decorated-window-tao` takes `nucleusTao` instead of `nucleus`.
-- **Why:** the commentator's pane torn off the reader needs `Modifier.satelliteTearOffHandle`, which only
-  efrul/Nucleus's `commentator-tearoff` branch has; that one module comes from `nucleus-fork/maven` until Nucleus
-  releases it (`831ad272`, `0447981b`, `nucleus-fork/README.md`).
+- **Why:** the commentator's pane torn off the reader needs `Modifier.satelliteTearOffHandle`, and a pane dropped at
+  the window's edge the docks' outer bands, which only Pardes's fork of Nucleus (efrul/Nucleus) has; that one module
+  comes from `nucleus-fork/maven` until Nucleus releases them (`831ad272`, `0447981b`, `nucleus-fork/README.md`).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** Zayit bumps `nucleus` often (0.6.13 does): `nucleusTao` must then be rebuilt for the new release or
   dropped once Nucleus has the tear-off.
@@ -316,7 +316,7 @@ The entries of this section by kind:
 - **Change:** modified, +7 −0 lines. Feature: Commentators in their own panes, the open smart siddur.
 - **What:** in `dependencyResolutionManagement.repositories`, an `exclusiveContent` repository `NucleusFork`
   (`nucleus-fork/maven`) that serves only `dev.nucleusframework:nucleus.decorated-window-tao` at
-  `3.0.0-dev-202610272317-1-tearoff`, with a two-line comment. And `include(":siddur-open")`, after Zayit's last
+  `3.0.0-dev-202610272317-2-tearoff`, with a two-line comment. And `include(":siddur-open")`, after Zayit's last
   `include`: the open siddur's engine as a module of this build.
 - **Why:** as for `gradle/libs.versions.toml`: that one module from the repository, every other module from the
   release (`0447981b`). The engine's copy (`siddur-open/README.md`) is compiled here, with this build's Kotlin and
@@ -448,19 +448,23 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
 
-- **Change:** modified, +7 −2 lines. Feature: Side panes at full height.
+- **Change:** modified, +11 −2 lines. Feature: Side panes at full height.
 - **What:** the window reads `AppSettings.sidePanesFullHeightFlow` after `bottomOpen`, under a comment marked
-  "Pardes:", and while it is on the reader's `DockLayout` takes `SidePanesFullHeightOrder` in place of Zayit's
-  `LineSideOrder`, and `DockedPaneCard` takes it too (the side panes' bottom margin); two imports.
+  "Pardes:", into `lineSideOrder`: `SidePanesFullHeightOrder` while it is on, else Zayit's `LineSideOrder`. The
+  reader's `DockLayout` takes it as its `sideOrder`, and `DockedPaneCard` too (whether a pane stands under a side
+  pane); and the dock takes `outerBandSides = LineOuterBandSides`, under a comment marked "Pardes:" (a pane dropped at
+  the window's edge runs its full length); three imports.
 - **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, step 1 of its plan, 2026-11-12) that a side pane run
   from the top of the window to its bottom while something is open under the text: with the switch in Settings ›
   תצוגה the side panes run the whole height and the commentaries sit under the text alone. Off, the default, is Zayit's
-  layout. Eli's own reader demo in Nucleus has the same switch ("Navigation outermost").
+  layout. Eli's own reader demo in Nucleus has the same switch ("Navigation outermost"). The outer bands (step 4) let
+  the user choose it pane by pane, by where the pane is dropped (the mock-up approved on 2026-11-12).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small: two arguments of the `DockLayout` call and two lines after `bottomOpen`, which a Zayit change
-  of the dock's call meets.
+- **Merge risk:** small: three arguments of the `DockLayout` call and three lines after `bottomOpen`, which a Zayit
+  change of the dock's call meets; `outerBandSides` needs Pardes's fork of Nucleus.
 - **Smaller:** already minimal.
-- **Tests:** `SidePanesFullHeightTest` (the preference); both layouts tried in the app.
+- **Tests:** `SidePanesFullHeightTest` (the preference); both layouts tried in the app, and the drops: the links pane
+  to the left edge (the full height), back beside the text, and the commentaries to the bottom edge (the full width).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/WindowUtils.kt`
 
@@ -705,7 +709,8 @@ The entries of this section by kind:
   four-arrow move cursor over every pane's grip, the floating windows' title bars included.
 - **What, the panes kept:** under comments marked "Pardes:", `restoredPanes`, the docks each restored window was saved
   with (`restore` keeps its snapshot's `panes`, `forgetWindow` drops them); `panesOf` gives a new dock its split sides'
-  thickness as saved; `savedPlacement(groupId, paneId, sides, floatable)`, a pane's saved place for `WindowPanes`;
+  thickness and its outer bands' order as saved, through `restore` with a snapshot naming no pane
+  (`SavedPanes.dockOf`); `savedPlacement(groupId, paneId, sides, floatable)`, a pane's saved place for `WindowPanes`;
   `windowSnapshot` saves the window's docks (`PaneLayouts.save` from the two workspaces' `snapshot()`, else what was
   restored); two imports.
 - **Why:** the four-arrow cursor over every pane header looked wrong on Windows (`9de93f98`, `0447981b`). The panes
@@ -984,7 +989,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +182 −33 lines. Feature: Commentators in their own panes, Side panes at full height, Pane
+- **Change:** modified, +210 −34 lines. Feature: Commentators in their own panes, Side panes at full height, Pane
   layout kept.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
@@ -1003,9 +1008,11 @@ The entries of this section by kind:
   - `ReaderPane.entries` becomes `ReaderPane.standard` in `innerWidthPx`; `writeBack` and `position` handle
     `Commentator`.
   - The side panes at full height: `SidePanesFullHeightOrder` after `LineSideOrder` (the sides before the bottom, so
-    the side panes run the whole height and the commentaries sit under the text alone), and `DockedPaneCard`'s
-    `sidesFullHeight`, which keeps a side pane's full bottom margin while a pane is open under the text, since it no
-    longer stands over it; its KDoc says so.
+    the side panes run the whole height and the commentaries sit under the text alone), and `LineOuterBandSides` (left,
+    right, bottom: the sides a pane dropped at the window's edge runs the full length of). `DockedPaneCard` takes the
+    dock's `sideOrder` and gives a side pane the 3 dp gap above a pane open under the text only when that pane's band
+    is laid outside the side pane's own (`bottomPaneOutside`, private, the bands in Nucleus's order: the outer ones
+    first, by `outerBandOrder`); otherwise its full bottom margin. Its KDoc says so.
   - The pane layout kept: `WindowPanes` gives each pane first the place it had when its window was saved
     (`DesktopSession.savedPlacement`, on one of its `sides` or floating if it may), its sides read once into `sides`.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
@@ -5041,7 +5048,10 @@ is read once for a while. Hooks: `main.kt`, `AppSettings.kt`, `SettingsSidebar.k
 
 The reader's side panes can run the window's whole height, the commentaries under the text alone, since 2026-11-12, as
 the user asked (request ב of `docs/DESKTOP_STAGE2.md`, step 1 of the docking in its plan): a switch in Settings ›
-תצוגה, off by default, which keeps Zayit's layout (the bottom pane under the text and the side panes). Hooks:
+תצוגה, off by default, which keeps Zayit's layout (the bottom pane under the text and the side panes). And, the same day
+(step 4), pane by pane by the drop: a pane released on the strip along the window's very edge runs its full length and
+takes the corners from the panes beside it (Nucleus's outer band, from Pardes's fork, `nucleus-fork/README.md`), one
+released beside the text stays where the switch puts its side, and the corner goes to the pane dropped last. Hooks:
 `WindowBody.kt`, `ReaderPanes.kt`, `DisplaySettingsScreen.kt`, `AppSettings.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/SidePanesCard.kt`
@@ -5075,10 +5085,12 @@ back to its panes as their first places; which are open stays the selected tab's
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayouts.kt`
 
 - **Feature:** Pane layout kept.
-- **Size:** 147 lines.
-- **What:** `SavedPane` (a pane's own id, docked side, order, extent and weight, or floating anchors, offset and size)
-  and `SavedPanes` (a window's panes and the split sides' thickness of its two docks; `placementOf`, a pane's saved
-  place where it may still be; `extentsOf`), serializable for the session's ProtoBuf; `PaneLayouts.save`, a window's
+- **Size:** 165 lines.
+- **What:** `SavedPane` (a pane's own id, docked side, order, extent, weight and band — `outer`, the full length of the
+  window, appended last — or floating anchors, offset and size) and `SavedPanes` (a window's panes, and the split
+  sides' thickness and the outer bands' order of its two docks, the orders appended last; `placementOf`, a pane's saved
+  place where it may still be; `extentsOf`; `dockOf`, a dock's thickness and outer bands' order as a snapshot naming no
+  pane), serializable for the session's ProtoBuf; `PaneLayouts.save`, a window's
   panes from its docks' `SatelliteLayoutSnapshot`s without the window's id (a restored window has a new one), and
   `placementOf`, a saved pane's placement again (none for a side or anchor no longer known). A pane floating on a part
   of the window only is not kept.
@@ -5091,11 +5103,12 @@ back to its panes as their first places; which are open stays the selected tab's
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayoutsTest.kt`
 
 - **Feature:** Pane layout kept.
-- **Size:** 108 lines.
+- **Size:** 158 lines.
 - **What:** a window's panes saved by their own ids, docked or floating, with its split sides, another window's left
   out; a place a pane can no longer have not given back (a side it may not dock on, floating when it may not, names no
-  longer known); a pane floating on part of the window not saved; the docks in the session file, and an older file
-  without them.
+  longer known); a pane floating on part of the window not saved; a pane in the outer band kept with its band, the
+  dock's outer bands' order given back (an unknown side name left out), and an older file without them; the docks in
+  the session file, and an older file without them.
 - **Reached from:** the JVM tests.
 - **Follows:** `SessionModelsTest` (ProtoBuf), Kotlin Test.
 - **Tests:** it is one (unit).
@@ -5334,7 +5347,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `.claude/settings.json` | Claude Code's project settings for this repository: `attribution.sessionUrl` false, which turns off the session link Claude Code adds to the commits it writes (f353d5dc's message). *Note:* Zayit has no .claude/ folder. Later Pardes commits still carry `Claude-Session:` trailers (e.g. 6be0f42b, 0c107b56). | Pardes's own |
-| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
+| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation, a drag's ghost black without a compositor). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/make-library.sh` | Skill script that makes the small library the headless app runs on (default /home/user/pardes-lib): the released library without its full-text index, cut to the base books given (default 103, Berakhot) with their commentaries and targumim, plus the lookup index, lexical.db, catalog.pb and release_info.txt; it then deletes the full seforim.db and copies the Talmud layouts into pardes-daf/. *Note:* Calls zayit-android's fetch-desktop-library.sh (`--no-fulltext`) and androidApp/tools/make_subset_db.sh (CONN_TYPES=1,3); needs about 8.2 GB free while it runs. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/setup.sh` | Skill script that apt-installs what the container lacks to run the desktop app headless: Xvfb, xdotool, x11-utils, ImageMagick, zstd, sqlite3, xclip, Mesa's EGL, GLES and DRI drivers, mesa-utils and Noto fonts, after an `apt-get update` (stale lists once hid libegl1); it then copies central-mirror.init.gradle.kts into ~/.gradle/init.d. Idempotent. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/shot.sh` | Skill script: a screenshot of display :99 (ImageMagick `import -window root`), optionally after an xdotool click at x y and a wait, into $SHOTS (default /tmp/pardes-desktop-shots); with `CROP=<geometry>` also that region alone, to read small text. *Note:* The same as zayit-android's desktop-shot.sh, which shoots the released Zayit instead. | Pardes's own |
@@ -5622,10 +5635,10 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `nucleus-fork/README.md` | Explains why Pardes for desktop takes one Nucleus module, nucleus.decorated-window-tao, from a fork of Nucleus on Pardes's GitHub account (branch commentator-tearoff) as 3.0.0-dev-202610272317-1-tearoff in maven/: `Modifier.satelliteTearOffHandle`, `SatelliteDragOrigin.HostElement` and pointer-icon parameters for the commentator tear-off; how to update it, and when to delete it. *Note:* The fork changes no native code, and every other Nucleus module stays Zayit's pin from Maven Central. To be deleted once Nucleus has the API. | Pardes's own |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar` | The fork's build of nucleus.decorated-window-tao (1,063 classes and the release's native libraries for macOS, Windows and Linux, 6.3 MB), read through the exclusive NucleusFork repository of settings.gradle.kts (`nucleusTao` in libs.versions.toml); as the higher version it wins over the tao the other Nucleus modules ask for. *Note:* A binary committed to git without LFS, in two versions (0447981b, then 9de93f98). | built from Pardes's fork of Nucleus (MIT) and copied in by nucleus-fork/vendor.py; replaces at build time Maven Central's nucleus.decorated-window-tao 3.0.0-dev-202610272317, Zayit's pin |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.module` | Gradle module metadata of the vendored tao: version 3.0.0-dev-202610272317-1-tearoff, apiElements and runtimeElements on the jar alone, and the Nucleus dependencies (decorated-window-core, core-runtime, energy-manager) at the release 3.0.0-dev-202610272317, with angle-natives 8037.1, Compose desktop 1.12.1 and Kotlin stdlib 2.4.20. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py (dependencies set back to the release, sources and javadoc variants dropped) |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.pom` | Maven POM of the vendored tao, with the fork's version and the same dependencies as its Gradle module, for tools that do not read Gradle metadata. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py |
+| `nucleus-fork/README.md` | Explains why Pardes for desktop takes one Nucleus module, nucleus.decorated-window-tao, from a fork of Nucleus on Pardes's GitHub account (branch claude/elegant-bardeen-oq55hp: commentator-tearoff and the outer bands) as 3.0.0-dev-202610272317-2-tearoff in maven/: `Modifier.satelliteTearOffHandle`, `SatelliteDragOrigin.HostElement` and pointer-icon parameters for the commentator tear-off, and the docks' outer bands (`DockLayout(outerBandSides = …)`, `SatellitePlacement.Docked.outer`, `SatelliteWorkspace.outerBandOrder`) for a pane dropped at the window's edge; how to update it, and when to delete it. *Note:* The fork changes no native code, and every other Nucleus module stays Zayit's pin from Maven Central. To be deleted once Nucleus has the API. | Pardes's own |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.jar` | The fork's build of nucleus.decorated-window-tao (1,067 classes and the release's native libraries for macOS, Windows and Linux, 6.3 MB), read through the exclusive NucleusFork repository of settings.gradle.kts (`nucleusTao` in libs.versions.toml); as the higher version it wins over the tao the other Nucleus modules ask for. *Note:* A binary committed to git without LFS, in three versions (0447981b, 9de93f98, then the one with the outer bands, as 3.0.0-dev-202610272317-2-tearoff). | built from Pardes's fork of Nucleus (MIT) and copied in by nucleus-fork/vendor.py; replaces at build time Maven Central's nucleus.decorated-window-tao 3.0.0-dev-202610272317, Zayit's pin |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.module` | Gradle module metadata of the vendored tao: version 3.0.0-dev-202610272317-2-tearoff, apiElements and runtimeElements on the jar alone, and the Nucleus dependencies (decorated-window-core, core-runtime, energy-manager) at the release 3.0.0-dev-202610272317, with angle-natives 8037.1, Compose desktop 1.12.1 and Kotlin stdlib 2.4.20. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py (dependencies set back to the release, sources and javadoc variants dropped) |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.pom` | Maven POM of the vendored tao, with the fork's version and the same dependencies as its Gradle module, for tools that do not read Gradle metadata. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py |
 | `nucleus-fork/vendor.py` | Copies the fork's tao jar, POM and Gradle module from Maven Local into nucleus-fork/maven after the fork's scripts/publish-tearoff-local.sh, setting every other Nucleus dependency back to the base release 3.0.0-dev-202610272317 and keeping only the jar's variants. *Note:* Deletes and rewrites nucleus-fork/maven on every run. | Pardes's own |
 
 #### The open siddur's engine (`siddur-open/`)

@@ -14,7 +14,7 @@ import os
 import shutil
 
 BASE = "3.0.0-dev-202610272317"
-FORK = "3.0.0-dev-202610272317-1-tearoff"
+FORK = "3.0.0-dev-202610272317-2-tearoff"
 ARTIFACT = "nucleus.decorated-window-tao"
 GROUP_PATH = "dev/nucleusframework"
 
