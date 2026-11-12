@@ -423,6 +423,19 @@ class AppSettings(
         settings[KEY_SEMANTIC_PACK_PROMPT] = enabled
     }
 
+    // Pardes: the newest semantic pack and release of daf layouts a start opened the settings for (StartOffers), each once
+    fun getOfferedSemanticPack(): Int = settings[KEY_OFFERED_SEMANTIC_PACK, 0]
+
+    fun setOfferedSemanticPack(pack: Int) {
+        settings[KEY_OFFERED_SEMANTIC_PACK] = pack
+    }
+
+    fun getOfferedDafRelease(): Int = settings[KEY_OFFERED_DAF_RELEASE, 0]
+
+    fun setOfferedDafRelease(release: Int) {
+        settings[KEY_OFFERED_DAF_RELEASE] = release
+    }
+
     // Pardes: whether each search result shows the buttons that grade it, for training the semantic search (off at first)
     fun isSearchFeedbackEnabled(): Boolean = settings[KEY_SEARCH_FEEDBACK, false]
 
@@ -950,6 +963,8 @@ class AppSettings(
         private const val KEY_DATABASE_PATH = "database_path"
         private const val KEY_LIBRARY_INSTALL_DIR = "library_install_dir"
         private const val KEY_SEMANTIC_PACK_PROMPT = "semantic_pack_prompt"
+        private const val KEY_OFFERED_SEMANTIC_PACK = "offered_semantic_pack"
+        private const val KEY_OFFERED_DAF_RELEASE = "offered_daf_release"
         private const val KEY_SEARCH_FEEDBACK = "search_feedback"
         private const val KEY_FEEDBACK_SENDER = "feedback_sender"
         private const val KEY_FEEDBACK_SENT_PREFIX = "feedback_sent_"

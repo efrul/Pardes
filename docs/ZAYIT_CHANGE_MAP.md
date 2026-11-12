@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (206 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (209 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -341,7 +341,8 @@ The entries of this section by kind:
   - With a move pending, the catalog is not warmed (`if (pendingLibraryMove == null) warmCatalog(it)`) and the window
     shows `LibraryMoveWindow(pendingLibraryMove)` before the onboarding and the database update.
   - Once the library is open: `LaunchedEffect`s that warm the search (`warmSearch`) and, outside E2E runs, open the
-    settings on the semantic search card when no pack is in use (`SemanticPackPrompt.openAtStart`), then let
+    settings on what the start has to offer (`StartOffers.openAtStart`: the semantic search's files missing or newer, a
+    newer daf layout; `SemanticPackPrompt.openAtStart` until 2026-11-12), then let
     `feedbackAutoSender` ask whether to send feedback, after the session is restored, a window is open and the update
     dialog and the settings are closed.
   - `FeedbackConsentDialog(appGraph.feedbackAutoSender)` while its question is shown.
@@ -569,7 +570,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +255 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur.
+- **Change:** modified, +270 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     its marks shown or hidden (`daf_marks`, `dafMarksFlow`: the unsure lines drawn lighter and the review's marks, the end
@@ -585,7 +586,9 @@ The entries of this section by kind:
     size it was.
   - **Library location:** `getLibraryInstallDir`/`setLibraryInstallDir` (`library_install_dir`, not portable) and
     `flush()`, which writes the preferences now, before a step that relies on them.
-  - **Semantic packs:** `semantic_pack_prompt`, whether a start without a pack opens the settings on it.
+  - **Semantic packs:** `semantic_pack_prompt`, whether a start without a pack opens the settings on it; and the newest
+    pack and release of daf layouts a start opened the settings for (`offered_semantic_pack`, `offered_daf_release`,
+    not portable: what this computer was offered), each offered once (`StartOffers`).
   - **Feedback:** `search_feedback` (the grade buttons, with a flow), the random sender id (`feedback_sender`,
     `renewFeedbackSender`), the start question's answer (`feedback_asked`, `feedback_auto_send`), and per kind of
     feedback whether it is sent and up to when (`feedback_kind_*`, `feedback_sent_*`).
@@ -604,7 +607,7 @@ The entries of this section by kind:
   split), but Pardes's blocks are separate members, keys and list entries.
 - **Smaller:** the feedback and daf settings could be Pardes classes over the same `Settings`, leaving only the
   portable keys and `clearAll()`'s resets here.
-- **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`,
+- **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`, `StartOffersTest`,
   `OpenSiddurSwitchTest`.
 
 ### Tabs, sessions and desktops
@@ -1653,13 +1656,16 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/SettingsSidebar.kt`
 
-- **Change:** modified, +16 −0 lines. Feature: Daf view, Feedback sending.
+- **Change:** modified, +29 −0 lines. Feature: Daf view, Feedback sending, Start offers.
 - **What:** a sidebar item "צורת הדף" (`daf_view`, the reader's own label, with its icon `GemaraPage`) between the fonts
   and the data, and an item "משוב" (`settings_category_feedback`, with the icon `TablerMessage`) between the data and
-  About; each one's branch in the `when` that marks the page shown; four imports.
-- **Why:** as for `SettingsDestination.kt`.
+  About; each one's branch in the `when` that marks the page shown; and a dot after the label of a page that has
+  something new to download this start (`StartOffers.marked`, a `marked` parameter of `SidebarItem`, the page not
+  shown), with a comment marked "Pardes:"; eight imports.
+- **Why:** as for `SettingsDestination.kt`; the dot, as `StartOffers.kt` says (request 29).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; two items in Zayit's list and two branches in its `when`, which must stay exhaustive.
+- **Merge risk:** small; two items in Zayit's list and two branches in its `when`, which must stay exhaustive, and a
+  parameter of the item with its dot.
 - **Smaller:** already minimal.
 - **Tests:** none.
 
@@ -2029,16 +2035,16 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayout.kt`
 
 - **Feature:** Daf view.
-- **Size:** 210 lines.
+- **Size:** 213 lines.
 - **What:** the layout file's model and folder. `DafLayoutFile` (a tractate's amudim, made by pardes-rashi-ocr's
   `export_layout.py`), `DafLibrary` (the library release a format-2 file's line ids are of), `DafAmud` (page and block
   size, lines), `DafLine` (column, box, words, sureness, dibbur words, each word's library line `u`), and `DafLayouts`:
   a folder's files found by the tractate their header names (English or Hebrew), watched for files put in or taken out,
-  the last few read kept, and an import. A file's `version` is its tractate's own among the released layouts (one more
+  the last few read kept, and an import; `hasAny`, whether the folder has a layout file at all. A file's `version` is its tractate's own among the released layouts (one more
   in each release its layout changed in), read with the file or from its head alone (`versionOf`); a file of before
   the releases gave each tractate one has none.
 - **Reached from:** `DafView.kt`, `DafPage.kt`, `DafSetting.kt`, `DafAnchors.kt`, `DafAmudLinks.kt`, `DafReview.kt`,
-  `DafDownloads.kt`, `DafLayoutsCard.kt`.
+  `DafDownloads.kt`, `DafLayoutsCard.kt`, `StartOffers.kt`.
 - **Follows:** Pardes's own; kotlinx-serialization as Zayit uses it.
 - **Tests:** `DafLayoutsTest`, `DafPageTest`, `DafDownloadsTest` (a file's version).
 
@@ -2228,14 +2234,14 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafDownloads.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 362 lines.
+- **Size:** 364 lines.
 - **What:** the released layouts downloaded into a library's `pardes-daf` folder: `DafReleases` (the `daf-<n>` releases
-  from the GitHub API, or the site's `daf.json` when it fails), `DafManifest` (each tractate's gzipped file with its
+  from the GitHub API, or the site's `daf.json` when it fails, through `ReleaseLists`, shared with the semantic packs), `DafManifest` (each tractate's gzipped file with its
   sha256 and its layout's, and the tractate's own version, none in a release of before the versions), and
   `DafDownloads` (what the folder has as released, the version of each of its files, and each tractate downloaded,
   checked and imported as a picked file is, one alone or several). The sha256 still says whether a file is the
   release's; the versions are what the reader is shown.
-- **Reached from:** `DafView.kt` (a missing tractate's download), `DafUpdate.kt`, `DafLayoutsCard.kt`.
+- **Reached from:** `DafView.kt` (a missing tractate's download), `DafUpdate.kt`, `DafLayoutsCard.kt`, `StartOffers.kt`.
 - **Follows:** Zayit's library download (`GitHubReleaseFetcher`, `HttpFileDownloader`) in spirit; its own code.
 - **Tests:** `DafDownloadsTest`.
 
@@ -2254,12 +2260,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafLayoutsCard.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 213 lines.
+- **Size:** 232 lines.
 - **What:** Settings › צורת הדף's card for the daf's layouts (in Settings › ניהול נתונים until 2026-11-10): how many the library's folder has as released, and
   every one it lacks, or has otherwise, downloaded at once; the download goes on when the settings close. Each
   tractate has a row (`Tractates`, `tractateLine`): its name, its file's version in the folder and the release's, and
   for one to download a link that downloads it alone; those to download are always listed, the others when asked
-  ("כל המסכתות והגרסאות שלהן").
+  ("כל המסכתות והגרסאות שלהן"). Marked, its frame lit and brought into view, when a start opened the settings for a
+  newer version (`StartOffers.take`), as the semantic search's card is.
 - **Reached from:** `DafSettingsScreen.kt` (`DafLayoutsCard()`).
 - **Follows:** the settings cards of Zayit's data page (their layout and components).
 - **Tests:** `DafLayoutsCardUiTest`.
@@ -3661,12 +3668,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleases.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 128 lines.
+- **Size:** 130 lines.
 - **What:** `SemanticPackReleases`, the packs released with `semantic-*` tags: the GitHub API's list, or the site's copy
   when the API cannot be reached; the newest pack, and of its builds the installed library's, else the newest library's;
-  what a pack's manifest says it holds (`infoOf`).
+  what a pack's manifest says it holds (`infoOf`). The lists are read through `ReleaseLists`, shared with the daf's.
 - **Reached from:** `SemanticPackViewModel.kt`, `SemanticPackCard.kt`, `SemanticPackInstaller.kt`,
-  `PendingSemanticPack.kt`, `IndependentSemanticSearch.kt`.
+  `PendingSemanticPack.kt`, `IndependentSemanticSearch.kt`, `StartOffers.kt`.
 - **Follows:** Zayit's `GitHubReleaseFetcher` use for library releases.
 - **Tests:** `SemanticPackReleasesTest`.
 
@@ -3698,11 +3705,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackPrompt.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 64 lines.
-- **What:** `SemanticPackPrompt.openAtStart`: a start whose library has no usable pack opens the settings on the semantic
-  card, once the session is restored and no update dialog is open, at every start until a pack is in use or the user
-  turns it off.
-- **Reached from:** `main.kt`.
+- **Size:** 36 lines.
+- **What:** `SemanticPackPrompt`: whether a start opens the settings on the semantic card (`shouldOpen`, `needsPack`:
+  the library has no usable pack, at every start until one is in use or the user turns it off), and the card's focus
+  (`opened`, `takeFocus`, which takes the page's mark in the sidebar too). Its start (`openAtStart`) went into
+  `StartOffers` on 2026-11-12, which also offers a newer pack and newer layouts.
+- **Reached from:** `StartOffers.kt`, `SemanticPackCard.kt`.
 - **Follows:** Pardes's own.
 - **Tests:** `SemanticPackPromptTest`.
 
@@ -4705,6 +4713,58 @@ front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowStat
   opened again they are a new window (the count starts again).
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `SettingsWindowViewModelTest` (its `DesktopManager`, Kotlin Test).
+- **Tests:** it is one (unit).
+
+### What a start offers to download
+
+A start opens the settings by itself on what it has to offer, as the user asked on 2026-11-11 (request 29 of
+`docs/DESKTOP_STAGE2.md`): the semantic search's files when none are in use (as it did since 1.0.6, at every start until
+they are or the user unticks it), and since 2026-11-12 a newer version of them than the one in use, or a newer version of
+an installed tractate's daf layout, each version once (the user's decision of 2026-11-12). The library's own update waits
+for Zayit (the same day's decision). The settings open on the first page that has something, its card marked and brought
+into view, and another page that has something gets a dot in the sidebar. The repository's release list, which both read,
+is read once for a while. Hooks: `main.kt`, `AppSettings.kt`, `SettingsSidebar.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/ReleaseLists.kt`
+
+- **Feature:** Start offers.
+- **Size:** 32 lines.
+- **What:** `ReleaseLists.text(url, fetch)`, the repository's release lists (the GitHub API's and the site's copies) as
+  read in the last ten minutes, else read once whoever else asks meanwhile (a `Mutex`); a list that could not be read is
+  read again. The semantic packs' and the daf layouts' readers go through it.
+- **Reached from:** `SemanticPackReleases.kt`, `DafDownloads.kt` (`DafReleases`), their default `fetchText`.
+- **Follows:** Pardes's own.
+- **Tests:** `StartOffersTest`.
+- **Notes:** the API answers 60 calls an hour from an address, often shared behind a filtering proxy; at start the two
+  readers would otherwise read the same list twice, and again when their cards are shown.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/StartOffers.kt`
+
+- **Feature:** Start offers.
+- **Size:** 138 lines.
+- **What:** `StartOffers.openAtStart`: what the start has to offer (`Found`: the semantic files missing, the pack in use
+  and the newest released, the newest release of layouts when it has a newer version of a tractate the folder has, read
+  with `DafDownloads`), the pages it opens (`pagesFor`: the data page for missing files or a newer pack not offered yet,
+  the daf page for a newer release of layouts not offered yet), then, once the session is restored, a window is focused
+  and an update dialog is closed, the versions offered kept, the semantic card's focus set (`SemanticPackPrompt`), the
+  pages marked (`marked`, taken by each card as it is shown, `take`) and the settings opened on the first. The releases
+  are read only while the app checks for updates by itself, and for 20 seconds at most.
+- **Reached from:** `main.kt` (in place of `SemanticPackPrompt.openAtStart`), `SettingsSidebar.kt` (`marked`),
+  `DafLayoutsCard.kt` and `SemanticPackPrompt.kt` (`take`).
+- **Follows:** `SemanticPackPrompt`'s start, which it takes over.
+- **Tests:** `StartOffersTest`; the newer pack's offer was tried in the app on the whole library (the settings opened on
+  the semantic card, framed, and the version offered kept).
+- **Notes:** a release of layouts gives its tractates versions since daf-3; daf-2 has none, so it offers nothing.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/StartOffersTest.kt`
+
+- **Feature:** Start offers.
+- **Size:** 67 lines.
+- **What:** missing files open the semantic search's page at every start; a newer pack than the one in use is offered
+  once (not the one in use, not over a pack with no number); a newer release of layouts once, after the semantic page; a
+  page's mark taken once; a release list read lately is not read again, one read ten minutes ago or that failed is.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
 
 ### The open smart siddur (experimental)
