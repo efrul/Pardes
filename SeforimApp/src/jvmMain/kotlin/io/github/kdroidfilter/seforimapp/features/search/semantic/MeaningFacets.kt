@@ -17,11 +17,20 @@ interface MeaningFacets {
     suspend fun meaningBookCounts(): Map<Long, Int>
 
     /**
-     * Those lines themselves, in the list's order, the closest in meaning first: a list in another order
-     * (CatalogOrderSession) keeps the first of them alone. Empty where [meaningBookCounts] is.
+     * Those lines themselves, in the list's order, each with how far it stands out ([MeaningLine.standing]): a list in
+     * another order (CatalogOrderSession) keeps those that stand out alone. Empty where [meaningBookCounts] is.
      */
-    suspend fun meaningLines(): List<Long>
+    suspend fun meaningLines(): List<MeaningLine>
 }
+
+/**
+ * A line the meaning search alone found ([MeaningFacets.meaningLines]), and how far its closeness to the query stands
+ * above that of the search's other candidates, in standard deviations of theirs ([standing]; 0 when they are all alike).
+ */
+data class MeaningLine(
+    val lineId: Long,
+    val standing: Double,
+)
 
 /**
  * An engine whose search of the words can be asked apart from the lines it adds to it by meaning: [HybridSearchEngine],
