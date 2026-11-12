@@ -35,6 +35,7 @@ class CatalogOrderSessionTest {
         private val hits: List<LineHit>,
     ) : SearchEngine {
         val opened = ArrayList<List<Long>>()
+        var counted = 0
 
         private fun found(
             bookIds: Collection<Long>?,
@@ -79,6 +80,7 @@ class CatalogOrderSessionTest {
             lineIds: Collection<Long>?,
             baseBookOnly: Boolean,
         ): SearchFacets {
+            counted++
             val found = found(bookIds, lineIds)
             return SearchFacets(found.size.toLong(), emptyMap(), found.groupingBy { it.bookId }.eachCount())
         }
@@ -120,7 +122,12 @@ class CatalogOrderSessionTest {
 
         override suspend fun meaningBookCounts(): Map<Long, Int> = meant.groupingBy { it.bookId }.eachCount()
 
-        override suspend fun meaningLines(): List<MeaningLine> = meant.mapIndexed { i, line -> MeaningLine(line.lineId, standings[i]) }
+        override suspend fun meaningLines(): List<MeaningLine> =
+            meant.mapIndexed { i, line ->
+                MeaningLine(line.lineId, standings[i], line.bookId)
+            }
+
+        override suspend fun meaningHits(lineIds: Collection<Long>): List<LineHit> = meant.filter { it.lineId in lineIds }
 
         override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> =
             hits.associate {
@@ -247,7 +254,7 @@ class CatalogOrderSessionTest {
             )
             assertEquals(9L, first?.totalHits)
             assertEquals(2, session.fartherLines())
-            assertEquals(listOf(MeaningLine(40_001L, 3.2), MeaningLine(20_002L, 2.0)), session.meaningLines())
+            assertEquals(listOf(MeaningLine(40_001L, 3.2, 40L), MeaningLine(20_002L, 2.0, 20L)), session.meaningLines())
             // The category tabs count them all, as the order of relevance does
             assertEquals(mapOf(40L to 1, 20L to 1, 30L to 1, 10L to 1), session.meaningBookCounts())
         }
@@ -310,6 +317,21 @@ class CatalogOrderSessionTest {
             assertNull(engine.openSession(" "))
             // Everything else is the engine's
             assertEquals(listOf(found.size.toLong()), listOf(engine.computeFacets("מילה")?.totalHits))
+        }
+
+    @Test
+    fun `the list counts no facets the view model counted, nor a tab's the whole search's`() =
+        runTest {
+            val words = Lines(found)
+            val engine = CatalogOrderEngine(words, bookOrder = { order }) { true }
+
+            // The view model counts the search's facets, then opens its list, then a tab of it
+            engine.computeFacets("מילה")
+            engine.openSession("מילה")?.all(limit = 10)
+            val tab = engine.openSession("מילה", bookIds = listOf(10L, 30L))?.all(limit = 10).orEmpty()
+
+            assertEquals(listOf(30L to 2, 30L to 7, 10L to 1, 10L to 5, 10L to 9), tab.places())
+            assertEquals(1, words.counted)
         }
 
     @Test

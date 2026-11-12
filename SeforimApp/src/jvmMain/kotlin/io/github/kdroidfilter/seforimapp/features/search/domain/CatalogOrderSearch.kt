@@ -5,6 +5,7 @@ import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningLine
 import io.github.kdroidfilter.seforimapp.features.search.semantic.WordsEngine
 import io.github.kdroidfilter.seforimlibrary.search.LineHit
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
+import io.github.kdroidfilter.seforimlibrary.search.SearchFacets
 import io.github.kdroidfilter.seforimlibrary.search.SearchPage
 import io.github.kdroidfilter.seforimlibrary.search.SearchSession
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +16,8 @@ import kotlinx.coroutines.withContext
 /**
  * [engine], with its sessions listing the lines found in the library's order while [byCatalog] says so: the Tanakh's
  * before the Mishnah's, a book's lines as they stand in it, as a concordance reads ([CatalogOrderSession]). Everything
- * else is [engine]'s own, and so are its sessions when [byCatalog] says no.
+ * else is [engine]'s own, and so are its sessions when [byCatalog] says no; its facets are counted once for the last
+ * searches ([RecentFacets]), which such a list reads again.
  */
 class CatalogOrderEngine(
     private val engine: SearchEngine,
@@ -23,6 +25,21 @@ class CatalogOrderEngine(
     private val bookOrder: suspend () -> Map<Long, Int>,
     private val byCatalog: () -> Boolean,
 ) : SearchEngine by engine {
+    private val recent = RecentFacets()
+
+    override fun computeFacets(
+        query: String,
+        near: Int,
+        bookFilter: Long?,
+        categoryFilter: Long?,
+        bookIds: Collection<Long>?,
+        lineIds: Collection<Long>?,
+        baseBookOnly: Boolean,
+    ): SearchFacets? =
+        recent.get(FacetsKey(query, near, bookFilter, categoryFilter, bookIds?.toSet(), lineIds?.toSet(), baseBookOnly)) {
+            engine.computeFacets(query, near, bookFilter, categoryFilter, bookIds, lineIds, baseBookOnly)
+        }
+
     override fun openSession(
         query: String,
         near: Int,
@@ -46,6 +63,7 @@ class CatalogOrderEngine(
             near = near,
             where = CatalogOrderSession.Where(bookFilter, categoryFilter, bookIds, lineIds, baseBookOnly),
             bookOrder = bookOrder,
+            facets = recent,
         )
     }
 }
@@ -74,6 +92,8 @@ internal class CatalogOrderSession(
     private val bookOrder: suspend () -> Map<Long, Int>,
     // How far above the search's other candidates a line of the meaning's own stands, to stand in the list
     private val standout: Double = STANDOUT,
+    // The facets of its engine's last searches, the view model's among them
+    private val facets: RecentFacets = RecentFacets(),
 ) : SearchSession,
     MeaningFacets {
     /** Where the search runs, as [SearchEngine.openSession] takes it. */
@@ -83,7 +103,18 @@ internal class CatalogOrderSession(
         val bookIds: Collection<Long>? = null,
         val lineIds: Collection<Long>? = null,
         val baseBookOnly: Boolean = false,
-    )
+    ) {
+        internal fun facetsKey(
+            query: String,
+            near: Int,
+        ) = FacetsKey(query, near, bookFilter, categoryFilter, bookIds?.toSet(), lineIds?.toSet(), baseBookOnly)
+
+        internal fun facetsOf(
+            engine: SearchEngine,
+            query: String,
+            near: Int,
+        ): SearchFacets? = engine.computeFacets(query, near, bookFilter, categoryFilter, bookIds, lineIds, baseBookOnly)
+    }
 
     private val mutex = Mutex()
 
@@ -122,22 +153,22 @@ internal class CatalogOrderSession(
 
     private suspend fun open(): List<Pair<Long, Int>> {
         order = bookOrder()
+        val key = where.facetsKey(query, near)
         val counts =
             withContext(Dispatchers.IO) {
-                words.computeFacets(query, near, where.bookFilter, where.categoryFilter, where.bookIds, where.lineIds, where.baseBookOnly)
-            }?.bookCounts.orEmpty()
+                // Those of a search that holds this one (the view model's same search, or the whole one for a tab), else counted
+                facets.bookCounts(key) ?: facets.get(key) { where.facetsOf(words, query, near) }?.bookCounts
+            }.orEmpty()
         if (fused != null) {
-            val lines =
-                fused
-                    .nextPage(MEANING_LINES, snippets = false)
-                    ?.hits
-                    .orEmpty()
-                    .associateBy { it.lineId }
-            // The meaning's own lines, as the engine ranks them, and of them those that stand out
-            val own = (fused as? MeaningFacets)?.meaningLines().orEmpty().filter { it.lineId in lines }
-            standing = own.filter { it.standing >= standout }
-            listed = standing.map { lines.getValue(it.lineId) }
-            meaningCounts = own.groupingBy { lines.getValue(it.lineId).bookId }.eachCount()
+            val meaning = fused as? MeaningFacets
+            // The engine's list made, none of its lines read but its first: of the meaning's own lines, in the engine's
+            // order, those that stand out alone are read (the 300 lines of the list were most of its opening)
+            fused.nextPage(1, snippets = false)
+            val own = meaning?.meaningLines().orEmpty()
+            val read = meaning?.meaningHits(own.filter { it.standing >= standout }.map { it.lineId }).orEmpty().associateBy { it.lineId }
+            standing = own.filter { it.lineId in read }
+            listed = standing.map { read.getValue(it.lineId) }
+            meaningCounts = own.groupingBy { it.bookId }.eachCount()
             farther = own.size - listed.size
         }
         total = counts.values.sumOf { it.toLong() } + listed.size
@@ -214,9 +245,6 @@ internal class CatalogOrderSession(
          * 5 to 13 of them, 8 at the median.
          */
         const val STANDOUT = 2.0
-
-        // The engine's own list holds this many lines at most (its words' first and its meaning's)
-        private const val MEANING_LINES = 300
 
         // A book's lines are read this many at a time
         private const val READ_LINES = 2_000

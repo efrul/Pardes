@@ -28,13 +28,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (219 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (221 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (772 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (773 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -2948,15 +2948,17 @@ and `MeaningFacets.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSearch.kt`
 
 - **Feature:** Results in the library's order.
-- **Size:** 227 lines.
+- **Size:** 255 lines.
 - **What:**
   - `CatalogOrderEngine(engine, bookOrder, byCatalog)`, a `SearchEngine` that is `engine` in everything (`by engine`)
     but its sessions: while `byCatalog()` says so, `openSession` gives a `CatalogOrderSession` over the engine's words
     (`WordsEngine.words`, else the engine itself), with the engine's own session beside it when that one lists lines
-    found by meaning (`MeaningFacets`).
-  - `CatalogOrderSession`, a `SearchSession` and `MeaningFacets`: on its first page it counts the books that have lines
-    found (`computeFacets`) and reads the engine's own list once (some 300 lines, and how many of each book's the words
-    don't find); then it reads the books in the library's order (`bookOrder`, a book without a place last), as many as
+    found by meaning (`MeaningFacets`). Its facets are counted once for its last searches (`RecentFacets`): the view
+    model's, which the list reads again, and a tab's list reads its books' from the whole search's.
+  - `CatalogOrderSession`, a `SearchSession` and `MeaningFacets`: on its first page it takes the counts of the books
+    that have lines found (`computeFacets`, or those of a recent search that holds it) and has the engine make its own
+    list, reading none of its lines but those of the meaning's own that stay in it (`MeaningFacets.meaningHits`), and
+    counting the meaning's lines by book; then it reads the books in the library's order (`bookOrder`, a book without a place last), as many as
     fill the page asked for (200 books at most in one reading), each group in one session of the words, sorted by book
     and `lineIndex`; of the meaning's own lines (`MeaningFacets.meaningLines`, in the engine's own order) those that
     stand out of the search's candidates by `STANDOUT` (2 standard deviations) or more join them in their books,
@@ -2967,8 +2969,10 @@ and `MeaningFacets.kt`.
 - **Follows:** Zayit's `SearchEngine` and `SearchSession` contract (pages asked one after the other, `snippets = false`
   to skip, a `Mutex` around the cursor as `LuceneSearchEngine`'s session), and `HybridSearchEngine`'s session beside
   it, the other session Pardes adds.
-- **Tests:** `CatalogOrderSessionTest`; the order, the tabs in it and the choice kept over a restart were tried in the
-  app on the whole library.
+- **Tests:** `CatalogOrderSessionTest`, `RecentFacetsTest`; the order, the tabs in it and the choice kept over a
+  restart were tried in the app on the whole library; measured by `ScopeFlowBench` (docs/scope-search-speed: a tab in
+  that order 61 to 116 ms where it took 93 to 198, the engine's 300 lines read for 5 to 13 of them having been most of
+  its opening).
 - **Notes:** the meaning's lines were all listed until 2026-11-12, when the user asked for the closest alone (request
   31 of `docs/DESKTOP_STAGE2.md`): in the library's order a weak line came first because its book does. A fixed number
   of them (10) went in first; the user asked that day for a rule by each line's score instead, so each search keeps
@@ -2979,17 +2983,43 @@ and `MeaningFacets.kt`.
   at a time). The passage beside the results still highlights by the engine's rule (by meaning with a pack), while
   the list shows the words in bold.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/RecentFacets.kt`
+
+- **Feature:** Results in the library's order.
+- **Size:** 79 lines.
+- **What:** `FacetsKey`, a search whose facets are counted (`computeFacets`' arguments, its sets as sets), and whether
+  one holds another (`holds`: some of its books, nothing else different); `RecentFacets`, the facets of a search tab's
+  last four searches, each counted once (`get`: counted, or awaited while another counts it), and a search's counts by
+  book read from one that holds it (`bookCounts`).
+- **Reached from:** `CatalogOrderSearch.kt` (`CatalogOrderEngine.computeFacets`, `CatalogOrderSession`).
+- **Follows:** Zayit's `SearchFacets`; Java's `CompletableFuture` for a count awaited while another thread makes it.
+- **Tests:** `RecentFacetsTest`, `CatalogOrderSessionTest`.
+- **Notes:** the view model counts a search's facets and opens its list at once, and the list counted them again; a tab
+  in the library's order is a new list, which counted its books again (docs/scope-search-speed).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/RecentFacetsTest.kt`
+
+- **Feature:** Results in the library's order.
+- **Size:** 78 lines.
+- **What:** a search's facets counted once, the second asking awaiting the first; a tab's books counted from the whole
+  search's, not another search's nor another base-books choice's; a search in some books holding none wider; only the
+  last searches kept, and a count that failed not kept.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test; two threads of `Executors` for the count awaited.
+- **Tests:** it is one (unit).
+
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSessionTest.kt`
 
 - **Feature:** Results in the library's order.
-- **Size:** 327 lines.
+- **Size:** 349 lines.
 - **What:** the lines come book by book in the library's order, each book's as they stand in it; the books are read as
   the pages ask for them, those with a line or two together, and the last page says so; a line the meaning alone found
   stands in its place and is counted, one the words found too comes once; of the meaning's own lines only those
   that stand out stand in the list, the others counted, and how many stay is the search's own (none, or all); the words' lines show the words, the
   meaning's own its text and then its passage; a search in some lines reads them alone; the session closes the
   engine's own; and the engine gives its own session unless the library's order is asked for, reading the words of an
-  engine that adds lines by meaning.
+  engine that adds lines by meaning; the list counts no facets the view model counted, nor a tab's the whole
+  search's.
 - **Reached from:** the JVM tests.
 - **Follows:** `MeaningFacetsTest` and `HybridSearchEngineFallbackTest` (a fake `SearchEngine` listing given hits),
   Kotlin Test with `runTest`.
@@ -3523,7 +3553,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 814 lines.
+- **Size:** 821 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -3535,7 +3565,8 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   (`MeaningFacets`, `standingOf`), and falls back to the words alone
   when the model or the index cannot load. Its session gives views of its list (`SessionViews`: the lines of some
   books, in the list's order, paged from the first with no search), for the category tabs; none when the list goes on
-  past what it holds (the words alone, past their candidates). It is a `WordsEngine`: its words' search (`words`) can
+  past what it holds (the words alone, past their candidates). Some of the meaning's own lines are read alone on
+  request (`meaningHits`). It is a `WordsEngine`: its words' search (`words`) can
   be asked apart, for a list of every line they find in the library's order (`CatalogOrderSession`). A dense side whose walk came back short is searched again from the words'
   first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering. The
   passages closest in meaning (`passagesByMeaning`) are worked out one request at a time (`passageWork`, the default
@@ -3704,10 +3735,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacets.kt`
 
 - **Feature:** Semantic search's category tabs.
-- **Size:** 77 lines.
+- **Size:** 86 lines.
 - **What:** `MeaningFacets`, a session whose list holds lines its facets don't count (the lines found by meaning alone),
   by book (`meaningBookCounts`) and themselves in the list's order (`meaningLines`, each a `MeaningLine` with how far
-  it stands out of the search's candidates, which `CatalogOrderSession` keeps by);
+  it stands out of the search's candidates and its book, which `CatalogOrderSession` keeps and counts by), and some of
+  them read as the list shows them (`meaningHits`, for the lines that stay in that order);
   `plusBooks` counts them into their books and categories; `otherTabCategories` offers the library's other top
   categories as tabs when the search runs by meaning in the whole library. `WordsEngine`, an engine whose search of
   the words can be asked apart from the lines it adds by meaning (`HybridSearchEngine`), for `CatalogOrderSession`.
@@ -3926,9 +3958,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacetsTest.kt`
 
 - **Feature:** Semantic search's category tabs.
-- **Size:** 220 lines.
+- **Size:** 222 lines.
 - **What:** a book's lines found by meaning count for it, its categories and the total; the other top categories in
-  the library's order; a hybrid session counting only the meaning's own lines, and listing them; a line's standing out
+  the library's order; a hybrid session counting only the meaning's own lines, and listing them with their books,
+  and reading some of them alone; a line's standing out
   of the dense side's candidates (`standingOf`: above their mean, in standard deviations; 0 when all alike).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
@@ -5233,7 +5266,7 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (772 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (773 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -5436,10 +5469,11 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `docs/scope-search-speed/README.md` | Hebrew report (2026-11-12) for request 37: where a search in chosen books or a large category, and a tab picked after it, keep the reader waiting. What was run (ScopeFlowBench: the app's own search view model on the whole library with pack 3, five searches in eight scopes, two tabs and the library's order, at a reader's pace), what was found (the search itself 25 to 220 ms; a tab waiting 0.9 to 1.8 s behind the passages by meaning of the pages before it, which held every thread of the default dispatcher, as a JFR profile showed; the cold first search reading seconds off the cloud's disk), what was fixed (the passages one request at a time, a replaced page's stopped), before and after, and what is left (the library's order, the status line's 300 ms, a cold start). | Pardes's own |
+| `docs/scope-search-speed/README.md` | Hebrew report (2026-11-12) for request 37: where a search in chosen books or a large category, and a tab picked after it, keep the reader waiting. What was run (ScopeFlowBench: the app's own search view model on the whole library with pack 3, five searches in eight scopes, two tabs and the library's order, at a reader's pace), what was found (the search itself 25 to 220 ms; a tab waiting 0.9 to 1.8 s behind the passages by meaning of the pages before it, which held every thread of the default dispatcher, as a JFR profile showed; the cold first search reading seconds off the cloud's disk), what was fixed (the passages one request at a time, a replaced page's stopped; the library's order counting its facets once and reading only the lines it keeps), before and after, and what is left (the status line's 300 ms, a cold start). | Pardes's own |
 | `docs/scope-search-speed/runs/1-unpaced-before.txt` | ScopeFlowBench's step lines (times, scopes, hits; no text) of the run before the fix with no pause between steps and none of the screen's flows collected: a tab waiting 0.9 to 1.8 s. | Pardes's own; measured |
 | `docs/scope-search-speed/runs/2-paced-before.txt` | Its step lines before the fix at a reader's pace (300 ms between steps, the screen's flows collected). | Pardes's own; measured |
-| `docs/scope-search-speed/runs/3-paced-after.txt` | Its step lines after the fix, at the same pace. | Pardes's own; measured |
+| `docs/scope-search-speed/runs/3-paced-after.txt` | Its step lines after the passages' fix, at the same pace. | Pardes's own; measured |
+| `docs/scope-search-speed/runs/4-paced-catalog.txt` | Its step lines after the library's order read its facets once and only the lines it keeps, at the same pace. | Pardes's own; measured |
 | `docs/scope-search-speed/tools/bench.init.gradle` | A Gradle init script that adds `:SeforimApp:runBench`, a `main` of the JVM tests run on the library named (`-PbenchMain`, `-PbenchArgs`, `-PbenchDb`, `-PbenchQuery`), with a JFR recording on demand (`-PbenchJfr`): the app's build has no task for its benches. | Pardes's own |
 | `docs/scope-search-speed/tools/compare.py` | Two runs of ScopeFlowBench side by side: per scope and step, the median and slowest time to the first results. | Pardes's own |
 | `docs/scope-search-speed/tools/table.py` | One run of ScopeFlowBench as a table: per scope and step, the cold first round and the warm rounds, to the first results and to the end. | Pardes's own |

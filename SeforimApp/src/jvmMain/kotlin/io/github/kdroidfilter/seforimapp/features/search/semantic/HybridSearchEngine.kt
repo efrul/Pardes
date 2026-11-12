@@ -492,6 +492,8 @@ class HybridSearchEngine internal constructor(
 
             override suspend fun meaningLines(): List<MeaningLine> = this@HybridSession.meaningLines()
 
+            override suspend fun meaningHits(lineIds: Collection<Long>): List<LineHit> = this@HybridSession.meaningHits(lineIds)
+
             // Its own: the session it views closes when it is shown, and goes on being viewed
             private val refining = Refining()
 
@@ -502,7 +504,12 @@ class HybridSearchEngine internal constructor(
 
         override suspend fun meaningBookCounts(): Map<Long, Int> = meaningOnly().groupingBy { it.bookId }.eachCount()
 
-        override suspend fun meaningLines(): List<MeaningLine> = meaningOnly().map { MeaningLine(it.lineId, it.standing) }
+        override suspend fun meaningLines(): List<MeaningLine> = meaningOnly().map { MeaningLine(it.lineId, it.standing, it.bookId) }
+
+        override suspend fun meaningHits(lineIds: Collection<Long>): List<LineHit> {
+            val ids = lineIds.toSet()
+            return resolvePage(fused.orEmpty().filter { it.lexical == null && it.lineId in ids }, snippets = false)
+        }
 
         // The list's lines that the words don't find, in its order
         private suspend fun meaningOnly(): List<FusedEntry> {
