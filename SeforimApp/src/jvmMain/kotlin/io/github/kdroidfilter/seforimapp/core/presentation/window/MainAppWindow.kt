@@ -57,6 +57,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToC
 import io.github.kdroidfilter.seforimapp.core.reading.LastInput
 import io.github.kdroidfilter.seforimapp.core.reading.noteInput
 import io.github.kdroidfilter.seforimapp.core.selectionCopyShortcut
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearch
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
@@ -255,7 +256,8 @@ fun NucleusApplicationScope.MainAppWindow(
                     )
                 }
             } else {
-                false
+                // Pardes: a character typed that no text field took, for the side pane under the pointer (TypeToSearch)
+                TypeToSearch.type(keyEvent, openWindow.id)
             }
         },
     ) {

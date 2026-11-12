@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (111 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (114 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (209 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (211 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -429,18 +429,22 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +5 −12 lines. Feature: Reading time, Settings window.
+- **Change:** modified, +8 −13 lines. Feature: Reading time, Settings window, Typing over a pane.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
   its comment and its import: the settings are a window of their own, composed once in `main.kt`.
+- **What, typing over a pane:** the key handler's last branch, for a key event that is not a key's press (a typed
+  character no text field took), gives it to `TypeToSearch.type` instead of returning false, with a comment marked
+  "Pardes:" and its import.
 - **Why:** the reading time counts only while the user is at the window, and stops after five minutes without mouse or
-  keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`.
+  keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`. Typing over a pane: as for
+  `TypeToSearch.kt` (request 24).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small, but Zayit edits this file (0.6.13 changes Ctrl+Tab here): the two lines sit in the window's
   modifier chain and key handler.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none; `SettingsWindowReopenTest`.
+- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none; `SettingsWindowReopenTest`; `TypeToSearchTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/WindowUtils.kt`
 
@@ -1158,6 +1162,44 @@ The entries of this section by kind:
   the rest is woven into Zayit's composables.
 - **Tests:** `CommentatorsCheckStateTest`, `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`,
   `KeptCommentatorTest`; the pin was tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/PaneSearch.kt`
+
+- **Change:** modified, +8 −0 lines. Feature: Typing over a pane.
+- **What:** `PaneSearchFocus.typed`, text typed over the pane before its field had the focus, with a comment marked
+  "Pardes:"; as the field takes the focus it appends it to its text and hands the query over at once (past the
+  debounce, so that the text flow's first value, dropped, is not the typed one).
+- **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
+  contents and get straight to a daf, without the search button first, and without hurting anything else.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a field of Zayit's focus holder and four lines in its field's focus effect.
+- **Smaller:** already minimal.
+- **Tests:** `TypeToSearchTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocPanel.kt`
+
+- **Change:** modified, +8 −0 lines. Feature: Typing over a pane.
+- **What:** `TypeToSearchTarget(paneHoverSource)` before the pane's column, while a book is open, with a comment marked
+  "Pardes:": a letter typed with the pointer over the contents opens their search with it
+  (`searchFocus.type`, `ToggleTocSearch` when it is closed); three imports.
+- **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
+  contents and get straight to a daf, without the search button first, and without hurting anything else.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call before the pane's column.
+- **Smaller:** already minimal.
+- **Tests:** `TypeToSearchTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryTreePanel.kt`
+
+- **Change:** modified, +6 −0 lines. Feature: Typing over a pane.
+- **What:** `TypeToSearchTarget(paneHoverSource)` before the pane's column, with a comment marked "Pardes:": the same for
+  the book tree's search (`ToggleBookTreeSearch`); two imports.
+- **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
+  contents and get straight to a daf, without the search button first, and without hurting anything else.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call before the pane's column.
+- **Smaller:** already minimal.
+- **Tests:** `TypeToSearchTest`; tried in the app.
 
 ### Search and history
 
@@ -4713,6 +4755,39 @@ front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowStat
   opened again they are a new window (the count starts again).
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `SettingsWindowViewModelTest` (its `DesktopManager`, Kotlin Test).
+- **Tests:** it is one (unit).
+
+### Typing over a side pane
+
+With the pointer over the table of contents or the book tree, a letter or digit typed that no text field took opens the
+pane's search with it, its field taking the focus, since 2026-11-12, as the user asked. Shortcuts, arrows and other keys
+are left as they were; only a typed character counts, as the keyboard's layout gives it. Hooks: `MainAppWindow.kt` (the
+window's key handler), `PaneSearch.kt`, `BookTocPanel.kt`, `CategoryTreePanel.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TypeToSearch.kt`
+
+- **Feature:** Typing over a pane.
+- **Size:** 90 lines.
+- **What:** `TypeToSearch`: the pane under the pointer, by its window (`point`, set by `TypeToSearchTarget` from the
+  pane's own hover source), `type(event, windowId)` for the window's key handler (a typed character, `KeyEventType.Unknown`,
+  as a text field takes it), `textOf` (a letter or digit, no Ctrl, Alt or Meta) and `route`. `PaneSearchFocus.type`: the
+  text kept for the field, its focus asked for, and the search opened when it is closed.
+- **Reached from:** `MainAppWindow.kt`, `BookTocPanel.kt`, `CategoryTreePanel.kt`.
+- **Follows:** Zayit's `PaneSearchFocus` (the field's focus asked for, as the search button does) and its panes' hover
+  sources (`PaneHeader`'s).
+- **Tests:** `TypeToSearchTest`; tried in the app on Kiddushin (a letter over the contents opened their search with it,
+  the next one went on in it, Enter opened the daf; a letter over the book tree opened its search).
+- **Notes:** a pane floated in a window of its own types in that window, which has no such handler: only the docked
+  panes (the default) take it.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TypeToSearchTest.kt`
+
+- **Feature:** Typing over a pane.
+- **Size:** 55 lines.
+- **What:** a letter or digit is typed into a search, a shortcut, a space or a mark is not; the text goes to the pane
+  under the pointer in its own window only; typing opens a closed search and goes on in an open one.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
 
 ### What a start offers to download
