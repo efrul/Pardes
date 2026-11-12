@@ -1999,20 +1999,31 @@ class SearchResultViewModel(
     }
 
     /**
-     * Shows a top category's results (a tab above the results) with those of the tabs already picked, or no longer when
-     * it is one of them; all the results for null. The tabs picked are the bar's categories too ([showTabsInBar]).
+     * Shows a top category's results (a tab above the results) alone, or, when [add] (Ctrl/Cmd+click), with those of the
+     * tabs already picked, or no longer when it is one of them; all the results for null. The tabs picked are the bar's
+     * categories too ([showTabsInBar]).
      */
-    fun showOnlyCategory(categoryId: Long?) {
+    fun showOnlyCategory(
+        categoryId: Long?,
+        add: Boolean = false,
+    ) {
         dropBeforeBook()
         val picked = _selectedCategoryIds.value
-        val categories = if (categoryId == null) emptySet() else picked
+        // Pardes: a plain click picks its tab alone, Ctrl/Cmd+click ([add]) adds it to the others or takes it out
+        val categories = if (categoryId == null || !add) emptySet() else picked
         _selectedCategoryIds.value = categories
         _selectedBookIds.value = emptySet()
         _selectedTocIds.value = emptySet()
         updatePersistedSearch { it.copy(selectedCategoryIds = categories, selectedBookIds = emptySet(), selectedTocIds = emptySet()) }
         if (categoryId != null) {
-            setCategoryChecked(categoryId, categoryId !in picked)
-            showTabsInBar(if (categoryId in picked) picked - categoryId else picked + categoryId)
+            setCategoryChecked(categoryId, !add || categoryId !in picked)
+            showTabsInBar(
+                when {
+                    !add -> setOf(categoryId)
+                    categoryId in picked -> picked - categoryId
+                    else -> picked + categoryId
+                },
+            )
         } else {
             maybeClearFiltersIfNoneChecked()
             executeFilteredSearch()

@@ -38,9 +38,12 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -87,6 +90,7 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -122,7 +126,8 @@ data class SearchShellActions(
     val onEnsureScopeBookForToc: (Long) -> Unit,
     val onTocToggle: (io.github.kdroidfilter.seforimlibrary.core.models.TocEntry, Boolean) -> Unit,
     val onTocFilter: (io.github.kdroidfilter.seforimlibrary.core.models.TocEntry) -> Unit,
-    val onShowOnlyCategory: (Long?) -> Unit = {},
+    // Pardes: with Ctrl/Cmd held ([Boolean]), the tab is added to the others picked rather than picked alone
+    val onShowOnlyCategory: (Long?, Boolean) -> Unit = { _, _ -> },
     val onOpenBookAt: (bookId: Long, lineId: Long) -> Unit = { _, _ -> },
     val onSelectResult: (lineId: Long) -> Unit = {},
     val onMoreFromBook: (bookId: Long) -> Unit = {},
@@ -347,6 +352,8 @@ private fun SearchResultContentMvi(
     val selectedLineId = preview?.hit?.lineId
     val showBookDetails by appSettings.bookDetailsPaneFlow.collectAsState()
     val listFocus = remember { FocusRequester() }
+    // Pardes: back to the bar once a tab is picked, for Enter to search again in the tabs picked
+    val barFocus = remember { FocusRequester() }
 
     // In a new tab
     fun openResult(result: SearchResult) = actions.onOpenResult(result, true)
@@ -405,13 +412,21 @@ private fun SearchResultContentMvi(
                                     initialText = barText,
                                     autoFocus = false,
                                     onTextChange = actions.onQueryChange,
+                                    focusRequester = barFocus,
                                 )
                             }
 
                             // Always there, as Google's, even with one category: "הכל" also undoes a kept filter
                             if (categories.isNotEmpty()) {
                                 Spacer(Modifier.height(10.dp))
-                                CategoryTabs(categories, selectedCategoryIds, actions.onShowOnlyCategory)
+                                CategoryTabs(categories, selectedCategoryIds) { id, add ->
+                                    actions.onShowOnlyCategory(id, add)
+                                    // The bar's chips follow the tabs a moment later
+                                    scope.launch {
+                                        delay(BAR_FOCUS_DELAY_MS)
+                                        runCatching { barFocus.requestFocus() }
+                                    }
+                                }
                             }
                             Spacer(Modifier.height(8.dp))
                             // Inside one book: the way back to all the results
@@ -1061,11 +1076,16 @@ internal fun ResultLink(
 private fun CategoryTabs(
     categories: List<SearchResultViewModel.SearchTreeCategory>,
     selectedCategoryIds: Set<Long>,
-    onShowOnly: (Long?) -> Unit,
+    onShowOnly: (Long?, Boolean) -> Unit,
 ) {
     val sorted = remember(categories) { categories.sortedByDescending { it.count }.map { it.category.id to it.category.title } }
     val selected = remember(sorted, selectedCategoryIds) { sorted.map { it.first }.filterTo(HashSet()) { it in selectedCategoryIds } }
-    FilterTabs(sorted, selected, onShowOnly)
+    // Pardes: a plain click picks a tab alone, Ctrl/Cmd+click adds it to the others (request 38)
+    val windowInfo = LocalWindowInfo.current
+    FilterTabs(sorted, selected, onSelect = { id: Long? ->
+        val mods = windowInfo.keyboardModifiers
+        onShowOnly(id, id != null && (mods.isCtrlPressed || mods.isMetaPressed))
+    })
 }
 
 /**
@@ -1117,6 +1137,9 @@ internal fun FilterTabs(
 }
 
 private const val TOP_TABS = 5
+
+// The bar's chips follow the tabs picked a moment after the click
+private const val BAR_FOCUS_DELAY_MS = 80L
 
 @Composable
 private fun CategoryTab(

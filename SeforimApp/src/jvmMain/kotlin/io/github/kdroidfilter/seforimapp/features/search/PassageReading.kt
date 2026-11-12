@@ -45,7 +45,7 @@ import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.buildCopyWithSourcePayload
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.deeplink.bookShareLink
-import io.github.kdroidfilter.seforimapp.core.hasMoreThanLetters
+import io.github.kdroidfilter.seforimapp.core.hasPunctuation
 import io.github.kdroidfilter.seforimapp.core.lettersOnly
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryLookup
@@ -337,7 +337,7 @@ private class PassageActions(
             if (selected.isNotBlank() && (HebrewTextUtils.containsNikud(selected) || HebrewTextUtils.containsTeamim(selected))) {
                 add(option(AllIconsKeys.Actions.Copy, labels.withoutNikud) { copy(HebrewTextUtils.removeAllDiacritics(selected)) })
             }
-            if (selected.isNotBlank() && hasMoreThanLetters(selected)) {
+            if (selected.isNotBlank() && hasPunctuation(selected)) {
                 add(option(AllIconsKeys.Actions.Copy, labels.lettersAlone) { copy(lettersOnly(selected)) })
             }
             if (entity != null && selected.isNotBlank()) {
