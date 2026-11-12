@@ -50,5 +50,24 @@ sealed interface InstalledPack {
                 }
             }.getOrElse { Unreadable(it.message ?: it.toString()) }
         }
+
+        /**
+         * [installed] with the number of [newest], the newest pack released, when it carries none of its own and is that
+         * pack: the same model over as many lines of the same library release (packs may share a model, and differ by
+         * their lines). A pack installed from folders that held no manifest is so; what was found is kept beside the
+         * model in [libraryDir], as an install from the pack's own files leaves it.
+         */
+        fun named(
+            libraryDir: File,
+            installed: InstalledPack,
+            newest: PackInfo,
+        ): InstalledPack {
+            if (installed !is InUse || installed.pack != null) return installed
+            val sameLibrary = installed.library?.let { SemanticPack.sameLibrary(it, newest.library) } != false
+            val sameLines = newest.lines != null && newest.lines == installed.lines
+            if (newest.model != installed.model || !sameLines || !sameLibrary) return installed
+            runCatching { File(File(libraryDir, SemanticPack.MODEL_DIR), SemanticPack.INFO_NAME).writeText(newest.toJson()) }
+            return installed.copy(pack = newest.pack)
+        }
     }
 }

@@ -116,7 +116,8 @@ class SemanticPackViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val dir = LibraryLocation.currentDir(appSettings)
             val hasLibrary = LibraryLocation.exists(dir)
-            _state.update { it.copy(hasLibrary = hasLibrary, installed = InstalledPack.read(dir)) }
+            val installed = InstalledPack.read(dir)
+            _state.update { it.copy(hasLibrary = hasLibrary, installed = installed) }
             // Without a library the card asks for it, and offers no pack
             if (!hasLibrary) return@launch
             val available =
@@ -127,6 +128,11 @@ class SemanticPackViewModel(
                         Available.Unreachable
                     }
             _state.update { it.copy(available = available) }
+            // A pack installed with no number, from folders that held no manifest: not offered again when it is the newest
+            val newest = (available as? Available.Pack)?.pack
+            if (newest != null && installed is InstalledPack.InUse && installed.pack == null) {
+                releases.infoOf(newest)?.let { info -> _state.update { it.copy(installed = InstalledPack.named(dir, installed, info)) } }
+            }
         }
     }
 

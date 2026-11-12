@@ -63,6 +63,12 @@ class SemanticPackReleases(
      */
     suspend fun newest(library: String?): Available? = select(list(), library)
 
+    /** What [pack]'s manifest says it holds ([PackInfo]), or null when it can't be read or says nothing of it. */
+    suspend fun infoOf(pack: Available): PackInfo? =
+        pack.assets[SemanticPack.MANIFEST_NAME]?.let { manifest ->
+            runSuspendCatching { PackInfo.parseOrNull(fetchText(manifest.url)) }.getOrNull()
+        }
+
     /** The releases of the repository, newest first; throws IOException when neither list can be read. */
     suspend fun list(): List<Release> =
         runSuspendCatching { json.decodeFromString(ListSerializer(Release.serializer()), fetchText(API_URL)) }
