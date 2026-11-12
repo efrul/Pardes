@@ -6,6 +6,7 @@ import dev.zacsweers.metro.Named
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.backup.BackupSnapshot
 import io.github.kdroidfilter.seforimapp.backup.BackupSource
+import io.github.kdroidfilter.seforimapp.core.presentation.typography.UserFonts
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.framework.database.USER_SETTINGS_DRIVER
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
@@ -83,6 +84,8 @@ class UserDataBackup(
                 zip.write(json.encodeToString(BackupManifest.serializer(), manifest).toByteArray())
                 zip.putNextEntry(ZipEntry(DATABASE_ENTRY))
                 zip.write(database)
+                // Pardes: the fonts the user added (UserFonts), which an older app's restore leaves alone
+                UserFonts.sharedOrNull()?.writeTo(zip)
             }
             return out.toByteArray()
         }
