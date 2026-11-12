@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (221 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (223 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -669,8 +669,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModels.kt`
 
-- **Change:** modified, +51 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
-  Search in categories, Results in the library's order.
+- **Change:** modified, +54 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
+  Search in categories, Results in the library's order, Pane layout kept.
 - **What:**
   - `BookContentPersistedState` gains, appended last for ProtoBuf: `detachedCommentators` (by name; 1.0.5's slot list
     is still read), `allCommentatorsBooks`, `excludedCommentatorsByBook`, `commentatorGroupsByBook`,
@@ -683,28 +683,38 @@ The entries of this section by kind:
     category's (with `baseBooksOnly`), else everywhere. A search narrowed to one book goes back to it.
   - `withScope` writes `"category"` and `"multi"` scopes and their ids instead of turning a category into everywhere; a
     private `SearchScope.categoriesInBaseBooks()` lists the categories searched in their base books.
+  - `WindowSnapshot` gains, appended last, `panes` (`SavedPanes`, PaneLayouts.kt): the window's reader docks as the
+    user left them; its import.
 - **Why:** a tab restored at start must come back with its torn-off commentators (`831ad272`), its commentator
   selection (`3c6bae9b`, `49b456d4`), its daf view (`4efa3e3c`), its search scope (`54180126`, `574f3d55`,
-  `37d4fe60`) and the order of its results.
+  `37d4fe60`) and the order of its results; a window, with its panes where the user put them (step 3 of the docking).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium. The new fields are appended last, as Zayit's own comment asks, but a Zayit release that
   appends fields of its own to the same classes conflicts, and their ProtoBuf numbers would then clash with Pardes's
   saved sessions. The scope change reverses a choice of Zayit's: Zayit reads a saved category scope as "everywhere".
 - **Smaller:** already minimal for the fields; the scope logic could move to a Pardes extension, but it reads private
   fields of the class.
-- **Tests:** `SessionModelsTest` (changed with it), `DetachedCommentatorsTest`, `CommentatorSelectionTest`.
+- **Tests:** `SessionModelsTest` (changed with it), `DetachedCommentatorsTest`, `CommentatorSelectionTest`,
+  `PaneLayoutsTest` (the panes in the session file, and an older file without them).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopSession.kt`
 
-- **Change:** modified, +13 −1 lines. Feature: Commentators in their own panes (Windows).
+- **Change:** modified, +37 −1 lines. Feature: Commentators in their own panes (Windows), Pane layout kept.
 - **What:** `panesOf` creates each `SatelliteWorkspace` with `gripIcon` and `gripDraggingIcon` set to
   `PointerIcon.Hand` on Windows, with a comment: Windows has no open or closed hand, and Nucleus would show its
   four-arrow move cursor over every pane's grip, the floating windows' title bars included.
-- **Why:** the four-arrow cursor over every pane header looked wrong on Windows (`9de93f98`, `0447981b`).
-- **Kind:** fix of Zayit's code (it holds for Zayit's panes on Windows too).
-- **Merge risk:** small; one function.
+- **What, the panes kept:** under comments marked "Pardes:", `restoredPanes`, the docks each restored window was saved
+  with (`restore` keeps its snapshot's `panes`, `forgetWindow` drops them); `panesOf` gives a new dock its split sides'
+  thickness as saved; `savedPlacement(groupId, paneId, sides, floatable)`, a pane's saved place for `WindowPanes`;
+  `windowSnapshot` saves the window's docks (`PaneLayouts.save` from the two workspaces' `snapshot()`, else what was
+  restored); two imports.
+- **Why:** the four-arrow cursor over every pane header looked wrong on Windows (`9de93f98`, `0447981b`). The panes
+  kept: as for `PaneLayouts.kt`.
+- **Kind:** fix of Zayit's code (it holds for Zayit's panes on Windows too); Pardes feature hook.
+- **Merge risk:** small: lines in `panesOf`, `restore`, `forgetWindow` and `windowSnapshot`, and one function.
 - **Smaller:** already minimal.
-- **Tests:** none.
+- **Tests:** `PaneLayoutsTest` (what is saved and given back); a pane moved to the left side and found there after a
+  restart, tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManager.kt`
 
@@ -974,7 +984,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +176 −32 lines. Feature: Commentators in their own panes, Side panes at full height.
+- **Change:** modified, +182 −33 lines. Feature: Commentators in their own panes, Side panes at full height, Pane
+  layout kept.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
     `ReaderPane.standard`, and a `data class Commentator(name)` is a pane per split-off commentator, closed by
@@ -995,8 +1006,10 @@ The entries of this section by kind:
     the side panes run the whole height and the commentaries sit under the text alone), and `DockedPaneCard`'s
     `sidesFullHeight`, which keeps a side pane's full bottom margin while a pane is open under the text, since it no
     longer stands over it; its KDoc says so.
+  - The pane layout kept: `WindowPanes` gives each pane first the place it had when its window was saved
+    (`DesktopSession.savedPlacement`, on one of its `sides` or floating if it may), its sides read once into `sides`.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
-  anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). The side panes at full height: as for `WindowBody.kt`.
+  anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). The side panes at full height: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the enum's every entry was rewritten, so any Zayit change to a pane's declaration, or a new pane,
   conflicts; `PaneSync` and `WindowPanes` are edited in their core loops.
@@ -5049,6 +5062,42 @@ the user asked (request ב of `docs/DESKTOP_STAGE2.md`, step 1 of the docking in
   portable preferences.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's settings tests (`testAppSettings`, `PropertiesSettings`), Kotlin Test.
+- **Tests:** it is one (unit).
+
+### The reader's pane layout kept
+
+A reader window's panes stay where the user put them over a restart, since 2026-11-12 (request ב of
+`docs/DESKTOP_STAGE2.md`, step 3 of the docking in its plan): a pane moved to another side or another place on it, sized,
+or pulled out into a window of its own. The two docks' layouts are saved with the window in the session file and given
+back to its panes as their first places; which are open stays the selected tab's. Hooks: `DesktopSession.kt`,
+`SessionModels.kt`, `ReaderPanes.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayouts.kt`
+
+- **Feature:** Pane layout kept.
+- **Size:** 147 lines.
+- **What:** `SavedPane` (a pane's own id, docked side, order, extent and weight, or floating anchors, offset and size)
+  and `SavedPanes` (a window's panes and the split sides' thickness of its two docks; `placementOf`, a pane's saved
+  place where it may still be; `extentsOf`), serializable for the session's ProtoBuf; `PaneLayouts.save`, a window's
+  panes from its docks' `SatelliteLayoutSnapshot`s without the window's id (a restored window has a new one), and
+  `placementOf`, a saved pane's placement again (none for a side or anchor no longer known). A pane floating on a part
+  of the window only is not kept.
+- **Reached from:** `DesktopSession.kt` (`windowSnapshot`, `panesOf`, `savedPlacement`), `SessionModels.kt`
+  (`WindowSnapshot.panes`).
+- **Follows:** Nucleus's `SatelliteWorkspace.snapshot()`; given back as each satellite's `initialPlacement` rather than
+  by its `restore()`, which would also open or close the panes, which `PaneSync` takes from the selected tab.
+- **Tests:** `PaneLayoutsTest`; a pane moved to the left side and found there after a restart, tried in the app.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayoutsTest.kt`
+
+- **Feature:** Pane layout kept.
+- **Size:** 108 lines.
+- **What:** a window's panes saved by their own ids, docked or floating, with its split sides, another window's left
+  out; a place a pane can no longer have not given back (a side it may not dock on, floating when it may not, names no
+  longer known); a pane floating on part of the window not saved; the docks in the session file, and an older file
+  without them.
+- **Reached from:** the JVM tests.
+- **Follows:** `SessionModelsTest` (ProtoBuf), Kotlin Test.
 - **Tests:** it is one (unit).
 
 ### The open smart siddur (experimental)

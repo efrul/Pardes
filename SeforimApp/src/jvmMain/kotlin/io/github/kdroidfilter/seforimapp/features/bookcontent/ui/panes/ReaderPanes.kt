@@ -296,15 +296,20 @@ fun WindowPanes(window: OpenWindow) {
     for (pane in panes) {
         key(pane) {
             val commentator = pane as? ReaderPane.Commentator
+            val sides = if (pane.navigation) NavigationDockSides else LineDockSides
             Satellite(
                 workspace = pane.workspaceIn(session, groupId),
                 id = pane.idIn(groupId),
                 // A split-off commentator's pane is called by its commentator's name
                 title = commentator?.name ?: stringResource(pane.title),
-                // Read once, when the dock first meets the commentator: from then on its place is its own
-                initialPlacement = commentator?.let { commentatorHome(commentators.indexOf(it.name)) } ?: pane.home,
+                // Read once, when the dock first meets the commentator: from then on its place is its own. Pardes: the
+                // place the pane had when the window was saved first
+                initialPlacement =
+                    session.savedPlacement(groupId, pane.id, sides, floatable = !pane.fixed)
+                        ?: commentator?.let { commentatorHome(commentators.indexOf(it.name)) }
+                        ?: pane.home,
                 initiallyOpen = false,
-                dockSides = if (pane.navigation) NavigationDockSides else LineDockSides,
+                dockSides = sides,
                 floatable = !pane.fixed,
                 reorderable = !pane.fixed,
                 // Zayit's windows are usually maximized: a pane pulled out stays on screen.
