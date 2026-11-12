@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import io.github.kdroidfilter.seforimapp.features.settings.downloads.StartOffers
 import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
 import io.github.kdroidfilter.seforimapp.icons.BootstrapPersonLines
 import io.github.kdroidfilter.seforimapp.icons.FileArrowDown
@@ -116,6 +120,9 @@ fun SettingsSidebar(
             ),
         )
 
+    // Pardes: the pages with something new to download this start (StartOffers), a dot by each until its card is shown
+    val offered by StartOffers.marked.collectAsState()
+
     Column(modifier = modifier) {
         LazyColumn(
             modifier = Modifier.fillMaxHeight(),
@@ -139,6 +146,7 @@ fun SettingsSidebar(
                     icon = item.icon,
                     selected = selected,
                     onClick = { navController.navigate(item.destination) },
+                    marked = !selected && item.destination in offered,
                 )
             }
         }
@@ -151,6 +159,7 @@ private fun SidebarItem(
     icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
+    marked: Boolean = false,
 ) {
     val accent = JewelTheme.globalColors.outlines.focused
     val selectedBackground = accent.copy(alpha = 0.15f)
@@ -184,5 +193,9 @@ private fun SidebarItem(
         )
         Spacer(Modifier.width(6.dp))
         Text(text = label, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+        if (marked) {
+            Spacer(Modifier.width(6.dp))
+            Box(Modifier.size(6.dp).background(accent, CircleShape))
+        }
     }
 }

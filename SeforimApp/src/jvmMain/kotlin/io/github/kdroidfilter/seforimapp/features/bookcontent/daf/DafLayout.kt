@@ -99,6 +99,9 @@ class DafLayouts(
     @Synchronized
     fun has(name: String): Boolean = filesFor(name).isNotEmpty()
 
+    /** Whether the folder has a layout file at all (its JSON files, not read). */
+    fun hasAny(): Boolean = dir.listFiles { f -> f.isFile && f.extension == "json" }.orEmpty().isNotEmpty()
+
     /** The file [tractate] reads the tractate named [name] from first, or null when none is for it. */
     @Synchronized
     fun fileFor(name: String): File? = filesFor(name).firstOrNull()

@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.features.search.semantic.pack
 
 import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.features.settings.downloads.ReleaseLists
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimapp.network.HttpsConnectionFactory
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,8 @@ import java.net.HttpURLConnection
  * site writes at every deploy (`semantic.json`, .github/workflows/android-site.yml), in the API's shape.
  */
 class SemanticPackReleases(
-    private val fetchText: suspend (url: String) -> String = ::get,
+    // The lists as read lately, shared with the daf view's layouts (ReleaseLists)
+    private val fetchText: suspend (url: String) -> String = { url -> ReleaseLists.text(url, ::get) },
 ) {
     @Serializable
     data class Release(

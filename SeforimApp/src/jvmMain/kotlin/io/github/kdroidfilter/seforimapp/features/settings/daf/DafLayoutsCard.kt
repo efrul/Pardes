@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +29,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafDownloads
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafLayouts
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafManifest
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafLayouts
+import io.github.kdroidfilter.seforimapp.features.settings.downloads.StartOffers
+import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.DefaultButton
@@ -59,13 +64,14 @@ import seforimapp.seforimapp.generated.resources.daf_layouts_version
  * Settings › צורת הדף: the daf view's layouts as released for download, how many of them the library's
  * folder has as released, and every one it lacks, or has otherwise, downloaded at once or one by one ([DafDownloads]):
  * each tractate has a version of its own, and a row with the folder's and the release's. The download goes on when the
- * settings close.
+ * settings close. Marked and brought into view when a start opened the settings for a newer version (StartOffers).
  */
 @Composable
 fun DafLayoutsCard() {
     val layouts = rememberDafLayouts()
     val downloads = remember(layouts) { DafDownloads.of(layouts) }
     val state by downloads.state.collectAsState()
+    val offered = remember { StartOffers.take(SettingsDestination.Daf) }
     // Each time the card is shown: a tractate may have been imported or downloaded from its page since
     LaunchedEffect(downloads) {
         downloads.refresh()
@@ -76,9 +82,11 @@ fun DafLayoutsCard() {
         onDownload = downloads::download,
         onCancel = downloads::cancel,
         onRetry = { if (state.manifest != null) downloads.download(state.toGet) else downloads.refresh(force = true) },
+        marked = offered,
     )
 }
 
+/** The card for [state]; [marked] when the settings were opened for it: it comes into view, its frame lit. */
 @Composable
 internal fun DafLayoutsCardContent(
     state: DafDownloads.State,
@@ -86,14 +94,25 @@ internal fun DafLayoutsCardContent(
     onCancel: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    marked: Boolean = false,
 ) {
+    val inView = remember { BringIntoViewRequester() }
+    if (marked) {
+        // Once the screen is laid out, and again once the check has settled the card's lines
+        LaunchedEffect(state.checking) {
+            withFrameNanos {}
+            inView.bringIntoView()
+        }
+    }
     val shape = RoundedCornerShape(8.dp)
+    val colors = JewelTheme.globalColors
     Column(
         modifier =
             modifier
+                .bringIntoViewRequester(inView)
                 .fillMaxWidth()
                 .clip(shape)
-                .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
+                .border(if (marked) 2.dp else 1.dp, if (marked) colors.outlines.focused else colors.borders.normal, shape)
                 .background(JewelTheme.globalColors.panelBackground)
                 .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
