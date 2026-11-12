@@ -164,3 +164,9 @@ its stale report (`rm -f SeforimApp/build/reports/ktlint/*/*.txt`) if ktlint the
   which fail to open. Open books through the catalog chips or the book tree instead.
 - The working directory resets between commands: give absolute paths, or `cd` in the same command.
 - A benchmark is run alone: mockk loaded in the same JVM slows the real repository's calls.
+- **A search of the whole library that never ends** (still "מחפש..." after a minute, `top` at 90% iowait) is the
+  memory: the Kotlin compile daemons of earlier builds (Nucleus's on JDK 25, Pardes's) held 7 GB, the index found no
+  page cache and every search read the disk. Kill the idle `kotlin-build-tools` daemons (`ps -o pid,cmd -C java`;
+  never the Gradle daemon running the app) and the search came back at once (2026-11-12).
+- A drag-selection in a side pane (the targumim) drawn too fast selects nothing: steps of 10 px, 0.08 s apart, from
+  inside a word.

@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (117 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (119 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (231 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (233 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,8 +57,8 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 44 |
-| Pardes feature in Zayit's file | 29 |
+| Pardes feature hook | 45 |
+| Pardes feature in Zayit's file | 30 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 5 |
 | Removed Zayit file | 5 |
@@ -432,7 +432,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +8 −13 lines. Feature: Reading time, Settings window, Typing over a pane.
+- **Change:** modified, +21 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
@@ -440,14 +440,19 @@ The entries of this section by kind:
 - **What, typing over a pane:** the key handler's last branch, for a key event that is not a key's press (a typed
   character no text field took), gives it to `TypeToSearch.type` instead of returning false, with a comment marked
   "Pardes:" and its import.
+- **What, the copy with source:** the key handler reads the selected tab's id once (`selectedTabId`, the expression
+  Zayit's call to `selectionCopyShortcut` had inline) and first gives the key to `rememberCommentaryCopyShortcut()`'s
+  handler (`commentaryCopy`), which takes Ctrl/Cmd+Alt+C of a selection in a commentary, a targum or the daf's Rashi
+  and Tosafot; comments marked "Pardes:" and an import.
 - **Why:** the reading time counts only while the user is at the window, and stops after five minutes without mouse or
   keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`. Typing over a pane: as for
-  `TypeToSearch.kt` (request 24).
+  `TypeToSearch.kt` (request 24). The copy with source: as for `CommentarySource.kt` (request 40).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small, but Zayit edits this file (0.6.13 changes Ctrl+Tab here): the two lines sit in the window's
   modifier chain and key handler.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none; `SettingsWindowReopenTest`; `TypeToSearchTest`.
+- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none; `SettingsWindowReopenTest`; `TypeToSearchTest`;
+  `CommentarySourceTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
 
@@ -801,7 +806,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
-- **Change:** modified, +96 −10 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window.
+- **Change:** modified, +137 −20 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window,
+  Copy with a commentary's source.
 - **What:**
   - In `BookTextMenus`, `LocalLocatedSelection.current`: when the content locates its own selection in the library (the
     daf's printed words), the context menu's link, note and highlight take that location instead of searching the
@@ -810,7 +816,15 @@ The entries of this section by kind:
   - The selection written to the `SelectionContext`: an area with nothing selected clears the tab's selection only if
     the text there is still the one it wrote (`written`), because the daf has an area per amud.
   - In `BookTextMenus`, the item "העתק טקסט בלבד" (`context_menu_copy_letters_only`) after "copy without nikud", when the
-    copied text has anything but letters, digits and spaces (`hasMoreThanLetters`): it copies `lettersOnly(copiedText)`.
+    copied text has punctuation (`hasPunctuation`): it copies `lettersOnly(copiedText)`, and shows Ctrl/Cmd+Shift+C, the
+    keybinding Zayit's "copy without nikud" showed, which is a plain `ContextMenuItemOption` now (a comment marked
+    "Pardes:").
+  - In `BookTextMenus`, "העתק עם מקור" asks `menuOwnSourceOf` first (the content's located selection, the daf's, and
+    the column of commentaries or targumim published last, read from the graph with `catalogCache`): when it cites the
+    selection's own lines it is copied off the UI thread (`sourceScope`, `runSuspendCatching`), else Zayit's
+    `buildCopyWithSourcePayload` as before.
+  - In the effect that writes the selection to the `SelectionContext`, a selection the content locates (the daf's) is
+    written with its lines (`locatedLinesOf`), for the window's Ctrl/Cmd+Alt+C.
   - In `BookTextMenus`, the item "פתח במילון" (`context_menu_open_in_dictionary`) after "search the selected text", when
     the copied text is a word or up to four (`lookupWord`): it opens the dictionary's window on what the dictionaries
     have of it (`dictionaryLookup.entryOf`, then `open`, read from the graph beside the repository), and is shown
@@ -824,13 +838,16 @@ The entries of this section by kind:
 - **Why:** highlights and notes work on the daf's printed words (`d334af46`), a selection survives while another amud
   is composed (`d9cb48b7`), the learning split widget counts the time a book is read (`0083381e`), and a text is copied
   without its nikud, teamim and punctuation, and a selected word is looked up in the dictionary, as the user asked on
-  2026-11-09; the daf's review is said in two checkboxes, as the user asked the same day.
+  2026-11-09; the daf's review is said in two checkboxes, as the user asked the same day; the copy of the words alone
+  only where there is punctuation, with its shortcut, and a copy with source of a commentary, a targum or the daf's
+  words citing them, as asked on 2026-11-12 (requests 39 and 40).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: the edits sit inside Zayit's context-menu builder (`BookTextMenus`), which Zayit changes when
   it adds a menu action.
 - **Smaller:** the reading-time effect could be a Pardes composable called by one line; the menu's branches need the
   menu's locals.
-- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`, `DictionaryLookupTest`.
+- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`, `DictionaryLookupTest`,
+  `CommentarySourceTest`.
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
@@ -1137,7 +1154,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +292 −44 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +296 −45 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
@@ -1157,6 +1174,8 @@ The entries of this section by kind:
     (`category_base_books_only`, `scope_base_books_label`); a category row's icon is a folder.
   - The focus returns to the bar after a book is picked only in the selected tab (`LocalTabSelected`): the window's
     tabs share their `SearchHomeViewModel`, and a hidden tab's bar took the letters typed next.
+  - `UnifiedSearchBar` takes a `focusRequester` (its own when none): the results' bar is given one, to take the focus
+    after a tab is picked.
   - An author row says whose book it was found by (`author_of_book`) when it has no alias.
   - Ctrl+Enter and "search all books" are Enter when the scope's books are all searched (an author or a category).
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
@@ -1177,7 +1196,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineCommentsView.kt`
 
-- **Change:** modified, +362 −50 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default commentators.
+- **Change:** modified, +365 −51 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default
+  commentators, Copy with a commentary's source.
 - **What:**
   - `LineCommentsView` reads the book's `CommentatorSelection` (`bookCommentators`) instead of the line's
     `selectedCommentatorIds`, and the split-off commentators, and passes both to the single- and multi-line contents.
@@ -1199,6 +1219,8 @@ The entries of this section by kind:
   - The reader's default for the book (`rememberCommentatorsDefault`, in `LineCommentsView`) goes down to the list
     as `commentatorsDefault`, and "כל המפרשים", now shown for a single commentator too, ends with its pin
     (`CommentatorsDefaultPin`, clear of the scrollbar); `CommentatorsCheckAllRow` takes a `modifier` for it.
+  - `CommentaryItem` publishes the column (`onSecondaryClick`) on a primary press too, not on a secondary one alone, so
+    that a selection dragged in a commentary is found in its column (a comment marked "Pardes:").
 - **Why:** a commentator in a pane of its own (`d85afee7`, `831ad272`) and whole groups checked from line to line
   (`3c6bae9b`, `49b456d4`); the commentator the pages stay on from line to line, asked for on 2026-11-10; the pin of the reader's default,
   asked for on 2026-11-09 as "קבע כברירת מחדל".
@@ -1209,6 +1231,41 @@ The entries of this section by kind:
   the rest is woven into Zayit's composables.
 - **Tests:** `CommentatorsCheckStateTest`, `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`,
   `KeptCommentatorTest`; the pin was tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/CopyWithSource.kt`
+
+- **Change:** modified, +13 −4 lines. Feature: Copy of the words alone, Copy with a commentary's source.
+- **What:**
+  - `selectionCopyShortcut`: Ctrl/Cmd+Shift+C copies `lettersOnly(selectedText)` (Pardes's `LettersOnly.kt`) instead of
+    `HebrewTextUtils.removeAllDiacritics(selectedText)`; its KDoc says so, marked "Pardes:".
+  - `formatHebrewSourceReference`: under the Talmud root, a reference whose first segment is a daf ("ב." or "ב:") is
+    cited by that segment alone; Zayit's rule (the last segment dropped) now serves the references without a daf (the
+    Yerushalmi's "דמאי א, א"); a comment marked "Pardes:".
+- **Why:** request 39 of `docs/DESKTOP_STAGE2.md` (2026-11-12): "העתק טקסט בלבד" gets Ctrl+Shift+C, which was "העתק
+  ללא ניקוד"'s; that copy stays in the menu, without a shortcut. Request 40: a commentary on the Talmud is cited by its
+  book and daf, as the Gemara is; Rashi's and Tosafot's references have two segments after the daf (the Gemara's
+  segment, the comment), and Zayit's rule left "רש"י על בבא בתרא ב., א".
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** small: a line in each of two functions Zayit seldom changes.
+- **Smaller:** the shortcut could be caught before Zayit's in `CommentarySource.kt`, leaving a branch of Zayit's that
+  nothing reaches; one line here is smaller and plainer.
+- **Tests:** Zayit's `CopyWithSourceTest` (the Gemara and the Yerushalmi, unchanged), `CommentarySourceTest` (a
+  commentary by its daf), `LettersOnlyTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineTargumView.kt`
+
+- **Change:** modified, +24 −1 lines. Feature: Copy with a commentary's source.
+- **What:** `LinkItem` takes `onPress`, called on a primary or secondary press of the item (`onPointerEvent`, with its
+  opt-in); the single- and multi-line contents pass one that publishes the targumim shown, as the commentaries pane
+  publishes its column (`SelectionContext.setActiveCommentaryColumn`), through the file-level
+  `List<SourceSection>.column()`, marked "Pardes:"; `selectionContext` read from the graph; imports.
+- **Why:** request 40 (2026-11-12): a selection in a targum is copied with the targum's source ("תרגום אונקלוס על
+  בראשית כה, א"), not with the book's title alone. As in the commentaries pane, the menu's "הוסף הערה" and "דווח על
+  טעות", the main pane's, are no longer offered there, and a highlight made there is saved on the targum's line.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a parameter and a modifier on `LinkItem`, a line at each of its two calls.
+- **Smaller:** already minimal.
+- **Tests:** `CommentarySourceTest` (a column's match); the press, in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/PaneSearch.kt`
 
@@ -1364,7 +1421,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +420 −52 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
+- **Change:** modified, +432 −53 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1382,8 +1439,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `MeaningFacets` and `BuildSearchTreeUseCase.categoryIdsOf`), and the library's other top categories are tabs after
     the results' (`showOtherCategories`, `_otherTabCategories`).
   - `collectBookIdsUnderCategory` reads the app's catalog (`libraryCategories.bookIds`) instead of the database.
-  - **Result tabs:** `showOnlyCategory` picks a tab with those already picked, or lets it go (Zayit's showed one at a
-    time); `listed` keeps the search's session when its list can be shown in part (`SessionViews`), and
+  - **Result tabs:** `showOnlyCategory(categoryId, add)` shows a tab alone, as Zayit's did, and with `add`
+    (Ctrl/Cmd+click) picks it with those already picked, or lets it go; `listed` keeps the search's session when its list can be shown in part (`SessionViews`), and
     `executeFilteredSearch` then shows the tabs' categories from that list with no new search (a category with no line
     in it is searched, as before); in a search of the whole library the tabs picked are the bar's categories
     (`showTabsInBar`, through `scopeChanges` and the file-level `scopeOfTabs(tabs, picked)`; `SearchScope.Global` when
@@ -1406,7 +1463,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   library's order are the user's request of 2026-11-09 (a sort by the catalog): wrapping the engine here leaves
   every search, filter and restore path of the file as it is. The tree's books from the catalog are the speed fix
   of `BuildSearchTreeUseCase.kt`; the guard is a fix of Zayit's code, seen once in the app when the first tree
-  from the catalog came in after the facets'.
+  from the catalog came in after the facets'. A tab picked alone on a plain click, others added only with Ctrl/Cmd,
+  is the user's request of 2026-11-12 (request 38).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
@@ -1418,7 +1476,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +96 −29 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
+- **Change:** modified, +123 −33 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1428,7 +1486,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - The preview's highlights come from `rememberPreviewHighlights(...)` instead of an inline `produceState`.
   - The category tabs are picked several at once: `FilterTabs` has a form taking the set picked (`selected: Set<Long>`,
     "הכל" the one picked when none is), Zayit's one-at-a-time form calling it; `CategoryTabs` marks every top
-    category picked.
+    category picked. A plain click picks a tab alone, as Zayit's did, and Ctrl/Cmd+click adds it or lets it go
+    (`onShowOnlyCategory(id, add)`, `add` read from `LocalWindowInfo`'s keyboard modifiers); then the bar takes the
+    focus (`barFocus`, after `BAR_FOCUS_DELAY_MS`), so that Enter searches again at once.
   - `PassagePreview` is read as a book is (`PassageReading.kt`): its lines are `rememberPassageReading(preview).lines`
     (more of the book past the passage's ends, the scroll container taking `readPastEnds`); Zayit's `Box` around the
     lines is `PassageText` (the text selected, the menu of a right click); a line's `clickable` and its hand pointer are
@@ -1444,7 +1504,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
   screen's. The passage read as a book is the user's request of 2026-11-10: its text selected and copied, the book's
   menu on a right click, and scrolling up and down past it. The link to the library's order is the user's request
-  of 2026-11-09, beside the status line's other choice.
+  of 2026-11-09, beside the status line's other choice. A tab picked alone unless Ctrl/Cmd is held, and the focus in
+  the bar after it, are the user's request of 2026-11-12 (request 38).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
@@ -2880,27 +2941,73 @@ book or by the time it was read, as Pardes for Android's widget. Hooks: `MainApp
 ### The reader's menu: a copy of the words alone
 
 "העתק טקסט בלבד" in the reader's context menu: the selected text without its nikud, teamim and punctuation, as the user
-asked on 2026-11-09. Hooks: `BookContentScreen.kt`, `strings.xml`.
+asked on 2026-11-09; offered only where the selection has punctuation, with Ctrl/Cmd+Shift+C, as asked on 2026-11-12
+(request 39). Hooks: `BookContentScreen.kt`, `CopyWithSource.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/LettersOnly.kt`
 
 - **Feature:** Copy of the words alone.
-- **Size:** 50 lines.
+- **Size:** 61 lines.
 - **What:** `lettersOnly(text)`, a text as its words alone: Zayit's `HebrewTextUtils.removeAllDiacritics`, then every
   character that is no letter or digit taken out, a space where it stood between two words (a maqaf, a dash, a slash),
   the lines kept and the spaces folded. A geresh after a letter and gershayim between two letters stay, as the word's
-  own spelling (וגו׳, רש״י). `hasMoreThanLetters(text)` says whether such a copy would differ, for the menu to offer it.
-- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`).
+  own spelling (וגו׳, רש״י). `hasPunctuation(text)` says whether the text has punctuation such a copy takes out (a sign
+  between or around its words, not a word's geresh or gershayim, nor nikud or teamim alone, which "העתק ללא ניקוד"
+  takes out), for the menus to offer it only then.
+- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`), `PassageReading.kt`, Zayit's `CopyWithSource.kt`
+  (`selectionCopyShortcut`).
 - **Follows:** Zayit's `core/CopyWithSource.kt`: the copy actions' top-level functions, in `core`.
 - **Tests:** `LettersOnlyTest`.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/LettersOnlyTest.kt`
 
 - **Feature:** Copy of the words alone.
-- **Size:** 44 lines.
+- **Size:** 50 lines.
 - **What:** a verse loses its nikud, teamim and sof pasuq; a maqaf, a dash and a slash become a space; רש"י, ד"ה, וגו'
-  and ר׳ keep their marks while the quotation marks around words go; lines and numbers stay; and a text of words alone
-  is told from one with marks.
+  and ר׳ keep their marks while the quotation marks around words go; lines and numbers stay; and a text with
+  punctuation (a maqaf, a sof pasuq, quotation marks) is told from one with nikud, gershayim or a mark of direction
+  alone.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The reader's menu: a copy with the source of a commentary, a targum or the daf
+
+"העתק עם מקור" and Ctrl/Cmd+Alt+C of a selection made in a commentary, a targum or the daf view cite them, their own
+book and lines ("רשב״א על בבא בתרא ב."), not the title of the book open in the tab alone, as the user asked on
+2026-11-12 (request 40). Hooks: `BookContentScreen.kt`, `MainAppWindow.kt`, `LineCommentsView.kt`, `LineTargumView.kt`,
+`CopyWithSource.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/CommentarySource.kt`
+
+- **Feature:** Copy with a commentary's source.
+- **Size:** 210 lines.
+- **What:**
+  - `commentaryRangeOf(text, column)`: the first and last commentaries of a column (`CommentaryLineRef`) a selection
+    covers, by their text without diacritics: one holding the other, or a selection begun or ended inside one, wherever
+    in it (an overlap of eight letters at least, `MIN_OVERLAP`, found from the occurrences of the selection's first or
+    last letters, in linear time, since a whole book's selection is checked on a click).
+  - `commentaryCopyWithSource`; `locatedLinesOf` (the first and last lines, in their book's order, of the daf view's
+    located selection in its first book); `copyWithSourceOf` (a text with the reference of its lines in their own book,
+    by Zayit's `formatHebrewSourceReference`).
+  - `menuOwnSourceOf(text, ranges, column)`: the menu's copy (`OwnSourceCopy`) for a located selection or one found in
+    the column; null leaves it to Zayit's `buildCopyWithSourcePayload`.
+  - `rememberCommentaryCopyShortcut()`: the window's Ctrl/Cmd+Alt+C for its selected tab, through `ownSourceOf`: a
+    selection whose lines are known in another book than the tab's (the daf's Rashi and Tosafot, published with their
+    lines), or found in the column and not among the book's lines; null leaves it to Zayit's `selectionCopyShortcut`.
+- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`), `MainAppWindow.kt`.
+- **Follows:** Zayit's `core/CopyWithSource.kt` beside it: top-level functions in `core`, and its reference format.
+- **Tests:** `CommentarySourceTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/CommentarySourceTest.kt`
+
+- **Feature:** Copy with a commentary's source.
+- **Size:** 127 lines.
+- **What:** a selection is found among a column of the Rashba's and Tosafot's commentaries (across two, inside one, not
+  in another text) and copied with the Rashba's book and daf; the daf view's located Rashi lines are cited first to last
+  in their own book whatever their order, a word of the Gemara's left out; the shortcut takes a selection of the
+  window's tab whose lines are in another book, or found in the column alone, and leaves the book's own text and the
+  Gemara's lines to Zayit's; a commentary on the Talmud is cited by its daf.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).

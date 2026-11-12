@@ -86,7 +86,15 @@ fun formatHebrewSourceReference(
         val base = if (hasEmbeddedPrefix) heRef else "$bookRef $heRef"
         // Talmud refs end with an in-page line marker ("דף, אמוד, שורה"); never part of the
         // standard citation, so drop the last comma-separated segment.
-        val trimmed = if (isTalmud) base.substringBeforeLast(',').trim() else base.trim()
+        // Pardes: a ref whose first segment is a daf is cited by its daf alone, a commentary's too, whose
+        // marker has two segments ("רש"י על בבא בתרא ב., א, א": the Gemara's segment, the comment)
+        val trimmed =
+            if (isTalmud) {
+                base.substringBefore(',').trim().takeIf { it.endsWith('.') || it.endsWith(':') }
+                    ?: base.substringBeforeLast(',').trim()
+            } else {
+                base.trim()
+            }
         // Some heRefs in the catalog contain stray double spaces (data quality artifact).
         // Always emit a single-space output regardless of input shape.
         val normalized = trimmed.replace(WHITESPACE_REGEX, " ")
@@ -122,8 +130,9 @@ fun buildCopyWithSourcePayload(
 }
 
 /**
- * The text a selection copy shortcut puts on the clipboard for [tabId]: Ctrl/Cmd+Shift+C without nikud, Ctrl/Cmd+Alt+C
- * with its source. Null for any other key or without a selection.
+ * The text a selection copy shortcut puts on the clipboard for [tabId]: Ctrl/Cmd+Shift+C its words alone (Pardes: no
+ * nikud, no teamim and no punctuation, lettersOnly, in place of Zayit's without nikud), Ctrl/Cmd+Alt+C with its source.
+ * Null for any other key or without a selection.
  */
 fun selectionCopyShortcut(
     keyEvent: KeyEvent,
@@ -134,7 +143,7 @@ fun selectionCopyShortcut(
     if (!keyEvent.isCtrlPressed && !keyEvent.isMetaPressed) return null
     val selectedText = selectionContext.selectedTextIn(tabId).takeIf { it.isNotBlank() } ?: return null
     return when {
-        keyEvent.isShiftPressed && !keyEvent.isAltPressed -> HebrewTextUtils.removeAllDiacritics(selectedText)
+        keyEvent.isShiftPressed && !keyEvent.isAltPressed -> lettersOnly(selectedText)
         keyEvent.isAltPressed && !keyEvent.isShiftPressed -> {
             val active = selectionContext.activeBook.value ?: return null
             buildCopyWithSourcePayload(

@@ -56,6 +56,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.processKeyShort
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.reading.LastInput
 import io.github.kdroidfilter.seforimapp.core.reading.noteInput
+import io.github.kdroidfilter.seforimapp.core.rememberCommentaryCopyShortcut
 import io.github.kdroidfilter.seforimapp.core.selectionCopyShortcut
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearch
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
@@ -326,6 +327,8 @@ fun NucleusApplicationScope.MainAppWindow(
             var isTouchMode by remember { mutableStateOf(false) }
 
             val copyToClipboard = rememberCopyToClipboard()
+            // Pardes: Ctrl/Cmd+Alt+C of a selection in a commentary, a targum or the daf's Rashi and Tosafot cites them
+            val commentaryCopy = rememberCommentaryCopyShortcut()
             // Intercept key combos early to avoid focus traversal consuming Tab
             Box(
                 modifier =
@@ -337,18 +340,17 @@ fun NucleusApplicationScope.MainAppWindow(
                         .noteInput()
                         .onPreviewKeyEvent { keyEvent ->
                             LastInput.now()
+                            // Pardes: the tab whose selection both copy shortcuts take, read once
+                            val selectedTabId =
+                                tabsVm.state.value.let {
+                                    it.tabs
+                                        .getOrNull(it.selectedTabIndex)
+                                        ?.destination
+                                        ?.tabId
+                                } ?: ""
+                            if (commentaryCopy(keyEvent, selectedTabId)) return@onPreviewKeyEvent true
                             // Copy without nikud / with source: before the focused text, which would copy it as is
-                            val selectionCopy =
-                                selectionCopyShortcut(
-                                    keyEvent,
-                                    appGraph.selectionContext,
-                                    tabsVm.state.value.let {
-                                        it.tabs
-                                            .getOrNull(it.selectedTabIndex)
-                                            ?.destination
-                                            ?.tabId
-                                    } ?: "",
-                                )
+                            val selectionCopy = selectionCopyShortcut(keyEvent, appGraph.selectionContext, selectedTabId)
                             if (selectionCopy != null) {
                                 copyToClipboard(selectionCopy)
                                 return@onPreviewKeyEvent true
