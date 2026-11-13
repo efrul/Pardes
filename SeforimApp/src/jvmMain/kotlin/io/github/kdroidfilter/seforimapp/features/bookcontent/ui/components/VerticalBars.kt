@@ -165,9 +165,8 @@ fun EndVerticalBar(
                         label = stringResource(Res.string.shnayim_mikra_mode),
                     )
                 }
-                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text; the Chumash as Mikraot
-                // Gedolot (MikraotView)
-                if (selectedBook.isBavli || selectedBook.isChumash) {
+                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text
+                if (selectedBook.isBavli) {
                     SelectableIconButtonWithToolip(
                         toolTipText = stringResource(Res.string.daf_view_tooltip),
                         onClick = { onEvent(BookContentEvent.ToggleDafView) },

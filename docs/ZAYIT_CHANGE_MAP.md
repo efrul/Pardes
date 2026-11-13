@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (235 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (233 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -893,11 +893,10 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +47 −14 lines. Feature: Daf view, More links, Unflagged books, Mikraot Gedolot pages.
+- **Change:** modified, +46 −14 lines. Feature: Daf view, More links, Unflagged books.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
-    (`selectedBook.isBavli`), and for a book of the Chumash (`isChumash`, its Mikraot Gedolot pages), sending
-    `ToggleDafView`.
+    (`selectedBook.isBavli`), sending `ToggleDafView`.
   - With a daf shown (`uiState.content.dafView` of a Bavli tractate), `DafMarksButton()` stands in the diacritics
     button's place: the printed page has no nikud to hide, and the daf's marks are shown or hidden there.
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
@@ -1058,7 +1057,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/BookContentPanel.kt`
 
-- **Change:** modified, +201 −54 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept, Mikraot Gedolot pages.
+- **Change:** modified, +189 −54 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept.
 - **What:**
   - `detachedCommentatorIds`: the split-off commentators' book ids, from the names and the loaded line connections;
     their passages answer in the text as those of the commentaries pane's page do (`passageCommentatorIds`).
@@ -1066,8 +1065,6 @@ The entries of this section by kind:
     prefetches its own commentators of those groups.
   - The call to `BookContentView` is wrapped in a `run { … }` that builds a `DafMode` for a Bavli tractate in daf view
     (its line clicks select the line, its passage clicks call `selectDafPassage`) and passes it as `daf`.
-  - After it, a book of the Chumash in daf view shows `MikraotView` over the text, from the selected verse's chapter,
-    with the book's `commentatorSelection` and its line's listed commentators (`getCommentatorGroupsForLine`).
   - `onShowCommentaries` passed to `BookContentView`: opens the commentaries pane when it is closed and says whether
     it was, for a comment selected on the daf to be read there once the text is shown.
   - New private `selectDafPassage`: shows the passage's commentators in the commentaries pane's selection when they
@@ -2178,8 +2175,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
-- **Feature:** Daf view; its `dafFamily` (the daf's letters as the settings pick them) is `internal`, for the Mikraot
-  Gedolot pages too.
+- **Feature:** Daf view.
 - **Size:** 1348 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
@@ -3045,53 +3041,6 @@ its text is copied. Hooks: `strings.xml`, `reachability-metadata.json`; the Tool
   otherwise; the tool is offered exactly when the switch is on.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's unit tests (Kotlin Test, backtick names).
-- **Tests:** it is one (unit).
-
-### The Chumash as Mikraot Gedolot (a prototype)
-
-Request 21 (`docs/DESKTOP_STAGE2_PLAN.md`), its first book type, as the user decided on 2026-11-12 and showed in an
-example of a printed edition on 2026-11-13: the daf toggle of a book of the Chumash shows its pages, one size, scrolled
-down; each verse with Onkelos at the top of where its part starts, then each commentator under its name in two columns,
-going on to the next pages until the next verse. The boxes are laid out by the program and drawn by the daf's setting
-and drawing. Hooks: `VerticalBars.kt`, `BookContentPanel.kt`; in Pardes's files, `DafView.kt` (`dafFamily`).
-
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/MikraotGedolot.kt`
-
-- **Feature:** Mikraot Gedolot pages.
-- **Size:** 676 lines.
-- **What:**
-  - `mikraotPages(verses, commentators, widths)`, through `PageSetter`: the verses set as pages of 412 by 597 points,
-    each a `MikraotPageText` of three `DafAmud`s (the verses' in square letters `VERSE_SCALE` times Onkelos', Onkelos',
-    the commentaries' in Rashi script), the names over the parts (`MikraotHeading`), the verses it starts and its running
-    head (the verses whose parts it holds, "בראשית א, א–ב"). A verse block (the verse on the right 62%, Onkelos under
-    its name on the left) starts a new page when it does not fit; a commentator's comments on the verse, together, run
-    in two columns under its name, as long as the page's room, balanced on their last page; lines are broken by the words'
-    widths (`WordWidths`), a part's short last line kept at its width from the right.
-  - `htmlWords`: a line's words and those in bold (the dibbur).
-  - `MikraotView`: the pages in a `LazyColumn`, from the chapter of the tab's verse, the next chapter loaded when its
-    end is reached (`chapterOf`, `chapterAt`, by the references' chapter); the verses' targum and comments read in one
-    query (`getCommentariesForLines`); the commentators those the commentaries pane shows for the first verse, or the
-    example's (רש"י, אבן עזרא, רשב"ם, רמב"ן, ספורנו) when none; each page laid out by `layoutAmud` off the UI thread
-    and drawn by `PageView`: paper, the running head, the names (in the daf's square letters, bold), and three
-    `DafAmudText`s, the commentaries' on top, whose words are selected.
-- **Reached from:** `BookContentPanel.kt`, while the daf toggle (`VerticalBars.kt`) is on for a book of the Chumash.
-- **Follows:** Pardes's daf view (`DafView`, `DafLayout`, `DafSetting`): its model, setting and drawing reused for boxes
-  laid out here, and `DafView`'s amudim one below the other.
-- **Tests:** `MikraotGedolotTest`; seen in the app on בראשית א.
-- **Notes:** a prototype, shown before the other book types: no click to select a verse or a comment yet, nor the
-  text's menu, and the columns of a pair of commentators are not balanced across pages beyond their own part.
-
-#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/MikraotGedolotTest.kt`
-
-- **Feature:** Mikraot Gedolot pages.
-- **Size:** 95 lines.
-- **What:** short comments share a page with their verses, each verse at the top of its part, the verse on the right in
-  its bigger letters, Onkelos on the left under its name, the comments in two columns with their dibbur in bold, the
-  running head the page's verses; a long comment runs on to the next pages, its name once, both columns full on the
-  pages between, balanced on its last, a page that only goes on with it headed with its verse, and the next verse
-  follows it; a comment's words keep its bold dibbur.
-- **Reached from:** the JVM tests.
-- **Follows:** Pardes's daf tests (Kotlin Test, backtick names), with words of fixed widths.
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is

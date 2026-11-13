@@ -342,7 +342,7 @@ fun DafView(
 
 /** A font of the daf by its settings' code: Noto Rashi Hebrew a variable font, its bold its weight axis at 700. */
 @Composable
-internal fun dafFamily(code: String): FontFamily {
+private fun dafFamily(code: String): FontFamily {
     if (code != AppSettings.DEFAULT_DAF_COMMENTARY_FONT) return FontCatalog.familyFor(code)
     val normal = Font(Res.font.notorashihebrew, FontWeight.Normal)
     val bold = Font(Res.font.notorashihebrew, FontWeight.Bold)
