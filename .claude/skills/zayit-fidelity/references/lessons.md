@@ -64,6 +64,10 @@ tools and the code did when it was written.
   PDF book's file and drawn pages), keeps its place outside the composition, and takes focus only then.
 - A `LazyColumn` keeps pixels, not places: after a zoom or a resize, a place is kept by scrolling to its item
   (`requestScrollToItem`), not by trusting the offset.
+- **A list not laid out is moved with `requestScrollToItem`.** `scrollToItem` waits for the list's first layout, and
+  a list kept out of the composition (the daf's, while the scan stands in its place) never has one: the move hung, and
+  ran late over a newer place once the list came back (2026-11-13). `requestScrollToItem` sets the place at once, and
+  `firstVisibleItemIndex` reads it.
 - **An item that grows is measured at its new size only in a frame to come.** `scrollToItem(index, offset)` into an
   item whose content was just set (a part laid out in place of its placeholder) runs on, before then, through the
   items after it: the book daf's experiment landed four chapters on. Wait until `layoutInfo.visibleItemsInfo` gives

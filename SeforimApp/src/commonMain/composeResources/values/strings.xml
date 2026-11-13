@@ -1193,5 +1193,14 @@
     <string name="pdf_keep_no_folder">עוד לא נבחרה תיקייה</string>
     <string name="pdf_keep_add">הוספה</string>
     <string name="pdf_keep_cancel">ביטול</string>
+    <!-- Pardes: the scan of the page in the daf view (request 41, DafScanView) -->
+    <string name="daf_scan">סריקה</string>
+    <string name="daf_scan_tooltip">הדף כפי שהוא בדפוס, בסריקה, במקום צורת הדף</string>
+    <string name="daf_scan_missing">לא נמצאה סריקה של %1$s.</string>
+    <string name="daf_scan_missing_hint">פרדס מחפש את הסריקה בספרייה של אוצריא שבמחשב. אפשר גם לבחור קובץ PDF של המסכת, שבו כל עמוד הוא עמוד של הגמרא, מ־ב. והלאה.</string>
+    <string name="daf_scan_choose">בחירת קובץ PDF…</string>
+    <string name="daf_scan_change">החלפת קובץ הסריקה…</string>
+    <string name="daf_scan_unlink">חזרה לסריקה של אוצריא</string>
+    <string name="daf_scan_failed">הסריקה לא נפתחה: %1$s</string>
 
 </resources>

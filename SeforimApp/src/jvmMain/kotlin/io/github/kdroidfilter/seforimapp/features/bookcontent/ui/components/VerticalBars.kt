@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMarksButton
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookConnections
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
@@ -175,6 +176,8 @@ fun EndVerticalBar(
                         iconDescription = stringResource(Res.string.daf_view),
                         label = stringResource(Res.string.daf_view),
                     )
+                    // Pardes: the page's scan in the daf's place (request 41)
+                    if (uiState.content.dafView) DafScanButton()
                 }
             }
 //            SelectableIconButtonWithToolip(
