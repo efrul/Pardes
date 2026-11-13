@@ -188,7 +188,10 @@ A build for the user to try, from a branch, before anything reaches `main`:
 2. Run `desktop-release.yml` on the branch (workflow_dispatch) with `quick: "true"` (Windows x64 alone, a
    pre-release) and a `note`. It takes about 20 minutes and gives the tag `desktop-<x.y.z>-<run number>`.
 3. Revert the changelog commit (`revert: the changelog's <x.y.z> section waits for the public release`):
-   `android-site.yml` publishes the changelog from `main`, and the section belongs to the public release.
+   `android-site.yml` publishes the changelog from `main`, and the section belongs to the public release. `git revert`
+   writes its commit as the container's own identity: run it with `-c user.name=efrul -c user.email=…`, or amend it
+   with `--reset-author` (a plain `--amend` keeps the author), and check `git log -1 --format='%an | %cn'` before the
+   push (2026-11-13: one went out as Claude, and was amended and pushed again).
 
 A session cannot delete a release. Tell the user which pre-releases can go once tried: Pardes for Android 0.3.0 to
 0.4.1 reads only the 30 newest releases.

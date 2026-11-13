@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (256 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (257 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -611,8 +611,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +300 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
-  smart siddur, The user's PDF books.
+- **Change:** modified, +284 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
+  smart siddur.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     its marks shown or hidden (`daf_marks`, `dafMarksFlow`: the unsure lines drawn lighter and the review's marks, the end
@@ -641,9 +641,6 @@ The entries of this section by kind:
     siddur's addon reads the switch where it has no graph to take the settings from. And the custom of the State of
     Israel's days in Iyar the open siddur asks on those days, with its flow (`siddur_israeli_prayer_custom`, an
     `IsraeliPrayerCustom`'s name), after Zayit's three siddur preferences. Both are portable.
-  - **The user's PDF books:** where a book added is kept, the answer to the question at the first one: `getPdfKeep`
-    (`pdf_keep`, a `PdfKeep`'s name, null until the user is asked), `getPdfKeepFolder` (`pdf_keep_folder`, the folder
-    they chose) and `setPdfKeep`; not portable, a folder of this computer.
   - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`, `OpenSiddurSwitch`.
 - **Why:** Zayit keeps every preference here with its flow, so Pardes's features keep theirs here too (`8d3825e7` and
   the daf commits, `58586e1a`, `cb0f0a27`, `90f8a24a`, `ddf604d8`). The siddur's switch is the one preference here
@@ -655,7 +652,7 @@ The entries of this section by kind:
 - **Smaller:** the feedback and daf settings could be Pardes classes over the same `Settings`, leaving only the
   portable keys and `clearAll()`'s resets here.
 - **Tests:** `DafZoomTest`, `DafSpreadsTest`, `PdfPageListTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`, `StartOffersTest`,
-  `OpenSiddurSwitchTest`; the PDF books' answer, tried in the app.
+  `OpenSiddurSwitchTest`.
 
 ### Tabs, sessions and desktops
 
@@ -1702,8 +1699,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +354 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 332 Hebrew strings added in twenty blocks,
+- **Change:** modified, +348 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 326 Hebrew strings added in twenty blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1745,11 +1742,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
     says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal;
   - the PDF reading experiment, under a comment after the open siddur's switch: `pdf_experiment_title` ("קריאת PDF
     (ניסוי)"), `…_open`, `…_hint`, `…_status` (the file, its pages and size, the time it took and the Java memory),
-    `…_failed`, `…_zoom_in` and `…_zoom_out`; and after them, under two comments, the user's PDF books: their tab's
+    `…_failed`, `…_zoom_in` and `…_zoom_out`; and after them, under two comments, the user's PDF books: their reader's
     `pdf_book_*` (10: a file missing or failed, "עמוד %1$d מתוך %2$d", the go-to field, the zoom, the removal and its
-    tooltip, a book removed), the tree's `my_pdf_books` ("הספרים שלי") and `my_pdf_books_add` ("הוספת PDF…"), and
-    where books added are kept, `pdf_keep_*` (12: the card's title and description, the question, the three answers
-    and what they mean, the folder's button, the dialog's buttons); and under a comment after them, a tractate's
+    tooltip, a book removed), the tree's `my_pdf_books` ("הספרים שלי") and `my_pdf_books_add` ("הוספת תיקייה…"), and
+    the folders' card, `pdf_folders_*` (6: what the folders are, none yet, a folder's books, a folder not found, its
+    removal, the scan again); and under a comment after them, a tractate's
     scan: `daf_scan` ("סריקה") and its tooltip (in place of the text or the daf), `daf_scan_missing` and its hint
     (where the scan is looked for), `…_choose`, `…_change`, `…_unlink` and `…_failed`; and under a comment after
     them, two pages side by side: `page_spreads` ("שני עמודים") and its tooltip.
@@ -1880,12 +1877,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 - **Change:** modified, +20 −7 lines. Feature: Library location, Semantic search packs, No error reports, The user's PDF books.
 - **What:**
-  - Three Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()` and, with a comment, the PDF
-    books' `PdfBooksCard()` (the daf's layouts card stood among them until 2026-11-10, and the feedback's sending card
+  - Three Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()` and, with a comment, the
+    folders of the user's PDF books, `PdfBooksCard()` (the daf's layouts card stood among them until 2026-11-10, and the feedback's sending card
     until 2026-11-12: each is in a settings page of its own); its import.
   - The error-reports card only when `isErrorReportingAvailable`, with a comment.
-- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`; the PDF books' answer, changed
-  here as the user decided on 2026-11-13); a build without a DSN sends no reports (`fabcf4e8`).
+- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`; the PDF books' folders, request 44); a build without a DSN sends no reports (`fabcf4e8`).
 - **Kind:** Pardes feature hooks.
 - **Merge risk:** small: one call per card in Zayit's column, and one `if` around its last card.
 - **Smaller:** the three cards could be one `PardesDataCards()` call.
@@ -3142,30 +3138,44 @@ its text is copied. Hooks: `strings.xml`, `reachability-metadata.json`; the Tool
 
 Request 28's first version (`docs/DESKTOP_STAGE2_PLAN.md`), on Nucleus's PDFium binding as the experiment above found it
 works, which the user confirmed on Windows on 2026-11-13: a category "הספרים שלי" after the library's categories in the
-book tree, holding the user's PDF books by title and a row "הוספת PDF…". A book opens in the reading screen as the
+book tree. Its books are the user's folders of PDF files, read where they are, each subfolder a category and each
+file's name its book's title, as Zayita and Otzaria read theirs (request 44, the user's decision of 2026-11-13: "שיהיה
+רק ככה, במקום המצב היום", in place of build 45's files added one by one, copied where the user chose at the first;
+those books stay, in "הספרים שלי" itself). A folder is added from the tree ("הוספת תיקייה…") or from Settings ›
+ניהול נתונים, which lists the folders, takes one out and reads them again. A book opens in the reading screen as the
 library's books do, in the text's place (request 45: "הצגת ספר סרוק אמור להיות באותו מסך כמו הטקסט"; build 45
 opened a tab of its own, kept for the sessions that hold one), its pages one under the other or two side by side
 (request 47), scrolled, zoomed as the daf is and by the same buttons and keys (its levels, Ctrl + wheel, a pinch), with
 a field that goes to a page; it opens where it was last read, from the tree, from the history or after a restart. Its
 pages are drawn as Otzaria and Zayita draw theirs (request 43): no wider than 1,600 pixels, scaled up beyond, and the
-next pages drawn ahead (`PdfPageList`). At the first book
-added the user is asked whether to copy it and where (beside the library, in place, or to a folder they choose), as
-they decided on 2026-11-13; the answer is kept, and changed in Settings › ניהול נתונים. The list and each book's place
-are in the user DB, so the backup carries them (not the files). Reading only, as decided on 2026-11-12. Hooks: a
-branch each in the `when`s over the destinations (`TabsContent.kt`, `TabsViewModel.kt`, `DesktopSession.kt`,
-`ZayitDeepLink.kt`, `SessionManager.kt`), `CategoryTreePanel.kt`, `BookContentPanel.kt` (the book in the text's
-place), `BookContentViewModel.kt` (a PDF book's id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`,
-`AppSettings.kt`, `DataSettingsScreen.kt`, `strings.xml`; `branding/brand.gradle` gives both brands the binding.
+next pages drawn ahead (`PdfPageList`). The folders, the books and each book's place are in the user DB, so the
+backup carries them (not the files). Reading only, as decided on 2026-11-12. Hooks: a branch each in the `when`s over
+the destinations (`TabsContent.kt`, `TabsViewModel.kt`, `DesktopSession.kt`, `ZayitDeepLink.kt`, `SessionManager.kt`),
+`CategoryTreePanel.kt`, `BookContentPanel.kt` (the book in the text's place), `BookContentViewModel.kt` (a PDF book's
+id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt`, `strings.xml`;
+`branding/brand.gradle` gives both brands the binding.
 
 #### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/PdfBooks.sq`
 
 - **Feature:** The user's PDF books.
 - **Size:** 31 lines.
-- **What:** the table `pdf_book` (the file's path, unique; its title; where it was last read: the page at the view's
-  top, its pixels above the view, the zoom; when it was added) and its queries `selectAll` (by title), `selectById`,
+- **What:** the table `pdf_book`, a row for each book (a file in one of the user's folders, found by a scan, or a file
+  added alone by build 45): the file's path, unique; its title; where it was last read (the page at the view's top, its
+  pixels above the view, the zoom); when it was added. Its queries `selectAll` (by title), `selectById`,
   `selectByPath`, `insert` (a path already listed is left as it is), `updatePlace` and `delete`.
 - **Reached from:** `PdfBookStore.kt` (through SQLDelight's generated `UserSettingsDb`).
 - **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`.
+- **Tests:** `PdfBookStoreTest`.
+
+#### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/PdfFolders.sq`
+
+- **Feature:** The user's PDF books.
+- **Size:** 17 lines.
+- **What:** the table `pdf_folder` (the folder's path, unique; when it was added), the user's folders of PDF books
+  read where they are, and its queries `selectAll` (by path), `insert` (a path already listed is left as it is) and
+  `delete`.
+- **Reached from:** `PdfBookStore.kt` (through SQLDelight's generated `UserSettingsDb`).
+- **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`; Pardes's `PdfBooks.sq`.
 - **Tests:** `PdfBookStoreTest`.
 
 #### `navigation/src/commonMain/kotlin/io/github/kdroidfilter/seforim/tabs/PdfBookTab.kt`
@@ -3185,47 +3195,69 @@ place), `BookContentViewModel.kt` (a PDF book's id opened), `VerticalBars.kt` (t
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooks.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 121 lines.
+- **Size:** 99 lines.
 - **What:** `MyPdfBooks(navigation, onBookClick, content)`, the book tree's content given its navigation with the
-  category "הספרים שלי" after the library's categories (once they are there) and its rows, and a click: from "הוספת
-  PDF…" it picks PDF files (several at once, FileKit's picker off the event loop) and adds them, the last one opened,
-  asking first where books added are kept when the user was never asked (`PdfKeepDialog`); any other book, a PDF book
-  too, goes to the tree's own click, which opens it in the reading screen (request 45). The ids: the category and the
-  row that adds a book negative (`MY_BOOKS_CATEGORY`, `MY_BOOKS_ADD`), as no book of the library has them; a PDF
-  book's `2,100,000,000` and its own id (`myBookId`, `pdfIdOf`): positive, as the reading screen opens a book of a
-  positive id only, far above the library's (its tens of thousands), and below the largest `Int`. The lists given to the tree are kept while their inputs are, as
-  the tree groups its books again for each new set.
-- **Reached from:** `CategoryTreePanel.kt` (`NavigationTree`).
-- **Follows:** Zayit's tree data (`Category`, `Book`); the picker as Zayit's data screen calls it
-  (`FileKit.openFilePicker` on `Dispatchers.IO`).
-- **Tests:** `PdfBookStoreTest` (the rows and their ids); tried in the app.
+  category "הספרים שלי" after the library's categories (once they are there), the user's folders under it and their
+  subfolders under them (`categoryChildren`, from `PdfBookStore.library`, read again when its `revision` goes up), its
+  rows (`myBooksRows`: "הוספת תיקייה…" first, then the books, each in its folder's category), and a click: from
+  "הוספת תיקייה…" it picks a folder (`pickPdfFolder`, FileKit's directory picker off the event loop) and adds it; any
+  other book, a PDF book too, goes to the tree's own click, which opens it in the reading screen (request 45). The
+  ids: the category and the row that adds a folder negative (`MY_BOOKS_CATEGORY`, `MY_BOOKS_ADD`), as no book of the
+  library has them; a folder's category below −1,000,000, by its path's hash (`folderCategoryId`: the same at every
+  start, so the tree's open categories stay open); a PDF book's `2,100,000,000` and its own id (`myBookId`,
+  `pdfIdOf`): positive, as the reading screen opens a book of a positive id only, far above the library's (its tens of
+  thousands), and below the largest `Int`. The lists given to the tree are kept while their inputs are, as the tree
+  groups its books again for each new set.
+- **Reached from:** `CategoryTreePanel.kt` (`NavigationTree`); `PdfBooksCard.kt` (`pickPdfFolder`).
+- **Follows:** Zayit's tree data (`Category` with its parent, `Book`, `categoryChildren` as the tree shows subcategories);
+  the picker as Zayit's data screen calls it (`FileKit` on `Dispatchers.IO`).
+- **Tests:** `PdfBookStoreTest` (the rows and their ids); tried in the app (a folder with subfolders added from the
+  tree, opened down to a book).
 - **Notes:** the books are not in the tree's search (which looks in the library's titles) nor in the search's tabs.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookFiles.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 104 lines.
-- **What:** `PdfKeep` (beside the library, in place, a folder chosen), `PdfKeepAnswer` (the answer, with the folder
-  chosen) and `PdfBookFiles`: `folderFor` (the folder `my-books` beside the library's `seforim.db`, else in the app's
-  data folder; the folder chosen; or none), `keep` (a copy under the file's own name in the folder, under a number when
-  another file has the name, unless that file has the same bytes; written as `.part` and renamed once whole; a file
-  kept in place, or already in the folder, is not copied) and `titleOf` (the file's name without its extension).
-- **Reached from:** `PdfBookStore.kt`, `PdfKeepChoice.kt`, `MyPdfBooks.kt`.
-- **Follows:** Pardes's `UserFonts` (a file added under its own name, numbered beside another's).
+- **Size:** 55 lines.
+- **What:** `PdfFolderTree` (a folder's PDF files and its subfolders that hold some) and `PdfBookFiles`: `titleOf`
+  (a file's name without its extension), `treeOf` (a folder as the book tree shows it: its PDF files by name, any case
+  of the extension, its subfolders by name, hidden files and folders left out, a folder seen already on the way, a link
+  back up, left out too; null when it holds no PDF file, in it or below it) and `isIn` (a file in a folder, not in one
+  whose name only begins the same).
+- **Reached from:** `PdfBookStore.kt`.
+- **Follows:** Zayita's and Otzaria's folders of books, the title from the file's name and the categories from the
+  folders (ideas only: neither's code is used).
 - **Tests:** `PdfBookFilesTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBooksCard.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 101 lines.
+- **What:** `PdfBooksCard()`, Settings › ניהול נתונים: "הספרים שלי", what the folders are, each folder of the user's
+  with its name, its path and its books, or that it was not found, and a link that takes it out; "הוספת תיקייה…", and
+  "סריקה מחדש" (books added to the folders or taken out since).
+- **Reached from:** `DataSettingsScreen.kt`.
+- **Follows:** Pardes's settings cards (`LibraryLocationCard`: its frame, `isolatedPath`); Zayita's and Otzaria's
+  folder rows (a path, a count, a removal).
+- **Tests:** tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookStore.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 109 lines.
+- **Size:** 238 lines.
 - **What:** `PdfPlace` (the page at the view's top, its pixels above the view, the zoom), `PdfBook` (id, file, title,
-  place) and `PdfBookStore`, the books in the user DB: `books` (by title), `book`, `add` (kept as `PdfBookFiles.keep`
-  says; the book already listed when its file is), `keepPlace` (in the background, on a scope of its own, so that a tab
-  closed right after a scroll still keeps its place) and `setPlace`, `remove` (the file stays), a `revision` flow that
-  goes up when a book is added or removed only, and `asBook` (the book of the library's kind a PDF book's book id is,
-  for the reading screen); `PdfBook.asTreeBook` is that book (its id `myBookId`, its category "הספרים שלי").
+  place), `PdfFolder`, `PdfFolderShown` (a folder with its books and whether it was found), `PdfLibrary` (the tree's
+  categories by their parent, its books, the folders shown), `PdfBook.asTreeBook(categoryId)`, and `PdfBookStore`, the
+  books and folders in the user DB: `book`, `folders`, `addFolder` (nothing when one of the user's folders holds it
+  already; the user's folders it holds become its subfolders, so no file is a book twice), `removeFolder` (with its
+  books' rows; the files stay), `rescan`, `library` (the folders read once a revision, under a lock: each PDF file a
+  book, a row added for a file found the first time, so a book keeps its id and its place; each folder that holds some
+  a category; the books build 45 added alone in "הספרים שלי" itself), `keepPlace` (in the background, on a scope of its
+  own, so that a tab closed right after a scroll still keeps its place) and `setPlace`, `remove` (a book added alone),
+  `isAlone`, `asBook` (the book of the library's kind a PDF book's book id is, in its folder's category, for the reading
+  screen), and a `revision` flow that goes up when a folder is added or removed, a book removed or a scan asked.
 - **Reached from:** `AppGraph.kt` (`pdfBookStore`, which Metro makes through `@Inject`), `BookContentViewModel.kt`
-  (`asBook`), `MyPdfBooks.kt`, `PdfBookReader.kt`, `PdfBookTabContent.kt`.
+  (`asBook`), `MyPdfBooks.kt`, `PdfBooksCard.kt`, `PdfBookReader.kt`, `PdfBookTabContent.kt`.
 - **Follows:** Zayit's user-DB stores (a SQLDelight table, `Dispatchers.IO`, a `revision` flow) and its
   `@Inject @SingleIn(AppScope::class)` classes; Pardes's `DafDownloads` for a scope of its own (`@StructuredScope`).
 - **Tests:** `PdfBookStoreTest`.
@@ -3261,27 +3293,13 @@ place), `BookContentViewModel.kt` (a PDF book's id opened), `VerticalBars.kt` (t
   and its `TextZoom` for the pointer's zoom; Pardes's daf for the zoom it shares.
 - **Tests:** `PdfBookFilesTest` (`zoomStep`); tried in the app.
 
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfKeepChoice.kt`
-
-- **Feature:** The user's PDF books.
-- **Size:** 235 lines.
-- **What:** `AppSettings.pdfKeep` and `setPdfKeep(PdfKeepAnswer)` over `AppSettings`'s two strings, and `pdfFolderFor`;
-  `PdfKeepChoice`, three radio rows, each with what it means (the folder beside the library shown; a file moved or
-  deleted not opening again; a folder chosen with FileKit's directory picker); `PdfKeepDialog`, the question at the
-  first book added, in a window of its own ("הוספה" enabled once a folder of one's own has its folder; closed without
-  an answer, it is asked again next time); and `PdfBooksCard`, Settings › ניהול נתונים: the same choice, kept as it
-  changes once it is complete.
-- **Reached from:** `MyPdfBooks.kt` (the dialog), `DataSettingsScreen.kt` (the card).
-- **Follows:** Zayit's dialogs in a window of their own (`WidgetOptionsDialog`: `JewelDecoratedDialog` through
-  `LocalNucleusApplicationScope`), and Pardes's settings cards (`LibraryLocationCard`: its frame, `isolatedPath`).
-- **Tests:** tried in the app (the dialog, the card).
-
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookFilesTest.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 91 lines.
-- **What:** the folder for each answer; a copy under its own name, and under a number beside another file; the same
-  file added again; a file kept in place or already in the folder not copied; a book's title; the zoom's steps.
+- **Size:** 76 lines.
+- **What:** a folder's PDF files by name and its subfolders that hold some (other files, hidden ones and empty folders
+  left out); a folder with no PDF file is none; a file in a folder, not in one whose name only begins the same; a
+  book's title; the zoom's steps.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's `UserFontsTest` (a temporary folder; Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
@@ -3289,21 +3307,23 @@ place), `BookContentViewModel.kt` (a PDF book's id opened), `VerticalBars.kt` (t
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookStoreTest.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 83 lines.
-- **What:** books added, copied, listed by title and found again; one kept in place; a place kept; a book removed, its
-  file kept; the tree's rows and their ids (the books' positive and far above the library's, the add row's
-  negative).
+- **Size:** 170 lines.
+- **What:** a folder's books read where they are, each subfolder a category under "הספרים שלי"; a book keeping its id
+  when the folders are read again, and a file added found then; a folder in one of the user's not added again, and one
+  that holds theirs taking their place; a folder taken out with its books, their files kept; a folder not found; a
+  book added alone by build 45 in "הספרים שלי" itself, taken out; a folder's book opened in its folder's category;
+  a place kept; the tree's rows and their ids.
 - **Reached from:** the JVM tests.
-- **Follows:** Pardes's `StudyPlanStoreTest` (an in-memory user DB).
+- **Follows:** Pardes's `StudyPlanStoreTest` (an in-memory user DB) and `UserFontsTest` (a temporary folder).
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookReader.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 92 lines.
+- **Size:** 98 lines.
 - **What:** `PdfBookReader(tabId, pdfId, modifier, zoomButtons)`: it reads the book, shows `PdfBookView` at its place
-  and keeps each place it tells; a book removed is said so; a delete button with a tooltip takes the book out of the
-  list and closes the tab. Only the tab in view composes the view: every tab of a window stays composed
+  and keeps each place it tells; a book removed is said so; for a book added alone by build 45 (`isAlone`), a delete
+  button with a tooltip takes it out of the list and closes the tab (a folder's books go with their folder). Only the tab in view composes the view: every tab of a window stays composed
   (`TabsContent`), and a PDF's pages take memory as its file does (the binding reads the whole file and caches up to
   76 MB of drawn pages); back in view, it opens again where it was left.
 - **Reached from:** `BookContentPanel.kt` (a PDF book in the text's place, request 45), `PdfBookTabContent.kt`.

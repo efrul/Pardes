@@ -1,7 +1,7 @@
--- Pardes: the user's PDF books (request 28 of docs/DESKTOP_STAGE2.md), the book tree's "הספרים שלי"
--- (features/pdf/MyPdfBooks.kt), written by features/pdf/PdfBookStore.kt: each book's file, kept where the user chose
--- (PdfBookFiles), its title, and where it was last read (the page at the view's top, its pixels above the view, the
--- zoom), so that it opens there again, from the tree or after a restart.
+-- Pardes: the user's PDF books (requests 28 and 44 of docs/DESKTOP_STAGE2.md), the book tree's "הספרים שלי"
+-- (features/pdf/MyPdfBooks.kt), written by features/pdf/PdfBookStore.kt: each book's file, in one of the user's folders
+-- (pdf_folder) or added alone by build 45, its title, and where it was last read (the page at the view's top, its pixels
+-- above the view, the zoom), so that it opens there again, from the tree or after a restart.
 CREATE TABLE IF NOT EXISTS pdf_book (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     path TEXT NOT NULL UNIQUE,

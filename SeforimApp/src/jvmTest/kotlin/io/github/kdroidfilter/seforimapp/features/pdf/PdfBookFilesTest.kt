@@ -9,7 +9,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Where a PDF book the user adds is kept ([PdfBookFiles]): beside the library, in place, or in a folder they chose. */
+/** The user's folders of PDF books as the book tree shows them ([PdfBookFiles]), and the PDF view's zoom steps. */
 class PdfBookFilesTest {
     private val root = createTempDirectory("pdf-books").toFile()
 
@@ -18,60 +18,45 @@ class PdfBookFilesTest {
         root.deleteRecursively()
     }
 
-    private fun pdf(
-        dir: String,
-        name: String,
-        bytes: String,
-    ): File = File(root, "$dir/$name").apply { parentFile.mkdirs() }.apply { writeText(bytes) }
+    private fun file(path: String): File = File(root, path).apply { parentFile.mkdirs() }.apply { writeText(path) }
 
     @Test
-    fun `the folder is beside the library, the one chosen, or none in place`() {
-        val database = File(root, "library/seforim.db")
-        val appDir = File(root, "app")
-        val chosen = File(root, "chosen")
+    fun `a folder's PDF files by name, and its subfolders that hold some`() {
+        file("ספרים/ב.pdf")
+        file("ספרים/א.PDF")
+        file("ספרים/הערות.txt")
+        file("ספרים/.hidden.pdf")
+        file("ספרים/הלכה/שולחן ערוך.pdf")
+        file("ספרים/ריקה/קובץ.txt")
+        file("ספרים/.git/x.pdf")
 
-        assertEquals(File(root, "library/my-books"), PdfBookFiles.folderFor(PdfKeep.BesideLibrary, database, chosen, appDir))
-        assertEquals(File(appDir, "my-books"), PdfBookFiles.folderFor(PdfKeep.BesideLibrary, null, chosen, appDir))
-        assertEquals(chosen, PdfBookFiles.folderFor(PdfKeep.ChosenFolder, database, chosen, appDir))
-        assertNull(PdfBookFiles.folderFor(PdfKeep.ChosenFolder, database, null, appDir))
-        assertNull(PdfBookFiles.folderFor(PdfKeep.InPlace, database, chosen, appDir))
+        val tree = PdfBookFiles.treeOf(File(root, "ספרים"))
+
+        assertEquals(listOf("א.PDF", "ב.pdf"), tree?.books?.map { it.name })
+        assertEquals(listOf("הלכה"), tree?.folders?.map { it.dir.name })
+        assertEquals(
+            listOf("שולחן ערוך.pdf"),
+            tree
+                ?.folders
+                ?.single()
+                ?.books
+                ?.map { it.name },
+        )
     }
 
     @Test
-    fun `a book is copied under its own name, and under a number when another file has it`() {
-        val folder = File(root, "kept")
-        val first = pdf("a", "ספר.pdf", "one")
-        val second = pdf("b", "ספר.pdf", "two")
+    fun `a folder with no PDF file, in it or below it, is none`() {
+        file("ריקה/תת/קובץ.txt")
 
-        val keptFirst = PdfBookFiles.keep(first, folder)
-        val keptSecond = PdfBookFiles.keep(second, folder)
-
-        assertEquals(File(folder, "ספר.pdf").absoluteFile, keptFirst)
-        assertEquals(File(folder, "ספר-2.pdf").absoluteFile, keptSecond)
-        assertEquals("two", keptSecond.readText())
-        assertTrue(first.exists(), "the source stays")
-        assertFalse(File(folder, "ספר.pdf.part").exists(), "no copy in progress is left")
+        assertNull(PdfBookFiles.treeOf(File(root, "ריקה")))
     }
 
     @Test
-    fun `the same file added again is the copy already kept`() {
-        val folder = File(root, "kept")
-        val source = pdf("a", "book.pdf", "same")
-
-        val once = PdfBookFiles.keep(source, folder)
-        val twice = PdfBookFiles.keep(source, folder)
-
-        assertEquals(once, twice)
-        assertEquals(listOf("book.pdf"), folder.list()?.toList())
-    }
-
-    @Test
-    fun `a book kept in place, or already in the folder, is not copied`() {
-        val source = pdf("kept", "book.pdf", "here")
-
-        assertEquals(source.absoluteFile, PdfBookFiles.keep(source, null))
-        assertEquals(source.absoluteFile, PdfBookFiles.keep(source, File(root, "kept")))
-        assertEquals(listOf("book.pdf"), File(root, "kept").list()?.toList())
+    fun `a file is in a folder below it, not in one whose name only begins the same`() {
+        assertTrue(PdfBookFiles.isIn(File(root, "a/b/c.pdf"), File(root, "a")))
+        assertTrue(PdfBookFiles.isIn(File(root, "a/c.pdf"), File(root, "a/")))
+        assertFalse(PdfBookFiles.isIn(File(root, "ab/c.pdf"), File(root, "a")))
+        assertFalse(PdfBookFiles.isIn(File(root, "a"), File(root, "a")))
     }
 
     @Test

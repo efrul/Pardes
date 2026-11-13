@@ -1178,21 +1178,15 @@
     <string name="pdf_book_removed">הספר הוסר מהספרים שלי.</string>
     <string name="pdf_book_remove">הסרה מהספרים שלי</string>
     <string name="pdf_book_remove_hint">הסרה מהספרים שלי. הקובץ עצמו נשאר במקומו.</string>
-    <!-- Pardes: the user's PDF books in the book tree (MyPdfBooks), and where those added are kept (PdfKeepChoice) -->
+    <!-- Pardes: the user's PDF books in the book tree (MyPdfBooks), and their folders in the settings (PdfBooksCard) -->
     <string name="my_pdf_books">הספרים שלי</string>
-    <string name="my_pdf_books_add">הוספת PDF…</string>
-    <string name="pdf_keep_title">ספרי PDF</string>
-    <string name="pdf_keep_question">איפה לשמור ספרי PDF שמוסיפים?</string>
-    <string name="pdf_keep_description">איפה נשמרים קובצי PDF שמוסיפים ל״הספרים שלי״ בעץ הספרים. השינוי חל על ספרים שיתווספו מעכשיו.</string>
-    <string name="pdf_keep_dialog_description">התשובה תישמר גם לספרים הבאים, ואפשר לשנות אותה בהגדרות › ניהול נתונים.</string>
-    <string name="pdf_keep_beside_library">להעתיק לתיקייה ליד הספרייה (מומלץ)</string>
-    <string name="pdf_keep_in_place">להשאיר כל קובץ במקומו</string>
-    <string name="pdf_keep_in_place_hint">קובץ שיוזז או יימחק לא ייפתח עוד מהספרים שלי.</string>
-    <string name="pdf_keep_chosen_folder">להעתיק לתיקייה שאבחר</string>
-    <string name="pdf_keep_choose_folder">בחירת תיקייה…</string>
-    <string name="pdf_keep_no_folder">עוד לא נבחרה תיקייה</string>
-    <string name="pdf_keep_add">הוספה</string>
-    <string name="pdf_keep_cancel">ביטול</string>
+    <string name="my_pdf_books_add">הוספת תיקייה…</string>
+    <string name="pdf_folders_description">תיקיות של קובצי PDF. פרדס קורא את הספרים מהתיקייה עצמה, בלי להעתיק אותם. כל תת־תיקייה היא קטגוריה בעץ הספרים, תחת ״הספרים שלי״, ושם הספר הוא שם הקובץ.</string>
+    <string name="pdf_folders_none">עוד לא נוספו תיקיות.</string>
+    <string name="pdf_folders_books">ספרים: %1$d</string>
+    <string name="pdf_folders_missing">התיקייה לא נמצאה</string>
+    <string name="pdf_folders_remove">הסרה</string>
+    <string name="pdf_folders_rescan">סריקה מחדש</string>
     <!-- Pardes: a tractate's scan in place of its text or its daf (requests 41 and 46, DafScanView) -->
     <string name="daf_scan">סריקה</string>
     <string name="daf_scan_tooltip">המסכת כפי שהיא בדפוס, בסריקה, במקום הטקסט או צורת הדף</string>
