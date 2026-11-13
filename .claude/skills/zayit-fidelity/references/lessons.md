@@ -29,7 +29,11 @@ tools and the code did when it was written.
   - A finding in a file that is gone is a stale report: `rm -f SeforimApp/build/reports/ktlint/*/*.txt`. When one
     ktlint task fails, the ones after it show old reports: `--continue`.
 - **detekt** (60-line methods, 6 parameters, 15 functions a file) is met by splitting, never by suppressing: a small
-  class in place of a seventh parameter or a sixth destructured value, a second file for a second concern. Its
+  class in place of a seventh parameter or a sixth destructured value, a second file for a second concern.
+- **`detekt` checks nothing of SeforimApp.** Its `detekt` task is NO-SOURCE (a multiplatform module); its source
+  sets' tasks are `:SeforimApp:detektJvmMainSourceSet` and `:SeforimApp:detektJvmTestSourceSet`, which report the
+  issues beyond `SeforimApp/detekt-baseline-jvmMainSourceSet.xml` (308 on 2026-11-13, most of them old). Run them on a
+  change and look at its own files' lines; `LongParameterList` is not reported on composables. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
   `@param:StructuredScope @property:StructuredScope`.
 - **Kotlin, as it bit:**
@@ -51,6 +55,10 @@ tools and the code did when it was written.
   tab's persisted state.
 - A `LazyColumn` keeps pixels, not places: after a zoom or a resize, a place is kept by scrolling to its item
   (`requestScrollToItem`), not by trusting the offset.
+- **An item that grows is measured at its new size only in a frame to come.** `scrollToItem(index, offset)` into an
+  item whose content was just set (a part laid out in place of its placeholder) runs on, before then, through the
+  items after it: the book daf's experiment landed four chapters on. Wait until `layoutInfo.visibleItemsInfo` gives
+  the item its new size (2026-11-13).
 - Text lines are whole pixels high. A long run of lines at a fractional pitch drifts by half a pixel a line: give each
   line the whole pixels that keep it on the pitch (`fix(daf): a long run's lines no longer drift`).
 - A menu that closes before the coroutine it launched has ended cancels it: do the work, then dismiss
