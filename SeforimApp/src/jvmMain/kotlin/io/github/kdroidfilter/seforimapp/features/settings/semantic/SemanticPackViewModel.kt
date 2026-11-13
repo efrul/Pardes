@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.settings.semantic
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.nucleusframework.core.runtime.AppRestarter.restartApplication
+import dev.nucleusframework.core.runtime.SingleInstanceManager
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
@@ -154,7 +155,14 @@ class SemanticPackViewModel(
 
     fun dismiss() = _state.update { it.copy(work = if (it.work is Work.Failed) Work.Idle else it.work, startFailure = null) }
 
-    fun restart() = restartApplication()
+    /**
+     * Starts the app again, for the next start to put the waiting pack in place. The single-instance lock goes to the new
+     * instance first: it would otherwise find this one still closing and quit, and the pack would wait for a start by hand.
+     */
+    fun restart() {
+        SingleInstanceManager.releaseForHandoff()
+        restartApplication()
+    }
 
     fun setPromptAtStart(enabled: Boolean) {
         appSettings.setSemanticPackPromptEnabled(enabled)

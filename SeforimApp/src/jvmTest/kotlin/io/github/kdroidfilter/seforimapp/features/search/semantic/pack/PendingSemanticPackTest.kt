@@ -2,14 +2,18 @@ package io.github.kdroidfilter.seforimapp.features.search.semantic.pack
 
 import java.io.File
 import java.io.IOException
+import java.nio.file.AccessDeniedException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PendingSemanticPackTest {
     private val root = createTempDirectory().toFile()
@@ -50,10 +54,11 @@ class PendingSemanticPackTest {
     }
 
     @Test
-    fun `a failed move puts both old folders back`() {
+    fun `a failed move puts both old folders back and keeps the new pack staged`() {
         PackFixtures.folders(library, tag = "old")
         val old = oldContents()
         stage()
+        val staged = newContents()
         var moves = 0
         // The fourth rename, the new index's into place, fails: the model is already the new one
         val failing: (File, File) -> Unit = { from, to ->
@@ -66,12 +71,13 @@ class PendingSemanticPackTest {
         assertEquals(PendingSemanticPack.Outcome.Failed("locked"), outcome)
         assertEquals(old, oldContents())
         for (name in SemanticPack.FOLDERS) assertFalse(File(library, "$name.old").exists())
-        assertFalse(staging.exists())
+        assertStaged(staged)
     }
 
     @Test
     fun `a fresh pack whose second folder can't go in leaves no first one`() {
         stage()
+        val staged = newContents()
         var moves = 0
         val failing: (File, File) -> Unit = { from, to ->
             if (++moves == 2) throw IOException("locked")
@@ -81,6 +87,7 @@ class PendingSemanticPackTest {
         assertIs<PendingSemanticPack.Outcome.Failed>(PendingSemanticPack.apply(PendingSemanticPack.Request(library), failing))
 
         for (name in SemanticPack.FOLDERS) assertFalse(File(library, name).exists(), name)
+        assertStaged(staged)
     }
 
     @Test
@@ -119,22 +126,86 @@ class PendingSemanticPackTest {
     }
 
     @Test
-    fun `a failure is told once`() {
+    fun `a failure is told once, and the pack is tried again at the next start`() {
         PackFixtures.folders(library, tag = "old")
         val old = oldContents()
         stage()
+        val expected = newContents()
         PendingSemanticPack.schedule(PendingSemanticPack.Request(library), markers)
-        // A link to nowhere where the old index was: not there to move aside, but in the way of the new one
-        File(library, SemanticPack.INDEX_DIR).deleteRecursively()
-        Files.createSymbolicLink(File(library, SemanticPack.INDEX_DIR).toPath(), File(root, "nowhere").toPath())
+        blockIndex()
 
         val outcome = assertIs<PendingSemanticPack.Outcome.Failed>(PendingSemanticPack.runOnce(markers))
 
         assertEquals(outcome.message, PendingSemanticPack.takeFailure(markers))
         assertNull(PendingSemanticPack.takeFailure(markers))
-        assertNull(PendingSemanticPack.read(markers))
+        assertEquals(PendingSemanticPack.Request(library), PendingSemanticPack.read(markers))
         assertEquals(old.filterKeys { it.startsWith(SemanticPack.MODEL_DIR) }, oldContents())
+        assertStaged(expected)
+
+        // What was in the way is gone by the next start
+        Files.delete(File(library, SemanticPack.INDEX_DIR).toPath())
+        assertEquals(PendingSemanticPack.Outcome.Installed, PendingSemanticPack.runOnce(markers))
+        assertEquals(expected, PackFixtures.contents(library).filterKeys { it.substringBefore('/') in SemanticPack.FOLDERS })
+        assertNull(PendingSemanticPack.read(markers))
+    }
+
+    @Test
+    fun `a pack that fails every start is dropped at the last one`() {
+        PackFixtures.folders(library, tag = "old")
+        stage()
+        val expected = newContents()
+        PendingSemanticPack.schedule(PendingSemanticPack.Request(library), markers)
+        blockIndex()
+
+        repeat(PendingSemanticPack.MAX_ATTEMPTS - 1) {
+            assertIs<PendingSemanticPack.Outcome.Failed>(PendingSemanticPack.runOnce(markers))
+            assertEquals(PendingSemanticPack.Request(library), PendingSemanticPack.read(markers))
+            assertStaged(expected)
+        }
+        assertIs<PendingSemanticPack.Outcome.Failed>(PendingSemanticPack.runOnce(markers))
+
+        assertNull(PendingSemanticPack.read(markers))
         assertFalse(staging.exists())
+        assertTrue(PendingSemanticPack.takeFailure(markers) != null)
+        // A new pack scheduled starts its own count
+        stage()
+        PendingSemanticPack.schedule(PendingSemanticPack.Request(library), markers)
+        assertIs<PendingSemanticPack.Outcome.Failed>(PendingSemanticPack.runOnce(markers))
+        assertEquals(PendingSemanticPack.Request(library), PendingSemanticPack.read(markers))
+    }
+
+    @Test
+    fun `a folder in use is waited for, a name taken is not`() {
+        val from = File(root, "from")
+        val to = File(root, "to")
+        val pauses = mutableListOf<Long>()
+        val pause: (Long) -> Unit = { pauses += it }
+        var refusals = 2
+        val inUseTwice: (File, File) -> Unit = { _, _ -> if (refusals-- > 0) throw AccessDeniedException(from.path) }
+        PendingSemanticPack.renameWaiting(from, to, inUseTwice, pause)
+        assertEquals(2, pauses.size)
+
+        pauses.clear()
+        val taken: (File, File) -> Unit = { _, _ -> throw FileAlreadyExistsException(to.path) }
+        assertFailsWith<FileAlreadyExistsException> { PendingSemanticPack.renameWaiting(from, to, taken, pause) }
+        assertTrue(pauses.isEmpty())
+
+        // In use for good: given up after ten seconds of pauses
+        val inUse: (File, File) -> Unit = { _, _ -> throw AccessDeniedException(from.path) }
+        assertFailsWith<AccessDeniedException> { PendingSemanticPack.renameWaiting(from, to, inUse, pause) }
+        assertEquals(10_000L, pauses.sum())
+    }
+
+    /** A link to nowhere where the old index was: not there to move aside, but in the way of the new one. */
+    private fun blockIndex() {
+        File(library, SemanticPack.INDEX_DIR).deleteRecursively()
+        Files.createSymbolicLink(File(library, SemanticPack.INDEX_DIR).toPath(), File(root, "nowhere").toPath())
+    }
+
+    /** The new pack is still staged as it was, both folders marked as the pack's, for the next start. */
+    private fun assertStaged(expected: Map<String, String>) {
+        assertEquals(expected, newContents())
+        for (name in SemanticPack.FOLDERS) assertTrue(File(staging, "$name/${SemanticPackInstaller.STAGED_MARK}").isFile, name)
     }
 
     /** The new pack staged as SemanticPackInstaller leaves it: both folders, each marked as the pack's. */

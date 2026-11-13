@@ -333,7 +333,8 @@
     <string name="semantic_pack_ready_version">גרסה %1$s של הקבצים מוכנה, ותיכנס לשימוש בהפעלה הבאה של פרדס.</string>
     <string name="semantic_pack_ready_new">הקבצים החדשים מוכנים, וייכנסו לשימוש בהפעלה הבאה של פרדס.</string>
     <string name="semantic_pack_restart">הפעלה מחדש עכשיו</string>
-    <string name="semantic_pack_start_failed">בהפעלה הקודמת הקבצים לא הותקנו, ומה שהיה מותקן נשאר. אפשר לנסות שוב.</string>
+    <string name="semantic_pack_start_failed">הקבצים החדשים לא נכנסו לשימוש גם אחרי %2$d הפעלות (%1$s), ולכן נמחקו. מה שהיה מותקן נשאר. אפשר לנסות שוב.</string>
+    <string name="semantic_pack_start_retry">בהפעלה הקודמת הקבצים החדשים לא נכנסו לשימוש (%1$s). הם נשמרו, ופרדס ינסה שוב בהפעלה הבאה.</string>
     <string name="semantic_problem_not_a_pack">הקובץ %1$s אינו מקובצי החיפוש לפי משמעות. בוחרים את %2$s שהורד מדף ההורדות.</string>
     <string name="semantic_problem_no_space">אין מספיק מקום בכונן של הספרייה: צריך %1$s, פנויים %2$s.</string>
     <string name="semantic_problem_missing">חסר הקובץ %1$s.</string>
