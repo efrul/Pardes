@@ -28,14 +28,16 @@ import seforimapp.seforimapp.generated.resources.pdf_book_remove
 import seforimapp.seforimapp.generated.resources.pdf_book_remove_hint
 import seforimapp.seforimapp.generated.resources.pdf_book_removed
 
-// Pardes (requests 28 and 45 of docs/DESKTOP_STAGE2.md): a PDF book of the user's read, in the reading screen as the
-// library's books are, in the text's place, "בדומה להצגת גמרא סרוקה" (and in a tab of its own, as build 45 opened it).
+// Pardes (requests 28, 44 and 45 of docs/DESKTOP_STAGE2.md): a PDF book of the user's read, in the reading screen as
+// the library's books are, in the text's place, "בדומה להצגת גמרא סרוקה" (and in a tab of its own, as build 45 opened
+// it).
 
 /**
  * The PDF book [pdfId] in the tab [tabId]: its pages ([PdfBookView]) where it was last read, its place kept as it is
- * read, the zoom's buttons in its bar with [zoomButtons], and a button that takes it out of the list and closes the
- * tab. Only the tab in view holds its file: every tab stays composed (TabsContent), and a PDF's pages take memory as its
- * file does; back in view, it opens again where it was left.
+ * read, the zoom's buttons in its bar with [zoomButtons], and, for a book added alone by build 45 (in none of the user's
+ * folders), a button that takes it out of the list and closes the tab. Only the tab in view holds its file: every tab
+ * stays composed (TabsContent), and a PDF's pages take memory as its file does; back in view, it opens again where it
+ * was left.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,8 +52,11 @@ internal fun PdfBookReader(
     val scope = rememberCoroutineScope()
     var book by remember(pdfId) { mutableStateOf<PdfBook?>(null) }
     var read by remember(pdfId) { mutableStateOf(false) }
+    // A book of a folder goes with its folder (Settings › ניהול נתונים), not by itself
+    var alone by remember(pdfId) { mutableStateOf(false) }
     LaunchedEffect(pdfId) {
         book = store.book(pdfId)
+        alone = book?.let { store.isAlone(it) } == true
         read = true
     }
     val current = book
@@ -73,6 +78,7 @@ internal fun PdfBookReader(
                 modifier = modifier,
                 zoomButtons = zoomButtons,
                 actions = {
+                    if (!alone) return@PdfBookView
                     val remove = stringResource(Res.string.pdf_book_remove)
                     Tooltip({ Text(stringResource(Res.string.pdf_book_remove_hint)) }) {
                         IconActionButton(

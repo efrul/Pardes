@@ -3,20 +3,15 @@ package io.github.kdroidfilter.seforimapp.features.pdf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.dialogs.FileKitMode
-import io.github.vinceglb.filekit.dialogs.FileKitType
-import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,15 +22,18 @@ import seforimapp.seforimapp.generated.resources.my_pdf_books
 import seforimapp.seforimapp.generated.resources.my_pdf_books_add
 import java.io.File
 
-// Pardes (request 28 of docs/DESKTOP_STAGE2.md): the user's PDF books in the book tree, "הספרים שלי", after the
-// library's categories (the user's decision of 2026-11-12).
+// Pardes (requests 28 and 44 of docs/DESKTOP_STAGE2.md): the user's PDF books in the book tree, "הספרים שלי", after the
+// library's categories (the user's decision of 2026-11-12): their folders, each subfolder a category, as Zayita and
+// Otzaria show theirs, in place of the books added one by one (the user's decision of 2026-11-13).
 
-// The ids of "הספרים שלי" in the book tree: the category and the row that adds a book negative, as no book of the
-// library has them; a PDF book's positive and far above the library's (its tens of thousands), as the reading screen
-// opens a book of a positive id only, and below the largest Int, as some code takes ids as Ints
+// The ids of "הספרים שלי" in the book tree: the category and the row that adds a folder negative, as no book of the
+// library has them, and the folders' categories further down, by their paths; a PDF book's positive and far above the
+// library's (its tens of thousands), as the reading screen opens a book of a positive id only, and below the largest
+// Int, as some code takes ids as Ints
 internal const val MY_BOOKS_CATEGORY = -28L
 internal const val MY_BOOKS_ADD = -29L
 private const val PDF_BOOK_BASE = 2_100_000_000L
+private const val FOLDER_CATEGORY_BASE = 1_000_000L
 
 /** The book id of the PDF book [pdfId] (the user DB's ids start at 1). */
 fun myBookId(pdfId: Long): Long = PDF_BOOK_BASE + pdfId
@@ -43,21 +41,32 @@ fun myBookId(pdfId: Long): Long = PDF_BOOK_BASE + pdfId
 /** The PDF book a book id is, or null for another book. */
 fun pdfIdOf(bookId: Long): Long? = (bookId - PDF_BOOK_BASE).takeIf { bookId > PDF_BOOK_BASE }
 
+/** The id of the book tree's category for the folder [dir] of the user's, by its path: the same at every start. */
+internal fun folderCategoryId(dir: File): Long =
+    -(
+        FOLDER_CATEGORY_BASE + (
+            dir.absoluteFile
+                .normalize()
+                .path
+                .hashCode()
+                .toLong() and Int.MAX_VALUE.toLong()
+        )
+    )
+
 /** The category "הספרים שלי", [title], last among the roots. */
 internal fun myBooksCategory(title: String): Category = Category(id = MY_BOOKS_CATEGORY, title = title, order = Int.MAX_VALUE)
 
-/** The category's rows: the user's [books] (by title, as the store gives them), then the row that adds one, [add]. */
+/** The category's own rows: the row that adds a folder, [add], first, then the books of [library]. */
 internal fun myBooksRows(
-    books: List<PdfBook>,
+    library: PdfLibrary,
     add: String,
-): List<Book> =
-    books.map { it.asTreeBook() } +
-        Book(id = MY_BOOKS_ADD, categoryId = MY_BOOKS_CATEGORY, sourceId = 0, title = add)
+): List<Book> = listOf(Book(id = MY_BOOKS_ADD, categoryId = MY_BOOKS_CATEGORY, sourceId = 0, title = add)) + library.books
 
 /**
  * The book tree's [content], given [navigation] with "הספרים שלי" after the library's categories (once they are there),
- * and a click for its books: "הוספת PDF…" picks files and adds them (asking first, at the first one, where books added
- * are kept), the last one opened; any other book, a PDF book too, goes to [onBookClick], opened as the library's are.
+ * the user's folders under it and their subfolders under them ([PdfBookStore.library]), and a click for its books:
+ * "הוספת תיקייה…" picks a folder and adds it, read where it is; any other book, a PDF book too, goes to [onBookClick],
+ * opened as the library's are.
  */
 @Composable
 fun MyPdfBooks(
@@ -65,57 +74,26 @@ fun MyPdfBooks(
     onBookClick: (Book) -> Unit,
     content: @Composable (navigation: NavigationState, onBookClick: (Book) -> Unit) -> Unit,
 ) {
-    val appGraph = LocalAppGraph.current
-    val store = appGraph.pdfBookStore
-    val appSettings = appGraph.appSettings
+    val store = LocalAppGraph.current.pdfBookStore
     val scope = rememberCoroutineScope()
     val revision by store.revision.collectAsState()
-    val books by produceState(emptyList<PdfBook>(), revision) { value = store.books() }
+    val library by produceState(PdfLibrary(), revision) { value = store.library() }
     val title = stringResource(Res.string.my_pdf_books)
     val add = stringResource(Res.string.my_pdf_books_add)
     // Kept while their inputs are: the tree groups its books again whenever it gets new ones
     val roots = navigation.rootCategories
     val shownRoots = remember(roots, title) { if (roots.isEmpty()) roots else roots + myBooksCategory(title) }
-    val shownBooks = remember(navigation.booksInCategory, books, add) { navigation.booksInCategory + myBooksRows(books, add) }
-    // The files picked at the first book added, while the user is asked where books added are kept
-    var asking by remember { mutableStateOf<List<File>?>(null) }
-
-    fun addAll(
-        files: List<File>,
-        answer: PdfKeepAnswer,
-    ) {
-        scope.launch {
-            val folder = appSettings.pdfFolderFor(answer)
-            val added = files.mapNotNull { file -> runSuspendCatching { store.add(file, folder) }.getOrNull() }
-            added.lastOrNull()?.let { onBookClick(it.asTreeBook()) }
-        }
-    }
-
+    val shownChildren = remember(navigation.categoryChildren, library) { navigation.categoryChildren + library.children }
+    val shownBooks = remember(navigation.booksInCategory, library, add) { navigation.booksInCategory + myBooksRows(library, add) }
     val click: (Book) -> Unit = { book ->
-        when {
-            book.id == MY_BOOKS_ADD ->
-                scope.launch {
-                    // Off the GTK event-loop thread, as the data screen's pickers (see pickDatabaseParts)
-                    val picked =
-                        withContext(Dispatchers.IO) {
-                            FileKit.openFilePicker(type = FileKitType.File(extensions = setOf("pdf")), mode = FileKitMode.Multiple())
-                        }?.map { File(it.path) }
-                    if (picked.isNullOrEmpty()) return@launch
-                    val answer = appSettings.pdfKeep()
-                    if (answer == null) asking = picked else addAll(picked, answer)
-                }
-            else -> onBookClick(book)
+        if (book.id == MY_BOOKS_ADD) {
+            scope.launch { pickPdfFolder()?.let { store.addFolder(it) } }
+        } else {
+            onBookClick(book)
         }
     }
-    content(navigation.copy(rootCategories = shownRoots, booksInCategory = shownBooks), click)
-    asking?.let { files ->
-        PdfKeepDialog(
-            onAnswer = { answer ->
-                appSettings.setPdfKeep(answer)
-                asking = null
-                addAll(files, answer)
-            },
-            onCancel = { asking = null },
-        )
-    }
+    content(navigation.copy(rootCategories = shownRoots, categoryChildren = shownChildren, booksInCategory = shownBooks), click)
 }
+
+/** A folder picked with the system's picker, off the GTK event-loop thread as the data screen's pickers; null for none. */
+internal suspend fun pickPdfFolder(): File? = withContext(Dispatchers.IO) { FileKit.openDirectoryPicker() }?.let { File(it.path) }

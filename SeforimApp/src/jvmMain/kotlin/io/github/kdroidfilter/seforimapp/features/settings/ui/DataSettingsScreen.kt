@@ -166,7 +166,7 @@ fun DataSettingsScreen() {
 
             SemanticPackCard()
 
-            // Pardes: where PDF books added are kept (request 28)
+            // Pardes: the folders of the user's PDF books (requests 28 and 44)
             PdfBooksCard()
 
             ResetCard(
