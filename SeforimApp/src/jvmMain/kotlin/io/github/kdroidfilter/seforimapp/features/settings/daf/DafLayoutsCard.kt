@@ -132,27 +132,7 @@ internal fun DafLayoutsCardContent(
                 OutlinedButton(onClick = onCancel) { Text(stringResource(Res.string.daf_layouts_cancel)) }
             }
             state.checking -> Text(text = stringResource(Res.string.daf_layouts_checking), fontSize = 13.sp)
-            manifest != null -> {
-                val current = manifest.tractates.count { state.installedOf(it) == DafDownloads.Installed.CURRENT }
-                Text(
-                    text = stringResource(Res.string.daf_layouts_status, current, manifest.tractates.size, manifest.daf),
-                    fontSize = 13.sp,
-                )
-                val toGet = state.toGet
-                if (toGet.isEmpty()) {
-                    Text(text = stringResource(Res.string.daf_layouts_current), fontSize = 13.sp)
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        DefaultButton(onClick = { onDownload(toGet) }) {
-                            Text(stringResource(Res.string.daf_layouts_download, toGet.size, formatBytes(toGet.sumOf { it.size })))
-                        }
-                    }
-                    if (toGet.any { state.installedOf(it) == DafDownloads.Installed.OTHER }) {
-                        Hint(stringResource(Res.string.daf_layouts_update_hint))
-                    }
-                }
-                Tractates(manifest, state, onDownload)
-            }
+            manifest != null -> ReleaseLines(manifest, state, onDownload)
             state.checked && state.problem == null -> Text(text = stringResource(Res.string.daf_layouts_none), fontSize = 13.sp)
         }
         state.problem?.takeIf { work == null }?.let { problem ->
@@ -163,6 +143,37 @@ internal fun DafLayoutsCardContent(
             )
             OutlinedButton(onClick = onRetry) { Text(stringResource(Res.string.daf_download_retry)) }
         }
+    }
+}
+
+/** The release's lines: how many tractates are current, a button that downloads the others, and each tractate's row. */
+@Composable
+private fun ReleaseLines(
+    manifest: DafManifest,
+    state: DafDownloads.State,
+    onDownload: (List<DafManifest.Entry>) -> Unit,
+) {
+    // One column, with the card's spacing between its lines
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val current = manifest.tractates.count { state.installedOf(it) == DafDownloads.Installed.CURRENT }
+        Text(
+            text = stringResource(Res.string.daf_layouts_status, current, manifest.tractates.size, manifest.daf),
+            fontSize = 13.sp,
+        )
+        val toGet = state.toGet
+        if (toGet.isEmpty()) {
+            Text(text = stringResource(Res.string.daf_layouts_current), fontSize = 13.sp)
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                DefaultButton(onClick = { onDownload(toGet) }) {
+                    Text(stringResource(Res.string.daf_layouts_download, toGet.size, formatBytes(toGet.sumOf { it.size })))
+                }
+            }
+            if (toGet.any { state.installedOf(it) == DafDownloads.Installed.OTHER }) {
+                Hint(stringResource(Res.string.daf_layouts_update_hint))
+            }
+        }
+        Tractates(manifest, state, onDownload)
     }
 }
 

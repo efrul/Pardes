@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (233 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (235 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2441,9 +2441,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafLayoutsCard.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 232 lines.
+- **Size:** 243 lines.
 - **What:** Settings › צורת הדף's card for the daf's layouts (in Settings › ניהול נתונים until 2026-11-10): how many the library's folder has as released, and
-  every one it lacks, or has otherwise, downloaded at once; the download goes on when the settings close. Each
+  every one it lacks, or has otherwise, downloaded at once (`ReleaseLines`, apart since 2026-11-13 for detekt's
+  `LongMethod`); the download goes on when the settings close. Each
   tractate has a row (`Tractates`, `tractateLine`): its name, its file's version in the folder and the release's, and
   for one to download a link that downloads it alone; those to download are always listed, the others when asked
   ("כל המסכתות והגרסאות שלהן"). Marked, its frame lit and brought into view, when a start opened the settings for a
@@ -4218,7 +4219,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 224 lines.
+- **Size:** 233 lines.
 - **What:** the staged pack taking the old one's place, a first pack, a failed move put back with the pack kept staged,
   a fresh pack whose second folder cannot go in, a start stopped half way, another release of the library, a failure
   told once and the pack put in place at the next start, a pack dropped at the last of its starts (and a new request's
@@ -4855,18 +4856,28 @@ grade buttons' switch stood in the semantic search's card and the reviews' folde
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendCard.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 406 lines.
+- **Size:** 382 lines.
 - **What:** the pieces of Settings › משוב. `FeedbackSendCard`, the page's first card: how much of each kind waits to be
   sent, when the last package was made, the sending's progress and result, and send now or save to a file.
   `FeedbackKinds`, what the row "מה נשלח" opens: each kind with how much of it is new, a row for each other app found
   on the computer (checked, it says how many of its searches and grades there are, which are read only then), the
   queries to look over and leave out, and everything again once a package was made. `FeedbackPrivacy`, what the row
   "פרטיות ומחיקה" opens: what is never sent, the sender's id to copy or renew, and deleting from the service what this
-  sender sent. `FeedbackSendActions`, what the page's checkboxes and buttons do. Until 2026-11-12 all of it was one
+  sender sent. Until 2026-11-12 all of it was one
   long card of Settings › ניהול נתונים, with the automatic sending's and the publication's checkboxes, which are rows
   of the page now.
 - **Reached from:** `FeedbackSettingsScreen.kt`.
 - **Follows:** Zayit's data settings cards.
+- **Tests:** `FeedbackSettingsUiTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendActions.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 26 lines.
+- **What:** `FeedbackSendActions`, what the feedback page's checkboxes and buttons do. It stood in `FeedbackSendCard.kt`
+  until 2026-11-13, when detekt's `MatchingDeclarationName` asked for a file named after it (that file's only class).
+- **Reached from:** `FeedbackSettingsScreen.kt`, `FeedbackSendCard.kt`.
+- **Follows:** Zayit's action holders of its settings screens (a class of callbacks with defaults).
 - **Tests:** `FeedbackSettingsUiTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendViewModel.kt`
@@ -5081,7 +5092,7 @@ with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBack
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFonts.kt`
 
 - **Feature:** User fonts.
-- **Size:** 142 lines.
+- **Size:** 138 lines.
 - **What:** `UserFonts`, the fonts in a folder (`shared`: the data folder's fonts/, `FileKit.filesDir`; `sharedOrNull`
   where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, whether
   its file is there): `add` (a TTF or OTF that Skia loads, copied under a name of its own, and whether it has an alef),
@@ -5096,14 +5107,25 @@ with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBack
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/UserFontsCard.kt`
 
 - **Feature:** User fonts.
-- **Size:** 176 lines.
+- **Size:** 164 lines.
 - **What:** `UserFontsCard`, Settings › גופנים's card after the six lists: the fonts added, each with a link that takes
   it out, a button that adds one (FileKit's picker, TTF or OTF), and what the last one came to (added; added without
-  Hebrew letters, a warning; not a font). `withMissingFont`, a list's fonts with the setting's user font whose file is
+  Hebrew letters, a warning; not a font: `FontAddResult`, in a file of its own since 2026-11-13). `withMissingFont`, a list's fonts with the setting's user font whose file is
   gone, listed as missing.
 - **Reached from:** `FontsSettingsScreen.kt`.
 - **Follows:** Zayit's settings cards (their frame and components) and the data page's file pickers.
 - **Tests:** none of the card (`UserFontsTest` for what it calls); tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontAddResult.kt`
+
+- **Feature:** User fonts.
+- **Size:** 13 lines.
+- **What:** `FontAddResult`, what the last font added came to: added, with Hebrew letters or without, or a file that is
+  not a font. It stood in `UserFontsCard.kt` until 2026-11-13, when detekt's `MatchingDeclarationName` asked for a file
+  named after it (that file's only class).
+- **Reached from:** `UserFontsCard.kt`.
+- **Follows:** Zayit's sealed results of its screens' operations.
+- **Tests:** none of its own; tried in the app with the card.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFontsTest.kt`
 
@@ -5126,7 +5148,7 @@ window's key handler), `PaneSearch.kt`, `BookTocPanel.kt`, `CategoryTreePanel.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TypeToSearch.kt`
 
 - **Feature:** Typing over a pane.
-- **Size:** 90 lines.
+- **Size:** 93 lines.
 - **What:** `TypeToSearch`: the pane under the pointer, by its window (`point`, set by `TypeToSearchTarget` from the
   pane's own hover source), `type(event, windowId)` for the window's key handler (a typed character, `KeyEventType.Unknown`,
   as a text field takes it), `textOf` (a letter or digit, no Ctrl, Alt or Meta) and `route`. `PaneSearchFocus.type`: the
@@ -5212,14 +5234,15 @@ back to its panes as their first places; which are open stays the selected tab's
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayouts.kt`
 
 - **Feature:** Pane layout kept.
-- **Size:** 165 lines.
+- **Size:** 167 lines.
 - **What:** `SavedPane` (a pane's own id, docked side, order, extent, weight and band — `outer`, the full length of the
   window, appended last — or floating anchors, offset and size) and `SavedPanes` (a window's panes, and the split
   sides' thickness and the outer bands' order of its two docks, the orders appended last; `placementOf`, a pane's saved
   place where it may still be; `extentsOf`; `dockOf`, a dock's thickness and outer bands' order as a snapshot naming no
   pane), serializable for the session's ProtoBuf; `PaneLayouts.save`, a window's
   panes from its docks' `SatelliteLayoutSnapshot`s without the window's id (a restored window has a new one), and
-  `placementOf`, a saved pane's placement again (none for a side or anchor no longer known). A pane floating on a part
+  `placementOf`, a saved pane's placement again (none for a side or anchor no longer known; a floating one's by
+  `floatingOf`, apart since 2026-11-13 for detekt's `ReturnCount`). A pane floating on a part
   of the window only is not kept.
 - **Reached from:** `DesktopSession.kt` (`windowSnapshot`, `panesOf`, `savedPlacement`), `SessionModels.kt`
   (`WindowSnapshot.panes`).
@@ -5531,13 +5554,16 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 444 lines.
+- **Size:** 522 lines.
 - **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
   the book, looked up by title as it is typed (`booksLike`: an exact title first); the depths of its table of contents
   as buttons; where to start (`ListComboBox` of the units); how many a day; the first day (the luach's
   `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least); to
   start again at the end; the day's part beneath, as the card will show it; "שמור", "ביטול", and for a plan saved,
   "מחק תוכנית", which deletes on a second click within four seconds. The book's categories' titles are saved with it.
+  Its parts: `PlanFields` (the fields as the user sets them: `pickBook` and `pickLevel` take the start back to the
+  first unit, `toggle` keeps one day at least, `readPerDay` follows the field, `planFrom` makes the plan saved),
+  `rememberPreview`, `EditorWindow`, `BookRows`, `ScheduleRows` and `EditorButtons` (split on 2026-11-13 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on it).
 - **Reached from:** `StudyWidget.kt` (`Detached`).
 - **Follows:** Zayit's `WidgetOptionsDialog` (the window, its title bar and bottom bar) and its settings' fields.
 - **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז").
