@@ -92,6 +92,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafAnchor
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafControl
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFind
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanReader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafView
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.AnchorTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentAnchorIndex
@@ -1073,7 +1074,19 @@ fun BookContentView(
                 .onPreviewKeyEvent(previewKeyHandler)
                 .focusable(),
     ) {
-        if (daf != null) {
+        if (daf?.scan == true) {
+            // Pardes: the tractate's scan in the daf's place (request 46), at the tab's place as the daf
+            DafScanReader(
+                book = daf.book,
+                control = dafControl,
+                zoom = dafZoom.textSize / PERCENT,
+                lineId = primarySelectedLineId ?: anchorId.takeIf { it > 0 },
+                scrollToLineTimestamp = scrollToLineTimestamp,
+                modifier = Modifier.fillMaxSize().padding(bottom = 8.dp),
+                openAt = anchorId.takeIf { it > 0 },
+                onScroll = { id -> wordScope.launch { runSuspendCatching { repository.getLine(id) }.getOrNull()?.let(::dafAt) } },
+            )
+        } else if (daf != null) {
             DafView(
                 book = daf.book,
                 listState = dafListState,

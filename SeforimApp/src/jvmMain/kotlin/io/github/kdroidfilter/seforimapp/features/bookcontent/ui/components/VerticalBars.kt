@@ -27,6 +27,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookCon
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.placesLines
+import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.icons.*
@@ -140,6 +141,8 @@ fun EndVerticalBar(
         position = VerticalLateralBarPosition.End,
         topContent = {
             ZoomButtons(tabId = uiState.tabId)
+            // Pardes: two pages side by side, while pages are shown (request 47)
+            PageSpreadsButton(uiState)
 
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
@@ -176,8 +179,8 @@ fun EndVerticalBar(
                         iconDescription = stringResource(Res.string.daf_view),
                         label = stringResource(Res.string.daf_view),
                     )
-                    // Pardes: the page's scan in the daf's place (request 41)
-                    if (uiState.content.dafView) DafScanButton()
+                    // Pardes: the tractate's scan in place of its text or its daf (requests 41 and 46)
+                    DafScanButton(selected = uiState.content.scanView, onClick = { onEvent(BookContentEvent.ToggleScanView) })
                 }
             }
 //            SelectableIconButtonWithToolip(

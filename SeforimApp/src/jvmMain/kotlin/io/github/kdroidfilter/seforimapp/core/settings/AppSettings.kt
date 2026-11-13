@@ -47,9 +47,9 @@ class AppSettings(
     private val _dafMarksFlow = MutableStateFlow(isDafMarksShown())
     val dafMarksFlow: StateFlow<Boolean> = _dafMarksFlow.asStateFlow()
 
-    // Pardes: whether the daf view shows the page's scan in place of the daf it draws (the end bar's button, DafScanView)
-    private val _dafScanFlow = MutableStateFlow(isDafScanShown())
-    val dafScanFlow: StateFlow<Boolean> = _dafScanFlow.asStateFlow()
+    // Pardes: whether pages are shown two side by side, as a book open (the end bar's button: the daf, a scan, a PDF book)
+    private val _pageSpreadsFlow = MutableStateFlow(isPageSpreads())
+    val pageSpreadsFlow: StateFlow<Boolean> = _pageSpreadsFlow.asStateFlow()
 
     // The tabs whose reading view shows a daf now, each with its views' count (a tab dragged to another window is
     // composed there before it leaves this one): the zoom keys, buttons and menu zoom their daf, not the text
@@ -259,11 +259,11 @@ class AppSettings(
         _dafMarksFlow.value = shown
     }
 
-    fun isDafScanShown(): Boolean = settings[KEY_DAF_SCAN, false]
+    fun isPageSpreads(): Boolean = settings[KEY_PAGE_SPREADS, false]
 
-    fun setDafScanShown(shown: Boolean) {
-        settings[KEY_DAF_SCAN] = shown
-        _dafScanFlow.value = shown
+    fun setPageSpreads(spreads: Boolean) {
+        settings[KEY_PAGE_SPREADS] = spreads
+        _pageSpreadsFlow.value = spreads
     }
 
     /** The reading view of [tabId] shows a daf, until [dafHidden]. */
@@ -837,7 +837,7 @@ class AppSettings(
         _textSizeFlow.value = DEFAULT_TEXT_SIZE
         _dafZoomFlow.value = DEFAULT_DAF_ZOOM
         _dafMarksFlow.value = false
-        _dafScanFlow.value = false
+        _pageSpreadsFlow.value = false
         _lineHeightFlow.value = DEFAULT_LINE_HEIGHT
         _maxCommentatorsPerPageFlow.value = DEFAULT_MAX_COMMENTATORS_PER_PAGE
         _closeTreeOnNewBookFlow.value = false
@@ -875,7 +875,7 @@ class AppSettings(
                 KEY_TEXT_SIZE,
                 KEY_DAF_ZOOM,
                 KEY_DAF_MARKS,
-                KEY_DAF_SCAN,
+                KEY_PAGE_SPREADS,
                 KEY_DAF_MARK_UNSURE,
                 KEY_DAF_REVIEW,
                 KEY_LINE_HEIGHT,
@@ -980,7 +980,7 @@ class AppSettings(
         private const val KEY_TEXT_SIZE = "text_size"
         private const val KEY_DAF_ZOOM = "daf_zoom"
         private const val KEY_DAF_MARKS = "daf_marks"
-        private const val KEY_DAF_SCAN = "daf_scan"
+        private const val KEY_PAGE_SPREADS = "page_spreads"
 
         // The two settings the daf's marks button replaced, read for its first value
         private const val KEY_DAF_MARK_UNSURE = "daf_mark_unsure"

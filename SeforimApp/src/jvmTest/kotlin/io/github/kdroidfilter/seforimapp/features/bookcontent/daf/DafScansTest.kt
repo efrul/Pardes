@@ -43,6 +43,27 @@ class DafScansTest {
     }
 
     @Test
+    fun `the app's own scans are beside its books database, in one folder`() {
+        val berakhot = scan("db/תלמוד בבלי/ברכות.pdf")
+        val data =
+            dataFolder(File(root, "library")).apply {
+                File(this, "library_database_path.txt").writeText(BYTE_ORDER_MARK + File(root, "db").path)
+            }
+
+        val bavli = OtzariaScans.bavliFolders(listOf(data))
+
+        assertEquals(listOf(File(root, "db/תלמוד בבלי")), bavli)
+        assertEquals(berakhot, OtzariaScans.find("ברכות", bavli))
+    }
+
+    @Test
+    fun `the default library is books in the data folder`() {
+        val berakhot = scan("data/books/תלמוד בבלי/ברכות.pdf")
+
+        assertEquals(berakhot, OtzariaScans.find("ברכות", OtzariaScans.bavliFolders(listOf(File(root, "data")))))
+    }
+
+    @Test
     fun `the pointer may name the library's own אוצריא folder, and a scan may sit right in the Bavli's`() {
         val berakhot = scan("library/אוצריא/תלמוד בבלי/ברכות.pdf")
 

@@ -65,9 +65,21 @@ tools and the code did when it was written.
 - A `LazyColumn` keeps pixels, not places: after a zoom or a resize, a place is kept by scrolling to its item
   (`requestScrollToItem`), not by trusting the offset.
 - **A list not laid out is moved with `requestScrollToItem`.** `scrollToItem` waits for the list's first layout, and
-  a list kept out of the composition (the daf's, while the scan stands in its place) never has one: the move hung, and
+  a list kept out of the composition (the daf's, while the scan stood in its place) never has one: the move hung, and
   ran late over a newer place once the list came back (2026-11-13). `requestScrollToItem` sets the place at once, and
   `firstVisibleItemIndex` reads it.
+- **Another view of a book goes in the daf's place, not inside the daf.** The scan first sat inside the daf's pages: it
+  needed the daf's layout file and kept the two lists in step by hand. In the daf's slot of the text view
+  (`DafMode.scan`, `DafScanReader`) it has the frame's keys, zoom and place for nothing: it sets `DafControl`'s
+  lambdas (in a `SideEffect`, never cleared on leaving, as the next view sets its own during its composition) and
+  tells its place through the daf's `onScroll`, and the text opens there (2026-11-13).
+- **Pages side by side follow the view's direction.** A `Row` in a view laid out from the right puts its first child
+  on the right: the right page first there, the left one first otherwise. Overriding `LocalLayoutDirection` around
+  the pages would flip what inside them reads the direction. A list whose items become rows of two keeps its places
+  by the pages' own order, and turns them into rows only where it scrolls (`itemOfAmud`, `rowOf`); turned on or off,
+  it reopens at what was at its top (2026-11-13).
+- **A Zayit test that builds a Zayit class breaks with a new constructor parameter** (`PostSelectLineTest` builds
+  `BookContentViewModel` by hand): add the argument there, a relaxed `mockk`, and write the test into the map.
 - **An item that grows is measured at its new size only in a frame to come.** `scrollToItem(index, offset)` into an
   item whose content was just set (a part laid out in place of its placeholder) runs on, before then, through the
   items after it: the book daf's experiment landed four chapters on. Wait until `layoutInfo.visibleItemsInfo` gives

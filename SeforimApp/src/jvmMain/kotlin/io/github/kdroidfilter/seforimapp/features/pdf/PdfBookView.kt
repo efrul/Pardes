@@ -1,31 +1,24 @@
 package io.github.kdroidfilter.seforimapp.features.pdf
 
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,29 +30,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
-import dev.nucleusframework.pdfium.PdfPage
 import dev.nucleusframework.pdfium.PdfReaderState
 import dev.nucleusframework.pdfium.rememberPdfReaderState
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.texteffects.rememberTextZoom
-import io.github.santimattius.structured.annotations.StructuredScope
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
@@ -80,24 +68,27 @@ import seforimapp.seforimapp.generated.resources.pdf_book_zoom_out
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
-// Pardes (request 28 of docs/DESKTOP_STAGE2.md): a PDF book of the user's in a tab, its first version, for reading,
-// drawn by Nucleus's PDFium binding as the experiment found it works in Pardes's window and in the Windows build
-// (PdfReaderTool.kt).
+// Pardes (requests 28, 45 and 47 of docs/DESKTOP_STAGE2.md): a PDF book of the user's, for reading, drawn by Nucleus's
+// PDFium binding as the experiment found it works in Pardes's window and in the Windows build (PdfReaderTool.kt).
 
 /**
- * The PDF book [file], its pages one under the other, as wide as the view at a zoom of 1 (wider past it, scrolled
- * sideways), their text selectable. A bar says the page in view, goes to a page typed, and zooms, as the daf's zoom: its
- * levels, Ctrl + wheel, a pinch, and the zoom keys while the pages have the focus; [actions] end it. It opens at [place],
- * and tells its place to [onPlace] once it rests there, and as it leaves.
+ * The PDF book [file], its pages one under the other, or two side by side as a book open (the end bar's button), as wide
+ * as the view at a zoom of 1 (wider past it, scrolled sideways), their text selectable. Its zoom is the daf's, which the
+ * tab [tabId] zooms as it would its daf: the end bar's buttons and the zoom keys, Ctrl + wheel and a pinch. A bar says
+ * the page in view and goes to a page typed, zooms too with [zoomButtons] (in a tab of its own, which has no end bar),
+ * and [actions] end it. It opens at [place], and tells its place to [onPlace] once it rests there, and as it leaves.
  */
 @Composable
 internal fun PdfBookView(
     file: File,
     place: PdfPlace,
     onPlace: (PdfPlace) -> Unit,
+    tabId: String,
     modifier: Modifier = Modifier,
+    zoomButtons: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
+    val appSettings = LocalAppGraph.current.appSettings
     val reader = rememberPdfReaderState()
     var failure by remember(file) { mutableStateOf<String?>(null) }
     var opened by remember(file) { mutableStateOf(false) }
@@ -108,16 +99,24 @@ internal fun PdfBookView(
             .onSuccess { opened = true }
             .onFailure { failure = it.message ?: it::class.simpleName }
     }
-    val listState = rememberLazyListState(place.page, place.offset)
-    var zoom by remember(file) { mutableFloatStateOf(place.zoom.coerceIn(AppSettings.MIN_DAF_ZOOM, AppSettings.MAX_DAF_ZOOM)) }
-    TellPlace(listState, { zoom }, onPlace)
+    DisposableEffect(tabId) {
+        appSettings.dafShown(tabId)
+        onDispose { appSettings.dafHidden(tabId) }
+    }
+    val zoom by appSettings.dafZoomFlow.collectAsState()
+    val spreads by appSettings.pageSpreadsFlow.collectAsState()
+    // At the page read at the top, kept as it scrolls: the rows changed (a page each, or two), a new list opens there
+    val top = remember(file) { Top(place.page, place.offset) }
+    val listState = remember(file, spreads) { LazyListState(rowOf(top.page, spreads), top.offset).also { top.offset = 0 } }
+    TellPlace(listState, spreads, { zoom }, onTop = { top.page = it }, onPlace = onPlace)
     val error = failure ?: reader.error?.message
     Column(modifier.fillMaxSize()) {
         PdfBar(
             pages = if (opened) reader.pageCount else 0,
             listState = listState,
-            zoom = zoom,
-            onZoom = { zoom = it },
+            spreads = spreads,
+            zoom = zoom.takeIf { zoomButtons },
+            onZoom = appSettings::zoomDaf,
             actions = actions,
         )
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -125,20 +124,22 @@ internal fun PdfBookView(
                 !file.isFile -> Text(stringResource(Res.string.pdf_book_missing, file.path), Modifier.padding(16.dp))
                 error != null -> Text(stringResource(Res.string.pdf_book_failed, error), Modifier.padding(16.dp))
                 !opened -> CircularProgressIndicator()
-                else -> PdfPages(reader, listState, zoom, onZoom = { zoom = it })
+                else -> PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::zoomDaf)
             }
         }
     }
 }
 
 /**
- * The pages one under the other, [zoom] times the view's width, centered and scrolled sideways past it. The daf's
- * gestures zoom them, and the keys turn them as the text's: Page Up and Down, Ctrl + Home and End.
+ * The pages one under the other, or two side by side with [spreads], [zoom] times the view's width (two, half of it
+ * each), centered and scrolled sideways past it. The daf's gestures zoom them, and the keys turn them as the text's:
+ * Page Up and Down, Ctrl + Home and End; the zoom keys are the window's, which zoom the daf of the tab.
  */
 @Composable
 private fun PdfPages(
     reader: PdfReaderState,
     listState: LazyListState,
+    spreads: Boolean,
     zoom: Float,
     onZoom: (Float) -> Unit,
 ) {
@@ -153,56 +154,19 @@ private fun PdfPages(
             onTextSize = { currentOnZoom(it / PERCENT) },
             animate = LocalTabSelected.current,
         )
+    val rows = rowCount(reader.pageCount, spreads)
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
             .then(pinch.modifier)
             .focusRequester(keys)
-            .onPreviewKeyEvent { event -> pageKey(event, listState, scope, reader.pageCount, zoom, currentOnZoom) }
+            .onPreviewKeyEvent { event -> pageListKey(event, listState, scope, rows) }
             .focusable(),
     ) {
-        val pagesWidth = maxWidth * (pinch.textSize / PERCENT)
-        // Narrower than the view, the pages are centered in a list as wide as it, which the wheel scrolls anywhere
-        val listWidth = max(maxWidth, pagesWidth)
-        Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.width(listWidth).fillMaxHeight(),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                items(reader.pageCount) { index ->
-                    PdfPage(reader, index, Modifier.width(pagesWidth), selectableText = true)
-                }
-            }
-        }
+        val base = if (spreads) spreadPageWidth(maxWidth) else maxWidth
+        PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads)
     }
     LaunchedEffect(Unit) { keys.requestFocus() }
-}
-
-/** A key over the pages: Page Up and Down move a view, Ctrl + Home and End go to the first and last page, Ctrl + = and - zoom. */
-private fun pageKey(
-    event: KeyEvent,
-    listState: LazyListState,
-    @StructuredScope scope: CoroutineScope,
-    pages: Int,
-    zoom: Float,
-    onZoom: (Float) -> Unit,
-): Boolean {
-    if (event.type != KeyEventType.KeyDown) return false
-    val ctrl = event.isCtrlPressed || event.isMetaPressed
-    val height = listState.layoutInfo.viewportSize.height * PAGE_STEP
-    when {
-        event.key == Key.PageDown -> scope.launch { listState.animateScrollBy(height) }
-        event.key == Key.PageUp -> scope.launch { listState.animateScrollBy(-height) }
-        ctrl && event.key == Key.MoveHome -> scope.launch { listState.scrollToItem(0) }
-        ctrl && event.key == Key.MoveEnd -> scope.launch { listState.scrollToItem((pages - 1).coerceAtLeast(0)) }
-        ctrl && event.key in ZOOM_IN_KEYS -> onZoom(zoomStep(zoom, closer = false))
-        ctrl && event.key in ZOOM_OUT_KEYS -> onZoom(zoomStep(zoom, closer = true))
-        else -> return false
-    }
-    return true
 }
 
 /** The next of the daf's zoom levels from [zoom]: out when [closer] is false, in when it is true. */
@@ -216,12 +180,16 @@ internal fun zoomStep(
         AppSettings.DAF_ZOOM_LEVELS.firstOrNull { it > zoom + ZOOM_SLACK } ?: AppSettings.MAX_DAF_ZOOM
     }
 
-/** The bar over the pages: the page in view of [pages], a field to go to a page, the zoom's buttons, and [actions]. */
+/**
+ * The bar over the pages: the page in view of [pages], a field to go to a page, the zoom's buttons when there is a
+ * [zoom] to show, and [actions].
+ */
 @Composable
 private fun PdfBar(
     pages: Int,
     listState: LazyListState,
-    zoom: Float,
+    spreads: Boolean,
+    zoom: Float?,
     onZoom: (Float) -> Unit,
     actions: @Composable RowScope.() -> Unit,
 ) {
@@ -234,7 +202,7 @@ private fun PdfBar(
     ) {
         if (pages > 0) {
             Text(
-                stringResource(Res.string.pdf_book_page_of, listState.firstVisibleItemIndex + 1, pages),
+                stringResource(Res.string.pdf_book_page_of, firstPageOf(listState.firstVisibleItemIndex, spreads) + 1, pages),
                 color = JewelTheme.globalColors.text.info,
             )
             TextField(
@@ -249,18 +217,20 @@ private fun PdfBar(
                                 .toIntOrNull() ?: return@onPreviewKeyEvent true
                         // Gone to, the field is empty again: the page in view is said beside it
                         target.clearText()
-                        scope.launch { listState.scrollToItem((page - 1).coerceIn(0, pages - 1)) }
+                        scope.launch { listState.scrollToItem(rowOf((page - 1).coerceIn(0, pages - 1), spreads)) }
                         true
                     },
                 placeholder = { Text(stringResource(Res.string.pdf_book_go_to_page)) },
             )
         }
         Box(Modifier.weight(1f))
-        IconButton(onClick = { onZoom(zoomStep(zoom, closer = true)) }, enabled = zoom > AppSettings.MIN_DAF_ZOOM) {
-            Icon(AllIconsKeys.General.ZoomOut, contentDescription = stringResource(Res.string.pdf_book_zoom_out))
-        }
-        IconButton(onClick = { onZoom(zoomStep(zoom, closer = false)) }, enabled = zoom < AppSettings.MAX_DAF_ZOOM) {
-            Icon(AllIconsKeys.General.ZoomIn, contentDescription = stringResource(Res.string.pdf_book_zoom_in))
+        if (zoom != null) {
+            IconButton(onClick = { onZoom(zoomStep(zoom, closer = true)) }, enabled = zoom > AppSettings.MIN_DAF_ZOOM) {
+                Icon(AllIconsKeys.General.ZoomOut, contentDescription = stringResource(Res.string.pdf_book_zoom_out))
+            }
+            IconButton(onClick = { onZoom(zoomStep(zoom, closer = false)) }, enabled = zoom < AppSettings.MAX_DAF_ZOOM) {
+                Icon(AllIconsKeys.General.ZoomIn, contentDescription = stringResource(Res.string.pdf_book_zoom_in))
+            }
         }
         actions()
     }
@@ -268,20 +238,23 @@ private fun PdfBar(
 
 /**
  * The place told to [onPlace] once the pages rest there ([PLACE_DEBOUNCE]) after a move, with the [zoom] then, and as
- * the view leaves, when it moved since.
+ * the view leaves, when it moved since: the first page read in the row at the top ([spreads]), told to [onTop] at once.
  */
 @OptIn(FlowPreview::class)
 @Composable
 private fun TellPlace(
     listState: LazyListState,
+    spreads: Boolean,
     zoom: () -> Float,
+    onTop: (page: Int) -> Unit,
     onPlace: (PdfPlace) -> Unit,
 ) {
     val currentOnPlace by rememberUpdatedState(onPlace)
+    val currentOnTop by rememberUpdatedState(onTop)
     val currentZoom by rememberUpdatedState(zoom)
     val told = remember { Told() }
 
-    fun placeNow() = PdfPlace(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset, currentZoom())
+    fun placeNow() = PdfPlace(firstPageOf(listState.firstVisibleItemIndex, spreads), listState.firstVisibleItemScrollOffset, currentZoom())
 
     fun tell(place: PdfPlace) {
         told.place = place
@@ -291,6 +264,7 @@ private fun TellPlace(
         told.place = placeNow()
         snapshotFlow { placeNow() }
             .distinctUntilChanged()
+            .onEach { currentOnTop(it.page) }
             .drop(1)
             .debounce(PLACE_DEBOUNCE)
             .collect { tell(it) }
@@ -305,15 +279,16 @@ private class Told(
     var place: PdfPlace? = null,
 )
 
+// The page read at the top, and the pixels the first list opens above it (a new list for other rows opens at its top)
+private class Top(
+    var page: Int,
+    var offset: Int,
+)
+
 private const val PERCENT = 100f
 
 // A zoom a pinch left this close to a level is at that level, as the daf's
 private const val ZOOM_SLACK = 0.005f
 
-// A page key moves this much of the view
-private const val PAGE_STEP = 0.9f
-
 private val GO_TO_WIDTH = 72.dp
 private val PLACE_DEBOUNCE = 400.milliseconds
-private val ZOOM_IN_KEYS = setOf(Key.Equals, Key.Plus, Key.NumPadAdd)
-private val ZOOM_OUT_KEYS = setOf(Key.Minus, Key.NumPadSubtract)

@@ -10,7 +10,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
-import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
@@ -31,16 +30,18 @@ import java.io.File
 // Pardes (request 28 of docs/DESKTOP_STAGE2.md): the user's PDF books in the book tree, "הספרים שלי", after the
 // library's categories (the user's decision of 2026-11-12).
 
-// The ids of "הספרים שלי" in the book tree: negative, as the library's are positive and its search groups' larger
+// The ids of "הספרים שלי" in the book tree: the category and the row that adds a book negative, as no book of the
+// library has them; a PDF book's positive and far above the library's (its tens of thousands), as the reading screen
+// opens a book of a positive id only, and below the largest Int, as some code takes ids as Ints
 internal const val MY_BOOKS_CATEGORY = -28L
 internal const val MY_BOOKS_ADD = -29L
-private const val FIRST_MY_BOOK = -1_000L
+private const val PDF_BOOK_BASE = 2_100_000_000L
 
-/** The tree's id of the PDF book [pdfId] (the user DB's ids start at 1). */
-internal fun myBookId(pdfId: Long): Long = FIRST_MY_BOOK - pdfId
+/** The book id of the PDF book [pdfId] (the user DB's ids start at 1). */
+fun myBookId(pdfId: Long): Long = PDF_BOOK_BASE + pdfId
 
-/** The PDF book a tree's [bookId] is, or null for another row. */
-internal fun pdfIdOf(bookId: Long): Long? = (FIRST_MY_BOOK - bookId).takeIf { bookId < FIRST_MY_BOOK }
+/** The PDF book a book id is, or null for another book. */
+fun pdfIdOf(bookId: Long): Long? = (bookId - PDF_BOOK_BASE).takeIf { bookId > PDF_BOOK_BASE }
 
 /** The category "הספרים שלי", [title], last among the roots. */
 internal fun myBooksCategory(title: String): Category = Category(id = MY_BOOKS_CATEGORY, title = title, order = Int.MAX_VALUE)
@@ -50,13 +51,13 @@ internal fun myBooksRows(
     books: List<PdfBook>,
     add: String,
 ): List<Book> =
-    books.map { Book(id = myBookId(it.id), categoryId = MY_BOOKS_CATEGORY, sourceId = 0, title = it.title) } +
+    books.map { it.asTreeBook() } +
         Book(id = MY_BOOKS_ADD, categoryId = MY_BOOKS_CATEGORY, sourceId = 0, title = add)
 
 /**
  * The book tree's [content], given [navigation] with "הספרים שלי" after the library's categories (once they are there),
- * and a click for its books: a PDF book opens in its tab, "הוספת PDF…" picks files and adds them (asking first, at the
- * first one, where books added are kept), and any other book goes to [onBookClick].
+ * and a click for its books: "הוספת PDF…" picks files and adds them (asking first, at the first one, where books added
+ * are kept), the last one opened; any other book, a PDF book too, goes to [onBookClick], opened as the library's are.
  */
 @Composable
 fun MyPdfBooks(
@@ -67,7 +68,6 @@ fun MyPdfBooks(
     val appGraph = LocalAppGraph.current
     val store = appGraph.pdfBookStore
     val appSettings = appGraph.appSettings
-    val tabsViewModel = LocalOpenWindow.current.tabsViewModel
     val scope = rememberCoroutineScope()
     val revision by store.revision.collectAsState()
     val books by produceState(emptyList<PdfBook>(), revision) { value = store.books() }
@@ -87,14 +87,12 @@ fun MyPdfBooks(
         scope.launch {
             val folder = appSettings.pdfFolderFor(answer)
             val added = files.mapNotNull { file -> runSuspendCatching { store.add(file, folder) }.getOrNull() }
-            added.lastOrNull()?.let { openPdfBookTab(tabsViewModel, it.id) }
+            added.lastOrNull()?.let { onBookClick(it.asTreeBook()) }
         }
     }
 
     val click: (Book) -> Unit = { book ->
-        val pdfId = pdfIdOf(book.id)
         when {
-            pdfId != null -> openPdfBookTab(tabsViewModel, pdfId)
             book.id == MY_BOOKS_ADD ->
                 scope.launch {
                     // Off the GTK event-loop thread, as the data screen's pickers (see pickDatabaseParts)
