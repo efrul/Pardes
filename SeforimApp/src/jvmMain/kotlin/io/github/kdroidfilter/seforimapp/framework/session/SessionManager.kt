@@ -5,6 +5,7 @@ package io.github.kdroidfilter.seforimapp.framework.session
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforim.desktop.VirtualDesktop
+import io.github.kdroidfilter.seforim.tabs.PdfBookTab
 import io.github.kdroidfilter.seforim.tabs.TabType
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
@@ -241,6 +242,11 @@ class SessionManager(
 
                 is TabsDestination.Author -> {
                     // No-op: the Author screen sets its own title once loaded.
+                }
+
+                // Pardes: a PDF book of the user's (request 28)
+                is PdfBookTab -> {
+                    // No-op: the PDF book's tab sets its own title once its book is read.
                 }
             }
         }

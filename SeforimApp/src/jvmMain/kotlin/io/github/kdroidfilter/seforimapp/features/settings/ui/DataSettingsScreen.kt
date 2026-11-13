@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfBooksCard
 import io.github.kdroidfilter.seforimapp.features.settings.data.DataSettingsViewModel
 import io.github.kdroidfilter.seforimapp.features.settings.library.LibraryLocationCard
 import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackCard
@@ -164,6 +165,9 @@ fun DataSettingsScreen() {
             LibraryLocationCard()
 
             SemanticPackCard()
+
+            // Pardes: where PDF books added are kept (request 28)
+            PdfBooksCard()
 
             ResetCard(
                 resetDone = state.resetDone,

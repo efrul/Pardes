@@ -233,4 +233,6 @@ internal fun TabsDestination.withTabId(tabId: String): TabsDestination =
         is TabsDestination.Notes -> copy(tabId = tabId)
         is TabsDestination.Siddur -> copy(tabId = tabId)
         is TabsDestination.Author -> copy(tabId = tabId)
+        // Pardes: a PDF book of the user's (request 28)
+        is PdfBookTab -> copy(tabId = tabId)
     }

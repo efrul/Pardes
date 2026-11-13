@@ -17,6 +17,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.Pane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearchTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberPaneSearchFocus
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
+import io.github.kdroidfilter.seforimapp.features.pdf.MyPdfBooks
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import kotlinx.collections.immutable.ImmutableList
@@ -95,13 +96,16 @@ private fun NavigationTree(
     uiState: BookContentState,
     onEvent: (BookContentEvent) -> Unit,
 ) {
-    CategoryBookTreeView(
-        navigationState = uiState.navigation,
-        onCategoryClick = { onEvent(BookContentEvent.CategorySelected(it)) },
-        onBookClick = bookClick(onEvent) { onEvent(BookContentEvent.BookSelected(it)) },
-        onScroll = { index, offset -> onEvent(BookContentEvent.BookTreeScrolled(index, offset)) },
-        onCategoryRevealComplete = { onEvent(BookContentEvent.CategoryRevealed) },
-    )
+    // Pardes: the user's PDF books after the library's categories (request 28)
+    MyPdfBooks(uiState.navigation, bookClick(onEvent) { onEvent(BookContentEvent.BookSelected(it)) }) { navigation, onBookClick ->
+        CategoryBookTreeView(
+            navigationState = navigation,
+            onCategoryClick = { onEvent(BookContentEvent.CategorySelected(it)) },
+            onBookClick = onBookClick,
+            onScroll = { index, offset -> onEvent(BookContentEvent.BookTreeScrolled(index, offset)) },
+            onCategoryRevealComplete = { onEvent(BookContentEvent.CategoryRevealed) },
+        )
+    }
 }
 
 /** A book click: Ctrl/Cmd opens it in a new tab, a plain click runs [onOpen]. */

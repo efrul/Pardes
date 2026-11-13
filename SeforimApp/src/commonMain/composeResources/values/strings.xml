@@ -1168,5 +1168,30 @@
     <string name="pdf_experiment_failed">הקובץ לא נפתח: %1$s</string>
     <string name="pdf_experiment_zoom_in">הגדלה</string>
     <string name="pdf_experiment_zoom_out">הקטנה</string>
+    <!-- Pardes: the user's PDF books (request 28): their tab (PdfBookView) -->
+    <string name="pdf_book_missing">הקובץ לא נמצא: %1$s</string>
+    <string name="pdf_book_failed">הקובץ לא נפתח: %1$s</string>
+    <string name="pdf_book_page_of">עמוד %1$d מתוך %2$d</string>
+    <string name="pdf_book_go_to_page">לעמוד…</string>
+    <string name="pdf_book_zoom_in">הגדלה</string>
+    <string name="pdf_book_zoom_out">הקטנה</string>
+    <string name="pdf_book_removed">הספר הוסר מהספרים שלי.</string>
+    <string name="pdf_book_remove">הסרה מהספרים שלי</string>
+    <string name="pdf_book_remove_hint">הסרה מהספרים שלי. הקובץ עצמו נשאר במקומו.</string>
+    <!-- Pardes: the user's PDF books in the book tree (MyPdfBooks), and where those added are kept (PdfKeepChoice) -->
+    <string name="my_pdf_books">הספרים שלי</string>
+    <string name="my_pdf_books_add">הוספת PDF…</string>
+    <string name="pdf_keep_title">ספרי PDF</string>
+    <string name="pdf_keep_question">איפה לשמור ספרי PDF שמוסיפים?</string>
+    <string name="pdf_keep_description">איפה נשמרים קובצי PDF שמוסיפים ל״הספרים שלי״ בעץ הספרים. השינוי חל על ספרים שיתווספו מעכשיו.</string>
+    <string name="pdf_keep_dialog_description">התשובה תישמר גם לספרים הבאים, ואפשר לשנות אותה בהגדרות › ניהול נתונים.</string>
+    <string name="pdf_keep_beside_library">להעתיק לתיקייה ליד הספרייה (מומלץ)</string>
+    <string name="pdf_keep_in_place">להשאיר כל קובץ במקומו</string>
+    <string name="pdf_keep_in_place_hint">קובץ שיוזז או יימחק לא ייפתח עוד מהספרים שלי.</string>
+    <string name="pdf_keep_chosen_folder">להעתיק לתיקייה שאבחר</string>
+    <string name="pdf_keep_choose_folder">בחירת תיקייה…</string>
+    <string name="pdf_keep_no_folder">עוד לא נבחרה תיקייה</string>
+    <string name="pdf_keep_add">הוספה</string>
+    <string name="pdf_keep_cancel">ביטול</string>
 
 </resources>

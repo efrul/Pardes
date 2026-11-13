@@ -36,6 +36,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.savedState
 import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
+import io.github.kdroidfilter.seforim.tabs.PdfBookTab
 import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
@@ -50,6 +51,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.favorites.FavoritesTabContent
 import io.github.kdroidfilter.seforimapp.features.history.HistoryTabContent
 import io.github.kdroidfilter.seforimapp.features.notes.NotesTabContent
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfBookTabContent
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeNavigationEvent
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeViewModel
 import io.github.kdroidfilter.seforimapp.features.search.SearchResultInBookShellMvi
@@ -85,6 +87,8 @@ private fun TabsDestination.typeKey(): String =
         is TabsDestination.Notes -> "notes"
         is TabsDestination.Siddur -> "siddur"
         is TabsDestination.Author -> "author"
+        // Pardes: a PDF book of the user's (request 28)
+        is PdfBookTab -> "pdf"
     }
 
 private fun saveableKeyFor(destination: TabsDestination): String = "${destination.tabId}:${destination.typeKey()}"
@@ -239,6 +243,11 @@ fun TabsContent() {
 
                                 is TabsDestination.Author -> {
                                     AuthorTabContent(tabId = tabId, authorId = destination.authorId)
+                                }
+
+                                // Pardes: a PDF book of the user's (request 28)
+                                is PdfBookTab -> {
+                                    PdfBookTabContent(tabId = tabId, pdfId = destination.pdfId)
                                 }
                             }
                         }

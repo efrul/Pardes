@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (118 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (121 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (233 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (243 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 50 |
+| Pardes feature hook | 53 |
 | Pardes feature in Zayit's file | 31 |
 | Fix of Zayit's code | 12 |
 | Branding hook | 4 |
@@ -373,7 +373,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +14 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans.
+- **Change:** modified, +17 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -384,16 +384,19 @@ The entries of this section by kind:
     KDoc line.
   - `abstract val libraryCategories: LibraryCategories`, after Zayit's `searchEngine`, with its import, and
     `abstract val commentatorDefaults: CommentatorDefaults` after it, with its import.
+  - After them, `abstract val pdfBookStore: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore`, with a
+    comment marked "Pardes:".
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
   lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
-  starts, and the commentators list reads the reader's default.
+  starts, and the commentators list reads the reader's default; the book tree and a PDF book's tab reach the user's
+  PDF books.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** seven lines among Zayit's declarations, and three imports.
+- **Merge risk:** eight lines among Zayit's declarations, and three imports.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
-- **Notes:** the first two types and the last are written fully qualified instead of imported, unlike every other line of the file:
+- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`.
+- **Notes:** the first two types, `libraryLinks`' and `pdfBookStore`'s are written fully qualified instead of imported, unlike every other line of the file:
   fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
@@ -607,7 +610,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +270 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur.
+- **Change:** modified, +286 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur, The user's PDF books.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     its marks shown or hidden (`daf_marks`, `dafMarksFlow`: the unsure lines drawn lighter and the review's marks, the end
@@ -634,6 +637,9 @@ The entries of this section by kind:
     siddur's addon reads the switch where it has no graph to take the settings from. And the custom of the State of
     Israel's days in Iyar the open siddur asks on those days, with its flow (`siddur_israeli_prayer_custom`, an
     `IsraeliPrayerCustom`'s name), after Zayit's three siddur preferences. Both are portable.
+  - **The user's PDF books:** where a book added is kept, the answer to the question at the first one: `getPdfKeep`
+    (`pdf_keep`, a `PdfKeep`'s name, null until the user is asked), `getPdfKeepFolder` (`pdf_keep_folder`, the folder
+    they chose) and `setPdfKeep`; not portable, a folder of this computer.
   - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`, `OpenSiddurSwitch`.
 - **Why:** Zayit keeps every preference here with its flow, so Pardes's features keep theirs here too (`8d3825e7` and
   the daf commits, `58586e1a`, `cb0f0a27`, `90f8a24a`, `ddf604d8`). The siddur's switch is the one preference here
@@ -645,14 +651,14 @@ The entries of this section by kind:
 - **Smaller:** the feedback and daf settings could be Pardes classes over the same `Settings`, leaving only the
   portable keys and `clearAll()`'s resets here.
 - **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`, `StartOffersTest`,
-  `OpenSiddurSwitchTest`.
+  `OpenSiddurSwitchTest`; the PDF books' answer, tried in the app.
 
 ### Tabs, sessions and desktops
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +36 −2 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link.
+- **Change:** modified, +45 −2 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link, The user's PDF books.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -669,16 +675,20 @@ The entries of this section by kind:
     `Grade`) and `onCatalogOrderChange` (event `SetCatalogOrder`).
   - `navigate` takes `openDesktop` and gives it a search bar's `SearchHomeNavigationEvent.OpenDesktop`; the two places
     that collect a bar's navigation (the window's, and a results tab's own) pass `rememberDesktopOpener()`.
+  - `typeKey` gives a `PdfBookTab` "pdf", and the tabs' `when` shows one with `PdfBookTabContent`, each with a comment
+    marked "Pardes:"; two imports.
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
   link of their own: a search made again from the bar searches in them). A desktop's link pasted into a bar opens
-  its desktop from here, where the window and the desktops are at hand (the bar's view model has neither).
+  its desktop from here, where the window and the desktops are at hand (the bar's view model has neither). A PDF book
+  of the user's opens in a tab of its own (request 28), and every destination has a branch in these two `when`s.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: one-line additions inside Zayit's callback and action builders, which Zayit extends
   when it adds a search action.
 - **Smaller:** already minimal.
-- **Tests:** `CategoryScopeSearchTest`, `ScopeItemsTest`, `SearchFeedbackButtonsUiTest`.
+- **Tests:** `CategoryScopeSearchTest`, `ScopeItemsTest`, `SearchFeedbackButtonsUiTest`; the PDF tab, tried in the app.
+- **Notes:** the PDF tab's branch takes `TabsContent`'s cyclomatic complexity from 16 to 17 (`detekt.yml` allows 15).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModels.kt`
 
@@ -712,7 +722,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopSession.kt`
 
-- **Change:** modified, +37 −1 lines. Feature: Commentators in their own panes (Windows), Pane layout kept.
+- **Change:** modified, +40 −1 lines. Feature: Commentators in their own panes (Windows), Pane layout kept, The user's PDF books.
 - **What:** `panesOf` creates each `SatelliteWorkspace` with `gripIcon` and `gripDraggingIcon` set to
   `PointerIcon.Hand` on Windows, with a comment: Windows has no open or closed hand, and Nucleus would show its
   four-arrow move cursor over every pane's grip, the floating windows' title bars included.
@@ -722,10 +732,14 @@ The entries of this section by kind:
   (`SavedPanes.dockOf`); `savedPlacement(groupId, paneId, sides, floatable)`, a pane's saved place for `WindowPanes`;
   `windowSnapshot` saves the window's docks (`PaneLayouts.save` from the two workspaces' `snapshot()`, else what was
   restored); two imports.
+- **What, the PDF books:** `tabTypeFor` gives a `PdfBookTab` `TabType.BOOK` (a book's icon), with a comment marked
+  "Pardes:"; its import.
 - **Why:** the four-arrow cursor over every pane header looked wrong on Windows (`9de93f98`, `0447981b`). The panes
-  kept: as for `PaneLayouts.kt`.
+  kept: as for `PaneLayouts.kt`. A PDF book of the user's opens in a tab of its own (request 28), and every destination
+  has a branch in `tabTypeFor`.
 - **Kind:** fix of Zayit's code (it holds for Zayit's panes on Windows too); Pardes feature hook.
-- **Merge risk:** small: lines in `panesOf`, `restore`, `forgetWindow` and `windowSnapshot`, and one function.
+- **Merge risk:** small: lines in `panesOf`, `restore`, `forgetWindow` and `windowSnapshot`, one function, and one
+  branch in `tabTypeFor`.
 - **Smaller:** already minimal.
 - **Tests:** `PaneLayoutsTest` (what is saved and given back); a pane moved to the left side and found there after a
   restart, tried in the app.
@@ -781,6 +795,42 @@ The entries of this section by kind:
 - **Merge risk:** small.
 - **Smaller:** already minimal.
 - **Tests:** it is one.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforim/tabs/TabsViewModel.kt`
+
+- **Change:** modified, +2 −0 lines. Feature: The user's PDF books.
+- **What:** `withTabId` gives a `PdfBookTab` its new tab id (`copy`), with a comment marked "Pardes:".
+- **Why:** a PDF book of the user's opens in a tab of its own (request 28 of `docs/DESKTOP_STAGE2.md`), and every
+  destination has a branch in this `when`.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one branch at the `when`'s end.
+- **Smaller:** already minimal: the compiler asks for it.
+- **Tests:** tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionManager.kt`
+
+- **Change:** modified, +6 −0 lines. Feature: The user's PDF books.
+- **What:** `computeTabTitles` has a branch for a `PdfBookTab` that does nothing (its tab names itself once its book is
+  read, as the Author's), with comments marked "Pardes:"; its import.
+- **Why:** a PDF book of the user's opens in a tab of its own (request 28), and every destination has a branch in this
+  `when`.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one branch at the `when`'s end.
+- **Smaller:** already minimal: the compiler asks for it.
+- **Tests:** a PDF tab came back after a restart, named, in the app.
+- **Notes:** the branch takes `computeTabTitles` to a cyclomatic complexity of 16, past `detekt.yml`'s 15.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/deeplink/ZayitDeepLink.kt`
+
+- **Change:** modified, +3 −0 lines. Feature: The user's PDF books.
+- **What:** `toShareLink` gives no link for a `PdfBookTab`, with a comment marked "Pardes:" (the book is a file on the
+  user's computer); its import.
+- **Why:** a PDF book of the user's opens in a tab of its own (request 28), and every destination has a branch in this
+  `when`; no link also keeps the tab out of a desktop's link.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one branch at the `when`'s end.
+- **Smaller:** already minimal: the compiler asks for it.
+- **Tests:** none.
 
 ### The reader (book content)
 
@@ -1295,15 +1345,21 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryTreePanel.kt`
 
-- **Change:** modified, +6 −0 lines. Feature: Typing over a pane.
-- **What:** `TypeToSearchTarget(paneHoverSource)` before the pane's column, with a comment marked "Pardes:": the same for
-  the book tree's search (`ToggleBookTreeSearch`); two imports.
+- **Change:** modified, +17 −7 lines. Feature: Typing over a pane, The user's PDF books.
+- **What:**
+  - `TypeToSearchTarget(paneHoverSource)` before the pane's column, with a comment marked "Pardes:": the same for the
+    book tree's search (`ToggleBookTreeSearch`); two imports.
+  - `NavigationTree` draws Zayit's `CategoryBookTreeView` inside `MyPdfBooks`, which gives it the navigation with
+    "הספרים שלי" and the click that opens a PDF book (the tree's own click passed to it), with a comment marked
+    "Pardes:"; its import.
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
-  contents and get straight to a daf, without the search button first, and without hurting anything else.
+  contents and get straight to a daf, without the search button first, and without hurting anything else. The user's
+  PDF books are a category of the book tree (request 28, the user's decision of 2026-11-12).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small: one call before the pane's column.
+- **Merge risk:** small: one call before the pane's column; the tree's call, wrapped and indented once, conflicts
+  with any change of Zayit's to its arguments.
 - **Smaller:** already minimal.
-- **Tests:** `TypeToSearchTest`; tried in the app.
+- **Tests:** `TypeToSearchTest`, `PdfBookStoreTest` (the rows); tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/UserDataBackup.kt`
 
@@ -1620,8 +1676,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +317 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 298 Hebrew strings added in nineteen blocks,
+- **Change:** modified, +342 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 322 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1663,7 +1719,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
     says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal;
   - the PDF reading experiment, under a comment after the open siddur's switch: `pdf_experiment_title` ("קריאת PDF
     (ניסוי)"), `…_open`, `…_hint`, `…_status` (the file, its pages and size, the time it took and the Java memory),
-    `…_failed`, `…_zoom_in` and `…_zoom_out`.
+    `…_failed`, `…_zoom_in` and `…_zoom_out`; and after them, under two comments, the user's PDF books: their tab's
+    `pdf_book_*` (10: a file missing or failed, "עמוד %1$d מתוך %2$d", the go-to field, the zoom, the removal and its
+    tooltip, a book removed), the tree's `my_pdf_books` ("הספרים שלי") and `my_pdf_books_add` ("הוספת PDF…"), and
+    where books added are kept, `pdf_keep_*` (12: the card's title and description, the question, the three answers
+    and what they mean, the folder's button, the dialog's buttons).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -1789,18 +1849,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DataSettingsScreen.kt`
 
-- **Change:** modified, +16 −7 lines. Feature: Library location, Semantic search packs, No error reports.
+- **Change:** modified, +20 −7 lines. Feature: Library location, Semantic search packs, No error reports, The user's PDF books.
 - **What:**
-  - Two Pardes cards before the reset: `LibraryLocationCard()` and `SemanticPackCard()` (the daf's layouts card stood
-    among them until 2026-11-10, and the feedback's sending card until 2026-11-12: each is in a settings page of its
-    own).
+  - Three Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()` and, with a comment, the PDF
+    books' `PdfBooksCard()` (the daf's layouts card stood among them until 2026-11-10, and the feedback's sending card
+    until 2026-11-12: each is in a settings page of its own); its import.
   - The error-reports card only when `isErrorReportingAvailable`, with a comment.
-- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`); a build
-  without a DSN sends no reports (`fabcf4e8`).
+- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`; the PDF books' answer, changed
+  here as the user decided on 2026-11-13); a build without a DSN sends no reports (`fabcf4e8`).
 - **Kind:** Pardes feature hooks.
 - **Merge risk:** small: one call per card in Zayit's column, and one `if` around its last card.
-- **Smaller:** the two cards could be one `PardesDataCards()` call.
-- **Tests:** `SemanticPackCardUiTest`; the other card has none.
+- **Smaller:** the three cards could be one `PardesDataCards()` call.
+- **Tests:** `SemanticPackCardUiTest`; the other cards have none (the PDF books', tried in the app).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsDestination.kt`
 
@@ -3041,6 +3101,158 @@ its text is copied. Hooks: `strings.xml`, `reachability-metadata.json`; the Tool
   otherwise; the tool is offered exactly when the switch is on.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's unit tests (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The user's PDF books
+
+Request 28's first version (`docs/DESKTOP_STAGE2_PLAN.md`), on Nucleus's PDFium binding as the experiment above found it
+works, which the user confirmed on Windows on 2026-11-13: a category "הספרים שלי" after the library's categories in the
+book tree, holding the user's PDF books by title and a row "הוספת PDF…". A book opens in a tab of its own, its pages one
+under the other, scrolled, zoomed as the daf is (its levels, Ctrl + wheel, a pinch, the zoom keys), with a field that
+goes to a page; it opens where it was last read, from the tree, from another tab or after a restart. At the first book
+added the user is asked whether to copy it and where (beside the library, in place, or to a folder they choose), as
+they decided on 2026-11-13; the answer is kept, and changed in Settings › ניהול נתונים. The list and each book's place
+are in the user DB, so the backup carries them (not the files). Reading only, as decided on 2026-11-12. Hooks: a
+branch each in the `when`s over the destinations (`TabsContent.kt`, `TabsViewModel.kt`, `DesktopSession.kt`,
+`ZayitDeepLink.kt`, `SessionManager.kt`), `CategoryTreePanel.kt`, `AppGraph.kt`, `AppSettings.kt`,
+`DataSettingsScreen.kt`, `strings.xml`; `branding/brand.gradle` gives both brands the binding.
+
+#### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/PdfBooks.sq`
+
+- **Feature:** The user's PDF books.
+- **Size:** 31 lines.
+- **What:** the table `pdf_book` (the file's path, unique; its title; where it was last read: the page at the view's
+  top, its pixels above the view, the zoom; when it was added) and its queries `selectAll` (by title), `selectById`,
+  `selectByPath`, `insert` (a path already listed is left as it is), `updatePlace` and `delete`.
+- **Reached from:** `PdfBookStore.kt` (through SQLDelight's generated `UserSettingsDb`).
+- **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`.
+- **Tests:** `PdfBookStoreTest`.
+
+#### `navigation/src/commonMain/kotlin/io/github/kdroidfilter/seforim/tabs/PdfBookTab.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 19 lines.
+- **What:** `PdfBookTab(tabId, pdfId)`, a destination of `TabsDestination`'s in a file of its own, with a fixed serial
+  name ("PdfBook"), by which the session keeps the tab.
+- **Reached from:** the `when`s over the destinations in `TabsContent.kt`, `TabsViewModel.kt`, `DesktopSession.kt`,
+  `ZayitDeepLink.kt` and `SessionManager.kt`; `PdfBookTabContent.kt`, which opens it.
+- **Follows:** Zayit's destinations in `TabsDestination.kt` (`@Serializable @Immutable` data classes with a `tabId`). A
+  sealed interface's subclass may live in another file of its package and module, so Zayit's file stays as it is.
+- **Tests:** none of its own; the session's tests still pass, and a PDF tab came back after a restart in the app.
+- **Notes:** an older Pardes cannot decode a session that holds a PDF tab, and starts on a new session
+  (`SessionManager.loadDesktopsState` deletes a session file it cannot read).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooks.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 123 lines.
+- **What:** `MyPdfBooks(navigation, onBookClick, content)`, the book tree's content given its navigation with the
+  category "הספרים שלי" after the library's categories (once they are there) and its rows, and a click that opens a PDF
+  book in its tab (`openPdfBookTab`); from "הוספת PDF…" it picks PDF files (several at once, FileKit's picker off the
+  event loop) and adds them, the last one opened, asking first where books added are kept when the user was never
+  asked (`PdfKeepDialog`); any other book goes to the tree's own click. The rows' ids are negative
+  (`MY_BOOKS_CATEGORY`, `MY_BOOKS_ADD`, `myBookId`, `pdfIdOf`): the library's are positive and its search groups'
+  larger, and the tree's list keys must not clash. The lists given to the tree are kept while their inputs are, as
+  the tree groups its books again for each new set.
+- **Reached from:** `CategoryTreePanel.kt` (`NavigationTree`).
+- **Follows:** Zayit's tree data (`Category`, `Book`); the picker as Zayit's data screen calls it
+  (`FileKit.openFilePicker` on `Dispatchers.IO`).
+- **Tests:** `PdfBookStoreTest` (the rows and their ids); tried in the app.
+- **Notes:** the books are not in the tree's search (which looks in the library's titles) nor in the search's tabs;
+  a click opens a tab of their own rather than the book in the same tab, as the reader's panes are a library book's.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookFiles.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 104 lines.
+- **What:** `PdfKeep` (beside the library, in place, a folder chosen), `PdfKeepAnswer` (the answer, with the folder
+  chosen) and `PdfBookFiles`: `folderFor` (the folder `my-books` beside the library's `seforim.db`, else in the app's
+  data folder; the folder chosen; or none), `keep` (a copy under the file's own name in the folder, under a number when
+  another file has the name, unless that file has the same bytes; written as `.part` and renamed once whole; a file
+  kept in place, or already in the folder, is not copied) and `titleOf` (the file's name without its extension).
+- **Reached from:** `PdfBookStore.kt`, `PdfKeepChoice.kt`, `MyPdfBooks.kt`.
+- **Follows:** Pardes's `UserFonts` (a file added under its own name, numbered beside another's).
+- **Tests:** `PdfBookFilesTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookStore.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 102 lines.
+- **What:** `PdfPlace` (the page at the view's top, its pixels above the view, the zoom), `PdfBook` (id, file, title,
+  place) and `PdfBookStore`, the books in the user DB: `books` (by title), `book`, `add` (kept as `PdfBookFiles.keep`
+  says; the book already listed when its file is), `keepPlace` (in the background, on a scope of its own, so that a tab
+  closed right after a scroll still keeps its place) and `setPlace`, `remove` (the file stays), and a `revision` flow
+  that goes up when a book is added or removed only.
+- **Reached from:** `AppGraph.kt` (`pdfBookStore`, which Metro makes through `@Inject`), `MyPdfBooks.kt`,
+  `PdfBookTabContent.kt`.
+- **Follows:** Zayit's user-DB stores (a SQLDelight table, `Dispatchers.IO`, a `revision` flow) and its
+  `@Inject @SingleIn(AppScope::class)` classes; Pardes's `DafDownloads` for a scope of its own (`@StructuredScope`).
+- **Tests:** `PdfBookStoreTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookTabContent.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 110 lines.
+- **What:** `openPdfBookTab` (brings the window's tab of a book forward, else opens one beside the current tab) and
+  `PdfBookTabContent(tabId, pdfId)`: it reads the book, names the tab after it (`TabTitleUpdateManager`,
+  `TabType.BOOK`), shows `PdfBookView` at its place and keeps each place it tells; a book removed is said so; a delete
+  button with a tooltip takes the book out of the list and closes the tab. Only the tab in view composes the view:
+  every tab of a window stays composed (`TabsContent`), and a PDF's pages take memory as its file does (the binding
+  reads the whole file and caches up to 76 MB of drawn pages); back in view, it opens again where it was left.
+- **Reached from:** `TabsContent.kt` (its destination's branch), `MyPdfBooks.kt`.
+- **Follows:** Zayit's tabs of their own: `AuthorScreen` names its tab, `OpenNotes.kt` brings one forward.
+- **Tests:** tried in the app (opened, kept after a restart, back from another tab, removed).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 319 lines.
+- **What:** `PdfBookView(file, place, onPlace, modifier, actions)`: the file read whole into the binding off the UI
+  thread (`runSuspendCatching`, a missing native library caught too), a missing file or a failure said, and the pages
+  one under the other with `PdfPage(…, selectableText = true)`, as wide as the view at a zoom of 1, centered in a list as
+  wide as the view (the wheel scrolls it from anywhere), scrolled sideways past it. A bar: "עמוד N מתוך M", a field that
+  goes to the page typed (Enter, then it is emptied), the zoom's buttons and the caller's actions. The zoom is the
+  daf's: its levels for the buttons and for Ctrl + = and −, `rememberTextZoom` for Ctrl + wheel and pinches. Page Up
+  and Down move 90% of a view; Ctrl + Home and End go to the first and the last page. It opens at its place
+  (`rememberLazyListState`) and tells its place 400 ms after a move ends, and as it leaves when it moved since.
+- **Reached from:** `PdfBookTabContent.kt`.
+- **Follows:** Pardes's experiment (`PdfReaderTool.kt`) for the binding; Zayit's `BookContentView` for the page keys
+  and its `TextZoom` for the pointer's zoom.
+- **Tests:** `PdfBookFilesTest` (`zoomStep`); tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfKeepChoice.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 235 lines.
+- **What:** `AppSettings.pdfKeep` and `setPdfKeep(PdfKeepAnswer)` over `AppSettings`'s two strings, and `pdfFolderFor`;
+  `PdfKeepChoice`, three radio rows, each with what it means (the folder beside the library shown; a file moved or
+  deleted not opening again; a folder chosen with FileKit's directory picker); `PdfKeepDialog`, the question at the
+  first book added, in a window of its own ("הוספה" enabled once a folder of one's own has its folder; closed without
+  an answer, it is asked again next time); and `PdfBooksCard`, Settings › ניהול נתונים: the same choice, kept as it
+  changes once it is complete.
+- **Reached from:** `MyPdfBooks.kt` (the dialog), `DataSettingsScreen.kt` (the card).
+- **Follows:** Zayit's dialogs in a window of their own (`WidgetOptionsDialog`: `JewelDecoratedDialog` through
+  `LocalNucleusApplicationScope`), and Pardes's settings cards (`LibraryLocationCard`: its frame, `isolatedPath`).
+- **Tests:** tried in the app (the dialog, the card).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookFilesTest.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 91 lines.
+- **What:** the folder for each answer; a copy under its own name, and under a number beside another file; the same
+  file added again; a file kept in place or already in the folder not copied; a book's title; the zoom's steps.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's `UserFontsTest` (a temporary folder; Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookStoreTest.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 80 lines.
+- **What:** books added, copied, listed by title and found again; one kept in place; a place kept; a book removed, its
+  file kept; the tree's rows and their ids.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's `StudyPlanStoreTest` (an in-memory user DB).
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is
@@ -5659,7 +5871,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `branding/README.md` | English guide to the brand overlay: how brand.gradle and BrandResources make the build Pardes for desktop, the brand Kotlin objects, the open siddur's addon compiled for Pardes, the tables of every hook in Zayit's files (branding, library location, semantic search, fixes of Zayit's code), the licence-restricted files replaced in place, merging a Zayit release, and rules for ABOUT.md and CONDITIONS.md. *Note:* Says ForeignLibraries.kt is the only reader of BrandLibraries, but LibraryLocationViewModel.kt reads `OTHER_APP_NAME` too. Later features' hooks in Zayit files are not listed (e.g. `FeedbackSendCard()` in DataSettingsScreen.kt). | Pardes's own |
-| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, compiles Pardes's open smart siddur in the place of Zayit's (it leaves `addons/siddur/disabled` out of jvmMain with an exclude on its path, adds `addons/siddur/open/kotlin`, the `:siddur-open` module and the tests of `addons/siddur/open-test/kotlin`), adds Nucleus's PDFium binding (`dev.nucleusframework:pdfium-jvm`) for the PDF reading experiment, and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). brandLicences also copies the two notices of the open siddur's data (`siddur-open/COPYING.AMUD` as GPL-3.0.txt, `COPYING.HEBCAL` as Hebcal-LICENSE.txt). With the zayit brand it only adds branding/zayit/kotlin. | Pardes's own |
+| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, compiles Pardes's open smart siddur in the place of Zayit's (it leaves `addons/siddur/disabled` out of jvmMain with an exclude on its path, adds `addons/siddur/open/kotlin`, the `:siddur-open` module and the tests of `addons/siddur/open-test/kotlin`), and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). brandLicences also copies the two notices of the open siddur's data (`siddur-open/COPYING.AMUD` as GPL-3.0.txt, `COPYING.HEBCAL` as Hebcal-LICENSE.txt). For both brands, before the zayit brand's return, it adds Nucleus's PDFium binding (`dev.nucleusframework:pdfium-jvm`) for `features/pdf` (the PDF reading experiment, the user's PDF books), which both brands compile; with the zayit brand it adds only that and branding/zayit/kotlin. | Pardes's own |
 | `branding/pardes/assets/common/splash.png` | 800x533 splash picture laid over Zayit's package-time asset common/splash.png: Zayit's layout (a dark card with a gold border, the icon with a gold rim, the name under it) with the Pardes icon and the word פרדס in gold on dark olive. *Note:* Zayit's Rust installer wrapper (installer/), which also shows that splash, is not built for Pardes. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py (desktop mode); replaces Zayit's SeforimApp/src/jvmMain/assets/common/splash.png (the olive branch and זית on black) |
 | `branding/pardes/assetsExtra/common/licenses/ANGLE-LICENSE.txt` | BSD 3-Clause licence of ANGLE (libEGL and libGLESv2, also nucleus.angle-natives), which Nucleus's Tao window ships. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Zayit's packages carry no third-party licence texts; all of this folder is Pardes's. | copied from ANGLE (BSD-3-Clause); identical to META-INF/licenses/LICENSE-BSD-3-Clause-angle.txt in the Nucleus tao jar |
 | `branding/pardes/assetsExtra/common/licenses/AccessKit-LICENSE-MIT.txt` | MIT licence of AccessKit, the accessibility library compiled into Nucleus's Tao window binary (MIT or Apache-2.0). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from AccessKit (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-accesskit.txt |

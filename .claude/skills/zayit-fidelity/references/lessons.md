@@ -35,13 +35,20 @@ tools and the code did when it was written.
   issues beyond `SeforimApp/detekt-baseline-jvmMainSourceSet.xml` (308 on 2026-11-13, most of them old). Run them on a
   change and look at its own files' lines; `LongParameterList` is not reported on composables. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
-  `@param:StructuredScope @property:StructuredScope`.
+  `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
+  plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class
+  makes for itself unless its property is (`DafDownloads`, `PdfBookStore`).
 - **Kotlin, as it bit:**
   - a constructor or function that ends in a lambda parameter keeps it last, or every caller's trailing lambda binds
     to the new parameter (`FeedbackSource(database) { … }`);
   - a property named `name` on an enum's extension is shadowed by the enum's own `name`;
   - `open` is a soft keyword, and a function of that name reads as a modifier (`openOn`);
-  - a test's `assertEquals(listOf(listOf(30L)), …)` may need its element type said.
+  - a test's `assertEquals(listOf(listOf(30L)), …)` may need its element type said;
+  - a sealed interface's subclass may live in another file of its package and module: a tab of Pardes's own
+    (`PdfBookTab`, 2026-11-13) leaves `TabsDestination.kt` alone, but takes a branch in each of its five exhaustive
+    `when`s (`TabsContent`'s two, `TabsViewModel.withTabId`, `DesktopSession.tabTypeFor`, `ZayitDeepLink.toShareLink`,
+    `SessionManager.computeTabTitles`) and a fixed `@SerialName`, as the session keeps it by name. An older Pardes
+    cannot read a session that holds it, and starts on a new one.
 - **Scratch tests and benches** (`Tmp*`) are deleted before the commit. A benchmark runs alone: mockk in the same JVM
   slows the real repository's calls.
 
@@ -49,10 +56,12 @@ tools and the code did when it was written.
 
 - `VerticallyScrollableContainer(scrollState)` scrolls its content itself. An inner `verticalScroll` on the same state
   fails with "measured with an infinity maximum height".
-- **`remember` does not outlive a rebuilt screen.** A step of the install wizard that reloads, or a tab whose
-  composition was dropped (`TabsContent` keeps three), comes back empty. What must stay goes in a small `ViewModel` of
-  the window's store (`viewModel(viewModelStoreOwner = LocalWindowViewModelStoreOwner.current, key = …)`) or in the
-  tab's persisted state.
+- **`remember` does not outlive a rebuilt screen.** A step of the install wizard that reloads, or a tab dragged to
+  another window, comes back empty. What must stay goes in a small `ViewModel` of the window's store
+  (`viewModel(viewModelStoreOwner = LocalWindowViewModelStoreOwner.current, key = …)`) or in the tab's persisted state.
+- **Every tab of a window stays composed** (`TabsContent`'s KDoc; `CLAUDE.md`'s "an LRU of 3" is older): only the
+  selected one is measured and drawn. A tab that holds something heavy composes it only while `LocalTabSelected` (a
+  PDF book's file and drawn pages), keeps its place outside the composition, and takes focus only then.
 - A `LazyColumn` keeps pixels, not places: after a zoom or a resize, a place is kept by scrolling to its item
   (`requestScrollToItem`), not by trusting the offset.
 - **An item that grows is measured at its new size only in a frame to come.** `scrollToItem(index, offset)` into an
@@ -118,6 +127,9 @@ tools and the code did when it was written.
 
   Prefer the second for anything larger than a line. Check that both brands still compile:
   `gradle.sh :SeforimApp:compileKotlinJvm -Pseforimapp.brand=zayit`.
+- **A dependency of code in `src/jvmMain` goes before `brand.gradle`'s `if (brand == 'zayit') return`**, as both
+  brands compile that code. PDFium went after it on 2026-11-12 (the PDF experiment), and the zayit brand did not
+  compile until 2026-11-13.
 - **A third party's engine is a module of its own** (`siddur-open/` is the example):
   - a copy at a pinned commit, with its licence files, never a submodule (a release must build without another
     repository, and the source archive must hold it);
