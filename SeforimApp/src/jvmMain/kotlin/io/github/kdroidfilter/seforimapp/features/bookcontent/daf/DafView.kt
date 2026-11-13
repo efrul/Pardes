@@ -411,6 +411,8 @@ private fun DafPages(
     // The reader's review of the tractate (DafReview.kt): its actions in the menu always, its marks on the lines and
     // its moves on the pages while the daf's marks are shown (the end bar's button)
     val marksShown by graph.appSettings.dafMarksFlow.collectAsState()
+    // The page's scan in the daf's place (DafScanView), while the end bar's button says so
+    val scanShown by graph.appSettings.dafScanFlow.collectAsState()
     var review by remember(file) { mutableStateOf<DafReviewFile?>(null) }
     LaunchedEffect(file) { review = withContext(Dispatchers.IO) { reviews.of(file) } }
     val scope = rememberCoroutineScope()
@@ -485,6 +487,15 @@ private fun DafPages(
             listState.requestScrollToItem(index, shown.offset)
         }
 
+        // Moves the list to its item [index], [offset] pixels down it: unseen while the scan is shown, the list not laid
+        // out then (scrollToItem would wait for its first layout), for the scan to follow it (DafScanView)
+        suspend fun moveTo(
+            index: Int,
+            offset: Int = 0,
+        ) {
+            if (scanShown) listState.requestScrollToItem(index, offset) else listState.scrollToItem(index, offset)
+        }
+
         // Brings the line of the library [id] into view, a little below the view's top, unless it is in view
         suspend fun reveal(
             id: Long,
@@ -494,7 +505,7 @@ private fun DafPages(
             val y = titleHeight + top * currentPerPoint
             val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
             val shown = item != null && item.offset + y >= 0 && item.offset + y + titleHeight <= listState.layoutInfo.viewportEndOffset
-            if (always || !shown) listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
+            if (always || !shown) moveTo(index, (y - titleHeight).toInt().coerceAtLeast(0))
         }
 
         // Opens at the Gemara's segment [id]: the line it begins on at the view's very top (an amud's first line: the
@@ -502,17 +513,20 @@ private fun DafPages(
         suspend fun openOn(id: Long) {
             val (index, top) = currentPlaces[id] ?: return
             val opensAmud = currentIndex?.gemaraTop(index) == top
-            listState.scrollToItem(index, if (opensAmud) 0 else (titleHeight + top * currentPerPoint).toInt())
+            moveTo(index, if (opensAmud) 0 else (titleHeight + top * currentPerPoint).toInt())
         }
-        control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
-        control.edge = { end ->
-            if (end) {
-                // The last amud's end, not its top: the list stops scrolling there (an amud is a few thousand
-                // pixels tall at most, far less than this)
-                listState.scrollToItem((order.size - 1).coerceAtLeast(0))
-                listState.scrollBy(1_000_000f)
-            } else {
-                listState.scrollToItem(0)
+        // The keys turn the scan's pages while it is shown (DafScanView)
+        if (!scanShown) {
+            control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
+            control.edge = { end ->
+                if (end) {
+                    // The last amud's end, not its top: the list stops scrolling there (an amud is a few thousand
+                    // pixels tall at most, far less than this)
+                    listState.scrollToItem((order.size - 1).coerceAtLeast(0))
+                    listState.scrollBy(1_000_000f)
+                } else {
+                    listState.scrollToItem(0)
+                }
             }
         }
         control.toLine = { id -> reveal(id, always = false) }
@@ -598,7 +612,7 @@ private fun DafPages(
                     }.getOrNull()
                 val index = amud?.let(order::indexOf) ?: -1
                 if (index >= 0 && (!revealed || listState.layoutInfo.visibleItemsInfo.none { it.index == index })) {
-                    listState.scrollToItem(index)
+                    moveTo(index)
                 }
             } else if (opening != null) {
                 openOn(id)
@@ -626,6 +640,18 @@ private fun DafPages(
                 .horizontalScroll(hScroll)
                 .sidewaysPan(hScroll, rtl),
         ) {
+            if (scanShown) {
+                DafScanView(
+                    book = book,
+                    tractateHe = file.tractateHe,
+                    order = order,
+                    listState = listState,
+                    control = control,
+                    pageWidth = with(density) { pageWidth.toDp() },
+                    contentWidth = with(density) { contentWidth.toDp() },
+                )
+                return@Box
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.width(with(density) { contentWidth.toDp() }).fillMaxHeight(),

@@ -67,8 +67,9 @@ abstract class AppGraph : ViewModelGraph {
     abstract val libraryCategories: LibraryCategories
     abstract val commentatorDefaults: CommentatorDefaults
 
-    // Pardes: the user's PDF books (request 28)
+    // Pardes: the user's PDF books (request 28), and the tractates' scans in the daf view (request 41)
     abstract val pdfBookStore: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore
+    abstract val dafScans: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScans
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync

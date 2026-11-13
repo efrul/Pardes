@@ -52,6 +52,19 @@ class DafScansTest {
     }
 
     @Test
+    fun `a scan's page i is the amud i from 2a, and back`() {
+        assertEquals(0, scanPageOf("2a"))
+        assertEquals(1, scanPageOf("2b"))
+        assertEquals(66, scanPageOf("35a"))
+        assertEquals(124, scanPageOf("64a"), "Berakhot's last amud, the 125th page of its scan")
+        assertNull(scanPageOf("1b"))
+        assertNull(scanPageOf("x"))
+        assertEquals("2a", amudOfScanPage(0))
+        assertEquals("35b", amudOfScanPage(67))
+        assertEquals("64a", amudOfScanPage(124))
+    }
+
+    @Test
     fun `without Otzaria there is no scan`() {
         assertEquals(emptyList(), OtzariaScans.bavliFolders(listOf(File(root, "nothing"))))
         assertNull(OtzariaScans.find("ברכות", emptyList()))
