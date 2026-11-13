@@ -78,6 +78,13 @@ tools and the code did when it was written.
   the pages would flip what inside them reads the direction. A list whose items become rows of two keeps its places
   by the pages' own order, and turns them into rows only where it scrolls (`itemOfAmud`, `rowOf`); turned on or off,
   it reopens at what was at its top (2026-11-13).
+- **A binding's internal API, for a bench only, by reflection.** The PDFium binding keeps its reader's constructor and
+  its drawing of a page internal (`internal` holds across modules, and Kotlin 2 does not let it be suppressed): a
+  test reaches them by their JVM names, a suspend one through `suspendCoroutineUninterceptedOrReturn`
+  (`PdfOpenBench`, 2026-11-13). Never in the app's own code.
+- **A parameter renamed to a local's name is shadowed by it.** `PdfBookReader`'s `alone` parameter (a tab of its own)
+  met its local `alone` (a book added by itself): the local was passed on, and a book by itself got the tab's bar. Name
+  them apart (`inTab`), and look for the name before a rename (2026-11-13).
 - **A Zayit test that builds a Zayit class breaks with a new constructor parameter** (`PostSelectLineTest` builds
   `BookContentViewModel` by hand): add the argument there, a relaxed `mockk`, and write the test into the map.
 - **An item that grows is measured at its new size only in a frame to come.** `scrollToItem(index, offset)` into an

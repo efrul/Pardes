@@ -487,8 +487,12 @@ class BookContentViewModel(
                 is BookContentEvent.BookTreeSearchQueryChanged ->
                     navigationUseCase.search(event.query)
 
-                is BookContentEvent.BookTreeSearchBookSelected ->
-                    navigationUseCase.selectSearchBook(event.bookId)?.let { loadBook(it) }
+                is BookContentEvent.BookTreeSearchBookSelected -> {
+                    // Pardes: a PDF book of the user's found by the search (request 51) is not among the library's books
+                    val searching = stateManager.state.value.navigation.search != null
+                    val pdf = if (searching) pdfBooks.asBook(event.bookId) else null
+                    (navigationUseCase.selectSearchBook(event.bookId) ?: pdf)?.let { loadBook(it) }
+                }
 
                 // TOC
                 is BookContentEvent.TocEntryExpanded ->

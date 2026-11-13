@@ -47,6 +47,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -74,9 +75,11 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * The PDF book [file], its pages one under the other, or two side by side as a book open (the end bar's button), as wide
  * as the view at a zoom of 1 (wider past it, scrolled sideways), their text selectable. Its zoom is the daf's, which the
- * tab [tabId] zooms as it would its daf: the end bar's buttons and the zoom keys, Ctrl + wheel and a pinch. A bar says
- * the page in view and goes to a page typed, zooms too with [zoomButtons] (in a tab of its own, which has no end bar),
- * and [actions] end it. It opens at [place], and tells its place to [onPlace] once it rests there, and as it leaves.
+ * tab [tabId] zooms as it would its daf: the end bar's buttons and the zoom keys, Ctrl + wheel and a pinch. Its pages
+ * are told to the tab's contents pane, which lists them ([PdfBookToc]), and it goes to the page clicked there. A bar
+ * says the page in view, goes to a page typed and zooms too when [inTab] (in a tab of its own, which has no end bar nor
+ * contents pane), and [actions] end it. It opens at [place], and tells its place to [onPlace] once it rests there, and
+ * as it leaves.
  */
 @Composable
 internal fun PdfBookView(
@@ -85,10 +88,11 @@ internal fun PdfBookView(
     onPlace: (PdfPlace) -> Unit,
     tabId: String,
     modifier: Modifier = Modifier,
-    zoomButtons: Boolean = true,
+    inTab: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val appSettings = LocalAppGraph.current.appSettings
+    val store = LocalAppGraph.current.pdfBookStore
     val reader = rememberPdfReaderState()
     var failure by remember(file) { mutableStateOf<String?>(null) }
     var opened by remember(file) { mutableStateOf(false) }
@@ -108,14 +112,34 @@ internal fun PdfBookView(
     // At the page read at the top, kept as it scrolls: the rows changed (a page each, or two), a new list opens there
     val top = remember(file) { Top(place.page, place.offset) }
     val listState = remember(file, spreads) { LazyListState(rowOf(top.page, spreads), top.offset).also { top.offset = 0 } }
-    TellPlace(listState, spreads, { zoom }, onTop = { top.page = it }, onPlace = onPlace)
+    val pages = if (opened) reader.pageCount else 0
+    TellPlace(
+        listState,
+        spreads,
+        { zoom },
+        onTop = { page ->
+            top.page = page
+            if (pages > 0) store.showPages(tabId, PdfPagesShown(pages, page))
+        },
+        onPlace = onPlace,
+    )
+    // The contents pane lists the pages once they are known, and sends the page clicked there
+    DisposableEffect(tabId) { onDispose { store.showPages(tabId, null) } }
+    LaunchedEffect(tabId, pages) { if (pages > 0) store.showPages(tabId, PdfPagesShown(pages, top.page.coerceIn(0, pages - 1))) }
+    LaunchedEffect(tabId, listState, pages) {
+        if (pages == 0) return@LaunchedEffect
+        store.pageRequests
+            .filter { (tab, _) -> tab == tabId }
+            .collect { (_, page) -> listState.scrollToItem(rowOf(page.coerceIn(0, pages - 1), spreads)) }
+    }
     val error = failure ?: reader.error?.message
     Column(modifier.fillMaxSize()) {
         PdfBar(
-            pages = if (opened) reader.pageCount else 0,
+            pages = pages,
             listState = listState,
             spreads = spreads,
-            zoom = zoom.takeIf { zoomButtons },
+            goTo = inTab,
+            zoom = zoom.takeIf { inTab },
             onZoom = appSettings::zoomDaf,
             actions = actions,
         )
@@ -181,14 +205,15 @@ internal fun zoomStep(
     }
 
 /**
- * The bar over the pages: the page in view of [pages], a field to go to a page, the zoom's buttons when there is a
- * [zoom] to show, and [actions].
+ * The bar over the pages: the page in view of [pages], a field to go to a page with [goTo], the zoom's buttons when
+ * there is a [zoom] to show, and [actions].
  */
 @Composable
 private fun PdfBar(
     pages: Int,
     listState: LazyListState,
     spreads: Boolean,
+    goTo: Boolean,
     zoom: Float?,
     onZoom: (Float) -> Unit,
     actions: @Composable RowScope.() -> Unit,
@@ -205,23 +230,25 @@ private fun PdfBar(
                 stringResource(Res.string.pdf_book_page_of, firstPageOf(listState.firstVisibleItemIndex, spreads) + 1, pages),
                 color = JewelTheme.globalColors.text.info,
             )
-            TextField(
-                state = target,
-                modifier =
-                    Modifier.width(GO_TO_WIDTH).onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown || event.key != Key.Enter) return@onPreviewKeyEvent false
-                        val page =
-                            target.text
-                                .toString()
-                                .trim()
-                                .toIntOrNull() ?: return@onPreviewKeyEvent true
-                        // Gone to, the field is empty again: the page in view is said beside it
-                        target.clearText()
-                        scope.launch { listState.scrollToItem(rowOf((page - 1).coerceIn(0, pages - 1), spreads)) }
-                        true
-                    },
-                placeholder = { Text(stringResource(Res.string.pdf_book_go_to_page)) },
-            )
+            if (goTo) {
+                TextField(
+                    state = target,
+                    modifier =
+                        Modifier.width(GO_TO_WIDTH).onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown || event.key != Key.Enter) return@onPreviewKeyEvent false
+                            val page =
+                                target.text
+                                    .toString()
+                                    .trim()
+                                    .toIntOrNull() ?: return@onPreviewKeyEvent true
+                            // Gone to, the field is empty again: the page in view is said beside it
+                            target.clearText()
+                            scope.launch { listState.scrollToItem(rowOf((page - 1).coerceIn(0, pages - 1), spreads)) }
+                            true
+                        },
+                    placeholder = { Text(stringResource(Res.string.pdf_book_go_to_page)) },
+                )
+            }
         }
         Box(Modifier.weight(1f))
         if (zoom != null) {

@@ -34,8 +34,8 @@ import seforimapp.seforimapp.generated.resources.pdf_book_removed
 
 /**
  * The PDF book [pdfId] in the tab [tabId]: its pages ([PdfBookView]) where it was last read, its place kept as it is
- * read, the zoom's buttons in its bar with [zoomButtons], and, for a book added alone by build 45 (in none of the user's
- * folders), a button that takes it out of the list and closes the tab. Only the tab in view holds its file: every tab
+ * read, a bar that goes to a page and zooms when [inTab] (in a tab of its own), and, for a book added alone by build 45
+ * (in none of the user's folders), a button that takes it out of the list and closes the tab. Only the tab in view holds its file: every tab
  * stays composed (TabsContent), and a PDF's pages take memory as its file does; back in view, it opens again where it
  * was left.
  */
@@ -45,7 +45,7 @@ internal fun PdfBookReader(
     tabId: String,
     pdfId: Long,
     modifier: Modifier = Modifier,
-    zoomButtons: Boolean = false,
+    inTab: Boolean = false,
 ) {
     val store = LocalAppGraph.current.pdfBookStore
     val tabsViewModel = LocalOpenWindow.current.tabsViewModel
@@ -76,7 +76,7 @@ internal fun PdfBookReader(
                 },
                 tabId = tabId,
                 modifier = modifier,
-                zoomButtons = zoomButtons,
+                inTab = inTab,
                 actions = {
                     if (!alone) return@PdfBookView
                     val remove = stringResource(Res.string.pdf_book_remove)

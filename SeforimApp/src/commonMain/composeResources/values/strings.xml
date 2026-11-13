@@ -1168,7 +1168,7 @@
     <string name="pdf_experiment_failed">הקובץ לא נפתח: %1$s</string>
     <string name="pdf_experiment_zoom_in">הגדלה</string>
     <string name="pdf_experiment_zoom_out">הקטנה</string>
-    <!-- Pardes: the user's PDF books (request 28): their tab (PdfBookView) -->
+    <!-- Pardes: the user's PDF books (requests 28 and 49): their reader (PdfBookView) and contents (PdfBookToc) -->
     <string name="pdf_book_missing">הקובץ לא נמצא: %1$s</string>
     <string name="pdf_book_failed">הקובץ לא נפתח: %1$s</string>
     <string name="pdf_book_page_of">עמוד %1$d מתוך %2$d</string>
@@ -1178,6 +1178,7 @@
     <string name="pdf_book_removed">הספר הוסר מהספרים שלי.</string>
     <string name="pdf_book_remove">הסרה מהספרים שלי</string>
     <string name="pdf_book_remove_hint">הסרה מהספרים שלי. הקובץ עצמו נשאר במקומו.</string>
+    <string name="pdf_book_toc_page">עמוד %1$d</string>
     <!-- Pardes: the user's PDF books in the book tree (MyPdfBooks), and their folders in the settings (PdfBooksCard) -->
     <string name="my_pdf_books">הספרים שלי</string>
     <string name="my_pdf_books_add">הוספת תיקייה…</string>
@@ -1191,11 +1192,18 @@
     <string name="daf_scan">סריקה</string>
     <string name="daf_scan_tooltip">המסכת כפי שהיא בדפוס, בסריקה, במקום הטקסט או צורת הדף</string>
     <string name="daf_scan_missing">לא נמצאה סריקה של %1$s.</string>
-    <string name="daf_scan_missing_hint">פרדס מחפש את הסריקה בספרייה של אוצריא שבמחשב. אפשר גם לבחור קובץ PDF של המסכת, שבו כל עמוד הוא עמוד של הגמרא, מ־ב. והלאה.</string>
-    <string name="daf_scan_choose">בחירת קובץ PDF…</string>
-    <string name="daf_scan_change">החלפת קובץ הסריקה…</string>
-    <string name="daf_scan_unlink">חזרה לסריקה של אוצריא</string>
+    <string name="daf_scan_missing_hint">פרדס מחפש את הסריקה בתיקייה של גמרות סרוקות שבוחרים בהגדרות › צורת הדף, ובסריקות של אוצריא שבמחשב. בתיקייה יש קובץ PDF לכל מסכת, בשם המסכת, שבו כל עמוד הוא עמוד של הגמרא, מ־ב. והלאה.</string>
+    <string name="daf_scan_choose">בחירת תיקייה של גמרות סרוקות…</string>
     <string name="daf_scan_failed">הסריקה לא נפתחה: %1$s</string>
+    <!-- Pardes: where the tractates' scans are looked for, in Settings › צורת הדף (request 48, DafScansCard) -->
+    <string name="daf_scans_title">סריקות הגמרא</string>
+    <string name="daf_scans_description">הסריקות שהכפתור ״סריקה״ מציג במקום הטקסט או צורת הדף. בתיקייה שבוחרים יש קובץ PDF לכל מסכת, בשם המסכת (למשל ברכות.pdf), בתיקייה עצמה או בתיקיות שבתוכה, שבו כל עמוד הוא עמוד של הגמרא, מ־ב. והלאה. פרדס מחפש קודם בתיקייה הזאת, ואחר כך בסריקות של אוצריא שבמחשב.</string>
+    <string name="daf_scans_folder">התיקייה שבחרתם</string>
+    <string name="daf_scans_no_folder">לא נבחרה תיקייה</string>
+    <string name="daf_scans_choose">בחירת תיקייה…</string>
+    <string name="daf_scans_remove">הסרה</string>
+    <string name="daf_scans_otzaria">הסריקות של אוצריא שנמצאו במחשב</string>
+    <string name="daf_scans_no_otzaria">לא נמצאו במחשב סריקות של אוצריא.</string>
     <!-- Pardes: pages two side by side (request 47, PageSpreadsButton) -->
     <string name="page_spreads">שני עמודים</string>
     <string name="page_spreads_tooltip">שני עמודים זה לצד זה, כספר פתוח: עמוד ב מימין ועמוד א משמאל</string>

@@ -12,8 +12,11 @@ import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -70,6 +73,13 @@ data class PdfLibrary(
     val folders: List<PdfFolderShown> = emptyList(),
 )
 
+/** The pages of a PDF book shown in a tab: how many ([count]), and the first read at the top ([page], from 0). */
+@Immutable
+data class PdfPagesShown(
+    val count: Int,
+    val page: Int,
+)
+
 /** The book of the library's kind this PDF book is, in the category [categoryId] of the book tree, and in the reading screen. */
 fun PdfBook.asTreeBook(categoryId: Long = MY_BOOKS_CATEGORY): Book =
     Book(id = myBookId(id), categoryId = categoryId, sourceId = 0, title = title)
@@ -98,6 +108,32 @@ class PdfBookStore(
     // The folders as last read, and the revision they were read at: every tab's tree asks for them
     private val reading = Mutex()
     private var read: Pair<Long, PdfLibrary>? = null
+
+    // The books shown by the tabs' readers, for the tabs' contents panes, and the pages those panes ask them to go to
+    private val _shown = MutableStateFlow(emptyMap<String, PdfPagesShown>())
+    private val _pageRequests = MutableSharedFlow<Pair<String, Int>>(extraBufferCapacity = PAGE_REQUESTS)
+
+    /** The PDF books shown, by their tabs: their pages, which the contents pane lists ([PdfBookToc]). */
+    val shown: StateFlow<Map<String, PdfPagesShown>> = _shown.asStateFlow()
+
+    /** The pages the contents panes ask the tabs' readers to go to: the tab, and the page (from 0). */
+    val pageRequests: SharedFlow<Pair<String, Int>> = _pageRequests.asSharedFlow()
+
+    /** The reader of the tab [tabId] shows a book's [pages], or none any more (null). */
+    fun showPages(
+        tabId: String,
+        pages: PdfPagesShown?,
+    ) {
+        _shown.update { if (pages == null) it - tabId else it + (tabId to pages) }
+    }
+
+    /** Asks the reader of the tab [tabId] to go to [page] (from 0). */
+    fun goToPage(
+        tabId: String,
+        page: Int,
+    ) {
+        _pageRequests.tryEmit(tabId to page)
+    }
 
     /** The book [id], or null once it was removed. */
     suspend fun book(id: Long): PdfBook? = withContext(Dispatchers.IO) { queries.selectById(id).executeAsOneOrNull()?.toBook() }
@@ -235,4 +271,9 @@ class PdfBookStore(
     }
 
     private fun Pdf_book.toBook(): PdfBook = PdfBook(id, File(path), title, PdfPlace(page.toInt(), pageOffset.toInt(), zoom.toFloat()))
+
+    private companion object {
+        // A click on a page waits for no one: a few kept while a reader catches up
+        const val PAGE_REQUESTS = 8
+    }
 }

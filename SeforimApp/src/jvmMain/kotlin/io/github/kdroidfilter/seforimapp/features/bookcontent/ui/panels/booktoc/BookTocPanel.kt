@@ -17,6 +17,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.Type
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberPaneSearchFocus
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.toTocEntry
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfBookToc
+import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
 import io.github.kdroidfilter.seforimlibrary.core.models.AltTocEntry
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
@@ -43,8 +45,10 @@ fun BookTocPanel(
                 .MutableInteractionSource()
         }
     val searchFocus = rememberPaneSearchFocus()
+    // Pardes: a PDF book's contents are its pages, with no search (request 49)
+    val searchable = uiState.navigation.selectedBook?.let { pdfIdOf(it.id) == null } == true
     // Pardes: a letter typed with the pointer over the contents opens their search with it (TypeToSearch)
-    if (uiState.navigation.selectedBook != null) {
+    if (searchable) {
         TypeToSearchTarget(paneHoverSource) { text ->
             searchFocus.type(text, isOpen = uiState.toc.search != null) { onEvent(BookContentEvent.ToggleTocSearch) }
         }
@@ -60,7 +64,7 @@ fun BookTocPanel(
             interactionSource = paneHoverSource,
             onHide = { onEvent(BookContentEvent.ToggleToc) },
             actions = {
-                if (uiState.navigation.selectedBook != null) {
+                if (searchable) {
                     PaneSearchButton(
                         isOpen = uiState.toc.search != null,
                         focus = searchFocus,
@@ -95,7 +99,15 @@ fun BookTocPanel(
                             onSelect = { onEvent(BookContentEvent.TocSearchEntrySelected(it)) },
                             onClose = { onEvent(BookContentEvent.CloseTocSearch) },
                             modifier = if (showAlt) Modifier.weight(1f) else Modifier.fillMaxHeight(),
-                            regular = { BookTocView(uiState = uiState, onEvent = onEvent, modifier = Modifier.fillMaxHeight()) },
+                            regular = {
+                                // Pardes: a PDF book's pages as its contents (request 49)
+                                val book = uiState.navigation.selectedBook
+                                if (pdfIdOf(book.id) != null) {
+                                    PdfBookToc(uiState.tabId, book.id, Modifier.fillMaxHeight())
+                                } else {
+                                    BookTocView(uiState = uiState, onEvent = onEvent, modifier = Modifier.fillMaxHeight())
+                                }
+                            },
                         ) { result, activeId ->
                             TocSearchResults(result = result, activeId = activeId, onEvent = onEvent)
                         }

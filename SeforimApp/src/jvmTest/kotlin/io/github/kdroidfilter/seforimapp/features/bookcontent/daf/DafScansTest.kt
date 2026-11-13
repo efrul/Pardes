@@ -1,7 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
+import io.github.kdroidfilter.seforimapp.testAppSettings
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.io.path.createTempDirectory
@@ -10,7 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-/** The tractates' scans: Otzaria's, found in the library its data folder points at, and the files the user links. */
+/** The tractates' scans: in the folder the user chose, and Otzaria's, found in the library its data folder points at. */
 class DafScansTest {
     private val root = createTempDirectory("daf-scans").toFile()
 
@@ -92,18 +91,34 @@ class DafScansTest {
     }
 
     @Test
-    fun `a file linked to a tractate is kept, and let go`() =
+    fun `a folder chosen is looked in first, a scan right in it or folders down, then Otzaria's`() =
         runBlocking {
-            val scans = DafScans(UserSettingsDb(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also(UserSettingsDb.Schema::create)))
-            val file = scan("mine/ברכות וילנא.pdf")
+            val scans = DafScans(testAppSettings()).apply { otzariaRoots = listOf(File(root, "nothing")) }
+            val mine = scan("mine/סדר נזיקין/בבא בתרא.pdf")
+            scan("mine/ברכות-ישן.txt")
 
-            scans.link("ברכות", file)
-            assertEquals(file.absoluteFile, scans.linked("ברכות"))
-            assertNull(scans.linked("שבת"))
+            assertNull(scans.of("בבא בתרא"), "no folder chosen, and no Otzaria here")
+            scans.setFolder(File(root, "mine"))
 
-            scans.unlink("ברכות")
-            assertNull(scans.linked("ברכות"))
+            assertEquals(File(root, "mine").absolutePath, scans.folder.value)
+            assertEquals(mine, scans.of("בבא בתרא"))
+            assertNull(scans.of("ברכות"))
+            scans.setFolder(null)
+            assertNull(scans.folder.value)
+            assertNull(scans.of("בבא בתרא"))
         }
+
+    @Test
+    fun `a scan is found three folders down at most, the nearest first`() {
+        val near = scan("mine/a/שבת.pdf")
+        scan("mine/b/c/שבת.pdf")
+        val deep = scan("deep/1/2/3/עירובין.pdf")
+        scan("deep/1/2/3/4/פסחים.pdf")
+
+        assertEquals(near, OtzariaScans.findIn("שבת", File(root, "mine")))
+        assertEquals(deep, OtzariaScans.findIn("עירובין", File(root, "deep")))
+        assertNull(OtzariaScans.findIn("פסחים", File(root, "deep")), "four folders down")
+    }
 
     private companion object {
         val BYTE_ORDER_MARK = Char(0xFEFF).toString()
