@@ -212,6 +212,8 @@ data class ContentState(
     val shnayimMikra: Boolean = false,
     // A Talmud tractate drawn as its Vilna page (צורת הדף) in place of its text
     val dafView: Boolean = false,
+    // Pardes: a Talmud tractate shown as its scan in place of its text, or of its daf (request 46)
+    val scanView: Boolean = false,
     // Scroll positions
     val paragraphScrollPosition: Int = 0,
     val chapterScrollPosition: Int = 0,

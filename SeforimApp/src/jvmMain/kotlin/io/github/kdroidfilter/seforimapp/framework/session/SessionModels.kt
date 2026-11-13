@@ -126,6 +126,8 @@ data class BookContentPersistedState(
     val hiddenCommentatorGroupsByBook: Map<Long, Set<String>> = emptyMap(),
     // A Talmud tractate drawn as its Vilna page (ContentState.dafView)
     val dafView: Boolean = false,
+    // Pardes: a Talmud tractate shown as its scan (ContentState.scanView)
+    val scanView: Boolean = false,
 )
 
 // -- Virtual desktops persistence models --

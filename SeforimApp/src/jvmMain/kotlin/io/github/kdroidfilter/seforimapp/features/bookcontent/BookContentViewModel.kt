@@ -61,6 +61,8 @@ class BookContentViewModel(
     private val historyStore: HistoryStore,
     sessionManager: SessionManager,
     private val appSettings: AppSettings,
+    // Pardes: a PDF book of the user's opens as the library's books do (request 45)
+    private val pdfBooks: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore,
 ) : ViewModel() {
     @AssistedFactory
     @ViewModelAssistedFactoryKey(BookContentViewModel::class)
@@ -627,8 +629,12 @@ class BookContentViewModel(
                 BookContentEvent.ToggleShnayimMikra ->
                     stateManager.updateContent { copy(shnayimMikra = !shnayimMikra) }
 
+                // Pardes: the text, the daf and the scan (request 46), one at a time
                 BookContentEvent.ToggleDafView ->
-                    stateManager.updateContent { copy(dafView = !dafView) }
+                    stateManager.updateContent { copy(dafView = !dafView, scanView = false) }
+
+                BookContentEvent.ToggleScanView ->
+                    stateManager.updateContent { copy(scanView = !scanView, dafView = false) }
 
                 BookContentEvent.ToggleSources ->
                     contentUseCase.toggleSources()
@@ -766,7 +772,7 @@ class BookContentViewModel(
     ) {
         stateManager.setLoading(true)
         try {
-            repository.getBookCore(bookId)?.let { book ->
+            (repository.getBookCore(bookId) ?: pdfBooks.asBook(bookId))?.let { book ->
                 val persistedBeforeLoad = persistedStore.get(tabId)?.bookContent
                 val isRestore = !triggerScroll
 

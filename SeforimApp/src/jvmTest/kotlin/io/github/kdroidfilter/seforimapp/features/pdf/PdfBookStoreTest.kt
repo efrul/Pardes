@@ -72,7 +72,10 @@ class PdfBookStoreTest {
         assertEquals(listOf("א", "ב", "הוספת PDF…"), rows.map { it.title })
         assertEquals(listOf(1L, 7L, null), rows.map { pdfIdOf(it.id) })
         assertEquals(MY_BOOKS_ADD, rows.last().id)
-        assertTrue(rows.all { it.categoryId == MY_BOOKS_CATEGORY && it.id < 0 })
+        assertTrue(rows.all { it.categoryId == MY_BOOKS_CATEGORY })
+        // The books' ids positive, as the reading screen opens those only, and far above the library's; the add row's not
+        assertTrue(rows.dropLast(1).all { it.id > 1_000_000_000L && it.id < Int.MAX_VALUE })
+        assertTrue(rows.last().id < 0)
         assertEquals(MY_BOOKS_CATEGORY, myBooksCategory("הספרים שלי").id)
         assertNull(pdfIdOf(42), "a book of the library")
         assertNull(pdfIdOf(MY_BOOKS_CATEGORY))

@@ -162,6 +162,9 @@ sealed interface BookContentEvent {
     /** Shows a Talmud tractate as its Vilna page (צורת הדף), or as its text again. */
     data object ToggleDafView : BookContentEvent
 
+    /** Pardes: shows a Talmud tractate as its scan (request 46), or as its text again. */
+    data object ToggleScanView : BookContentEvent
+
     data object ToggleSources : BookContentEvent
 
     /** Shows or hides the pane of the places that refer to the selected line (its REFERENCE links). */

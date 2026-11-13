@@ -14,21 +14,29 @@ import java.io.File
 // own computer first (nothing of them is shipped by Pardes), a file of the user's where there are none.
 
 /**
- * Where Otzaria keeps the Talmud Bavli's scans: one PDF a tractate, beside its text, in its order's folder of its
- * library's `אוצריא/תלמוד בבלי` (`סדר זרעים/ברכות.pdf`, as Otzaria's library has it). Page i of such a file is the
- * tractate's amud i from ב. Pardes's library is made from Otzaria's, so a tractate's title is its file's name.
+ * Where Otzaria keeps the Talmud Bavli's scans: one PDF a tractate (`ברכות.pdf`) in a folder `תלמוד בבלי`. The app
+ * downloads them with its library and puts them beside its books database, in a folder of their own; its library's
+ * repository keeps them beside their texts, in their orders' folders (`אוצריא/תלמוד בבלי/סדר זרעים/ברכות.pdf`). Page i
+ * of such a file is the tractate's amud i from ב. Pardes's library is made from Otzaria's, so a tractate's title is its
+ * file's name.
  */
 object OtzariaScans {
     /**
-     * The Bavli folders of the libraries that Otzaria's data folders [roots] point at (`library_path.txt`, its library's
-     * folder or the `אוצריא` in it).
+     * The Bavli folders of the libraries that Otzaria's data folders [roots] point at: the folder of its books database
+     * (`library_database_path.txt`), its library's (`library_path.txt`), the `אוצריא` in that or beside it, and the
+     * library Otzaria makes by default (`books` in its data folder).
      */
     fun bavliFolders(roots: List<File> = otzariaDataRoots()): List<File> =
         roots
-            .mapNotNull { pointer(File(it, POINTER)) }
-            .flatMap { path ->
-                val library = File(path)
-                listOfNotNull(library, File(library, OTZARIA_DIR), library.parentFile?.let { File(it, OTZARIA_DIR) })
+            .flatMap { root ->
+                val library = pointer(File(root, POINTER))?.let(::File)
+                listOfNotNull(
+                    pointer(File(root, DATABASE_POINTER))?.let(::File),
+                    library,
+                    library?.let { File(it, OTZARIA_DIR) },
+                    library?.parentFile?.let { File(it, OTZARIA_DIR) },
+                    File(root, DEFAULT_LIBRARY),
+                )
             }.map { File(it, BAVLI_DIR) }
             .filter { it.isDirectory }
             .distinctBy { runCatching { it.canonicalPath }.getOrDefault(it.path) }
@@ -57,6 +65,8 @@ object OtzariaScans {
     }
 
     private const val POINTER = "library_path.txt"
+    private const val DATABASE_POINTER = "library_database_path.txt"
+    private const val DEFAULT_LIBRARY = "books"
     private const val OTZARIA_DIR = "אוצריא"
     private const val BAVLI_DIR = "תלמוד בבלי"
     private val BYTE_ORDER_MARK = Char(0xFEFF)

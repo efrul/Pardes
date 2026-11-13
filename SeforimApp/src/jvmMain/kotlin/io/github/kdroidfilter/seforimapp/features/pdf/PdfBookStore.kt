@@ -6,6 +6,7 @@ import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.db.Pdf_book
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
+import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,9 +38,12 @@ data class PdfBook(
     val place: PdfPlace = PdfPlace(),
 )
 
+/** The book of the library's kind this PDF book is, under "הספרים שלי": in the tree, and in the reading screen. */
+fun PdfBook.asTreeBook(): Book = Book(id = myBookId(id), categoryId = MY_BOOKS_CATEGORY, sourceId = 0, title = title)
+
 /**
  * The user's PDF books, in the user DB (table pdf_book), so the backup carries the list (not the files): the book
- * tree's "הספרים שלי" ([MyPdfBooks]) and their tabs ([PdfBookTabContent]). [revision] goes up when a book is added or
+ * tree's "הספרים שלי" ([MyPdfBooks]) and the reading screen ([PdfBookReader]). [revision] goes up when a book is added or
  * removed, not when one is read further.
  */
 @Inject
@@ -97,6 +101,9 @@ class PdfBookStore(
         withContext(Dispatchers.IO) { queries.delete(id) }
         _revision.update { it + 1 }
     }
+
+    /** The book of the library's kind that the PDF book of the book id [bookId] is, for the reading screen; else null. */
+    suspend fun asBook(bookId: Long): Book? = pdfIdOf(bookId)?.let { book(it) }?.asTreeBook()
 
     private fun Pdf_book.toBook(): PdfBook = PdfBook(id, File(path), title, PdfPlace(page.toInt(), pageOffset.toInt(), zoom.toFloat()))
 }

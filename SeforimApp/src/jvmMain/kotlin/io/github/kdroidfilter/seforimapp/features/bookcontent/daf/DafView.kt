@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.LocalTextContextMenu
@@ -171,14 +173,15 @@ internal fun firstLines(toc: List<TocEntry>): Map<String, Long> {
 }
 
 /**
- * A tab's tractate shown as its Vilna page in the text view ([book]), and what a click on a word selects: a segment
- * ([onSelectLine], with whether Ctrl or Cmd was held), or a passage ([onSelectPassage]: the segment, the comments, their
- * books).
+ * A tab's tractate shown as its Vilna page in the text view ([book]), or as its scan in the page's place ([scan],
+ * DafScanReader), and what a click on a word of the page selects: a segment ([onSelectLine], with whether Ctrl or Cmd
+ * was held), or a passage ([onSelectPassage]: the segment, the comments, their books).
  */
 class DafMode(
     val book: Book,
     val onSelectLine: (lineId: Long, withModifier: Boolean) -> Unit,
     val onSelectPassage: (lineId: Long, commentIds: Set<Long>, commentBookIds: Set<Long>) -> Unit,
+    val scan: Boolean = false,
 )
 
 /**
@@ -390,6 +393,11 @@ private fun DafPages(
     val byName = remember(file) { file.amudim.associateBy { it.amud } }
     val index by produceState<DafIndex?>(null, file, order) { value = withContext(Dispatchers.Default) { DafIndex(file, order) } }
     val places = index?.places.orEmpty()
+    // Pardes: the amudim two side by side, as a Gemara open (request 47): the list's items are rows of them then, their
+    // lines' places still the order's
+    val spreads by graph.appSettings.pageSpreadsFlow
+        .collectAsState()
+    val rows = remember(order, spreads) { if (spreads) DafSpreads(order) else null }
     // The tractate's usual block: one scale for all its amudim, each as tall as printed
     val blockWidth =
         remember(file) {
@@ -411,8 +419,6 @@ private fun DafPages(
     // The reader's review of the tractate (DafReview.kt): its actions in the menu always, its marks on the lines and
     // its moves on the pages while the daf's marks are shown (the end bar's button)
     val marksShown by graph.appSettings.dafMarksFlow.collectAsState()
-    // The page's scan in the daf's place (DafScanView), while the end bar's button says so
-    val scanShown by graph.appSettings.dafScanFlow.collectAsState()
     var review by remember(file) { mutableStateOf<DafReviewFile?>(null) }
     LaunchedEffect(file) { review = withContext(Dispatchers.IO) { reviews.of(file) } }
     val scope = rememberCoroutineScope()
@@ -461,11 +467,13 @@ private fun DafPages(
     ) {
         val viewport = constraints.maxWidth.toFloat()
         val padding = with(density) { PagePadding.toPx() }
-        val base = minOf(viewport - 2 * padding, with(density) { MAX_PAGE_WIDTH.dp.toPx() }).coerceAtLeast(1f)
+        // Pardes: two amudim side by side share the view (request 47)
+        val columns = if (rows != null) 2 else 1
+        val base = minOf(viewport / columns - 2 * padding, with(density) { MAX_PAGE_WIDTH.dp.toPx() }).coerceAtLeast(1f)
         val pageWidth = base * zoom
         val perPoint = pageWidth / blockWidth
         // As wide as the view, or as the page once the zoom makes it wider (a wider amud takes some of its margin)
-        val contentWidth = maxOf(viewport, pageWidth + 2 * padding)
+        val contentWidth = maxOf(viewport, (pageWidth + 2 * padding) * columns)
         val titleHeight = with(density) { TitleHeight.toPx() }
         val viewportHeight = constraints.maxHeight.toFloat()
         val currentPlaces by rememberUpdatedState(places)
@@ -487,46 +495,41 @@ private fun DafPages(
             listState.requestScrollToItem(index, shown.offset)
         }
 
-        // Moves the list to its item [index], [offset] pixels down it: unseen while the scan is shown, the list not laid
-        // out then (scrollToItem would wait for its first layout), for the scan to follow it (DafScanView)
-        suspend fun moveTo(
-            index: Int,
-            offset: Int = 0,
-        ) {
-            if (scanShown) listState.requestScrollToItem(index, offset) else listState.scrollToItem(index, offset)
-        }
+        // Pardes: the list's item of the amud at [amud] in the order, and the amud read first in its item [item] (its
+        // row's right one when they are two a row, request 47)
+        fun itemOfAmud(amud: Int): Int = rows?.rowOf(amud) ?: amud
+
+        fun amudOfItem(item: Int): Int = rows?.rows?.getOrNull(item)?.first ?: item
 
         // Brings the line of the library [id] into view, a little below the view's top, unless it is in view
         suspend fun reveal(
             id: Long,
             always: Boolean,
         ) {
-            val (index, top) = currentPlaces[id] ?: return
+            val (amud, top) = currentPlaces[id] ?: return
+            val index = itemOfAmud(amud)
             val y = titleHeight + top * currentPerPoint
             val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
             val shown = item != null && item.offset + y >= 0 && item.offset + y + titleHeight <= listState.layoutInfo.viewportEndOffset
-            if (always || !shown) moveTo(index, (y - titleHeight).toInt().coerceAtLeast(0))
+            if (always || !shown) listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
         }
 
         // Opens at the Gemara's segment [id]: the line it begins on at the view's very top (an amud's first line: the
         // amud's own top), where the daf's place reads that segment again (DafIndex.gemaraAt)
         suspend fun openOn(id: Long) {
-            val (index, top) = currentPlaces[id] ?: return
-            val opensAmud = currentIndex?.gemaraTop(index) == top
-            moveTo(index, if (opensAmud) 0 else (titleHeight + top * currentPerPoint).toInt())
+            val (amud, top) = currentPlaces[id] ?: return
+            val opensAmud = currentIndex?.gemaraTop(amud) == top
+            listState.scrollToItem(itemOfAmud(amud), if (opensAmud) 0 else (titleHeight + top * currentPerPoint).toInt())
         }
-        // The keys turn the scan's pages while it is shown (DafScanView)
-        if (!scanShown) {
-            control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
-            control.edge = { end ->
-                if (end) {
-                    // The last amud's end, not its top: the list stops scrolling there (an amud is a few thousand
-                    // pixels tall at most, far less than this)
-                    listState.scrollToItem((order.size - 1).coerceAtLeast(0))
-                    listState.scrollBy(1_000_000f)
-                } else {
-                    listState.scrollToItem(0)
-                }
+        control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP) }
+        control.edge = { end ->
+            if (end) {
+                // The last amud's end, not its top: the list stops scrolling there (an amud is a few thousand
+                // pixels tall at most, far less than this)
+                listState.scrollToItem(((rows?.rows?.size ?: order.size) - 1).coerceAtLeast(0))
+                listState.scrollBy(1_000_000f)
+            } else {
+                listState.scrollToItem(0)
             }
         }
         control.toLine = { id -> reveal(id, always = false) }
@@ -561,20 +564,31 @@ private fun DafPages(
             }
         }
 
+        // Pardes: the same segment at the top when the amudim go two a row, or one again (request 47): where the daf was
+        // before, read as the list's items were then
+        var rowsShown by remember { mutableStateOf(spreads) }
+        val before = remember(spreads) { if (rowsShown != spreads) control.where()?.topLineId else null }
+
         // Where the daf is: the Gemara's segment read at the view's top, and whether the tab's line is in view
         val currentLine by rememberUpdatedState(lineId)
         control.where = where@{
             val comments = currentIndex ?: return@where null
-            val first = listState.firstVisibleItemIndex
+            val first = amudOfItem(listState.firstVisibleItemIndex)
             val top = (listState.firstVisibleItemScrollOffset - titleHeight) / currentPerPoint
             val topLine = comments.gemaraAt(first, top) ?: return@where null
             val shown =
                 currentLine?.let(comments.places::get)?.let { (index, y) ->
-                    val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                    val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == itemOfAmud(index) }
                     val at = titleHeight + y * currentPerPoint
                     item != null && item.offset + at >= 0 && item.offset + at <= listState.layoutInfo.viewportEndOffset
                 } == true
             DafPlace(topLine, shown, onComment = focused?.let { it in currentPassage?.targetLineIds.orEmpty() } == true)
+        }
+
+        LaunchedEffect(spreads) {
+            if (rowsShown == spreads) return@LaunchedEffect
+            rowsShown = spreads
+            before?.let { openOn(it) }
         }
 
         // The tab's line in view: once the places are known, then whenever it changes or the tab asks. At first the place
@@ -610,9 +624,9 @@ private fun DafPages(
                                 ?.heRef
                                 ?.let(::amudOf)
                     }.getOrNull()
-                val index = amud?.let(order::indexOf) ?: -1
+                val index = amud?.let(order::indexOf)?.takeIf { it >= 0 }?.let(::itemOfAmud) ?: -1
                 if (index >= 0 && (!revealed || listState.layoutInfo.visibleItemsInfo.none { it.index == index })) {
-                    moveTo(index)
+                    listState.scrollToItem(index)
                 }
             } else if (opening != null) {
                 openOn(id)
@@ -633,6 +647,69 @@ private fun DafPages(
                 }
         }
 
+        // An amud of the list, [name] (none: its side of a row left empty), as wide as [modifier] says in a row of two
+        @Composable
+        fun AmudColumn(
+            name: String?,
+            modifier: Modifier = Modifier,
+        ) {
+            if (name == null) {
+                Box(modifier)
+                return
+            }
+            val amud = byName[name]
+            Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.fillMaxWidth().height(TitleHeight), contentAlignment = Alignment.BottomCenter) {
+                    Text(
+                        "${file.tractateHe} ${amudTitle(name)}",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = JewelTheme.globalColors.text.info,
+                    )
+                }
+                if (amud == null) {
+                    Text(
+                        stringResource(Res.string.daf_amud_missing),
+                        Modifier.padding(vertical = 48.dp),
+                        color = JewelTheme.globalColors.text.info,
+                    )
+                } else {
+                    AmudItem(
+                        book = book,
+                        amud = amud,
+                        range = selection?.takeIf { it.first == name }?.second,
+                        onRange = { range -> selection = range?.let { name to it } },
+                        onPress = { keys.requestFocus() },
+                        perPoint = perPoint,
+                        layouts = layouts,
+                        measurer = measurer,
+                        density = density,
+                        gemara = gemara,
+                        rashi = rashi,
+                        ink = ink,
+                        color = focus,
+                        marked = marked,
+                        passage = passage,
+                        onSelectLine = selectLine,
+                        onSelectPassage = selectPassage,
+                        onFocusComment = { focused = it },
+                        onContextLine = onContextLine,
+                        review = review,
+                        onSay = { lines, reason, said ->
+                            onReview { it.say(file, amud, lines, reason, said) }
+                            // What the reader has just said is seen on the page
+                            if (said) graph.appSettings.setDafMarksShown(true)
+                        },
+                        onMark = { mark -> onReview { it.mark(file, mark) } },
+                        onWordInText = onWordInText,
+                        find = find,
+                        modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
+                    )
+                }
+            }
+        }
+
         val hScroll = rememberScrollState()
         Box(
             Modifier
@@ -640,73 +717,21 @@ private fun DafPages(
                 .horizontalScroll(hScroll)
                 .sidewaysPan(hScroll, rtl),
         ) {
-            if (scanShown) {
-                DafScanView(
-                    book = book,
-                    tractateHe = file.tractateHe,
-                    order = order,
-                    listState = listState,
-                    control = control,
-                    pageWidth = with(density) { pageWidth.toDp() },
-                    contentWidth = with(density) { contentWidth.toDp() },
-                )
-                return@Box
-            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.width(with(density) { contentWidth.toDp() }).fillMaxHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                itemsIndexed(order, key = { _, amud -> amud }) { _, name ->
-                    val amud = byName[name]
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.fillMaxWidth().height(TitleHeight), contentAlignment = Alignment.BottomCenter) {
-                            Text(
-                                "${file.tractateHe} ${amudTitle(name)}",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                color = JewelTheme.globalColors.text.info,
-                            )
-                        }
-                        if (amud == null) {
-                            Text(
-                                stringResource(Res.string.daf_amud_missing),
-                                Modifier.padding(vertical = 48.dp),
-                                color = JewelTheme.globalColors.text.info,
-                            )
-                        } else {
-                            AmudItem(
-                                book = book,
-                                amud = amud,
-                                range = selection?.takeIf { it.first == name }?.second,
-                                onRange = { range -> selection = range?.let { name to it } },
-                                onPress = { keys.requestFocus() },
-                                perPoint = perPoint,
-                                layouts = layouts,
-                                measurer = measurer,
-                                density = density,
-                                gemara = gemara,
-                                rashi = rashi,
-                                ink = ink,
-                                color = focus,
-                                marked = marked,
-                                passage = passage,
-                                onSelectLine = selectLine,
-                                onSelectPassage = selectPassage,
-                                onFocusComment = { focused = it },
-                                onContextLine = onContextLine,
-                                review = review,
-                                onSay = { lines, reason, said ->
-                                    onReview { it.say(file, amud, lines, reason, said) }
-                                    // What the reader has just said is seen on the page
-                                    if (said) graph.appSettings.setDafMarksShown(true)
-                                },
-                                onMark = { mark -> onReview { it.mark(file, mark) } },
-                                onWordInText = onWordInText,
-                                find = find,
-                                modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
-                            )
+                if (rows == null) {
+                    itemsIndexed(order, key = { _, amud -> amud }) { _, name -> AmudColumn(name) }
+                } else {
+                    // Pardes: two amudim a row (request 47), the right one first in a view laid out from the right
+                    val width = with(density) { (pageWidth + 2 * padding).toDp() }
+                    items(rows.rows, key = { "${it.left}:${it.right}" }) { row ->
+                        Row {
+                            val (first, second) = if (rtl) row.right to row.left else row.left to row.right
+                            AmudColumn(first?.let(order::getOrNull), Modifier.width(width))
+                            AmudColumn(second?.let(order::getOrNull), Modifier.width(width))
                         }
                     }
                 }
