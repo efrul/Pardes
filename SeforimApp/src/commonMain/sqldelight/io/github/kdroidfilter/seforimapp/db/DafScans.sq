@@ -1,0 +1,16 @@
+-- Pardes: the scan the user linked to a tractate (request 41 of docs/DESKTOP_STAGE2.md), a PDF whose page i is its amud
+-- i from ב., shown in the daf view in place of the daf Pardes draws (features/bookcontent/daf/DafScans.kt). Kept by
+-- the tractate's title, so that a new library, whatever ids it gives, keeps it. Without one, Otzaria's scan is used.
+CREATE TABLE IF NOT EXISTS daf_scan (
+    tractate TEXT NOT NULL PRIMARY KEY,
+    path TEXT NOT NULL
+);
+
+select:
+SELECT path FROM daf_scan WHERE tractate = :tractate;
+
+upsert:
+INSERT OR REPLACE INTO daf_scan(tractate, path) VALUES (:tractate, :path);
+
+delete:
+DELETE FROM daf_scan WHERE tractate = :tractate;
