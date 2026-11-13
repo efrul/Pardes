@@ -13,6 +13,12 @@ if (!brandDir.isDirectory()) throw new GradleException("Unknown brand '$brand': 
 // The brand's Kotlin (Brand.APP_ID, Brand.settings() and the other values the app reads at run time)
 kotlin.sourceSets.jvmMain.kotlin.srcDir(new File(brandDir, 'kotlin'))
 
+// The reading of PDF files (request 28 of docs/DESKTOP_STAGE2.md: the user's PDF books, features/pdf): Nucleus's binding
+// of PDFium. Its JAR holds PDFium for every platform; the native image takes the Windows x64 one only
+// (src/graalvm/reachability-metadata.json), the testers' builds being Windows ones. Zayit's brand takes it too, as both
+// brands compile features/pdf
+kotlin.sourceSets.jvmMain.dependencies { implementation('dev.nucleusframework:pdfium-jvm:159.0.8152.0') }
+
 if (brand == 'zayit') return
 
 def props = new Properties()
@@ -40,11 +46,6 @@ appSources.exclude { it.file.path.replace('\\', '/').contains('/addons/siddur/di
 appSources.srcDir('addons/siddur/open/kotlin')
 kotlin.sourceSets.jvmMain.dependencies { implementation(project(':siddur-open')) }
 kotlin.sourceSets.jvmTest.kotlin.srcDir('addons/siddur/open-test/kotlin')
-
-// The reading of PDF files (request 28 of docs/DESKTOP_STAGE2.md), an experiment behind a hidden switch
-// (features/pdf/PdfReaderTool.kt): Nucleus's binding of PDFium. Its JAR holds PDFium for every platform; the native
-// image takes the Windows x64 one only (src/graalvm/reachability-metadata.json), the testers' builds being Windows ones
-kotlin.sourceSets.jvmMain.dependencies { implementation('dev.nucleusframework:pdfium-jvm:159.0.8152.0') }
 
 def app = nucleus.application
 app.graalvm.imageName = value('imageName')

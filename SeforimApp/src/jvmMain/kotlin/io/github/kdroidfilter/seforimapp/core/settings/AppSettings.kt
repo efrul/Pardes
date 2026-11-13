@@ -489,6 +489,20 @@ class AppSettings(
         settings[KEY_FEEDBACK_SENT_PREFIX + kind] = at
     }
 
+    // Pardes: where a PDF book the user adds is kept (PdfKeep's name), asked at the first one: null until then; and the
+    // folder they chose for it
+    fun getPdfKeep(): String? = settings.getStringOrNull(KEY_PDF_KEEP)?.ifBlank { null }
+
+    fun getPdfKeepFolder(): String? = settings.getStringOrNull(KEY_PDF_KEEP_FOLDER)?.ifBlank { null }
+
+    fun setPdfKeep(
+        keep: String,
+        folder: String?,
+    ) {
+        settings[KEY_PDF_KEEP] = keep
+        settings[KEY_PDF_KEEP_FOLDER] = folder.orEmpty()
+    }
+
     /** Writes the settings to disk now (Java preferences do it within 30 s otherwise), before a step that relies on them. */
     fun flush() {
         // The app's node is under the user root, whose flush writes its descendants
@@ -971,6 +985,8 @@ class AppSettings(
         private const val KEY_FEEDBACK_ASKED = "feedback_asked"
         private const val KEY_FEEDBACK_AUTO_SEND = "feedback_auto_send"
         private const val KEY_FEEDBACK_KIND_PREFIX = "feedback_kind_"
+        private const val KEY_PDF_KEEP = "pdf_keep"
+        private const val KEY_PDF_KEEP_FOLDER = "pdf_keep_folder"
         private const val KEY_PERSIST_SESSION = "persist_session"
         private const val KEY_KEEP_SCREEN_AWAKE_ON_BOOK = "keep_screen_awake_on_book"
         private const val KEY_ERROR_REPORTING = "error_reporting"
