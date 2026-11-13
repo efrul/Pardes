@@ -27,7 +27,6 @@ import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
-import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.MikraotView
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePlaces
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
@@ -331,17 +330,6 @@ private fun BookContentPanelContent(
                             if (closed) onEvent(BookContentEvent.ToggleCommentaries)
                             closed
                         },
-                    )
-                }
-                // Pardes: the Chumash as Mikraot Gedolot (request 21, a prototype), over its text: its pages from the
-                // selected verse's chapter on, with the commentators the commentaries pane shows for it
-                if (uiState.content.dafView && selectedBook.isChumash) {
-                    MikraotView(
-                        book = selectedBook,
-                        lineId = uiState.content.primarySelectedLineId,
-                        selection = uiState.content.commentatorSelection(selectedBook.id),
-                        listed = { providers.getCommentatorGroupsForLine(it).listedCommentators() },
-                        modifier = paneCardModifier.fillMaxSize(),
                     )
                 }
             }
