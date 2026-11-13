@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (243 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (246 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -3253,6 +3253,53 @@ branch each in the `when`s over the destinations (`TabsContent.kt`, `TabsViewMod
   file kept; the tree's rows and their ids.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's `StudyPlanStoreTest` (an in-memory user DB).
+- **Tests:** it is one (unit).
+
+### The scan of the page in the daf view
+
+Request 41 (`docs/DESKTOP_STAGE2.md`, 2026-11-13): a switch in the Gemara's daf view to the scan of the page, "גם כי
+יש כאלה שמעדיפים מקור וגם להשוואה בקלות". Where the scans come from, as the user decided that day: Otzaria's on the
+user's own computer first (nothing of them is shipped by Pardes: they are of a modern edition whose margins are not
+public domain), a file the user links to a tractate where there are none. Otzaria's library keeps one PDF a tractate
+beside its text (`אוצריא/תלמוד בבלי/סדר זרעים/ברכות.pdf`), and page i of such a file is the tractate's amud i from ב.
+This first step finds a tractate's scan and keeps the files linked; the view and its switch follow.
+
+#### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/DafScans.sq`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 16 lines.
+- **What:** the table `daf_scan` (a tractate's title, the file the user linked to it as its scan) and its queries
+  `select`, `upsert` and `delete`.
+- **Reached from:** `DafScans.kt` (through SQLDelight's generated `UserSettingsDb`).
+- **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`, and Pardes's `CommentatorDefaults.sq`,
+  which keeps a book by its title so that a new library finds it.
+- **Tests:** `DafScansTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScans.kt`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 100 lines.
+- **What:** `OtzariaScans`: `bavliFolders` (the Talmud Bavli's folders of the libraries that Otzaria's data folders
+  point at with `library_path.txt`, UTF-8 with a byte order mark: the library's folder, the `אוצריא` in it, or the one
+  beside it) and `find` (a tractate's `<title>.pdf` in one of them, or in one of their orders' folders, by name). And
+  `DafScans`, `@Inject @SingleIn(AppScope::class)`: `of` (the file linked to a tractate, else Otzaria's, its folders
+  read once a start), `linked`, `link` and `unlink`, in the user DB.
+- **Reached from:** `DafScansTest`; the daf view, once its switch is built.
+- **Follows:** Pardes's `OtzariaSearches` (`otzariaDataRoots`, the pointer file read the same way), and Zayit's
+  user-DB stores (`Dispatchers.IO`).
+- **Tests:** `DafScansTest`.
+- **Notes:** whether Otzaria's install brings its library's PDFs to the user's computer was not found (the agents' report
+  in pardes-rashi-ocr, `docs/agents/2026-11-13-otzaria-library-pdfs`): where it does not, the user links a file.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScansTest.kt`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 77 lines.
+- **What:** a tractate's scan found in its order's folder of the library Otzaria's pointer names (with its byte order
+  mark), or right in the Bavli's folder when the pointer names the library's `אוצריא`; none without Otzaria; a file
+  linked to a tractate kept and let go.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's `UserFontsTest` (a temporary folder) and `StudyPlanStoreTest` (an in-memory user DB).
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is
