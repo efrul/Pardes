@@ -12,8 +12,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** The size of a line's letters to its box's height: the box spans the letters' ascenders and descenders. */
-private const val GEMARA_SIZE = 0.92f
-private const val RASHI_SIZE = 0.95f
+internal const val GEMARA_SIZE = 0.92f
+internal const val RASHI_SIZE = 0.95f
 private const val BIG_SIZE = 0.9f
 
 /**
@@ -126,6 +126,11 @@ internal fun layoutAmud(
             text,
             setter.column("R", rashi, isGemara = false, commentary),
             setter.column("T", rashi, isGemara = false, commentary, lead),
+            // A book's daf's (BookDafLayout): the commentaries left of its text, as Rashi's, the commentators' names, and
+            // the targum beside a verse, in square letters of a commentary's size
+            setter.column(LEFT_COLUMN, rashi, isGemara = false, commentary),
+            setter.column(NAME_COLUMN, gemara, isGemara = true, sizes?.gemara?.times(scale)),
+            setter.column(TARGUM_COLUMN, gemara, isGemara = true, commentary),
         )
     // Drawn last, on top of the runs whose lines they stand beside
     val bigRuns = columns.flatMap { it.bigRuns(gemara) }

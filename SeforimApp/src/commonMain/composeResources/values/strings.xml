@@ -403,6 +403,8 @@
     <string name="shnayim_mikra_mode_tooltip">שנים מקרא ואחד תרגום: כל פסוק פעמיים ואחריו התרגום</string>
     <string name="daf_view">צורת הדף</string>
     <string name="daf_view_tooltip">צורת הדף: הגמרא, רש״י ותוספות כפי שנדפסו בש״ס וילנא, שורה בשורה</string>
+    <string name="book_daf_tooltip">צורת הדף: הטקסט באמצע, והמפרשים שמסומנים בחלונית המפרשים סביבו</string>
+    <string name="book_daf_no_commentators">לא סומנו מפרשים לספר הזה. המפרשים שתסמנו בחלונית המפרשים יוצגו סביב הטקסט.</string>
     <string name="daf_marks">סימונים</string>
     <string name="daf_marks_tooltip">סימוני הדף: שורות שההתאמה שלהן לדפוס אינה ודאית מוצגות בהיר, והקטעים שדיווחת עליהם צבועים</string>
     <string name="daf_amud_missing">עמוד זה עוד חסר בצורת הדף</string>

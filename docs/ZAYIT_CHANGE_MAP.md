@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (233 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (242 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -893,10 +893,11 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +46 −14 lines. Feature: Daf view, More links, Unflagged books.
+- **Change:** modified, +51 −14 lines. Feature: Daf view, More links, Unflagged books, A book's daf.
 - **What:**
-  - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
-    (`selectedBook.isBavli`), sending `ToggleDafView`.
+  - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a book that has a daf
+    (`selectedBook.hasDaf`: a Bavli tractate, or a book with commentaries, its own pages), sending `ToggleDafView`;
+    its tooltip is the tractate's (`daf_view_tooltip`) or another book's (`book_daf_tooltip`).
   - With a daf shown (`uiState.content.dafView` of a Bavli tractate), `DafMarksButton()` stands in the diacritics
     button's place: the printed page has no nikud to hide, and the daf's marks are shown or hidden there.
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
@@ -1057,14 +1058,16 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/BookContentPanel.kt`
 
-- **Change:** modified, +189 −54 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept.
+- **Change:** modified, +196 −54 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept, A book's daf.
 - **What:**
   - `detachedCommentatorIds`: the split-off commentators' book ids, from the names and the loaded line connections;
     their passages answer in the text as those of the commentaries pane's page do (`passageCommentatorIds`).
   - The hover prefetch of commentaries follows the book's `commentatorSelection`: with whole groups checked, each line
     prefetches its own commentators of those groups.
-  - The call to `BookContentView` is wrapped in a `run { … }` that builds a `DafMode` for a Bavli tractate in daf view
-    (its line clicks select the line, its passage clicks call `selectDafPassage`) and passes it as `daf`.
+  - The call to `BookContentView` is wrapped in a `run { … }` that builds a `DafMode` for a book that has a daf in daf
+    view (`hasDaf`; its line clicks select the line, its passage clicks call `selectDafPassage`), with the commentators
+    the commentaries pane shows (`DafCommentators`: the book's `commentatorSelection` and the providers'
+    `loadLineConnections`), and passes it as `daf`.
   - `onShowCommentaries` passed to `BookContentView`: opens the commentaries pane when it is closed and says whether
     it was, for a comment selected on the daf to be read there once the text is shown.
   - New private `selectDafPassage`: shows the passage's commentators in the commentaries pane's selection when they
@@ -1084,10 +1087,11 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +378 −219 lines. Feature: Daf view.
+- **Change:** modified, +381 −219 lines. Feature: Daf view, A book's daf.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
-    `DafView` in place of the lines' `LazyColumn`.
+    `DafView` in place of the lines' `LazyColumn`; for a book that is no tractate, the commentators (`daf.commentators`)
+    and the text's diacritics go to it too.
   - The daf's own `LazyListState` and `DafControl`; its own zoom by the same gestures (`rememberTextZoom` over
     `dafZoomFlow`, in percent, `PERCENT = 100f`, given to `AppSettings.zoomDaf`, which zooms the text with it);
     `dafShown`/`dafHidden` while it is shown, so the zoom keys know.
@@ -1620,8 +1624,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +317 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 298 Hebrew strings added in nineteen blocks,
+- **Change:** modified, +319 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 300 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1631,7 +1635,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     page's name in the sidebar, `settings_category_feedback`, after Zayit's `settings_category_data`; and under a comment, after `onboarding_library_folder_*`, the
     onboarding's step: `onboarding_feedback_*` (7);
   - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (5), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
-    `daf_view_tooltip`, `daf_marks` and `daf_marks_tooltip` (the marks' button), `daf_missing`, `daf_missing_hint`,
+    `daf_view_tooltip`, `book_daf_tooltip` and `book_daf_no_commentators` (a book's own daf), `daf_marks` and
+    `daf_marks_tooltip` (the marks' button), `daf_missing`, `daf_missing_hint`,
     `daf_amud_missing` and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
   - the existing Zayit library: `onboarding_existing_library_*` (5); and under a comment, after Zayit's
@@ -2175,8 +2180,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
-- **Feature:** Daf view.
-- **Size:** 1348 lines.
+- **Feature:** Daf view, A book's daf.
+- **Size:** 1138 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
@@ -2190,9 +2195,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   place is still its own (back from the text, which was not scrolled), and keeps the place at its top when its scale
   changes (the zoom, the view's width, also while the text was shown: `DafScale`, `requestScrollToItem`).
   `DafControl.place` says where it is (`DafPlace`: that segment, whether the tab's selected line is in view, whether a
-  comment is selected by a click on itself), for the text to open in the same state. Also the amud helpers (`isBavli`, `amudOf`, `amudIndex`, `amudTitle`,
-  `firstLines`), the page's marks (`dafHighlight`: passage, segments, their comments), clicks
-  (`clickOn`, `segmentOf`), the links read for a page (`loadLinks`), the layouts folder (`rememberDafLayouts`), a missing
+  comment is selected by a click on itself), for the text to open in the same state. Also the amud helpers (`isBavli`, `hasDaf`: a tractate's
+  daf or another book's, `amudOf`, `amudIndex`, `amudTitle`, `firstLines`), the layouts folder (`rememberDafLayouts`), a missing
   layout's page with its download (`MissingLayout`, `DownloadLayout`), the review's menu items and tints, `DafFind`, and a
   sideways pan as the commentaries' pages turn. The review is read with the tractate and its items are always in the menu (`reviewItems`), while its marks are
   tinted and its moves made only when the daf's marks are shown (`asShown`, `AppSettings.dafMarksFlow`, which also
@@ -2202,16 +2206,20 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   selection covers (`reviewedAt`: the reader's own selection when the word is in it, or the selected segment's or
   comment's words on the amud, else the word's line), each written through `DafReviews.say`, one write at a time
   (`reviewing`); a line marked before the two reasons has "ביטול הסימון של השורה" too. Over a tractate's pages,
-  `DafUpdateLine` (`DafUpdate.kt`) offers a newer version of its layout.
+  `DafUpdateLine` (`DafUpdate.kt`) offers a newer version of its layout. An amud's drawing tied to the library (its
+  marks, clicks, menu and links) is `DafLinkedAmud.kt`'s `LinkedAmud`, shared with a book's daf: `AmudItem` lays the
+  amud out and hands it the review's tints, menu items and lighter unsure lines (`AmudReview`). For another book than
+  a tractate, `DafView` shows `BookDafView` (`DafMode.commentators`, `DafCommentators`, and the text's `diacritics`);
+  `DafScale.page` keeps a zoom's place on its pages, and `awaitPassage` and `sidewaysPan` are its too.
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
-  (`DafMode`, `isBavli`), `VerticalBars.kt` (`isBavli`).
+  (`DafMode`, `DafCommentators`, `hasDaf`), `VerticalBars.kt` (`isBavli`, `hasDaf`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
   composables have no UI test.
-- **Notes:** at 1,348 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
-  (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
-  parts (pages, review, missing layout, marks).
+- **Notes:** at 1,138 lines, with 18 top-level functions, it is beyond `detekt.yml`'s limits (600 lines for a class,
+  15 functions for a file), as some of Zayit's largest files are; its marks and links went to `DafLinkedAmud.kt`, and
+  it could be split further by its parts (pages, review, missing layout).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayout.kt`
 
@@ -2232,7 +2240,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafSetting.kt`
 
 - **Feature:** Daf view.
-- **Size:** 690 lines.
+- **Size:** 695 lines.
 - **What:** typesetting an amud: `layoutAmud` sets every line in runs (a column's lines one below the other at its
   pitch), one size of letters per column, made smaller for a line only as far as its words need, its spaces widened to
   fill its box, a big word's neighbours set beside it, an overfull line given its empty neighbour's room. `DafSizes`
@@ -2245,7 +2253,9 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   dibbur goes on from the line above or after a big first word (`firsts`, `Marks`); a big first word of Tosafot is
   such a word too, set that size and no longer by its box's height (the box is two lines high, the word is not).
   Rashi's dibbur stays bold in its own script. The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`,
-  `Marks`) and the constants of the printed page's proportions.
+  `Marks`) and the constants of the printed page's proportions. A book's daf's columns are set too (`LEFT_COLUMN`,
+  `NAME_COLUMN`, `TARGUM_COLUMN`, BookDafLayout.kt), and `GEMARA_SIZE` and `RASHI_SIZE` are `internal`, for its words'
+  widths.
 - **Reached from:** `DafView.kt` (`layoutAmud`, `DafSizes`).
 - **Follows:** Pardes's own.
 - **Tests:** `DafPageTest` (evenly spaced runs, words in order, one size of letters with a tractate's sizes, the
@@ -2345,10 +2355,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAmudLinks.kt`
 
 - **Feature:** Daf view.
-- **Size:** 100 lines.
+- **Size:** 114 lines.
 - **What:** one amud's words tied to the library for its clicks and marks: `DafAmudLinks` (each word's library line, each
   comment's Gemara line through the library's COMMENTARY links, read once a page, and which Gemara words each dibbur
-  quotes) and `passageAt` (what a click or the pointer on a word stands for).
+  quotes) and `passageAt` (what a click or the pointer on a word stands for). A book's daf gives it the passages Zayit's anchors mark (`passages`): a comment an anchor puts on words quotes those
+  words, whatever its dibbur.
 - **Reached from:** `DafView.kt`; `BookContentView.kt` (`passageAt`).
 - **Follows:** the text view's passages (`SelectedPassage`) and the library's links.
 - **Tests:** `DafLinksTest`.
@@ -3039,6 +3050,146 @@ its text is copied. Hooks: `strings.xml`, `reachability-metadata.json`; the Tool
 - **Size:** 22 lines.
 - **What:** the switch is on when the environment or the property lists "pdf", in any case and among others, and off
   otherwise; the tool is offered exactly when the switch is on.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's unit tests (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### A book's daf (an experiment)
+
+Request 21 (`docs/DESKTOP_STAGE2_PLAN.md`), as the user asked on 2026-11-13 and then stopped the same day, on this
+experiment branch only (`experiment/book-daf`, out of main): any book with commentaries as a daf of its own, in the
+text view's frame and colors, its text with the commentators the commentaries pane shows for its lines, set as books
+of its kind are printed (around the text as the Gemara, or verse by verse as the Mikraot Gedolot for the Tanakh), and
+drawn, clicked and selected by the tractate's daf's own code, a part of which was made shared for it
+(`DafLinkedAmud.kt`). Hooks: `VerticalBars.kt` (`hasDaf`), `BookContentPanel.kt` (`DafMode` with `DafCommentators`),
+`BookContentView.kt` (two arguments); in Pardes's files, `DafView.kt` (`BookDafView` for another book),
+`DafSetting.kt` (the columns), `DafAmudLinks.kt` (`passages`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafLayout.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 229 lines.
+- **What:** the model of a book's daf (`DafSegment`, `DafCommentary`, `DafTargum`, `WordWidths`), its styles
+  (`DafStyle`: `Around`, `Verses`; `Book.dafStyle`, the Tanakh's categories verse by verse), its columns' codes
+  (`TEXT_COLUMN`, `RIGHT_COLUMN`, `LEFT_COLUMN`, `NAME_COLUMN`, `TARGUM_COLUMN`), the page's size in points
+  (`BOOK_DAF_WIDTH`, the Talmud's block, and `BOOK_DAF_HEIGHT`), and `dafPages`: a unit's lines in pages of its
+  style, as many lines a page as keep it no taller than that, one at least, a heading never last; with the shared
+  setting's pieces (`DafPageSetter`, `SetPage`, `SetWord`, `fit`, `lineSpan`, `dafLine`: each word tied to its library
+  line by the line's `u` spans, as the scans' layouts have them).
+- **Reached from:** `BookDafPlaces.kt` (`UnitSetter`), `DafAroundSetter.kt`, `DafVersesSetter.kt`, `DafSetting.kt`
+  (the columns).
+- **Follows:** the tractates' layout model (`DafLayout.kt`'s `DafAmud` and `DafLine`), which it makes.
+- **Tests:** `BookDafLayoutTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAroundSetter.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 164 lines.
+- **What:** `DafAroundSetter`, a page set around its text, as the Vilna Shas sets the Gemara: the text in the middle
+  (half the page), the commentators on both sides of it (their side by `DafCommentary.onRight`), each under its name,
+  their comments run on; a side beside the text while it runs, then under it on its half; a side that ends first leaves
+  its place to the text, and the other takes the whole width once both are alone. Three columns set line by line, the
+  highest first (`Flow`, `Paragraph`).
+- **Reached from:** `BookDafLayout.kt` (`dafPages`, `DafStyle.Around`).
+- **Follows:** the Vilna page's shape (the tractates' daf, `DafView.kt`).
+- **Tests:** `BookDafLayoutTest` (the text in the middle, a side that ends, the commentaries under the text, a side
+  alone, no commentaries, no two lines overlap, every word once, the names).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafVersesSetter.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 146 lines.
+- **What:** `DafVersesSetter`, a page set verse by verse, as the Mikraot Gedolot, after the printed edition the user
+  sent on 2026-11-13: each verse at the top of its part on the right, its targum on the left under the targum's name
+  (in square letters of a commentary's size), then each commentator's comments on it under its name in two columns,
+  the right one taking the first half of their lines, then the next verse; a heading alone across the page.
+- **Reached from:** `BookDafLayout.kt` (`dafPages`, `DafStyle.Verses`).
+- **Follows:** the Mikraot Gedolot prototype (`45f086e`, out of main), set again on the shared pieces.
+- **Tests:** `BookDafLayoutTest` (the verse, its targum, the commentator's two columns, the next verse).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafSource.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 295 lines.
+- **What:** what a book's daf reads from the library. `dafUnits`: the book's units, from each entry of its table of
+  contents to the next (a heading alone with the next, a long part in pieces of `MOST_UNIT_LINES`); `loadDafUnit`: a
+  unit's lines, the comments on each of the commentators shown on it (the commentaries pane's selection of those its
+  connections list, with their names; their sides by their first place among those met, `DafUnitLook.ranks`), each
+  comment with the first line it is on, the passages Zayit's anchors mark (`CommentAnchorIndex`, Shulchan Aruch's
+  comments), and verse by verse the targum (Onkelos where it is, else the one on most verses); `dafWords`: a line's
+  words as the text shows them (`buildAnnotatedFromHtml`), without what the diacritics hide, bold where most of their
+  letters are, with the anchors' passages; `isHeading`.
+- **Reached from:** `BookDafPlaces.kt` (`UnitSetter`, `unitsOf`).
+- **Follows:** the commentaries pane's own selection (`CommentatorSelection`, `listedCommentators`) and Zayit's
+  anchors (`CommentSegments.kt`).
+- **Tests:** `BookDafSourceTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafPlaces.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 293 lines.
+- **What:** a book's daf's units laid out and where their lines are: `UnitSetter` (a unit read, set in pages of the
+  book's style and laid out by the daf's own `layoutAmud`, one at a time), `LaidUnit` (its pages, its comments as
+  read for the arrows, the setter it was laid out by; `offset`, `offsetOf`, `placeAt`, `textAt`, `height`,
+  `pageOpenedBy`, `next`), `LaidPage` (a page, its running head, its lines' places), `PageFrame`, `DafLetters`,
+  `DafComment`, the words' widths (`measuredWidths`), `refRange` (a page's head: "בראשית א, א–ה") and `unitsOf`.
+- **Reached from:** `BookDafView.kt`.
+- **Follows:** the tractates' daf's `DafIndex` and `LayoutCache`.
+- **Tests:** none of its own; `BookDafLayoutTest` and `BookDafSourceTest` cover what it calls.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafView.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 589 lines.
+- **What:** `BookDafView`, a book's own daf in the text view's frame: its units one below the other, those in view
+  (and one on each side) laid out as they come, those in view kept as they were until laid out again when the pages
+  are set otherwise (a check in the commentaries pane, the diacritics, the fonts); a word when nothing is checked
+  (`book_daf_no_commentators`); its pages' heads; the zoom, keys, find bar, selection and menu as a tractate's
+  (`DafControl`: a page, the edges, a line brought into view, the arrows through a commentary, the place); the tab's
+  place kept (`RevealTabLine`, told once revealed) and the place kept at a zoom (`KeepPlaceAtZoom`). `DafTab` is the
+  tab's line, selection and place as the text view gives them.
+- **Reached from:** `DafView.kt` (`DafView`, for a book that is no tractate).
+- **Follows:** the tractates' daf (`DafView.kt`'s `DafPages`), its pieces shared through `DafLinkedAmud.kt`.
+- **Tests:** none; seen in the app on בראשית א and שולחן ערוך, חושן משפט ד–ז.
+- **Notes:** an experiment: detekt's `detektJvmMainSourceSet` finds `BookDafPages` too long and complex, a loop with two
+  jumps, and the file named after another declaration; the place kept over a restart was fixed last and not seen in
+  the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLinkedAmud.kt`
+
+- **Feature:** Daf view, A book's daf.
+- **Size:** 386 lines.
+- **What:** an amud's drawing tied to the library, shared by both dafs, out of `DafView.kt`'s `AmudItem`: `LinkedAmud`
+  (its links read once, the tab's marks, the user's highlights and notes, the find in page's matches, the clicks, the
+  text's menu on its selection, and a tractate's review when it has one: `AmudReview`), its parameters' classes
+  (`DafLook`, `DafMarks`, `DafClicks`, `AmudSelection`), and the functions moved from `DafView.kt` unchanged:
+  `dafTextManager`, `loadLinks` (now with the anchors' `passages`), `dafHighlight`, `clickOn`, `segmentOf`,
+  `LAYOUT_SCALE`.
+- **Reached from:** `DafView.kt` (`AmudItem`), `BookDafView.kt`.
+- **Follows:** the tractates' daf's own code, moved, not rewritten.
+- **Tests:** `DafLinksTest` (the marks and clicks).
+- **Notes:** detekt finds `LinkedAmud` too long (69 lines).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafLayoutTest.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 183 lines.
+- **What:** with words of known widths, around the text: the text in the middle and the sides beside it, a side that
+  ends first leaves its place to the text, the commentaries under the text on their halves, a side alone across under
+  it, the text across with no commentaries, no two lines overlap, every word once in order and tied to its line, a
+  name centred over its column, pages as tall as they may be with no heading last; verse by verse: the verse on the
+  right, its targum on the left, the commentator under it in two balanced columns, the next verse after them.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's unit tests (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafSourceTest.kt`
+
+- **Feature:** A book's daf.
+- **Size:** 66 lines.
+- **What:** the units from the table of contents (the lines before its first entry, a heading alone, a long part, no
+  table of contents), and a line's words as printed (joined across tags, bold, the diacritics hidden, the anchors'
+  passages, a heading).
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's unit tests (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).

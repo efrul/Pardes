@@ -1086,6 +1086,9 @@ fun BookContentView(
                 scrollToLineTimestamp = scrollToLineTimestamp,
                 onSelectLine = daf.onSelectLine,
                 onSelectPassage = daf.onSelectPassage,
+                // Another book than a tractate: its commentators around its text, in the text's diacritics
+                commentators = daf.commentators,
+                diacritics = diacritics,
                 // The menu acts on the right-clicked word's segment, as on a right-clicked line of the text
                 onContextLine = { id ->
                     selectionContext.setCurrentLineId(id)

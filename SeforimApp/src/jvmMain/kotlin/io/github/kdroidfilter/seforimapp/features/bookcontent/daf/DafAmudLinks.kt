@@ -4,7 +4,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
  * One amud's printed words tied to the library, for its clicks and marks: which library line each word is of (the
  * layout's [DafLine.u]), which Gemara line each comment on the page is on ([baseOf], the library's COMMENTARY links,
  * read once for the page), and which of the Gemara's printed words each comment's dibbur hamatchil quotes
- * ([matchLemmas], as the library knows only whole lines).
+ * ([matchLemmas], as the library knows only whole lines), or which its anchor puts it on ([passages], a book's daf's).
  */
 internal class DafAmudLinks(
     private val amud: DafAmud,
@@ -16,6 +16,11 @@ internal class DafAmudLinks(
     val anchors: Map<DafWord, DafAnchor> = emptyMap(),
     /** Each library line's plain text with diacritics, the anchors' offsets', for the find in page's matches. */
     val texts: Map<Long, String> = emptyMap(),
+    /**
+     * The passages Zayit's anchors mark in a book's lines (BookDafSource): each line's words, as indices among its words
+     * on the page, and the comments on them, which quote those words whatever their dibbur.
+     */
+    passages: Map<Long, List<Pair<IntRange, Set<Long>>>> = emptyMap(),
 ) {
     /** The comments on each Gemara line of the page, in the order they are printed. */
     val commentsOn: Map<Long, List<Long>>
@@ -54,8 +59,17 @@ internal class DafAmudLinks(
         }
         val printOrder = words.keys.withIndex().associate { (i, id) -> id to i }
         commentsOn = on.mapValues { (_, comments) -> comments.sortedBy { printOrder[it] ?: Int.MAX_VALUE } }
-        // Each commentator's comments on a segment, in the order he wrote them, in its words on the page
+        // The comments an anchor puts on words, on those; each commentator's other comments on a segment, in the order
+        // he wrote them, in its words on the page
         val quotedBy = HashMap<Long, MutableSet<DafWord>>()
+        for ((base, marked) in passages) {
+            val segment = words[base] ?: continue
+            for ((range, comments) in marked) {
+                val at = range.mapNotNull { segment.getOrNull(it) }
+                if (at.isNotEmpty()) for (comment in comments) quotedBy.getOrPut(comment) { mutableSetOf() } += at
+            }
+        }
+        val anchored = quotedBy.keys.toSet()
         for ((base, comments) in commentsOn) {
             val segment = words[base] ?: continue
             val texts =
@@ -65,7 +79,7 @@ internal class DafAmudLinks(
                         .split(' ')
                         .filter { it.isNotEmpty() }[w.word]
                 }
-            for ((_, ofOne) in comments.groupBy { bookOf[it] }) {
+            for ((_, ofOne) in comments.filterNot { it in anchored }.groupBy { bookOf[it] }) {
                 val found = matchLemmas(texts, ofOne.map { lemma[it].orEmpty() })
                 ofOne.zip(found).forEach { (comment, range) ->
                     if (range != null) quotedBy.getOrPut(comment) { mutableSetOf() } += range.map { segment[it] }
