@@ -1623,12 +1623,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +316 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 297 Hebrew strings added in nineteen blocks,
+- **Change:** modified, +317 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 298 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
-  - semantic packs: `semantic_pack_*` (35), `semantic_problem_*` (6);
+  - semantic packs: `semantic_pack_*` (36), `semantic_problem_*` (6);
   - feedback: `feedback_send_*` (41), `feedback_consent_*` (20), `search_feedback_*` (5): among them the other apps'
     rows and the publication's, with what each means, and what the settings' feedback page says of what waits; the
     page's name in the sidebar, `settings_category_feedback`, after Zayit's `settings_category_data`; and under a comment, after `onboarding_library_folder_*`, the
@@ -4011,10 +4011,16 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPack.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 165 lines.
+- **Size:** 232 lines.
 - **What:** `PendingSemanticPack.runOnce`: at the next start, before anything opens the search, a staged pack takes the
   old one's place (each old folder renamed aside, the new one moved in, the old deleted), a failed move put back, a start
-  stopped half way ended by the next, a failure told once.
+  stopped half way ended by the next, a failure told once. A failed start keeps the request and the unpacked pack
+  (2.7 GB) for the next one, counted in `pending-semantic-pack-attempts.txt` beside the request, and the
+  `MAX_ATTEMPTS`th (3) drops them; a new request starts its own count. A rename refused because the folder is in use
+  (Windows, while the app before "restart now" still has its files open) is tried again every quarter of a second for
+  ten seconds (`renameWaiting`: `AccessDeniedException` or a plain `FileSystemException`, never a name taken or a
+  folder missing). Both since 2026-11-13, step 3 of request 36 in `docs/DESKTOP_STAGE2_PLAN.md`, which the user asked
+  for whatever their Windows test shows: before, a failed start deleted the pack it had unpacked.
 - **Reached from:** `main.kt`, `SemanticPackInstaller.kt`, `SemanticPackCard.kt`.
 - **Follows:** Zayit's `PendingDbCleanup`, a step left for the next start.
 - **Tests:** `PendingSemanticPackTest`.
@@ -4034,10 +4040,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCard.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 411 lines.
+- **Size:** 419 lines.
 - **What:** Settings › ניהול נתונים's card for the semantic search: the pack in use or offered, its download or import,
   the work's progress and problems, a pack that waits for the restart named by its version while the one above it is
   said to be in use until then (the user took the old pack's line for the import's result, 2026-11-11), and how to install one with or without internet; the card comes into view when the settings were opened for it.
+  A start that could not put the pack in place is told with its reason: tried again at the next start while the pack
+  still waits (`semantic_pack_start_retry`), else dropped after `MAX_ATTEMPTS` starts (`semantic_pack_start_failed`).
   Feedback mode's switch stood in it until 2026-11-12 (it is a row of Settings › משוב), with the number of results
   graded, which no page shows now: the feedback page says how many wait to be sent.
 - **Reached from:** `DataSettingsScreen.kt` (`SemanticPackCard()`).
@@ -4047,11 +4055,14 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackViewModel.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 189 lines.
+- **Size:** 197 lines.
 - **What:** `SemanticPackViewModel`: the pack beside the library, the newest release for it, and installing one,
   downloaded or imported, with its progress; a pack that waits for the next start is known by its number (`Work.Ready`,
   from what was staged, also when the settings are opened again before the restart); a pack in use with no number is
   given the newest release's when it is that pack (`InstalledPack.named`), and so is not offered again as an update.
+  `restart` hands Nucleus's single-instance lock to the new instance first (`SingleInstanceManager.releaseForHandoff`,
+  as Nucleus's NSIS update does): `AppRestarter.restartApplication` starts it before this one has closed, and a new
+  instance that finds the lock still held quits, the pack waiting for a start by hand (2026-11-13, request 36).
 - **Reached from:** `SemanticPackCard.kt`.
 - **Follows:** Zayit's settings ViewModels.
 - **Tests:** `SemanticPackCardUiTest`.
@@ -4258,9 +4269,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 153 lines.
-- **What:** the staged pack taking the old one's place, a first pack, a failed move put back, a fresh pack whose second
-  folder cannot go in, a start stopped half way, another release of the library, a failure told once.
+- **Size:** 224 lines.
+- **What:** the staged pack taking the old one's place, a first pack, a failed move put back with the pack kept staged,
+  a fresh pack whose second folder cannot go in, a start stopped half way, another release of the library, a failure
+  told once and the pack put in place at the next start, a pack dropped at the last of its starts (and a new request's
+  own count), and the wait for a folder in use (`renameWaiting`: waited for, not for a name taken, given up after ten
+  seconds).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, on temporary folders).

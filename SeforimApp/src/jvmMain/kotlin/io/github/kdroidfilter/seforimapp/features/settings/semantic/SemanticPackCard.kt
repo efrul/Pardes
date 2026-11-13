@@ -32,6 +32,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.formatBytes
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PackProblem
+import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackInstaller
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackReleases
@@ -82,6 +83,7 @@ import seforimapp.seforimapp.generated.resources.semantic_pack_ready_version
 import seforimapp.seforimapp.generated.resources.semantic_pack_releases_page
 import seforimapp.seforimapp.generated.resources.semantic_pack_restart
 import seforimapp.seforimapp.generated.resources.semantic_pack_start_failed
+import seforimapp.seforimapp.generated.resources.semantic_pack_start_retry
 import seforimapp.seforimapp.generated.resources.semantic_pack_title
 import seforimapp.seforimapp.generated.resources.semantic_pack_unpacking
 import seforimapp.seforimapp.generated.resources.semantic_pack_unreachable
@@ -202,9 +204,15 @@ private fun PackSection(
         }
 
         WorkStatus(work, replacing = state.installed is InstalledPack.InUse)
-        // Why, in the log (PendingSemanticPack.runOnce)
-        if (state.startFailure != null) {
-            InlineInformationBanner(text = stringResource(Res.string.semantic_pack_start_failed), modifier = Modifier.fillMaxWidth())
+        // Why, from the log (PendingSemanticPack.runOnce); a pack still waiting is tried again at the next start
+        state.startFailure?.let { reason ->
+            val text =
+                if (waiting) {
+                    stringResource(Res.string.semantic_pack_start_retry, reason)
+                } else {
+                    stringResource(Res.string.semantic_pack_start_failed, reason, PendingSemanticPack.MAX_ATTEMPTS)
+                }
+            InlineInformationBanner(text = text, modifier = Modifier.fillMaxWidth())
         }
         PackButtons(state, actions, missing)
         if (missing && settled) {
