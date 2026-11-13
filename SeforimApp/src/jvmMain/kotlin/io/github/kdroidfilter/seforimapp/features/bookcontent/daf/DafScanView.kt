@@ -1,24 +1,19 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -29,7 +24,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,8 +43,7 @@ import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.dialogs.FileKitType
-import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -62,15 +55,12 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CircularProgressIndicator
 import org.jetbrains.jewel.ui.component.DefaultButton
-import org.jetbrains.jewel.ui.component.Link
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.daf_scan_change
 import seforimapp.seforimapp.generated.resources.daf_scan_choose
 import seforimapp.seforimapp.generated.resources.daf_scan_failed
 import seforimapp.seforimapp.generated.resources.daf_scan_missing
 import seforimapp.seforimapp.generated.resources.daf_scan_missing_hint
-import seforimapp.seforimapp.generated.resources.daf_scan_unlink
 import java.io.File
 
 // Pardes (requests 41, 43, 46 and 47 of docs/DESKTOP_STAGE2.md): a Talmud tractate shown as its scan, the third of its
@@ -98,7 +88,6 @@ private sealed interface ScanLoad {
 
     data class Found(
         val file: File,
-        val linked: Boolean,
     ) : ScanLoad
 }
 
@@ -122,8 +111,8 @@ private class ScanPlace(
  * top line ([openAt], else [lineId]), follows the tab's line when it is chosen ([scrollToLineTimestamp]: the table of
  * contents, a search, the arrows), and once a scroll rests tells the first line of the amud read at its top
  * ([onScroll]), where the text and the daf open. The reader's keys turn its pages through [control], as the daf's.
- * Without a scan, a word on where it is looked for and a button that links a file to the tractate; with one, a line
- * over its foot to change it. Only the tab in view holds the file.
+ * Without a scan, a word on where it is looked for and a button that chooses the folder of scanned tractates, as
+ * Settings › צורת הדף does. Only the tab in view holds the file.
  */
 @Composable
 internal fun DafScanReader(
@@ -152,47 +141,31 @@ internal fun DafScanReader(
         control.step = { false }
         control.where = { place.topLineId?.let { DafPlace(it, selectionShown = false, onComment = false) } }
     }
-    // Bumped by a link, to look for the scan again
-    var links by remember { mutableIntStateOf(0) }
-    val load by produceState<ScanLoad>(ScanLoad.Looking, book.title, links) {
-        val file = runSuspendCatching { scans.of(book.title) }.getOrNull()
-        value =
-            file?.let { ScanLoad.Found(it, linked = runSuspendCatching { scans.linked(book.title) }.getOrNull() != null) }
-                ?: ScanLoad.None
-    }
-    val choose: () -> Unit = {
-        scope.launch {
-            // Off the GTK event-loop thread, as the data screen's pickers (see pickDatabaseParts)
-            val picked =
-                withContext(Dispatchers.IO) { FileKit.openFilePicker(type = FileKitType.File(extensions = setOf("pdf"))) }
-                    ?: return@launch
-            runSuspendCatching { scans.link(book.title, File(picked.path)) }
-            links++
-        }
+    // Looked for again when the folder of scans changes
+    val folder by scans.folder.collectAsState()
+    val load by produceState<ScanLoad>(ScanLoad.Looking, book.title, folder) {
+        value = runSuspendCatching { scans.of(book.title) }.getOrNull()?.let(ScanLoad::Found) ?: ScanLoad.None
     }
     Box(modifier.fillMaxSize()) {
         when (val state = load) {
             ScanLoad.Looking -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-            ScanLoad.None -> NoScan(book.title, onChoose = choose, modifier = Modifier.align(Alignment.Center))
+            ScanLoad.None ->
+                NoScan(
+                    book.title,
+                    onChoose = { scope.launch { pickScansFolder()?.let(scans::setFolder) } },
+                    modifier = Modifier.align(Alignment.Center),
+                )
             is ScanLoad.Found -> {
                 if (LocalTabSelected.current) ScanPages(state.file, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
-                ScanLine(
-                    linked = state.linked,
-                    onChange = choose,
-                    onUnlink = {
-                        scope.launch {
-                            runSuspendCatching { scans.unlink(book.title) }
-                            links++
-                        }
-                    },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-                )
             }
         }
     }
 }
 
-/** No scan of [tractate]: where it is looked for, and a button that links a file to it ([onChoose]). */
+/** A folder picked with the system's picker, off the GTK event-loop thread as the data screen's pickers; null for none. */
+internal suspend fun pickScansFolder(): File? = withContext(Dispatchers.IO) { FileKit.openDirectoryPicker() }?.let { File(it.path) }
+
+/** No scan of [tractate]: where it is looked for, and a button that chooses the folder of scans ([onChoose]). */
 @Composable
 private fun NoScan(
     tractate: String,
@@ -211,31 +184,6 @@ private fun NoScan(
             textAlign = TextAlign.Center,
         )
         DefaultButton(onClick = onChoose) { Text(stringResource(Res.string.daf_scan_choose)) }
-    }
-}
-
-/**
- * The line at the scan's foot, over its page as the daf's own line is (DafUpdateLine): another file for it
- * ([onChange]), and, for a file linked, Otzaria's again ([onUnlink]).
- */
-@Composable
-private fun ScanLine(
-    linked: Boolean,
-    onChange: () -> Unit,
-    onUnlink: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(6.dp)
-    Row(
-        modifier
-            .clip(shape)
-            .background(JewelTheme.globalColors.panelBackground)
-            .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Link(stringResource(Res.string.daf_scan_change), onClick = onChange)
-        if (linked) Link(stringResource(Res.string.daf_scan_unlink), onClick = onUnlink)
     }
 }
 

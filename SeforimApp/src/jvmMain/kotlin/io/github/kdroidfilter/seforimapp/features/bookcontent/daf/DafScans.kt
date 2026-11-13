@@ -2,16 +2,25 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
+import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.core.settings.SettingsGroup
 import io.github.kdroidfilter.seforimapp.features.settings.feedback.otzariaDataRoots
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 
-// Pardes (request 41 of docs/DESKTOP_STAGE2.md): the scan of a tractate's page, beside the daf Pardes draws, "גם כי יש
-// כאלה שמעדיפים מקור וגם להשוואה בקלות". Its source, as the user decided on 2026-11-13: Otzaria's scans on the user's
-// own computer first (nothing of them is shipped by Pardes), a file of the user's where there are none.
+// Pardes (requests 41 and 48 of docs/DESKTOP_STAGE2.md): the scan of a tractate's pages, beside the text and the daf
+// Pardes draws, "גם כי יש כאלה שמעדיפים מקור וגם להשוואה בקלות". Its sources, as the user decided on 2026-11-13: a
+// folder of scanned tractates the user chooses in the settings, and Otzaria's scans on the user's own computer, found
+// by themselves (nothing of them is shipped by Pardes).
+
+/** The daf view's scans' settings: the folder of scanned tractates the user chose (Settings › צורת הדף). */
+object DafScanSettings : SettingsGroup("daf_scans") {
+    /** The folder's path, looked in before Otzaria's; null for none. A folder of this computer: not carried elsewhere. */
+    val folder by json<String?>(null)
+}
 
 /**
  * Where Otzaria keeps the Talmud Bavli's scans: one PDF a tractate (`ברכות.pdf`) in a folder `תלמוד בבלי`. The app
@@ -41,6 +50,24 @@ object OtzariaScans {
             .filter { it.isDirectory }
             .distinctBy { runCatching { it.canonicalPath }.getOrDefault(it.path) }
 
+    /**
+     * The scan of [tractate] in a folder of the user's [dir]: its PDF right in it, or in a folder in it, [depth] folders
+     * down at most, the nearest first and each level's folders by name.
+     */
+    fun findIn(
+        tractate: String,
+        dir: File,
+        depth: Int = FOLDER_DEPTH,
+    ): File? {
+        val name = "$tractate.pdf"
+        var level = listOf(dir)
+        repeat(depth + 1) {
+            level.firstNotNullOfOrNull { folder -> File(folder, name).takeIf { it.isFile } }?.let { return it }
+            level = level.flatMap { folder -> folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name } }
+        }
+        return null
+    }
+
     /** The scan of [tractate] in the Bavli folders [bavli]: its PDF in one of their orders' folders, or in them. */
     fun find(
         tractate: String,
@@ -64,6 +91,7 @@ object OtzariaScans {
         return text.trim(BYTE_ORDER_MARK, ' ', '\t', '\r', '\n', '"').ifEmpty { null }
     }
 
+    private const val FOLDER_DEPTH = 3
     private const val POINTER = "library_path.txt"
     private const val DATABASE_POINTER = "library_database_path.txt"
     private const val DEFAULT_LIBRARY = "books"
@@ -73,38 +101,32 @@ object OtzariaScans {
 }
 
 /**
- * The tractates' scans: the file the user linked to a tractate (the user DB's daf_scan, so the backup carries the link),
- * else Otzaria's ([OtzariaScans]), looked for once a start.
+ * The tractates' scans: in the folder the user chose ([DafScanSettings.folder]) first, else Otzaria's ([OtzariaScans]),
+ * whose folders are looked for once a start.
  */
 @Inject
 @SingleIn(AppScope::class)
 class DafScans(
-    database: UserSettingsDb,
+    private val appSettings: AppSettings,
 ) {
-    private val queries = database.dafScansQueries
+    // Otzaria's data folders, its own unless a test gives others, and its Bavli folders, read at the first scan asked for
+    internal var otzariaRoots: List<File>? = null
+    private val bavli by lazy { OtzariaScans.bavliFolders(otzariaRoots ?: otzariaDataRoots()) }
 
-    // Otzaria's Bavli folders, read at the first scan asked for
-    private val bavli by lazy { OtzariaScans.bavliFolders() }
+    /** The folder of scans the user chose, its path, or null. */
+    val folder: StateFlow<String?> get() = appSettings.flow(DafScanSettings.folder)
 
-    /** The scan of [tractate] (its book's title), or null when none is linked and Otzaria has none. */
+    /** Chooses [dir] as the folder of scans, or none. */
+    fun setFolder(dir: File?) {
+        appSettings[DafScanSettings.folder] = dir?.absolutePath
+    }
+
+    /** The scan of [tractate] (its book's title), or null when the folder chosen and Otzaria have none. */
     suspend fun of(tractate: String): File? =
         withContext(Dispatchers.IO) {
-            linked(tractate) ?: OtzariaScans.find(tractate, bavli)
+            folder.value?.let { OtzariaScans.findIn(tractate, File(it)) } ?: OtzariaScans.find(tractate, bavli)
         }
 
-    /** The file the user linked to [tractate], or null. */
-    suspend fun linked(tractate: String): File? = withContext(Dispatchers.IO) { queries.select(tractate).executeAsOneOrNull()?.let(::File) }
-
-    /** Links [file] to [tractate] as its scan, in place of Otzaria's. */
-    suspend fun link(
-        tractate: String,
-        file: File,
-    ) {
-        withContext(Dispatchers.IO) { queries.upsert(tractate, file.absolutePath) }
-    }
-
-    /** Lets the file linked to [tractate] go: Otzaria's scan, if any, is its scan again. */
-    suspend fun unlink(tractate: String) {
-        withContext(Dispatchers.IO) { queries.delete(tractate) }
-    }
+    /** Otzaria's Bavli folders found on this computer. */
+    suspend fun otzariaFolders(): List<File> = withContext(Dispatchers.IO) { bavli }
 }

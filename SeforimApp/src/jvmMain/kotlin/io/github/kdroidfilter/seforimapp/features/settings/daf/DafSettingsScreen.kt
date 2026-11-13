@@ -10,9 +10,9 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 
 /**
- * Settings › צורת הדף: the daf view's layouts ([DafLayoutsCard]). Its two fonts stay with the other fonts (Settings ›
- * גופנים), its marks are shown from the button beside the daf, and the folder of the reader's reviews is opened from
- * Settings › משוב.
+ * Settings › צורת הדף: the daf view's layouts ([DafLayoutsCard]) and where the tractates' scans are looked for
+ * ([DafScansCard]). Its two fonts stay with the other fonts (Settings › גופנים), its marks are shown from the button
+ * beside the daf, and the folder of the reader's reviews is opened from Settings › משוב.
  */
 @Composable
 fun DafSettingsScreen() {
@@ -22,6 +22,7 @@ fun DafSettingsScreen() {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             DafLayoutsCard()
+            DafScansCard()
         }
     }
 }

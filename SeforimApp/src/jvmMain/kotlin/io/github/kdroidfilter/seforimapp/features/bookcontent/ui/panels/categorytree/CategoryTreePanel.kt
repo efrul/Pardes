@@ -18,6 +18,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.Type
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberPaneSearchFocus
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
 import io.github.kdroidfilter.seforimapp.features.pdf.MyPdfBooks
+import io.github.kdroidfilter.seforimapp.features.pdf.myPdfBooksIn
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import kotlinx.collections.immutable.ImmutableList
@@ -34,7 +35,8 @@ fun CategoryTreePanel(
     modifier: Modifier = Modifier,
 ) {
     val paneHoverSource = remember { MutableInteractionSource() }
-    val search = uiState.navigation.search
+    // Pardes: the user's PDF books found by the search too (request 51)
+    val search = myPdfBooksIn(uiState.navigation.search)
     val searchFocus = rememberPaneSearchFocus()
     // Pardes: a letter typed with the pointer over the book tree opens its search with it (TypeToSearch)
     TypeToSearchTarget(paneHoverSource) { text ->

@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (257 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (261 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -906,7 +906,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +53 −6 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
+- **Change:** modified, +59 −8 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
   Reader's default commentators.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
@@ -917,7 +917,9 @@ The entries of this section by kind:
     (`clearCommentatorsDefault`).
   - The constructor takes the user's PDF books (`PdfBookStore`, fully qualified, after Zayit's parameters), and
     `loadBookById` opens a book id the library has not as the PDF book it is (`PdfBookStore.asBook`): a PDF book's tab
-    restored, or opened from the history, reads as the library's books do (request 45).
+    restored, or opened from the history, reads as the library's books do (request 45); and
+    `BookTreeSearchBookSelected` opens a PDF book the search found (`asBook`), with a comment marked "Pardes:", as the
+    search's own lookup has only the library's books (request 51).
   - The commentaries' prefetch reads the book's `commentatorSelection`: with whole groups checked, each line prefetches
     its own commentators of those groups (`shownOn`), not only those remembered by name.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
@@ -1355,34 +1357,44 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocPanel.kt`
 
-- **Change:** modified, +8 −0 lines. Feature: Typing over a pane.
-- **What:** `TypeToSearchTarget(paneHoverSource)` before the pane's column, while a book is open, with a comment marked
-  "Pardes:": a letter typed with the pointer over the contents opens their search with it
-  (`searchFocus.type`, `ToggleTocSearch` when it is closed); three imports.
+- **Change:** modified, +22 −2 lines. Feature: Typing over a pane, The user's PDF books.
+- **What:**
+  - `TypeToSearchTarget(paneHoverSource)` before the pane's column, while a book with a searchable contents is open, with
+    a comment marked "Pardes:": a letter typed with the pointer over the contents opens their search with it
+    (`searchFocus.type`, `ToggleTocSearch` when it is closed); three imports.
+  - `searchable`, with a comment marked "Pardes:": a PDF book of the user's (`pdfIdOf`) has its pages as its contents
+    and no search, so neither the typing nor the search button is offered for it (request 49).
+  - The search layout's regular content is, for a PDF book, its pages (`PdfBookToc(tabId, bookId)`), with a comment
+    marked "Pardes:"; Zayit's `BookTocView` otherwise; two imports.
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
-  contents and get straight to a daf, without the search button first, and without hurting anything else.
+  contents and get straight to a daf, without the search button first, and without hurting anything else. A PDF book
+  has "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים" in place of a field that went to a page (request 49).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small: one call before the pane's column.
+- **Merge risk:** small: one call before the pane's column, a value tested in two places, and an `if` around the
+  regular contents.
 - **Smaller:** already minimal.
-- **Tests:** `TypeToSearchTest`; tried in the app.
+- **Tests:** `TypeToSearchTest`; tried in the app (a PDF book's pages, one clicked).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryTreePanel.kt`
 
-- **Change:** modified, +17 −7 lines. Feature: Typing over a pane, The user's PDF books.
+- **Change:** modified, +20 −8 lines. Feature: Typing over a pane, The user's PDF books.
 - **What:**
   - `TypeToSearchTarget(paneHoverSource)` before the pane's column, with a comment marked "Pardes:": the same for the
     book tree's search (`ToggleBookTreeSearch`); two imports.
   - `NavigationTree` draws Zayit's `CategoryBookTreeView` inside `MyPdfBooks`, which gives it the navigation with
     "הספרים שלי" and the click that opens a PDF book (the tree's own click passed to it), with a comment marked
     "Pardes:"; its import.
+  - The search's state given to the pane passes through `myPdfBooksIn`, with a comment marked "Pardes:" and its import:
+    the user's PDF books its query names are found too (request 51).
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
   contents and get straight to a daf, without the search button first, and without hurting anything else. The user's
-  PDF books are a category of the book tree (request 28, the user's decision of 2026-11-12).
+  PDF books are a category of the book tree (request 28, the user's decision of 2026-11-12), found by its search
+  ("שיוכלו למצוא את הספרים שלי בחיפוש ספרים", request 51).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small: one call before the pane's column; the tree's call, wrapped and indented once, conflicts
   with any change of Zayit's to its arguments.
 - **Smaller:** already minimal.
-- **Tests:** `TypeToSearchTest`, `PdfBookStoreTest` (the rows); tried in the app.
+- **Tests:** `TypeToSearchTest`, `PdfBookStoreTest` (the rows), `MyPdfBooksSearchTest`; tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/UserDataBackup.kt`
 
@@ -1699,8 +1711,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +348 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 326 Hebrew strings added in twenty blocks,
+- **Change:** modified, +356 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 333 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1743,13 +1755,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - the PDF reading experiment, under a comment after the open siddur's switch: `pdf_experiment_title` ("קריאת PDF
     (ניסוי)"), `…_open`, `…_hint`, `…_status` (the file, its pages and size, the time it took and the Java memory),
     `…_failed`, `…_zoom_in` and `…_zoom_out`; and after them, under two comments, the user's PDF books: their reader's
-    `pdf_book_*` (10: a file missing or failed, "עמוד %1$d מתוך %2$d", the go-to field, the zoom, the removal and its
-    tooltip, a book removed), the tree's `my_pdf_books` ("הספרים שלי") and `my_pdf_books_add` ("הוספת תיקייה…"), and
+    `pdf_book_*` (11: a file missing or failed, "עמוד %1$d מתוך %2$d", the go-to field, the zoom, the removal and its
+    tooltip, a book removed, a page in the contents), the tree's `my_pdf_books` ("הספרים שלי") and `my_pdf_books_add` ("הוספת תיקייה…"), and
     the folders' card, `pdf_folders_*` (6: what the folders are, none yet, a folder's books, a folder not found, its
     removal, the scan again); and under a comment after them, a tractate's
     scan: `daf_scan` ("סריקה") and its tooltip (in place of the text or the daf), `daf_scan_missing` and its hint
-    (where the scan is looked for), `…_choose`, `…_change`, `…_unlink` and `…_failed`; and under a comment after
-    them, two pages side by side: `page_spreads` ("שני עמודים") and its tooltip.
+    (where the scan is looked for), `…_choose` (the folder of scans) and `…_failed`; under a comment after them, the
+    settings' card of the scans, `daf_scans_*` (8: its title and what it is, the folder chosen or none, its two
+    buttons, Otzaria's folders found or none); and under a comment after them, two pages side by side:
+    `page_spreads` ("שני עמודים") and its tooltip.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -2546,14 +2560,15 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafSettingsScreen.kt`
 
 - **Feature:** Daf view.
-- **Size:** 27 lines.
-- **What:** `DafSettingsScreen`, Settings › צורת הדף: the layouts' card (`DafLayoutsCard`). The page had the switches of
+- **Size:** 28 lines.
+- **What:** `DafSettingsScreen`, Settings › צורת הדף: the layouts' card (`DafLayoutsCard`) and the scans' card
+  (`DafScansCard`, request 48). The page had the switches of
   the unsure lines and of the review mode until 2026-11-12, when the review went into the menu for good and the
   marks to the button beside the daf, and under the card the link to the folder of the reader's reviews, which is in
   Settings › משוב since that day; the daf's two fonts stay among the fonts (the user's word of 2026-11-11).
 - **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Daf`), from `SettingsSidebar.kt`'s item.
 - **Follows:** Zayit's settings screens (a scrolling column of cards with the same paddings).
-- **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its card.
+- **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its first card; the second, tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LocatedSelection.kt`
 
@@ -3146,7 +3161,9 @@ those books stay, in "הספרים שלי" itself). A folder is added from the t
 library's books do, in the text's place (request 45: "הצגת ספר סרוק אמור להיות באותו מסך כמו הטקסט"; build 45
 opened a tab of its own, kept for the sessions that hold one), its pages one under the other or two side by side
 (request 47), scrolled, zoomed as the daf is and by the same buttons and keys (its levels, Ctrl + wheel, a pinch), with
-a field that goes to a page; it opens where it was last read, from the tree, from the history or after a restart. Its
+its pages listed in the reader's own contents pane (request 49, in place of a field that went to a page), and found
+by the book tree's search (request 51); it opens where it was last read, from the tree, from the history or after a
+restart. Its
 pages are drawn as Otzaria and Zayita draw theirs (request 43): no wider than 1,600 pixels, scaled up beyond, and the
 next pages drawn ahead (`PdfPageList`). The folders, the books and each book's place are in the user DB, so the
 backup carries them (not the files). Reading only, as decided on 2026-11-12. Hooks: a branch each in the `when`s over
@@ -3215,6 +3232,19 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   tree, opened down to a book).
 - **Notes:** the books are not in the tree's search (which looks in the library's titles) nor in the search's tabs.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooksSearch.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 77 lines.
+- **What:** `myPdfBooksIn(search)`, the book tree's search state with the user's PDF books its query names
+  (`withMyPdfBooks`): the books whose titles hold every word of the query (points, cantillation, quotes and case left
+  aside) added after the library's, under "הספרים שלי" and only their folders' categories, all open, among the matches
+  the arrows and Enter go through, the first of them the best match when the library has none (request 51: "שיוכלו
+  למצוא את הספרים שלי בחיפוש ספרים").
+- **Reached from:** `CategoryTreePanel.kt`; opened through `BookContentViewModel.kt` (`BookTreeSearchBookSelected`).
+- **Follows:** Zayit's search result of the tree (`BookFilterResult`: roots, children, books, open categories, matches).
+- **Tests:** `MyPdfBooksSearchTest`; tried in the app ("ברכות" found two PDF books, one opened).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookFiles.kt`
 
 - **Feature:** The user's PDF books.
@@ -3244,7 +3274,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookStore.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 238 lines.
+- **Size:** 279 lines.
 - **What:** `PdfPlace` (the page at the view's top, its pixels above the view, the zoom), `PdfBook` (id, file, title,
   place), `PdfFolder`, `PdfFolderShown` (a folder with its books and whether it was found), `PdfLibrary` (the tree's
   categories by their parent, its books, the folders shown), `PdfBook.asTreeBook(categoryId)`, and `PdfBookStore`, the
@@ -3255,9 +3285,13 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   a category; the books build 45 added alone in "הספרים שלי" itself), `keepPlace` (in the background, on a scope of its
   own, so that a tab closed right after a scroll still keeps its place) and `setPlace`, `remove` (a book added alone),
   `isAlone`, `asBook` (the book of the library's kind a PDF book's book id is, in its folder's category, for the reading
-  screen), and a `revision` flow that goes up when a folder is added or removed, a book removed or a scan asked.
+  screen), and a `revision` flow that goes up when a folder is added or removed, a book removed or a scan asked. And
+  the channel between the tabs' readers and their contents panes (`PdfPagesShown`, request 49): `shown`, the pages each
+  tab's reader shows (`showPages`, null when it shows none), and `pageRequests`, the pages the panes ask for
+  (`goToPage`).
 - **Reached from:** `AppGraph.kt` (`pdfBookStore`, which Metro makes through `@Inject`), `BookContentViewModel.kt`
-  (`asBook`), `MyPdfBooks.kt`, `PdfBooksCard.kt`, `PdfBookReader.kt`, `PdfBookTabContent.kt`.
+  (`asBook`), `MyPdfBooks.kt`, `MyPdfBooksSearch.kt`, `PdfBooksCard.kt`, `PdfBookReader.kt`, `PdfBookTabContent.kt`,
+  `PdfBookView.kt` and `PdfBookToc.kt` (the pages).
 - **Follows:** Zayit's user-DB stores (a SQLDelight table, `Dispatchers.IO`, a `revision` flow) and its
   `@Inject @SingleIn(AppScope::class)` classes; Pardes's `DafDownloads` for a scope of its own (`@StructuredScope`).
 - **Tests:** `PdfBookStoreTest`.
@@ -3265,28 +3299,42 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookTabContent.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 25 lines.
+- **Size:** 28 lines.
 - **What:** `PdfBookTabContent(tabId, pdfId)`, the tab of a PDF book as build 45 opened one: it names the tab after
-  the book (`TabTitleUpdateManager`, `TabType.BOOK`) and reads it with `PdfBookReader`, the zoom's buttons in its bar
-  (the tab has no end bar). Books open in the reading screen since (request 45); the tab is kept for the sessions
+  the book (`TabTitleUpdateManager`, `TabType.BOOK`) and reads it with `PdfBookReader`, its bar going to a page and
+  zooming (`inTab`: the tab has no contents pane nor end bar). Books open in the reading screen since (request 45); the tab is kept for the sessions
   that still hold one.
 - **Reached from:** `TabsContent.kt` (its destination's branch).
 - **Follows:** Zayit's tabs of their own: `AuthorScreen` names its tab.
 - **Tests:** tried in the app with build 45 (opened, kept after a restart, back from another tab, removed).
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookToc.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 58 lines.
+- **What:** `PdfBookToc(tabId, bookId, modifier)`, a PDF book's contents in the reader's own contents pane (request 49:
+  "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים", in place of the field that went to a page): its pages ("עמוד N"), as
+  the tab's reader tells them (`PdfBookStore.shown`), drawn by Zayit's `BookTocView` as the library's books' contents
+  are; the page at the reader's top is the one selected (and scrolled to), and a page clicked is gone to
+  (`goToPage`). The PDF's own bookmarks are not listed: the binding reads none.
+- **Reached from:** `BookTocPanel.kt`.
+- **Follows:** Zayit's contents pane (`BookTocView`'s list of entries, `TocEntry`).
+- **Tests:** tried in the app (a page clicked gone to, the page at the top selected).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 294 lines.
-- **What:** `PdfBookView(file, place, onPlace, tabId, modifier, zoomButtons, actions)`: the file read whole into the
+- **Size:** 321 lines.
+- **What:** `PdfBookView(file, place, onPlace, tabId, modifier, inTab, actions)`: the file read whole into the
   binding off the UI thread (`runSuspendCatching`, a missing native library caught too), a missing file or a failure
   said, and its pages in `PdfPageList`, their text selectable, one under the other or two side by side
   (`pageSpreadsFlow`), as wide as the view at a zoom of 1 (two, half of it each). The zoom is the daf's, global
   (`dafZoomFlow`, `zoomDaf`), and the view counts as the tab's daf (`dafShown`/`dafHidden`), so the end bar's buttons,
-  the window's zoom keys and the menu zoom it; `rememberTextZoom` for Ctrl + wheel and pinches. A bar: "עמוד N מתוך M"
-  (the first page read in the row at the top), a field that goes to the page typed (Enter, then it is emptied), the
-  zoom's buttons with `zoomButtons` (a tab of its own has no end bar; their levels, `zoomStep`) and the caller's
-  actions. The keys: `pageListKey`. It opens at its place, and a new list at the page read at the top when the rows
+  the window's zoom keys and the menu zoom it; `rememberTextZoom` for Ctrl + wheel and pinches. Its pages are told to the tab's
+  contents pane (`PdfBookStore.showPages`, the page at the top as it changes) and it goes to a page clicked there
+  (`pageRequests`), request 49. A bar: "עמוד N מתוך M" (the first page read in the row at the top), and with `inTab`
+  (build 45's tab of its own, which has no contents pane nor end bar) a field that goes to the page typed (Enter, then
+  it is emptied) and the zoom's buttons (their levels, `zoomStep`), and the caller's actions. The keys: `pageListKey`. It opens at its place, and a new list at the page read at the top when the rows
   change (`Top`), and tells its place 400 ms after a move ends, and as it leaves when it moved since.
 - **Reached from:** `PdfBookReader.kt`.
 - **Follows:** Pardes's experiment (`PdfReaderTool.kt`) for the binding; Zayit's `BookContentView` for the page keys
@@ -3321,7 +3369,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 
 - **Feature:** The user's PDF books.
 - **Size:** 98 lines.
-- **What:** `PdfBookReader(tabId, pdfId, modifier, zoomButtons)`: it reads the book, shows `PdfBookView` at its place
+- **What:** `PdfBookReader(tabId, pdfId, modifier, inTab)`: it reads the book, shows `PdfBookView` at its place
   and keeps each place it tells; a book removed is said so; for a book added alone by build 45 (`isAlone`), a delete
   button with a tooltip takes it out of the list and closes the tab (a folder's books go with their folder). Only the tab in view composes the view: every tab of a window stays composed
   (`TabsContent`), and a PDF's pages take memory as its file does (the binding reads the whole file and caches up to
@@ -3349,6 +3397,33 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   pages drawn ahead, and Zayita's prefetch (ideas only: neither's code is used).
 - **Tests:** `PdfPageListTest` (the rows); tried in the app (a PDF book and a scan, a page a row and two).
 
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooksSearchTest.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 62 lines.
+- **What:** a book whose title holds every word of the query found, its points and case left aside, under its
+  folders, after the library's matches; only the folders of the books found opened, the first book the best match
+  when the library has none; a query no book answers leaving the result as it is.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOpenBench.kt`
+
+- **Feature:** The user's PDF books, Scan view.
+- **Size:** 190 lines.
+- **What:** `PdfOpenBench`, how fast PDFs open on a computer, as Pardes opens them (request 50, to measure on the
+  user's): it runs only when `PARDES_PDF_BENCH` names `otzaria` (Otzaria's scans found there) or files and folders of
+  PDFs, and otherwise passes at once. For each file (8 at most, `PARDES_PDF_BENCH_MAX`, from the smallest to the
+  largest): its size, reading it into memory, the binding's reader opening it, its pages, the first page drawn at
+  1,100, 1,600, 2,200 and 3,300 pixels and the next five at 1,600, and the Java heap then; the first open and draw of
+  the process told apart. A table in `build/pdf-bench/report.md`, and printed. The reader's constructor and its drawing
+  of a page are internal to the binding, and reached by reflection (a suspend function through
+  `suspendCoroutineUninterceptedOrReturn`).
+- **Reached from:** the JVM tests, by hand.
+- **Follows:** Pardes's benches (run alone, their results written down).
+- **Tests:** it is one (a bench); run in the cloud on three scans.
+
 ### The scan of the page in the daf view
 
 Requests 41 and 46 (`docs/DESKTOP_STAGE2.md`, 2026-11-13): the scan of a tractate's pages, "גם כי יש כאלה שמעדיפים
@@ -3363,52 +3438,59 @@ the text or the daf, which works without the daf's layout: its pages one under t
 printed (request 47), each under its amud's name, as wide as the daf's at its zoom, drawn as fast as a PDF book's
 (`PdfPageList`, request 43). The scan sits in the daf's place in the text view's frame, so it has the daf's keys, zoom
 and place: it opens at the amud of the tab's place, follows the tab's line (its table of contents, a search), and
-tells the amud at its top as the tab's place, where the text and the daf open; with a word and a button to link a file
-where there is no scan. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookContentState.kt`,
+tells the amud at its top as the tab's place, where the text and the daf open; with a word and a button that chooses
+a folder of scanned tractates where there is no scan. That folder, looked in before Otzaria's, is chosen in Settings ›
+צורת הדף (request 48: "תבטל את החלפת קובץ סריקה ותעביר את זה להגדרות"), in place of build 45's file linked to each
+tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookContentState.kt`,
 `BookContentStateManager.kt`, `SessionModels.kt` and `BookContentViewModel.kt` (the tab's `scanView`),
 `BookContentPanel.kt` and `BookContentView.kt` (the scan in the daf's place), `AppGraph.kt` (`dafScans`),
 `strings.xml`; in Pardes's `DafView.kt`, `DafMode.scan`.
 
-#### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/DafScans.sq`
-
-- **Feature:** The scan of the page in the daf view.
-- **Size:** 16 lines.
-- **What:** the table `daf_scan` (a tractate's title, the file the user linked to it as its scan) and its queries
-  `select`, `upsert` and `delete`.
-- **Reached from:** `DafScans.kt` (through SQLDelight's generated `UserSettingsDb`).
-- **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`, and Pardes's `CommentatorDefaults.sq`,
-  which keeps a book by its title so that a new library finds it.
-- **Tests:** `DafScansTest`.
-
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScans.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 110 lines.
-- **What:** `OtzariaScans`: `bavliFolders` (the Talmud Bavli's folders of the libraries that Otzaria's data folders
-  point at, their pointer files UTF-8 with a byte order mark: the folder of its books database
-  (`library_database_path.txt`), where its app downloads the scans; its library's (`library_path.txt`), the `אוצריא`
-  in it or beside it; and the library it makes by default, `books` in its data folder) and `find` (a tractate's `<title>.pdf` in one of them, or in one of their orders' folders, by name). And
-  `DafScans`, `@Inject @SingleIn(AppScope::class)`: `of` (the file linked to a tractate, else Otzaria's, its folders
-  read once a start), `linked`, `link` and `unlink`, in the user DB.
-- **Reached from:** `AppGraph.kt` (`dafScans`), `DafScanView.kt`.
-- **Follows:** Pardes's `OtzariaSearches` (`otzariaDataRoots`, the pointer file read the same way), and Zayit's
-  user-DB stores (`Dispatchers.IO`).
+- **Size:** 132 lines.
+- **What:** `DafScanSettings`, a `SettingsGroup` of Zayit's kind ("daf_scans"): `folder`, the folder of scanned
+  tractates the user chose (a path, null for none; not portable, a folder of this computer). `OtzariaScans`:
+  `bavliFolders` (the Talmud Bavli's folders of the libraries that Otzaria's data folders point at, their pointer
+  files UTF-8 with a byte order mark: the folder of its books database (`library_database_path.txt`), where its app
+  downloads the scans; its library's (`library_path.txt`), the `אוצריא` in it or beside it; and the library it makes
+  by default, `books` in its data folder), `find` (a tractate's `<title>.pdf` in one of them, or in one of their
+  orders' folders, by name) and `findIn` (a tractate's PDF in a folder of the user's or in the folders in it, three
+  down at most, the nearest first). And `DafScans`, `@Inject @SingleIn(AppScope::class)` over `AppSettings`: `folder`
+  (a flow of the setting), `setFolder`, `of` (the folder chosen first, else Otzaria's, its folders read once a start)
+  and `otzariaFolders`; a test gives its own data folders (`otzariaRoots`). Until 2026-11-13 a file was linked to
+  each tractate (table `daf_scan`, `DafScans.sq`): the user moved the choice to the settings, as a folder (request 48),
+  and the table is left in their user DB, unread.
+- **Reached from:** `AppGraph.kt` (`dafScans`), `DafScanView.kt`, `DafScansCard.kt`.
+- **Follows:** Pardes's `OtzariaSearches` (`otzariaDataRoots`, the pointer file read the same way); Zayit's typed
+  settings (`SettingsGroup`, `AppSettings.flow`), which keep the setting out of `AppSettings.kt`.
 - **Tests:** `DafScansTest`.
-- **Notes:** whether Otzaria's install brings its library's PDFs to the user's computer was not found (the agents' report
-  in pardes-rashi-ocr, `docs/agents/2026-11-13-otzaria-library-pdfs`): where it does not, the user links a file.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScansTest.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 111 lines.
+- **Size:** 126 lines.
 - **What:** a tractate's scan found in its order's folder of the library Otzaria's pointer names (with its byte order
   mark), or right in the Bavli's folder when the pointer names the library's `אוצריא`; the app's own scans beside its
   books database, in one folder (`library_database_path.txt`); the default library, `books` in the data folder; none
-  without Otzaria; a file
-  linked to a tractate kept and let go; a scan's pages and their amudim.
+  without Otzaria; a folder
+  chosen looked in first, a scan right in it or folders down, and let go; a scan found three folders down at most, the
+  nearest first; a scan's pages and their amudim.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's `UserFontsTest` (a temporary folder) and `StudyPlanStoreTest` (an in-memory user DB).
 - **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafScansCard.kt`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 85 lines.
+- **What:** `DafScansCard()`, Settings › צורת הדף: "סריקות הגמרא", what the folder of scanned tractates is (a PDF a
+  tractate, named after it, its pages the amudim from ב., looked in before Otzaria's), the folder chosen or none, a
+  button that chooses another and one that lets it go, and Otzaria's folders found on this computer, or none.
+- **Reached from:** `DafSettingsScreen.kt`.
+- **Follows:** Pardes's settings cards (`PdfBooksCard`, `LibraryLocationCard`: their frame, `isolatedPath`).
+- **Tests:** tried in the app (a folder chosen, a tractate's scan read from it, let go).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanButton.kt`
 
@@ -3424,7 +3506,7 @@ where there is no scan. Hooks: `VerticalBars.kt` (the button), `BookContentEvent
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 397 lines.
+- **Size:** 345 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -3435,10 +3517,11 @@ where there is no scan. Hooks: `VerticalBars.kt` (the button), `BookContentEvent
   else the tab's line, by the table of contents or the line's reference), follows the tab's line when it is chosen
   (`FollowTheTab`: the table of contents, a search, the arrows; not the line it told itself), and once a scroll rests
   tells the first line of the amud read at its top (`TellThePlace`, `firstLines`). The page read at the top is kept
-  (`ScanPlace.page`), so the rows changing reopen the list there. Without a scan, a word on where it is looked for and a
-  button that links a file (FileKit's picker, `DafScans.link`); with one, a line over its foot to change the file and,
-  for a file linked, to go back to Otzaria's. Only the tab in view composes the pages and holds the file
-  (`LocalTabSelected`), as a PDF book.
+  (`ScanPlace.page`), so the rows changing reopen the list there. It looks for the scan again when the folder of scans
+  changes. Without a scan, a word on where it is looked for and a button that chooses the folder of scans
+  (`pickScansFolder`, FileKit's directory picker off the event loop, `DafScans.setFolder`), as the settings do; the line
+  over a scan's foot that changed its file is gone, moved to Settings › צורת הדף as a folder (request 48). Only the tab
+  in view composes the pages and holds the file (`LocalTabSelected`), as a PDF book.
 - **Reached from:** `BookContentView.kt` (a `DafMode` of the scan, request 46).
 - **Follows:** `DafView`'s seams with the text view (`DafControl`, `openAt`, `onScroll`) and its titles and widths, and
   Pardes's `PdfPageList` for the pages.
