@@ -21,6 +21,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMarksButton
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookConnections
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
@@ -165,10 +166,14 @@ fun EndVerticalBar(
                         label = stringResource(Res.string.shnayim_mikra_mode),
                     )
                 }
-                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text
-                if (selectedBook.isBavli) {
+                // The daf (צורת הדף), in place of the text: a Talmud tractate as printed in the Vilna Shas, another book
+                // with its commentators around it (BookDafView)
+                if (selectedBook.hasDaf) {
                     SelectableIconButtonWithToolip(
-                        toolTipText = stringResource(Res.string.daf_view_tooltip),
+                        toolTipText =
+                            stringResource(
+                                if (selectedBook.isBavli) Res.string.daf_view_tooltip else Res.string.book_daf_tooltip,
+                            ),
                         onClick = { onEvent(BookContentEvent.ToggleDafView) },
                         isSelected = uiState.content.dafView,
                         icon = GemaraPage,

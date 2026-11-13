@@ -26,8 +26,9 @@ import io.github.kdroidfilter.seforim.htmlparser.CommentAnchor
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
-import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePlaces
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
@@ -241,9 +242,10 @@ private fun BookContentPanelContent(
                     val repository = LocalAppGraph.current.repository
                     val scope = rememberCoroutineScope()
                     val content by rememberUpdatedState(uiState.content)
-                    // A Talmud tractate as its Vilna page: the same view, its items amudim
+                    // A Talmud tractate as its Vilna page, another book as pages with the commentators the commentaries
+                    // pane shows around its text: the same view, its items amudim or pages
                     val daf =
-                        if (uiState.content.dafView && selectedBook.isBavli) {
+                        if (uiState.content.dafView && selectedBook.hasDaf) {
                             DafMode(
                                 book = selectedBook,
                                 onSelectLine = { lineId, withModifier ->
@@ -267,6 +269,11 @@ private fun BookContentPanelContent(
                                         )
                                     }
                                 },
+                                commentators =
+                                    DafCommentators(
+                                        uiState.content.commentatorSelection(selectedBook.id),
+                                        providers.loadLineConnections,
+                                    ),
                             )
                         } else {
                             null
