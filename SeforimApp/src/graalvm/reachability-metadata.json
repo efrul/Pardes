@@ -2896,6 +2896,12 @@
             "glob": "ai/onnxruntime/native/osx-x64/libonnxruntime4j_jni.dylib"
         },
         {
+            "glob": "pdfium/native/win32-x86-64/pdfium.dll"
+        },
+        {
+            "glob": "pdfium/native/win32-x86-64/pdfiumjni.dll"
+        },
+        {
             "glob": "libcudart.so"
         },
         {

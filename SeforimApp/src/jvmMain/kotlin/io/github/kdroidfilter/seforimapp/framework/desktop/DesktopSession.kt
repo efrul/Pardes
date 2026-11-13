@@ -8,6 +8,8 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.nucleusframework.window.ExperimentalNucleusApi
+import dev.nucleusframework.window.tao.DockSide
+import dev.nucleusframework.window.tao.SatellitePlacement
 import dev.nucleusframework.window.tao.SatelliteWorkspace
 import dev.nucleusframework.window.tao.TabGroupSnapshot
 import dev.nucleusframework.window.tao.TabLayoutSnapshot
@@ -58,6 +60,9 @@ class DesktopSession internal constructor(
     // reads — a state write there would throw.
     private val navPaneWorkspaces = HashMap<String, SatelliteWorkspace>()
     private val linePaneWorkspaces = HashMap<String, SatelliteWorkspace>()
+
+    // Pardes: the docks saved with each restored window, given back to its panes (PaneLayouts)
+    private val restoredPanes = HashMap<String, SavedPanes>()
     private val owners = HashMap<String, SimpleTabViewModelOwner>()
 
     /** Tabs waiting for their first declaration: where they land, and the tab they replace. */
@@ -101,8 +106,21 @@ class DesktopSession internal constructor(
                     gripIcon = PointerIcon.Hand
                     gripDraggingIcon = PointerIcon.Hand
                 }
+                // Pardes: the split sides' thickness and the outer bands' order as the window had them
+                restoredPanes[groupId]?.let { restore(it.dockOf(navigation)) }
             }
         }
+
+    /**
+     * Pardes: where pane [paneId] of window [groupId] was when the window was saved, if it can be there again (one of its
+     * [sides], or floating when [floatable]); null otherwise.
+     */
+    fun savedPlacement(
+        groupId: String,
+        paneId: String,
+        sides: Set<DockSide>,
+        floatable: Boolean,
+    ): SatellitePlacement? = restoredPanes[groupId]?.placementOf(paneId, sides, floatable)
 
     fun ownerOf(tabId: String): SimpleTabViewModelOwner = owners.getOrPut(tabId) { SimpleTabViewModelOwner(tabId) }
 
@@ -234,6 +252,7 @@ class DesktopSession internal constructor(
         restoredByGroup.remove(groupId)
         navPaneWorkspaces.remove(groupId)
         linePaneWorkspaces.remove(groupId)
+        restoredPanes.remove(groupId)
     }
 
     /** The last tab the user closed, taken off the stack; null when there is none. */
@@ -284,6 +303,7 @@ class DesktopSession internal constructor(
                         )
                 }
                 restoredByGroup[groupId] = snapshot
+                snapshot.panes?.let { restoredPanes[groupId] = it }
                 TabGroupSnapshot(
                     id = groupId,
                     tabIds = snapshot.destinations.map { it.tabId },
@@ -316,6 +336,10 @@ class DesktopSession internal constructor(
             destinations = items.map { stripEphemeral(it.destination) },
             selectedIndex = items.indexOfFirst { it.destination.tabId == group.selectedId }.coerceAtLeast(0),
             titles = items.associate { it.destination.tabId to SerializableTabTitle(it.title, it.tabType, it.pinned, it.shortTitle) },
+            // Pardes: its docks as they are, else as it was restored
+            panes =
+                PaneLayouts.save(groupId, navPaneWorkspaces[groupId]?.snapshot(), linePaneWorkspaces[groupId]?.snapshot())
+                    ?: restoredPanes[groupId],
         )
     }
 

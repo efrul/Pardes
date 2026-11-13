@@ -5,6 +5,7 @@ import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class SemanticPackReleasesTest {
@@ -43,6 +44,16 @@ class SemanticPackReleasesTest {
         assertEquals("semantic-5-v3-20261012193827", SemanticPackReleases.select(releases, "20261012193827")?.tag)
         assertEquals("semantic-5-v4-20261201000000", SemanticPackReleases.select(releases, "20251116085948")?.tag)
         assertEquals("semantic-5-v4-20261201000000", SemanticPackReleases.select(releases, null)?.tag)
+    }
+
+    @Test
+    fun `a pack's manifest says what it holds, and one that can't be read says nothing`() {
+        val pack = assertNotNull(SemanticPackReleases.select(listOf(release("semantic-3-v3-20261012193827")), null))
+        val manifest = """{"formatVersion":1,"pack":3,"model":"student@test/pardes-clean-1","library":"v3-20261012193827","lines":7}"""
+
+        val info = runBlocking { SemanticPackReleases { manifest }.infoOf(pack) }
+        assertEquals(3 to 7L, info?.pack to info?.lines)
+        assertNull(runBlocking { SemanticPackReleases { throw IOException("HTTP 404") }.infoOf(pack) })
     }
 
     @Test

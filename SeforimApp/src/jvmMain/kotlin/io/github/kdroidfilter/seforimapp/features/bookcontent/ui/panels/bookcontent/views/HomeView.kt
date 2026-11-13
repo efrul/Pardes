@@ -507,6 +507,8 @@ internal fun UnifiedSearchBar(
     autoFocus: Boolean = true,
     // The typed text, as it changes (the results page keeps it for the tab's restore)
     onTextChange: (String) -> Unit = {},
+    // Pardes: the main field's focus, for the results page to come back to it once a tab is picked
+    focusRequester: FocusRequester? = null,
 ) {
     // Keep state outside the sections so it persists across their recompositions
     val scope = rememberCoroutineScope()
@@ -531,7 +533,8 @@ internal fun UnifiedSearchBar(
     var tocEditedSinceBook by remember { mutableStateOf(false) }
     // Shared focus requester for the MAIN search bar so other UI (e.g., level changes)
     // can reliably return focus to it, allowing immediate Enter to submit.
-    val mainSearchFocusRequester = remember { FocusRequester() }
+    val ownFocusRequester = remember { FocusRequester() }
+    val mainSearchFocusRequester = focusRequester ?: ownFocusRequester
     // Forward reference input changes to the ViewModel (VM handles debouncing and suggestions)
     LaunchedEffect(Unit) {
         var opened = false

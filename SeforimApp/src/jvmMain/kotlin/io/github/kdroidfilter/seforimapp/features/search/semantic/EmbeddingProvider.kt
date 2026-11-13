@@ -14,7 +14,10 @@ interface EmbeddingProvider : AutoCloseable {
 
     /**
      * [texts] (passages of found lines, plain) as the model embeds documents, (normalised) float vectors in order;
-     * null when the provider can't.
+     * null when the provider can't, or when [keepGoing], asked before each run of the model, says to stop.
      */
-    fun embedPassages(texts: List<String>): List<FloatArray>? = null
+    fun embedPassages(
+        texts: List<String>,
+        keepGoing: () -> Boolean = { true },
+    ): List<FloatArray>? = null
 }

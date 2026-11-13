@@ -50,9 +50,12 @@ import io.github.kdroidfilter.seforimapp.core.annotations.LineHighlightRange
 import io.github.kdroidfilter.seforimapp.core.annotations.resolveHighlightRangesForSelection
 import io.github.kdroidfilter.seforimapp.core.bookErrorReportMailto
 import io.github.kdroidfilter.seforimapp.core.buildCopyWithSourcePayload
+import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.deeplink.bookShareLink
-import io.github.kdroidfilter.seforimapp.core.hasMoreThanLetters
+import io.github.kdroidfilter.seforimapp.core.hasPunctuation
 import io.github.kdroidfilter.seforimapp.core.lettersOnly
+import io.github.kdroidfilter.seforimapp.core.locatedLinesOf
+import io.github.kdroidfilter.seforimapp.core.menuOwnSourceOf
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
@@ -69,6 +72,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveComposeSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.resolveRange
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
+import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryReadFor
 import io.github.kdroidfilter.seforimapp.features.home.widgets.library.lookupWord
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -512,6 +516,9 @@ fun BookTextMenus(
                     val repository = LocalAppGraph.current.repository
                     val dictionaryLookup = LocalAppGraph.current.dictionaryLookup
                     val copyToClipboard = rememberCopyToClipboard()
+                    // Pardes: the copy with source of a commentary reads its book and lines from the library
+                    val catalogCache = LocalAppGraph.current.catalogCache
+                    val sourceScope = rememberCoroutineScope()
                     // Pardes: a selection its content located in the library itself (the daf's), for the highlights,
                     // the note and the link, in place of a search of the selected text in the book's lines
                     val locatedByContent = LocalLocatedSelection.current
@@ -521,6 +528,7 @@ fun BookTextMenus(
                     val bookSelection = LocalBookSelection.current
                     val shiftRange = bookSelection?.range
                     val rawText = textManager.selectedText.text
+                    DictionaryReadFor(rawText)
                     // Mirror the current selection into the SelectionContext so the AWT
                     // keyboard dispatcher can read it without touching Compose state directly.
                     // A new Compose selection (a drag) replaces the Shift+click one; a Shift+click leaves Compose's as is
@@ -554,6 +562,14 @@ fun BookTextMenus(
                             bookSelection?.resolved = resolved
                             selectionContext.setSelectedText(tabId, resolved.text, resolved.first to resolved.last)
                         }
+                        // Pardes: the daf's selection with the lines it locates, for the copy with source's shortcut
+                        // (CommentarySource.kt), its words not being the lines' text, which the shortcut would search
+                        val located = if (text.isEmpty()) emptyList() else locatedByContent?.invoke()?.ranges.orEmpty()
+                        if (located.isNotEmpty()) {
+                            runSuspendCatching { locatedLinesOf(located, repository) }
+                                .getOrNull()
+                                ?.let { selectionContext.setSelectedText(tabId, text, it) }
+                        }
                     }
                     val resolved = bookSelection?.resolved
                     val owned = resolved?.takeIf { it.owned }
@@ -583,6 +599,19 @@ fun BookTextMenus(
                                     (HebrewTextUtils.containsNikud(copiedText) || HebrewTextUtils.containsTeamim(copiedText))
                                 ) {
                                     add(
+                                        // Pardes: its shortcut is the copy of the words alone's now (request 39)
+                                        ContextMenuItemOption(
+                                            icon = AllIconsKeys.Actions.Copy,
+                                            label = copyWithoutNikudLabel,
+                                        ) {
+                                            val textWithoutDiacritics = HebrewTextUtils.removeAllDiacritics(copiedText)
+                                            copyToClipboard(textWithoutDiacritics)
+                                        },
+                                    )
+                                }
+                                // Copy the words alone: no nikud, no teamim and no punctuation; only where there is punctuation
+                                if (copiedText.isNotBlank() && hasPunctuation(copiedText)) {
+                                    add(
                                         ContextMenuItemOptionWithKeybinding(
                                             icon = AllIconsKeys.Actions.Copy,
                                             keybinding =
@@ -591,18 +620,6 @@ fun BookTextMenus(
                                                 } else {
                                                     linkedSetOf("Ctrl", "Shift", "C")
                                                 },
-                                            label = copyWithoutNikudLabel,
-                                        ) {
-                                            val textWithoutDiacritics = HebrewTextUtils.removeAllDiacritics(copiedText)
-                                            copyToClipboard(textWithoutDiacritics)
-                                        },
-                                    )
-                                }
-                                // Copy the words alone: no nikud, no teamim and no punctuation
-                                if (copiedText.isNotBlank() && hasMoreThanLetters(copiedText)) {
-                                    add(
-                                        ContextMenuItemOption(
-                                            icon = AllIconsKeys.Actions.Copy,
                                             label = copyLettersOnlyLabel,
                                         ) {
                                             copyToClipboard(lettersOnly(copiedText))
@@ -623,15 +640,31 @@ fun BookTextMenus(
                                                 },
                                             label = copyWithSourceLabel,
                                         ) {
-                                            val payload =
-                                                buildCopyWithSourcePayload(
+                                            // Pardes: a selection not of the book's lines (a commentary's, a targum's, the
+                                            // daf's) cites its own
+                                            val ownSource =
+                                                menuOwnSourceOf(
                                                     copiedText,
-                                                    bookForCopy,
-                                                    selectionContext.activeBook.value?.rootTitle,
-                                                    selectionContext.visibleLines.value.lines,
-                                                    resolved?.let { it.first to it.last },
+                                                    locatedNow?.ranges.orEmpty(),
+                                                    selectionContext.activeCommentaryColumn.value,
                                                 )
-                                            copyToClipboard(payload)
+                                            if (ownSource != null) {
+                                                sourceScope.launch {
+                                                    runSuspendCatching { ownSource(repository, catalogCache) }
+                                                        .getOrNull()
+                                                        ?.let(copyToClipboard)
+                                                }
+                                            } else {
+                                                val payload =
+                                                    buildCopyWithSourcePayload(
+                                                        copiedText,
+                                                        bookForCopy,
+                                                        selectionContext.activeBook.value?.rootTitle,
+                                                        selectionContext.visibleLines.value.lines,
+                                                        resolved?.let { it.first to it.last },
+                                                    )
+                                                copyToClipboard(payload)
+                                            }
                                         },
                                     )
                                 }
@@ -672,14 +705,16 @@ fun BookTextMenus(
                                         },
                                     )
                                 }
-                                // Its word, or its few, in the dictionary's window
+                                // Its word, or its few, in the dictionary's window: lit for what the dictionaries have
                                 lookupWord(copiedText)?.let { word ->
+                                    val entry = dictionaryLookup.entryOf(word)
                                     add(
                                         ContextMenuItemOption(
                                             icon = AllIconsKeys.Toolwindows.Documentation,
+                                            enabled = entry != null,
                                             label = openInDictionaryLabel,
                                         ) {
-                                            dictionaryLookup.open(word)
+                                            entry?.let(dictionaryLookup::open)
                                         },
                                     )
                                 }

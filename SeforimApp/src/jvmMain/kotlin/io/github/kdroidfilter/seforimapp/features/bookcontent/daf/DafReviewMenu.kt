@@ -33,12 +33,13 @@ import seforimapp.seforimapp.generated.resources.daf_review_open_folder
 import java.awt.Desktop
 
 /**
- * An entry of the text's menu that is a checkbox, [checked] when the menu opens: a click checks or unchecks it
- * ([onCheck]), and the menu stays open, for another of them to be checked too.
+ * An entry of the text's menu that is a checkbox: a click checks or unchecks it ([onCheck]), and the menu stays open,
+ * for another of them to be checked too. [checked] is read as the menu is drawn, so that a box another one excludes is
+ * seen unchecked at once.
  */
 class ContextMenuCheck(
     label: String,
-    val checked: Boolean,
+    val checked: () -> Boolean,
     val onCheck: (Boolean) -> Unit,
 ) : ContextMenuItem(label, {})
 
@@ -49,14 +50,10 @@ fun ContextMenuCheckRow(
     item: ContextMenuCheck,
     modifier: Modifier = Modifier,
 ) {
-    var checked by remember(item) { mutableStateOf(item.checked) }
+    val checked = item.checked()
     var hovered by remember { mutableStateOf(false) }
     // A passive item of the menu is given no content color: the menu's own, as its other items
     val colors = JewelTheme.menuStyle.colors.itemColors
-    val check: (Boolean) -> Unit = {
-        checked = it
-        item.onCheck(it)
-    }
     Row(
         modifier =
             modifier
@@ -64,12 +61,12 @@ fun ContextMenuCheckRow(
                 .background(if (hovered) colors.backgroundHovered else Color.Transparent)
                 .onPointerEvent(PointerEventType.Enter) { hovered = true }
                 .onPointerEvent(PointerEventType.Exit) { hovered = false }
-                .clickable { check(!checked) }
+                .clickable { item.onCheck(!checked) }
                 .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Checkbox(checked = checked, onCheckedChange = check)
+        Checkbox(checked = checked, onCheckedChange = item.onCheck)
         Text(text = item.label, color = colors.content)
     }
 }

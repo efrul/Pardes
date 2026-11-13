@@ -27,8 +27,8 @@ import seforimapp.seforimapp.generated.resources.search_feedback_not_relevant
 import seforimapp.seforimapp.generated.resources.search_feedback_relevant
 
 /**
- * Pardes: feedback mode's buttons under a search result (Settings › ניהול נתונים, the semantic search's card): exactly
- * this, relevant, not relevant. The [grade] given is marked; clicking it again takes it back ([onGrade] decides).
+ * Pardes: feedback mode's buttons under a search result (Settings › משוב): exactly this, relevant, not relevant. The
+ * [grade] given is marked; clicking it again takes it back ([onGrade] decides).
  */
 @Composable
 internal fun SearchFeedbackButtons(

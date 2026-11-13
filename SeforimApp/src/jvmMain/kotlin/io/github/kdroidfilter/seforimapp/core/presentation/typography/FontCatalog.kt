@@ -326,6 +326,9 @@ object FontCatalog {
                     Font(resource = Res.font.YehudaCLM_Light, weight = FontWeight.Light),
                     Font(resource = Res.font.YehudaCLM_Bold, weight = FontWeight.Bold),
                 )
-            else -> FontFamily(Font(resource = Res.font.notoserifhebrew, weight = FontWeight.Normal))
+            // Pardes: a font the user added (UserFonts); one whose file is gone, as an unknown code
+            else ->
+                UserFonts.sharedOrNull()?.familyFor(code)
+                    ?: FontFamily(Font(resource = Res.font.notoserifhebrew, weight = FontWeight.Normal))
         }
 }

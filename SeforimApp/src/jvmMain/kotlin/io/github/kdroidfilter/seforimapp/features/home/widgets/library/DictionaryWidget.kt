@@ -270,7 +270,7 @@ private fun cached(dictionaries: List<Dictionary>): Map<Dictionary, List<Diction
     dictionaries.associateWith { cache[it] ?: return null }
 
 /** [dictionaries]' entries, each read once; one that fails to read is left out of the map, to be tried again. */
-private suspend fun readDictionaries(
+internal suspend fun readDictionaries(
     graph: AppGraph,
     dictionaries: List<Dictionary>,
 ): Map<Dictionary, List<DictionaryEntry>> =

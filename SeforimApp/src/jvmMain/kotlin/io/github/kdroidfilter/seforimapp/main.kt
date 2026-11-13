@@ -56,9 +56,8 @@ import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSe
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindow
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.downloads.StartOffers
 import io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackConsentDialog
-import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
-import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackPrompt
 import io.github.kdroidfilter.seforimapp.features.siddur.installedSiddur
 import io.github.kdroidfilter.seforimapp.features.update.UpdateDialog
 import io.github.kdroidfilter.seforimapp.framework.backup.PendingUserDataRestore
@@ -385,17 +384,18 @@ fun main(args: Array<String>) {
                             if (!E2e.enabled) warmSearch(appGraph)
                         }
 
-                        // A library whose semantic search has no pack opens the settings on it (SemanticPackPrompt). Then,
-                        // once that and an update dialog are closed, the question whether to send feedback, if not
-                        // answered yet, and the feedback sent by itself while the user agrees (FeedbackAutoSender)
+                        // A library whose semantic search has no pack, or a newer pack or daf layout out, opens the settings
+                        // on it (StartOffers). Then, once that and an update dialog are closed, the question whether to send
+                        // feedback, if not answered yet, and the feedback sent by itself while the user agrees
+                        // (FeedbackAutoSender)
                         LaunchedEffect(Unit) {
                             if (!E2e.enabled) {
-                                SemanticPackPrompt.openAtStart(
+                                StartOffers.openAtStart(
                                     appGraph.appSettings,
                                     snapshotFlow { sessionRestored },
                                     desktopManager,
                                     appGraph.appUpdateService.dialogVisible,
-                                ) { settingsWindowViewModel.onEvent(SettingsWindowEvents.OnOpenTo(SettingsDestination.Data)) }
+                                ) { page -> settingsWindowViewModel.onEvent(SettingsWindowEvents.OnOpenTo(page)) }
                                 appGraph.feedbackAutoSender.run {
                                     snapshotFlow { sessionRestored }.first { it }
                                     desktopManager.windows.first { it.isNotEmpty() }
@@ -436,15 +436,13 @@ fun main(args: Array<String>) {
 
                         // App-level dialogs: single instance shared by all windows. They inherit the
                         // Rtl layout direction and theme from the providers above.
-                        // The settings dialog is normally composed inside its owner window
-                        // (see MainAppWindow) so it is modal to that window only; this
-                        // app-scope fallback only covers an owner window that disappeared,
-                        // making the dialog app-modal instead of silently dropping it.
+                        // Pardes: the settings are a window of their own, composed once here, which blocks no window
                         val settingsWindowState by settingsWindowViewModel.state.collectAsState()
-                        if (settingsWindowState.isVisible && windows.none { it.id == settingsWindowState.ownerWindowId }) {
+                        if (settingsWindowState.isVisible) {
                             SettingsWindow(
                                 onClose = { settingsWindowViewModel.onEvent(SettingsWindowEvents.OnClose) },
                                 initialDestination = settingsWindowState.initialDestination,
+                                reopened = settingsWindowState.reopened,
                             )
                         }
                         val updateDialogVisible by appGraph.appUpdateService.dialogVisible.collectAsState()

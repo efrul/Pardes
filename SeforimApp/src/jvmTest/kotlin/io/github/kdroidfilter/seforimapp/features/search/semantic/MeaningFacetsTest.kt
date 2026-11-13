@@ -92,6 +92,34 @@ class MeaningFacetsTest {
             }
         }
 
+    @Test
+    fun `a hybrid session lists the lines only its meaning search found, in its order`(): Unit =
+        runBlocking {
+            hybrid(words = mapOf(1L to 10L), meaning = mapOf(1L to 10L, 2L to 10L, 3L to 20L)).use { engine ->
+                val session = engine.openSession(QUERY, 5)!!
+                session.nextPage(25, snippets = false)
+                // All alike in meaning here: none stands out of the others
+                val listed = (session as MeaningFacets).meaningLines().sortedBy { it.lineId }
+                assertEquals(listOf(MeaningLine(2L, 0.0, 10L), MeaningLine(3L, 0.0, 20L)), listed)
+                // Those asked for read as the list shows them, the others not
+                assertEquals(listOf(3L), (session as MeaningFacets).meaningHits(listOf(3L, 1L)).map { it.lineId })
+                session.close()
+            }
+        }
+
+    @Test
+    fun `a line stands out of the dense side's candidates by its distance above their mean, in their standard deviations`() {
+        val standings = HybridSearchEngine.standingOf(listOf(DenseHit(1, 0.9f), DenseHit(2, 0.8f), DenseHit(3, 0.7f), DenseHit(1, 0.6f)))
+
+        // 0.9, 0.8, 0.7 and 0.6: their mean is 0.75 and their spread 0.1118; a line repeated keeps its first
+        assertEquals(listOf(1L, 2L, 3L), standings.keys.toList())
+        assertEquals(1.342, standings.getValue(1), 0.001)
+        assertEquals(0.447, standings.getValue(2), 0.001)
+        assertEquals(-0.447, standings.getValue(3), 0.001)
+        assertEquals(mapOf(5L to 0.0, 6L to 0.0), HybridSearchEngine.standingOf(listOf(DenseHit(5, 0.8f), DenseHit(6, 0.8f))))
+        assertEquals(emptyMap(), HybridSearchEngine.standingOf(emptyList()))
+    }
+
     /** A hybrid engine on [words], with a meaning search that finds [meaning] (both line id to book id), all alike. */
     private fun hybrid(
         words: Map<Long, Long>,

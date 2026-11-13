@@ -37,7 +37,7 @@ $K/gradle.sh :SeforimApp:jvmTest ktlintCheck detekt     # every Gradle run here 
    `start.sh` writes `onboarding_finished`, `database_path` (the library's `seforim.db`), a region in Israel, and
    turns off the semantic pack prompt and the update check, which would open windows over the main one. It replaces
    what an earlier run saved there. More preferences, or other values, go in `PREFS`, as `key=value` words:
-   `PREFS="open_siddur=true daf_review=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants.
+   `PREFS="open_siddur=true daf_marks=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants.
 4. **The locale.** The container's locale is POSIX. With it, Gradle cannot write test classes whose names have
    non-ASCII characters (`InvalidPathException: Malformed input`), xdotool cannot type Hebrew, and window titles
    read `(failure in conversion from UTF8_STRING to ANSI_X3.4-1968)`. The scripts set `LC_ALL=C.UTF-8`
@@ -76,11 +76,11 @@ Coordinates on the maximised 1440x900 window:
 | Top bar, from the left: settings, theme, tools menu, history, notes, bookmarks, search, home | 20, 60, 100, 140, 180, 220, 260, 300 at y 20 |
 | Close the window (`stop.sh` does it and waits) | 1420, 20 |
 | Home's "תלמוד בבלי" chip, then its first tractate (ברכות) | 733, 156, then 758, 218 |
-| The reader's end bar (left in RTL): zoom in / out, ניקוד, צורת הדף | 33, 78 / 33, 145 / 33, 215 / 33, 285 |
+| The reader's end bar (left in RTL): zoom in / out, ניקוד (סימונים while a daf is shown), צורת הדף | 33, 78 / 33, 145 / 33, 215 / 33, 285 |
 | The daf view's header: previous amud (right) / next amud (left) | 987, 66 / 93, 66 |
 | Table of contents entries (right pane) | 1105, 100 + 33 a row |
 | The tools menu's rows (the siddur first when it is on) | 127, 59 + 25 a row |
-| Settings (a 700x500 window at +370+200): its pages from כללי down, its "סגור" | 1000, 270 + 34 a row / 422, 669 |
+| Settings (a 700x500 window at +370+200): its pages from כללי down (כללי, תצוגה, פרופיל, גופנים, צורת הדף, ניהול נתונים, משוב, אודות, תנאים), its "סגור" | 1000, 270 + 34 a row / 422, 669 |
 | The siddur: the day's name (opens the date picker), the first part in the contents | 1000, 67 / 1304, 99 |
 
 - A row of controls moves with the width of the text before it (the siddur's day arrows, a settings card below an
@@ -97,6 +97,13 @@ Coordinates on the maximised 1440x900 window:
   `xdotool key --window <id> …` or `type --window <id> …`. `xwininfo -root -tree` lists the windows; the main one is
   `xdotool search --name "פרדס"`.
 - Wheel: `xdotool mousemove x y` over the list, then `click 5` (down) or `click 4`, some 10 to 60 times.
+- **Selecting text:** a double click selects nothing here. Drag: `xdotool mousemove x1 y mousedown 1 mousemove x2 y
+  mouseup 1`, then a right click inside the selection for the text's menu.
+- **The settings' file picker is a GTK dialog** (the wizard's folder chooser is Swing): focus it
+  (`xdotool search --name` its title, `windowfocus`), `key ctrl+l`, type the path, `Return`.
+- **Settings › משוב as an official build shows it** (send now, the automatic sending, the publication) needs the
+  service's address: `PARDES_FEEDBACK_URL=http://127.0.0.1:9 PREFS="feedback_asked=true" $K/start.sh`. Nothing is
+  sent unless "שליחה עכשיו" is clicked; without the preference the consent dialog opens over the window.
 - **Read small text only from a crop**: `CROP=700x500+370+200 $K/shot.sh name`. A status line misread from the whole
   screenshot once sent a check after a bug that was not there.
 - Send what you show the user with SendUserFile, one Hebrew line of caption each.
@@ -137,8 +144,19 @@ its stale report (`rm -f SeforimApp/build/reports/ktlint/*/*.txt`) if ktlint the
 - `pgrep -f "Xvfb :99"` (or any pattern) also matches the shell running it, whose command line holds the pattern:
   test the display with `xwininfo -root`, and use `pgrep -f "[a]lign_lines"`-style patterns.
 - `pgrep -f` with Hebrew in the pattern finds nothing in the POSIX locale (the command lines read as `?`).
+- **"הפעלה מחדש עכשיו" cannot be tried here:** `AppRestarter` starts the app's own launcher, and in a Gradle run that
+  is a bare `java` with nothing to run. Close and start again by hand (`stop.sh`, `start.sh`); what depends on the
+  restart itself (a pack put in place while the old process still closes, on Windows) is the user's to check.
+- A test that waits on a timer or a local server may fail once when a batch runs beside a compilation
+  (`FeedbackAutoSenderTest`'s "without a network at start" did, on 2026-11-12, and passed alone and in the next
+  batch): run it again alone before looking for a cause.
 - Foreground `sleep` loops are refused by the harness: wait with `timeout N bash -c 'until …; do sleep 5; done'`
   or a background command. A background task has a time limit too: give a long run `timeout: 7200000`.
+- **A drag's ghost is black without a compositor:** the card that follows the pointer while a pane or a tab is dragged
+  is a translucent window of its own, and Xvfb alone draws its transparent pixels black over the screenshot. Run one
+  first: `apt-get install -y xcompmgr`, then `DISPLAY=:99 xcompmgr -n &`. Drive the drag with
+  `xdotool mousedown 1`, a few `mousemove` steps 0.25 s apart, `import -window root` while the button is held, then
+  `mouseup 1`. Grab a pane's header far from where it is aimed, so the ghost does not cover the preview.
 - llvmpipe is slow: a frame can take a second; give a screen 3 to 8 s after a click before the screenshot, 15 after
   opening a book, a search or the siddur. A menu item "missing" from a screenshot was twice only a frame not drawn yet.
 - `shot.sh name 0 0 5` clicks at (0, 0): pass no coordinates to wait without a click.
@@ -146,3 +164,9 @@ its stale report (`rm -f SeforimApp/build/reports/ktlint/*/*.txt`) if ktlint the
   which fail to open. Open books through the catalog chips or the book tree instead.
 - The working directory resets between commands: give absolute paths, or `cd` in the same command.
 - A benchmark is run alone: mockk loaded in the same JVM slows the real repository's calls.
+- **A search of the whole library that never ends** (still "מחפש..." after a minute, `top` at 90% iowait) is the
+  memory: the Kotlin compile daemons of earlier builds (Nucleus's on JDK 25, Pardes's) held 7 GB, the index found no
+  page cache and every search read the disk. Kill the idle `kotlin-build-tools` daemons (`ps -o pid,cmd -C java`;
+  never the Gradle daemon running the app) and the search came back at once (2026-11-12).
+- A drag-selection in a side pane (the targumim) drawn too fast selects nothing: steps of 10 px, 0.08 s apart, from
+  inside a word.

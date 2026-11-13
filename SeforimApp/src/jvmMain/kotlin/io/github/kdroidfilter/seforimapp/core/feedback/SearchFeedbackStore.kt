@@ -3,10 +3,6 @@ package io.github.kdroidfilter.seforimapp.core.feedback
 import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforimapp.db.UserSettingsDb
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
 /** A grade given to one result of a search, on the evaluations' scale ([SearchFeedbackStore]). */
@@ -45,20 +41,15 @@ data class SearchFeedback(
 )
 
 /**
- * Pardes: the grades the user gives search results in feedback mode (Settings › ניהול נתונים, the semantic search's card),
- * kept in the user database beside the visit history, for pardes-semantic/feedback/ to turn into training and evaluation
- * data. A search is keyed as [io.github.kdroidfilter.seforimapp.core.history.HistoryStore.searchKey] keys it; each line of
- * its results holds at most one grade. [count] follows every write.
+ * Pardes: the grades the user gives search results in feedback mode (Settings › משוב), kept in the user database beside
+ * the visit history, for pardes-semantic/feedback/ to turn into training and evaluation data. A search is keyed as
+ * [io.github.kdroidfilter.seforimapp.core.history.HistoryStore.searchKey] keys it; each line of its results holds at
+ * most one grade.
  */
 class SearchFeedbackStore(
     database: UserSettingsDb,
 ) {
     private val queries = database.searchFeedbackQueries
-
-    private val _count = MutableStateFlow<Long?>(null)
-
-    /** How many results are graded, null until first read ([refreshCount]). */
-    val count: StateFlow<Long?> = _count.asStateFlow()
 
     /** The grades given to the results of [searchKey]: line to grade. */
     suspend fun grades(searchKey: String): Map<Long, FeedbackGrade> =
@@ -92,7 +83,6 @@ class SearchFeedbackStore(
                 model = feedback.model,
                 gradedAt = feedback.gradedAt,
             )
-            _count.value = queries.countGrades().executeAsOne()
         }
 
     /** Takes back the grade of [lineId] in [searchKey]. */
@@ -102,11 +92,5 @@ class SearchFeedbackStore(
     ): Unit =
         withContext(Dispatchers.IO) {
             queries.deleteGrade(searchKey, lineId)
-            _count.value = queries.countGrades().executeAsOne()
-        }
-
-    suspend fun refreshCount(): Long =
-        withContext(Dispatchers.IO) {
-            queries.countGrades().executeAsOne().also { n -> _count.update { n } }
         }
 }

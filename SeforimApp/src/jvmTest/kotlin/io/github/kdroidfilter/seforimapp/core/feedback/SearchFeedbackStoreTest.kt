@@ -28,7 +28,6 @@ class SearchFeedbackStoreTest {
             store.save(feedback(key, 11, FeedbackGrade.NOT_RELEVANT))
             store.save(feedback(key, 11, FeedbackGrade.RELEVANT))
             assertEquals(mapOf(10L to FeedbackGrade.EXACT, 11L to FeedbackGrade.RELEVANT), store.grades(key))
-            assertEquals(2L, store.count.value)
         }
 
     @Test
@@ -41,6 +40,6 @@ class SearchFeedbackStoreTest {
             assertEquals(mapOf(10L to FeedbackGrade.RELEVANT), store.grades(global))
             store.clear(inBook, 10)
             assertEquals(emptyMap(), store.grades(inBook))
-            assertEquals(1L, store.refreshCount())
+            assertEquals(mapOf(10L to FeedbackGrade.RELEVANT), store.grades(global))
         }
 }

@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (108 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (118 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,13 +28,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (200 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (235 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (751 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (774 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -57,12 +57,12 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 42 |
-| Pardes feature in Zayit's file | 29 |
+| Pardes feature hook | 50 |
+| Pardes feature in Zayit's file | 31 |
 | Fix of Zayit's code | 12 |
-| Branding hook | 5 |
+| Branding hook | 4 |
 | Removed Zayit file | 5 |
-| Branding hook with Pardes feature hooks or a fix | 6 |
+| Branding hook with Pardes feature hooks or a fix | 7 |
 | Licence removal | 4 |
 | Documentation | 2 |
 | Renamed Zayit file | 2 |
@@ -268,14 +268,17 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/graalvm/reachability-metadata.json`
 
-- **Change:** modified, +33 −0 lines. Feature: Semantic search, the open smart siddur.
+- **Change:** modified, +39 −0 lines. Feature: Semantic search, the open smart siddur, PDF reading experiment.
 - **What:** eight resource globs for ONNX Runtime's native libraries on `win-x64`, `linux-aarch64`, `osx-aarch64` and
-  `osx-x64` (`onnxruntime` and `onnxruntime4j_jni`), beside the `linux-x64` ones Zayit already lists; and three for
+  `osx-x64` (`onnxruntime` and `onnxruntime4j_jni`), beside the `linux-x64` ones Zayit already lists, followed by two
+  for PDFium's on `win32-x86-64` (`pdfium.dll`, `pdfiumjni.dll`, from `dev.nucleusframework:pdfium-jvm`); and three for
   the open siddur's data in the `:siddur-open` jar (`open-siddur/amud-annotations.tsv`, `amud-inline.tsv`,
   `readings.tsv.gz`), before `org/sqlite/…`.
 - **Why:** the GraalVM native image carries only the resources this file names, so without them Pardes's semantic
   search had no ONNX Runtime on those platforms (`20e2fa81`, `0c107b56`), and the open siddur's engine would find
-  none of its tables, which it reads as resources (`AmudAnnotations`, `TorahReadings`).
+  none of its tables, which it reads as resources (`AmudAnnotations`, `TorahReadings`). PDFium's loader extracts its
+  libraries from the classpath when they are not beside the app: the Windows x64 ones only, the PDF experiment's
+  testers' builds being Windows ones (its JAR holds every platform's, some 48 MB).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** two blocks inserted inside a 2,900-line generated list; a conflict if Zayit regenerates the file.
 - **Smaller:** already minimal.
@@ -300,11 +303,11 @@ The entries of this section by kind:
 
 - **Change:** modified, +5 −1 lines. Feature: Commentators in their own panes.
 - **What:**
-  - A version `nucleusTao = "3.0.0-dev-202610272317-1-tearoff"`, with a three-line comment.
+  - A version `nucleusTao = "3.0.0-dev-202610272317-2-tearoff"`, with a three-line comment.
   - `nucleus-decorated-window-tao` takes `nucleusTao` instead of `nucleus`.
-- **Why:** the commentator's pane torn off the reader needs `Modifier.satelliteTearOffHandle`, which only
-  efrul/Nucleus's `commentator-tearoff` branch has; that one module comes from `nucleus-fork/maven` until Nucleus
-  releases it (`831ad272`, `0447981b`, `nucleus-fork/README.md`).
+- **Why:** the commentator's pane torn off the reader needs `Modifier.satelliteTearOffHandle`, and a pane dropped at
+  the window's edge the docks' outer bands, which only Pardes's fork of Nucleus (efrul/Nucleus) has; that one module
+  comes from `nucleus-fork/maven` until Nucleus releases them (`831ad272`, `0447981b`, `nucleus-fork/README.md`).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** Zayit bumps `nucleus` often (0.6.13 does): `nucleusTao` must then be rebuilt for the new release or
   dropped once Nucleus has the tear-off.
@@ -316,7 +319,7 @@ The entries of this section by kind:
 - **Change:** modified, +7 −0 lines. Feature: Commentators in their own panes, the open smart siddur.
 - **What:** in `dependencyResolutionManagement.repositories`, an `exclusiveContent` repository `NucleusFork`
   (`nucleus-fork/maven`) that serves only `dev.nucleusframework:nucleus.decorated-window-tao` at
-  `3.0.0-dev-202610272317-1-tearoff`, with a two-line comment. And `include(":siddur-open")`, after Zayit's last
+  `3.0.0-dev-202610272317-2-tearoff`, with a two-line comment. And `include(":siddur-open")`, after Zayit's last
   `include`: the open siddur's engine as a module of this build.
 - **Why:** as for `gradle/libs.versions.toml`: that one module from the repository, every other module from the
   release (`0447981b`). The engine's copy (`siddur-open/README.md`) is compiled here, with this build's Kotlin and
@@ -330,7 +333,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/main.kt`
 
-- **Change:** modified, +73 −3 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts, Search speed.
+- **Change:** modified, +76 −8 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts, Search speed,
+  Settings window.
 - **What:**
   - `val appId = Brand.APP_ID` instead of Zayit's literal `"io.github.kdroidfilter.seforimapp"` (FileKit's data folder).
   - Before the graph: `remember { PendingSemanticPack.runOnce() }` puts a pack unpacked in the settings in place of the
@@ -340,10 +344,13 @@ The entries of this section by kind:
   - With a move pending, the catalog is not warmed (`if (pendingLibraryMove == null) warmCatalog(it)`) and the window
     shows `LibraryMoveWindow(pendingLibraryMove)` before the onboarding and the database update.
   - Once the library is open: `LaunchedEffect`s that warm the search (`warmSearch`) and, outside E2E runs, open the
-    settings on the semantic search card when no pack is in use (`SemanticPackPrompt.openAtStart`), then let
+    settings on what the start has to offer (`StartOffers.openAtStart`: the semantic search's files missing or newer, a
+    newer daf layout; `SemanticPackPrompt.openAtStart` until 2026-11-12), then let
     `feedbackAutoSender` ask whether to send feedback, after the session is restored, a window is open and the update
     dialog and the settings are closed.
   - `FeedbackConsentDialog(appGraph.feedbackAutoSender)` while its question is shown.
+  - The settings window, Zayit's app-scope fallback for an owner window gone, is composed here whenever the settings
+    are open (they are a window of their own, which blocks no window), with `reopened`; its comment says so.
   - The private `warmSearch(graph)`: a minimum-priority daemon thread that first reads the bar's categories and the
     library's books (`libraryCategories.warmUp()`, some 1.2 s of the library's links), then waits up to
     `LEXICON_WAIT_MS` (2 minutes) for `PardesLexicon.awaitBuild` and runs `searchEngine.warmUp()`; failures are
@@ -352,7 +359,8 @@ The entries of this section by kind:
 - **Why:** each is the entry point of a Pardes feature: the data folder that keeps Pardes apart from an installed Zayit
   (`47626634`), the library location (`58586e1a`), the semantic packs (`20e2fa81`, `77f5349b`, `cb0f0a27`), Pardes's
   dictionary copy (`722af188`), the categories read ahead of the first letter typed in the bar, the feedback (`ddf604d8`) and the links in the texts, an object the reader reaches without
-  the graph (Zayit's `installedQuoteLinks`). They must run before the graph or beside the main window,
+  the graph (Zayit's `installedQuoteLinks`); and the settings, a window of their own since 2026-11-12 (see
+  `SettingsWindow.kt`). They must run before the graph or beside the main window,
   which only `main` can do.
 - **Kind:** branding hook and Pardes feature hooks.
 - **Merge risk:** high. `main.kt` is long and Zayit edits it in most releases; the hooks sit in five places (the
@@ -365,9 +373,10 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +13 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators.
+- **Change:** modified, +14 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans.
 - **What:**
-  - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`.
+  - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
+    `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
   - `abstract val feedbackAutoSender: io.github.kdroidfilter.seforimapp.features.settings.feedback.FeedbackAutoSender`,
     with a KDoc line.
   - `abstract val dictionaryLookup: DictionaryLookup`, after Zayit's `toolWindows`, with its import.
@@ -375,24 +384,26 @@ The entries of this section by kind:
     KDoc line.
   - `abstract val libraryCategories: LibraryCategories`, after Zayit's `searchEngine`, with its import, and
     `abstract val commentatorDefaults: CommentatorDefaults` after it, with its import.
-- **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`) and the
+- **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
+  study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
   lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
   starts, and the commentators list reads the reader's default.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** six lines among Zayit's declarations, and three imports.
+- **Merge risk:** seven lines among Zayit's declarations, and three imports.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
+- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`.
 - **Notes:** the first two types and the last are written fully qualified instead of imported, unlike every other line of the file:
   fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
 
-- **Change:** modified, +36 −3 lines. Feature: Branding, Reading time, Feedback mode, Book and author titles search,
-  Search in categories, Lexicon.
+- **Change:** modified, +42 −3 lines. Feature: Branding, Reading time, Feedback mode, Book and author titles search,
+  Search in categories, Lexicon, Daily study plans.
 - **What:**
   - `provideSettings()` returns `Brand.settings()` (Pardes's own preferences node) instead of `Settings()`.
-  - New providers: `provideSearchFeedbackStore`, `provideReadingTimeStore` (KDoc: the learning split's data) and
+  - New providers: `provideSearchFeedbackStore`, `provideReadingTimeStore` (KDoc: the learning split's data),
+    `provideStudyPlanStore` after it (KDoc marked "Pardes:": the Home's study plans), with its import, and
     `provideFeedbackService(client)`, at `BuildConfig.FEEDBACK_URL`.
   - The search engine's dictionary is `PardesLexicon.dictionaryFor(lexical.db, indexPath)`: `lexical.db` with its
     empty bases dropped and each word's commonest forms first.
@@ -407,7 +418,7 @@ The entries of this section by kind:
   service, the desktop manager) besides three new ones.
 - **Smaller:** the new providers could sit in a Pardes `@BindingContainer` (for example `PardesBindings`) included by
   the graph; the edits inside Zayit's providers stay.
-- **Tests:** `SearchFeedbackStoreTest`, `ReadingTimeStoreTest`, `FeedbackServiceTest`, `PardesLexiconTest`,
+- **Tests:** `SearchFeedbackStoreTest`, `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackServiceTest`, `PardesLexiconTest`,
   `BookTitleIndexTest`, `CategoryScopeSearchTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/OnboardingBindings.kt`
@@ -424,16 +435,47 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +5 −0 lines. Feature: Reading time.
+- **Change:** modified, +21 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
+- **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
+  its comment and its import: the settings are a window of their own, composed once in `main.kt`.
+- **What, typing over a pane:** the key handler's last branch, for a key event that is not a key's press (a typed
+  character no text field took), gives it to `TypeToSearch.type` instead of returning false, with a comment marked
+  "Pardes:" and its import.
+- **What, the copy with source:** the key handler reads the selected tab's id once (`selectedTabId`, the expression
+  Zayit's call to `selectionCopyShortcut` had inline) and first gives the key to `rememberCommentaryCopyShortcut()`'s
+  handler (`commentaryCopy`), which takes Ctrl/Cmd+Alt+C of a selection in a commentary, a targum or the daf's Rashi
+  and Tosafot; comments marked "Pardes:" and an import.
 - **Why:** the reading time counts only while the user is at the window, and stops after five minutes without mouse or
-  keyboard (`ReadingTimeStore`, `0083381e`).
+  keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`. Typing over a pane: as for
+  `TypeToSearch.kt` (request 24). The copy with source: as for `CommentarySource.kt` (request 40).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small, but Zayit edits this file (0.6.13 changes Ctrl+Tab here): the two lines sit in the window's
   modifier chain and key handler.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none.
+- **Tests:** `ReadingTimeStoreTest` (the store); the hook has none; `SettingsWindowReopenTest`; `TypeToSearchTest`;
+  `CommentarySourceTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
+
+- **Change:** modified, +3 −0 lines. Feature: A pane at the window's edge.
+- **What:** the reader's `DockLayout` takes `outerBandSides = LineOuterBandSides`, under a comment marked "Pardes:" (a
+  pane dropped at the window's edge runs its full length), and its import.
+- **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, steps 1 and 4 of the docking in its plan,
+  2026-11-12) that a side pane run from the top of the window to its bottom while something is open under the text.
+  It is done pane by pane, by the drop (the mock-up approved on 2026-11-12): a pane released on the strip along the
+  window's very edge runs its full length and takes the corners from the panes beside it (Nucleus's outer band, from
+  Pardes's fork, `nucleus-fork/README.md`), one released beside the text stays where Zayit's `LineSideOrder` puts its
+  side, and the corner goes to the pane dropped last. A switch in Settings › תצוגה that laid every side pane at full
+  height (step 1) was taken out on 2026-11-13 at the user's word: the edge does it pane by pane, and Zayit's display
+  page and preferences stay as they are.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one argument of the `DockLayout` call, which a Zayit change of that call meets;
+  `outerBandSides` needs Pardes's fork of Nucleus.
+- **Smaller:** already minimal.
+- **Tests:** the drops tried in the app: the links pane to the left edge (the full height), back beside the text, and
+  the commentaries to the bottom edge (the full width).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/WindowUtils.kt`
 
@@ -491,13 +533,15 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/PendingUserDataRestore.kt`
 
-- **Change:** modified, +2 −2 lines. Feature: Branding.
+- **Change:** modified, +5 −2 lines. Feature: Branding, User fonts.
 - **What:** a restored backup's preferences go into `Brand.settings()` instead of `Settings()`; the import changes.
-- **Why:** Pardes's preferences live in their own node, so a restore must write there (`47626634`).
-- **Kind:** branding hook.
-- **Merge risk:** one line.
+  And the backup's fonts are put back (`UserFonts.restoreFrom`), with a comment marked "Pardes:" and its import.
+- **Why:** Pardes's preferences live in their own node, so a restore must write there (`47626634`). The fonts: as
+  for `UserDataBackup.kt`.
+- **Kind:** branding hook; Pardes feature hook.
+- **Merge risk:** small: one line each.
 - **Smaller:** already minimal.
-- **Tests:** none.
+- **Tests:** `UserFontsTest` (the fonts read back from an archive).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/database/PendingDbCleanup.kt`
 
@@ -563,12 +607,13 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +261 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur.
+- **Change:** modified, +270 −0 lines. Feature: Daf view, Library location, Semantic search packs, Feedback mode, the open smart siddur.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
-    lighter unsure lines (`daf_mark_unsure`), the review mode (`daf_review`) and its two fonts (`font_daf_gemara`,
-    default Frank Ruehl CLM; `font_daf_commentary`, default Noto Rashi Hebrew). All are portable (`PORTABLE_KEYS`) and
-    reset by `clearAll()`.
+    its marks shown or hidden (`daf_marks`, `dafMarksFlow`: the unsure lines drawn lighter and the review's marks, the end
+    bar's button; until it is first pressed, on for whoever had turned on `daf_mark_unsure` or `daf_review`, the two
+    settings it replaced, whose keys are still read for that) and its two fonts (`font_daf_gemara`, default Frank Ruehl
+    CLM; `font_daf_commentary`, default Noto Rashi Hebrew). All are portable (`PORTABLE_KEYS`) and reset by `clearAll()`.
   - **Zoom of the selected tab:** `dafShown`/`dafHidden`/`showsDaf` count the views that show a daf per tab
     (`dafViewsFlow`), and `zoomIn`/`zoomOut(tabId)` zoom the text as before, and the daf with it to its next level
     when the tab shows one: the panes beside a daf (the commentaries, the references) are drawn in the text's size,
@@ -578,7 +623,9 @@ The entries of this section by kind:
     size it was.
   - **Library location:** `getLibraryInstallDir`/`setLibraryInstallDir` (`library_install_dir`, not portable) and
     `flush()`, which writes the preferences now, before a step that relies on them.
-  - **Semantic packs:** `semantic_pack_prompt`, whether a start without a pack opens the settings on it.
+  - **Semantic packs:** `semantic_pack_prompt`, whether a start without a pack opens the settings on it; and the newest
+    pack and release of daf layouts a start opened the settings for (`offered_semantic_pack`, `offered_daf_release`,
+    not portable: what this computer was offered), each offered once (`StartOffers`).
   - **Feedback:** `search_feedback` (the grade buttons, with a flow), the random sender id (`feedback_sender`,
     `renewFeedbackSender`), the start question's answer (`feedback_asked`, `feedback_auto_send`), and per kind of
     feedback whether it is sent and up to when (`feedback_kind_*`, `feedback_sent_*`).
@@ -597,7 +644,7 @@ The entries of this section by kind:
   split), but Pardes's blocks are separate members, keys and list entries.
 - **Smaller:** the feedback and daf settings could be Pardes classes over the same `Settings`, leaving only the
   portable keys and `clearAll()`'s resets here.
-- **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`,
+- **Tests:** `DafZoomTest`, `LibraryLocationTest`, `FeedbackAutoSenderTest`, `SemanticPackPromptTest`, `StartOffersTest`,
   `OpenSiddurSwitchTest`.
 
 ### Tabs, sessions and desktops
@@ -635,41 +682,53 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModels.kt`
 
-- **Change:** modified, +49 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
-  Search in categories, Results in the library's order.
+- **Change:** modified, +54 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
+  Search in categories, Results in the library's order, Pane layout kept.
 - **What:**
   - `BookContentPersistedState` gains, appended last for ProtoBuf: `detachedCommentators` (by name; 1.0.5's slot list
     is still read), `allCommentatorsBooks`, `excludedCommentatorsByBook`, `commentatorGroupsByBook`,
     `hiddenCommentatorGroupsByBook` and `dafView`.
   - `SearchPersistedState` gains `fetchBookIds`, `fetchCategoryIds`, `fetchBaseOnlyCategoryIds` and, last,
-    `catalogOrder` (the results listed in the library's order); the comment of
+    `catalogOrder` (the results listed in the library's order) and `fartherLines` (how many lines found by meaning
+    alone that order leaves out); the comment of
     `fetchCategoryId` says it is used again.
   - `scope` falls back to a new `wideScope`: the author's, the several books' and categories' (`SearchScope.Multi`), the
     category's (with `baseBooksOnly`), else everywhere. A search narrowed to one book goes back to it.
   - `withScope` writes `"category"` and `"multi"` scopes and their ids instead of turning a category into everywhere; a
     private `SearchScope.categoriesInBaseBooks()` lists the categories searched in their base books.
+  - `WindowSnapshot` gains, appended last, `panes` (`SavedPanes`, PaneLayouts.kt): the window's reader docks as the
+    user left them; its import.
 - **Why:** a tab restored at start must come back with its torn-off commentators (`831ad272`), its commentator
   selection (`3c6bae9b`, `49b456d4`), its daf view (`4efa3e3c`), its search scope (`54180126`, `574f3d55`,
-  `37d4fe60`) and the order of its results.
+  `37d4fe60`) and the order of its results; a window, with its panes where the user put them (step 3 of the docking).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium. The new fields are appended last, as Zayit's own comment asks, but a Zayit release that
   appends fields of its own to the same classes conflicts, and their ProtoBuf numbers would then clash with Pardes's
   saved sessions. The scope change reverses a choice of Zayit's: Zayit reads a saved category scope as "everywhere".
 - **Smaller:** already minimal for the fields; the scope logic could move to a Pardes extension, but it reads private
   fields of the class.
-- **Tests:** `SessionModelsTest` (changed with it), `DetachedCommentatorsTest`, `CommentatorSelectionTest`.
+- **Tests:** `SessionModelsTest` (changed with it), `DetachedCommentatorsTest`, `CommentatorSelectionTest`,
+  `PaneLayoutsTest` (the panes in the session file, and an older file without them).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopSession.kt`
 
-- **Change:** modified, +13 −1 lines. Feature: Commentators in their own panes (Windows).
+- **Change:** modified, +37 −1 lines. Feature: Commentators in their own panes (Windows), Pane layout kept.
 - **What:** `panesOf` creates each `SatelliteWorkspace` with `gripIcon` and `gripDraggingIcon` set to
   `PointerIcon.Hand` on Windows, with a comment: Windows has no open or closed hand, and Nucleus would show its
   four-arrow move cursor over every pane's grip, the floating windows' title bars included.
-- **Why:** the four-arrow cursor over every pane header looked wrong on Windows (`9de93f98`, `0447981b`).
-- **Kind:** fix of Zayit's code (it holds for Zayit's panes on Windows too).
-- **Merge risk:** small; one function.
+- **What, the panes kept:** under comments marked "Pardes:", `restoredPanes`, the docks each restored window was saved
+  with (`restore` keeps its snapshot's `panes`, `forgetWindow` drops them); `panesOf` gives a new dock its split sides'
+  thickness and its outer bands' order as saved, through `restore` with a snapshot naming no pane
+  (`SavedPanes.dockOf`); `savedPlacement(groupId, paneId, sides, floatable)`, a pane's saved place for `WindowPanes`;
+  `windowSnapshot` saves the window's docks (`PaneLayouts.save` from the two workspaces' `snapshot()`, else what was
+  restored); two imports.
+- **Why:** the four-arrow cursor over every pane header looked wrong on Windows (`9de93f98`, `0447981b`). The panes
+  kept: as for `PaneLayouts.kt`.
+- **Kind:** fix of Zayit's code (it holds for Zayit's panes on Windows too); Pardes feature hook.
+- **Merge risk:** small: lines in `panesOf`, `restore`, `forgetWindow` and `windowSnapshot`, and one function.
 - **Smaller:** already minimal.
-- **Tests:** none.
+- **Tests:** `PaneLayoutsTest` (what is saved and given back); a pane moved to the left side and found there after a
+  restart, tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManager.kt`
 
@@ -748,7 +807,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
-- **Change:** modified, +92 −10 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window.
+- **Change:** modified, +137 −20 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window,
+  Copy with a commentary's source.
 - **What:**
   - In `BookTextMenus`, `LocalLocatedSelection.current`: when the content locates its own selection in the library (the
     daf's printed words), the context menu's link, note and highlight take that location instead of searching the
@@ -757,10 +817,20 @@ The entries of this section by kind:
   - The selection written to the `SelectionContext`: an area with nothing selected clears the tab's selection only if
     the text there is still the one it wrote (`written`), because the daf has an area per amud.
   - In `BookTextMenus`, the item "העתק טקסט בלבד" (`context_menu_copy_letters_only`) after "copy without nikud", when the
-    copied text has anything but letters, digits and spaces (`hasMoreThanLetters`): it copies `lettersOnly(copiedText)`.
+    copied text has punctuation (`hasPunctuation`): it copies `lettersOnly(copiedText)`, and shows Ctrl/Cmd+Shift+C, the
+    keybinding Zayit's "copy without nikud" showed, which is a plain `ContextMenuItemOption` now (a comment marked
+    "Pardes:").
+  - In `BookTextMenus`, "העתק עם מקור" asks `menuOwnSourceOf` first (the content's located selection, the daf's, and
+    the column of commentaries or targumim published last, read from the graph with `catalogCache`): when it cites the
+    selection's own lines it is copied off the UI thread (`sourceScope`, `runSuspendCatching`), else Zayit's
+    `buildCopyWithSourcePayload` as before.
+  - In the effect that writes the selection to the `SelectionContext`, a selection the content locates (the daf's) is
+    written with its lines (`locatedLinesOf`), for the window's Ctrl/Cmd+Alt+C.
   - In `BookTextMenus`, the item "פתח במילון" (`context_menu_open_in_dictionary`) after "search the selected text", when
-    the copied text is a word or up to four (`lookupWord`): it opens the dictionary's window on it
-    (`dictionaryLookup.open`, read from the graph beside the repository).
+    the copied text is a word or up to four (`lookupWord`): it opens the dictionary's window on what the dictionaries
+    have of it (`dictionaryLookup.entryOf`, then `open`, read from the graph beside the repository), and is shown
+    disabled when they have none of it; `DictionaryReadFor(rawText)` in the menu's area has them read at the first
+    such selection.
   - In `contextItems`, a branch for `ContextMenuCheck` (the daf review's checkboxes): a passive item drawing
     `ContextMenuCheckRow`, so that a click on it leaves the menu open.
   - In `BookContentScreen`, a `LaunchedEffect` that tracks the book's reading time (`readingTimeStore.track`) while its
@@ -769,13 +839,16 @@ The entries of this section by kind:
 - **Why:** highlights and notes work on the daf's printed words (`d334af46`), a selection survives while another amud
   is composed (`d9cb48b7`), the learning split widget counts the time a book is read (`0083381e`), and a text is copied
   without its nikud, teamim and punctuation, and a selected word is looked up in the dictionary, as the user asked on
-  2026-11-09; the daf's review is said in two checkboxes, as the user asked the same day.
+  2026-11-09; the daf's review is said in two checkboxes, as the user asked the same day; the copy of the words alone
+  only where there is punctuation, with its shortcut, and a copy with source of a commentary, a targum or the daf's
+  words citing them, as asked on 2026-11-12 (requests 39 and 40).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: the edits sit inside Zayit's context-menu builder (`BookTextMenus`), which Zayit changes when
   it adds a menu action.
 - **Smaller:** the reading-time effect could be a Pardes composable called by one line; the menu's branches need the
   menu's locals.
-- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`, `DictionaryLookupTest`.
+- **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`, `DictionaryLookupTest`,
+  `CommentarySourceTest`.
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
@@ -820,10 +893,13 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +41 −13 lines. Feature: Daf view, More links, Unflagged books.
+- **Change:** modified, +47 −14 lines. Feature: Daf view, More links, Unflagged books, Mikraot Gedolot pages.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
-    (`selectedBook.isBavli`), sending `ToggleDafView`.
+    (`selectedBook.isBavli`), and for a book of the Chumash (`isChumash`, its Mikraot Gedolot pages), sending
+    `ToggleDafView`.
+  - With a daf shown (`uiState.content.dafView` of a Bavli tractate), `DafMarksButton()` stands in the diacritics
+    button's place: the printed page has no nikud to hide, and the daf's marks are shown or hidden there.
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
     (`zoomIn/zoomOut`), are enabled while either can still be zoomed, and their tooltips say "400% max" / "30% min";
     otherwise the text, as before.
@@ -839,7 +915,7 @@ The entries of this section by kind:
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
   their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; one button among the bar's, `ZoomButtons`' body, the references' availability and the two
+- **Merge risk:** small; one button among the bar's, a branch before the diacritics button, `ZoomButtons`' body, the references' availability and the two
   `…Enabled` lines.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`).
@@ -935,7 +1011,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +166 −30 lines. Feature: Commentators in their own panes.
+- **Change:** modified, +203 −34 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+  Pane layout kept.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
     `ReaderPane.standard`, and a `data class Commentator(name)` is a pane per split-off commentator, closed by
@@ -952,14 +1029,21 @@ The entries of this section by kind:
   - `desiredPanes` adds each split-off commentator's pane; `BookPaneBody` draws it with `DetachedCommentatorPane`.
   - `ReaderPane.entries` becomes `ReaderPane.standard` in `innerWidthPx`; `writeBack` and `position` handle
     `Commentator`.
+  - A pane at the window's edge: `LineOuterBandSides` after `LineSideOrder` (left, right, bottom: the sides a pane
+    dropped at the window's edge runs the full length of). `DockedPaneCard` gives a side pane the 3 dp gap above a pane
+    open under the text only when that pane's band is laid outside the side pane's own (`bottomPaneOutside`, private,
+    the bands in Nucleus's order: the outer ones first, by `outerBandOrder`, then the others in `LineSideOrder`);
+    otherwise its full bottom margin. Its KDoc says so.
+  - The pane layout kept: `WindowPanes` gives each pane first the place it had when its window was saved
+    (`DesktopSession.savedPlacement`, on one of its `sides` or floating if it may), its sides read once into `sides`.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
-  anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`).
+  anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). A pane at the window's edge: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the enum's every entry was rewritten, so any Zayit change to a pane's declaration, or a new pane,
   conflicts; `PaneSync` and `WindowPanes` are edited in their core loops.
 - **Smaller:** hard. The commentator panes could be a second list of satellites declared by a Pardes composable, leaving
   Zayit's enum as it is, but `PaneSync` needs to know them.
-- **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`.
+- **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`; the drops at the window's edge tried in the app.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/PostSelectLineTest.kt`
 
@@ -974,7 +1058,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/BookContentPanel.kt`
 
-- **Change:** modified, +189 −54 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept.
+- **Change:** modified, +201 −54 lines. Feature: Daf view, Commentators in their own panes, Commentator selection kept, Mikraot Gedolot pages.
 - **What:**
   - `detachedCommentatorIds`: the split-off commentators' book ids, from the names and the loaded line connections;
     their passages answer in the text as those of the commentaries pane's page do (`passageCommentatorIds`).
@@ -982,6 +1066,8 @@ The entries of this section by kind:
     prefetches its own commentators of those groups.
   - The call to `BookContentView` is wrapped in a `run { … }` that builds a `DafMode` for a Bavli tractate in daf view
     (its line clicks select the line, its passage clicks call `selectDafPassage`) and passes it as `daf`.
+  - After it, a book of the Chumash in daf view shows `MikraotView` over the text, from the selected verse's chapter,
+    with the book's `commentatorSelection` and its line's listed commentators (`getCommentatorGroupsForLine`).
   - `onShowCommentaries` passed to `BookContentView`: opens the commentaries pane when it is closed and says whether
     it was, for a comment selected on the daf to be read there once the text is shown.
   - New private `selectDafPassage`: shows the passage's commentators in the commentaries pane's selection when they
@@ -1071,7 +1157,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +292 −44 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +296 −45 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
@@ -1091,6 +1177,8 @@ The entries of this section by kind:
     (`category_base_books_only`, `scope_base_books_label`); a category row's icon is a folder.
   - The focus returns to the bar after a book is picked only in the selected tab (`LocalTabSelected`): the window's
     tabs share their `SearchHomeViewModel`, and a hidden tab's bar took the letters typed next.
+  - `UnifiedSearchBar` takes a `focusRequester` (its own when none): the results' bar is given one, to take the focus
+    after a tab is picked.
   - An author row says whose book it was found by (`author_of_book`) when it has no alias.
   - Ctrl+Enter and "search all books" are Enter when the scope's books are all searched (an author or a category).
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
@@ -1111,7 +1199,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineCommentsView.kt`
 
-- **Change:** modified, +362 −50 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default commentators.
+- **Change:** modified, +365 −51 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default
+  commentators, Copy with a commentary's source.
 - **What:**
   - `LineCommentsView` reads the book's `CommentatorSelection` (`bookCommentators`) instead of the line's
     `selectedCommentatorIds`, and the split-off commentators, and passes both to the single- and multi-line contents.
@@ -1133,6 +1222,8 @@ The entries of this section by kind:
   - The reader's default for the book (`rememberCommentatorsDefault`, in `LineCommentsView`) goes down to the list
     as `commentatorsDefault`, and "כל המפרשים", now shown for a single commentator too, ends with its pin
     (`CommentatorsDefaultPin`, clear of the scrollbar); `CommentatorsCheckAllRow` takes a `modifier` for it.
+  - `CommentaryItem` publishes the column (`onSecondaryClick`) on a primary press too, not on a secondary one alone, so
+    that a selection dragged in a commentary is found in its column (a comment marked "Pardes:").
 - **Why:** a commentator in a pane of its own (`d85afee7`, `831ad272`) and whole groups checked from line to line
   (`3c6bae9b`, `49b456d4`); the commentator the pages stay on from line to line, asked for on 2026-11-10; the pin of the reader's default,
   asked for on 2026-11-09 as "קבע כברירת מחדל".
@@ -1143,6 +1234,95 @@ The entries of this section by kind:
   the rest is woven into Zayit's composables.
 - **Tests:** `CommentatorsCheckStateTest`, `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`,
   `KeptCommentatorTest`; the pin was tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/CopyWithSource.kt`
+
+- **Change:** modified, +13 −4 lines. Feature: Copy of the words alone, Copy with a commentary's source.
+- **What:**
+  - `selectionCopyShortcut`: Ctrl/Cmd+Shift+C copies `lettersOnly(selectedText)` (Pardes's `LettersOnly.kt`) instead of
+    `HebrewTextUtils.removeAllDiacritics(selectedText)`; its KDoc says so, marked "Pardes:".
+  - `formatHebrewSourceReference`: under the Talmud root, a reference whose first segment is a daf ("ב." or "ב:") is
+    cited by that segment alone; Zayit's rule (the last segment dropped) now serves the references without a daf (the
+    Yerushalmi's "דמאי א, א"); a comment marked "Pardes:".
+- **Why:** request 39 of `docs/DESKTOP_STAGE2.md` (2026-11-12): "העתק טקסט בלבד" gets Ctrl+Shift+C, which was "העתק
+  ללא ניקוד"'s; that copy stays in the menu, without a shortcut. Request 40: a commentary on the Talmud is cited by its
+  book and daf, as the Gemara is; Rashi's and Tosafot's references have two segments after the daf (the Gemara's
+  segment, the comment), and Zayit's rule left "רש"י על בבא בתרא ב., א".
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** small: a line in each of two functions Zayit seldom changes.
+- **Smaller:** the shortcut could be caught before Zayit's in `CommentarySource.kt`, leaving a branch of Zayit's that
+  nothing reaches; one line here is smaller and plainer.
+- **Tests:** Zayit's `CopyWithSourceTest` (the Gemara and the Yerushalmi, unchanged), `CommentarySourceTest` (a
+  commentary by its daf), `LettersOnlyTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineTargumView.kt`
+
+- **Change:** modified, +24 −1 lines. Feature: Copy with a commentary's source.
+- **What:** `LinkItem` takes `onPress`, called on a primary or secondary press of the item (`onPointerEvent`, with its
+  opt-in); the single- and multi-line contents pass one that publishes the targumim shown, as the commentaries pane
+  publishes its column (`SelectionContext.setActiveCommentaryColumn`), through the file-level
+  `List<SourceSection>.column()`, marked "Pardes:"; `selectionContext` read from the graph; imports.
+- **Why:** request 40 (2026-11-12): a selection in a targum is copied with the targum's source ("תרגום אונקלוס על
+  בראשית כה, א"), not with the book's title alone. As in the commentaries pane, the menu's "הוסף הערה" and "דווח על
+  טעות", the main pane's, are no longer offered there, and a highlight made there is saved on the targum's line.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a parameter and a modifier on `LinkItem`, a line at each of its two calls.
+- **Smaller:** already minimal.
+- **Tests:** `CommentarySourceTest` (a column's match); the press, in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/PaneSearch.kt`
+
+- **Change:** modified, +8 −0 lines. Feature: Typing over a pane.
+- **What:** `PaneSearchFocus.typed`, text typed over the pane before its field had the focus, with a comment marked
+  "Pardes:"; as the field takes the focus it appends it to its text and hands the query over at once (past the
+  debounce, so that the text flow's first value, dropped, is not the typed one).
+- **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
+  contents and get straight to a daf, without the search button first, and without hurting anything else.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a field of Zayit's focus holder and four lines in its field's focus effect.
+- **Smaller:** already minimal.
+- **Tests:** `TypeToSearchTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocPanel.kt`
+
+- **Change:** modified, +8 −0 lines. Feature: Typing over a pane.
+- **What:** `TypeToSearchTarget(paneHoverSource)` before the pane's column, while a book is open, with a comment marked
+  "Pardes:": a letter typed with the pointer over the contents opens their search with it
+  (`searchFocus.type`, `ToggleTocSearch` when it is closed); three imports.
+- **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
+  contents and get straight to a daf, without the search button first, and without hurting anything else.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call before the pane's column.
+- **Smaller:** already minimal.
+- **Tests:** `TypeToSearchTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryTreePanel.kt`
+
+- **Change:** modified, +6 −0 lines. Feature: Typing over a pane.
+- **What:** `TypeToSearchTarget(paneHoverSource)` before the pane's column, with a comment marked "Pardes:": the same for
+  the book tree's search (`ToggleBookTreeSearch`); two imports.
+- **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
+  contents and get straight to a daf, without the search button first, and without hurting anything else.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call before the pane's column.
+- **Smaller:** already minimal.
+- **Tests:** `TypeToSearchTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/UserDataBackup.kt`
+
+- **Change:** modified, +3 −0 lines. Feature: User fonts.
+- **What:** a backup's archive (`Snapshot.toArchive`) holds, after the user database, the fonts the user added
+  (`UserFonts.writeTo`: `fonts/<file name>`), with a comment marked "Pardes:". The manifest's format stays 1: an older
+  app's restore reads the database and the manifest by their names and leaves the fonts alone, where a format 2 would
+  have refused the whole backup.
+- **Why:** the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12
+  that they go into the backup.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call after the archive's database entry.
+- **Smaller:** already minimal.
+- **Tests:** `UserFontsTest` (the archive's fonts written and read back); `UserDataBackupTest`, unchanged, still passes.
+- **Notes:** the snapshot's fingerprint, by which an unchanged backup is not uploaded again, does not count the fonts: a
+  font added alone goes to the Drive with the next change of the data.
 
 ### Search and history
 
@@ -1244,7 +1424,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +406 −52 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
+- **Change:** modified, +432 −53 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1262,8 +1442,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `MeaningFacets` and `BuildSearchTreeUseCase.categoryIdsOf`), and the library's other top categories are tabs after
     the results' (`showOtherCategories`, `_otherTabCategories`).
   - `collectBookIdsUnderCategory` reads the app's catalog (`libraryCategories.bookIds`) instead of the database.
-  - **Result tabs:** `showOnlyCategory` picks a tab with those already picked, or lets it go (Zayit's showed one at a
-    time); `listed` keeps the search's session when its list can be shown in part (`SessionViews`), and
+  - **Result tabs:** `showOnlyCategory(categoryId, add)` shows a tab alone, as Zayit's did, and with `add`
+    (Ctrl/Cmd+click) picks it with those already picked, or lets it go; `listed` keeps the search's session when its list can be shown in part (`SessionViews`), and
     `executeFilteredSearch` then shows the tabs' categories from that list with no new search (a category with no line
     in it is searched, as before); in a search of the whole library the tabs picked are the bar's categories
     (`showTabsInBar`, through `scopeChanges` and the file-level `scopeOfTabs(tabs, picked)`; `SearchScope.Global` when
@@ -1272,7 +1452,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - **Results in the library's order:** the constructor's `lucene` is a plain parameter named `engine`, and the
     `lucene` the file searches with is `CatalogOrderEngine(engine, libraryCategories::bookOrder)`, which lists in
     the library's order while the tab's `catalogOrder` says so; `SearchUiState.catalogOrder` (restored from the
-    tab's saved state), and the event `SetCatalogOrder`, which saves the choice and searches again.
+    tab's saved state), and the event `SetCatalogOrder`, which saves the choice and searches again;
+    `SearchUiState.fartherLines`, set from each first page by `showFartherLines` and kept with the tab: how many
+    lines found by meaning alone that order leaves out.
   - **Search speed:** the results' tree takes its books from the catalog (`BuildSearchTreeUseCase(repository,
     libraryCategories::books)`); and the flow that builds a tree from the first results no longer sets it once the
     facets' tree is in (`if (!facetsComputed)` in its `collect`): one finished late replaced the full tree with
@@ -1284,7 +1466,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   library's order are the user's request of 2026-11-09 (a sort by the catalog): wrapping the engine here leaves
   every search, filter and restore path of the file as it is. The tree's books from the catalog are the speed fix
   of `BuildSearchTreeUseCase.kt`; the guard is a fix of Zayit's code, seen once in the app when the first tree
-  from the catalog came in after the facets'.
+  from the catalog came in after the facets'. A tab picked alone on a plain click, others added only with Ctrl/Cmd,
+  is the user's request of 2026-11-12 (request 38).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
@@ -1296,7 +1479,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +89 −29 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
+- **Change:** modified, +123 −33 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1306,14 +1489,17 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - The preview's highlights come from `rememberPreviewHighlights(...)` instead of an inline `produceState`.
   - The category tabs are picked several at once: `FilterTabs` has a form taking the set picked (`selected: Set<Long>`,
     "הכל" the one picked when none is), Zayit's one-at-a-time form calling it; `CategoryTabs` marks every top
-    category picked.
+    category picked. A plain click picks a tab alone, as Zayit's did, and Ctrl/Cmd+click adds it or lets it go
+    (`onShowOnlyCategory(id, add)`, `add` read from `LocalWindowInfo`'s keyboard modifiers); then the bar takes the
+    focus (`barFocus`, after `BAR_FOCUS_DELAY_MS`), so that Enter searches again at once.
   - `PassagePreview` is read as a book is (`PassageReading.kt`): its lines are `rememberPassageReading(preview).lines`
     (more of the book past the passage's ends, the scroll container taking `readPastEnds`); Zayit's `Box` around the
     lines is `PassageText` (the text selected, the menu of a right click); a line's `clickable` and its hand pointer are
     `passageLine`, which still opens the book on a click of its own; and the view goes to the found line only until
     lines are added before the passage (`!passage.grownBefore`).
   - `SearchShellActions` gains `onCatalogOrderChange`; `SearchStatusLine` takes `catalogOrder` and ends with a link
-    to the other order (`search_sort_catalog` / `search_sort_relevance`); and in the library's order every passage
+    to the other order (`search_sort_catalog` / `search_sort_relevance`), and, in the library's order, `fartherLines`:
+    the lines found by meaning alone it leaves out are counted before that link (`search_farther_lines`); and in the library's order every passage
     is listed (`flattenResults`' `oneBook` is `everyPassage`: no "more in this book" link, a book's lines stand
     together).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
@@ -1321,7 +1507,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
   screen's. The passage read as a book is the user's request of 2026-11-10: its text selected and copied, the book's
   menu on a right click, and scrolling up and down past it. The link to the library's order is the user's request
-  of 2026-11-09, beside the status line's other choice.
+  of 2026-11-09, beside the status line's other choice. A tab picked alone unless Ctrl/Cmd is held, and the focus in
+  the bar after it, are the user's request of 2026-11-12 (request 38).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
@@ -1436,17 +1623,19 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +290 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 272 Hebrew strings added in eighteen blocks,
+- **Change:** modified, +317 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 298 Hebrew strings added in nineteen blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
-  - semantic packs: `semantic_pack_*` (31), `semantic_problem_*` (6);
-  - feedback: `feedback_send_*` (37), `feedback_consent_*` (20), `search_feedback_*` (6): among them the other apps'
-    rows and the publication's, with what each means; and under a comment, after `onboarding_library_folder_*`, the
+  - semantic packs: `semantic_pack_*` (36), `semantic_problem_*` (6);
+  - feedback: `feedback_send_*` (41), `feedback_consent_*` (20), `search_feedback_*` (5): among them the other apps'
+    rows and the publication's, with what each means, and what the settings' feedback page says of what waits; the
+    page's name in the sidebar, `settings_category_feedback`, after Zayit's `settings_category_data`; and under a comment, after `onboarding_library_folder_*`, the
     onboarding's step: `onboarding_feedback_*` (7);
-  - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (4), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
-    `daf_view_tooltip`, `daf_missing`, `daf_missing_hint`, `daf_amud_missing`, `settings_daf_*` (4) and
+  - the daf view: `daf_layouts_*` (19), `daf_update_*` (2), `daf_review_*` (5), `daf_download_*` (6), `daf_import_*` (4), `daf_view` and
+    `daf_view_tooltip`, `daf_marks` and `daf_marks_tooltip` (the marks' button), `daf_missing`, `daf_missing_hint`,
+    `daf_amud_missing` and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
   - the existing Zayit library: `onboarding_existing_library_*` (5); and under a comment, after Zayit's
     `onboarding_choose_files`, the offline install's folder that holds a library: `onboarding_library_folder_*` (8:
@@ -1454,13 +1643,17 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - search in categories and by name: `search_text_row_in_category`, `search_text_row_in_scope`,
     `search_switch_scope_all`, `search_switch_scope_base`, `row_action_add_to_search`, `row_action_search_category`,
     `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
-  - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה") and `search_sort_relevance`, after
+  - the user fonts' card, after `settings_font_reset_defaults`: `settings_user_fonts_*` (8) and
+    `settings_user_font_missing`;
+  - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה"), `search_sort_relevance` and
+    `search_farther_lines` (the lines found by meaning alone the library's order leaves out), after
     `search_switch_scope_base`;
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
     the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
   - a desktop's link: `desktop_copy_link` ("העתק קישור למרחב"), after Zayit's `desktop_open_in_new_window`;
-  - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings` and `home_widget_name_learning_split`;
+  - the Home: `home_dictionary_synonyms`, `home_dictionary_spellings`, `home_widget_name_learning_split` and after it
+    `home_widget_name_study_plans` ("הלימוד שלי");
   - the reader's menu: `context_menu_copy_letters_only`, `context_menu_open_in_dictionary`;
   - the references pane: `references_more` ("קישורים נוספים"), after Zayit's `references_mesorat_hashas`;
   - the open smart siddur, under a comment after Zayit's last siddur string (`siddur_open_siddur`): the 26 strings
@@ -1470,7 +1663,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     the engine's author's fork; `siddur_israeli_ordinary` ("כביום חול רגיל"), the custom Pardes adds, first among
     them; the three days of Iyar the engine names (`siddur_yom_hazikaron`, `…_haatzmaut`,
     `…_yerushalayim`); and the switch, `settings_open_siddur` ("סידור חכם (ניסיוני)") with its description, which
-    says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal.
+    says it is experimental and credits SeforimOpenSiddur, Amud and Hebcal;
+  - the PDF reading experiment, under a comment after the open siddur's switch: `pdf_experiment_title` ("קריאת PDF
+    (ניסוי)"), `…_open`, `…_hint`, `…_status` (the file, its pages and size, the time it took and the Java memory),
+    `…_failed`, `…_zoom_in` and `…_zoom_out`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -1507,15 +1703,64 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 ### Settings and fonts
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindow.kt`
+
+- **Change:** modified, +21 −11 lines. Feature: Settings window.
+- **What:** the settings are a window (`JewelDecoratedWindow`, with `rememberWindowState` at the same place and size,
+  700x500 in the middle) instead of a dialog (`JewelDecoratedDialog`), and its title bar `JewelTitleBar` instead of
+  `JewelDialogTitleBar`: no window is blocked, and the settings minimize apart. `SettingsWindow` takes `reopened`: at
+  each one the window comes back (`setMinimized(false)`, `toFront`, `requestFocus`, as `DefaultToolWindow` does), and the
+  page asked for is gone to again (`LaunchedEffect(initialDestination, reopened)`). A comment marked "Pardes:".
+- **Why:** the user asked on 2026-11-11 (request 35 of `docs/DESKTOP_STAGE2.md`) to minimize the settings apart from the main
+  window and use the app while they are open; Zayit's settings were a dialog modal to the window they were opened from.
+  A window of its own, opened once and brought back to the front when asked for again, is how Zayit opens its tool
+  windows (the dictionary's among them, `ToolWindows.kt`).
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** medium: the window's wrapper and title bar are replaced; a Zayit change of the dialog's parameters or
+  title bar conflicts there. The window's content (sidebar, pages, the close button) is Zayit's, unchanged.
+- **Smaller:** already near minimal: the wrapper, its state, the title bar and one effect.
+- **Tests:** `SettingsWindowReopenTest` (the reopening's state); the window was tried in the app (the main window usable
+  behind it, the app closed with it open); minimizing needs a window manager, which the cloud's display has not.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindowState.kt`
+
+- **Change:** modified, +3 −3 lines. Feature: Settings window.
+- **What:** `reopened`, how many times the open settings were asked for again, with a comment marked "Pardes:"; the
+  comment of `ownerWindowId` says only what it holds (the window composed inside it is gone).
+- **Why:** the user asked on 2026-11-11 (request 35 of `docs/DESKTOP_STAGE2.md`) to minimize the settings apart from the main
+  window and use the app while they are open; Zayit's settings were a dialog modal to the window they were opened from.
+  A window of its own, opened once and brought back to the front when asked for again, is how Zayit opens its tool
+  windows (the dictionary's among them, `ToolWindows.kt`).
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: a field at the end of the data class.
+- **Smaller:** already minimal.
+- **Tests:** `SettingsWindowReopenTest`; Zayit's `SettingsWindowStateTest`, unchanged, still passes.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindowViewModel.kt`
+
+- **Change:** modified, +5 −0 lines. Feature: Settings window.
+- **What:** `OnOpen` and `OnOpenTo` set `reopened` from the private `reopened()`: one more than before while the
+  settings are open, 0 when they open; a comment marked "Pardes:".
+- **Why:** the user asked on 2026-11-11 (request 35 of `docs/DESKTOP_STAGE2.md`) to minimize the settings apart from the main
+  window and use the app while they are open; Zayit's settings were a dialog modal to the window they were opened from.
+  A window of its own, opened once and brought back to the front when asked for again, is how Zayit opens its tool
+  windows (the dictionary's among them, `ToolWindows.kt`).
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one argument in each of the two events and a function after them.
+- **Smaller:** already minimal.
+- **Tests:** `SettingsWindowReopenTest`; Zayit's `SettingsWindowViewModelTest`, unchanged, still passes.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/FontCatalog.kt`
 
-- **Change:** modified, +0 −7 lines. Feature: Licences.
-- **What:** the Rashi Amiti option (`rashiamiti`), its family and its imports are removed.
-- **Why:** the font is not in Pardes (see `RashiAmiti.ttf`).
-- **Kind:** licence removal.
+- **Change:** modified, +4 −8 lines. Feature: Licences, User fonts.
+- **What:** the Rashi Amiti option (`rashiamiti`), its family and its imports are removed. And `familyFor`'s last
+  branch first asks `UserFonts` for a font the user added (a `user:` code), with a comment marked "Pardes:"; an
+  unknown code, or a user font whose file is gone, still gets the default family.
+- **Why:** the font is not in Pardes (see `RashiAmiti.ttf`). The user fonts: the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup.
+- **Kind:** licence removal; Pardes feature hook.
 - **Merge risk:** small; a conflict if Zayit edits the lines around the option.
 - **Smaller:** already minimal.
-- **Tests:** `FontCatalogTest`.
+- **Tests:** `FontCatalogTest`, `UserFontsTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/database/update/DatabaseCleanupUseCase.kt`
 
@@ -1547,48 +1792,57 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DataSettingsScreen.kt`
 
-- **Change:** modified, +19 −7 lines. Feature: Library location, Semantic search packs, Feedback sending,
-  No error reports.
+- **Change:** modified, +16 −7 lines. Feature: Library location, Semantic search packs, No error reports.
 - **What:**
-  - Three Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()` and `FeedbackSendCard()` (the
-    daf's layouts card stood among them until 2026-11-10; it is in the daf's own settings page).
+  - Two Pardes cards before the reset: `LibraryLocationCard()` and `SemanticPackCard()` (the daf's layouts card stood
+    among them until 2026-11-10, and the feedback's sending card until 2026-11-12: each is in a settings page of its
+    own).
   - The error-reports card only when `isErrorReportingAvailable`, with a comment.
-- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`, `3e365d16`, `e14ce828`); a build
+- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`); a build
   without a DSN sends no reports (`fabcf4e8`).
 - **Kind:** Pardes feature hooks.
 - **Merge risk:** small: one call per card in Zayit's column, and one `if` around its last card.
-- **Smaller:** the three cards could be one `PardesDataCards()` call.
-- **Tests:** `SemanticPackCardUiTest`, `FeedbackSendCardUiTest`; the other cards have none.
+- **Smaller:** the two cards could be one `PardesDataCards()` call.
+- **Tests:** `SemanticPackCardUiTest`; the other card has none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsDestination.kt`
 
-- **Change:** modified, +4 −0 lines. Feature: Daf view.
-- **What:** `SettingsDestination.Daf`, the daf view's settings page, after `Data`, with a comment.
+- **Change:** modified, +8 −0 lines. Feature: Daf view, Feedback sending.
+- **What:** `SettingsDestination.Daf`, the daf view's settings page, after `Data`, and `SettingsDestination.Feedback`,
+  the feedback's, after it, each with a comment.
 - **Why:** the daf view's settings stood in two pages (its marks and review among the fonts, its layouts among the
-  data); the user asked on 2026-11-10 for an ordered category of their own. Its two fonts stay among the fonts.
+  data); the user asked on 2026-11-10 for an ordered category of their own. Its two fonts stay among the fonts. The feedback's controls stood in three places (its
+  sending and the grade buttons' switch in two cards among the data, the reviews' folder in the daf's page); the user
+  asked on 2026-11-11 for a category of the settings where all of it is in order (request 30 of
+  `docs/DESKTOP_STAGE2.md`).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; one object at the end of Zayit's sealed interface.
+- **Merge risk:** small; two objects at the end of Zayit's sealed interface.
 - **Smaller:** already minimal.
 - **Tests:** none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsNavHost.kt`
 
-- **Change:** modified, +4 −0 lines. Feature: Daf view.
-- **What:** the `SettingsDestination.Daf` route draws `DafSettingsScreen()`; its import.
+- **Change:** modified, +8 −0 lines. Feature: Daf view, Feedback sending.
+- **What:** the `SettingsDestination.Daf` route draws `DafSettingsScreen()`, and the `SettingsDestination.Feedback`
+  route `FeedbackSettingsScreen()`; their imports.
 - **Why:** as for `SettingsDestination.kt`.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; one route after Zayit's last.
+- **Merge risk:** small; two routes after Zayit's last.
 - **Smaller:** already minimal.
 - **Tests:** none.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/SettingsSidebar.kt`
 
-- **Change:** modified, +8 −0 lines. Feature: Daf view.
+- **Change:** modified, +29 −0 lines. Feature: Daf view, Feedback sending, Start offers.
 - **What:** a sidebar item "צורת הדף" (`daf_view`, the reader's own label, with its icon `GemaraPage`) between the fonts
-  and the data, and its branch in the `when` that marks the page shown; two imports.
-- **Why:** as for `SettingsDestination.kt`.
+  and the data, and an item "משוב" (`settings_category_feedback`, with the icon `TablerMessage`) between the data and
+  About; each one's branch in the `when` that marks the page shown; and a dot after the label of a page that has
+  something new to download this start (`StartOffers.marked`, a `marked` parameter of `SidebarItem`, the page not
+  shown), with a comment marked "Pardes:"; eight imports.
+- **Why:** as for `SettingsDestination.kt`; the dot, as `StartOffers.kt` says (request 29).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; an item in Zayit's list and a branch in its `when`, which must stay exhaustive.
+- **Merge risk:** small; two items in Zayit's list and two branches in its `when`, which must stay exhaustive, and a
+  parameter of the item with its dot.
 - **Smaller:** already minimal.
 - **Tests:** none.
 
@@ -1607,10 +1861,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsEvents.kt`
 
-- **Change:** modified, +16 −0 lines. Feature: Daf view.
-- **What:** events `SetDafGemaraFont(code)`, `SetDafCommentaryFont(code)`, `SetDafMarkUnsure(enabled)` and
-  `SetDafReview(enabled)`.
-- **Why:** the daf view's fonts and its two switches are set on the fonts page (`e00754a4`, `1a350161`, `3c9ec937`).
+- **Change:** modified, +8 −0 lines. Feature: Daf view.
+- **What:** events `SetDafGemaraFont(code)` and `SetDafCommentaryFont(code)`.
+- **Why:** the daf view's fonts are set on the fonts page (`e00754a4`); its two switches, which had their events here, are
+  gone since the marks' button.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small.
 - **Smaller:** already minimal.
@@ -1618,8 +1872,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsState.kt`
 
-- **Change:** modified, +4 −0 lines. Feature: Daf view.
-- **What:** `dafGemaraFontCode`, `dafCommentaryFontCode`, `dafMarkUnsure` and `dafReview`, with their defaults.
+- **Change:** modified, +2 −0 lines. Feature: Daf view.
+- **What:** `dafGemaraFontCode` and `dafCommentaryFontCode`, with their defaults.
 - **Why:** as for `FontsSettingsEvents.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small.
@@ -1628,32 +1882,36 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsViewModel.kt`
 
-- **Change:** modified, +44 −18 lines. Feature: Daf view.
+- **Change:** modified, +30 −18 lines. Feature: Daf view.
 - **What:**
-  - Four more flows (`dafGemaraFont`, `dafCommentaryFont`, `dafMarkUnsure`, `dafReview`) and a private `current()`.
-  - `state` combines eight flows as `combine<Any, FontsSettingsState>(…) { current() }` instead of Zayit's typed
+  - Two more flows (`dafGemaraFont`, `dafCommentaryFont`) and a private `current()`.
+  - `state` combines six flows as `combine<Any, FontsSettingsState>(…) { current() }` instead of Zayit's typed
     four-flow lambda, and starts from `current()`.
-  - `onEvent` handles the four new events; `ResetToDefaults` resets the daf's two fonts too (not its switches, which
-    are in the daf's own settings page since 2026-11-10).
+  - `onEvent` handles the two new events; `ResetToDefaults` resets the daf's two fonts too.
 - **Why:** as for `FontsSettingsEvents.kt`.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: Zayit's `state` builder was rewritten.
-- **Smaller:** the daf's settings could be a second state of their own, leaving Zayit's typed `combine` as it was.
+- **Smaller:** the daf's two fonts could be a second state of their own, leaving Zayit's typed `combine` as it was.
 - **Tests:** `FontsSettingsEventsTest`.
 - **Notes:** the `combine<Any, …>` over flows of different types reads their values by hand: it works, but it is not
   how Zayit's code builds a state.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontsSettingsScreen.kt`
 
-- **Change:** modified, +18 −0 lines. Feature: Daf view.
+- **Change:** modified, +38 −10 lines. Feature: Daf view, User fonts.
 - **What:** two `FontSettingCard`s after Zayit's last, the daf's Gemara and its Rashi and Tosafot; their two imports.
   The daf's checkboxes that stood here too (the unsure lines, the review) are in `DafSettingsScreen.kt` since
   2026-11-10; the fonts stay here, with the other fonts, as the user asked on 2026-11-11.
-- **Why:** as for `FontsSettingsEvents.kt`.
+  - The user fonts (comments marked "Pardes:"): the lists offer the fonts the user added after the catalog's
+    (`UserFonts.fonts`), so `FontSettingCard` takes the fonts' codes in place of `FontOption`s, and a user font of
+    the setting whose file is gone is listed as missing (`withMissingFont`); `UserFontsCard()` after the six cards;
+    the `FontOption` import gone, four imports.
+- **Why:** as for `FontsSettingsEvents.kt`; the user fonts, the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; a block after Zayit's last card.
+- **Merge risk:** small to medium: a block after Zayit's last card, and the card's list of fonts from codes, which a
+  Zayit change of the card meets.
 - **Smaller:** already near minimal.
-- **Tests:** none of the screen.
+- **Tests:** none of the screen; `UserFontsTest`; the font added and chosen were tried in the app.
 
 ### Home widgets
 
@@ -1680,14 +1938,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWidget.kt`
 
-- **Change:** modified, +170 −22 lines. Feature: Klei Kodesh dictionary, Dictionary window.
+- **Change:** modified, +171 −23 lines. Feature: Klei Kodesh dictionary, Dictionary window.
 - **What:**
   - `Dictionary` gains a `source` (`BOOK`, `INDEX`, `TEXT`) and an `attribution`, and six entries: four books of the
     library read through Klei Kodesh's index of headwords (מצודת ציון, the Malbim's ביאור המילות, מיקרופדיה תלמודית,
     מחברת מנחם) and two dictionaries of text (Torat Emet's Aramaic-Hebrew dictionary, from Klei Kodesh's data with
     their permission; Hebrew Wikipedia's acronyms, CC BY-SA), with `Dictionary.of(name, source)`.
   - `DictionaryEntry.text` for a word of no book.
-  - Reading by source: `readBook` (Zayit's code, moved out of `readDictionaries`), `readIndexed` (each index entry
+  - Reading by source (`readDictionaries`, now internal: `DictionaryLookup` reads through it for the menus): `readBook`
+    (Zayit's code, moved out of it), `readIndexed` (each index entry
     checked against its line; the counts logged), `titleVariants` (באור/ביאור, " and ״), and the text dictionaries from
     `KleiKodeshPack.shipped`.
   - Each word's synonyms and spellings from Klei Kodesh (`RelatedWords`), under the field and on the entry's page; one
@@ -1872,12 +2131,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetSizesScreenshotTest.kt`
 
-- **Change:** modified, +12 −2 lines. Feature: Learning split widget, Home widgets loading.
+- **Change:** modified, +15 −2 lines. Feature: Learning split widget, Home widgets loading, Daily study plans, PDF reading experiment.
 - **What:** it waits until no card shows `WIDGET_LOADING_TAG` (`OFF_MAIN_TIMEOUT_MS`, 10 s) before measuring, and leaves
-  out the learning split widget, which reads its books' titles in the library, as the dictionary is left out; the class
-  KDoc says so.
+  out the learning split widget, which reads its books' titles in the library, and the study plans, whose parts come from
+  their books' tables of contents, as the dictionary is left out, and the PDF reader, an experiment that draws a file
+  opened and is no card; the class KDoc and the list's comment say so.
 - **Why:** the cards read off the UI thread were measured while loading (`022af5bb`); the learning split widget has no
-  library in the test (`0083381e`; `LearningSplitCardUiTest` draws it).
+  library in the test (`0083381e`; `LearningSplitCardUiTest` draws it), nor do the study plans (`StudyCardUiTest` draws
+  their card).
 - **Kind:** fix of Zayit's code (its tests), and a Pardes widget left out.
 - **Merge risk:** small.
 - **Smaller:** already minimal.
@@ -1895,10 +2156,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsEventsTest.kt`
 
-- **Change:** modified, +8 −0 lines. Feature: Daf view.
-- **What:** the four daf events are added to the test's list and to its exhaustive `when`.
-- **Why:** the `when` over `FontsSettingsEvents` must cover the new events to compile (`e00754a4`, `1a350161`,
-  `3c9ec937`).
+- **Change:** modified, +4 −0 lines. Feature: Daf view.
+- **What:** the two daf events are added to the test's list and to its exhaustive `when`.
+- **Why:** the `when` over `FontsSettingsEvents` must cover the new events to compile (`e00754a4`).
 - **Kind:** Pardes feature hook (a test kept compiling).
 - **Merge risk:** small.
 - **Smaller:** already minimal.
@@ -1918,11 +2178,12 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
-- **Feature:** Daf view.
-- **Size:** 1324 lines.
+- **Feature:** Daf view; its `dafFamily` (the daf's letters as the settings pick them) is `internal`, for the Mikraot
+  Gedolot pages too.
+- **Size:** 1348 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
-  `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review mode; `DafMode` (what a click
+  `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
   selects) and `DafControl` (what the keys and the find bar ask: page up or down, first or last amud, a line brought into
   view, a step to the next comment) are its two seams with the text view. A comment selected by a click on its own words
   is the one the arrows step from (`focused`): `stepComment` selects the comment read after it or before it in its
@@ -1937,8 +2198,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   `firstLines`), the page's marks (`dafHighlight`: passage, segments, their comments), clicks
   (`clickOn`, `segmentOf`), the links read for a page (`loadLinks`), the layouts folder (`rememberDafLayouts`), a missing
   layout's page with its download (`MissingLayout`, `DownloadLayout`), the review's menu items and tints, `DafFind`, and a
-  sideways pan as the commentaries' pages turn. The review's items (`reviewItems`, while the settings' review is on) are
-  two checkboxes, "הקטע מעומד לא נכון" and "יש טעות במילים" (`ContextMenuCheck`), of the lines the right-clicked word's
+  sideways pan as the commentaries' pages turn. The review is read with the tractate and its items are always in the menu (`reviewItems`), while its marks are
+  tinted and its moves made only when the daf's marks are shown (`asShown`, `AppSettings.dafMarksFlow`, which also
+  draws the unsure lines lighter); a reason said shows them. The items are
+  three checkboxes, "הקטע מעומד לא נכון", "יש טעות במילים" and "הקטע תקין" (`ContextMenuCheck`; while the menu stays open they share what is said, so "הקטע תקין" unchecks the two faults and
+  either unchecks it), of the lines the right-clicked word's
   selection covers (`reviewedAt`: the reader's own selection when the word is in it, or the selected segment's or
   comment's words on the amud, else the word's line), each written through `DafReviews.say`, one write at a time
   (`reviewing`); a line marked before the two reasons has "ביטול הסימון של השורה" too. Over a tractate's pages,
@@ -1949,23 +2213,23 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
   composables have no UI test.
-- **Notes:** at 1,324 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
+- **Notes:** at 1,348 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
   parts (pages, review, missing layout, marks).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayout.kt`
 
 - **Feature:** Daf view.
-- **Size:** 210 lines.
+- **Size:** 213 lines.
 - **What:** the layout file's model and folder. `DafLayoutFile` (a tractate's amudim, made by pardes-rashi-ocr's
   `export_layout.py`), `DafLibrary` (the library release a format-2 file's line ids are of), `DafAmud` (page and block
   size, lines), `DafLine` (column, box, words, sureness, dibbur words, each word's library line `u`), and `DafLayouts`:
   a folder's files found by the tractate their header names (English or Hebrew), watched for files put in or taken out,
-  the last few read kept, and an import. A file's `version` is its tractate's own among the released layouts (one more
+  the last few read kept, and an import; `hasAny`, whether the folder has a layout file at all. A file's `version` is its tractate's own among the released layouts (one more
   in each release its layout changed in), read with the file or from its head alone (`versionOf`); a file of before
   the releases gave each tractate one has none.
 - **Reached from:** `DafView.kt`, `DafPage.kt`, `DafSetting.kt`, `DafAnchors.kt`, `DafAmudLinks.kt`, `DafReview.kt`,
-  `DafDownloads.kt`, `DafLayoutsCard.kt`.
+  `DafDownloads.kt`, `DafLayoutsCard.kt`, `StartOffers.kt`.
 - **Follows:** Pardes's own; kotlinx-serialization as Zayit uses it.
 - **Tests:** `DafLayoutsTest`, `DafPageTest`, `DafDownloadsTest` (a file's version).
 
@@ -2041,6 +2305,33 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Tests:** none; the icon is seen in the reader's end bar.
 - **Notes:** Android compiles the module's folder as it is, so the file stays a plain `ImageVector`.
 
+#### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/MarkedLine.kt`
+
+- **Feature:** Daf view.
+- **Size:** 62 lines.
+- **What:** the icon of the daf's marks button, `MarkedLine`: a page's lines, the middle one marked by a rounded frame
+  around it.
+- **Reached from:** `DafMarksButton.kt`.
+- **Follows:** `GemaraPage.kt` and Zayit's icons in the module: an `ImageVector` built once and kept, 16 units square,
+  filled paths (the frame by the even-odd rule).
+- **Tests:** none; the icon is seen in the reader's end bar.
+- **Notes:** one of three proposals shown to the user on 2026-11-12, who had not yet chosen when it went in; Android
+  compiles the module's folder as it is, so the file stays a plain `ImageVector`.
+
+#### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/TablerMessage.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 94 lines.
+- **What:** the icon of the settings' feedback page in the sidebar, `TablerMessage`: Tabler's "message", a speech bubble
+  with two lines.
+- **Reached from:** `SettingsSidebar.kt`.
+- **Follows:** Zayit's `TablerInfoSquare.kt` and `License.kt` in the module, the sidebar's other Tabler icons: the same
+  stroked paths, and Tabler's MIT licence at the file's head (its text is shipped already,
+  `branding/pardes/assetsExtra/common/licenses/Tabler-Icons-LICENSE.txt`).
+- **Tests:** none; the icon is seen in the settings' sidebar.
+- **Notes:** listed here, with the daf's icons, though its feature is the feedback: the module's added icons stand
+  together.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAnchors.kt`
 
 - **Feature:** Daf view.
@@ -2081,11 +2372,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReview.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 287 lines.
+- **Size:** 315 lines.
 - **What:** a reader's review of a tractate's layout, for pardes-rashi-ocr: `DafReviewFile` and `DafMark`, a line
-  with what the reader said is wrong with it (`DafReason`: how it is set on the page, `layout`, or its words, `words`,
-  with `ok` false), of which of its words when the passage reviewed starts or ends inside it (`from`, `to`); a mark of
-  before the two reasons (a line right, wrong, or its first word moved: `isFormer`) is still read, its moves still made
+  with what the reader said of it (`DafReason`: it is set wrongly on the page, `layout`, its words are wrong, `words`,
+  both with `ok` false, or it is right, `RIGHT`, `ok` true: right takes both faults away, and either takes it away, `excludes`; `says`
+  tells whether one is said of a line), of
+  which of its words when the passage reviewed starts or ends inside it (`from`, `to`); a mark of before the two reasons
+  (a line wrong for no reason given, or its first word moved: `isFormer`) is still read, its moves still made
   (`withMarks`, a mark whose line now holds other words left out). `reviewed` gives the lines a review of a word is of:
   the selection's when the word is in it, each with the words of it meant, else the word's own (`ReviewedLine`).
   `lineBefore`/`lineAfter` in a column's reading order, and `DafReviews`, kept in the layouts' folder under
@@ -2100,28 +2393,40 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewMenu.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 94 lines.
-- **What:** `ContextMenuCheck`, an entry of the text's menu that is a checkbox (checked or not when the menu opens; a
-  click checks or unchecks it and the menu stays open, for another to be checked too), and its row
+- **Size:** 91 lines.
+- **What:** `ContextMenuCheck`, an entry of the text's menu that is a checkbox (a click checks or unchecks it and the menu
+  stays open, for another to be checked too; whether it is checked is read as the menu is drawn, so a box another one
+  excludes is seen unchecked at once), and its row
   (`ContextMenuCheckRow`: Jewel's `Checkbox` and the label, lit under the pointer as the menu's items are); and
-  `DafReviewsFolderLink`, the settings' link that opens the folder the reviews are kept in.
+  `DafReviewsFolderLink`, the settings' link that opens the folder the reviews are kept in (in Settings › משוב).
 - **Reached from:** `BookContentScreen.kt` (`contextItems`, one branch), `DafView.kt` (`reviewItems`),
-  `FontsSettingsScreen.kt` (the link).
+  `FeedbackSettingsScreen.kt` (the link).
 - **Follows:** Zayit's `ContextMenuHighlightColorPicker` and its row in `BookContentScreen.kt` (a passive item of the
   menu, its own hover and content color); Jewel's `Checkbox` and `Link`.
 - **Tests:** none of the composables; the marks they make are `DafReviewTest`'s.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafMarksButton.kt`
+
+- **Feature:** Daf view.
+- **Size:** 33 lines.
+- **What:** `DafMarksButton`, the end bar's button while a daf is shown: it shows or hides the daf's marks
+  (`AppSettings.dafMarksFlow`), the lines its alignment is not sure of drawn lighter and the lines the reader's review
+  named tinted, its label "סימונים" (`daf_marks`, `daf_marks_tooltip`).
+- **Reached from:** `VerticalBars.kt` (the end bar, in the diacritics button's place while a daf is shown).
+- **Follows:** Zayit's toggles of the same bar (`SelectableIconButtonWithToolip`, as the daf's own and שנים מקרא's).
+- **Tests:** none of the composable; `DafZoomTest` (the setting it switches). Seen in the app on Kiddushin 2a.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafDownloads.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 362 lines.
+- **Size:** 364 lines.
 - **What:** the released layouts downloaded into a library's `pardes-daf` folder: `DafReleases` (the `daf-<n>` releases
-  from the GitHub API, or the site's `daf.json` when it fails), `DafManifest` (each tractate's gzipped file with its
+  from the GitHub API, or the site's `daf.json` when it fails, through `ReleaseLists`, shared with the semantic packs), `DafManifest` (each tractate's gzipped file with its
   sha256 and its layout's, and the tractate's own version, none in a release of before the versions), and
   `DafDownloads` (what the folder has as released, the version of each of its files, and each tractate downloaded,
   checked and imported as a picked file is, one alone or several). The sha256 still says whether a file is the
   release's; the versions are what the reader is shown.
-- **Reached from:** `DafView.kt` (a missing tractate's download), `DafUpdate.kt`, `DafLayoutsCard.kt`.
+- **Reached from:** `DafView.kt` (a missing tractate's download), `DafUpdate.kt`, `DafLayoutsCard.kt`, `StartOffers.kt`.
 - **Follows:** Zayit's library download (`GitHubReleaseFetcher`, `HttpFileDownloader`) in spirit; its own code.
 - **Tests:** `DafDownloadsTest`.
 
@@ -2140,12 +2445,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafLayoutsCard.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 213 lines.
+- **Size:** 232 lines.
 - **What:** Settings › צורת הדף's card for the daf's layouts (in Settings › ניהול נתונים until 2026-11-10): how many the library's folder has as released, and
   every one it lacks, or has otherwise, downloaded at once; the download goes on when the settings close. Each
   tractate has a row (`Tractates`, `tractateLine`): its name, its file's version in the folder and the release's, and
   for one to download a link that downloads it alone; those to download are always listed, the others when asked
-  ("כל המסכתות והגרסאות שלהן").
+  ("כל המסכתות והגרסאות שלהן"). Marked, its frame lit and brought into view, when a start opened the settings for a
+  newer version (`StartOffers.take`), as the semantic search's card is.
 - **Reached from:** `DafSettingsScreen.kt` (`DafLayoutsCard()`).
 - **Follows:** the settings cards of Zayit's data page (their layout and components).
 - **Tests:** `DafLayoutsCardUiTest`.
@@ -2153,14 +2459,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafSettingsScreen.kt`
 
 - **Feature:** Daf view.
-- **Size:** 82 lines.
-- **What:** `DafSettingsScreen`, Settings › צורת הדף: the daf view's settings in one page, in order: the lighter unsure
-  lines with their note, the review mode with its note and the link to its folder, then the layouts' card
-  (`DafLayoutsCard`). They stood among the fonts and among the data until 2026-11-10, when the user asked for a
-  category of their own; the daf's two fonts stay among the fonts (the user's word of 2026-11-11).
+- **Size:** 27 lines.
+- **What:** `DafSettingsScreen`, Settings › צורת הדף: the layouts' card (`DafLayoutsCard`). The page had the switches of
+  the unsure lines and of the review mode until 2026-11-12, when the review went into the menu for good and the
+  marks to the button beside the daf, and under the card the link to the folder of the reader's reviews, which is in
+  Settings › משוב since that day; the daf's two fonts stay among the fonts (the user's word of 2026-11-11).
 - **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Daf`), from `SettingsSidebar.kt`'s item.
-- **Follows:** Zayit's `FontsSettingsScreen` (a screen over a view of state and events, the same column of cards), whose
-  view model it reads: the daf's switches are kept there with its fonts (`FontsSettingsState`, `FontsSettingsEvents`).
+- **Follows:** Zayit's settings screens (a scrolling column of cards with the same paddings).
 - **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its card.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LocatedSelection.kt`
@@ -2178,10 +2483,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/settings/DafZoomTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 116 lines.
+- **Size:** 119 lines.
 - **What:** the daf's own settings: the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
   shows one, level by level; the daf's own zoom (a pinch) zooms the text by the same ratio, the same text back at the
-  same zoom, and goes on from the next level; the views' count; the unsure lines and the review mode off until asked and reset; the zoom kept and reset.
+  same zoom, and goes on from the next level; the views' count; the daf's marks hidden until asked and reset, and shown at first for whoever had one of the two former settings on; the zoom kept and reset.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's settings tests (`testAppSettings()`).
 - **Tests:** it is one (unit, `AppSettings`).
@@ -2292,14 +2597,16 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafReviewTest.kt`
 
 - **Feature:** Daf view (review mode).
-- **Size:** 185 lines.
+- **Size:** 222 lines.
 - **What:** a line's start moved a word on or back with its library line and bold, a move that would empty a line left
   out, a mark of a changed line or another amud moving nothing, the review kept in the feedback folder (the new mark in
   place of the old), written to the file it was read from, and an unreadable file set aside. The two reasons: a review
   is of the selection's lines when the word is in it, with the words it holds (its column's lines alone, no big word),
   else of the word's line; a reason said of a passage's lines in one write and unsaid again, the other reason kept, no
   mark left with neither, each mark with the version of the layout it was made on; a mark of before the reasons kept
-  under them (its move still made) and told apart.
+  under them (its move still made) and told apart. The third answer: a passage said to be right has neither fault, a
+  fault said of it takes right away, and it is said of each line of a passage in one write, as a fault is; which answer excludes which (`excludes`,
+  `says`).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, `DafReview.kt`).
@@ -2631,29 +2938,160 @@ book or by the time it was read, as Pardes for Android's widget. Hooks: `MainApp
 ### The reader's menu: a copy of the words alone
 
 "העתק טקסט בלבד" in the reader's context menu: the selected text without its nikud, teamim and punctuation, as the user
-asked on 2026-11-09. Hooks: `BookContentScreen.kt`, `strings.xml`.
+asked on 2026-11-09; offered only where the selection has punctuation, with Ctrl/Cmd+Shift+C, as asked on 2026-11-12
+(request 39). Hooks: `BookContentScreen.kt`, `CopyWithSource.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/LettersOnly.kt`
 
 - **Feature:** Copy of the words alone.
-- **Size:** 50 lines.
+- **Size:** 61 lines.
 - **What:** `lettersOnly(text)`, a text as its words alone: Zayit's `HebrewTextUtils.removeAllDiacritics`, then every
   character that is no letter or digit taken out, a space where it stood between two words (a maqaf, a dash, a slash),
   the lines kept and the spaces folded. A geresh after a letter and gershayim between two letters stay, as the word's
-  own spelling (וגו׳, רש״י). `hasMoreThanLetters(text)` says whether such a copy would differ, for the menu to offer it.
-- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`).
+  own spelling (וגו׳, רש״י). `hasPunctuation(text)` says whether the text has punctuation such a copy takes out (a sign
+  between or around its words, not a word's geresh or gershayim, nor nikud or teamim alone, which "העתק ללא ניקוד"
+  takes out), for the menus to offer it only then.
+- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`), `PassageReading.kt`, Zayit's `CopyWithSource.kt`
+  (`selectionCopyShortcut`).
 - **Follows:** Zayit's `core/CopyWithSource.kt`: the copy actions' top-level functions, in `core`.
 - **Tests:** `LettersOnlyTest`.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/LettersOnlyTest.kt`
 
 - **Feature:** Copy of the words alone.
-- **Size:** 44 lines.
+- **Size:** 50 lines.
 - **What:** a verse loses its nikud, teamim and sof pasuq; a maqaf, a dash and a slash become a space; רש"י, ד"ה, וגו'
-  and ר׳ keep their marks while the quotation marks around words go; lines and numbers stay; and a text of words alone
-  is told from one with marks.
+  and ר׳ keep their marks while the quotation marks around words go; lines and numbers stay; and a text with
+  punctuation (a maqaf, a sof pasuq, quotation marks) is told from one with nikud, gershayim or a mark of direction
+  alone.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The reader's menu: a copy with the source of a commentary, a targum or the daf
+
+"העתק עם מקור" and Ctrl/Cmd+Alt+C of a selection made in a commentary, a targum or the daf view cite them, their own
+book and lines ("רשב״א על בבא בתרא ב."), not the title of the book open in the tab alone, as the user asked on
+2026-11-12 (request 40). Hooks: `BookContentScreen.kt`, `MainAppWindow.kt`, `LineCommentsView.kt`, `LineTargumView.kt`,
+`CopyWithSource.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/CommentarySource.kt`
+
+- **Feature:** Copy with a commentary's source.
+- **Size:** 210 lines.
+- **What:**
+  - `commentaryRangeOf(text, column)`: the first and last commentaries of a column (`CommentaryLineRef`) a selection
+    covers, by their text without diacritics: one holding the other, or a selection begun or ended inside one, wherever
+    in it (an overlap of eight letters at least, `MIN_OVERLAP`, found from the occurrences of the selection's first or
+    last letters, in linear time, since a whole book's selection is checked on a click).
+  - `commentaryCopyWithSource`; `locatedLinesOf` (the first and last lines, in their book's order, of the daf view's
+    located selection in its first book); `copyWithSourceOf` (a text with the reference of its lines in their own book,
+    by Zayit's `formatHebrewSourceReference`).
+  - `menuOwnSourceOf(text, ranges, column)`: the menu's copy (`OwnSourceCopy`) for a located selection or one found in
+    the column; null leaves it to Zayit's `buildCopyWithSourcePayload`.
+  - `rememberCommentaryCopyShortcut()`: the window's Ctrl/Cmd+Alt+C for its selected tab, through `ownSourceOf`: a
+    selection whose lines are known in another book than the tab's (the daf's Rashi and Tosafot, published with their
+    lines), or found in the column and not among the book's lines; null leaves it to Zayit's `selectionCopyShortcut`.
+- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`), `MainAppWindow.kt`.
+- **Follows:** Zayit's `core/CopyWithSource.kt` beside it: top-level functions in `core`, and its reference format.
+- **Tests:** `CommentarySourceTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/CommentarySourceTest.kt`
+
+- **Feature:** Copy with a commentary's source.
+- **Size:** 127 lines.
+- **What:** a selection is found among a column of the Rashba's and Tosafot's commentaries (across two, inside one, not
+  in another text) and copied with the Rashba's book and daf; the daf view's located Rashi lines are cited first to last
+  in their own book whatever their order, a word of the Gemara's left out; the shortcut takes a selection of the
+  window's tab whose lines are in another book, or found in the column alone, and leaves the book's own text and the
+  Gemara's lines to Zayit's; a commentary on the Talmud is cited by its daf.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### Reading PDF files: the experiment
+
+The first step of request 28 (`docs/DESKTOP_STAGE2_PLAN.md`), behind a hidden switch as the user decided on
+2026-11-12: a PDF file drawn by Nucleus's PDFium binding (`dev.nucleusframework:pdfium-jvm`, added by
+`branding/brand.gradle`) in a tool window of its own, which the Tools menu lists only while the switch is on, to
+answer whether it draws on Pardes's Tao window and in the native image, what a large scan costs in memory, and whether
+its text is copied. Hooks: `strings.xml`, `reachability-metadata.json`; the Tools menu finds the tool by itself
+(`availableTools`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfReaderTool.kt`
+
+- **Feature:** PDF reading experiment.
+- **Size:** 170 lines.
+- **What:**
+  - `PdfExperiment.enabled`: the hidden switch, on when the environment variable `PARDES_EXPERIMENTS` or the system
+    property `pardes.experiments` lists "pdf" (`listsPdf`); no setting shows it.
+  - `PdfReaderTool`, a `HomeWidget` with a tool window (820 by 900 dp) that is supported only while the switch is on,
+    so that the Tools menu and the widgets' gallery offer it then alone.
+  - Its view: a button that opens a file with FileKit's picker and reads it whole into `PdfReaderState.open`, a line
+    that says the file, its pages and size, the time it took and the Java memory, zoom buttons, and the pages one
+    under the other with `PdfPage(…, selectableText = true)` (the binding's `PdfReader` leaves the text unselectable),
+    as wide as the zoom asks and scrolled sideways; an error, a missing native library's too, is said in the window.
+- **Reached from:** the Tools menu (`ToolsMenuButton`, `AppNativeMenuBar`) through `availableTools`, the widgets'
+  registry generated by KSP.
+- **Follows:** Zayit's tool widgets, as the dictionary (`DictionaryWidget`): an `object` with `toolWindowSize` and
+  `toolSymbol`, and DafView's FileKit picker off the event loop.
+- **Tests:** `PdfExperimentTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfExperimentTest.kt`
+
+- **Feature:** PDF reading experiment.
+- **Size:** 22 lines.
+- **What:** the switch is on when the environment or the property lists "pdf", in any case and among others, and off
+  otherwise; the tool is offered exactly when the switch is on.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's unit tests (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The Chumash as Mikraot Gedolot (a prototype)
+
+Request 21 (`docs/DESKTOP_STAGE2_PLAN.md`), its first book type, as the user decided on 2026-11-12 and showed in an
+example of a printed edition on 2026-11-13: the daf toggle of a book of the Chumash shows its pages, one size, scrolled
+down; each verse with Onkelos at the top of where its part starts, then each commentator under its name in two columns,
+going on to the next pages until the next verse. The boxes are laid out by the program and drawn by the daf's setting
+and drawing. Hooks: `VerticalBars.kt`, `BookContentPanel.kt`; in Pardes's files, `DafView.kt` (`dafFamily`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/MikraotGedolot.kt`
+
+- **Feature:** Mikraot Gedolot pages.
+- **Size:** 676 lines.
+- **What:**
+  - `mikraotPages(verses, commentators, widths)`, through `PageSetter`: the verses set as pages of 412 by 597 points,
+    each a `MikraotPageText` of three `DafAmud`s (the verses' in square letters `VERSE_SCALE` times Onkelos', Onkelos',
+    the commentaries' in Rashi script), the names over the parts (`MikraotHeading`), the verses it starts and its running
+    head (the verses whose parts it holds, "בראשית א, א–ב"). A verse block (the verse on the right 62%, Onkelos under
+    its name on the left) starts a new page when it does not fit; a commentator's comments on the verse, together, run
+    in two columns under its name, as long as the page's room, balanced on their last page; lines are broken by the words'
+    widths (`WordWidths`), a part's short last line kept at its width from the right.
+  - `htmlWords`: a line's words and those in bold (the dibbur).
+  - `MikraotView`: the pages in a `LazyColumn`, from the chapter of the tab's verse, the next chapter loaded when its
+    end is reached (`chapterOf`, `chapterAt`, by the references' chapter); the verses' targum and comments read in one
+    query (`getCommentariesForLines`); the commentators those the commentaries pane shows for the first verse, or the
+    example's (רש"י, אבן עזרא, רשב"ם, רמב"ן, ספורנו) when none; each page laid out by `layoutAmud` off the UI thread
+    and drawn by `PageView`: paper, the running head, the names (in the daf's square letters, bold), and three
+    `DafAmudText`s, the commentaries' on top, whose words are selected.
+- **Reached from:** `BookContentPanel.kt`, while the daf toggle (`VerticalBars.kt`) is on for a book of the Chumash.
+- **Follows:** Pardes's daf view (`DafView`, `DafLayout`, `DafSetting`): its model, setting and drawing reused for boxes
+  laid out here, and `DafView`'s amudim one below the other.
+- **Tests:** `MikraotGedolotTest`; seen in the app on בראשית א.
+- **Notes:** a prototype, shown before the other book types: no click to select a verse or a comment yet, nor the
+  text's menu, and the columns of a pair of commentators are not balanced across pages beyond their own part.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/MikraotGedolotTest.kt`
+
+- **Feature:** Mikraot Gedolot pages.
+- **Size:** 95 lines.
+- **What:** short comments share a page with their verses, each verse at the top of its part, the verse on the right in
+  its bigger letters, Onkelos on the left under its name, the comments in two columns with their dibbur in bold, the
+  running head the page's verses; a long comment runs on to the next pages, its name once, both columns full on the
+  pages between, balanced on its last, a page that only goes on with it headed with its verse, and the next verse
+  follows it; a comment's words keep its bold dibbur.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's daf tests (Kotlin Test, backtick names), with words of fixed widths.
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is
@@ -2669,7 +3107,7 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/PassageReading.kt`
 
 - **Feature:** Passage read as a book.
-- **Size:** 399 lines.
+- **Size:** 407 lines.
 - **What:**
   - `PassageReading`, the state of one result's passage: its `lines` (the result's own, then those read before and
     after them, `more(before)`: 30 at a time by `lineIndex`, one reading at a time, none past the book's ends or 600
@@ -2681,14 +3119,15 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
   - `Modifier.readPastEnds(passage, scroll)`: the nested scroll connection, and the wheel's own events at an end (a
     passage shorter than its pane scrolls nothing).
   - `PassageText`: a `SelectionContainer` under a `TextContextMenu` that adds the menu's items (`PassageActions`) to the
-    app's own (Jewel's "העתקה"), and the lines added before those read kept out of the way: drawn above the view
+    app's own (Jewel's "העתקה"; "פתח במילון" lit for what the dictionaries have of the selection, as in the reader:
+    `DictionaryLookup.entryOf`, `DictionaryReadFor`), and the lines added before those read kept out of the way: drawn above the view
     (`offset`) until the scroll takes their height (`dispatchRawDelta`), so what is read stays in its place.
   - `Modifier.passageLine(passage, lineId, onOpen)`: a click of its own opens (not a drag, not a click that lets a
     selection go, not the first of two on a word, waited for `doubleTapTimeoutMillis`), nothing consumed, so the
     selection takes the same presses; the line pressed and the line right-clicked are kept.
 - **Reached from:** `SearchResultScreen.kt` (`PassagePreview`).
 - **Follows:** the reader's `BookTextMenus` (`BookContentScreen.kt`) for the menu's items, labels and icons, and its
-  helpers (`buildCopyWithSourcePayload`, `bookShareLink`, `lettersOnly`, `lookupWord`); `PreviewHighlights.kt` beside
+  helpers (`buildCopyWithSourcePayload`, `bookShareLink`, `lettersOnly`, `lookupWord`, `DictionaryLookup`); `PreviewHighlights.kt` beside
   it, the other part of the passage Pardes adds.
 - **Tests:** `PassageReadingTest`; the selection, the menu, the clicks and the scroll were tried in the app.
 - **Notes:** what needs the book open is left to the reader: a note, a highlight, the find bar, a report of an error.
@@ -2711,7 +3150,9 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
 A link in the results' status line, "מיון לפי סדר הספרייה", lists the lines found as the library has its books (the
 Tanakh's before the Mishnah's, a book's lines as they stand in it) instead of by relevance, as the user asked on
 2026-11-09; "מיון לפי רלוונטיות" goes back. Every line the words find is listed, a book's together, and with the meaning
-search the lines it alone found stand among them in their place. The choice is the tab's, kept with it. Nothing of
+search the lines it alone found that stand out of the search's candidates (2 standard deviations and more, measured in
+`docs/catalog-order/`; all of them until 2026-11-12, as the user asked that day) stand among them in their place, the
+others counted in the status line. The choice is the tab's, kept with it. Nothing of
 SeforimLibrary's index changes: the books that have lines found are known from the facets, and are read a few at a time
 in the library's order, each sorted by its lines' places. On the whole library the first page comes in 0.03 to 0.9
 seconds, a search of 1.7 million lines included. Hooks: `SearchResultViewModel.kt`, `SearchResultScreen.kt`,
@@ -2721,39 +3162,78 @@ and `MeaningFacets.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSearch.kt`
 
 - **Feature:** Results in the library's order.
-- **Size:** 198 lines.
+- **Size:** 255 lines.
 - **What:**
   - `CatalogOrderEngine(engine, bookOrder, byCatalog)`, a `SearchEngine` that is `engine` in everything (`by engine`)
     but its sessions: while `byCatalog()` says so, `openSession` gives a `CatalogOrderSession` over the engine's words
     (`WordsEngine.words`, else the engine itself), with the engine's own session beside it when that one lists lines
-    found by meaning (`MeaningFacets`).
-  - `CatalogOrderSession`, a `SearchSession` and `MeaningFacets`: on its first page it counts the books that have lines
-    found (`computeFacets`) and reads the engine's own list once (some 300 lines, and how many of each book's the words
-    don't find); then it reads the books in the library's order (`bookOrder`, a book without a place last), as many as
+    found by meaning (`MeaningFacets`). Its facets are counted once for its last searches (`RecentFacets`): the view
+    model's, which the list reads again, and a tab's list reads its books' from the whole search's.
+  - `CatalogOrderSession`, a `SearchSession` and `MeaningFacets`: on its first page it takes the counts of the books
+    that have lines found (`computeFacets`, or those of a recent search that holds it) and has the engine make its own
+    list, reading none of its lines but those of the meaning's own that stay in it (`MeaningFacets.meaningHits`), and
+    counting the meaning's lines by book; then it reads the books in the library's order (`bookOrder`, a book without a place last), as many as
     fill the page asked for (200 books at most in one reading), each group in one session of the words, sorted by book
-    and `lineIndex`; the meaning's own lines of those books join them, each line once. Its pages show the words in bold
+    and `lineIndex`; of the meaning's own lines (`MeaningFacets.meaningLines`, in the engine's own order) those that
+    stand out of the search's candidates by `STANDOUT` (2 standard deviations) or more join them in their books,
+    each line once, and how many others there are is `fartherLines` (`fartherLinesOf` for any session). Its pages show the words in bold
     (`attachSnippets`), a line the meaning alone found its text and then its passage closest in meaning
     (`refinedSnippets`, the engine's own session's); its total counts both.
 - **Reached from:** `SearchResultViewModel.kt` (its `lucene`).
 - **Follows:** Zayit's `SearchEngine` and `SearchSession` contract (pages asked one after the other, `snippets = false`
   to skip, a `Mutex` around the cursor as `LuceneSearchEngine`'s session), and `HybridSearchEngine`'s session beside
   it, the other session Pardes adds.
-- **Tests:** `CatalogOrderSessionTest`; the order, the tabs in it and the choice kept over a restart were tried in the
-  app on the whole library.
-- **Notes:** nothing is ranked, so a book with thousands of lines found is read whole when its turn comes (2,000 lines
+- **Tests:** `CatalogOrderSessionTest`, `RecentFacetsTest`; the order, the tabs in it and the choice kept over a
+  restart were tried in the app on the whole library; measured by `ScopeFlowBench` (docs/scope-search-speed: a tab in
+  that order 61 to 116 ms where it took 93 to 198, the engine's 300 lines read for 5 to 13 of them having been most of
+  its opening).
+- **Notes:** the meaning's lines were all listed until 2026-11-12, when the user asked for the closest alone (request
+  31 of `docs/DESKTOP_STAGE2.md`): in the library's order a weak line came first because its book does. A fixed number
+  of them (10) went in first; the user asked that day for a rule by each line's score instead, so each search keeps
+  as many as stand out (5 to 13 on eval-real). Both are measured in `docs/catalog-order/` (the lines standing 2 and
+  more related to the search in 61%, the others in 34%); the category tabs still count them all, as the order of
+  relevance does. Nothing is ranked, so a book with thousands of
+  lines found is read whole when its turn comes (2,000 lines
   at a time). The passage beside the results still highlights by the engine's rule (by meaning with a pack), while
   the list shows the words in bold.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/RecentFacets.kt`
+
+- **Feature:** Results in the library's order.
+- **Size:** 79 lines.
+- **What:** `FacetsKey`, a search whose facets are counted (`computeFacets`' arguments, its sets as sets), and whether
+  one holds another (`holds`: some of its books, nothing else different); `RecentFacets`, the facets of a search tab's
+  last four searches, each counted once (`get`: counted, or awaited while another counts it), and a search's counts by
+  book read from one that holds it (`bookCounts`).
+- **Reached from:** `CatalogOrderSearch.kt` (`CatalogOrderEngine.computeFacets`, `CatalogOrderSession`).
+- **Follows:** Zayit's `SearchFacets`; Java's `CompletableFuture` for a count awaited while another thread makes it.
+- **Tests:** `RecentFacetsTest`, `CatalogOrderSessionTest`.
+- **Notes:** the view model counts a search's facets and opens its list at once, and the list counted them again; a tab
+  in the library's order is a new list, which counted its books again (docs/scope-search-speed).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/RecentFacetsTest.kt`
+
+- **Feature:** Results in the library's order.
+- **Size:** 78 lines.
+- **What:** a search's facets counted once, the second asking awaiting the first; a tab's books counted from the whole
+  search's, not another search's nor another base-books choice's; a search in some books holding none wider; only the
+  last searches kept, and a count that failed not kept.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test; two threads of `Executors` for the count awaited.
+- **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CatalogOrderSessionTest.kt`
 
 - **Feature:** Results in the library's order.
-- **Size:** 285 lines.
+- **Size:** 349 lines.
 - **What:** the lines come book by book in the library's order, each book's as they stand in it; the books are read as
   the pages ask for them, those with a line or two together, and the last page says so; a line the meaning alone found
-  stands in its place and is counted, one the words found too comes once; the words' lines show the words, the
+  stands in its place and is counted, one the words found too comes once; of the meaning's own lines only those
+  that stand out stand in the list, the others counted, and how many stay is the search's own (none, or all); the words' lines show the words, the
   meaning's own its text and then its passage; a search in some lines reads them alone; the session closes the
   engine's own; and the engine gives its own session unless the library's order is asked for, reading the words of an
-  engine that adds lines by meaning.
+  engine that adds lines by meaning; the list counts no facets the view model counted, nor a tab's the whole
+  search's.
 - **Reached from:** the JVM tests.
 - **Follows:** `MeaningFacetsTest` and `HybridSearchEngineFallbackTest` (a fake `SearchEngine` listing given hits),
   Kotlin Test with `runTest`.
@@ -3074,18 +3554,23 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWindow.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 107 lines.
+- **Size:** 162 lines.
 - **What:** `DictionaryToolWindow`, the dictionary's tool window: Zayit's `DefaultToolWindow` under
   `LocalDictionaryWindow` set to true. `Modifier.focusedInItsWindow()` gives the field the focus there, when the window
   opens, each time it is asked for again (`ToolWindows.reopened`) and back from an entry's page; on the Home the local is
   false and the card takes no focus by itself. `DictionaryLookup` (app-scoped) opens that window on a word from outside
-  it, or brings it back: the word waits in it until `LookupAskedFor`, in the window alone, hands it to the field.
+  it, or brings it back: the word waits in it until `LookupAskedFor`, in the window alone, hands it to the field. It
+  also says what of a selection the dictionaries have (`entryOf`, by `entryIn`: the selection itself, else the first of
+  its words the window would find), for a menu to light its item only for that; the dictionaries ticked are read for
+  it once, off the UI thread, when a selection short enough is first made (`read`, called by `DictionaryReadFor`), and
+  until then the selection itself is offered, as before.
   `lookupWord` is a selection as the dictionary is asked for it: its words alone (`lettersOnly`), or null when it is
   empty or longer than four words. `lookupAsRead` is Zayit's `lookup`, and for a word no entry begins with, the same
   word without the letters before it in a text (והלל: הלל, דאמר: אמר), at most two and down to three letters, when
   what is left is an entry.
 - **Reached from:** `DictionaryWidget.kt` (`ToolWindow`, the field's modifier, `LookupAskedFor`, `lookupAsRead`),
-  `BookContentScreen.kt` (`lookupWord`, `DictionaryLookup.open`), `AppGraph.kt`.
+  `BookContentScreen.kt` and `PassageReading.kt` (`lookupWord`, `DictionaryReadFor`, `DictionaryLookup.entryOf` and
+  `open`), `AppGraph.kt`.
 - **Follows:** Zayit's `SolarSystemWidget`, whose `ToolWindow` is a window of its own, and his composable modifiers
   (`Modifier.pageSwipe`, `Modifier.trackedDrag`); `DictionaryLookup` is injected as his `ToolWindows` is.
 - **Tests:** `DictionaryWindowUiTest`, `DictionaryLookupTest`.
@@ -3103,9 +3588,10 @@ it on the selected word ("פתח במילון"), as the user asked on 2026-11-09
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryLookupTest.kt`
 
 - **Feature:** Dictionary window.
-- **Size:** 55 lines.
+- **Size:** 73 lines.
 - **What:** a selected word is asked for as its letters alone; no word, or more than four, is not looked up; a word of
-  a text is found without the letters before it, a word of the dictionaries as itself; a lookup opens the dictionary's
+  a text is found without the letters before it, a word of the dictionaries as itself; a selection is looked up whole when the dictionaries have it, else by the
+  first of its words they have, and offered as it is until they are read; a lookup opens the dictionary's
   window and brings it back for the next word.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `DictionaryWidgetTest` beside it (Kotlin Test, backtick names).
@@ -3281,7 +3767,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 766 lines.
+- **Size:** 821 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -3289,17 +3775,23 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   out; every line gains for the query's words close together in its best window, `coverage`), on the candidates' lines
   read once from the library (`candidateLines`); then it keeps the first lexical hits at places 2 and 4 (`keepLeaders`),
   recognizes a quote held word for word (`holdsQuote`), applies the earlier level's precedence (`LevelPrecedence`),
-  highlights by meaning, counts the meaning's lines in the facets (`MeaningFacets`), and falls back to the words alone
+  highlights by meaning, counts the meaning's lines in the facets and lists them with how far each stands out of the dense side's candidates
+  (`MeaningFacets`, `standingOf`), and falls back to the words alone
   when the model or the index cannot load. Its session gives views of its list (`SessionViews`: the lines of some
   books, in the list's order, paged from the first with no search), for the category tabs; none when the list goes on
-  past what it holds (the words alone, past their candidates). It is a `WordsEngine`: its words' search (`words`) can
+  past what it holds (the words alone, past their candidates). Some of the meaning's own lines are read alone on
+  request (`meaningHits`). It is a `WordsEngine`: its words' search (`words`) can
   be asked apart, for a list of every line they find in the library's order (`CatalogOrderSession`). A dense side whose walk came back short is searched again from the words'
-  first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering.
+  first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering. The
+  passages closest in meaning (`passagesByMeaning`) are worked out one request at a time (`passageWork`, the default
+  dispatcher's threads left to the searches), and stop between the model's runs when cancelled; a session's pages'
+  passages stop when it closes (`Refining`), each view of it with its own.
 - **Reached from:** `InstalledSemanticSearch.kt` (`installedSemanticSearch.hybrid`).
 - **Follows:** Zayit's `SemanticSearchFeature` interface and its private `HybridSearchEngine`, of the same name and role
   (not its code, which Pardes has not).
 - **Tests:** `HybridSearchEngineDenseTest`, `HybridSearchEngineFallbackTest`, `HybridSearchEngineFusionTest`,
-  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`, `DenseTrapTest`.
+  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`, `DenseTrapTest`, `RefiningTest`;
+  measured by `ScopeFlowBench` (docs/scope-search-speed).
 - **Notes:** its KDoc opens with "Independent Hybrid Search Engine for Pardes Desktop:", a title rather than Zayit's
   plain sentence; with some 17 functions it passes `detekt.yml`'s 15. The fusion's measurements, before and after:
   `docs/fusion-compare/IMPLEMENTATION.md`.
@@ -3330,10 +3822,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/IndependentSemanticSearch.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 472 lines.
+- **Size:** 477 lines.
 - **What:** `IndependentSemanticSearch`, the dense search: the query embedded (`EmbeddingProvider`), the nearest lines in
   the pack's vector index (`pardes.vec.lucene`), in the base books or a set of books, as `DenseHit`s; `bestPassages`, the
-  passage of a found line closest in meaning; it opens the pack beside the library and checks that the index and the
+  passage of a found line closest in meaning, which stops between the model's runs when told (`keepGoing`); it opens the pack beside the library and checks that the index and the
   model share their id. A small scope is scored exactly (`exactSearch`); any other is walked on the graph by itself
   (`graphWalk`), without Lucene's exact search of every vector, and a walk that comes back short, fallen among a
   repeated line's identical vectors, starts again at the `seeds` it is given (`SeededKnnVectorQuery`) or tells its
@@ -3349,8 +3841,9 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/EmbeddingProvider.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 20 lines.
-- **What:** `EmbeddingProvider`, the interface between the model and the search: a query's vector, passages' vectors.
+- **Size:** 23 lines.
+- **What:** `EmbeddingProvider`, the interface between the model and the search: a query's vector, passages' vectors
+  (stopped before a run of the model when `keepGoing` says so).
 - **Reached from:** `IndependentSemanticSearch.kt`, `OnnxEmbeddingProvider.kt`.
 - **Follows:** Pardes's own.
 - **Tests:** `HybridSearchEngineDenseTest`, `PassagesTest`, `MeaningFacetsTest` (fakes of it).
@@ -3358,10 +3851,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/OnnxEmbeddingProvider.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 140 lines.
+- **Size:** 144 lines.
 - **What:** `OnnxEmbeddingProvider`, a query embedded with the ONNX model into the int8 vector the index is searched with:
   the model's cleaning, prefix and tokenizer (`HfTokenizer`; `HebrewNormalizer` and `WordPieceTokenizer` for the legacy
-  model), ONNX Runtime's session, the sentence embedding's output.
+  model), ONNX Runtime's session, the sentence embedding's output; passages in runs of similar lengths, stopped before
+  a run when told.
 - **Reached from:** `IndependentSemanticSearch.kt`, `VectorIndexBuilder.kt`.
 - **Follows:** Pardes's own; ONNX Runtime's Java API.
 - **Tests:** `VectorIndexBuilderTest`, `HfTokenizerParityTest` (its tokenizer).
@@ -3455,8 +3949,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacets.kt`
 
 - **Feature:** Semantic search's category tabs.
-- **Size:** 62 lines.
-- **What:** `MeaningFacets`, a session whose list holds lines its facets don't count (the lines found by meaning alone);
+- **Size:** 86 lines.
+- **What:** `MeaningFacets`, a session whose list holds lines its facets don't count (the lines found by meaning alone),
+  by book (`meaningBookCounts`) and themselves in the list's order (`meaningLines`, each a `MeaningLine` with how far
+  it stands out of the search's candidates and its book, which `CatalogOrderSession` keeps and counts by), and some of
+  them read as the list shows them (`meaningHits`, for the lines that stay in that order);
   `plusBooks` counts them into their books and categories; `otherTabCategories` offers the library's other top
   categories as tabs when the search runs by meaning in the whole library. `WordsEngine`, an engine whose search of
   the words can be asked apart from the lines it adds by meaning (`HybridSearchEngine`), for `CatalogOrderSession`.
@@ -3489,9 +3986,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/InstalledPack.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 54 lines.
+- **Size:** 73 lines.
 - **What:** `InstalledPack`, the pack beside a library as the settings show it (none, in use, unusable, waiting for the
-  next start), checked as `IndependentSemanticSearch` opens it.
+  next start), checked as `IndependentSemanticSearch` opens it. `named` gives a pack in use that carries no number (its
+  folders were copied with no manifest) the newest release's, when it is that pack: the same model over as many lines
+  of the same library release (packs 2 and 3 share a model and differ by their lines), and writes it beside the model.
 - **Reached from:** `SemanticPackViewModel.kt`, `SemanticPackCard.kt`, `SemanticPackPrompt.kt`,
   `SearchResultViewModel.kt` (the model recorded with a grade).
 - **Follows:** Pardes's own.
@@ -3500,22 +3999,28 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackInstaller.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 513 lines.
+- **Size:** 516 lines.
 - **What:** `SemanticPackInstaller`: a pack downloaded (`download`) or found among files the user downloaded (`resolve`:
   a bundle in parts with its manifest, zips a browser renamed, unzipped folders), unpacked into a staging folder,
-  checked part by part and against the library and the model, then scheduled for the next start; `PackProblem`, why not.
+  checked part by part and against the library and the model, then scheduled for the next start; `stagedInfo`, what the staged pack's manifest said of it; `PackProblem`, why not.
 - **Reached from:** `SemanticPackViewModel.kt`, `PendingSemanticPack.kt`, `LibraryLocation.kt` (its leftovers).
 - **Follows:** Zayit's library install (`BundleManifest`, the parts and their checks) in spirit.
 - **Tests:** `SemanticPackInstallerTest`.
-- **Notes:** with some 21 functions it passes `detekt.yml`'s 15.
+- **Notes:** with some 22 functions it passes `detekt.yml`'s 15.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPack.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 165 lines.
+- **Size:** 232 lines.
 - **What:** `PendingSemanticPack.runOnce`: at the next start, before anything opens the search, a staged pack takes the
   old one's place (each old folder renamed aside, the new one moved in, the old deleted), a failed move put back, a start
-  stopped half way ended by the next, a failure told once.
+  stopped half way ended by the next, a failure told once. A failed start keeps the request and the unpacked pack
+  (2.7 GB) for the next one, counted in `pending-semantic-pack-attempts.txt` beside the request, and the
+  `MAX_ATTEMPTS`th (3) drops them; a new request starts its own count. A rename refused because the folder is in use
+  (Windows, while the app before "restart now" still has its files open) is tried again every quarter of a second for
+  ten seconds (`renameWaiting`: `AccessDeniedException` or a plain `FileSystemException`, never a name taken or a
+  folder missing). Both since 2026-11-13, step 3 of request 36 in `docs/DESKTOP_STAGE2_PLAN.md`, which the user asked
+  for whatever their Windows test shows: before, a failed start deleted the pack it had unpacked.
 - **Reached from:** `main.kt`, `SemanticPackInstaller.kt`, `SemanticPackCard.kt`.
 - **Follows:** Zayit's `PendingDbCleanup`, a step left for the next start.
 - **Tests:** `PendingSemanticPackTest`.
@@ -3523,21 +4028,26 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleases.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 122 lines.
+- **Size:** 130 lines.
 - **What:** `SemanticPackReleases`, the packs released with `semantic-*` tags: the GitHub API's list, or the site's copy
-  when the API cannot be reached; the newest pack, and of its builds the installed library's, else the newest library's.
+  when the API cannot be reached; the newest pack, and of its builds the installed library's, else the newest library's;
+  what a pack's manifest says it holds (`infoOf`). The lists are read through `ReleaseLists`, shared with the daf's.
 - **Reached from:** `SemanticPackViewModel.kt`, `SemanticPackCard.kt`, `SemanticPackInstaller.kt`,
-  `PendingSemanticPack.kt`, `IndependentSemanticSearch.kt`.
+  `PendingSemanticPack.kt`, `IndependentSemanticSearch.kt`, `StartOffers.kt`.
 - **Follows:** Zayit's `GitHubReleaseFetcher` use for library releases.
 - **Tests:** `SemanticPackReleasesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCard.kt`
 
-- **Feature:** Semantic search packs, Feedback mode.
-- **Size:** 423 lines.
+- **Feature:** Semantic search packs.
+- **Size:** 419 lines.
 - **What:** Settings › ניהול נתונים's card for the semantic search: the pack in use or offered, its download or import,
-  the work's progress and problems, how to install one with or without internet, and feedback mode's switch with the
-  number of results graded; the card comes into view when the settings were opened for it.
+  the work's progress and problems, a pack that waits for the restart named by its version while the one above it is
+  said to be in use until then (the user took the old pack's line for the import's result, 2026-11-11), and how to install one with or without internet; the card comes into view when the settings were opened for it.
+  A start that could not put the pack in place is told with its reason: tried again at the next start while the pack
+  still waits (`semantic_pack_start_retry`), else dropped after `MAX_ATTEMPTS` starts (`semantic_pack_start_failed`).
+  Feedback mode's switch stood in it until 2026-11-12 (it is a row of Settings › משוב), with the number of results
+  graded, which no page shows now: the feedback page says how many wait to be sent.
 - **Reached from:** `DataSettingsScreen.kt` (`SemanticPackCard()`).
 - **Follows:** Zayit's data settings cards.
 - **Tests:** `SemanticPackCardUiTest`.
@@ -3545,9 +4055,14 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackViewModel.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 200 lines.
+- **Size:** 197 lines.
 - **What:** `SemanticPackViewModel`: the pack beside the library, the newest release for it, and installing one,
-  downloaded or imported, with its progress.
+  downloaded or imported, with its progress; a pack that waits for the next start is known by its number (`Work.Ready`,
+  from what was staged, also when the settings are opened again before the restart); a pack in use with no number is
+  given the newest release's when it is that pack (`InstalledPack.named`), and so is not offered again as an update.
+  `restart` hands Nucleus's single-instance lock to the new instance first (`SingleInstanceManager.releaseForHandoff`,
+  as Nucleus's NSIS update does): `AppRestarter.restartApplication` starts it before this one has closed, and a new
+  instance that finds the lock still held quits, the pack waiting for a start by hand (2026-11-13, request 36).
 - **Reached from:** `SemanticPackCard.kt`.
 - **Follows:** Zayit's settings ViewModels.
 - **Tests:** `SemanticPackCardUiTest`.
@@ -3555,11 +4070,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackPrompt.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 64 lines.
-- **What:** `SemanticPackPrompt.openAtStart`: a start whose library has no usable pack opens the settings on the semantic
-  card, once the session is restored and no update dialog is open, at every start until a pack is in use or the user
-  turns it off.
-- **Reached from:** `main.kt`.
+- **Size:** 36 lines.
+- **What:** `SemanticPackPrompt`: whether a start opens the settings on the semantic card (`shouldOpen`, `needsPack`:
+  the library has no usable pack, at every start until one is in use or the user turns it off), and the card's focus
+  (`opened`, `takeFocus`, which takes the page's mark in the sidebar too). Its start (`openAtStart`) went into
+  `StartOffers` on 2026-11-12, which also offers a newer pack and newer layouts.
+- **Reached from:** `StartOffers.kt`, `SemanticPackCard.kt`.
 - **Follows:** Pardes's own.
 - **Tests:** `SemanticPackPromptTest`.
 
@@ -3667,9 +4183,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/MeaningFacetsTest.kt`
 
 - **Feature:** Semantic search's category tabs.
-- **Size:** 194 lines.
-- **What:** a book's lines found by meaning count for it, its categories and the total; the other top categories in the
-  library's order; a hybrid session counting only the meaning's own lines.
+- **Size:** 222 lines.
+- **What:** a book's lines found by meaning count for it, its categories and the total; the other top categories in
+  the library's order; a hybrid session counting only the meaning's own lines, and listing them with their books,
+  and reading some of them alone; a line's standing out
+  of the dense side's candidates (`standingOf`: above their mean, in standard deviations; 0 when all alike).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
@@ -3677,11 +4195,34 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/PassagesTest.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 165 lines.
+- **Size:** 177 lines.
 - **What:** a line cut into sentences and clauses, each verbatim, covering the line in order; the passage closest in
-  meaning picked; a passage embedded once; a very long line's passages; a model that cannot embed passages.
+  meaning picked; a passage embedded once; a very long line's passages; a model that cannot embed passages; work told
+  to stop runs no more of the model.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/Refining.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 47 lines.
+- **What:** `Refining`, the refined snippets of a session's pages being worked out, run as its own child coroutine and
+  cancelled when the session closes (`close`): the caller gets nothing and goes on, and a closed session works out no more.
+- **Reached from:** `HybridSearchEngine.kt` (its session and each view of it).
+- **Follows:** kotlinx.coroutines' structured concurrency (a child cancelled, its parent going on).
+- **Tests:** `RefiningTest`; measured by `ScopeFlowBench` (docs/scope-search-speed).
+- **Notes:** the pages of a search and of the tabs picked after it held every thread of the default dispatcher with
+  their model runs (1.2 to 1.8 s for a tab), and went on after their page was replaced.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/RefiningTest.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 56 lines.
+- **What:** an open session's work gives its result; closing it stops the work running, the caller getting nothing; a
+  closed session works out nothing more.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, `runBlocking`.
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HfTokenizerParityTest.kt`
@@ -3716,10 +4257,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackInstallerTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 222 lines.
-- **What:** fourteen tests: a bundle in parts unpacked and checked, any part finding the rest, damaged or missing parts,
-  renamed zips found by what they hold, unzipped folders copied, a pack of another library release staged, an index of
-  another model or a stray file refused, staging scheduled, the installed pack read as the search opens it.
+- **Size:** 245 lines.
+- **What:** fifteen tests: a bundle in parts unpacked and checked, any part finding the rest, damaged or missing parts,
+  renamed zips found by what they hold, unzipped folders copied (naming no pack, as the zips' copy of the manifest does), a pack of another library release staged, an index of
+  another model or a stray file refused, staging scheduled, the installed pack read as the search opens it, a pack in
+  use with no number named after the newest release when it is that one (its model, lines and library release).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, on temporary folders).
@@ -3727,9 +4269,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 153 lines.
-- **What:** the staged pack taking the old one's place, a first pack, a failed move put back, a fresh pack whose second
-  folder cannot go in, a start stopped half way, another release of the library, a failure told once.
+- **Size:** 224 lines.
+- **What:** the staged pack taking the old one's place, a first pack, a failed move put back with the pack kept staged,
+  a fresh pack whose second folder cannot go in, a start stopped half way, another release of the library, a failure
+  told once and the pack put in place at the next start, a pack dropped at the last of its starts (and a new request's
+  own count), and the wait for a folder in use (`renameWaiting`: waited for, not for a name taken, given up after ten
+  seconds).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, on temporary folders).
@@ -3737,19 +4282,21 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleasesTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 97 lines.
+- **Size:** 108 lines.
 - **What:** the newest published pack chosen whatever its library release, the installed library's build preferred, the
-  API's list read and the site's when the API cannot be, a library release the same in a tag and in `release_info`.
+  API's list read and the site's when the API cannot be, a library release the same in a tag and in `release_info`,
+  a pack's manifest read for what it holds (nothing when it cannot be).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCardUiTest.kt`
 
-- **Feature:** Semantic search packs, Feedback mode.
-- **Size:** 138 lines.
+- **Feature:** Semantic search packs.
+- **Size:** 139 lines.
 - **What:** the card says how to install a pack while none is in use (only the zips without a connection), offers nothing
-  once one is ready or in use, turns feedback mode on and counts the graded results, and comes into view when opened for.
+  once one is ready or in use, names the version that waits for the restart and says the one in use is in use until
+  then (with a number or without), and comes into view when opened for.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).
@@ -4176,6 +4723,20 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 - **Follows:** SeforimLibrary's engine and its filter caching (`StableFiltersCachingPolicy`), mimicked.
 - **Tests:** a bench.
 
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/ScopeFlowBench.kt`
+
+- **Feature:** Search in categories.
+- **Size:** 315 lines.
+- **What:** a `main` that times a search as the reader waits for it: `SearchResultViewModel` over the engines the app
+  builds (`provideSearchEngine`'s, `LibraryCategories` over catalog.pb), on the library `SEFORIMAPP_DATABASE_PATH`
+  names, the screen's flows collected; from a search's start to its first results, its tabs and its end, in eight
+  scopes (the whole library, a book, three books, a small category, תלמוד, הלכה, אחרונים on the Bavli, ראשונים and
+  אחרונים together), then the first two tabs picked and all again, and the library's order with a tab in it; the cold
+  first round apart.
+- **Reached from:** run by hand (docs/scope-search-speed/README.md).
+- **Follows:** `CategoryScopeSearchTest` (the view model built in a test), `ScopeSearchBench` and `CategorySearchBench`.
+- **Tests:** a bench.
+
 #### `SeforimApp/src/jvmTest/resources/search/common-sources-e100.json.gz`
 
 - **Feature:** Common sources line (planned).
@@ -4195,18 +4756,21 @@ or by themselves once the user agrees. Since 2026-11-11, as the user asked, the 
 (a user from before it is still asked at start), and it offers two things more: the searches the user made in Zayit
 and in Otzaria on the same computer, read from those apps' own files only once the user agreed, and the publication
 of what is sent on the service's open site (`publish`). Everything is checked at first, the user's decision of that
-day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.kt`, `SearchResultViewModel.kt`,
-`TabsContent.kt`, `main.kt`, `AppGraph.kt`, `AppCoreBindings.kt`, `AppSettings.kt`, `DataSettingsScreen.kt`,
-`build.gradle.kts` (`FEEDBACK_URL`), `strings.xml`, and the onboarding's `OnBoardingDestination.kt`,
-`OnBoardingNavHost.kt` and `RegionConfigScreen.kt`.
+day, and what is unchecked is neither read nor sent. Since 2026-11-12 all of it is set in one page of the settings,
+Settings › משוב (`FeedbackSettingsScreen.kt`), as the user asked: until then the sending was a card among the data, the
+grade buttons' switch stood in the semantic search's card and the reviews' folder in the daf's page. Hooks:
+`SearchResultScreen.kt`, `SearchResultViewModel.kt`, `TabsContent.kt`, `main.kt`, `AppGraph.kt`, `AppCoreBindings.kt`,
+`AppSettings.kt`, `SettingsDestination.kt`, `SettingsNavHost.kt`, `SettingsSidebar.kt`, `build.gradle.kts`
+(`FEEDBACK_URL`), `strings.xml`, and the onboarding's `OnBoardingDestination.kt`, `OnBoardingNavHost.kt` and
+`RegionConfigScreen.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/feedback/SearchFeedbackStore.kt`
 
 - **Feature:** Feedback mode.
-- **Size:** 112 lines.
+- **Size:** 96 lines.
 - **What:** `FeedbackGrade` (exactly this, relevant, not relevant, on the evaluations' scale), `SearchFeedback` (a result
   graded: its search keyed as the history keys it, line, book, place, scope, model, time) and `SearchFeedbackStore`, kept in
-  the user database: save, clear, a search's grades, counts, and what was graded since a time.
+  the user database: save, clear, and a search's grades (what was graded since a time is read by `FeedbackSource`).
 - **Reached from:** `AppCoreBindings.kt`, `SearchResultViewModel.kt`, `FeedbackPackage.kt` (`FeedbackSource`).
 - **Follows:** Zayit's `HistoryStore` (the user database, the history's search key).
 - **Tests:** `SearchFeedbackStoreTest`.
@@ -4214,9 +4778,9 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 #### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/SearchFeedback.sq`
 
 - **Feature:** Feedback mode.
-- **Size:** 76 lines.
+- **Size:** 73 lines.
 - **What:** the table `search_feedback` (one grade per search key and line) with an index on its time, and its queries
-  `upsertGrade`, `deleteGrade`, `gradesForSearch`, `countGrades`, `deleteAll`, `gradesSince` and `searchesSince`. And
+  `upsertGrade`, `deleteGrade`, `gradesForSearch`, `deleteAll`, `gradesSince` and `searchesSince`. And
   the table `other_app_feedback` (made at the next start, `CREATE TABLE IF NOT EXISTS`): a row of another app, by a
   hash of its key, with when Pardes first found it and whether it was sent (`otherAppRows`, `otherAppFound`,
   `otherAppSent`, `otherAppGone`).
@@ -4249,7 +4813,7 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
   `FeedbackSource.read(sent, others, everything)`, which reads the apps the user sends: Zayit's searches since the
   last package, Otzaria's by the ledger. A package of Pardes's own rows alone is what it was, byte for byte.
 - **Reached from:** `FeedbackSender.kt`, `FeedbackSendViewModel.kt`, `FeedbackAutoSender.kt`, `FeedbackConsentDialog.kt`,
-  `FeedbackSendCard.kt`, `OtherAppSearches.kt`, `OtherAppLedger.kt`, `FeedbackStepScreen.kt`.
+  `FeedbackSendCard.kt`, `FeedbackSettingsScreen.kt`, `OtherAppSearches.kt`, `OtherAppLedger.kt`, `FeedbackStepScreen.kt`.
 - **Follows:** the service's package format (`feedback-service/src/package.js`) and pardes-semantic's `collect.py`.
 - **Tests:** `FeedbackPackageTest`, `OtherAppSearchesTest`.
 
@@ -4288,7 +4852,7 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
   `isQuestionOpen` lets the onboarding ask the question first. `choice()` offers the other apps found here and
   publishing checked until the user answered of them; a user who agreed before they were offered is asked once more,
   when one of the apps is on the computer (`askOfOthers`), and one who said no is not.
-- **Reached from:** `main.kt` (`run`), `AppGraph.kt`, `FeedbackConsentDialog.kt`, `FeedbackSendCard.kt`,
+- **Reached from:** `main.kt` (`run`), `AppGraph.kt`, `FeedbackConsentDialog.kt`, `FeedbackSendViewModel.kt`,
   `FeedbackStepScreen.kt`, `RegionConfigScreen.kt`.
 - **Follows:** Pardes's own.
 - **Tests:** `FeedbackAutoSenderTest`.
@@ -4306,29 +4870,68 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 - **Follows:** Zayit's decorated dialogs (`JewelDecoratedDialog` in a `NucleusApplicationScope`).
 - **Tests:** `FeedbackConsentUiTest`.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSettingsScreen.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 125 lines.
+- **What:** `FeedbackSettingsScreen`, Settings › משוב, the page the user asked for on 2026-11-11 (request 30 of
+  `docs/DESKTOP_STAGE2.md`: a category of the settings where everything about the feedback is in order, and rows that
+  open at a click against the clutter). `FeedbackSettingsContent` is the page for a state: the sending card
+  (`FeedbackSendCard`), then a row each, closed until its arrow is clicked: what is sent (`ExpandableCard` over
+  `FeedbackKinds`), the automatic sending and the publication (Zayit's `SettingCard`, with the service alone), the
+  search results' grade buttons (`SettingCard`; the switch stood in the semantic search's card), and privacy
+  (`ExpandableCard` over `FeedbackPrivacy`). Under them the link to the folder of the daf view's reviews
+  (`DafReviewsFolderLink`, which stood in the daf's page). The screen gives the page its ViewModel's actions and the
+  folder picker of the saving.
+- **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Feedback`), from `SettingsSidebar.kt`'s item.
+- **Follows:** Zayit's settings screens (a scrolling column of cards with the same paddings) and its `SettingCard` rows
+  of the General page.
+- **Tests:** `FeedbackSettingsUiTest`.
+- **Notes:** shown to the user as a screenshot on 2026-11-12, for his word on the rows' order and names.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/ExpandableCard.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 74 lines.
+- **What:** `ExpandableCard`, a settings row that opens: a title and an arrow, and under them, once the row or the arrow
+  is clicked, its content. For a row that holds more than a switch and its description, which is all Zayit's
+  `SettingCard` takes.
+- **Reached from:** `FeedbackSettingsScreen.kt`.
+- **Follows:** `SettingCard` in `SettingsComponents.kt`, beside which it stands: the same frame, paddings, arrow
+  (`ExpandCollapseIcon`) and `AnimatedVisibility`.
+- **Tests:** `FeedbackSettingsUiTest` (a row's content is not there until it is opened).
+- **Notes:** the user decided on 2026-11-12 to try the rows that open in the feedback page first, and Pardes's other
+  cards after he has seen it.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendCard.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 444 lines.
-- **What:** Settings › ניהול נתונים's card: each kind of feedback with how much of it is new, the queries to look over and
-  leave out, send now or save to a file, the automatic sending, deleting from the service what this sender sent, and what is
-  never sent with the sender's id to copy or renew. A row for each other app found on the computer: checked, it says
-  how many of its searches (and grades) there are, which are read only then; and the publication's checkbox, by the
-  automatic sending's.
-- **Reached from:** `DataSettingsScreen.kt` (`FeedbackSendCard()`).
+- **Size:** 406 lines.
+- **What:** the pieces of Settings › משוב. `FeedbackSendCard`, the page's first card: how much of each kind waits to be
+  sent, when the last package was made, the sending's progress and result, and send now or save to a file.
+  `FeedbackKinds`, what the row "מה נשלח" opens: each kind with how much of it is new, a row for each other app found
+  on the computer (checked, it says how many of its searches and grades there are, which are read only then), the
+  queries to look over and leave out, and everything again once a package was made. `FeedbackPrivacy`, what the row
+  "פרטיות ומחיקה" opens: what is never sent, the sender's id to copy or renew, and deleting from the service what this
+  sender sent. `FeedbackSendActions`, what the page's checkboxes and buttons do. Until 2026-11-12 all of it was one
+  long card of Settings › ניהול נתונים, with the automatic sending's and the publication's checkboxes, which are rows
+  of the page now.
+- **Reached from:** `FeedbackSettingsScreen.kt`.
 - **Follows:** Zayit's data settings cards.
-- **Tests:** `FeedbackSendCardUiTest`.
+- **Tests:** `FeedbackSettingsUiTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendViewModel.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 232 lines.
+- **Size:** 245 lines.
 - **What:** `FeedbackSendViewModel`: what there is to send, what the user keeps of it (the kinds, kept in the settings;
   the queries left out), and the sending or saving with its result. `State.otherApps` (found off the UI thread),
-  `setOtherApp` (kept, and what there is read again) and `setPublish`.
-- **Reached from:** `FeedbackSendCard.kt`.
+  `setOtherApp` (kept, and what there is read again) and `setPublish`. `State.buttons` and `setButtons`: feedback
+  mode, the grade buttons under each search result (the semantic search's ViewModel held them until 2026-11-12); its
+  `dismiss`, which nothing called, went out that day, the class at detekt's fifteen functions.
+- **Reached from:** `FeedbackSettingsScreen.kt`, `FeedbackSendCard.kt`.
 - **Follows:** Zayit's settings ViewModels.
-- **Tests:** `FeedbackSendViewModelTest`, `FeedbackSendCardUiTest`.
+- **Tests:** `FeedbackSendViewModelTest`, `FeedbackSettingsUiTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/OtherAppSearches.kt`
 
@@ -4382,7 +4985,7 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/feedback/SearchFeedbackStoreTest.kt`
 
 - **Feature:** Feedback mode.
-- **Size:** 46 lines.
+- **Size:** 45 lines.
 - **What:** a search's grades come back by its key, each line's last; the same query in another scope is another search;
   a grade taken back is gone.
 - **Reached from:** the JVM tests.
@@ -4423,9 +5026,10 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendViewModelTest.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 138 lines.
+- **Size:** 150 lines.
 - **What:** a package holds what the user kept and the next one only what came after; sent in the kinds kept, which the
-  automatic sending keeps too; without a network nothing marked sent; nothing kept, nothing saved; the sender's id kept.
+  automatic sending keeps too; without a network nothing marked sent; nothing kept, nothing saved; the sender's id kept;
+  the grade buttons turned on and off, and kept in the settings.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
@@ -4453,12 +5057,14 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).
 
-#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendCardUiTest.kt`
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSettingsUiTest.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 146 lines.
-- **What:** a query left out leaves the counts and saving waits for something kept; with the service, sending now, the
-  automatic sending and deleting what was sent once the user says yes; nothing new says when the last package was.
+- **Size:** 175 lines.
+- **What:** the feedback page (`FeedbackSettingsContent`): what waits is said at once and each kind once its row is
+  opened; a query left out leaves the counts and saving waits for something kept; with the service, sending now, the
+  switches of the automatic sending and of the grade buttons, and deleting what was sent once the user says yes;
+  nothing new says when the last package was. `FeedbackSendCardUiTest` until 2026-11-12, when the card became a page.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's Compose UI tests.
 - **Tests:** it is one (Compose UI).
@@ -4496,6 +5102,193 @@ day, and what is unchecked is neither read nor sent. Hooks: `SearchResultScreen.
   checked; the apps checked are sent from, this one or not, and published only when checked.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+### The settings in a window of their own
+
+The settings are a window, not a dialog, since 2026-11-12, as the user asked: they minimize apart from the main window,
+the app can be used while they are open, and asked for again (the button, Ctrl+comma, the menu) they come back to the
+front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowState.kt`, `SettingsWindowViewModel.kt`,
+`MainAppWindow.kt`, `main.kt`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindowReopenTest.kt`
+
+- **Feature:** Settings window.
+- **Size:** 61 lines.
+- **What:** settings asked for again while open are reopened (the count goes up), at the page asked for; closed and
+  opened again they are a new window (the count starts again).
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `SettingsWindowViewModelTest` (its `DesktopManager`, Kotlin Test).
+- **Tests:** it is one (unit).
+
+### Fonts of one's own
+
+A font from a TTF or OTF file can be added in Settings › גופנים since 2026-11-12, as the user asked: it is copied into
+the app's data folder (fonts/), offered in all six lists of fonts after the catalog's, can be taken out, and goes into the
+backup. A font whose file is gone shows the default font and is listed as missing; one without Hebrew letters is added
+with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`, `PendingUserDataRestore.kt`,
+`strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFonts.kt`
+
+- **Feature:** User fonts.
+- **Size:** 142 lines.
+- **What:** `UserFonts`, the fonts in a folder (`shared`: the data folder's fonts/, `FileKit.filesDir`; `sharedOrNull`
+  where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, whether
+  its file is there): `add` (a TTF or OTF that Skia loads, copied under a name of its own, and whether it has an alef),
+  `remove`, `familyFor` (a `FontFamily` from the file, kept), `fontOf` (a code's font, one whose file is gone included),
+  `writeTo` and `restoreFrom` (the backup archive's fonts/ entries).
+- **Reached from:** `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserFontsCard.kt`, `UserDataBackup.kt`,
+  `PendingUserDataRestore.kt`.
+- **Follows:** Zayit's `FontCatalog` (codes in the settings, a family for each); Skia's `FontMgr` as Compose loads fonts.
+- **Tests:** `UserFontsTest`; a font added from a file, chosen for the book's text and seen there, tried in the app.
+- **Notes:** a font loaded from a file in the Windows build (a native image) is for the testers' build.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/UserFontsCard.kt`
+
+- **Feature:** User fonts.
+- **Size:** 176 lines.
+- **What:** `UserFontsCard`, Settings › גופנים's card after the six lists: the fonts added, each with a link that takes
+  it out, a button that adds one (FileKit's picker, TTF or OTF), and what the last one came to (added; added without
+  Hebrew letters, a warning; not a font). `withMissingFont`, a list's fonts with the setting's user font whose file is
+  gone, listed as missing.
+- **Reached from:** `FontsSettingsScreen.kt`.
+- **Follows:** Zayit's settings cards (their frame and components) and the data page's file pickers.
+- **Tests:** none of the card (`UserFontsTest` for what it calls); tried in the app.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFontsTest.kt`
+
+- **Feature:** User fonts.
+- **Size:** 76 lines.
+- **What:** a font file added under a name of its own (twice, two files), listed and offered by its code; one without
+  Hebrew letters said to be so, a file that is not a font refused; a font taken out, or gone, listed as missing and shown
+  in the default font; the fonts written into a backup archive and read back from it.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, on temporary folders and the app's own font files.
+- **Tests:** it is one (unit).
+
+### Typing over a side pane
+
+With the pointer over the table of contents or the book tree, a letter or digit typed that no text field took opens the
+pane's search with it, its field taking the focus, since 2026-11-12, as the user asked. Shortcuts, arrows and other keys
+are left as they were; only a typed character counts, as the keyboard's layout gives it. Hooks: `MainAppWindow.kt` (the
+window's key handler), `PaneSearch.kt`, `BookTocPanel.kt`, `CategoryTreePanel.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TypeToSearch.kt`
+
+- **Feature:** Typing over a pane.
+- **Size:** 90 lines.
+- **What:** `TypeToSearch`: the pane under the pointer, by its window (`point`, set by `TypeToSearchTarget` from the
+  pane's own hover source), `type(event, windowId)` for the window's key handler (a typed character, `KeyEventType.Unknown`,
+  as a text field takes it), `textOf` (a letter or digit, no Ctrl, Alt or Meta) and `route`. `PaneSearchFocus.type`: the
+  text kept for the field, its focus asked for, and the search opened when it is closed.
+- **Reached from:** `MainAppWindow.kt`, `BookTocPanel.kt`, `CategoryTreePanel.kt`.
+- **Follows:** Zayit's `PaneSearchFocus` (the field's focus asked for, as the search button does) and its panes' hover
+  sources (`PaneHeader`'s).
+- **Tests:** `TypeToSearchTest`; tried in the app on Kiddushin (a letter over the contents opened their search with it,
+  the next one went on in it, Enter opened the daf; a letter over the book tree opened its search).
+- **Notes:** a pane floated in a window of its own types in that window, which has no such handler: only the docked
+  panes (the default) take it.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TypeToSearchTest.kt`
+
+- **Feature:** Typing over a pane.
+- **Size:** 55 lines.
+- **What:** a letter or digit is typed into a search, a shortcut, a space or a mark is not; the text goes to the pane
+  under the pointer in its own window only; typing opens a closed search and goes on in an open one.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+### What a start offers to download
+
+A start opens the settings by itself on what it has to offer, as the user asked on 2026-11-11 (request 29 of
+`docs/DESKTOP_STAGE2.md`): the semantic search's files when none are in use (as it did since 1.0.6, at every start until
+they are or the user unticks it), and since 2026-11-12 a newer version of them than the one in use, or a newer version of
+an installed tractate's daf layout, each version once (the user's decision of 2026-11-12). The library's own update waits
+for Zayit (the same day's decision). The settings open on the first page that has something, its card marked and brought
+into view, and another page that has something gets a dot in the sidebar. The repository's release list, which both read,
+is read once for a while. Hooks: `main.kt`, `AppSettings.kt`, `SettingsSidebar.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/ReleaseLists.kt`
+
+- **Feature:** Start offers.
+- **Size:** 32 lines.
+- **What:** `ReleaseLists.text(url, fetch)`, the repository's release lists (the GitHub API's and the site's copies) as
+  read in the last ten minutes, else read once whoever else asks meanwhile (a `Mutex`); a list that could not be read is
+  read again. The semantic packs' and the daf layouts' readers go through it.
+- **Reached from:** `SemanticPackReleases.kt`, `DafDownloads.kt` (`DafReleases`), their default `fetchText`.
+- **Follows:** Pardes's own.
+- **Tests:** `StartOffersTest`.
+- **Notes:** the API answers 60 calls an hour from an address, often shared behind a filtering proxy; at start the two
+  readers would otherwise read the same list twice, and again when their cards are shown.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/StartOffers.kt`
+
+- **Feature:** Start offers.
+- **Size:** 138 lines.
+- **What:** `StartOffers.openAtStart`: what the start has to offer (`Found`: the semantic files missing, the pack in use
+  and the newest released, the newest release of layouts when it has a newer version of a tractate the folder has, read
+  with `DafDownloads`), the pages it opens (`pagesFor`: the data page for missing files or a newer pack not offered yet,
+  the daf page for a newer release of layouts not offered yet), then, once the session is restored, a window is focused
+  and an update dialog is closed, the versions offered kept, the semantic card's focus set (`SemanticPackPrompt`), the
+  pages marked (`marked`, taken by each card as it is shown, `take`) and the settings opened on the first. The releases
+  are read only while the app checks for updates by itself, and for 20 seconds at most.
+- **Reached from:** `main.kt` (in place of `SemanticPackPrompt.openAtStart`), `SettingsSidebar.kt` (`marked`),
+  `DafLayoutsCard.kt` and `SemanticPackPrompt.kt` (`take`).
+- **Follows:** `SemanticPackPrompt`'s start, which it takes over.
+- **Tests:** `StartOffersTest`; the newer pack's offer was tried in the app on the whole library (the settings opened on
+  the semantic card, framed, and the version offered kept).
+- **Notes:** a release of layouts gives its tractates versions since daf-3; daf-2 has none, so it offers nothing.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/StartOffersTest.kt`
+
+- **Feature:** Start offers.
+- **Size:** 67 lines.
+- **What:** missing files open the semantic search's page at every start; a newer pack than the one in use is offered
+  once (not the one in use, not over a pack with no number); a newer release of layouts once, after the semantic page; a
+  page's mark taken once; a release list read lately is not read again, one read ten minutes ago or that failed is.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
+### The reader's pane layout kept
+
+A reader window's panes stay where the user put them over a restart, since 2026-11-12 (request ב of
+`docs/DESKTOP_STAGE2.md`, step 3 of the docking in its plan): a pane moved to another side or another place on it, sized,
+or pulled out into a window of its own. The two docks' layouts are saved with the window in the session file and given
+back to its panes as their first places; which are open stays the selected tab's. Hooks: `DesktopSession.kt`,
+`SessionModels.kt`, `ReaderPanes.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayouts.kt`
+
+- **Feature:** Pane layout kept.
+- **Size:** 165 lines.
+- **What:** `SavedPane` (a pane's own id, docked side, order, extent, weight and band — `outer`, the full length of the
+  window, appended last — or floating anchors, offset and size) and `SavedPanes` (a window's panes, and the split
+  sides' thickness and the outer bands' order of its two docks, the orders appended last; `placementOf`, a pane's saved
+  place where it may still be; `extentsOf`; `dockOf`, a dock's thickness and outer bands' order as a snapshot naming no
+  pane), serializable for the session's ProtoBuf; `PaneLayouts.save`, a window's
+  panes from its docks' `SatelliteLayoutSnapshot`s without the window's id (a restored window has a new one), and
+  `placementOf`, a saved pane's placement again (none for a side or anchor no longer known). A pane floating on a part
+  of the window only is not kept.
+- **Reached from:** `DesktopSession.kt` (`windowSnapshot`, `panesOf`, `savedPlacement`), `SessionModels.kt`
+  (`WindowSnapshot.panes`).
+- **Follows:** Nucleus's `SatelliteWorkspace.snapshot()`; given back as each satellite's `initialPlacement` rather than
+  by its `restore()`, which would also open or close the panes, which `PaneSync` takes from the selected tab.
+- **Tests:** `PaneLayoutsTest`; a pane moved to the left side and found there after a restart, tried in the app.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayoutsTest.kt`
+
+- **Feature:** Pane layout kept.
+- **Size:** 158 lines.
+- **What:** a window's panes saved by their own ids, docked or floating, with its split sides, another window's left
+  out; a place a pane can no longer have not given back (a side it may not dock on, floating when it may not, names no
+  longer known); a pane floating on part of the window not saved; a pane in the outer band kept with its band, the
+  dock's outer bands' order given back (an unknown side name left out), and an older file without them; the docks in
+  the session file, and an older file without them.
+- **Reached from:** the JVM tests.
+- **Follows:** `SessionModelsTest` (ProtoBuf), Kotlin Test.
 - **Tests:** it is one (unit).
 
 ### The open smart siddur (experimental)
@@ -4711,9 +5504,131 @@ lines, where Zayit's sink wrote a reduced document that the release's index refu
   Pardes's `VectorIndexBuilderTest` makes them.
 - **Tests:** it is one (unit).
 
+### The daily study plans
+
+The user's own daily study, since 2026-11-12 (request 19 of `docs/DESKTOP_STAGE2.md`, built as the mock-up the user
+approved that day): a Home widget, "הלימוד שלי", lists the user's plans, each a book studied by the entries of its table
+of contents at one depth, so many a day, from a chosen unit and date, on chosen days (without Shabbat, without Yom Tov
+too), again from the start at its end if asked. The day's part is reckoned from the date, never stored; a tick marks it
+learnt; a click opens the book on it, marked through its end. The plans and ticks are kept in the user DB, so the
+backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no licence. Hooks: `AppGraph.kt`,
+`AppCoreBindings.kt`, `strings.xml`, `WidgetSizesScreenshotTest.kt`.
+
+#### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/StudyPlans.sq`
+
+- **Feature:** Daily study plans.
+- **Size:** 58 lines.
+- **What:** the tables `study_plan` (the book by id, title and categories' titles; the depth; the first unit by its
+  headings, `\u001F` between two; how many a day; the first day as an epoch day; the weekdays as bits, Sunday lowest;
+  whether to start again; the order) and `study_plan_done` (a plan's days marked learnt, key `planId, day`), and their
+  queries `selectAll`, `insert` (last in order), `lastInsertId`, `update`, `delete`, `deleteDoneOf`, `markDone`,
+  `unmarkDone` and `selectDoneOn`.
+- **Reached from:** `StudyPlanStore.kt` (through SQLDelight's generated `UserSettingsDb`).
+- **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`, and `CommentatorDefaults.sq`, which
+  keeps a book by names so that a new library finds it.
+- **Tests:** `StudyPlanStoreTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStore.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 146 lines.
+- **What:** `StudyPlan` (a plan's book, depth, first unit, pace, first day, weekdays and restart) and `StudyPlanStore`,
+  the plans and their ticks in the user DB: `plans`, `save` (a new one last, its id), `delete` (with its ticks),
+  `doneOn` and `setDone`, and a `revision` flow; the weekdays as one number (`toMask`, `weekdaysOf`).
+- **Reached from:** `AppCoreBindings.kt` (`provideStudyPlanStore`), `AppGraph.kt`, `StudyWidget.kt`,
+  `StudyPlanEditor.kt`.
+- **Follows:** Zayit's user-DB stores (`ShnayimMikraStore`: a SQLDelight table, `Dispatchers.IO`, a `revision` flow).
+- **Tests:** `StudyPlanStoreTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyParts.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 271 lines.
+- **What:** the units of a plan and the day's part, plain functions: a table of contents in reading order
+  (`readingOrder`), the depths worth studying by (`studyLevels`, more than one entry each), a depth's units with their
+  headings and the line the next one starts on (`studyUnits`), where a plan starts by headings (`startIndexOf`), what a
+  depth is called (`unitNameOf`, the headings' first word, an amud for the Bavli's "דף ב."), whether a day is learnt
+  (`isStudyDay`: one of its weekdays, and not Yom Tov while Shabbat is not one of them, KosherKotlin's
+  `isYomTovAssurBemelacha`, in Israel or abroad), the days learnt between two dates, the day's part (`dayPart`: on from
+  the days before, past the end from the start again or done), and the texts (`partLabel` "פרקים כג–כז",
+  `perDayLabel`, `weekdaysLabel`).
+- **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
+- **Follows:** the luach widgets' day reckoning (`LuachData.kt`: `JewishCalendar` by date and region).
+- **Tests:** `StudyPartsTest`.
+- **Notes:** the Hebrew texts are literals in Kotlin, as in Pardes's other widgets, not `strings.xml` keys.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyWidget.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 347 lines.
+- **What:** the Home widget `StudyWidget` ("הלימוד שלי", 6×4 cells, from 4×3 to 12×8) and its card `StudyCard`: a row
+  for each plan with the box ticked once the day's part is learnt, the book, the part, its pace, its day of study and a
+  bar of how far into the book it reaches, a pencil on hover to edit it, and "+ תוכנית חדשה"; `shownPlan` reads a plan's
+  book (by id while its title is the same, else by title) and table of contents and reckons the day shown on the Home,
+  and the part a click opens (`ShownPlan.held`: the day's, or on a day without study, or before the plan starts, where
+  it holds, the next day of study's, as the user asked on 2026-11-13);
+  `linesOf`, the part's first line and its last, for the tab to mark (`TabsDestination.BookContent`'s `endLineId`); the
+  plan being edited is kept per Home's state (`editedPlan`) and its editor composed in `Detached`; its menu has "תוכנית
+  חדשה…".
+- **Reached from:** the widget registry (`availableHomeWidgets`, generated by `:widgetprocessor` from every `HomeWidget`
+  object).
+- **Follows:** Zayit's `ShnayimMikraWidget` (a tick per part of the day, a click that opens it marked, the shown date),
+  and Pardes's `LearningSplitWidget` (a card fed by a store, read off the UI thread with `produceState`).
+- **Tests:** `StudyCardUiTest`; tried in the app (a plan made in the editor, two more and a tick kept over a restart, a
+  click that opened משנה ברורה on the day's סימן).
+- **Notes:** the Hebrew texts are literals in Kotlin; the header's gear of the mock-up is left out (the menu and the
+  pencil edit a plan).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 444 lines.
+- **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
+  the book, looked up by title as it is typed (`booksLike`: an exact title first); the depths of its table of contents
+  as buttons; where to start (`ListComboBox` of the units); how many a day; the first day (the luach's
+  `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least); to
+  start again at the end; the day's part beneath, as the card will show it; "שמור", "ביטול", and for a plan saved,
+  "מחק תוכנית", which deletes on a second click within four seconds. The book's categories' titles are saved with it.
+- **Reached from:** `StudyWidget.kt` (`Detached`).
+- **Follows:** Zayit's `WidgetOptionsDialog` (the window, its title bar and bottom bar) and its settings' fields.
+- **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז").
+- **Notes:** the Hebrew texts are literals in Kotlin.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPartsTest.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 122 lines.
+- **What:** a book's units at a depth in reading order, under the headings above them, and where each ends; a start found
+  by headings, or by its own heading in a new library; the depths' names, the Bavli's by the amud; Yom Tov skipped with
+  Shabbat, the second day abroad, Chol HaMoed learnt; the day's part on from the days before, done or again at the end;
+  the parts' names, the paces and the days in words.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's widget tests (`LearningSplitTest`), Kotlin Test.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStoreTest.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 69 lines.
+- **What:** a plan kept with every field, a new one last, changed in place; a day's tick marked and unmarked; a plan
+  deleted with its ticks; the weekdays as one number and back.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's store tests (an in-memory `UserSettingsDb`).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyCardUiTest.kt`
+
+- **Feature:** Daily study plans.
+- **Size:** 131 lines.
+- **What:** the card with three plans: the day's parts, the paces and days, one ticked ("סיימת להיום"), one with no
+  study that day; a click on a part opens it, and on the day without study opens where the plan holds.
+- **Reached from:** the JVM tests.
+- **Follows:** `LearningSplitCardUiTest` (the card drawn with its data, `runDesktopComposeUiTest`).
+- **Tests:** it is one (UI).
+
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (751 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (774 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -4732,7 +5647,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `.claude/settings.json` | Claude Code's project settings for this repository: `attribution.sessionUrl` false, which turns off the session link Claude Code adds to the commits it writes (f353d5dc's message). *Note:* Zayit has no .claude/ folder. Later Pardes commits still carry `Claude-Session:` trailers (e.g. 6be0f42b, 0c107b56). | Pardes's own |
-| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard and focus a new window, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
+| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation, a drag's ghost black without a compositor). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/make-library.sh` | Skill script that makes the small library the headless app runs on (default /home/user/pardes-lib): the released library without its full-text index, cut to the base books given (default 103, Berakhot) with their commentaries and targumim, plus the lookup index, lexical.db, catalog.pb and release_info.txt; it then deletes the full seforim.db and copies the Talmud layouts into pardes-daf/. *Note:* Calls zayit-android's fetch-desktop-library.sh (`--no-fulltext`) and androidApp/tools/make_subset_db.sh (CONN_TYPES=1,3); needs about 8.2 GB free while it runs. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/setup.sh` | Skill script that apt-installs what the container lacks to run the desktop app headless: Xvfb, xdotool, x11-utils, ImageMagick, zstd, sqlite3, xclip, Mesa's EGL, GLES and DRI drivers, mesa-utils and Noto fonts, after an `apt-get update` (stale lists once hid libegl1); it then copies central-mirror.init.gradle.kts into ~/.gradle/init.d. Idempotent. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/shot.sh` | Skill script: a screenshot of display :99 (ImageMagick `import -window root`), optionally after an xdotool click at x y and a wait, into $SHOTS (default /tmp/pardes-desktop-shots); with `CROP=<geometry>` also that region alone, to read small text. *Note:* The same as zayit-android's desktop-shot.sh, which shoots the released Zayit instead. | Pardes's own |
@@ -4742,7 +5657,7 @@ the description where something needs saying.
 | `.claude/skills/pardes-desktop-run/scripts/onb.sh` | Skill script that drives the install wizard opened by onboarding.sh: `to-disk` (welcome and licence, on to the disk-space step), `pick <path>` (types into the Swing folder chooser), `click x y` at the wizard's own coordinates, `shot <name>` (the display and the wizard alone). | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/onboarding.sh` | Skill script: as start.sh, but with preferences of a first run (no library, the onboarding not done, `INSTALL_DIR` as the folder offered), so the app opens its install wizard; it sets a test address as the feedback service's, so the wizard shows its feedback step. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/stop.sh` | Skill script that closes the app's main window (or the wizard's, `stop.sh wizard`) and waits until its process has ended, after which Gradle may run again. | Pardes's own |
-| `.claude/skills/pardes-semantic-search/SKILL.md` | Claude Code skill for Pardes's open semantic search: the app side here (features/search/semantic/, its packs), the model's pipeline in the efrul/pardes-semantic repository since 2026-11-05 (export, benchmark, fine-tuning, distillation, Kaggle runs, the vector index), the invariants (one cleaner and tokenizer for queries and corpus, the model id in the index, int8 with reduce_range, pooling in the ONNX graph), the pitfalls solved (among them the trap of a repeated line's vectors and the app's way out of it, the search measured by scope, the tabs as views of the list found, the library's order and its open question, other apps' searches in the feedback), the Android port, an outside question set kept for measuring only, and Klei Kodesh's data; and the zayit-fidelity skill's rules for every change of the app side. *Note:* Says never to use Zayit's private semantic package or its model for Pardes, and to name Kaggle datasets and kernels without their owner. | Pardes's own |
+| `.claude/skills/pardes-semantic-search/SKILL.md` | Claude Code skill for Pardes's open semantic search: the app side here (features/search/semantic/, its packs), the model's pipeline in the efrul/pardes-semantic repository since 2026-11-05 (export, benchmark, fine-tuning, distillation, Kaggle runs, the vector index), the invariants (one cleaner and tokenizer for queries and corpus, the model id in the index, int8 with reduce_range, pooling in the ONNX graph), the pitfalls solved (among them the trap of a repeated line's vectors and the app's way out of it, the search measured by scope, what the reader waits for measured with the app's view model and the passages that held the search's threads, the tabs as views of the list found, the library's order and its rule, other apps' searches in the feedback), the Android port, an outside question set kept for measuring only, and Klei Kodesh's data; and the zayit-fidelity skill's rules for every change of the app side. *Note:* Says never to use Zayit's private semantic package or its model for Pardes, and to name Kaggle datasets and kernels without their owner. | Pardes's own |
 | `.claude/skills/zayit-android/SKILL.md` | Claude Code skill for Pardes for Android (androidApp/): the name and authorship rules every Pardes text follows, talking to the user, the site and the CI release, a fresh session to a running emulator, the inner loop, the library on the device, matching desktop Zayit 0.6.12, the architecture, offline Lucene and semantic search, and the pitfalls that cost the most. *Note:* Keeps the name zayit-android from before the app became Pardes (2026-10-15). Since 2026-11-05 it asks for Zayit's Conventional Commits (`feat(android): …`) and a change-map row for every file of androidApp/, as the zayit-fidelity skill does. | Pardes's own |
 | `.claude/skills/zayit-android/evals/evals.json` | Four test prompts for the zayit-android skill, in skill-creator's format (prompt, expected output, expectations): a Jelly Star settings screenshot, the ClassValue search crash, fetching the library and a subset DB, and About and welcome parity that keeps the authorship texts. | Pardes's own |
 | `.claude/skills/zayit-android/references/architecture.md` | zayit-android reference on androidApp's architecture: the separate Gradle build and the SeforimLibrary code it compiles unchanged (the submodule at 4f07145), the runtime flow, a source map, state and navigation, data and storage, and conventions. | Pardes's own |
@@ -4795,7 +5710,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `branding/README.md` | English guide to the brand overlay: how brand.gradle and BrandResources make the build Pardes for desktop, the brand Kotlin objects, the open siddur's addon compiled for Pardes, the tables of every hook in Zayit's files (branding, library location, semantic search, fixes of Zayit's code), the licence-restricted files replaced in place, merging a Zayit release, and rules for ABOUT.md and CONDITIONS.md. *Note:* Says ForeignLibraries.kt is the only reader of BrandLibraries, but LibraryLocationViewModel.kt reads `OTHER_APP_NAME` too. Later features' hooks in Zayit files are not listed (e.g. `FeedbackSendCard()` in DataSettingsScreen.kt). | Pardes's own |
-| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, compiles Pardes's open smart siddur in the place of Zayit's (it leaves `addons/siddur/disabled` out of jvmMain with an exclude on its path, adds `addons/siddur/open/kotlin`, the `:siddur-open` module and the tests of `addons/siddur/open-test/kotlin`), and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). brandLicences also copies the two notices of the open siddur's data (`siddur-open/COPYING.AMUD` as GPL-3.0.txt, `COPYING.HEBCAL` as Hebcal-LICENSE.txt). With the zayit brand it only adds branding/zayit/kotlin. | Pardes's own |
+| `branding/brand.gradle` | Groovy script applied by the last line of SeforimApp/build.gradle.kts: picks the brand (`-Pseforimapp.brand`, default pardes) and adds branding/<brand>/kotlin to jvmMain; for Pardes it sets nucleus.application's packaging values from brand.properties, clears the zayit:// protocol, drops the AppX target, fails if a Zayit private add-on is on, compiles Pardes's open smart siddur in the place of Zayit's (it leaves `addons/siddur/disabled` out of jvmMain with an exclude on its path, adds `addons/siddur/open/kotlin`, the `:siddur-open` module and the tests of `addons/siddur/open-test/kotlin`), adds Nucleus's PDFium binding (`dev.nucleusframework:pdfium-jvm`) for the PDF reading experiment, and registers brandLicences, brandComposeResources and brandAssets as the app's resources and package assets. *Note:* Groovy, while all of Zayit's build scripts are Kotlin DSL; its header says why (the Nucleus DSL is set by name, without its types on this script's classpath). brandLicences also copies the two notices of the open siddur's data (`siddur-open/COPYING.AMUD` as GPL-3.0.txt, `COPYING.HEBCAL` as Hebcal-LICENSE.txt). With the zayit brand it only adds branding/zayit/kotlin. | Pardes's own |
 | `branding/pardes/assets/common/splash.png` | 800x533 splash picture laid over Zayit's package-time asset common/splash.png: Zayit's layout (a dark card with a gold border, the icon with a gold rim, the name under it) with the Pardes icon and the word פרדס in gold on dark olive. *Note:* Zayit's Rust installer wrapper (installer/), which also shows that splash, is not built for Pardes. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py (desktop mode); replaces Zayit's SeforimApp/src/jvmMain/assets/common/splash.png (the olive branch and זית on black) |
 | `branding/pardes/assetsExtra/common/licenses/ANGLE-LICENSE.txt` | BSD 3-Clause licence of ANGLE (libEGL and libGLESv2, also nucleus.angle-natives), which Nucleus's Tao window ships. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Zayit's packages carry no third-party licence texts; all of this folder is Pardes's. | copied from ANGLE (BSD-3-Clause); identical to META-INF/licenses/LICENSE-BSD-3-Clause-angle.txt in the Nucleus tao jar |
 | `branding/pardes/assetsExtra/common/licenses/AccessKit-LICENSE-MIT.txt` | MIT licence of AccessKit, the accessibility library compiled into Nucleus's Tao window binary (MIT or Apache-2.0). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from AccessKit (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-accesskit.txt |
@@ -4827,6 +5742,7 @@ the description where something needs saying.
 | `branding/pardes/assetsExtra/common/licenses/OFL-Open-Sans.txt` | SIL Open Font License 1.1 of Open Sans. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Open Sans (OFL-1.1) |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-LICENSE.txt` | MIT licence of ONNX Runtime, which runs the semantic search's model (1.17.1 on desktop). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from ONNX Runtime (MIT); same text as androidApp/app/src/androidMain/assets/licenses/ONNX-Runtime-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-ThirdPartyNotices.txt` | ONNX Runtime's third-party notices (6,508 lines). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Differs from androidApp's copy, which is ONNX Runtime 1.22.0's (a665f012). | copied from ONNX Runtime (MIT) |
+| `branding/pardes/assetsExtra/common/licenses/PDFium-LICENSES.txt` | PDFium's licence (BSD 3-Clause) and those of the components of others it is built with (Abseil, AGG 2.3, Brotli, Dragonbox, fast_float, FreeType, HarfBuzz, Highway, ICU, Little CMS, libjpeg-turbo, libyuv, LLVM libc, OpenJPEG, libpng, LibTIFF, simdutf, zlib) and of pdfium-binaries, word for word under a header each (1,739 lines), for the PDF reading experiment, whose Windows builds carry PDFium. Shipped as a plain file in the install folder's licenses/ and listed in its README.md. | the texts the PDFium binaries' build ships, as pypdfium2 5.15.2's wheel carries them (its dist-info licenses/BUILD_LICENSES; FreeType's converted from Latin-1) |
 | `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
 | `branding/pardes/assetsExtra/common/licenses/Radix-Icons-LICENSE.txt` | MIT licence of Radix Icons, drawn in the app's icons module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Radix Icons (MIT); same text as androidApp/app/src/androidMain/assets/licenses/Radix-Icons-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/Robius-LICENSE-MIT.txt` | MIT licence of Project Robius's robius-share, derived source in Nucleus's share module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Project Robius (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-robius.txt |
@@ -4875,7 +5791,8 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
-| `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps. | Pardes's own |
+| `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
+| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it; for 31 what was measured, the rule first chosen (a fixed 10) and the one by each line's score that replaced it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |
 | `docs/SEARCH_FUSION_RESEARCH.md` | Hebrew research note (2026-11-08) on merging the words' search and the meaning's: what plain RRF implies (a line only the words found, from their 11th place on, ranks below every line only the meaning found), rank against score fusion and their normalizations, calibration (ProbFuse, SSL, score distributions), weights by kind of query, a small learned ranker, and an offline measuring plan, which docs/fusion-compare/ carries out. *Note:* Written in Hebrew. | Pardes's own |
@@ -4887,6 +5804,42 @@ the description where something needs saying.
 | `docs/SEMANTIC_PLAN.md` | Hebrew plan (2026-10-28) for shipping the semantic search's model and vector index as packs: how Zayit ships its library, what is ready, publishing packs as `semantic-*` releases from a Kaggle dataset, the code and the in-app install (both done), incremental index updates (open), and open decisions. *Note:* Written in Hebrew. | Pardes's own |
 | `docs/ZAYIT_CHANGE_MAP.md` | This map (מפת השינויים): every file in which Pardes differs from the Zayit release it is based on, Zayit's files changed in full, the files added in Zayit's modules by feature, Pardes's own trees in rows, the departures from Zayit's style still to fix, Zayit after the base, and why GitHub does not show Pardes as a fork. | Pardes's own |
 | `docs/ZAYIT_LEXICAL_REPORT.md` | English report addressed to Zayit: lexical.db (release 20261012193827) has 4,711 bases with no forms, 2,479 of them spelled like another base's form, which `MagicDictionaryIndex.expansionFor` prefers, and the 32 forms kept are the first by id; the measured effect and a fix in the generator or at runtime. *Note:* Pardes applies the fix at runtime (PardesLexicon, docs/LEXICON.md) without changing SeforimLibrary. | Pardes's own |
+
+#### Agents' reports (docs/agents/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/agents/2026-11-11-stage2-code-maps/daf-view.md` | English code map (2026-11-11, read-only, main at `abcb687`) for stage 2 of Pardes for desktop, requests 33, 34, 29, 21 and the layouts' update: where the daf view's review menu is built and what gates it, the marks' model and files, how unsure lines and marks are drawn, the reader's end bar button by button, the daf settings page, the layout files with their manifest, update check and download, each file of features/bookcontent/daf with what it does, and how the daf's icon is kept; with the brief the agent got. *Note:* Its line numbers are that commit's. | Pardes's own: an Explore agent's report as it came back, under a header by the session that ran it |
+| `docs/agents/2026-11-11-stage2-code-maps/reader-fonts-limud-userdata.md` | English code map (2026-11-11, read-only, main at `abcb687`) for stage 2 of Pardes for desktop, requests 32, 24, 25 and 19: the dictionary item in both menus and the lookup behind it, the contents pane's search and how keys and hover reach the panes, the font catalog with its keys and pickers, how a Home widget is declared and stored and how the daily-study widget opens the library, the user database's tables and what the backup carries, and the fields of a contents entry; with the brief the agent got. *Note:* Not checked by hand; its last section says what it could not confirm. | Pardes's own: an Explore agent's report as it came back, under a header by the session that ran it |
+| `docs/agents/2026-11-11-stage2-code-maps/search-order-scope.md` | English code map (2026-11-11, read-only, main at `abcb687`) for stage 2 of Pardes for desktop, requests 31 and 37: `CatalogOrderSession` step by step with the merge of the lines the meaning alone found, the sort in the UI and the results' list items, how a scope becomes a filter on each side, the whole-scope scoring when the words find nothing, the benches and debug lines, and the tabs' counts; its header quotes what `5c6a545` measured of the index's category field; with the brief the agent got. | Pardes's own: an Explore agent's report as it came back, under a header by the session that ran it |
+| `docs/agents/2026-11-11-stage2-code-maps/semantic-pack-install.md` | English reading (2026-11-11, read-only, main at `abcb687` and efrul/Nucleus at `65ccd12`) of a semantic pack's path for request 36: found, brought, staged, scheduled, put in place at the next start and shown, and the four places that fit "the old model's details" after an import (the card until the restart, a failed swap that throws the staged pack away, a restart that starts the new app before the old one has ended, a pack with no pardes-pack.json installed without its number). *Note:* Nothing in it was reproduced in the app. | Pardes's own: the reading of the session that wrote the plan, not an agent's |
+| `docs/agents/2026-11-11-stage2-code-maps/settings-feedback-startup.md` | English code map (2026-11-11, read-only, main at `abcb687`) for stage 2 of Pardes for desktop, requests 30, 35 and 29: the settings window (a dialog composed inside its owner window), its state, call sites, navigation and pages, Zayit's tool windows as the precedent for a window of its own, `SettingCard` and the cards not built from it, every feedback control with its key, and the order of the start in main.kt; its header records that the library's delta update has no screen on desktop; with the brief the agent got. | Pardes's own: an Explore agent's report as it came back, under a header by the session that ran it |
+| `docs/agents/README.md` | Index of the reports that the agents of Claude Code sessions gave back, kept as they came so that a later session starts from them: a folder per run and a file per report (what it was for, the commit read, what was checked by hand, the report, the brief), a row per run; it points to the two earlier researches of stage 2 kept in the private daf repository. | Pardes's own |
+
+#### The library order's measurement (docs/catalog-order/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/catalog-order/README.md` | Hebrew report (2026-11-12) for request 31: how many of the lines a search found by meaning alone stay in the library's order. What was run (eval-real's 155 searches through the app's engines, in the app's scope, on the whole library with pack 3), what was found (a median of 149 such lines a search against 13 the words find, 91% of that list; a blind sample of 30 searches, 240 lines, judged by place, each half by its own judge; why a fixed gap from the closest drops the sources; how far a line stands out of its search's candidates follows its tie to the search; the rules side by side), the rule chosen (the lines standing 2 standard deviations and more, after the user found a fixed 10 wrong) and the files. | Pardes's own |
+| `docs/catalog-order/judged.tsv` | The sample's 240 judged lines: item, search, line id, place among the meaning's lines, dense rank, score gap from the closest, standing among the search's candidates, grade (0 to 3), judge, reference; no text. | Pardes's own; graded by Claude |
+| `docs/catalog-order/tools/DebugStub.kt` | Stand-in for the app's `debugln` (Logger.kt), which the semantic package writes, for the harness build. | Pardes's own |
+| `docs/catalog-order/tools/Meant.kt` | The harness: runs searches through the app's own engines (LongQuerySearchEngine with PardesLexicon, HybridSearchEngine, IndependentSemanticSearch) and writes, per search, the fused list's lines the words don't find, in its order, with their rank and score on the dense side, as JSON lines. | Pardes's own; follows `docs/fusion-compare/tools/FeedbackHistory.kt` and pardes-semantic's `eval-100/harness/Eval.kt` |
+| `docs/catalog-order/tools/build.sh` | Builds the harness with a standalone Kotlin compiler, outside Gradle, against this checkout's search code, with fusion-compare's `CategoryStub.kt` and `LoggerStub.kt`; its jars from the Gradle cache or Maven Central. | Pardes's own; follows `docs/fusion-compare/tools/build.sh` |
+| `docs/catalog-order/tools/judged.py` | The README's tables from the judges' grades: by place, by score gap, by standing (with `--run`, Meant.kt's output), the rules side by side with how many lines each keeps a search, and against eval-real's own grades of the same lines; writes `judged.tsv`. | Pardes's own |
+| `docs/catalog-order/tools/sample.py` | The blind sample: 30 searches drawn with seed 31, the lines at eight places of each, shuffled, in two files for two judges, and its key. | Pardes's own |
+
+#### The scoped search's speed (docs/scope-search-speed/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/scope-search-speed/README.md` | Hebrew report (2026-11-12) for request 37: where a search in chosen books or a large category, and a tab picked after it, keep the reader waiting. What was run (ScopeFlowBench: the app's own search view model on the whole library with pack 3, five searches in eight scopes, two tabs and the library's order, at a reader's pace), what was found (the search itself 25 to 220 ms; a tab waiting 0.9 to 1.8 s behind the passages by meaning of the pages before it, which held every thread of the default dispatcher, as a JFR profile showed; the cold first search reading seconds off the cloud's disk), what was fixed (the passages one request at a time, a replaced page's stopped; the library's order counting its facets once and reading only the lines it keeps), before and after, and what is left (the status line's 300 ms, a cold start). | Pardes's own |
+| `docs/scope-search-speed/runs/1-unpaced-before.txt` | ScopeFlowBench's step lines (times, scopes, hits; no text) of the run before the fix with no pause between steps and none of the screen's flows collected: a tab waiting 0.9 to 1.8 s. | Pardes's own; measured |
+| `docs/scope-search-speed/runs/2-paced-before.txt` | Its step lines before the fix at a reader's pace (300 ms between steps, the screen's flows collected). | Pardes's own; measured |
+| `docs/scope-search-speed/runs/3-paced-after.txt` | Its step lines after the passages' fix, at the same pace. | Pardes's own; measured |
+| `docs/scope-search-speed/runs/4-paced-catalog.txt` | Its step lines after the library's order read its facets once and only the lines it keeps, at the same pace. | Pardes's own; measured |
+| `docs/scope-search-speed/tools/bench.init.gradle` | A Gradle init script that adds `:SeforimApp:runBench`, a `main` of the JVM tests run on the library named (`-PbenchMain`, `-PbenchArgs`, `-PbenchDb`, `-PbenchQuery`), with a JFR recording on demand (`-PbenchJfr`): the app's build has no task for its benches. | Pardes's own |
+| `docs/scope-search-speed/tools/compare.py` | Two runs of ScopeFlowBench side by side: per scope and step, the median and slowest time to the first results. | Pardes's own |
+| `docs/scope-search-speed/tools/table.py` | One run of ScopeFlowBench as a table: per scope and step, the cold first round and the warm rounds, to the first results and to the end. | Pardes's own |
 
 #### The search's measurements (docs/fusion-compare/)
 
@@ -4983,10 +5936,10 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `nucleus-fork/README.md` | Explains why Pardes for desktop takes one Nucleus module, nucleus.decorated-window-tao, from a fork of Nucleus on Pardes's GitHub account (branch commentator-tearoff) as 3.0.0-dev-202610272317-1-tearoff in maven/: `Modifier.satelliteTearOffHandle`, `SatelliteDragOrigin.HostElement` and pointer-icon parameters for the commentator tear-off; how to update it, and when to delete it. *Note:* The fork changes no native code, and every other Nucleus module stays Zayit's pin from Maven Central. To be deleted once Nucleus has the API. | Pardes's own |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar` | The fork's build of nucleus.decorated-window-tao (1,063 classes and the release's native libraries for macOS, Windows and Linux, 6.3 MB), read through the exclusive NucleusFork repository of settings.gradle.kts (`nucleusTao` in libs.versions.toml); as the higher version it wins over the tao the other Nucleus modules ask for. *Note:* A binary committed to git without LFS, in two versions (0447981b, then 9de93f98). | built from Pardes's fork of Nucleus (MIT) and copied in by nucleus-fork/vendor.py; replaces at build time Maven Central's nucleus.decorated-window-tao 3.0.0-dev-202610272317, Zayit's pin |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.module` | Gradle module metadata of the vendored tao: version 3.0.0-dev-202610272317-1-tearoff, apiElements and runtimeElements on the jar alone, and the Nucleus dependencies (decorated-window-core, core-runtime, energy-manager) at the release 3.0.0-dev-202610272317, with angle-natives 8037.1, Compose desktop 1.12.1 and Kotlin stdlib 2.4.20. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py (dependencies set back to the release, sources and javadoc variants dropped) |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-1-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.pom` | Maven POM of the vendored tao, with the fork's version and the same dependencies as its Gradle module, for tools that do not read Gradle metadata. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py |
+| `nucleus-fork/README.md` | Explains why Pardes for desktop takes one Nucleus module, nucleus.decorated-window-tao, from a fork of Nucleus on Pardes's GitHub account (branch claude/elegant-bardeen-oq55hp: commentator-tearoff and the outer bands) as 3.0.0-dev-202610272317-2-tearoff in maven/: `Modifier.satelliteTearOffHandle`, `SatelliteDragOrigin.HostElement` and pointer-icon parameters for the commentator tear-off, and the docks' outer bands (`DockLayout(outerBandSides = …)`, `SatellitePlacement.Docked.outer`, `SatelliteWorkspace.outerBandOrder`) for a pane dropped at the window's edge; how to update it, and when to delete it. *Note:* The fork changes no native code, and every other Nucleus module stays Zayit's pin from Maven Central. To be deleted once Nucleus has the API. | Pardes's own |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.jar` | The fork's build of nucleus.decorated-window-tao (1,067 classes and the release's native libraries for macOS, Windows and Linux, 6.3 MB), read through the exclusive NucleusFork repository of settings.gradle.kts (`nucleusTao` in libs.versions.toml); as the higher version it wins over the tao the other Nucleus modules ask for. *Note:* A binary committed to git without LFS, in three versions (0447981b, 9de93f98, then the one with the outer bands, as 3.0.0-dev-202610272317-2-tearoff). | built from Pardes's fork of Nucleus (MIT) and copied in by nucleus-fork/vendor.py; replaces at build time Maven Central's nucleus.decorated-window-tao 3.0.0-dev-202610272317, Zayit's pin |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.module` | Gradle module metadata of the vendored tao: version 3.0.0-dev-202610272317-2-tearoff, apiElements and runtimeElements on the jar alone, and the Nucleus dependencies (decorated-window-core, core-runtime, energy-manager) at the release 3.0.0-dev-202610272317, with angle-natives 8037.1, Compose desktop 1.12.1 and Kotlin stdlib 2.4.20. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py (dependencies set back to the release, sources and javadoc variants dropped) |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.pom` | Maven POM of the vendored tao, with the fork's version and the same dependencies as its Gradle module, for tools that do not read Gradle metadata. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py |
 | `nucleus-fork/vendor.py` | Copies the fork's tao jar, POM and Gradle module from Maven Local into nucleus-fork/maven after the fork's scripts/publish-tearoff-local.sh, setting every other Nucleus dependency back to the base release 3.0.0-dev-202610272317 and keeping only the jar's variants. *Note:* Deletes and rewrites nucleus-fork/maven on every run. | Pardes's own |
 
 #### The open siddur's engine (`siddur-open/`)

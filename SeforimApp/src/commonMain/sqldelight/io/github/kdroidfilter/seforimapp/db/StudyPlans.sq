@@ -1,0 +1,58 @@
+-- Pardes: the user's daily study plans (request 19 of docs/DESKTOP_STAGE2.md), for the Home's "הלימוד שלי"
+-- (features/home/widgets/study/StudyWidget.kt), and the days each one's part was marked done. Written by
+-- core/study/StudyPlanStore.kt. A plan's book is kept by its id and by names (its title, its categories' titles), its
+-- first unit by its headings in the book's table of contents ("\u001F" between two), so that a new library, whatever
+-- ids it gives, still finds them. The day's part is reckoned from the date, never stored.
+CREATE TABLE IF NOT EXISTS study_plan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bookId INTEGER NOT NULL,
+    bookTitle TEXT NOT NULL,
+    categoryPath TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    startPath TEXT NOT NULL,
+    perDay INTEGER NOT NULL,
+    startDay INTEGER NOT NULL,
+    weekdays INTEGER NOT NULL,
+    restart INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    createdAt INTEGER NOT NULL
+);
+
+-- The days (epoch days) a plan's part was marked done ("סיימתי").
+CREATE TABLE IF NOT EXISTS study_plan_done (
+    planId INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    PRIMARY KEY (planId, day)
+);
+
+selectAll:
+SELECT * FROM study_plan ORDER BY position, id;
+
+insert:
+INSERT INTO study_plan(bookId, bookTitle, categoryPath, level, startPath, perDay, startDay, weekdays, restart, position, createdAt)
+VALUES (:bookId, :bookTitle, :categoryPath, :level, :startPath, :perDay, :startDay, :weekdays, :restart,
+    (SELECT COALESCE(MAX(position) + 1, 0) FROM study_plan), :createdAt);
+
+lastInsertId:
+SELECT last_insert_rowid();
+
+update:
+UPDATE study_plan
+SET bookId = :bookId, bookTitle = :bookTitle, categoryPath = :categoryPath, level = :level, startPath = :startPath,
+    perDay = :perDay, startDay = :startDay, weekdays = :weekdays, restart = :restart
+WHERE id = :id;
+
+delete:
+DELETE FROM study_plan WHERE id = :id;
+
+deleteDoneOf:
+DELETE FROM study_plan_done WHERE planId = :planId;
+
+markDone:
+INSERT OR REPLACE INTO study_plan_done(planId, day) VALUES (:planId, :day);
+
+unmarkDone:
+DELETE FROM study_plan_done WHERE planId = :planId AND day = :day;
+
+selectDoneOn:
+SELECT planId FROM study_plan_done WHERE day = :day;

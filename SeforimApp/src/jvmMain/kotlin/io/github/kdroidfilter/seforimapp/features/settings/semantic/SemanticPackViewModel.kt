@@ -3,11 +3,11 @@ package io.github.kdroidfilter.seforimapp.features.settings.semantic
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.nucleusframework.core.runtime.AppRestarter.restartApplication
+import dev.nucleusframework.core.runtime.SingleInstanceManager
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
-import io.github.kdroidfilter.seforimapp.core.feedback.SearchFeedbackStore
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
@@ -29,15 +29,13 @@ import java.io.File
 /**
  * Settings › ניהול נתונים: Pardes's semantic search, the pack beside the library ([InstalledPack]), the newest pack for
  * the library installed ([SemanticPackReleases]), and installing one, downloaded or from files the user downloaded
- * ([SemanticPackInstaller]); it goes in at the next start ([PendingSemanticPack]). And feedback mode, the search results'
- * grade buttons that train it ([SearchFeedbackStore]).
+ * ([SemanticPackInstaller]); it goes in at the next start ([PendingSemanticPack]).
  */
 @ContributesIntoMap(AppScope::class)
 @ViewModelKey
 @Inject
 class SemanticPackViewModel(
     private val appSettings: AppSettings,
-    private val feedbackStore: SearchFeedbackStore,
 ) : ViewModel() {
     sealed interface Available {
         data object Checking : Available
@@ -65,8 +63,10 @@ class SemanticPackViewModel(
             val progress: Float,
         ) : Work
 
-        /** Unpacked and checked, waiting for the next start. */
-        data object Ready : Work
+        /** Unpacked and checked, waiting for the next start; [pack] its number, when its manifest gave one. */
+        data class Ready(
+            val pack: Int? = null,
+        ) : Work
 
         data class Failed(
             val problem: Throwable,
@@ -82,39 +82,29 @@ class SemanticPackViewModel(
         val startFailure: String? = null,
         /** Whether a start without a pack in use opens the settings on the card ([SemanticPackPrompt]). */
         val promptAtStart: Boolean = true,
-        /** Feedback mode: whether each search result shows its grade buttons. */
-        val feedback: Boolean = false,
-        /** How many results are graded so far, null until read. */
-        val feedbackGrades: Long? = null,
     ) {
         val busy: Boolean get() = work is Work.Downloading || work is Work.Unpacking
     }
 
     private val releases = SemanticPackReleases()
-    private val _state =
-        MutableStateFlow(
-            State(promptAtStart = appSettings.isSemanticPackPromptEnabled(), feedback = appSettings.isSearchFeedbackEnabled()),
-        )
+    private val _state = MutableStateFlow(State(promptAtStart = appSettings.isSemanticPackPromptEnabled()))
     val state: StateFlow<State> = _state.asStateFlow()
     private var job: Job? = null
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val ready = PendingSemanticPack.read() != null
-            _state.update { it.copy(startFailure = PendingSemanticPack.takeFailure(), work = if (ready) Work.Ready else it.work) }
+            val waiting = PendingSemanticPack.read()?.let { Work.Ready(SemanticPackInstaller.stagedInfo(it.libraryDir)?.pack) }
+            _state.update { it.copy(startFailure = PendingSemanticPack.takeFailure(), work = waiting ?: it.work) }
         }
         refresh()
-        viewModelScope.launch(Dispatchers.IO) {
-            runSuspendCatching { feedbackStore.refreshCount() }
-            feedbackStore.count.collect { count -> _state.update { it.copy(feedbackGrades = count) } }
-        }
     }
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             val dir = LibraryLocation.currentDir(appSettings)
             val hasLibrary = LibraryLocation.exists(dir)
-            _state.update { it.copy(hasLibrary = hasLibrary, installed = InstalledPack.read(dir)) }
+            val installed = InstalledPack.read(dir)
+            _state.update { it.copy(hasLibrary = hasLibrary, installed = installed) }
             // Without a library the card asks for it, and offers no pack
             if (!hasLibrary) return@launch
             val available =
@@ -125,6 +115,11 @@ class SemanticPackViewModel(
                         Available.Unreachable
                     }
             _state.update { it.copy(available = available) }
+            // A pack installed with no number, from folders that held no manifest: not offered again when it is the newest
+            val newest = (available as? Available.Pack)?.pack
+            if (newest != null && installed is InstalledPack.InUse && installed.pack == null) {
+                releases.infoOf(newest)?.let { info -> _state.update { it.copy(installed = InstalledPack.named(dir, installed, info)) } }
+            }
         }
     }
 
@@ -160,16 +155,18 @@ class SemanticPackViewModel(
 
     fun dismiss() = _state.update { it.copy(work = if (it.work is Work.Failed) Work.Idle else it.work, startFailure = null) }
 
-    fun restart() = restartApplication()
+    /**
+     * Starts the app again, for the next start to put the waiting pack in place. The single-instance lock goes to the new
+     * instance first: it would otherwise find this one still closing and quit, and the pack would wait for a start by hand.
+     */
+    fun restart() {
+        SingleInstanceManager.releaseForHandoff()
+        restartApplication()
+    }
 
     fun setPromptAtStart(enabled: Boolean) {
         appSettings.setSemanticPackPromptEnabled(enabled)
         _state.update { it.copy(promptAtStart = enabled) }
-    }
-
-    fun setFeedback(enabled: Boolean) {
-        appSettings.setSearchFeedbackEnabled(enabled)
-        _state.update { it.copy(feedback = enabled) }
     }
 
     private fun launchInstall(block: suspend (SemanticPackInstaller) -> Unit) {
@@ -193,8 +190,8 @@ class SemanticPackViewModel(
         source: SemanticPackInstaller.Source,
     ) {
         _state.update { it.copy(work = Work.Unpacking(0f), startFailure = null) }
-        installer.stage(source) { progress -> _state.update { it.copy(work = Work.Unpacking(progress)) } }
+        val staged = installer.stage(source) { progress -> _state.update { it.copy(work = Work.Unpacking(progress)) } }
         installer.schedule()
-        _state.update { it.copy(work = Work.Ready) }
+        _state.update { it.copy(work = Work.Ready(staged.info?.pack)) }
     }
 }
