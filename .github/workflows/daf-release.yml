@@ -5,8 +5,8 @@ name: Daf layouts release
 # them by (SeforimApp/.../features/bookcontent/daf/DafDownloads.kt), all made by .github/scripts/daf_release.py. The
 # layouts are pardes-rashi-ocr's layouts/*.json (a private repository), pushed to this repository's branch
 # daf-layouts, which holds nothing else. Their words are Wikisource's Gemara (CC BY-SA, through Sefaria) and the Vilna
-# Rashi and Tosafot, their lines' places measured on the Vilna Shas's scans: the notes say so, and the files go out
-# under CC BY-SA.
+# Rashi and Tosafot, their lines' places measured on scans of a later edition that keeps the Vilna Shas's page line for
+# line: the notes say so, and the files go out under CC BY-SA.
 #
 # Each tractate has a version of its own, in its file's header and in the manifest: one more than in the release before
 # when its layout changed, the same otherwise (the manifest of the release before is downloaded for it). A tractate
