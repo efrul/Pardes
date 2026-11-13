@@ -46,6 +46,7 @@ Powered by the technologies that drive Zayit — https://zayitapp.com/
 - **KosherKotlin**. kdroidFilter, Sternbach-Software, after KosherJava by Eliyahu Hershfeld. GNU LGPL v2.1: [LGPL-2.1.txt](LGPL-2.1.txt).
 - **HebrewNumerals**. kdroidFilter. Apache License 2.0: [Apache-2.0.txt](Apache-2.0.txt).
 - **ONNX Runtime**, הרצת המודל של החיפוש הסמנטי. Copyright (c) Microsoft Corporation. MIT: [ONNX-Runtime-LICENSE.txt](ONNX-Runtime-LICENSE.txt). הרכיבים של אחרים שהוא כולל: [ONNX-Runtime-ThirdPartyNotices.txt](ONNX-Runtime-ThirdPartyNotices.txt).
+- **PDFium**, קריאת קובצי PDF (ניסוי מאחורי מתג נסתר), דרך הקשירה של Nucleus אליה, dev.nucleusframework:pdfium-jvm (kdroidFilter, MIT לפי ה־POM שלה). Copyright 2014 The PDFium Authors. BSD 3-Clause: [PDFium-LICENSES.txt](PDFium-LICENSES.txt), עם הרכיבים של אחרים שהיא נבנית איתם.
 - **JSON-java** (org.json). Sean Leary. נחלת הכלל.
 
 הספריות שברישיון LGPL אפשר להחליף: קוד המקור המלא של פרדס מאפשר לבנות אותו מחדש עם גרסה משונה שלהן.

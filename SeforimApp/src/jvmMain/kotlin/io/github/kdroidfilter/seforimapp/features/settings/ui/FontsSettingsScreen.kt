@@ -24,14 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
-import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontOption
+import io.github.kdroidfilter.seforimapp.core.presentation.typography.UserFonts
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.fonts.FontsSettingsViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.fonts.UserFontsCard
+import io.github.kdroidfilter.seforimapp.features.settings.fonts.withMissingFont
 import io.github.kdroidfilter.seforimapp.theme.PreviewContainer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -64,7 +67,10 @@ private fun FontsSettingsView(
     onEvent: (FontsSettingsEvents) -> Unit,
 ) {
     val options = FontCatalog.options
-    val optionLabels = options.map { stringResource(it.label) }.toImmutableList()
+    // Pardes: the fonts the user added, after the catalog's (UserFonts)
+    val userFonts by (UserFonts.sharedOrNull()?.fonts ?: MutableStateFlow(emptyList())).collectAsState()
+    val codes = (options.map { it.code } + userFonts.map { it.code }).toImmutableList()
+    val optionLabels = (options.map { stringResource(it.label) } + userFonts.map { it.name }).toImmutableList()
 
     VerticallyScrollableContainer(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -77,7 +83,7 @@ private fun FontsSettingsView(
             FontSettingCard(
                 label = Res.string.settings_font_book_label,
                 fontCode = state.bookFontCode,
-                options = options,
+                options = codes,
                 optionLabels = optionLabels,
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetBookFont(code)) },
             )
@@ -85,7 +91,7 @@ private fun FontsSettingsView(
             FontSettingCard(
                 label = Res.string.settings_font_commentary_label,
                 fontCode = state.commentaryFontCode,
-                options = options,
+                options = codes,
                 optionLabels = optionLabels,
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetCommentaryFont(code)) },
             )
@@ -93,7 +99,7 @@ private fun FontsSettingsView(
             FontSettingCard(
                 label = Res.string.settings_font_targum_label,
                 fontCode = state.targumFontCode,
-                options = options,
+                options = codes,
                 optionLabels = optionLabels,
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetTargumFont(code)) },
             )
@@ -101,7 +107,7 @@ private fun FontsSettingsView(
             FontSettingCard(
                 label = Res.string.settings_font_sources_label,
                 fontCode = state.sourceFontCode,
-                options = options,
+                options = codes,
                 optionLabels = optionLabels,
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetSourceFont(code)) },
             )
@@ -109,7 +115,7 @@ private fun FontsSettingsView(
             FontSettingCard(
                 label = Res.string.settings_font_daf_gemara_label,
                 fontCode = state.dafGemaraFontCode,
-                options = options,
+                options = codes,
                 optionLabels = optionLabels,
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetDafGemaraFont(code)) },
             )
@@ -117,10 +123,12 @@ private fun FontsSettingsView(
             FontSettingCard(
                 label = Res.string.settings_font_daf_commentary_label,
                 fontCode = state.dafCommentaryFontCode,
-                options = options,
+                options = codes,
                 optionLabels = optionLabels,
                 onFontChange = { code -> onEvent(FontsSettingsEvents.SetDafCommentaryFont(code)) },
             )
+
+            UserFontsCard()
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -138,11 +146,13 @@ private fun FontsSettingsView(
 private fun FontSettingCard(
     label: StringResource,
     fontCode: String,
-    options: ImmutableList<FontOption>,
+    options: ImmutableList<String>,
     optionLabels: ImmutableList<String>,
     onFontChange: (String) -> Unit,
 ) {
-    val selectedIndex = options.indexOfFirst { it.code == fontCode }.let { if (it >= 0) it else 0 }
+    // Pardes: the fonts' codes, the user's among them, and one of theirs whose file is gone listed as missing
+    val (codes, labels) = withMissingFont(fontCode, options, optionLabels)
+    val selectedIndex = codes.indexOf(fontCode).let { if (it >= 0) it else 0 }
     val fontFamily = FontCatalog.familyFor(fontCode)
     val shape = RoundedCornerShape(8.dp)
 
@@ -167,9 +177,9 @@ private fun FontSettingCard(
                 modifier = Modifier.weight(1f),
             )
             ListComboBox(
-                items = optionLabels,
+                items = labels,
                 selectedIndex = selectedIndex,
-                onSelectedItemChange = { idx -> onFontChange(options[idx].code) },
+                onSelectedItemChange = { idx -> onFontChange(codes[idx]) },
                 modifier = Modifier.fillMaxWidth(0.4f),
             )
         }

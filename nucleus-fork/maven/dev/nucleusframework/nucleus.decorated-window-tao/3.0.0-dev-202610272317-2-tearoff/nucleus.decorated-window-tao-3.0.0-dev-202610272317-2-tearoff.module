@@ -3,7 +3,7 @@
   "component": {
     "group": "dev.nucleusframework",
     "module": "nucleus.decorated-window-tao",
-    "version": "3.0.0-dev-202610272317-1-tearoff",
+    "version": "3.0.0-dev-202610272317-2-tearoff",
     "attributes": {
       "org.gradle.status": "release"
     }
@@ -43,13 +43,13 @@
       ],
       "files": [
         {
-          "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
-          "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
-          "size": 6267459,
-          "sha512": "f0d6c4e13da8cb70c6792a4ca179c8852c5991e5b3c536ee8b4d6685b48d0fa2f10e2851bcc45a08aa0b0edee2cd4ea06b2bf10d7f5610196bacb609b2dc379f",
-          "sha256": "35aaffc559d40a79b812352d7e56820f053b156e1d1453aff38b30a16718018d",
-          "sha1": "7558eadab600ff53878439d085abe5db6fc13491",
-          "md5": "f412f813d468981d8a69ddcddb978d12"
+          "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.jar",
+          "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.jar",
+          "size": 6280790,
+          "sha512": "a34e575d7e87998cf8dc90a0eccec4166d8ea07067163b96a42ab06a33b406ebfbe9f07ae8dc3f60be5178e64e33f42fcca285ccebc6b675c8a0919914aa1720",
+          "sha256": "fb5135ab1298197f8b279873ba05261c294cb02c1f876f5cc5c284bbf89b7c38",
+          "sha1": "7d3a77e5d4a20b3560a6692aa5f39c5ea8d31c9f",
+          "md5": "c0ee7bf4f54c7ecf70f9b96e0ab25a9b"
         }
       ]
     },
@@ -110,13 +110,13 @@
       ],
       "files": [
         {
-          "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
-          "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-1-tearoff.jar",
-          "size": 6267459,
-          "sha512": "f0d6c4e13da8cb70c6792a4ca179c8852c5991e5b3c536ee8b4d6685b48d0fa2f10e2851bcc45a08aa0b0edee2cd4ea06b2bf10d7f5610196bacb609b2dc379f",
-          "sha256": "35aaffc559d40a79b812352d7e56820f053b156e1d1453aff38b30a16718018d",
-          "sha1": "7558eadab600ff53878439d085abe5db6fc13491",
-          "md5": "f412f813d468981d8a69ddcddb978d12"
+          "name": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.jar",
+          "url": "nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.jar",
+          "size": 6280790,
+          "sha512": "a34e575d7e87998cf8dc90a0eccec4166d8ea07067163b96a42ab06a33b406ebfbe9f07ae8dc3f60be5178e64e33f42fcca285ccebc6b675c8a0919914aa1720",
+          "sha256": "fb5135ab1298197f8b279873ba05261c294cb02c1f876f5cc5c284bbf89b7c38",
+          "sha1": "7d3a77e5d4a20b3560a6692aa5f39c5ea8d31c9f",
+          "md5": "c0ee7bf4f54c7ecf70f9b96e0ab25a9b"
         }
       ]
     }

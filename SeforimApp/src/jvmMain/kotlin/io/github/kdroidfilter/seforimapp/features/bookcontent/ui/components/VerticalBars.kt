@@ -20,6 +20,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.VerticalLa
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMarksButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookConnections
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
@@ -142,7 +143,10 @@ fun EndVerticalBar(
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
                 val bookHasDiacritics = selectedBook.hasNekudot || selectedBook.hasTeamim
-                if (bookHasDiacritics) {
+                // A daf shown has no diacritics to hide: the button of its marks stands in their place
+                if (uiState.content.dafView && selectedBook.isBavli) {
+                    DafMarksButton()
+                } else if (bookHasDiacritics) {
                     DiacriticsButton(
                         diacritics = diacritics,
                         hasTeamim = selectedBook.hasTeamim,
@@ -161,8 +165,9 @@ fun EndVerticalBar(
                         label = stringResource(Res.string.shnayim_mikra_mode),
                     )
                 }
-                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text
-                if (selectedBook.isBavli) {
+                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text; the Chumash as Mikraot
+                // Gedolot (MikraotView)
+                if (selectedBook.isBavli || selectedBook.isChumash) {
                     SelectableIconButtonWithToolip(
                         toolTipText = stringResource(Res.string.daf_view_tooltip),
                         onClick = { onEvent(BookContentEvent.ToggleDafView) },

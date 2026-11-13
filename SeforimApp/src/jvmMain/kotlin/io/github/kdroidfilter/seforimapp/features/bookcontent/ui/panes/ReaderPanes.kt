@@ -268,6 +268,12 @@ val LineLayeredSides = setOf(DockSide.Left, DockSide.Right)
 val LineSideOrder = listOf(DockSide.Bottom, DockSide.Left, DockSide.Right, DockSide.Top)
 
 /**
+ * Pardes: the sides a pane dropped at the window's very edge runs the full length of (Nucleus's outer band), taking the
+ * corners from the panes beside it; dropped beside the text, it stays where [LineSideOrder] puts its side.
+ */
+val LineOuterBandSides = setOf(DockSide.Left, DockSide.Right, DockSide.Bottom)
+
+/**
  * The panes of one reader window, declared at application scope so they belong to the window, not
  * to a tab: a tab change creates or destroys no panel, it changes what the panels draw and which
  * are open — each tab keeps its own open panes (its ViewModel's visibility flags).
@@ -293,15 +299,20 @@ fun WindowPanes(window: OpenWindow) {
     for (pane in panes) {
         key(pane) {
             val commentator = pane as? ReaderPane.Commentator
+            val sides = if (pane.navigation) NavigationDockSides else LineDockSides
             Satellite(
                 workspace = pane.workspaceIn(session, groupId),
                 id = pane.idIn(groupId),
                 // A split-off commentator's pane is called by its commentator's name
                 title = commentator?.name ?: stringResource(pane.title),
-                // Read once, when the dock first meets the commentator: from then on its place is its own
-                initialPlacement = commentator?.let { commentatorHome(commentators.indexOf(it.name)) } ?: pane.home,
+                // Read once, when the dock first meets the commentator: from then on its place is its own. Pardes: the
+                // place the pane had when the window was saved first
+                initialPlacement =
+                    session.savedPlacement(groupId, pane.id, sides, floatable = !pane.fixed)
+                        ?: commentator?.let { commentatorHome(commentators.indexOf(it.name)) }
+                        ?: pane.home,
                 initiallyOpen = false,
-                dockSides = if (pane.navigation) NavigationDockSides else LineDockSides,
+                dockSides = sides,
                 floatable = !pane.fixed,
                 reorderable = !pane.fixed,
                 // Zayit's windows are usually maximized: a pane pulled out stays on screen.
@@ -902,17 +913,39 @@ fun PaneCard(
     Box(modifier) { content() }
 }
 
-/** A docked pane's frame by its side of the text: [bottomOpen] is whether a pane is docked under it. */
+/**
+ * A docked pane's frame by its side of the text: [bottomOpen] is whether a pane is docked under the text; Pardes: a side
+ * pane stands on it only when that pane's band is laid outside its own.
+ */
 @Composable
 fun SatelliteScope.DockedPaneCard(
     bottomOpen: Boolean,
     content: @Composable () -> Unit,
 ) {
-    val side = (satellite.placement as? SatellitePlacement.Docked)?.side
+    val docked = satellite.placement as? SatellitePlacement.Docked
+    val side = docked?.side
     when {
         side == DockSide.Bottom -> PaneCard(top = 3.dp, content = content)
-        side == DockSide.Left || side == DockSide.Right -> PaneCard(bottom = if (bottomOpen) 3.dp else 6.dp, content = content)
+        side == DockSide.Left || side == DockSide.Right ->
+            PaneCard(bottom = if (bottomOpen && workspace.bottomPaneOutside(docked)) 3.dp else 6.dp, content = content)
         else -> PaneCard(content = content)
+    }
+}
+
+/**
+ * Pardes: whether an open pane of the bottom side is laid outside [docked]'s band, so that it runs under it. Nucleus
+ * lays the outer bands first, the one docked into last outermost ([SatelliteWorkspace.outerBandOrder]) and the others in
+ * [LineSideOrder], then the inner bands in [LineSideOrder].
+ */
+private fun SatelliteWorkspace.bottomPaneOutside(docked: SatellitePlacement.Docked): Boolean {
+    val outerOrder = (outerBandOrder + LineSideOrder).distinct()
+
+    fun rank(placement: SatellitePlacement.Docked): Int =
+        if (placement.outer) outerOrder.indexOf(placement.side) else outerOrder.size + LineSideOrder.indexOf(placement.side)
+    val own = rank(docked)
+    return satellites.any { entry ->
+        val bottom = entry.placement as? SatellitePlacement.Docked
+        entry.isOpen && bottom?.side == DockSide.Bottom && rank(bottom) < own
     }
 }
 

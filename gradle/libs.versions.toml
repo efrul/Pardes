@@ -9,10 +9,10 @@ hebrewNumerals = "0.2.6"
 jsoup = "1.23.2"
 jvmToolchain = "25"
 nucleus = "3.0.0-dev-202610272317"
-# decorated-window-tao alone comes from efrul/Nucleus's commentator-tearoff (Modifier.satelliteTearOffHandle), kept in
-# nucleus-fork/maven: the release's module with the commentator tear-off, until upstream has it. It wins over the
-# release's tao the other Nucleus modules ask for, being the higher version. See nucleus-fork/README.md.
-nucleusTao = "3.0.0-dev-202610272317-1-tearoff"
+# decorated-window-tao alone comes from efrul/Nucleus (Modifier.satelliteTearOffHandle, the docks' outer bands), kept in
+# nucleus-fork/maven: the release's module with the commentator tear-off and the outer bands, until upstream has them.
+# It wins over the release's tao the other Nucleus modules ask for, being the higher version. See nucleus-fork/README.md.
+nucleusTao = "3.0.0-dev-202610272317-2-tearoff"
 koalaplotCore = "0.12.1"
 kotlin = "2.4.20"
 compose = "1.12.1"

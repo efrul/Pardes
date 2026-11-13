@@ -16,10 +16,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -40,6 +45,7 @@ import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.selection.CommentaryLineRef
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
@@ -87,6 +93,7 @@ private fun SingleLineTargumView(
     lineConnections: Map<Long, LineConnectionsSnapshot> = emptyMap(),
 ) {
     val appSettings = LocalAppGraph.current.appSettings
+    val selectionContext = LocalAppGraph.current.selectionContext
     val rawTextSize by appSettings.textSizeFlow.collectAsState()
     val isTabSelected = LocalTabSelected.current
     val isBookContentZoomInProgress = LocalBookContentZoomInProgress.current
@@ -313,6 +320,7 @@ private fun SingleLineTargumView(
                                                     boldScale = boldScaleForPlatform,
                                                     highlightQuery = highlightQuery,
                                                     onClick = { onLinkClick(item) },
+                                                    onPress = { selectionContext.setActiveCommentaryColumn(sourceSections.column()) },
                                                     diacritics = diacritics,
                                                     annotationCache = annotationCache,
                                                     onLayoutWidthMeasure = { width ->
@@ -461,6 +469,7 @@ private fun MultiLineTargumView(
     onHide: () -> Unit,
 ) {
     val appSettings = LocalAppGraph.current.appSettings
+    val selectionContext = LocalAppGraph.current.selectionContext
     val providers = uiState.providers ?: return
     val contentState = uiState.content
     val windowInfo = LocalWindowInfo.current
@@ -648,6 +657,7 @@ private fun MultiLineTargumView(
                                             fontFamily = targumFontFamily,
                                             boldScale = boldScaleForPlatform,
                                             highlightQuery = highlightQuery,
+                                            onPress = { selectionContext.setActiveCommentaryColumn(sourceSections.column()) },
                                             onClick = {
                                                 val mods = windowInfo.keyboardModifiers
                                                 if (mods.isCtrlPressed || mods.isMetaPressed) {
@@ -713,6 +723,15 @@ private data class SourceSection(
     val items: LazyPagingItems<CommentaryWithText>,
 )
 
+// Pardes: the targumim shown, published on a press as the commentaries pane publishes its column, so that a selection
+// in them is copied with their own source (CommentarySource.kt), not the book's
+private fun List<SourceSection>.column(): List<CommentaryLineRef> =
+    flatMap { section ->
+        section.items.itemSnapshotList.items.map {
+            CommentaryLineRef(bookId = it.link.targetBookId, lineId = it.link.targetLineId, content = it.targetText)
+        }
+    }
+
 /**
  * Opens this section's book in a new tab, like a commentator title: at the line it links to
  * for the displayed base line(s), or at the book's start when no link is loaded yet.
@@ -730,6 +749,7 @@ private data class SourceMeta(
     val bookId: Long,
 )
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun LinkItem(
     linkId: Long,
@@ -743,13 +763,16 @@ private fun LinkItem(
     annotationCache: StableAnnotatedCache,
     boldScale: Float = 1.0f,
     onLayoutWidthMeasure: (Int) -> Unit = {},
+    onPress: () -> Unit = {},
 ) {
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = LinkItemVerticalPaddingPerSide, horizontal = 16.dp)
-                .pointerInput(linkId) {
+                .onPointerEvent(PointerEventType.Press) { event ->
+                    if (event.buttons.isPrimaryPressed || event.buttons.isSecondaryPressed) onPress()
+                }.pointerInput(linkId) {
                     detectTapGestures(onTap = { onClick() })
                 },
     ) {

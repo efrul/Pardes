@@ -54,6 +54,9 @@ private const val SEARCH_DEBOUNCE_MS = 120L
 @Stable
 class PaneSearchFocus {
     internal var requested by mutableStateOf(false)
+
+    // Pardes: text typed over the pane before its field had the focus (TypeToSearch), put in the field as it takes it
+    internal var typed by mutableStateOf("")
 }
 
 @Composable
@@ -195,6 +198,11 @@ private fun PaneSearchField(
 
     LaunchedEffect(focus.requested) {
         if (focus.requested) {
+            if (focus.typed.isNotEmpty()) {
+                fieldState.edit { append(focus.typed) }
+                focus.typed = ""
+                send(fieldState.text.toString())
+            }
             focusRequester.requestFocus()
             focus.requested = false
         }

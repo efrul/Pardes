@@ -14,7 +14,9 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneHeader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneSearchButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneSearchLayout
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearchTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberPaneSearchFocus
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
 import io.github.kdroidfilter.seforimapp.framework.search.MIN_BOOK_QUERY_LENGTH
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import kotlinx.collections.immutable.ImmutableList
@@ -33,6 +35,10 @@ fun CategoryTreePanel(
     val paneHoverSource = remember { MutableInteractionSource() }
     val search = uiState.navigation.search
     val searchFocus = rememberPaneSearchFocus()
+    // Pardes: a letter typed with the pointer over the book tree opens its search with it (TypeToSearch)
+    TypeToSearchTarget(paneHoverSource) { text ->
+        searchFocus.type(text, isOpen = search != null) { onEvent(BookContentEvent.ToggleBookTreeSearch) }
+    }
     Column(modifier = modifier.hoverable(paneHoverSource)) {
         PaneHeader(
             label = stringResource(Res.string.book_list),

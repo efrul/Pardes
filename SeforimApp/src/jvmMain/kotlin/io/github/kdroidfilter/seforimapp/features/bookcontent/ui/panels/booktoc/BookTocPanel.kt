@@ -13,7 +13,9 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.TocFilterRes
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneHeader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneSearchButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneSearchLayout
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearchTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberPaneSearchFocus
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.toTocEntry
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
 import io.github.kdroidfilter.seforimlibrary.core.models.AltTocEntry
@@ -41,6 +43,12 @@ fun BookTocPanel(
                 .MutableInteractionSource()
         }
     val searchFocus = rememberPaneSearchFocus()
+    // Pardes: a letter typed with the pointer over the contents opens their search with it (TypeToSearch)
+    if (uiState.navigation.selectedBook != null) {
+        TypeToSearchTarget(paneHoverSource) { text ->
+            searchFocus.type(text, isOpen = uiState.toc.search != null) { onEvent(BookContentEvent.ToggleTocSearch) }
+        }
+    }
     Column(
         modifier =
             modifier

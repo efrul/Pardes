@@ -10,13 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.rememberNavController
 import dev.nucleusframework.application.NucleusApplicationScope
 import dev.nucleusframework.window.ControlButtonsDirection
-import dev.nucleusframework.window.jewel.JewelDecoratedDialog
-import dev.nucleusframework.window.jewel.JewelDialogTitleBar
+import dev.nucleusframework.window.jewel.JewelDecoratedWindow
+import dev.nucleusframework.window.jewel.JewelTitleBar
 import dev.nucleusframework.window.newFullscreenControls
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.ThemeUtils
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.ThemeUtils.buildThemeDefinition
@@ -41,14 +41,18 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.settings
 import seforimapp.seforimapp.generated.resources.settings_close
 
+// Pardes: a window of its own, not a dialog, so that the app can be used and the settings minimized apart from it; asked
+// for again ([reopened]), it comes back to the front
 @Composable
 fun NucleusApplicationScope.SettingsWindow(
     onClose: () -> Unit,
     initialDestination: SettingsDestination? = null,
+    reopened: Int = 0,
 ) {
     SettingsWindowView(
         onClose = onClose,
         initialDestination = initialDestination,
+        reopened = reopened,
     )
 }
 
@@ -56,6 +60,7 @@ fun NucleusApplicationScope.SettingsWindow(
 private fun NucleusApplicationScope.SettingsWindowView(
     onClose: () -> Unit,
     initialDestination: SettingsDestination? = null,
+    reopened: Int = 0,
 ) {
     val themeDefinition = buildThemeDefinition()
 
@@ -63,22 +68,27 @@ private fun NucleusApplicationScope.SettingsWindowView(
         theme = themeDefinition,
         styling = ThemeUtils.buildComponentStyling(),
     ) {
-        val settingsDialogState =
-            rememberDialogState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(700.dp, 500.dp))
-        JewelDecoratedDialog(
+        val settingsWindowState =
+            rememberWindowState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(700.dp, 500.dp))
+        JewelDecoratedWindow(
             onCloseRequest = onClose,
             title = stringResource(Res.string.settings),
             icon = painterResource(Res.drawable.AppIcon),
-            state = settingsDialogState,
-            visible = true,
-            resizable = true,
+            state = settingsWindowState,
         ) {
+            val window = nucleusWindow
+            LaunchedEffect(reopened) {
+                if (reopened == 0) return@LaunchedEffect
+                window.setMinimized(false)
+                window.toFront()
+                window.requestFocus()
+            }
             val windowViewModelOwner = rememberWindowViewModelStoreOwner()
             CompositionLocalProvider(
                 LocalWindowViewModelStoreOwner provides windowViewModelOwner,
                 LocalViewModelStoreOwner provides windowViewModelOwner,
             ) {
-                JewelDialogTitleBar(
+                JewelTitleBar(
                     modifier = Modifier.newFullscreenControls(),
                     gradientStartColor = ThemeUtils.titleBarGradientColor(),
                     controlButtonsDirection = ControlButtonsDirection.SystemNative,
@@ -98,7 +108,7 @@ private fun NucleusApplicationScope.SettingsWindowView(
                 }
                 // IntelliJ-like layout: sidebar + content with header and bottom action bar
                 val navController = rememberNavController()
-                LaunchedEffect(initialDestination) {
+                LaunchedEffect(initialDestination, reopened) {
                     if (initialDestination != null) {
                         navController.navigate(initialDestination) {
                             popUpTo(SettingsDestination.General) { inclusive = false }

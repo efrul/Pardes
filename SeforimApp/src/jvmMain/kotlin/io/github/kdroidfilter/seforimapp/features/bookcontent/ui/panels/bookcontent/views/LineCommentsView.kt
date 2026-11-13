@@ -1215,7 +1215,9 @@ private fun CommentaryItem(
                 .onPointerEvent(PointerEventType.Press) { event ->
                     // Record this commentary line as the highlight target (analogous to the main
                     // pane's onContextClick) so the shared context menu can anchor here.
-                    if (event.buttons.isSecondaryPressed) onSecondaryClick()
+                    // Pardes: on a primary press too, so a selection dragged here is found in its column (the copy with
+                    // source of a commentary, CommentarySource.kt)
+                    if (event.buttons.isSecondaryPressed || event.buttons.isPrimaryPressed) onSecondaryClick()
                 }.pointerInput(onClick) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)

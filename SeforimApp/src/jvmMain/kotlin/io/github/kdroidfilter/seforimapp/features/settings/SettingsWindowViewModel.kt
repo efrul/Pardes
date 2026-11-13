@@ -27,6 +27,7 @@ class SettingsWindowViewModel(
                     SettingsWindowState(
                         isVisible = true,
                         ownerWindowId = desktopManager.focusedWindowId.value,
+                        reopened = reopened(),
                     )
             is SettingsWindowEvents.OnOpenTo ->
                 _state.value =
@@ -34,8 +35,12 @@ class SettingsWindowViewModel(
                         isVisible = true,
                         initialDestination = events.destination,
                         ownerWindowId = desktopManager.focusedWindowId.value,
+                        reopened = reopened(),
                     )
             is SettingsWindowEvents.OnClose -> _state.value = SettingsWindowState(isVisible = false)
         }
     }
+
+    // Pardes: settings asked for while open are asked for again (their window comes to the front); 0 when they open
+    private fun reopened(): Int = _state.value.let { if (it.isVisible) it.reopened + 1 else 0 }
 }

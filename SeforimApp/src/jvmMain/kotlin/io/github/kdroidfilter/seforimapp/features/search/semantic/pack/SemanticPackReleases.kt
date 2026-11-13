@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.features.search.semantic.pack
 
 import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
+import io.github.kdroidfilter.seforimapp.features.settings.downloads.ReleaseLists
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimapp.network.HttpsConnectionFactory
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,8 @@ import java.net.HttpURLConnection
  * site writes at every deploy (`semantic.json`, .github/workflows/android-site.yml), in the API's shape.
  */
 class SemanticPackReleases(
-    private val fetchText: suspend (url: String) -> String = ::get,
+    // The lists as read lately, shared with the daf view's layouts (ReleaseLists)
+    private val fetchText: suspend (url: String) -> String = { url -> ReleaseLists.text(url, ::get) },
 ) {
     @Serializable
     data class Release(
@@ -62,6 +64,12 @@ class SemanticPackReleases(
      * so an index built on another release lacks only the lines changed in between.
      */
     suspend fun newest(library: String?): Available? = select(list(), library)
+
+    /** What [pack]'s manifest says it holds ([PackInfo]), or null when it can't be read or says nothing of it. */
+    suspend fun infoOf(pack: Available): PackInfo? =
+        pack.assets[SemanticPack.MANIFEST_NAME]?.let { manifest ->
+            runSuspendCatching { PackInfo.parseOrNull(fetchText(manifest.url)) }.getOrNull()
+        }
 
     /** The releases of the repository, newest first; throws IOException when neither list can be read. */
     suspend fun list(): List<Release> =

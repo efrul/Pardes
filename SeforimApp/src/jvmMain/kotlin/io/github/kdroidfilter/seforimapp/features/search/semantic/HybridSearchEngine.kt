@@ -18,10 +18,12 @@ import io.github.kdroidfilter.seforimlibrary.search.WARMUP_ROUNDS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
+import kotlin.math.sqrt
 
 /**
  * Independent Hybrid Search Engine for Pardes Desktop:
@@ -65,6 +67,11 @@ class HybridSearchEngine internal constructor(
 
     @Volatile private var semanticTried = false
     private val semanticMutex = Mutex()
+
+    // The passages closest in meaning, worked out one request at a time: the model's runs never hold every thread of the
+    // default dispatcher, which the searches run on (tabs picked one after another waited up to 1.8 s behind the earlier
+    // pages' passages, docs/scope-search-speed)
+    private val passageWork = Dispatchers.Default.limitedParallelism(1)
 
     private suspend fun ensureSemantic(): IndependentSemanticSearch? {
         if (semanticTried) return semantic
@@ -146,8 +153,9 @@ class HybridSearchEngine internal constructor(
         texts: List<String>,
     ): List<String?>? {
         val semantic = ensureSemantic() ?: return null
-        return withContext(Dispatchers.Default) {
-            runSuspendCatching { semantic.bestPassages(query, texts) { lexical.highlightRanges(it, query) } }
+        return withContext(passageWork) {
+            // Cancelled (its page no longer shown, Refining), it stops at the model's next run
+            runSuspendCatching { semantic.bestPassages(query, texts, keepGoing = { isActive }) { lexical.highlightRanges(it, query) } }
                 .onFailure { warnln(it) { "[HybridSearchEngine] Passages by meaning failed; the query's words instead." } }
                 .getOrNull()
         }
@@ -212,6 +220,8 @@ class HybridSearchEngine internal constructor(
         val lexical: LineHit?,
         // The line's book: the lexical hit's, else the dense hit's (-1 when the vector index doesn't store it)
         val bookId: Long = lexical?.bookId ?: -1L,
+        // How far the dense side's closeness of the line stands above its other candidates' (standingOf); 0 off it
+        val standing: Double = 0.0,
     )
 
     private suspend fun fuse(
@@ -289,6 +299,7 @@ class HybridSearchEngine internal constructor(
 
             val lexById = lexHits.associateBy { it.lineId }
             val denseBooks = denseHits.associate { it.lineId to it.bookId }
+            val standings = standingOf(denseHits)
             val order = rrf.entries.sortedWith(compareByDescending<Map.Entry<Long, Double>> { it.value }.thenBy { it.key }).map { it.key }
             // The lexical side's first hits that hold the query as a quote keep a place on the first page; the others rank
             // as fused. On real searches the lexical first hit was mostly a long line the query's words are scattered in:
@@ -306,7 +317,13 @@ class HybridSearchEngine internal constructor(
             (if (bookIds?.size == 1) page else withPrecedence(page, query, lines))
                 .map { lineId ->
                     val lexicalHit = lexById[lineId]
-                    FusedEntry(lineId, rrf.getValue(lineId).toFloat(), lexicalHit, lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L)
+                    FusedEntry(
+                        lineId,
+                        rrf.getValue(lineId).toFloat(),
+                        lexicalHit,
+                        lexicalHit?.bookId ?: denseBooks[lineId] ?: -1L,
+                        standings[lineId] ?: 0.0,
+                    )
                 }.also {
                     // The two sides run at once: the list waits for the slower one, then for the lines
                     debugln {
@@ -367,6 +384,9 @@ class HybridSearchEngine internal constructor(
         // Without the dense side, the lexical results after its candidates, and the lines shown so far
         private var rest: SearchSession? = null
         private val shown = HashSet<Long>()
+
+        // Its pages' passages being worked out, stopped when it closes
+        private val refining = Refining()
 
         override suspend fun nextPage(
             limit: Int,
@@ -470,18 +490,35 @@ class HybridSearchEngine internal constructor(
 
             override suspend fun meaningBookCounts(): Map<Long, Int> = this@HybridSession.meaningBookCounts()
 
-            override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = this@HybridSession.refinedSnippets(hits)
+            override suspend fun meaningLines(): List<MeaningLine> = this@HybridSession.meaningLines()
 
-            override fun close() = Unit
+            override suspend fun meaningHits(lineIds: Collection<Long>): List<LineHit> = this@HybridSession.meaningHits(lineIds)
+
+            // Its own: the session it views closes when it is shown, and goes on being viewed
+            private val refining = Refining()
+
+            override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = refining.run(emptyMap()) { refined(hits) }
+
+            override fun close() = refining.close()
         }
 
-        override suspend fun meaningBookCounts(): Map<Long, Int> {
+        override suspend fun meaningBookCounts(): Map<Long, Int> = meaningOnly().groupingBy { it.bookId }.eachCount()
+
+        override suspend fun meaningLines(): List<MeaningLine> = meaningOnly().map { MeaningLine(it.lineId, it.standing, it.bookId) }
+
+        override suspend fun meaningHits(lineIds: Collection<Long>): List<LineHit> {
+            val ids = lineIds.toSet()
+            return resolvePage(fused.orEmpty().filter { it.lexical == null && it.lineId in ids }, snippets = false)
+        }
+
+        // The list's lines that the words don't find, in its order
+        private suspend fun meaningOnly(): List<FusedEntry> {
             val meaningOnly = fused.orEmpty().filter { it.lexical == null && it.bookId > 0 }
-            if (meaningOnly.isEmpty()) return emptyMap()
+            if (meaningOnly.isEmpty()) return emptyList()
             // Past the fused list's CANDIDATES the words find more lines, which their facets count already: those of these
             // lines the words find too are not the meaning search's own
             val alsoWords = if (lexicalTotal > CANDIDATES) wordHitsAmong(meaningOnly.map { it.lineId }) else emptySet()
-            return meaningOnly.filterNot { it.lineId in alsoWords }.groupingBy { it.bookId }.eachCount()
+            return meaningOnly.filterNot { it.lineId in alsoWords }
         }
 
         // Which of [lineIds] the words find, where this session searches; none when the lexical side fails
@@ -495,7 +532,10 @@ class HybridSearchEngine internal constructor(
                     .mapTo(HashSet()) { it.lineId }
             }.getOrDefault(emptySet())
 
-        override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> {
+        override suspend fun refinedSnippets(hits: List<LineHit>): Map<Long, String> = refining.run(emptyMap()) { refined(hits) }
+
+        // [hits]' snippets with the passage closest in meaning in bold
+        private suspend fun refined(hits: List<LineHit>): Map<Long, String> {
             val shown = hits.filter { it.rawText.isNotBlank() && it.lineEnd > it.lineStart }
             if (shown.isEmpty()) return emptyMap()
             // The found line alone, not the neighbors its snippet shows around it
@@ -509,6 +549,7 @@ class HybridSearchEngine internal constructor(
         }
 
         override fun close() {
+            refining.close()
             rest?.close()
         }
     }
@@ -602,6 +643,20 @@ class HybridSearchEngine internal constructor(
 
         /** The words of a [verbatimKey]. */
         private fun wordCount(key: String): Int = if (key.isEmpty()) 0 else key.count { it == ' ' } + 1
+
+        /**
+         * How far each of [hits] stands out of them: its score's distance above their mean, in standard deviations of
+         * their scores (a line repeated keeps its first, closest one); 0 for each when their scores are all alike.
+         */
+        internal fun standingOf(hits: List<DenseHit>): Map<Long, Double> {
+            if (hits.isEmpty()) return emptyMap()
+            val scores = hits.map { it.score.toDouble() }
+            val mean = scores.average()
+            val spread = sqrt(scores.sumOf { (it - mean) * (it - mean) } / scores.size)
+            val standings = LinkedHashMap<Long, Double>()
+            for (hit in hits) standings.putIfAbsent(hit.lineId, if (spread > 0.0) (hit.score - mean) / spread else 0.0)
+            return standings
+        }
 
         /** The query's distinct words of two letters or more, as [stem]s, in their order ([coverage]). */
         internal fun queryWords(query: String): List<String> =

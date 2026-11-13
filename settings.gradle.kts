@@ -86,11 +86,11 @@ gradle.extensions.extraProperties["quoteLinksEnabled"] =
 
 dependencyResolutionManagement {
     repositories {
-        // Nucleus's decorated-window-tao from efrul/Nucleus (commentator-tearoff: Modifier.satelliteTearOffHandle), kept
+        // Nucleus's decorated-window-tao from efrul/Nucleus (Modifier.satelliteTearOffHandle, the docks' outer bands), kept
         // in the repository until upstream has it; every other Nucleus module is the release's. See nucleus-fork/README.md.
         exclusiveContent {
             forRepository { maven(rootDir.resolve("nucleus-fork/maven")) { name = "NucleusFork" } }
-            filter { includeVersion("dev.nucleusframework", "nucleus.decorated-window-tao", "3.0.0-dev-202610272317-1-tearoff") }
+            filter { includeVersion("dev.nucleusframework", "nucleus.decorated-window-tao", "3.0.0-dev-202610272317-2-tearoff") }
         }
         mavenLocal()
         google {

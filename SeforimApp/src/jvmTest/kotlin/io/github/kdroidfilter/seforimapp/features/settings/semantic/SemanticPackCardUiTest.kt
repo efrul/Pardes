@@ -90,26 +90,27 @@ class SemanticPackCardUiTest {
     @Test
     fun `a pack ready for the restart is not offered again`() =
         runDesktopComposeUiTest(width = 520, height = 700) {
-            show { SemanticPackCardContent(State(available = Available.Pack(pack), work = Work.Ready), actions()) }
+            show { SemanticPackCardContent(State(available = Available.Pack(pack), work = Work.Ready(2)), actions()) }
             onNodeWithText("הקבצים מוכנים", substring = true).assertExists()
             onAllNodesWithText("זמינה להורדה", substring = true).assertCountEquals(0)
             onAllNodesWithText("עם אינטרנט:", substring = true).assertCountEquals(0)
         }
 
     @Test
-    fun `feedback mode is turned on from the card, which says how many results are graded`() =
+    fun `a pack that waits for the restart is named, and the one in use is said to be in use until then`() =
         runDesktopComposeUiTest(width = 520, height = 700) {
-            var turnedOn: Boolean? = null
-            show {
-                SemanticPackCardContent(
-                    State(installed = inUse, available = Available.Pack(pack), feedbackGrades = 12),
-                    SemanticPackActions({}, {}, {}, {}, {}, {}, feedback = { turnedOn = it }),
-                )
-            }
-            onNodeWithText("ציונים שנשמרו עד עכשיו: 12").assertIsDisplayed()
-            onNodeWithText("משוב על תוצאות החיפוש").performClick()
-            waitForIdle()
-            assertEquals(true, turnedOn)
+            show { SemanticPackCardContent(State(installed = inUse, available = Available.Pack(pack), work = Work.Ready(3)), actions()) }
+            onNodeWithText("גרסה 3 של הקבצים מוכנה", substring = true).assertExists()
+            onNodeWithText("בשימוש עד ההפעלה הבאה: גרסה 2 של הקבצים", substring = true).assertExists()
+            onAllNodesWithText("מותקן:", substring = true).assertCountEquals(0)
+        }
+
+    @Test
+    fun `a pack with no number that waits over one in use is still told apart from it`() =
+        runDesktopComposeUiTest(width = 520, height = 700) {
+            show { SemanticPackCardContent(State(installed = inUse, work = Work.Ready()), actions()) }
+            onNodeWithText("הקבצים החדשים מוכנים", substring = true).assertExists()
+            onNodeWithText("בשימוש עד ההפעלה הבאה", substring = true).assertExists()
         }
 
     @Test

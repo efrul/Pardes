@@ -21,10 +21,11 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Settings › ניהול נתונים: sending feedback ([FeedbackSendCard]). What there is to send since the last package
+ * Settings › משוב: sending feedback ([FeedbackSettingsScreen]). What there is to send since the last package
  * ([FeedbackSender.read]), what the user keeps of it (the kinds, kept in the settings for the automatic sending too, and
  * the queries left out of this package), and the package sent to the service, saved to a file, or what was sent
- * deleted. The automatic sending ([FeedbackAutoSender]) is turned on or off here as well, and its sendings show here.
+ * deleted. The automatic sending ([FeedbackAutoSender]) and the search results' grade buttons are turned on or off
+ * here as well, and the automatic sendings show here.
  */
 @ContributesIntoMap(AppScope::class)
 @ViewModelKey
@@ -80,13 +81,20 @@ class FeedbackSendViewModel(
         val auto: Boolean = false,
         /** The other apps on this computer whose searches may be sent too. */
         val otherApps: Set<OtherApp> = emptySet(),
+        /** Feedback mode: whether each search result shows its grade buttons. */
+        val buttons: Boolean = false,
     ) {
         val busy: Boolean get() = work == Work.Saving || work is Work.Sending || work == Work.Deleting
     }
 
     private val _state =
         MutableStateFlow(
-            State(choice = sender.choice(), online = sender.service.available, auto = appSettings.isFeedbackAutoSend()),
+            State(
+                choice = sender.choice(),
+                online = sender.service.available,
+                auto = appSettings.isFeedbackAutoSend(),
+                buttons = appSettings.isSearchFeedbackEnabled(),
+            ),
         )
     val state: StateFlow<State> = _state.asStateFlow()
     private var reading: Job? = null
@@ -129,6 +137,7 @@ class FeedbackSendViewModel(
                         lastSent = sender.lastSent(),
                         auto = appSettings.isFeedbackAutoSend(),
                         otherApps = otherApps,
+                        buttons = appSettings.isSearchFeedbackEnabled(),
                     )
                 }
             }.also { reading = it }
@@ -169,6 +178,12 @@ class FeedbackSendViewModel(
         appSettings.setFeedbackAsked(true)
         _state.update { it.copy(auto = on) }
         if (on) autoSender.kick()
+    }
+
+    /** Feedback mode on or off: the grade buttons under each search result (SearchFeedbackButtons). */
+    fun setButtons(on: Boolean) {
+        appSettings.setSearchFeedbackEnabled(on)
+        _state.update { it.copy(buttons = on) }
     }
 
     /** A new sender id for the packages from now on: they cannot be told to be from the one who sent the earlier ones. */
@@ -220,8 +235,6 @@ class FeedbackSendViewModel(
                 }
         }
     }
-
-    fun dismiss() = _state.update { it.copy(work = Work.Idle) }
 
     // The kinds sent, kept for the automatic sending too
     private fun keep(change: (FeedbackChoice) -> FeedbackChoice) {

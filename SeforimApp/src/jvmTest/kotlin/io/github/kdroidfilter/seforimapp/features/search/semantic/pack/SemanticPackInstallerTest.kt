@@ -11,6 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SemanticPackInstallerTest {
@@ -115,6 +116,7 @@ class SemanticPackInstallerTest {
         PackFixtures.zip(withInfo, SemanticPack.INDEX_DIR, downloads, SemanticPack.INDEX_ZIP)
 
         assertEquals(info, runBlocking { installer.stage(installer.resolve(model)) }.info)
+        assertEquals(info, SemanticPackInstaller.stagedInfo(library), "kept with the staged pack, for the card to name it")
     }
 
     @Test
@@ -133,6 +135,7 @@ class SemanticPackInstallerTest {
 
         assertTrue(File(source, "pardes-model/model.int8.onnx").isFile)
         assertEquals(PackFixtures.contents(source).keys, PackFixtures.contents(installer.stagingDir).keys - marks())
+        assertNull(SemanticPackInstaller.stagedInfo(library), "folders that carry no manifest name no pack")
     }
 
     @Test
@@ -212,6 +215,26 @@ class SemanticPackInstallerTest {
 
         File(library, SemanticPack.INDEX_DIR).deleteRecursively()
         assertEquals(InstalledPack.NoIndex, InstalledPack.read(library))
+    }
+
+    @Test
+    fun `a pack installed with no number is named after the newest one when it is that one`() {
+        PackFixtures.folders(library)
+        val unnumbered = InstalledPack.read(library)
+
+        fun newest(lines: Long) = PackInfo(3, PackFixtures.MODEL, PackFixtures.DIMENSION, PackFixtures.LIBRARY_TAG, lines)
+
+        // Packs may share a model: another count of lines is another pack, and so is one of another library release
+        assertEquals(unnumbered, InstalledPack.named(library, unnumbered, newest(lines = 5)))
+        assertEquals(unnumbered, InstalledPack.named(library, unnumbered, newest(lines = 2).copy(model = "student@other/pardes-clean-1")))
+        assertEquals(unnumbered, InstalledPack.named(library, unnumbered, newest(lines = 2).copy(library = "v4-20261201000000")))
+        assertNull((InstalledPack.read(library) as InstalledPack.InUse).pack)
+
+        assertEquals(3, (InstalledPack.named(library, unnumbered, newest(lines = 2)) as InstalledPack.InUse).pack)
+        assertEquals(3, (InstalledPack.read(library) as InstalledPack.InUse).pack, "kept beside the model for the next start")
+        // One that has its number keeps it
+        val second = InstalledPack.InUse(2, PackFixtures.MODEL, 2, PackFixtures.LIBRARY)
+        assertEquals(second, InstalledPack.named(library, second, newest(lines = 2)))
     }
 
     private fun marks() = SemanticPack.FOLDERS.map { "$it/${SemanticPackInstaller.STAGED_MARK}" }.toSet()

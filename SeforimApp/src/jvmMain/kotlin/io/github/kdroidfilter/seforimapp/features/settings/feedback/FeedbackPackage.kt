@@ -11,7 +11,7 @@ import java.io.File
 import java.time.Instant
 
 /**
- * Pardes: what a user sends to improve the search and the daf's layouts (Settings › ניהול נתונים, [FeedbackSendCard]),
+ * Pardes: what a user sends to improve the search and the daf's layouts (Settings › משוב, [FeedbackSettingsScreen]),
  * one JSON document: the grades given to search results in feedback mode, the searches made (only when the user
  * includes them), and the daf view's line review, with the versions they were made on. Nothing else from the user
  * database (notes, highlights, favorites, books opened) and nothing that names the user or the computer: [sender] is a

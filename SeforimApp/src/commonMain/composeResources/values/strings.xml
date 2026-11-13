@@ -40,15 +40,21 @@
     <string name="settings_font_sources_label">גופן למקורות</string>
     <string name="settings_font_daf_gemara_label">גופן לגמרא בצורת הדף</string>
     <string name="settings_font_daf_commentary_label">גופן לרש״י ותוספות בצורת הדף</string>
-    <string name="settings_daf_mark_unsure">סימון בצבע בהיר של שורות לא ודאיות בצורת הדף</string>
-    <string name="settings_daf_mark_unsure_info">שורות שבהן ההתאמה בין הדפוס לנוסח שבספרייה לא בטוחה במילה הראשונה או האחרונה, וייתכן שמילה בהן אינה כבדפוס (כ־4% מהשורות). מועיל לבדיקת קובצי צורת הדף; כשזה כבוי, הדף אחיד כמו בדפוס.</string>
-    <string name="settings_daf_review">בדיקת השורות של צורת הדף, כדי לשלוח משוב על הזיהוי</string>
-    <string name="settings_daf_review_info">לחיצה ימנית בצורת הדף מוסיפה לתפריט שתי תיבות סימון: "הקטע מעומד לא נכון" ו"יש טעות במילים". הן חלות על הקטע המסומן כשהלחיצה בתוכו, ואחרת על השורה שנלחצה. הסימונים נשמרים בתיקייה feedback שליד קובצי צורת הדף, קובץ לכל מסכת, ושולחים אותם מ"שליחת משוב" שבניהול הנתונים.</string>
     <string name="daf_review_layout">הקטע מעומד לא נכון</string>
     <string name="daf_review_words">יש טעות במילים</string>
+    <string name="daf_review_right">הקטע תקין</string>
     <string name="daf_review_clear">ביטול הסימון של השורה</string>
-    <string name="daf_review_open_folder">פתיחת תיקיית המשוב</string>
+    <string name="daf_review_open_folder">פתיחת תיקיית הסימונים של צורת הדף</string>
     <string name="settings_font_reset_defaults">איפוס לברירת מחדל</string>
+    <string name="settings_user_fonts_title">גופנים שהוספתם</string>
+    <string name="settings_user_fonts_hint">גופן מקובץ TTF או OTF שבמחשב. הוא מועתק לתיקיית הנתונים של פרדס, מופיע בכל רשימות הגופנים שלמעלה ונשמר בגיבוי.</string>
+    <string name="settings_user_fonts_none">עוד לא הוספתם גופן.</string>
+    <string name="settings_user_fonts_add">הוספת גופן…</string>
+    <string name="settings_user_fonts_remove">הסרה</string>
+    <string name="settings_user_fonts_added">הגופן %1$s נוסף, ואפשר לבחור בו ברשימות שלמעלה.</string>
+    <string name="settings_user_fonts_no_hebrew">הגופן %1$s נוסף, אבל אין בו אותיות עבריות: טקסט עברי יוצג בו בגופן אחר.</string>
+    <string name="settings_user_fonts_failed">הקובץ לא נטען כגופן (%1$s).</string>
+    <string name="settings_user_font_missing">%1$s (חסר)</string>
     <!-- Font names -->
     <string name="font_noto_serif_hebrew">נוטו סריף עברית</string>
     <string name="font_noto_rashi_hebrew">נוטו רש"י עברית</string>
@@ -137,6 +143,7 @@
     <string name="settings_category_about">אודות</string>
     <string name="settings_category_conditions">תנאים</string>
     <string name="settings_category_data">ניהול נתונים</string>
+    <string name="settings_category_feedback">משוב</string>
     <string name="data_export_title">ייצוא הנתונים שלי</string>
     <string name="data_export_description">שמירת גיבוי של ההערות, ההדגשות וההגדרות.</string>
     <string name="data_export_action">ייצוא</string>
@@ -226,6 +233,8 @@
     <string name="semantic_pack_description">מוצא גם שורות שאומרות את מה שחיפשתם במילים אחרות. בשבילו מורידים פעם אחת שני קבצים: מודל ואינדקס של הספרייה.</string>
     <string name="semantic_pack_installed">מותקן: גרסה %1$s של הקבצים, עם %2$s שורות.</string>
     <string name="semantic_pack_installed_unnumbered">מותקן, עם %1$s שורות.</string>
+    <string name="semantic_pack_in_use">בשימוש עד ההפעלה הבאה: גרסה %1$s של הקבצים, עם %2$s שורות.</string>
+    <string name="semantic_pack_in_use_unnumbered">בשימוש עד ההפעלה הבאה: הקבצים הקודמים, עם %1$s שורות.</string>
     <string name="semantic_pack_not_installed">לא מותקן: החיפוש מוצא רק את המילים שחיפשתם.</string>
     <string name="semantic_pack_no_model">חסר המודל, ולכן החיפוש לפי משמעות כבוי.</string>
     <string name="semantic_pack_no_index">חסר האינדקס, למשל אחרי עדכון מלא של הספרייה, ולכן החיפוש לפי משמעות כבוי.</string>
@@ -244,8 +253,7 @@
     <string name="semantic_pack_prompt">לפתוח את המסך הזה בכל הפעלה, עד שהחיפוש לפי משמעות מותקן</string>
     <!-- Pardes: feedback mode, the grades of search results (SearchFeedbackStore) -->
     <string name="search_feedback_setting">משוב על תוצאות החיפוש</string>
-    <string name="search_feedback_setting_hint">מתחת לכל תוצאת חיפוש יופיעו שלושה כפתורים: בדיוק זה, רלוונטי, לא רלוונטי. לחיצה נוספת על הכפתור שנבחר מבטלת אותו. הציונים נשמרים במחשב הזה, יחד עם היסטוריית החיפושים, ויוצאים ממנו רק כששולחים אותם מ"שליחת משוב" שלמטה.</string>
-    <string name="search_feedback_count">ציונים שנשמרו עד עכשיו: %1$d</string>
+    <string name="search_feedback_setting_hint">מתחת לכל תוצאת חיפוש יופיעו שלושה כפתורים: בדיוק זה, רלוונטי, לא רלוונטי. לחיצה נוספת על הכפתור שנבחר מבטלת אותו. הציונים נשמרים במחשב הזה, יחד עם היסטוריית החיפושים, ויוצאים ממנו רק כששולחים אותם, מהעמוד הזה.</string>
     <string name="search_feedback_exact">בדיוק זה</string>
     <string name="search_feedback_relevant">רלוונטי</string>
     <string name="search_feedback_not_relevant">לא רלוונטי</string>
@@ -253,7 +261,11 @@
     <string name="feedback_send_title">שליחת משוב</string>
     <string name="feedback_send_description">המשוב שנתתם עוזר לשפר את החיפוש לפי משמעות ואת צורת הדף. כאן רואים מה יש לשלוח, ובוחרים מה מתוכו.</string>
     <string name="feedback_send_reading">בודק מה יש לשלוח…</string>
-    <string name="feedback_send_nothing">עוד אין משוב לשלוח. ציונים לתוצאות החיפוש נותנים כשהמשוב על תוצאות החיפוש דלוק (בכרטיס "חיפוש לפי משמעות" שלמעלה), וסימונים בצורת הדף כשבדיקת השורות שלה דלוקה (בהגדרות הגופנים).</string>
+    <string name="feedback_send_waiting">מחכים לשליחה: ציונים %1$d, חיפושים %2$d, סימונים בצורת הדף %3$d.</string>
+    <string name="feedback_send_last">הפעם הקודמת: %1$s.</string>
+    <string name="feedback_send_what">מה נשלח</string>
+    <string name="feedback_send_privacy_title">פרטיות ומחיקה</string>
+    <string name="feedback_send_nothing">עוד אין משוב לשלוח. ציונים לתוצאות החיפוש נותנים כש"משוב על תוצאות החיפוש" שבהמשך העמוד דלוק, וסימונים בצורת הדף נותנים בלחיצה ימנית על שורה בדף.</string>
     <string name="feedback_send_nothing_new">אין משוב חדש מאז הפעם הקודמת, מ־%1$s.</string>
     <string name="feedback_send_grades">ציונים לתוצאות החיפוש: %1$d (בחיפושים: %2$d)</string>
     <string name="feedback_send_searches">היסטוריית החיפושים: %1$d</string>
@@ -274,7 +286,7 @@
     <string name="feedback_send_open_folder">פתיחת התיקייה</string>
     <string name="feedback_send_privacy_online">המשוב נשלח לשרת של פרדס ב־Cloudflare, ונשמר שם בלי כתובת ה־IP.</string>
     <string name="feedback_send_auto">שליחה אוטומטית, בכל הפעלה ובכל חיבור לרשת</string>
-    <string name="feedback_send_auto_hint">נשלח רק מה שחדש מאז הפעם הקודמת, מהסוגים שמסומנים למעלה.</string>
+    <string name="feedback_send_auto_hint">נשלח רק מה שחדש מאז הפעם הקודמת, מהסוגים שמסומנים ב"מה נשלח".</string>
     <string name="feedback_send_now">שליחה עכשיו</string>
     <string name="feedback_send_sending">שולח… (חלק %1$d מתוך %2$d)</string>
     <string name="feedback_send_sent">המשוב נשלח ב־%1$s. תודה! בפעם הבאה יישלח רק מה שחדש.</string>
@@ -294,18 +306,18 @@
     <string name="feedback_consent_grades">הציונים שנתתם לתוצאות החיפוש</string>
     <string name="feedback_consent_grades_hint">שנותנים בכפתורי המשוב שמתחת לתוצאות החיפוש.</string>
     <string name="feedback_consent_buttons">להציג מעכשיו מתחת לכל תוצאת חיפוש את כפתורי המשוב</string>
-    <string name="feedback_consent_buttons_hint">בדיוק זה, רלוונטי, לא רלוונטי: הציונים עוזרים יותר מכל דבר אחר לשפר את החיפוש. אפשר לכבות אותם בהגדרות › ניהול נתונים › חיפוש לפי משמעות.</string>
+    <string name="feedback_consent_buttons_hint">בדיוק זה, רלוונטי, לא רלוונטי: הציונים עוזרים יותר מכל דבר אחר לשפר את החיפוש. אפשר לכבות אותם בהגדרות › משוב.</string>
     <string name="feedback_consent_searches">היסטוריית החיפושים</string>
     <string name="feedback_consent_searches_hint">מה חיפשתם, באיזה היקף וכמה פעמים, גם בלי ציון: הם מראים מה מחפשים.</string>
     <string name="feedback_consent_daf">הסימונים של שורות בצורת הדף</string>
-    <string name="feedback_consent_daf_hint">במצב הבדיקה של צורת הדף, שמדליקים בהגדרות › צורת הדף.</string>
+    <string name="feedback_consent_daf_hint">שנותנים בלחיצה ימנית על שורה בצורת הדף.</string>
     <string name="feedback_consent_zayit">גם החיפושים שעשיתם בזית, במחשב הזה</string>
     <string name="feedback_consent_zayit_hint">מהיסטוריית החיפושים של זית: מה חיפשתם, באיזה היקף וכמה פעמים. בלי הסימון הם לא נקראים ולא נשלחים.</string>
     <string name="feedback_consent_otzaria">גם החיפושים שעשיתם באוצריא, במחשב הזה</string>
     <string name="feedback_consent_otzaria_hint">מהיסטוריית החיפושים של אוצריא, ומהדירוגים שנתתם בחיפוש החכם שלה. בלי הסימון הם לא נקראים ולא נשלחים.</string>
     <string name="feedback_consent_publish">פרסום במאגר הפתוח</string>
     <string name="feedback_consent_publish_hint">מה שתשלחו יוצג לכולם באתר "מאגר החיפושים הפתוח": המילים שחיפשתם והתוצאות שדירגתם, בלי מזהה השולח ובלי שום דבר שמזהה אתכם. בלי הסימון רואה אותם רק המתחזק של פרדס.</string>
-    <string name="feedback_consent_privacy">לא נשלחים ההערות, ההדגשות, המועדפים, הספרים שפתחתם, ושום דבר שמזהה אתכם או את המחשב, והשרת שומר את המשוב בלי כתובת ה־IP. בהגדרות › ניהול נתונים › שליחת משוב אפשר לשנות את הבחירה, לעצור את השליחה ולמחוק את מה שנשלח.</string>
+    <string name="feedback_consent_privacy">לא נשלחים ההערות, ההדגשות, המועדפים, הספרים שפתחתם, ושום דבר שמזהה אתכם או את המחשב, והשרת שומר את המשוב בלי כתובת ה־IP. בהגדרות › משוב אפשר לשנות את הבחירה, לעצור את השליחה ולמחוק את מה שנשלח.</string>
     <string name="feedback_consent_agree">אישור</string>
     <string name="feedback_consent_decline">לא, תודה</string>
     <string name="semantic_pack_no_library">צריך להתקין קודם את הספרייה.</string>
@@ -318,8 +330,11 @@
     <string name="semantic_pack_downloading">מוריד: %1$s מתוך %2$s</string>
     <string name="semantic_pack_unpacking">פורס ובודק את הקבצים…</string>
     <string name="semantic_pack_ready">הקבצים מוכנים, והחיפוש לפי משמעות יפעל מההפעלה הבאה של פרדס.</string>
+    <string name="semantic_pack_ready_version">גרסה %1$s של הקבצים מוכנה, ותיכנס לשימוש בהפעלה הבאה של פרדס.</string>
+    <string name="semantic_pack_ready_new">הקבצים החדשים מוכנים, וייכנסו לשימוש בהפעלה הבאה של פרדס.</string>
     <string name="semantic_pack_restart">הפעלה מחדש עכשיו</string>
-    <string name="semantic_pack_start_failed">בהפעלה הקודמת הקבצים לא הותקנו, ומה שהיה מותקן נשאר. אפשר לנסות שוב.</string>
+    <string name="semantic_pack_start_failed">הקבצים החדשים לא נכנסו לשימוש גם אחרי %2$d הפעלות (%1$s), ולכן נמחקו. מה שהיה מותקן נשאר. אפשר לנסות שוב.</string>
+    <string name="semantic_pack_start_retry">בהפעלה הקודמת הקבצים החדשים לא נכנסו לשימוש (%1$s). הם נשמרו, ופרדס ינסה שוב בהפעלה הבאה.</string>
     <string name="semantic_problem_not_a_pack">הקובץ %1$s אינו מקובצי החיפוש לפי משמעות. בוחרים את %2$s שהורד מדף ההורדות.</string>
     <string name="semantic_problem_no_space">אין מספיק מקום בכונן של הספרייה: צריך %1$s, פנויים %2$s.</string>
     <string name="semantic_problem_missing">חסר הקובץ %1$s.</string>
@@ -388,6 +403,8 @@
     <string name="shnayim_mikra_mode_tooltip">שנים מקרא ואחד תרגום: כל פסוק פעמיים ואחריו התרגום</string>
     <string name="daf_view">צורת הדף</string>
     <string name="daf_view_tooltip">צורת הדף: הגמרא, רש״י ותוספות כפי שנדפסו בש״ס וילנא, שורה בשורה</string>
+    <string name="daf_marks">סימונים</string>
+    <string name="daf_marks_tooltip">סימוני הדף: שורות שההתאמה שלהן לדפוס אינה ודאית מוצגות בהיר, והקטעים שדיווחת עליהם צבועים</string>
     <string name="daf_amud_missing">עמוד זה עוד חסר בצורת הדף</string>
     <string name="daf_missing">צורת הדף של מסכת %1$s עוד לא הוכנה</string>
     <string name="daf_missing_hint">קובץ צורת הדף של מסכת נטען מהתיקייה %1$s שליד הספרייה. אפשר לייבא אותו לשם מכאן.</string>
@@ -646,6 +663,7 @@
     <string name="home_widget_name_molad">מולד וקידוש לבנה</string>
     <string name="home_widget_name_history">היסטוריה</string>
     <string name="home_widget_name_learning_split">חלוקת הלימוד</string>
+    <string name="home_widget_name_study_plans">הלימוד שלי</string>
     <string name="home_widget_name_favorites">מועדפים</string>
     <string name="home_widget_name_notes">ההערות שלי</string>
     <string name="home_widget_name_measures">ממיר מידות</string>
@@ -777,7 +795,7 @@
     <string name="onboarding_library_folder_old">מסד הנתונים שבתיקייה (גרסה %1$s) ישן מדי לגרסה הזו של האפליקציה. צריך להתקין מסד נתונים חדש.</string>
     <!-- The onboarding's step that asks whether to send feedback by itself (FeedbackStepScreen) -->
     <string name="onboarding_feedback_title">שליחת משוב לשיפור פרדס</string>
-    <string name="onboarding_feedback_description">כדי לשפר את החיפוש, פרדס שולח לבד את מה שחיפשתם, את הציונים שנתתם לתוצאות ואת הסימונים בצורת הדף, בלי שום דבר שמזהה אתכם או את המחשב. מה שלא תרצו לשלוח, הסירו ממנו את הסימון. אפשר לשנות הכול אחר כך בהגדרות › ניהול נתונים.</string>
+    <string name="onboarding_feedback_description">כדי לשפר את החיפוש, פרדס שולח לבד את מה שחיפשתם, את הציונים שנתתם לתוצאות ואת הסימונים בצורת הדף, בלי שום דבר שמזהה אתכם או את המחשב. מה שלא תרצו לשלוח, הסירו ממנו את הסימון. אפשר לשנות הכול אחר כך בהגדרות › משוב.</string>
     <string name="onboarding_feedback_send">שליחה אוטומטית של נתוני החיפוש שלי</string>
     <string name="onboarding_feedback_sources">מאיפה:</string>
     <string name="onboarding_feedback_zayit">זית</string>
@@ -883,6 +901,7 @@
     <string name="search_switch_scope_base">חיפוש בלי המפרשים</string>
     <string name="search_sort_catalog">מיון לפי סדר הספרייה</string>
     <string name="search_sort_relevance">מיון לפי רלוונטיות</string>
+    <string name="search_farther_lines">ועוד %1$d קרובות פחות:</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>
@@ -1141,5 +1160,13 @@
     <string name="siddur_yom_yerushalayim">יום ירושלים</string>
     <string name="settings_open_siddur">סידור חכם (ניסיוני)</string>
     <string name="settings_open_siddur_description">סידור שמציג את תפילות היום לפי הנוסח, הלוח והמקום, מתוך הסידורים שבספרייה. הוא נפתח מתפריט הכלים ומווידג׳ט הלוח. הסידור ניסיוני: הכיסוי שלו חלקי וייתכנו בו טעויות, ואין לסמוך עליו לבדו. הוא בנוי על המנוע הפתוח SeforimOpenSiddur של אריאל דניאלי, עם תיוגים מ־Amud וטבלת קריאות מ־Hebcal.</string>
+    <!-- Pardes: reading a PDF file, an experiment behind a hidden switch (PdfReaderTool) -->
+    <string name="pdf_experiment_title">קריאת PDF (ניסוי)</string>
+    <string name="pdf_experiment_open">פתיחת קובץ PDF…</string>
+    <string name="pdf_experiment_hint">פותחים כאן קובץ PDF כדי לבדוק את הקריאה בו: הגלילה, ההגדלה, הזיכרון וההעתקה של טקסט.</string>
+    <string name="pdf_experiment_status">%1$s · %2$d עמודים · %3$d מ״ב · נפתח ב־%4$d אלפיות שנייה · זיכרון Java %5$d מ״ב</string>
+    <string name="pdf_experiment_failed">הקובץ לא נפתח: %1$s</string>
+    <string name="pdf_experiment_zoom_in">הגדלה</string>
+    <string name="pdf_experiment_zoom_out">הקטנה</string>
 
 </resources>

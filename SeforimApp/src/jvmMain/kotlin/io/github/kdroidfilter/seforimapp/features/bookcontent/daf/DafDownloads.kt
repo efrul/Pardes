@@ -4,6 +4,7 @@ import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.features.onboarding.download.HttpFileDownloader
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPack
+import io.github.kdroidfilter.seforimapp.features.settings.downloads.ReleaseLists
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimapp.network.HttpsConnectionFactory
 import io.github.santimattius.structured.annotations.StructuredScope
@@ -74,7 +75,8 @@ data class DafManifest(
 
 /** The daf-<n> releases of Pardes's repository: the GitHub API's list, or the site's copy (daf.json) when it fails. */
 class DafReleases(
-    private val fetchText: suspend (url: String) -> String = ::get,
+    // The lists as read lately, shared with the semantic packs (ReleaseLists)
+    private val fetchText: suspend (url: String) -> String = { url -> ReleaseLists.text(url, ::get) },
 ) {
     @Serializable
     data class Release(

@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import io.github.kdroidfilter.seforimapp.features.settings.downloads.StartOffers
 import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
 import io.github.kdroidfilter.seforimapp.icons.BootstrapPersonLines
 import io.github.kdroidfilter.seforimapp.icons.FileArrowDown
@@ -33,6 +37,7 @@ import io.github.kdroidfilter.seforimapp.icons.MaterialIconsDisplay_settings
 import io.github.kdroidfilter.seforimapp.icons.RadixFontRoman
 import io.github.kdroidfilter.seforimapp.icons.TablerInfoSquare
 import io.github.kdroidfilter.seforimapp.icons.TablerLicense
+import io.github.kdroidfilter.seforimapp.icons.TablerMessage
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
@@ -43,6 +48,7 @@ import seforimapp.seforimapp.generated.resources.settings_category_about
 import seforimapp.seforimapp.generated.resources.settings_category_conditions
 import seforimapp.seforimapp.generated.resources.settings_category_data
 import seforimapp.seforimapp.generated.resources.settings_category_display
+import seforimapp.seforimapp.generated.resources.settings_category_feedback
 import seforimapp.seforimapp.generated.resources.settings_category_fonts
 import seforimapp.seforimapp.generated.resources.settings_category_general
 import seforimapp.seforimapp.generated.resources.settings_category_profile
@@ -98,6 +104,11 @@ fun SettingsSidebar(
                 icon = FileArrowDown,
             ),
             SettingsItem(
+                label = stringResource(Res.string.settings_category_feedback),
+                destination = SettingsDestination.Feedback,
+                icon = TablerMessage,
+            ),
+            SettingsItem(
                 label = stringResource(Res.string.settings_category_about),
                 destination = SettingsDestination.About,
                 icon = TablerInfoSquare,
@@ -108,6 +119,9 @@ fun SettingsSidebar(
                 icon = TablerLicense,
             ),
         )
+
+    // Pardes: the pages with something new to download this start (StartOffers), a dot by each until its card is shown
+    val offered by StartOffers.marked.collectAsState()
 
     Column(modifier = modifier) {
         LazyColumn(
@@ -125,12 +139,14 @@ fun SettingsSidebar(
                         is SettingsDestination.Conditions -> currentRoute.contains("Conditions")
                         is SettingsDestination.Data -> currentRoute.contains("Data")
                         is SettingsDestination.Daf -> currentRoute.contains("Daf")
+                        is SettingsDestination.Feedback -> currentRoute.contains("Feedback")
                     }
                 SidebarItem(
                     label = item.label,
                     icon = item.icon,
                     selected = selected,
                     onClick = { navController.navigate(item.destination) },
+                    marked = !selected && item.destination in offered,
                 )
             }
         }
@@ -143,6 +159,7 @@ private fun SidebarItem(
     icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
+    marked: Boolean = false,
 ) {
     val accent = JewelTheme.globalColors.outlines.focused
     val selectedBackground = accent.copy(alpha = 0.15f)
@@ -176,5 +193,9 @@ private fun SidebarItem(
         )
         Spacer(Modifier.width(6.dp))
         Text(text = label, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+        if (marked) {
+            Spacer(Modifier.width(6.dp))
+            Box(Modifier.size(6.dp).background(accent, CircleShape))
+        }
     }
 }

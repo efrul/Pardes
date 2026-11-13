@@ -27,8 +27,19 @@ fun lettersOnly(text: String): String =
             }.replace(SPACES, " ").trim()
         }
 
-/** Whether [text] has anything [lettersOnly] takes out: a copy of its words alone is then worth offering. */
-fun hasMoreThanLetters(text: String): Boolean = text.any { !it.isLetterOrDigit() && !it.isWhitespace() }
+/**
+ * Whether [text] has punctuation [lettersOnly] takes out: a sign between or around its words (a colon, a maqaf, a sof
+ * pasuq, a quotation mark). A geresh or gershayim of a word is not one, nor nikud or teamim alone, which "העתק ללא
+ * ניקוד" already takes out: a copy of its words alone is worth offering only then (request 39 of
+ * docs/DESKTOP_STAGE2.md).
+ */
+fun hasPunctuation(text: String): Boolean =
+    text.lines().any { line ->
+        line.indices.any { i ->
+            val c = line[i]
+            !c.isLetterOrDigit() && !c.isWhitespace() && !c.isJoinedMark() && !isInWord(line, i)
+        }
+    }
 
 // A geresh after a letter (ר׳, וגו׳) or gershayim between two (רש״י): the word's own spelling, not a quotation mark
 private fun isInWord(

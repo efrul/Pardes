@@ -8,6 +8,7 @@ import io.github.kdroidfilter.seforim.tabs.TabType
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.SplitDefaults
 import io.github.kdroidfilter.seforimapp.features.search.SearchTabCache
+import io.github.kdroidfilter.seforimapp.framework.desktop.SavedPanes
 import kotlinx.serialization.Serializable
 
 /**
@@ -153,6 +154,8 @@ data class WindowSnapshot(
     val selectedIndex: Int = 0,
     val titles: Map<String, SerializableTabTitle> = emptyMap(),
     val geometry: SavedGeometry? = null,
+    // Pardes: its reader docks as the user left them (PaneLayouts). Appended last: the session is ProtoBuf
+    val panes: SavedPanes? = null,
 )
 
 @Serializable
@@ -235,6 +238,8 @@ data class SearchPersistedState(
     val fetchBaseOnlyCategoryIds: List<Long> = emptyList(),
     // The results listed in the library's order (CatalogOrderEngine), not by relevance
     val catalogOrder: Boolean = false,
+    // In that order: how many lines found by meaning alone, less close, the list leaves out (CatalogOrderSession)
+    val fartherLines: Int = 0,
 ) {
     /** The scope the search runs in: its fetch scope, else its view filter. */
     val scope: SearchScope
