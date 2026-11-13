@@ -121,12 +121,14 @@ object PaneLayouts {
             .associate { (side, extent) -> side.name to extent.value }
 
     /** [saved]'s placement again; null when its side or anchors are no longer known. */
-    fun placementOf(saved: SavedPane): SatellitePlacement? {
-        val side = saved.side
-        if (side != null) {
-            val dockSide = dockSide(side) ?: return null
-            return SatellitePlacement.Docked(dockSide, saved.order, saved.extent?.dp, saved.weight, saved.outer)
+    fun placementOf(saved: SavedPane): SatellitePlacement? =
+        when (val side = saved.side) {
+            null -> floatingOf(saved)
+            else -> dockSide(side)?.let { SatellitePlacement.Docked(it, saved.order, saved.extent?.dp, saved.weight, saved.outer) }
         }
+
+    // A floating pane's placement again: its anchors known, and its size more than nothing
+    private fun floatingOf(saved: SavedPane): SatellitePlacement.Floating? {
         val parent = anchor(saved.parentAnchor) ?: return null
         val child = anchor(saved.childAnchor) ?: return null
         if (saved.width <= 0f || saved.height <= 0f) return null

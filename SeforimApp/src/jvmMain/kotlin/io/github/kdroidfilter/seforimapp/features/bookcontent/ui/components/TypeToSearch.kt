@@ -41,7 +41,10 @@ object TypeToSearch {
         ctrl: Boolean,
         alt: Boolean,
         meta: Boolean,
-    ): String? = if (ctrl || alt || meta || !Character.isLetterOrDigit(codePoint)) null else String(Character.toChars(codePoint))
+    ): String? {
+        val shortcut = ctrl || alt || meta
+        return if (shortcut || !Character.isLetterOrDigit(codePoint)) null else String(Character.toChars(codePoint))
+    }
 
     /** [text] given to the pane under the pointer in the window [windowId], if any; whether it was. */
     internal fun route(
