@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (257 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (258 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -3446,6 +3446,23 @@ where there is no scan. Hooks: `VerticalBars.kt` (the button), `BookContentEvent
   sample Otzaria from the text and from the daf, two pages, back to the text at its amud; Shabbat, which has no daf's
   layout, with no scan).
 
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanSwitchBench.kt`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 335 lines.
+- **What:** a `main` that times the switch from a tractate's text to its scan as the reader waits for it, in a Compose
+  scene that Skia renders on the CPU, its frames read back every 8 ms at most: from the switch to the frame that stays
+  (and to the first with a quarter of its ink), six switches a way, the median. The ways: today's (`DafScanReader`'s
+  `ScanPages` and `ScanList`: a reader of its own, the file read and opened at the switch, `PdfPageList`), today's two
+  pages side by side, the reader kept above the switch with its amud asked for ahead (`prefetch`, all that the
+  binding's public API allows), and an image an amud cut beforehand, read and decoded at the switch or decoded ahead
+  while the text is shown. Its arguments: the scan, the folder of its cut pages (docs/scan-speed/tools/CutPages.java),
+  the screen's density.
+- **Reached from:** run by hand (docs/scan-speed/README.md).
+- **Follows:** `ScopeFlowBench` (a bench's `main`, run by docs/scope-search-speed's init script) and `DafPageTest` (an
+  `ImageComposeScene` laid out right to left).
+- **Tests:** a bench.
+
 #### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/ScanPage.kt`
 
 - **Feature:** The scan of the page in the daf view.
@@ -6054,7 +6071,7 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (774 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (790 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -6073,9 +6090,9 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `.claude/settings.json` | Claude Code's project settings for this repository: `attribution.sessionUrl` false, which turns off the session link Claude Code adds to the commits it writes (f353d5dc's message). *Note:* Zayit has no .claude/ folder. Later Pardes commits still carry `Claude-Session:` trailers (e.g. 6be0f42b, 0c107b56). | Pardes's own |
-| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation, a drag's ghost black without a compositor). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
+| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the JDKs (25 from apt for the build, the 27 Nucleus downloads for the run) and the hosts a first build needed, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur, the scan's button in the text view and below the two pages' button), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation, a drag's ghost black without a compositor). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/make-library.sh` | Skill script that makes the small library the headless app runs on (default /home/user/pardes-lib): the released library without its full-text index, cut to the base books given (default 103, Berakhot) with their commentaries and targumim, plus the lookup index, lexical.db, catalog.pb and release_info.txt; it then deletes the full seforim.db and copies the Talmud layouts into pardes-daf/. *Note:* Calls zayit-android's fetch-desktop-library.sh (`--no-fulltext`) and androidApp/tools/make_subset_db.sh (CONN_TYPES=1,3); needs about 8.2 GB free while it runs. | Pardes's own |
-| `.claude/skills/pardes-desktop-run/scripts/setup.sh` | Skill script that apt-installs what the container lacks to run the desktop app headless: Xvfb, xdotool, x11-utils, ImageMagick, zstd, sqlite3, xclip, Mesa's EGL, GLES and DRI drivers, mesa-utils and Noto fonts, after an `apt-get update` (stale lists once hid libegl1); it then copies central-mirror.init.gradle.kts into ~/.gradle/init.d. Idempotent. | Pardes's own |
+| `.claude/skills/pardes-desktop-run/scripts/setup.sh` | Skill script that apt-installs what the container lacks to run the desktop app headless: Xvfb, xdotool, x11-utils, ImageMagick, zstd, sqlite3, xclip, Mesa's EGL, GLES and DRI drivers, mesa-utils, Noto fonts and the build's JDK 25 (its toolchain, which Gradle cannot download in the container), after an `apt-get update` (stale lists once hid libegl1); it then copies central-mirror.init.gradle.kts into ~/.gradle/init.d. Idempotent. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/shot.sh` | Skill script: a screenshot of display :99 (ImageMagick `import -window root`), optionally after an xdotool click at x y and a wait, into $SHOTS (default /tmp/pardes-desktop-shots); with `CROP=<geometry>` also that region alone, to read small text. *Note:* The same as zayit-android's desktop-shot.sh, which shoots the released Zayit instead. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/start.sh` | Skill script that writes Pardes's java.util.prefs file (onboarding_finished, database_path, a region in Israel, semantic_pack_prompt and auto_update_check off, and whatever `PREFS` adds as key=value words), starts Xvfb :99 at 1440x900, runs `:SeforimApp:run` through gradle.sh with LIBGL_ALWAYS_SOFTWARE=1, and maximises the window named פרדס once it appears (up to 20 minutes). *Note:* Replaces whatever an earlier run saved in Pardes's preferences node (`Brand.settings()`). | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/central-mirror.init.gradle.kts` | Gradle init script for the cloud container alone, copied by setup.sh into ~/.gradle/init.d: it puts Google's mirror of Maven Central first among the repositories of the settings, the plugins and every project, since Maven Central answers 429 through the container's shared address. *Note:* It is not applied by the repository's build, and changes no build file. | Pardes's own |
@@ -6266,6 +6283,27 @@ the description where something needs saying.
 | `docs/scope-search-speed/tools/bench.init.gradle` | A Gradle init script that adds `:SeforimApp:runBench`, a `main` of the JVM tests run on the library named (`-PbenchMain`, `-PbenchArgs`, `-PbenchDb`, `-PbenchQuery`), with a JFR recording on demand (`-PbenchJfr`): the app's build has no task for its benches. | Pardes's own |
 | `docs/scope-search-speed/tools/compare.py` | Two runs of ScopeFlowBench side by side: per scope and step, the median and slowest time to the first results. | Pardes's own |
 | `docs/scope-search-speed/tools/table.py` | One run of ScopeFlowBench as a table: per scope and step, the cold first round and the warm rounds, to the first results and to the end. | Pardes's own |
+
+#### The scan's speed (docs/scan-speed/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/scan-speed/README.md` | Hebrew report (2026-11-14) for request 42, asked again that day ("שהמעבר בין טקסט לדף יהיה בשבריר שניה"): the switch from a tractate's text to its scan, timed from the click to the page drawn, on branch claude/sleepy-lovelace-k4c21z (`5eaedfb`, build 47). What was run (five synthetic tractates of 160 pages in a scan's encodings, Otzaria's own being out of this session's reach; the binding's own JNI calls step by step; Skia's encoders and decoders; ScanSwitchBench; timing lines in the app, not kept), what was found (today 0.3 to 0.7 s, two pages side by side up to 1 s, at every switch, as the file is closed at the text and opened again, and over a second at a session's first; the time in the drawing, not the file: PDFium decoding the whole scanned image at each drawing, the binding's PdfPage waiting 100 ms, drawing a preview that costs 40 to 78% of the page and queuing the next rows first; a PDF an amud saving only the opening; an image an amud drawn 29 to 46 ms after the click, 17 to 27 when decoded ahead; the formats' sizes and times, and the cost of cutting a tractate), the proposal (images cut on the user's computer in the background, 1-bit at 2,000 px, drawn by Pardes without the binding's PdfPage, the current amud kept ready while the text is read, the PDF opened only to cut, the Vilna pack shipped cut, the same drawing later for PDF books), the four ways to get a page's pixels from the binding (a fork with one public function, the recommended; the internal call with the compiler's error suppressed; Java's FFM; PdfPage in an offscreen scene), the user's decisions, what was not checked, and how to run the tools. | Pardes's own |
+| `docs/scan-speed/quality.png` | The same lines of a synthetic page drawn by PDFium at 1,100 px, cut 1-bit at 2,000 px and shown at 1,100, and cut 1-bit at 1,100 (binary). | Pardes's own; made by the tools |
+| `docs/scan-speed/runs/app.txt` | The timing lines of one run of the app (Berakhot, a stand-in Otzaria whose file is the JBIG2 tractate): from the click on "סריקה" to the page list's start, the session's first switch and eight more, with the switches back to the text. | Pardes's own; measured |
+| `docs/scan-speed/runs/cut.txt` | CutPages's lines: the cost of cutting an amud (PDFium's render, its gray, Skia's PNG) and its size, per encoding and width. | Pardes's own; measured |
+| `docs/scan-speed/runs/pdfium.txt` | PdfiumBench's lines on the five tractates and a one-page PDF. | Pardes's own; measured |
+| `docs/scan-speed/runs/skia.txt` | SkiaBench's lines at 1,100 and 1,600 px, and Skia's decoding of the 1-bit and 16-gray PNGs made outside it. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-g4-d1.txt` | ScanSwitchBench's lines on the G4 tractate at density 1. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-jbig2-gen-d1.5.txt` | ScanSwitchBench's lines on the generic JBIG2 tractate at density 1.5, its pages cut at 1,600 px. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-jbig2-gen-d1.txt` | ScanSwitchBench's lines on the generic JBIG2 tractate at density 1. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-jbig2-sym-d1.txt` | ScanSwitchBench's lines on the JBIG2 tractate with a symbol dictionary at density 1. | Pardes's own; measured |
+| `docs/scan-speed/tools/CutPages.java` | Cuts a scan into an image an amud: each page rendered by PDFium at a width through the binding's JNI bridge, its gray written as a PNG by Skia, with each step's cost and the images' size. | Pardes's own |
+| `docs/scan-speed/tools/PdfiumBench.java` | Times each step of the binding for a page of a scan through its own JNI bridge, the calls its PdfDocument makes: the opening (read, native copy, parse, form environment), a page's load and links, a preview at a quarter of the width, full renders at 1,100, 1,600 and 2,048 px, and the same page again. | Pardes's own |
+| `docs/scan-speed/tools/SkiaBench.java` | A scan's pages rendered by PDFium, encoded by Skia as a cache of amudim could keep them (PNG in gray and in color, WebP lossless and lossy, gray JPEG) and decoded again, each format's size and times; and Skia's decoding of PNGs made outside it, their gray written out for that. | Pardes's own |
+| `docs/scan-speed/tools/java.sh` | Compiles and runs one of the Java tools beside it against the jars of Gradle's cache (Nucleus's PDFium binding, skiko with its Linux natives, the Kotlin stdlib, coroutines), after one build of the app. | Pardes's own |
+| `docs/scan-speed/tools/make_pages.py` | Synthetic scans of Talmud pages laid out as a Vilna daf (the Gemara, Rashi, Tosafot, notes in the margins, a header) with real text of Berakhot 2a in culmus fonts, bitonal at 300 DPI with a scan's specks and ragged edges, each page's words shuffled. | Pardes's own |
+| `docs/scan-speed/tools/make_pdfs.py` | Tractates of those pages in a scan's encodings (JBIG2 with a symbol dictionary and generic, by jbig2enc; CCITT G4, by libtiff's tiff2pdf; gray JPEG at 300 and 150 DPI), an image stream a page as in a scanned book, and the first page alone in a PDF of its own. | Pardes's own |
 
 #### The search's measurements (docs/fusion-compare/)
 

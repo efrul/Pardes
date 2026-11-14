@@ -1,0 +1,73 @@
+# Pardes for desktop, branch claude/sleepy-lovelace-k4c21z at 5eaedfb, run on the cloud machine (Xvfb, llvmpipe) with
+# a library cut to Berakhot and a stand-in Otzaria whose ברכות.pdf is jbig2-gen.pdf (16 MB). Timing lines added for
+# this run only to DafScanButton (the click) and DafScanView (each step), ms from the click on "סריקה". The first
+# switch is the session's first: the file read from a cold disk, PDFium's library loaded. Then switches back and
+# forth: a "click" alone is the switch back to the text. The pages themselves are drawn after "ScanList composed"
+# (ScanSwitchBench measures that part).
+SCANLOG     3.2 ms  click
+SCANLOG    10.2 ms  DafScanReader composed
+SCANLOG    51.5 ms  file found
+SCANLOG   103.4 ms  placed
+SCANLOG   845.8 ms  read 16 MB
+SCANLOG  1260.2 ms  opened
+SCANLOG  1261.4 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     3.2 ms  DafScanReader composed
+SCANLOG    23.9 ms  file found
+SCANLOG    39.4 ms  placed
+SCANLOG    62.0 ms  read 16 MB
+SCANLOG    65.3 ms  opened
+SCANLOG    65.9 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     4.1 ms  DafScanReader composed
+SCANLOG    31.9 ms  file found
+SCANLOG    55.4 ms  placed
+SCANLOG    73.7 ms  read 16 MB
+SCANLOG    78.4 ms  opened
+SCANLOG    79.3 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     4.7 ms  DafScanReader composed
+SCANLOG    26.8 ms  file found
+SCANLOG    43.8 ms  placed
+SCANLOG    61.3 ms  read 16 MB
+SCANLOG    65.5 ms  opened
+SCANLOG    66.1 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     3.1 ms  DafScanReader composed
+SCANLOG    19.9 ms  file found
+SCANLOG    34.0 ms  placed
+SCANLOG    51.8 ms  read 16 MB
+SCANLOG    55.1 ms  opened
+SCANLOG    56.0 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     0.0 ms  click
+SCANLOG     3.6 ms  DafScanReader composed
+SCANLOG    20.5 ms  file found
+SCANLOG    40.9 ms  placed
+SCANLOG    48.9 ms  read 16 MB
+SCANLOG    52.1 ms  opened
+SCANLOG    52.7 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     0.0 ms  click
+SCANLOG     3.1 ms  DafScanReader composed
+SCANLOG    19.1 ms  file found
+SCANLOG    46.9 ms  placed
+SCANLOG    56.1 ms  read 16 MB
+SCANLOG    61.7 ms  opened
+SCANLOG    62.9 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     0.0 ms  click
+SCANLOG     2.5 ms  DafScanReader composed
+SCANLOG    16.6 ms  file found
+SCANLOG    33.6 ms  placed
+SCANLOG    44.7 ms  read 16 MB
+SCANLOG    47.8 ms  opened
+SCANLOG    48.3 ms  ScanList composed
+SCANLOG     0.0 ms  click
+SCANLOG     0.0 ms  click
+SCANLOG     3.6 ms  DafScanReader composed
+SCANLOG    19.8 ms  file found
+SCANLOG    42.3 ms  placed
+SCANLOG    54.3 ms  read 16 MB
+SCANLOG    58.5 ms  opened
+SCANLOG    59.3 ms  ScanList composed

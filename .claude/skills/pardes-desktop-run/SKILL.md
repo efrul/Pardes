@@ -6,7 +6,7 @@ description: Running Pardes desktop (SeforimApp) built from this checkout, headl
 # Running Pardes desktop from this checkout
 
 The app the user gets is the one built from this repository, so a desktop change is checked in it, not only in tests:
-`./gradlew :SeforimApp:run` on a virtual display. Five things make that work in the cloud container, each found the
+`./gradlew :SeforimApp:run` on a virtual display. Six things make that work in the cloud container, each found the
 hard way; the scripts do them in order.
 
 ```bash
@@ -42,7 +42,12 @@ $K/gradle.sh :SeforimApp:jvmTest ktlintCheck detekt     # every Gradle run here 
    non-ASCII characters (`InvalidPathException: Malformed input`), xdotool cannot type Hebrew, and window titles
    read `(failure in conversion from UTF8_STRING to ANSI_X3.4-1968)`. The scripts set `LC_ALL=C.UTF-8`
    (`./gradlew --stop` once if a daemon was started without it).
-5. **Gradle, through `gradle.sh`.** It sets the locale, puts a `gh` that fails first on `PATH` (`settings.gradle.kts`
+5. **The JDKs.** The build's toolchain is JDK 25 (`jvmToolchain`), which Gradle cannot download here (its resolver's
+   api.foojay.io is refused): `setup.sh` installs apt's `openjdk-25-jdk-headless`, which Gradle finds by itself. The
+   run task runs the app on the JDK 27 that Nucleus's plugin downloads from download.java.net
+   (`NUCLEUS_JDK_HOME` must name a JDK 27). Beyond the package registries, a first build here also needed
+   dl.google.com, packages.jetbrains.team, www.jetbrains.com and the CloudFront host it redirects to (2026-11-14).
+6. **Gradle, through `gradle.sh`.** It sets the locale, puts a `gh` that fails first on `PATH` (`settings.gradle.kts`
    asks `gh` for a token to Zayit's private packages, which a Pardes build must never read), and refuses to run
    while the app runs. `setup.sh` also copies `central-mirror.init.gradle.kts` into `~/.gradle/init.d/`: Maven
    Central answers 429 through the container's shared address, and the script puts Google's mirror of it first, for
@@ -77,6 +82,7 @@ Coordinates on the maximised 1440x900 window:
 | Close the window (`stop.sh` does it and waits) | 1420, 20 |
 | Home's "תלמוד בבלי" chip, then its first tractate (ברכות) | 733, 156, then 758, 218 |
 | The reader's end bar (left in RTL): zoom in / out, ניקוד (סימונים while a daf is shown), צורת הדף | 33, 78 / 33, 145 / 33, 215 / 33, 285 |
+| The end bar's סריקה (a Bavli tractate): in the text view; in the daf or the scan, where שני עמודים comes in under the zoom's buttons and moves those below it down | 33, 355; 33, 420 |
 | The daf view's header: previous amud (right) / next amud (left) | 987, 66 / 93, 66 |
 | Table of contents entries (right pane) | 1105, 100 + 33 a row |
 | The tools menu's rows (the siddur first when it is on) | 127, 59 + 25 a row |

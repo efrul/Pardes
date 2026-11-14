@@ -1,0 +1,22 @@
+== jbig2-gen.pdf at 1100 x 1674 px
+format                 size KB   encode ms   decode ms (median)
+PNG gray8                 405       28.9        4.4
+PNG color                 964       83.2       12.5
+WebP lossless             579      168.4       35.3
+WebP q90                  427      158.2       26.7
+WebP q75                  319      147.0       19.8
+JPEG q90 gray             664       21.9        8.0
+JPEG q75 gray             468       19.7        6.8
+== jbig2-gen.pdf at 1600 x 2435 px
+format                 size KB   encode ms   decode ms (median)
+PNG gray8                 633       55.2        8.0
+PNG color                1421      156.3       23.4
+WebP lossless             946      319.8       61.5
+WebP q90                  698      309.6       47.6
+WebP q75                  522      299.9       37.6
+JPEG q90 gray            1112       40.5       14.0
+JPEG q75 gray             785       35.0       11.8
+== made outside (PIL) from the same page, decoded by Skia
+bits1100.png               61          -        3.3  (into GRAY_8)
+gray4-1100.png            221          -        4.5  (into BGRA_8888)
+bits2000.png              141          -       10.5  (into GRAY_8)
