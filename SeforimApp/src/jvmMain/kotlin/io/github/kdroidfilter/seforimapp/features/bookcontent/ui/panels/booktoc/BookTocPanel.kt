@@ -45,7 +45,7 @@ fun BookTocPanel(
                 .MutableInteractionSource()
         }
     val searchFocus = rememberPaneSearchFocus()
-    // Pardes: a PDF book's contents are its pages, with no search (request 49)
+    // Pardes: a PDF book's contents are its bookmarks or its pages, with no search (requests 49 and 52)
     val searchable = uiState.navigation.selectedBook?.let { pdfIdOf(it.id) == null } == true
     // Pardes: a letter typed with the pointer over the contents opens their search with it (TypeToSearch)
     if (searchable) {
@@ -100,7 +100,7 @@ fun BookTocPanel(
                             onClose = { onEvent(BookContentEvent.CloseTocSearch) },
                             modifier = if (showAlt) Modifier.weight(1f) else Modifier.fillMaxHeight(),
                             regular = {
-                                // Pardes: a PDF book's pages as its contents (request 49)
+                                // Pardes: a PDF book's bookmarks or pages as its contents (requests 49 and 52)
                                 val book = uiState.navigation.selectedBook
                                 if (pdfIdOf(book.id) != null) {
                                     PdfBookToc(uiState.tabId, book.id, Modifier.fillMaxHeight())

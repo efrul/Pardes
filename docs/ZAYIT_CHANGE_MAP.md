@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (261 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (263 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1362,13 +1362,15 @@ The entries of this section by kind:
   - `TypeToSearchTarget(paneHoverSource)` before the pane's column, while a book with a searchable contents is open, with
     a comment marked "Pardes:": a letter typed with the pointer over the contents opens their search with it
     (`searchFocus.type`, `ToggleTocSearch` when it is closed); three imports.
-  - `searchable`, with a comment marked "Pardes:": a PDF book of the user's (`pdfIdOf`) has its pages as its contents
-    and no search, so neither the typing nor the search button is offered for it (request 49).
-  - The search layout's regular content is, for a PDF book, its pages (`PdfBookToc(tabId, bookId)`), with a comment
-    marked "Pardes:"; Zayit's `BookTocView` otherwise; two imports.
+  - `searchable`, with a comment marked "Pardes:": a PDF book of the user's (`pdfIdOf`) has its own bookmarks or its
+    pages as its contents and no search, so neither the typing nor the search button is offered for it (requests 49
+    and 52).
+  - The search layout's regular content is, for a PDF book, its bookmarks or its pages (`PdfBookToc(tabId, bookId)`),
+    with a comment marked "Pardes:"; Zayit's `BookTocView` otherwise; two imports.
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
   contents and get straight to a daf, without the search button first, and without hurting anything else. A PDF book
-  has "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים" in place of a field that went to a page (request 49).
+  has "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים" in place of a field that went to a page (request 49), its own
+  bookmarks when it has some (request 52, "אין תמיכה בתוכן עניינים").
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small: one call before the pane's column, a value tested in two places, and an `if` around the
   regular contents.
@@ -3161,7 +3163,9 @@ those books stay, in "הספרים שלי" itself). A folder is added from the t
 library's books do, in the text's place (request 45: "הצגת ספר סרוק אמור להיות באותו מסך כמו הטקסט"; build 45
 opened a tab of its own, kept for the sessions that hold one), its pages one under the other or two side by side
 (request 47), scrolled, zoomed as the daf is and by the same buttons and keys (its levels, Ctrl + wheel, a pinch), with
-its pages listed in the reader's own contents pane (request 49, in place of a field that went to a page), and found
+its own bookmarks listed in the reader's own contents pane, or its pages when it has none (requests 49 and 52, in place
+of a field that went to a page; the bookmarks read by PDFium through the Foreign Function API, as the binding reads
+none), and found
 by the book tree's search (request 51); it opens where it was last read, from the tree, from the history or after a
 restart. Its
 pages are drawn as Otzaria and Zayita draw theirs (request 43): no wider than 1,600 pixels, scaled up beyond, and the
@@ -3291,7 +3295,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   (`goToPage`).
 - **Reached from:** `AppGraph.kt` (`pdfBookStore`, which Metro makes through `@Inject`), `BookContentViewModel.kt`
   (`asBook`), `MyPdfBooks.kt`, `MyPdfBooksSearch.kt`, `PdfBooksCard.kt`, `PdfBookReader.kt`, `PdfBookTabContent.kt`,
-  `PdfBookView.kt` and `PdfBookToc.kt` (the pages).
+  `PdfBookView.kt` and `PdfBookToc.kt` (the pages, and the book's file for its bookmarks).
 - **Follows:** Zayit's user-DB stores (a SQLDelight table, `Dispatchers.IO`, a `revision` flow) and its
   `@Inject @SingleIn(AppScope::class)` classes; Pardes's `DafDownloads` for a scope of its own (`@StructuredScope`).
 - **Tests:** `PdfBookStoreTest`.
@@ -3311,15 +3315,51 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookToc.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 58 lines.
+- **Size:** 187 lines.
 - **What:** `PdfBookToc(tabId, bookId, modifier)`, a PDF book's contents in the reader's own contents pane (request 49:
-  "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים", in place of the field that went to a page): its pages ("עמוד N"), as
-  the tab's reader tells them (`PdfBookStore.shown`), drawn by Zayit's `BookTocView` as the library's books' contents
-  are; the page at the reader's top is the one selected (and scrolled to), and a page clicked is gone to
-  (`goToPage`). The PDF's own bookmarks are not listed: the binding reads none.
+  "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים", in place of the field that went to a page), drawn by Zayit's
+  `BookTocView` as the library's books' contents are: the PDF's own bookmarks (request 52, "אין תמיכה בתוכן עניינים"),
+  read by `PdfOutlines` once the tab's reader opened the book (`PdfBookStore.shown`, which also says PDFium is loaded),
+  kept with the book they are of (another book opened in the tab shows none of the last one's), else its pages ("עמוד N"). The entry of the page at the reader's top is the one selected (and scrolled to), and one
+  clicked goes to its page (`goToPage`); a bookmark with others under it opens them instead, the first one opens at
+  the start when it holds some, and those above the entry read open as the reader moves on, as Zayit's contents do
+  (`TocUseCase.toggleTocEntry`, `loadRootToc`, `expandPathToTocEntry`). `PdfOutlineToc` and `pdfOutlineToc` turn the
+  bookmarks into Zayit's `TocEntry` rows, numbered in the book's order: each one's page, the entries above it
+  (`pathTo`) and under it (`below`, closed with it), and the entry read at a page (`entryAt`: the one that starts
+  nearest before it or on it, the last of those that start together); an untitled bookmark is named by its page.
 - **Reached from:** `BookTocPanel.kt`.
-- **Follows:** Zayit's contents pane (`BookTocView`'s list of entries, `TocEntry`).
-- **Tests:** tried in the app (a page clicked gone to, the page at the top selected).
+- **Follows:** Zayit's contents pane (`BookTocView`'s list of entries and their children, `TocEntry`) and its
+  `TocUseCase` for what opens and closes.
+- **Tests:** `PdfOutlineTest` (the bookmarks as contents); tried in the app (a book with bookmarks: a chapter opened,
+  a section clicked gone to, the entry read selected and its chapter opened while scrolling, the same when the book is
+  opened again; a book without bookmarks: its pages).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOutline.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 174 lines.
+- **What:** `PdfOutlineEntry(title, page, children)` and `PdfOutlines.read(file)`, a PDF file's own contents, its
+  outline (request 52): Nucleus's binding reads no bookmarks (its `PdfiumBridge` has no such function, nor has its
+  latest release), so the private `PdfiumOutline` calls PDFium's own functions of `fpdf_doc.h` through Java's Foreign
+  Function API (`Linker.downcallHandle`), in the PDFium library the binding loaded (`SymbolLookup.loaderLookup()`, the
+  libraries `System.load` loaded for the app's class loader; else the library by its name, which the system gives as
+  the one loaded), looked for again until found: `FPDF_InitLibrary` (done by the binding before its first document,
+  skipped by PDFium then), `FPDF_LoadDocument` (a document of its own, which reads from the file where it is only
+  what the outline needs; its path in UTF-8, as PDFium takes it on every system), `FPDF_GetPageCount`,
+  `FPDFBookmark_GetFirstChild`/`GetNextSibling` (the tree), `GetTitle` (UTF-16, its spaces and line breaks one space),
+  `GetDest` (which takes the action's destination when the bookmark has none of its own) and `GetAction` with
+  `FPDFAction_GetType` (a bookmark that acts goes to a page of the book only by GoTo, not to another file's),
+  `FPDFDest_GetDestPageIndex`, `FPDF_CloseDocument`. C's `long` (32 bits on Windows) is called with its own types on
+  each system (`longIsInt`), every call exact (`invokeExact`). A malformed file's bookmarks are bounded (each seen
+  once by its address, 20,000 at most, 64 deep). One file at a time, off the UI thread
+  (`Dispatchers.IO.limitedParallelism(1)`); anything failing gives no bookmarks, and the pages are listed.
+- **Reached from:** `PdfBookToc.kt`.
+- **Follows:** Pardes's experiment (`PdfReaderTool.kt`) and Nucleus's binding for PDFium, whose library it calls;
+  Zayit's style for the rest (an `object`, KDoc, `runCatching`). The native image needs nothing more: the calls'
+  shapes are among the downcalls `src/graalvm/reachability-metadata.json` already registers.
+- **Tests:** `PdfOutlineTest` (a PDF with every kind of bookmark, one without, a file that is none); tried in the app.
+- **Notes:** the binding's loader and dispatcher are internal, so PDFium is called once a book's reader opened it;
+  its own threads call PDFium on a document each, as here.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
@@ -3407,6 +3447,21 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOutlineTest.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 143 lines.
+- **What:** a PDF's bookmarks read by PDFium with their titles in Hebrew, nested, and their pages, from a PDF of five
+  pages written by the test: a destination of its own (an explicit page, a named one), a GoTo action, an action to
+  another file and one to the web (no page), a title's spaces and line breaks, and a loop back to the first bookmark;
+  a PDF without bookmarks, a file that is no PDF and a missing one, none; the bookmarks as the contents pane shows them
+  (`pdfOutlineToc`: the ids in the book's order, the children, the last child, an untitled one, the entries above and
+  under one, the entry read at each page). The binding opens the file first, as a book's reader does (its reader's
+  constructor is internal, reached as `PdfOpenBench` reaches it).
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (a temporary folder; Kotlin Test, backtick names).
+- **Tests:** it is one (unit; PDFium's library for the system, from the binding's JAR).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOpenBench.kt`
 

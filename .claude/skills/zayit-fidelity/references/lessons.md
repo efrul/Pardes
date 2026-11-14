@@ -153,6 +153,21 @@ tools and the code did when it was written.
 - **A dependency of code in `src/jvmMain` goes before `brand.gradle`'s `if (brand == 'zayit') return`**, as both
   brands compile that code. PDFium went after it on 2026-11-12 (the PDF experiment), and the zayit brand did not
   compile until 2026-11-13.
+- **What a binding lacks, its native library may have.** Nucleus's PDFium binding reads no bookmarks, but the
+  libpdfium it ships and loads exports all of PDFium's C API: `PdfOutline.kt` calls `fpdf_doc.h` through the Foreign
+  Function API (final in JDK 25), in the library the binding loaded (`SymbolLookup.loaderLookup()`). Its pitfalls
+  (2026-11-14):
+  - the binding's loader and its PDFium thread are `internal`: call PDFium once the binding has opened a document,
+    which also readies it (`FPDF_InitLibrary`);
+  - C's `long` is 32 bits on Windows: take `Linker.nativeLinker().canonicalLayouts()["long"]` and call with its type;
+  - `invokeExact` wants the exact types, which Kotlin writes from the cast (`as Int` is `I`, a statement `V`; `javap`
+    on the class shows them);
+  - `FPDFBookmark_GetDest` takes the action's destination when the bookmark has none, another file's too: check
+    `FPDFAction_GetType`;
+  - the native image calls only the shapes in `reachability-metadata.json`'s `foreign` downcalls: check each new one
+    is there;
+  - to try PDFium from plain Java in the container, run it with `LANG=C.UTF-8`, or a Hebrew path in its arguments is
+    mangled.
 - **A third party's engine is a module of its own** (`siddur-open/` is the example):
   - a copy at a pinned commit, with its licence files, never a submodule (a release must build without another
     repository, and the source archive must hold it);
