@@ -1,0 +1,6 @@
+jbig2-gen  cut 40 pages at 1100 px: render 77, gray 4, PNG 34 ms a page; 405 KB a page, 16.6 MB in all
+jbig2-gen  cut 40 pages at 1600 px: render 86, gray 7, PNG 59 ms a page; 633 KB a page, 25.9 MB in all
+jbig2-gen  cut 5 pages at 2000 px: render 95, gray 17, PNG 96 ms a page; 813 KB a page, 4.2 MB in all
+g4         cut 40 pages at 1100 px: render 45, gray 4, PNG 34 ms a page; 405 KB a page, 16.6 MB in all
+g4         cut 40 pages at 1600 px: render 56, gray 9, PNG 61 ms a page; 633 KB a page, 25.9 MB in all
+jbig2-sym  cut 40 pages at 1100 px: render 32, gray 3, PNG 32 ms a page; 404 KB a page, 16.5 MB in all

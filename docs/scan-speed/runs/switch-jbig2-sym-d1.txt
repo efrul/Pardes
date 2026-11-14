@@ -1,0 +1,6 @@
+jbig2-sym.pdf, 3.9 MB, density 1.0
+today: the file opened at the switch       first ink   323 ms, final   323 ms   (finals: 349 344 323 317 302 322)
+today, two pages side by side              first ink   389 ms, final   393 ms   (finals: 356 337 435 378 393 400)
+the reader kept, the amud drawn ahead      first ink   219 ms, final   219 ms   (finals: 233 239 219 218 216 217)
+cut: the amud's image read at the switch   first ink    30 ms, final    30 ms   (finals: 33 23 30 29 35 30)
+cut: the amud's image decoded ahead        first ink    17 ms, final    17 ms   (finals: 15 18 19 15 17 15)
