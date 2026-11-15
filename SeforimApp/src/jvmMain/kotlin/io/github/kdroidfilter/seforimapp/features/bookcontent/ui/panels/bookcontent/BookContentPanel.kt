@@ -40,6 +40,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.listedCommen
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.*
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfBookReader
+import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
@@ -238,14 +240,21 @@ private fun BookContentPanelContent(
                 // A Talmud tractate as its Vilna page, at the tab's line: its clicks select as the text's, and the
                 // panes around it (the text's, as they are, wherever they are docked) follow
                 run {
+                    // Pardes: a PDF book of the user's, its pages in the text's place (request 45)
+                    val pdfId = pdfIdOf(selectedBook.id)
+                    if (pdfId != null) {
+                        PdfBookReader(uiState.tabId, pdfId, paneCardModifier)
+                        return@run
+                    }
                     val repository = LocalAppGraph.current.repository
                     val scope = rememberCoroutineScope()
                     val content by rememberUpdatedState(uiState.content)
-                    // A Talmud tractate as its Vilna page: the same view, its items amudim
+                    // A Talmud tractate as its Vilna page: the same view, its items amudim; or as its scan (request 46)
                     val daf =
-                        if (uiState.content.dafView && selectedBook.isBavli) {
+                        if ((uiState.content.dafView || uiState.content.scanView) && selectedBook.isBavli) {
                             DafMode(
                                 book = selectedBook,
+                                scan = uiState.content.scanView,
                                 onSelectLine = { lineId, withModifier ->
                                     scope.launch {
                                         runSuspendCatching { repository.getLine(lineId) }.getOrNull()?.let {

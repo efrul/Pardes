@@ -15,6 +15,7 @@ import dev.nucleusframework.window.tao.TabGroupSnapshot
 import dev.nucleusframework.window.tao.TabLayoutSnapshot
 import dev.nucleusframework.window.tao.TabWindowGroup
 import dev.nucleusframework.window.tao.TabWorkspace
+import io.github.kdroidfilter.seforim.tabs.PdfBookTab
 import io.github.kdroidfilter.seforim.tabs.TabItem
 import io.github.kdroidfilter.seforim.tabs.TabType
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
@@ -373,6 +374,8 @@ class DesktopSession internal constructor(
                 is TabsDestination.Notes -> TabType.NOTES
                 is TabsDestination.Siddur -> TabType.SIDDUR
                 is TabsDestination.Author -> TabType.AUTHOR
+                // Pardes: a PDF book of the user's (request 28), shown as a book
+                is PdfBookTab -> TabType.BOOK
             }
 
         fun stripEphemeral(destination: TabsDestination): TabsDestination =

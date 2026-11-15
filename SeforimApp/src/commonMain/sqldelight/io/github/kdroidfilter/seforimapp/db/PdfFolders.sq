@@ -1,0 +1,17 @@
+-- Pardes: the folders of the user's PDF books (request 44 of docs/DESKTOP_STAGE2.md), each read where it is, its
+-- subfolders the categories under "הספרים שלי" in the book tree (features/pdf/PdfBookStore.kt): the folder's path, and
+-- when it was added. Its books are pdf_book's rows, by their files' paths.
+CREATE TABLE IF NOT EXISTS pdf_folder (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL UNIQUE,
+    addedAt INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM pdf_folder ORDER BY path;
+
+insert:
+INSERT OR IGNORE INTO pdf_folder(path, addedAt) VALUES (:path, :addedAt);
+
+delete:
+DELETE FROM pdf_folder WHERE id = :id;
