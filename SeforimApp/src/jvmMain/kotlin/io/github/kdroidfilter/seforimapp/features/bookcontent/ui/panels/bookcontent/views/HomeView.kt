@@ -89,6 +89,8 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsOverla
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.decodeLayout
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
+import io.github.kdroidfilter.seforimapp.features.pdf.myPdfBookSuggestions
+import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
@@ -603,6 +605,8 @@ internal fun UnifiedSearchBar(
             .map { bs ->
                 BookSuggestion(bs.book, bs.path, bs.exactAcronym)
             }.toImmutableList()
+    // Pardes: the user's PDF books the text names, before the library's other books (request 54)
+    val barBookSuggestions = (myPdfBookSuggestions(referenceSearchState.text) + mappedBookSuggestionsForBar).toImmutableList()
     val mappedTocSuggestionsForBar =
         searchUi.tocSuggestions.map { ts ->
             TocSuggestion(ts.toc, ts.path)
@@ -648,7 +652,7 @@ internal fun UnifiedSearchBar(
         onTextSearch = ::searchText,
         // Before a book is picked: go-to rows, the text search and books; after: its TOC
         suggestionsVisible = if (!isTocInTopBar) searchUi.suggestionsVisible else false,
-        bookSuggestions = if (!isTocInTopBar) mappedBookSuggestionsForBar else persistentListOf(),
+        bookSuggestions = if (!isTocInTopBar) barBookSuggestions else persistentListOf(),
         jumpSuggestions =
             if (!isTocInTopBar) searchUi.jumpSuggestions.toImmutableList() else persistentListOf(),
         onPickJump = { jump -> searchCallbacks.onOpenJump(jump) },
@@ -689,8 +693,13 @@ internal fun UnifiedSearchBar(
         isTocLoading = searchUi.isTocLoading && isTocInTopBar,
         // Tab on a book: the bar's book if it is the first, else one more searched with the others
         onPickBook = { picked ->
-            searchCallbacks.onAddScope(ScopeItem.BookItem(picked.book))
-            clearAfterAdding()
+            // Pardes: a PDF book of the user's has no text to search in, and Tab opens it (request 54)
+            if (pdfIdOf(picked.book.id) != null) {
+                searchCallbacks.onOpenBook(picked.book)
+            } else {
+                searchCallbacks.onAddScope(ScopeItem.BookItem(picked.book))
+                clearAfterAdding()
+            }
         },
         onPickToc = { picked ->
             searchCallbacks.onPickToc(picked.toc)
@@ -968,7 +977,8 @@ private fun SuggestionsPanel(
                                 onClick = open.onClick,
                                 kind = SuggestionKind.BOOK,
                                 highlighted = focused,
-                                actions = listOf(open, searchInside),
+                                // Pardes: a PDF book of the user's is opened, with no text to search in (request 54)
+                                actions = if (pdfIdOf(row.suggestion.book.id) != null) listOf(open) else listOf(open, searchInside),
                             )
 
                         is CatBookRow.Category -> {

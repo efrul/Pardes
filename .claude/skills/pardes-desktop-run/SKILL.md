@@ -37,7 +37,10 @@ $K/gradle.sh :SeforimApp:jvmTest ktlintCheck detekt     # every Gradle run here 
    `start.sh` writes `onboarding_finished`, `database_path` (the library's `seforim.db`), a region in Israel, and
    turns off the semantic pack prompt and the update check, which would open windows over the main one. It replaces
    what an earlier run saved there. More preferences, or other values, go in `PREFS`, as `key=value` words:
-   `PREFS="open_siddur=true daf_marks=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants.
+   `PREFS="open_siddur=true daf_marks=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants, or a
+   `SettingsGroup`'s `<prefix>.<name>`, whose JSON value goes in XML-escaped (a quote as `&quot;`:
+   `PREFS='daf_scans.folder=&quot;/home/user/pardes-rashi-ocr/data/pdf&quot;'`); a bare quote breaks the file, which
+   Java renames `IncorrectFormatPrefs.xml` and starts without.
 4. **The locale.** The container's locale is POSIX. With it, Gradle cannot write test classes whose names have
    non-ASCII characters (`InvalidPathException: Malformed input`), xdotool cannot type Hebrew, and window titles
    read `(failure in conversion from UTF8_STRING to ANSI_X3.4-1968)`. The scripts set `LC_ALL=C.UTF-8`
@@ -88,9 +91,10 @@ Coordinates on the maximised 1440x900 window:
 - **The first click after the window appears is often lost**, and so is a click on the top bar right after typing in
   the search field: click once in the page (say 300, 400), then on the target, and look at a screenshot before the
   next step.
-- Hebrew: `xdotool type --delay 100 "בבא בתרא"`; keys `xdotool key ctrl+t`, `Return`, `Escape`, `Down`, `Next`
-  (PageDown), `Prior`. To replace a field's text, clear it with `BackSpace`s: `ctrl+a` then typing once gave
-  `||||`.
+- Hebrew: `xdotool type --delay 100 "בבא בתרא"`, with `LC_ALL=C.UTF-8` exported in the shell that runs it (in the
+  container's POSIX locale it fails with "Invalid multi-byte sequence"); keys `xdotool key ctrl+t`, `Return`,
+  `Escape`, `Down`, `Next` (PageDown), `Prior`. To replace a field's text, clear it with `BackSpace`s: `ctrl+a` then
+  typing once gave `||||`.
 - **`xdotool key ctrl+v` does not paste** (it types letters): type the text. Read the clipboard with
   `xclip -selection clipboard -o -t UTF8_STRING`, a few seconds after the copy (llvmpipe).
 - **A new window gets no keyboard focus** (Xvfb has no window manager): `xdotool windowfocus <id>`, then

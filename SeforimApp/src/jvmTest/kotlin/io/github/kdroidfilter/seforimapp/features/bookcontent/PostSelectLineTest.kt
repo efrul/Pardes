@@ -153,6 +153,8 @@ class PostSelectLineTest {
             historyStore = mockk<HistoryStore>(relaxed = true),
             sessionManager = mockk { every { isRestoringSession } returns MutableStateFlow(false) },
             appSettings = testAppSettings(),
+            // Pardes: the user's PDF books (request 45), none here
+            pdfBooks = mockk(relaxed = true),
         )
     }
 

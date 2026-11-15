@@ -17,6 +17,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.Type
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberPaneSearchFocus
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.toTocEntry
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfBookToc
+import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
 import io.github.kdroidfilter.seforimlibrary.core.models.AltTocEntry
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
@@ -95,7 +97,15 @@ fun BookTocPanel(
                             onSelect = { onEvent(BookContentEvent.TocSearchEntrySelected(it)) },
                             onClose = { onEvent(BookContentEvent.CloseTocSearch) },
                             modifier = if (showAlt) Modifier.weight(1f) else Modifier.fillMaxHeight(),
-                            regular = { BookTocView(uiState = uiState, onEvent = onEvent, modifier = Modifier.fillMaxHeight()) },
+                            regular = {
+                                // Pardes: a PDF book's bookmarks or pages as its contents (requests 49 and 52)
+                                val book = uiState.navigation.selectedBook
+                                if (pdfIdOf(book.id) != null) {
+                                    PdfBookToc(uiState.tabId, book.id, Modifier.fillMaxHeight())
+                                } else {
+                                    BookTocView(uiState = uiState, onEvent = onEvent, modifier = Modifier.fillMaxHeight())
+                                }
+                            },
                         ) { result, activeId ->
                             TocSearchResults(result = result, activeId = activeId, onEvent = onEvent)
                         }

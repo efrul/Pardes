@@ -28,8 +28,9 @@ import java.nio.file.StandardCopyOption
 object LibraryLocation {
     /**
      * What a library is made of (what the install unpacks), the open semantic search's model and vector index, which
-     * the app looks for next to it (IndependentSemanticSearch), and the Talmud's page layouts (DafLayouts): a move that
-     * left them behind would turn the semantic search or the daf view off without a word.
+     * the app looks for next to it (IndependentSemanticSearch), the Talmud's page layouts (DafLayouts) and its scans'
+     * pages cut into images (DafScanPages): a move that left them behind would turn the semantic search or the daf view
+     * off without a word, or cut the scans again.
      */
     val NAMES =
         listOf(
@@ -43,6 +44,7 @@ object LibraryLocation {
             "pardes-model",
             "pardes.vec.lucene",
             "pardes-daf",
+            "pardes-scans",
         )
 
     /**

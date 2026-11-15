@@ -1,0 +1,85 @@
+package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
+import io.github.kdroidfilter.seforimapp.features.pdf.PageRows
+import io.github.kdroidfilter.seforimapp.features.pdf.ROWS_AHEAD
+import io.github.kdroidfilter.seforimapp.features.pdf.pagesOf
+import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
+import org.jetbrains.jewel.ui.component.CircularProgressIndicator
+import java.io.File
+
+// Pardes (request 56 of docs/DESKTOP_STAGE2.md): a tractate's scan drawn by Pardes from its pages cut into images, with
+// no wait and no preview, in the next frame once an image is in memory (docs/scan-speed).
+
+/**
+ * The pages of [scan] as cut ([cut], [DafScanPages]), in the rows of a PDF's pages ([PageRows]): one under the other
+ * or two side by side, each [pageWidth] wide under its [title]. Each image is decoded off the UI thread, and those of
+ * the [ROWS_AHEAD] rows after the first in view ahead of time; a page not cut yet is cut before the others, and shown
+ * once it is.
+ */
+@Composable
+internal fun ScanPageList(
+    scan: File,
+    cut: ScanCut,
+    listState: LazyListState,
+    pageWidth: Dp,
+    modifier: Modifier = Modifier,
+    spreads: Boolean = false,
+    title: ((page: Int) -> String)? = null,
+) {
+    val pages = LocalAppGraph.current.dafScanPages
+    LaunchedEffect(scan, spreads) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { first -> pages.prepare(scan, (first + 1..first + ROWS_AHEAD).flatMap { pagesOf(it, cut.pages, spreads) }) }
+    }
+    PageRows(cut.pages, listState, pageWidth, modifier, spreads, title) { page, width -> ScanPage(scan, cut, page, width) }
+}
+
+// A page as an image, smoothed as it is drawn smaller than cut; the paper, and a wait, while it is cut
+@Composable
+private fun ScanPage(
+    scan: File,
+    cut: ScanCut,
+    page: Int,
+    width: Dp,
+) {
+    val pages = LocalAppGraph.current.dafScanPages
+    val image by produceState(pages.shownImage(scan, page), scan, page) {
+        if (value == null) value = pages.revision.mapNotNull { pages.image(scan, page) }.first()
+    }
+    Box(Modifier.width(width).aspectRatio(cut.width.toFloat() / cut.heightOf(page)).background(Color.White)) {
+        val shown = image
+        if (shown == null) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
+        } else {
+            Image(
+                bitmap = shown,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds,
+                filterQuality = FilterQuality.Medium,
+            )
+        }
+    }
+}

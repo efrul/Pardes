@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.core.deeplink
 
+import io.github.kdroidfilter.seforim.tabs.PdfBookTab
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -50,6 +51,8 @@ fun TabsDestination.toShareLink(): String? =
         is TabsDestination.Notes -> null
         is TabsDestination.Siddur -> null
         is TabsDestination.Author -> null
+        // Pardes: a PDF book of the user's (request 28) is a file on their computer
+        is PdfBookTab -> null
     }
 
 /**

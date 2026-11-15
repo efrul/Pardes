@@ -35,13 +35,24 @@ tools and the code did when it was written.
   issues beyond `SeforimApp/detekt-baseline-jvmMainSourceSet.xml` (308 on 2026-11-13, most of them old). Run them on a
   change and look at its own files' lines; `LongParameterList` is not reported on composables. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
-  `@param:StructuredScope @property:StructuredScope`.
+  `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
+  plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class
+  makes for itself unless its property is (`DafDownloads`, `PdfBookStore`).
 - **Kotlin, as it bit:**
   - a constructor or function that ends in a lambda parameter keeps it last, or every caller's trailing lambda binds
     to the new parameter (`FeedbackSource(database) { … }`);
   - a property named `name` on an enum's extension is shadowed by the enum's own `name`;
   - `open` is a soft keyword, and a function of that name reads as a modifier (`openOn`);
-  - a test's `assertEquals(listOf(listOf(30L)), …)` may need its element type said.
+  - a test's `assertEquals(listOf(listOf(30L)), …)` may need its element type said;
+  - a sealed interface's subclass may live in another file of its package and module: a tab of Pardes's own
+    (`PdfBookTab`, 2026-11-13) leaves `TabsDestination.kt` alone, but takes a branch in each of its five exhaustive
+    `when`s (`TabsContent`'s two, `TabsViewModel.withTabId`, `DesktopSession.tabTypeFor`, `ZayitDeepLink.toShareLink`,
+    `SessionManager.computeTabTitles`) and a fixed `@SerialName`, as the session keeps it by name. An older Pardes
+    cannot read a session that holds it, and starts on a new one.
+- **Building on Windows from a folder whose name has Hebrew letters** (the user's computer, 2026-11-15): the Android
+  Gradle plugin refuses the path (`-Pandroid.overridePathCheck=true`), and Kover's agent cannot find its file, its
+  path turned to question marks: build from a `subst` drive. Gradle itself needs Java 21 or later (a JBR from
+  `~/.jdks`). A test measured again with nothing changed needs `--rerun`, or Gradle skips it.
 - **Scratch tests and benches** (`Tmp*`) are deleted before the commit. A benchmark runs alone: mockk in the same JVM
   slows the real repository's calls.
 
@@ -49,12 +60,37 @@ tools and the code did when it was written.
 
 - `VerticallyScrollableContainer(scrollState)` scrolls its content itself. An inner `verticalScroll` on the same state
   fails with "measured with an infinity maximum height".
-- **`remember` does not outlive a rebuilt screen.** A step of the install wizard that reloads, or a tab whose
-  composition was dropped (`TabsContent` keeps three), comes back empty. What must stay goes in a small `ViewModel` of
-  the window's store (`viewModel(viewModelStoreOwner = LocalWindowViewModelStoreOwner.current, key = …)`) or in the
-  tab's persisted state.
+- **`remember` does not outlive a rebuilt screen.** A step of the install wizard that reloads, or a tab dragged to
+  another window, comes back empty. What must stay goes in a small `ViewModel` of the window's store
+  (`viewModel(viewModelStoreOwner = LocalWindowViewModelStoreOwner.current, key = …)`) or in the tab's persisted state.
+- **Every tab of a window stays composed** (`TabsContent`'s KDoc; `CLAUDE.md`'s "an LRU of 3" is older): only the
+  selected one is measured and drawn. A tab that holds something heavy composes it only while `LocalTabSelected` (a
+  PDF book's file and drawn pages), keeps its place outside the composition, and takes focus only then.
 - A `LazyColumn` keeps pixels, not places: after a zoom or a resize, a place is kept by scrolling to its item
   (`requestScrollToItem`), not by trusting the offset.
+- **A list not laid out is moved with `requestScrollToItem`.** `scrollToItem` waits for the list's first layout, and
+  a list kept out of the composition (the daf's, while the scan stood in its place) never has one: the move hung, and
+  ran late over a newer place once the list came back (2026-11-13). `requestScrollToItem` sets the place at once, and
+  `firstVisibleItemIndex` reads it.
+- **Another view of a book goes in the daf's place, not inside the daf.** The scan first sat inside the daf's pages: it
+  needed the daf's layout file and kept the two lists in step by hand. In the daf's slot of the text view
+  (`DafMode.scan`, `DafScanReader`) it has the frame's keys, zoom and place for nothing: it sets `DafControl`'s
+  lambdas (in a `SideEffect`, never cleared on leaving, as the next view sets its own during its composition) and
+  tells its place through the daf's `onScroll`, and the text opens there (2026-11-13).
+- **Pages side by side follow the view's direction.** A `Row` in a view laid out from the right puts its first child
+  on the right: the right page first there, the left one first otherwise. Overriding `LocalLayoutDirection` around
+  the pages would flip what inside them reads the direction. A list whose items become rows of two keeps its places
+  by the pages' own order, and turns them into rows only where it scrolls (`itemOfAmud`, `rowOf`); turned on or off,
+  it reopens at what was at its top (2026-11-13).
+- **A binding's internal API, for a bench only, by reflection.** The PDFium binding keeps its reader's constructor and
+  its drawing of a page internal (`internal` holds across modules, and Kotlin 2 does not let it be suppressed): a
+  test reaches them by their JVM names, a suspend one through `suspendCoroutineUninterceptedOrReturn`
+  (`PdfOpenBench`, 2026-11-13). Never in the app's own code.
+- **A parameter renamed to a local's name is shadowed by it.** `PdfBookReader`'s `alone` parameter (a tab of its own)
+  met its local `alone` (a book added by itself): the local was passed on, and a book by itself got the tab's bar. Name
+  them apart (`inTab`), and look for the name before a rename (2026-11-13).
+- **A Zayit test that builds a Zayit class breaks with a new constructor parameter** (`PostSelectLineTest` builds
+  `BookContentViewModel` by hand): add the argument there, a relaxed `mockk`, and write the test into the map.
 - **An item that grows is measured at its new size only in a frame to come.** `scrollToItem(index, offset)` into an
   item whose content was just set (a part laid out in place of its placeholder) runs on, before then, through the
   items after it: the book daf's experiment landed four chapters on. Wait until `layoutInfo.visibleItemsInfo` gives
@@ -118,6 +154,36 @@ tools and the code did when it was written.
 
   Prefer the second for anything larger than a line. Check that both brands still compile:
   `gradle.sh :SeforimApp:compileKotlinJvm -Pseforimapp.brand=zayit`.
+- **A dependency of code in `src/jvmMain` goes before `brand.gradle`'s `if (brand == 'zayit') return`**, as both
+  brands compile that code. PDFium went after it on 2026-11-12 (the PDF experiment), and the zayit brand did not
+  compile until 2026-11-13.
+- **A book of Pardes's own opens by more than one road.** The reading screen's view model opens a book id at its
+  creation (`loadBookById`), and a tab already open takes a new one by `openDestination` → `OpenBookById`; each reads
+  the library alone (`getBookCore`). A PDF book's id needs the fallback on both (`?: pdfBooks.asBook`): without the
+  second, a PDF book picked in a tab's search bar named the tab by its id and left it on the home page (2026-11-15).
+- **What a binding lacks, its native library may have.** Nucleus's PDFium binding reads no bookmarks, but the
+  libpdfium it ships and loads exports all of PDFium's C API: `PdfOutline.kt` calls `fpdf_doc.h` through the Foreign
+  Function API (final in JDK 25), in the library the binding loaded (`SymbolLookup.loaderLookup()`). Its pitfalls
+  (2026-11-14):
+  - the binding's loader and its PDFium thread are `internal`: call PDFium once the binding has opened a document,
+    which also readies it (`FPDF_InitLibrary`);
+  - C's `long` is 32 bits on Windows: take `Linker.nativeLinker().canonicalLayouts()["long"]` and call with its type;
+  - `invokeExact` wants the exact types, which Kotlin writes from the cast (`as Int` is `I`, a statement `V`; `javap`
+    on the class shows them);
+  - `FPDFBookmark_GetDest` takes the action's destination when the bookmark has none, another file's too: check
+    `FPDFAction_GetType`;
+  - the native image calls only the shapes in `reachability-metadata.json`'s `foreign` downcalls: check each new one
+    is there;
+  - to try PDFium from plain Java in the container, run it with `LANG=C.UTF-8`, or a Hebrew path in its arguments is
+    mangled;
+  - the binding's `openPdfDocument` and `PdfDocument` are internal too: PDFium is loaded by its public
+    `rememberPdfReaderState()` opening an empty PDF (`rememberPdfiumLoaded`), and a test reaches the reader's
+    constructor by reflection;
+  - a `limitedParallelism(1)` dispatcher runs one at a time but not on one thread: a confined `Arena` lives inside one
+    non-suspending block, never across a suspension.
+- **The structured-coroutines compiler plugin crashes on `withContext(NonCancellable …)` in a `finally`**
+  (`NoSuchMethodError: FirResolvedQualifier.getClassId()`, the file's `try` as its place, 2026-11-15): clean up through
+  `currentCoroutineContext().job.invokeOnCompletion { … }` launching on a scope of the class instead (`DafScanPages`).
 - **A third party's engine is a module of its own** (`siddur-open/` is the example):
   - a copy at a pinned commit, with its licence files, never a submodule (a release must build without another
     repository, and the source archive must hold it);
@@ -160,7 +226,10 @@ A build for the user to try, from a branch, before anything reaches `main`:
 2. Run `desktop-release.yml` on the branch (workflow_dispatch) with `quick: "true"` (Windows x64 alone, a
    pre-release) and a `note`. It takes about 20 minutes and gives the tag `desktop-<x.y.z>-<run number>`.
 3. Revert the changelog commit (`revert: the changelog's <x.y.z> section waits for the public release`):
-   `android-site.yml` publishes the changelog from `main`, and the section belongs to the public release.
+   `android-site.yml` publishes the changelog from `main`, and the section belongs to the public release. `git revert`
+   writes its commit as the container's own identity: run it with `-c user.name=efrul -c user.email=…`, or amend it
+   with `--reset-author` (a plain `--amend` keeps the author), and check `git log -1 --format='%an | %cn'` before the
+   push (2026-11-13: one went out as Claude, and was amended and pushed again).
 
 A session cannot delete a release. Tell the user which pre-releases can go once tried: Pardes for Android 0.3.0 to
 0.4.1 reads only the 30 newest releases.

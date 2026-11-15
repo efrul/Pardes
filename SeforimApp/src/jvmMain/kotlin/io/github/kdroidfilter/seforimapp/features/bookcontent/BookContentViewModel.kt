@@ -61,6 +61,8 @@ class BookContentViewModel(
     private val historyStore: HistoryStore,
     sessionManager: SessionManager,
     private val appSettings: AppSettings,
+    // Pardes: a PDF book of the user's opens as the library's books do (request 45)
+    private val pdfBooks: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore,
 ) : ViewModel() {
     @AssistedFactory
     @ViewModelAssistedFactoryKey(BookContentViewModel::class)
@@ -100,6 +102,11 @@ class BookContentViewModel(
     private val navigationUseCase = useCaseFactory.createNavigationUseCase(stateManager)
     private val contentUseCase = useCaseFactory.createContentUseCase(stateManager)
     private val tocUseCase = useCaseFactory.createTocUseCase(stateManager, viewModelScope)
+
+    // Pardes: a PDF book's contents are searched in its bookmarks, or its pages (request 53)
+    private val pdfTocSearch =
+        io.github.kdroidfilter.seforimapp.features.pdf
+            .PdfTocSearch(pdfBooks, stateManager)
     private val notesUseCase = useCaseFactory.createNotesUseCase(stateManager)
     private val altTocUseCase = useCaseFactory.createAltTocUseCase(stateManager)
     private val commentariesUseCase = useCaseFactory.createCommentariesUseCase(stateManager, viewModelScope)
@@ -485,8 +492,12 @@ class BookContentViewModel(
                 is BookContentEvent.BookTreeSearchQueryChanged ->
                     navigationUseCase.search(event.query)
 
-                is BookContentEvent.BookTreeSearchBookSelected ->
-                    navigationUseCase.selectSearchBook(event.bookId)?.let { loadBook(it) }
+                is BookContentEvent.BookTreeSearchBookSelected -> {
+                    // Pardes: a PDF book of the user's found by the search (request 51) is not among the library's books
+                    val searching = stateManager.state.value.navigation.search != null
+                    val pdf = if (searching) pdfBooks.asBook(event.bookId) else null
+                    (navigationUseCase.selectSearchBook(event.bookId) ?: pdf)?.let { loadBook(it) }
+                }
 
                 // TOC
                 is BookContentEvent.TocEntryExpanded ->
@@ -505,7 +516,7 @@ class BookContentViewModel(
                     tocUseCase.closeSearch()
 
                 is BookContentEvent.TocSearchQueryChanged ->
-                    tocUseCase.search(event.query)
+                    if (!pdfTocSearch.search(event.query)) tocUseCase.search(event.query)
 
                 is BookContentEvent.TocSearchEntrySelected ->
                     openTocSearchMatch(event.tocId)
@@ -571,7 +582,8 @@ class BookContentViewModel(
                 }
 
                 is BookContentEvent.OpenBookById -> {
-                    val book = repository.getBookCore(event.bookId)
+                    // Pardes: a PDF book of the user's too, opened in a tab already open by the search bar (request 54)
+                    val book = repository.getBookCore(event.bookId) ?: pdfBooks.asBook(event.bookId)
                     if (book != null) {
                         loadBook(book)
                     }
@@ -627,8 +639,12 @@ class BookContentViewModel(
                 BookContentEvent.ToggleShnayimMikra ->
                     stateManager.updateContent { copy(shnayimMikra = !shnayimMikra) }
 
+                // Pardes: the text, the daf and the scan (request 46), one at a time
                 BookContentEvent.ToggleDafView ->
-                    stateManager.updateContent { copy(dafView = !dafView) }
+                    stateManager.updateContent { copy(dafView = !dafView, scanView = false) }
+
+                BookContentEvent.ToggleScanView ->
+                    stateManager.updateContent { copy(scanView = !scanView, dafView = false) }
 
                 BookContentEvent.ToggleSources ->
                     contentUseCase.toggleSources()
@@ -766,7 +782,7 @@ class BookContentViewModel(
     ) {
         stateManager.setLoading(true)
         try {
-            repository.getBookCore(bookId)?.let { book ->
+            (repository.getBookCore(bookId) ?: pdfBooks.asBook(bookId))?.let { book ->
                 val persistedBeforeLoad = persistedStore.get(tabId)?.bookContent
                 val isRestore = !triggerScroll
 
@@ -1161,6 +1177,8 @@ class BookContentViewModel(
 
     /** Opens the match [matchId] of the TOC search, a TOC or an alt TOC entry. */
     private suspend fun openTocSearchMatch(matchId: Long) {
+        // Pardes: a match in a PDF book's contents goes to its page (request 53)
+        if (pdfTocSearch.open(matchId)) return
         val altId = altTocIdOfSearchMatch(matchId)
         if (altId == null) {
             tocUseCase.selectSearchEntry(matchId)?.let { loadAndSelectLine(it) }
