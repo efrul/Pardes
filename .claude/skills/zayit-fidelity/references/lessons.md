@@ -49,6 +49,10 @@ tools and the code did when it was written.
     `when`s (`TabsContent`'s two, `TabsViewModel.withTabId`, `DesktopSession.tabTypeFor`, `ZayitDeepLink.toShareLink`,
     `SessionManager.computeTabTitles`) and a fixed `@SerialName`, as the session keeps it by name. An older Pardes
     cannot read a session that holds it, and starts on a new one.
+- **Building on Windows from a folder whose name has Hebrew letters** (the user's computer, 2026-11-15): the Android
+  Gradle plugin refuses the path (`-Pandroid.overridePathCheck=true`), and Kover's agent cannot find its file, its
+  path turned to question marks: build from a `subst` drive. Gradle itself needs Java 21 or later (a JBR from
+  `~/.jdks`). A test measured again with nothing changed needs `--rerun`, or Gradle skips it.
 - **Scratch tests and benches** (`Tmp*`) are deleted before the commit. A benchmark runs alone: mockk in the same JVM
   slows the real repository's calls.
 

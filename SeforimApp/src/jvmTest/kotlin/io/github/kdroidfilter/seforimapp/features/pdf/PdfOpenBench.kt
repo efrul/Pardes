@@ -23,7 +23,9 @@ import kotlin.test.Test
  * table to build/pdf-bench/report.md, and printed. The binding's reader ([PdfReaderState]) opens and draws them, as in the
  * app; its constructor and its drawing of a page are internal to it, and reached here by their names:
  *
- *     PARDES_PDF_BENCH=otzaria ./gradlew :SeforimApp:jvmTest --tests '*PdfOpenBench*'
+ *     PARDES_PDF_BENCH=otzaria ./gradlew :SeforimApp:jvmTest --tests '*PdfOpenBench*' --rerun
+ *
+ * `--rerun` measures again: without it Gradle skips the tests when nothing changed, and the report stays the last one.
  */
 class PdfOpenBench {
     @Test
