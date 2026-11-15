@@ -157,6 +157,10 @@ tools and the code did when it was written.
 - **A dependency of code in `src/jvmMain` goes before `brand.gradle`'s `if (brand == 'zayit') return`**, as both
   brands compile that code. PDFium went after it on 2026-11-12 (the PDF experiment), and the zayit brand did not
   compile until 2026-11-13.
+- **A book of Pardes's own opens by more than one road.** The reading screen's view model opens a book id at its
+  creation (`loadBookById`), and a tab already open takes a new one by `openDestination` → `OpenBookById`; each reads
+  the library alone (`getBookCore`). A PDF book's id needs the fallback on both (`?: pdfBooks.asBook`): without the
+  second, a PDF book picked in a tab's search bar named the tab by its id and left it on the home page (2026-11-15).
 - **What a binding lacks, its native library may have.** Nucleus's PDFium binding reads no bookmarks, but the
   libpdfium it ships and loads exports all of PDFium's C API: `PdfOutline.kt` calls `fpdf_doc.h` through the Foreign
   Function API (final in JDK 25), in the library the binding loaded (`SymbolLookup.loaderLookup()`). Its pitfalls

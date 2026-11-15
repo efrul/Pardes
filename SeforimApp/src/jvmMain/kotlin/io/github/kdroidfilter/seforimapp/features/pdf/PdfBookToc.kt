@@ -112,20 +112,22 @@ private fun PdfOutlineView(
     )
 }
 
-// "עמוד N" for the page [page] (from 0), or a dash for none
-private fun pageLabel(
+/** "עמוד N" ([label], "עמוד %1$d") for the page [page] (from 0), or a dash for none. */
+internal fun pageLabel(
     label: String,
     page: Int?,
 ): String = page?.let { label.replace("%1\$d", "${it + 1}") } ?: "—"
 
 /**
  * A PDF book's bookmarks as the contents pane draws them ([BookTocView]): the [roots], each entry's [children] by its
- * id, and the page each one goes to; the ids count the entries in the book's order, from 1.
+ * id, every entry in the book's order ([entries], as a book's whole contents are searched), and the page each one goes
+ * to; the ids count the entries in the book's order, from 1.
  */
 @Immutable
 internal class PdfOutlineToc(
     val roots: ImmutableList<TocEntry>,
     val children: Map<Long, List<TocEntry>>,
+    val entries: List<TocEntry>,
     private val pages: Map<Long, Int>,
     private val parents: Map<Long, Long>,
 ) {
@@ -183,5 +185,6 @@ internal fun pdfOutlineToc(
             )
         }
     val roots = add(outline, parent = null, level = 0)
-    return PdfOutlineToc(roots.toImmutableList(), children, pages, parents)
+    val entries = (roots + children.values.flatten()).sortedBy { it.id }
+    return PdfOutlineToc(roots.toImmutableList(), children, entries, pages, parents)
 }
