@@ -3466,7 +3466,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOpenBench.kt`
 
 - **Feature:** The user's PDF books, Scan view.
-- **Size:** 190 lines.
+- **Size:** 192 lines.
 - **What:** `PdfOpenBench`, how fast PDFs open on a computer, as Pardes opens them (request 50, to measure on the
   user's): it runs only when `PARDES_PDF_BENCH` names `otzaria` (Otzaria's scans found there) or files and folders of
   PDFs, and otherwise passes at once. For each file (8 at most, `PARDES_PDF_BENCH_MAX`, from the smallest to the
@@ -3474,10 +3474,12 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   1,100, 1,600, 2,200 and 3,300 pixels and the next five at 1,600, and the Java heap then; the first open and draw of
   the process told apart. A table in `build/pdf-bench/report.md`, and printed. The reader's constructor and its drawing
   of a page are internal to the binding, and reached by reflection (a suspend function through
-  `suspendCoroutineUninterceptedOrReturn`).
+  `suspendCoroutineUninterceptedOrReturn`). Measured again with `--rerun`, which its KDoc says (Gradle skips a test
+  when nothing changed).
 - **Reached from:** the JVM tests, by hand.
 - **Follows:** Pardes's benches (run alone, their results written down).
-- **Tests:** it is one (a bench); run in the cloud on three scans.
+- **Tests:** it is one (a bench); run in the cloud on three scans, and on the user's Windows computer on eight
+  (2026-11-15, its results in `docs/DESKTOP_STAGE2_PLAN.md`).
 
 ### The scan of the page in the daf view
 
