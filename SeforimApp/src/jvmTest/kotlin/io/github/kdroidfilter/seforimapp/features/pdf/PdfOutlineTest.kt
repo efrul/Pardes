@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.pdf
 
 import dev.nucleusframework.pdfium.PdfReaderState
+import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.buildTocFilter
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.io.path.createTempDirectory
@@ -78,6 +79,30 @@ class PdfOutlineTest {
         assertNull(toc.pageOf(5))
         // Page 3 is where both "עמוד 4" (id 3) and "ב" (id 4) start: the later one in the book is read there
         assertEquals(listOf(1L, 2L, 2L, 4L, 4L, 6L, 6L), (0..6).map { toc.entryAt(it) })
+    }
+
+    @Test
+    fun `the contents searched as a book's, a bookmark by its words and a page by its number`() {
+        val toc =
+            pdfOutlineToc(
+                bookId = 7,
+                outline =
+                    listOf(
+                        PdfOutlineEntry("פרק ראשון", 0, listOf(PdfOutlineEntry("סימן א", 1), PdfOutlineEntry("סימן ב", 2))),
+                        PdfOutlineEntry("פרק שני", 3, listOf(PdfOutlineEntry("סימן ג", 4))),
+                    ),
+            ) { page -> "עמוד ${page?.plus(1)}" }
+
+        assertEquals(listOf("פרק ראשון", "סימן א", "סימן ב", "פרק שני", "סימן ג"), toc.entries.map { it.text })
+        val found = buildTocFilter(toc.entries, "סימן ב")
+        assertEquals(listOf(3L), found.matchIds)
+        assertEquals(listOf(3L), found.roots.map { it.id }, "a lone chapter above it left out, as Zayit's search leaves it")
+        assertEquals(2, found.bestMatchId?.let(toc::pageOf))
+
+        val pages = pdfOutlineToc(7, List(130) { page -> PdfOutlineEntry("עמוד ${page + 1}", page) }) { "" }
+        val twelve = buildTocFilter(pages.entries, "12")
+        assertEquals(11, twelve.bestMatchId?.let(pages::pageOf), "the page whose number is the one typed, before 120 to 129")
+        assertEquals(11, twelve.matchIds.size)
     }
 
     // The binding loads PDFium (and readies it) when it first opens a PDF, as a book's reader does before its contents

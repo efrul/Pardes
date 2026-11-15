@@ -45,10 +45,8 @@ fun BookTocPanel(
                 .MutableInteractionSource()
         }
     val searchFocus = rememberPaneSearchFocus()
-    // Pardes: a PDF book's contents are its bookmarks or its pages, with no search (requests 49 and 52)
-    val searchable = uiState.navigation.selectedBook?.let { pdfIdOf(it.id) == null } == true
     // Pardes: a letter typed with the pointer over the contents opens their search with it (TypeToSearch)
-    if (searchable) {
+    if (uiState.navigation.selectedBook != null) {
         TypeToSearchTarget(paneHoverSource) { text ->
             searchFocus.type(text, isOpen = uiState.toc.search != null) { onEvent(BookContentEvent.ToggleTocSearch) }
         }
@@ -64,7 +62,7 @@ fun BookTocPanel(
             interactionSource = paneHoverSource,
             onHide = { onEvent(BookContentEvent.ToggleToc) },
             actions = {
-                if (searchable) {
+                if (uiState.navigation.selectedBook != null) {
                     PaneSearchButton(
                         isOpen = uiState.toc.search != null,
                         focus = searchFocus,

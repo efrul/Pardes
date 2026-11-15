@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (263 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (264 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -906,7 +906,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +59 −8 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
+- **Change:** modified, +69 −10 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
   Reader's default commentators.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
@@ -919,17 +919,25 @@ The entries of this section by kind:
     `loadBookById` opens a book id the library has not as the PDF book it is (`PdfBookStore.asBook`): a PDF book's tab
     restored, or opened from the history, reads as the library's books do (request 45); and
     `BookTreeSearchBookSelected` opens a PDF book the search found (`asBook`), with a comment marked "Pardes:", as the
-    search's own lookup has only the library's books (request 51).
+    search's own lookup has only the library's books (request 51); so does `OpenBookById`, by which a tab already open
+    takes a new destination (`openDestination`): a PDF book picked in its search bar (request 54).
+  - A `PdfTocSearch` of its own (fully qualified, after `tocUseCase`, with a comment marked "Pardes:"): the contents
+    pane's search, in a PDF book, runs in its bookmarks or pages, not in the library's contents (request 53).
+    `TocSearchQueryChanged` goes to it first (`search` says whether the book open is a PDF book), and
+    `openTocSearchMatch` lets it open a match first (`open`, its page).
   - The commentaries' prefetch reads the book's `commentatorSelection`: with whole groups checked, each line prefetches
     its own commentators of those groups (`shownOn`), not only those remembered by name.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
-  opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45).
+  opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45), its contents are
+  searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small to medium: new `when` branches, an edit inside Zayit's prefetch function, a parameter at the
-  constructor's end and an elvis in `loadBookById`.
+  constructor's end, an elvis in `loadBookById` and in `OpenBookById`, and two lines that hand a PDF book's contents
+  search to Pardes's class.
 - **Smaller:** already minimal.
 - **Tests:** `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`, `DetachedCommentatorsTest`;
-  `PostSelectLineTest` builds the view model with a relaxed `PdfBookStore`.
+  `PostSelectLineTest` builds the view model with a relaxed `PdfBookStore`; `PdfOutlineTest` (the contents searched);
+  tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/state/BookContentState.kt`
 
@@ -1229,8 +1237,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +296 −45 lines. Feature: Search in categories, Search in several books and categories, Book and
-  author titles search.
+- **Change:** modified, +308 −47 lines. Feature: Search in categories, Search in several books and categories, Book and
+  author titles search, PDF books.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
   - `CatBookRow.Category`: a category to search in. `catBookRows` orders references, books named by their title, a title
@@ -1253,19 +1261,25 @@ The entries of this section by kind:
     after a tab is picked.
   - An author row says whose book it was found by (`author_of_book`) when it has no alias.
   - Ctrl+Enter and "search all books" are Enter when the scope's books are all searched (an author or a category).
+  - The user's PDF books the text names (`myPdfBookSuggestions`, with the text typed) come before the library's
+    other books among the bar's books (`barBookSuggestions`, with a comment marked "Pardes:"), so that `catBookRows`
+    puts one before the library's not named exactly (request 54). Such a book's row offers Enter only, with no text to
+    search in, and Tab on it opens it (`onPickBook`), with comments marked "Pardes:"; two imports.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
   be pushed down when the book typed bears his name, and on 2026-11-10 that an author's name and Tab offer his books
   (`מהרשא` gave a book an acronym names so, `רשי` a category) and that `שמואל` not bring שמואל א after four authors and
-  four categories.
+  four categories. On 2026-11-15 that typing a PDF book's name in the bar shows it ("למה כתיבה בשורת החיפוש שם ספר
+  pdf לא מציגה אותו?").
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: `HomeView.kt` is one of Zayit's largest files (some 1,900 lines), and the edits run through
   its search bar's key handling, its rows and its panels.
 - **Smaller:** the category and scope rows could be drawn by a Pardes composable passed in; the key handling has to
   know them.
 - **Tests:** `CatBookRowsTest`, `CategorySuggestionsE2ETest`, `ScopeItemsTest`, `CategorySuggestionsTest`,
-  `BookSuggestionsE2ETest`.
+  `BookSuggestionsE2ETest`; `MyPdfBooksSearchTest` (the PDF books suggested); tried in the app (a PDF book first in
+  the bar, opened by Enter).
 - **Notes:** Zayit's search UI on purpose has no category scope (`SearchScope.Category` is "read back only" there,
   with category tabs over the results): this file brings back what Zayit chose to drop.
 
@@ -1357,20 +1371,19 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocPanel.kt`
 
-- **Change:** modified, +22 −2 lines. Feature: Typing over a pane, The user's PDF books.
+- **Change:** modified, +19 −1 lines. Feature: Typing over a pane, The user's PDF books.
 - **What:**
-  - `TypeToSearchTarget(paneHoverSource)` before the pane's column, while a book with a searchable contents is open, with
-    a comment marked "Pardes:": a letter typed with the pointer over the contents opens their search with it
-    (`searchFocus.type`, `ToggleTocSearch` when it is closed); three imports.
-  - `searchable`, with a comment marked "Pardes:": a PDF book of the user's (`pdfIdOf`) has its own bookmarks or its
-    pages as its contents and no search, so neither the typing nor the search button is offered for it (requests 49
-    and 52).
+  - `TypeToSearchTarget(paneHoverSource)` before the pane's column, while a book is open (as Zayit offers the search
+    button), with a comment marked "Pardes:": a letter typed with the pointer over the contents opens their search
+    with it (`searchFocus.type`, `ToggleTocSearch` when it is closed); three imports. A PDF book's contents are searched
+    too, in its bookmarks or pages (request 53, by `BookContentViewModel`'s `PdfTocSearch`): requests 49 to 52 had
+    left both the typing and the button out for it.
   - The search layout's regular content is, for a PDF book, its bookmarks or its pages (`PdfBookToc(tabId, bookId)`),
     with a comment marked "Pardes:"; Zayit's `BookTocView` otherwise; two imports.
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
   contents and get straight to a daf, without the search button first, and without hurting anything else. A PDF book
   has "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים" in place of a field that went to a page (request 49), its own
-  bookmarks when it has some (request 52, "אין תמיכה בתוכן עניינים").
+  bookmarks when it has some (request 52, "אין תמיכה בתוכן עניינים"), searched as a book's (request 53).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small: one call before the pane's column, a value tested in two places, and an `if` around the
   regular contents.
@@ -3165,8 +3178,8 @@ opened a tab of its own, kept for the sessions that hold one), its pages one und
 (request 47), scrolled, zoomed as the daf is and by the same buttons and keys (its levels, Ctrl + wheel, a pinch), with
 its own bookmarks listed in the reader's own contents pane, or its pages when it has none (requests 49 and 52, in place
 of a field that went to a page; the bookmarks read by PDFium through the Foreign Function API, as the binding reads
-none), and found
-by the book tree's search (request 51); it opens where it was last read, from the tree, from the history or after a
+none), searched there as a book's contents are (request 53), suggested by the search bar (request 54), and found
+by the book tree's search before the library's books (requests 51 and 55); it opens where it was last read, from the tree, from the history or after a
 restart. Its
 pages are drawn as Otzaria and Zayita draw theirs (request 43): no wider than 1,600 pixels, scaled up beyond, and the
 next pages drawn ahead (`PdfPageList`). The folders, the books and each book's place are in the user DB, so the
@@ -3239,15 +3252,24 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooksSearch.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 77 lines.
-- **What:** `myPdfBooksIn(search)`, the book tree's search state with the user's PDF books its query names
-  (`withMyPdfBooks`): the books whose titles hold every word of the query (points, cantillation, quotes and case left
-  aside) added after the library's, under "הספרים שלי" and only their folders' categories, all open, among the matches
-  the arrows and Enter go through, the first of them the best match when the library has none (request 51: "שיוכלו
-  למצוא את הספרים שלי בחיפוש ספרים").
-- **Reached from:** `CategoryTreePanel.kt`; opened through `BookContentViewModel.kt` (`BookTreeSearchBookSelected`).
+- **Size:** 130 lines.
+- **What:** the user's PDF books found by name (`pdfBooksNamed`: the books whose titles hold every word of the query,
+  points, cantillation, quotes and case left aside), in two searches:
+  - `myPdfBooksIn(search)`, the book tree's search state with them (`withMyPdfBooks`, request 51: "שיוכלו למצוא את
+    הספרים שלי בחיפוש ספרים"): before the library's books, under "הספרים שלי" and only their folders' categories, all
+    open, and first among the matches the arrows and Enter go through; the first of them is the best match unless the
+    library's is named exactly as typed. They came after the library's until 2026-11-15, when a long list found by
+    acronyms and beginnings of words (`ספר עם`: עמוס and its commentaries) hid them ("גם חיפוש שם ספר בעץ הספרים
+    יביא אותם", request 55).
+  - `myPdfBookSuggestions(typed)`, for the search bar (request 54): `pdfBookSuggestions`, 8 at most
+    (`MOST_SUGGESTED`) and none for a text shorter than the bar's books want (`MIN_BOOK_QUERY_LENGTH`), each a
+    `BookSuggestion` whose path is "הספרים שלי", its folders and its title (`categoriesById`).
+  Both read the library once a revision (`myPdfLibrary`).
+- **Reached from:** `CategoryTreePanel.kt` and `HomeView.kt`; opened through `BookContentViewModel.kt`
+  (`BookTreeSearchBookSelected`, `OpenBookById`).
 - **Follows:** Zayit's search result of the tree (`BookFilterResult`: roots, children, books, open categories, matches).
-- **Tests:** `MyPdfBooksSearchTest`; tried in the app ("ברכות" found two PDF books, one opened).
+- **Tests:** `MyPdfBooksSearchTest`; tried in the app ("ברכות" found two PDF books, one opened; "ספר עם" brought a PDF
+  book first in the tree and in the bar, and Enter opened it from both).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookFiles.kt`
 
@@ -3315,7 +3337,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookToc.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 187 lines.
+- **Size:** 190 lines.
 - **What:** `PdfBookToc(tabId, bookId, modifier)`, a PDF book's contents in the reader's own contents pane (request 49:
   "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים", in place of the field that went to a page), drawn by Zayit's
   `BookTocView` as the library's books' contents are: the PDF's own bookmarks (request 52, "אין תמיכה בתוכן עניינים"),
@@ -3326,7 +3348,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   (`TocUseCase.toggleTocEntry`, `loadRootToc`, `expandPathToTocEntry`). `PdfOutlineToc` and `pdfOutlineToc` turn the
   bookmarks into Zayit's `TocEntry` rows, numbered in the book's order: each one's page, the entries above it
   (`pathTo`) and under it (`below`, closed with it), and the entry read at a page (`entryAt`: the one that starts
-  nearest before it or on it, the last of those that start together); an untitled bookmark is named by its page.
+  nearest before it or on it, the last of those that start together); an untitled bookmark is named by its page. All
+  of them in the book's order too (`entries`), which `PdfTocSearch` searches, with `pageLabel` ("עמוד N").
 - **Reached from:** `BookTocPanel.kt`.
 - **Follows:** Zayit's contents pane (`BookTocView`'s list of entries and their children, `TocEntry`) and its
   `TocUseCase` for what opens and closes.
@@ -3360,6 +3383,23 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 - **Tests:** `PdfOutlineTest` (a PDF with every kind of bookmark, one without, a file that is none); tried in the app.
 - **Notes:** the binding's loader and dispatcher are internal, so PDFium is called once a book's reader opened it;
   its own threads call PDFium on a document each, as here.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfTocSearch.kt`
+
+- **Feature:** The user's PDF books.
+- **Size:** 77 lines.
+- **What:** `PdfTocSearch(pdfBooks, stateManager)`, the contents pane's search in the PDF book open in a reader (request
+  53: "למה אין חיפוש בתוכן עניינים?"), run as Zayit's `TocUseCase` runs a book's: `search(query)` filters the book's
+  whole contents with Zayit's `buildTocFilter` through a `PaneSearchRunner` of its own (the field's state, the
+  searches of successive keys cancelling each other), the contents being its bookmarks as the pane draws them
+  (`pdfOutlineToc`), or its pages when it has none ("12" finds "עמוד 12", before 120 to 129); `open(id)` closes the
+  field and goes to the match's page (`PdfBookStore.goToPage`). Each says whether the book open is a PDF book, so the
+  view model hands every other book to Zayit's use case. The contents are read once a book (kept when not empty).
+- **Reached from:** `BookContentViewModel.kt`.
+- **Follows:** Zayit's `TocUseCase.search` and `selectSearchEntry` (the same field, the same filter, the double Enter
+  guarded); its `PaneSearchRunner`.
+- **Tests:** `PdfOutlineTest` (a bookmark by its words, a page by its number); tried in the app ("סימן ב" found and
+  gone to, "12" in a book without bookmarks).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
@@ -3440,10 +3480,12 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooksSearchTest.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 62 lines.
+- **Size:** 80 lines.
 - **What:** a book whose title holds every word of the query found, its points and case left aside, under its
-  folders, after the library's matches; only the folders of the books found opened, the first book the best match
-  when the library has none; a query no book answers leaving the result as it is.
+  folders, before the library's matches and the best match; the library's book named exactly as typed staying the
+  best match; only the folders of the books found opened, the first book the best match when the library has none;
+  a query no book answers leaving the result as it is; the search bar's suggestions, their paths under "הספרים שלי"
+  and none for a letter alone.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
@@ -3451,13 +3493,15 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOutlineTest.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 143 lines.
+- **Size:** 168 lines.
 - **What:** a PDF's bookmarks read by PDFium with their titles in Hebrew, nested, and their pages, from a PDF of five
   pages written by the test: a destination of its own (an explicit page, a named one), a GoTo action, an action to
   another file and one to the web (no page), a title's spaces and line breaks, and a loop back to the first bookmark;
   a PDF without bookmarks, a file that is no PDF and a missing one, none; the bookmarks as the contents pane shows them
   (`pdfOutlineToc`: the ids in the book's order, the children, the last child, an untitled one, the entries above and
-  under one, the entry read at each page). The binding opens the file first, as a book's reader does (its reader's
+  under one, the entry read at each page); the contents searched as a book's (`entries` in the book's order, Zayit's
+  `buildTocFilter` finding a bookmark by its words, its lone chapter left out as Zayit's search leaves it, and a page by
+  its number before 120 to 129). The binding opens the file first, as a book's reader does (its reader's
   constructor is internal, reached as `PdfOpenBench` reaches it).
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (a temporary folder; Kotlin Test, backtick names).
