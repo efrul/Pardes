@@ -1,0 +1,6 @@
+jbig2-gen.pdf, 16.3 MB, density 1.5
+today: the file opened at the switch       first ink   466 ms, final   659 ms   (finals: 663 676 659 617 628 561)
+today, two pages side by side              first ink   875 ms, final   931 ms   (finals: 967 931 899 904 921 949)
+the reader kept, the amud drawn ahead      first ink   427 ms, final   427 ms   (finals: 427 438 421 452 410 423)
+cut: the amud's image read at the switch   first ink    46 ms, final    46 ms   (finals: 48 40 42 46 46 39)
+cut: the amud's image decoded ahead        first ink    27 ms, final    27 ms   (finals: 25 28 27 24 25 31)

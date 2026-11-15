@@ -61,7 +61,7 @@ import kotlin.math.roundToInt
 private const val MOST_DRAWN_PX = 1600
 
 /** The rows after the first in view whose pages are drawn ahead, at the width they are shown at. */
-private const val ROWS_AHEAD = 2
+internal const val ROWS_AHEAD = 2
 
 /** The space between two pages, one under the other or side by side. */
 private val PAGE_GAP = 8.dp
@@ -95,11 +95,10 @@ internal fun firstPageOf(
 internal fun spreadPageWidth(room: Dp): Dp = (room - PAGE_GAP) / 2
 
 /**
- * [reader]'s pages in rows ([rowCount], the items of [listState]), each page [pageWidth] wide, centered in a list as
- * wide as the view (wider rows scroll sideways), each under its [title] when one is given; their text selectable when
- * [selectableText]. A page wider than [MOST_DRAWN_PX] pixels is drawn at that width and scaled up, and the pages of the
- * [ROWS_AHEAD] rows after the first in view are drawn ahead of time, at their width, so that a page scrolled to is
- * mostly drawn already.
+ * [reader]'s pages in rows ([PageRows]), each page [pageWidth] wide, each under its [title] when one is given; their
+ * text selectable when [selectableText]. A page wider than [MOST_DRAWN_PX] pixels is drawn at that width and scaled up,
+ * and the pages of the [ROWS_AHEAD] rows after the first in view are drawn ahead of time, at their width, so that a
+ * page scrolled to is mostly drawn already.
  */
 @Composable
 internal fun PdfPageList(
@@ -113,9 +112,7 @@ internal fun PdfPageList(
 ) {
     val pages = reader.pageCount
     val rows = rowCount(pages, spreads)
-    val density = LocalDensity.current
-    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val drawnPx = with(density) { pageWidth.roundToPx() }.coerceAtMost(MOST_DRAWN_PX)
+    val drawnPx = with(LocalDensity.current) { pageWidth.roundToPx() }.coerceAtMost(MOST_DRAWN_PX)
     LaunchedEffect(reader, drawnPx, spreads) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
@@ -125,6 +122,28 @@ internal fun PdfPageList(
                 }
             }
     }
+    PageRows(pages, listState, pageWidth, modifier, spreads, title) { page, width ->
+        PdfPage(reader, page, Modifier.width(width).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
+    }
+}
+
+/**
+ * [pages] pages in rows ([rowCount], the items of [listState]), each [pageWidth] wide and drawn by [page], centered in
+ * a list as wide as the view (wider rows scroll sideways), each under its [title] when one is given: a PDF's pages
+ * drawn by its reader ([PdfPageList]), or a tractate's scan from its pages cut into images.
+ */
+@Composable
+internal fun PageRows(
+    pages: Int,
+    listState: LazyListState,
+    pageWidth: Dp,
+    modifier: Modifier = Modifier,
+    spreads: Boolean = false,
+    title: ((page: Int) -> String)? = null,
+    page: @Composable (page: Int, width: Dp) -> Unit,
+) {
+    val rows = rowCount(pages, spreads)
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     BoxWithConstraints(modifier.fillMaxSize()) {
         // Narrower than the view, the pages are centered in a list as wide as it, which the wheel scrolls anywhere
         val rowWidth = if (spreads) pageWidth * 2 + PAGE_GAP else pageWidth
@@ -139,13 +158,13 @@ internal fun PdfPageList(
             ) {
                 items(rows) { row ->
                     if (!spreads) {
-                        TitledPage(reader, row, pageWidth, selectableText, title)
+                        TitledPage(pages, row, pageWidth, title, page)
                     } else {
                         // The right page first in a view laid out from the right, the left one first otherwise
                         Row(horizontalArrangement = Arrangement.spacedBy(PAGE_GAP)) {
                             val (right, left) = row * 2 - 1 to row * 2
-                            TitledPage(reader, if (rtl) right else left, pageWidth, selectableText, title)
-                            TitledPage(reader, if (rtl) left else right, pageWidth, selectableText, title)
+                            TitledPage(pages, if (rtl) right else left, pageWidth, title, page)
+                            TitledPage(pages, if (rtl) left else right, pageWidth, title, page)
                         }
                     }
                 }
@@ -155,22 +174,22 @@ internal fun PdfPageList(
 }
 
 /** The pages of [row] ([rowCount]). */
-private fun pagesOf(
+internal fun pagesOf(
     row: Int,
     pages: Int,
     spreads: Boolean,
 ): List<Int> = if (spreads) listOf(row * 2 - 1, row * 2).filter { it in 0 until pages } else listOf(row)
 
-/** The page [page], [width] wide, under its [title] when one is given; its room, empty, for a page the PDF has not. */
+/** The page [index], [width] wide, under its [title] when one is given; its room, empty, for a page there is not. */
 @Composable
 private fun TitledPage(
-    reader: PdfReaderState,
-    page: Int,
+    pages: Int,
+    index: Int,
     width: Dp,
-    selectableText: Boolean,
     title: ((page: Int) -> String)?,
+    page: @Composable (page: Int, width: Dp) -> Unit,
 ) {
-    if (page !in 0 until reader.pageCount) {
+    if (index !in 0 until pages) {
         Spacer(Modifier.width(width))
         return
     }
@@ -178,7 +197,7 @@ private fun TitledPage(
         if (title != null) {
             Box(Modifier.fillMaxWidth().height(PAGE_TITLE_HEIGHT), contentAlignment = Alignment.BottomCenter) {
                 Text(
-                    title(page),
+                    title(index),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -186,7 +205,7 @@ private fun TitledPage(
                 )
             }
         }
-        PdfPage(reader, page, Modifier.width(width).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
+        page(index, width)
     }
 }
 

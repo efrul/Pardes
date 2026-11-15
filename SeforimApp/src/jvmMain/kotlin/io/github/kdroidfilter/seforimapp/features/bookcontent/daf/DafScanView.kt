@@ -26,15 +26,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
-import dev.nucleusframework.pdfium.PdfReaderState
 import dev.nucleusframework.pdfium.rememberPdfReaderState
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfPageList
 import io.github.kdroidfilter.seforimapp.features.pdf.firstPageOf
+import io.github.kdroidfilter.seforimapp.features.pdf.rememberPdfiumLoaded
 import io.github.kdroidfilter.seforimapp.features.pdf.rowCount
 import io.github.kdroidfilter.seforimapp.features.pdf.rowOf
 import io.github.kdroidfilter.seforimapp.features.pdf.spreadPageWidth
@@ -187,7 +188,21 @@ private fun NoScan(
     }
 }
 
-/** The scan [file], opened, at the amud of the tab's place. */
+// The cut of a scan as its view waits for it: being read or begun, ready, or none (PDFium not called here)
+private sealed interface CutLoad {
+    data object Opening : CutLoad
+
+    data object None : CutLoad
+
+    data class Ready(
+        val cut: ScanCut,
+    ) : CutLoad
+}
+
+/**
+ * The scan [file] at the amud of the tab's place: drawn from its pages cut into images ([DafScanPages], request 56),
+ * or, where PDFium cannot be called by Pardes, by the binding's reader as before ([BindingScan]).
+ */
 @Composable
 private fun ScanPages(
     file: File,
@@ -198,7 +213,59 @@ private fun ScanPages(
     scrollToLineTimestamp: Long,
     onScroll: (lineId: Long) -> Unit,
 ) {
+    val graph = LocalAppGraph.current
+    // PDFium loaded by the binding, if no PDF was opened yet, before the cut asks it for the scan
+    val loaded = rememberPdfiumLoaded()
+    val cut by produceState<CutLoad>(CutLoad.Opening, file, loaded) {
+        value =
+            when (loaded) {
+                null -> CutLoad.Opening
+                false -> CutLoad.None
+                true -> runSuspendCatching { graph.dafScanPages.open(file) }.getOrNull()?.let(CutLoad::Ready) ?: CutLoad.None
+            }
+    }
+    val placed = rememberPlaced(file, place)
+    when (val state = cut) {
+        // Nothing drawn for the moment the cut is read: the page follows in the next frames
+        CutLoad.Opening -> Box(Modifier.fillMaxSize())
+        CutLoad.None -> BindingScan(file, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
+        is CutLoad.Ready ->
+            if (placed) {
+                ScanList(state.cut.pages, book, place, zoom, lineId, scrollToLineTimestamp, onScroll) { listState, width, spreads, title ->
+                    ScanPageList(file, state.cut, listState, width, spreads = spreads, title = title)
+                }
+            } else {
+                Box(Modifier.fillMaxSize())
+            }
+    }
+}
+
+// Whether the page the scan opens at is known: the amud of the tab's place, set in [place]
+@Composable
+private fun rememberPlaced(
+    file: File,
+    place: ScanPlace,
+): Boolean {
     val repository = LocalAppGraph.current.repository
+    var placed by remember(file) { mutableStateOf(false) }
+    LaunchedEffect(file) {
+        place.page = place.topLineId?.let { amudOfLine(repository, it) }?.let(::scanPageOf) ?: 0
+        placed = true
+    }
+    return placed
+}
+
+/** The scan [file] read whole and drawn by the binding's reader, where Pardes cannot call PDFium itself. */
+@Composable
+private fun BindingScan(
+    file: File,
+    book: Book,
+    place: ScanPlace,
+    zoom: Float,
+    lineId: Long?,
+    scrollToLineTimestamp: Long,
+    onScroll: (lineId: Long) -> Unit,
+) {
     val reader = rememberPdfReaderState()
     var failure by remember(file) { mutableStateOf<String?>(null) }
     var opened by remember(file) { mutableStateOf(false) }
@@ -208,12 +275,7 @@ private fun ScanPages(
             .onSuccess { opened = true }
             .onFailure { failure = it.message ?: it::class.simpleName }
     }
-    // The page the scan opens at: the amud of the tab's place
-    var placed by remember(file) { mutableStateOf(false) }
-    LaunchedEffect(file) {
-        place.page = place.topLineId?.let { amudOfLine(repository, it) }?.let(::scanPageOf) ?: 0
-        placed = true
-    }
+    val placed = rememberPlaced(file, place)
     val error = failure ?: reader.error?.message
     when {
         error != null ->
@@ -221,23 +283,30 @@ private fun ScanPages(
                 Text(stringResource(Res.string.daf_scan_failed, error), Modifier.padding(24.dp))
             }
         !opened || !placed -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else -> ScanList(reader, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
+        else ->
+            ScanList(reader.pageCount, book, place, zoom, lineId, scrollToLineTimestamp, onScroll) { listState, width, spreads, title ->
+                PdfPageList(reader, listState, width, spreads = spreads, selectableText = false, title = title)
+            }
     }
 }
 
+/**
+ * The scan's [pages] in their list ([pagesList]: its state, each page's width, two side by side or not, and each one's
+ * title), at the page of [place], following the tab and telling it where it is.
+ */
 @Composable
 private fun ScanList(
-    reader: PdfReaderState,
+    pages: Int,
     book: Book,
     place: ScanPlace,
     zoom: Float,
     lineId: Long?,
     scrollToLineTimestamp: Long,
     onScroll: (lineId: Long) -> Unit,
+    pagesList: @Composable (listState: LazyListState, width: Dp, spreads: Boolean, title: (Int) -> String) -> Unit,
 ) {
     val graph = LocalAppGraph.current
     val repository = graph.repository
-    val pages = reader.pageCount
     val spreads by graph.appSettings.pageSpreadsFlow
         .collectAsState()
     val rows = rowCount(pages, spreads)
@@ -261,14 +330,7 @@ private fun ScanList(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val room = maxWidth - PAGE_PADDING * 2
         val base = if (spreads) min(spreadPageWidth(room), MOST_PAGE_WIDTH) else min(room, MOST_PAGE_WIDTH)
-        PdfPageList(
-            reader = reader,
-            listState = listState,
-            pageWidth = base * zoom,
-            spreads = spreads,
-            selectableText = false,
-            title = { page -> "${book.title} ${amudTitle(amudOfScanPage(page))}" },
-        )
+        pagesList(listState, base * zoom, spreads) { page -> "${book.title} ${amudTitle(amudOfScanPage(page))}" }
     }
 }
 
@@ -336,7 +398,7 @@ private suspend fun LazyListState.reveal(row: Int) {
 }
 
 /** The amud (`35b`) of the line [lineId], by its entry in the table of contents, else by its reference. */
-private suspend fun amudOfLine(
+internal suspend fun amudOfLine(
     repository: SeforimRepository,
     lineId: Long,
 ): String? =

@@ -1,0 +1,6 @@
+g4.pdf, 25.6 MB, density 1.0
+today: the file opened at the switch       first ink   395 ms, final   395 ms   (finals: 407 353 400 388 395 367)
+today, two pages side by side              first ink   457 ms, final   475 ms   (finals: 460 463 511 481 475 461)
+the reader kept, the amud drawn ahead      first ink   266 ms, final   266 ms   (finals: 266 266 270 257 184 266)
+cut: the amud's image read at the switch   first ink    29 ms, final    29 ms   (finals: 34 29 22 30 23 26)
+cut: the amud's image decoded ahead        first ink    18 ms, final    18 ms   (finals: 17 16 20 18 18 16)

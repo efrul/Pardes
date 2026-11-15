@@ -28,13 +28,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (264 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (273 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (774 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (790 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -268,17 +268,21 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/graalvm/reachability-metadata.json`
 
-- **Change:** modified, +39 −0 lines. Feature: Semantic search, the open smart siddur, PDF reading experiment.
+- **Change:** modified, +62 −0 lines. Feature: Semantic search, the open smart siddur, PDF reading experiment, Scan view.
 - **What:** eight resource globs for ONNX Runtime's native libraries on `win-x64`, `linux-aarch64`, `osx-aarch64` and
   `osx-x64` (`onnxruntime` and `onnxruntime4j_jni`), beside the `linux-x64` ones Zayit already lists, followed by two
   for PDFium's on `win32-x86-64` (`pdfium.dll`, `pdfiumjni.dll`, from `dev.nucleusframework:pdfium-jvm`); and three for
   the open siddur's data in the `:siddur-open` jar (`open-siddur/amud-annotations.tsv`, `amud-inline.tsv`,
-  `readings.tsv.gz`), before `org/sqlite/…`.
+  `readings.tsv.gz`), before `org/sqlite/…`. At the end of `foreign`'s downcalls, two shapes more:
+  `void* (int, int, int, void*, int)` and `void (void*, void*, int, int, int, int, int, int)`, PDFium's
+  `FPDFBitmap_CreateEx` and `FPDF_RenderPageBitmap` as Pardes calls them (request 56, `PdfiumCalls`).
 - **Why:** the GraalVM native image carries only the resources this file names, so without them Pardes's semantic
   search had no ONNX Runtime on those platforms (`20e2fa81`, `0c107b56`), and the open siddur's engine would find
   none of its tables, which it reads as resources (`AmudAnnotations`, `TorahReadings`). PDFium's loader extracts its
   libraries from the classpath when they are not beside the app: the Windows x64 ones only, the PDF experiment's
-  testers' builds being Windows ones (its JAR holds every platform's, some 48 MB).
+  testers' builds being Windows ones (its JAR holds every platform's, some 48 MB). The native image calls through the
+  Foreign Function API only the shapes registered here: a tractate's scan is cut by Pardes's own call of PDFium,
+  whose other calls (the bookmarks, the page's size) have shapes listed already.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** two blocks inserted inside a 2,900-line generated list; a conflict if Zayit regenerates the file.
 - **Smaller:** already minimal.
@@ -373,7 +377,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +18 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books.
+- **Change:** modified, +20 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -384,20 +388,21 @@ The entries of this section by kind:
     KDoc line.
   - `abstract val libraryCategories: LibraryCategories`, after Zayit's `searchEngine`, with its import, and
     `abstract val commentatorDefaults: CommentatorDefaults` after it, with its import.
-  - After them, `abstract val pdfBookStore: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore` and
-    `abstract val dafScans: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScans`, with a comment marked
-    "Pardes:".
+  - After them, `abstract val pdfBookStore: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore`,
+    `abstract val dafScans: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScans` and
+    `abstract val dafScanPages: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanPages` (request 56),
+    with a two-line comment marked "Pardes:".
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
   lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
   starts, and the commentators list reads the reader's default; the book tree and a PDF book's tab reach the user's
-  PDF books, and the daf view a tractate's scan.
+  PDF books, and the daf view a tractate's scan and its pages cut into images.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** nine lines among Zayit's declarations, and three imports.
+- **Merge risk:** eleven lines among Zayit's declarations, and three imports.
 - **Smaller:** already minimal.
 - **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`.
-- **Notes:** the first two types, `libraryLinks`', `pdfBookStore`'s and `dafScans`' are written fully qualified instead of imported, unlike every other line of the file:
+- **Notes:** the first two types, `libraryLinks`', `pdfBookStore`'s, `dafScans`' and `dafScanPages`' are written fully qualified instead of imported, unlike every other line of the file:
   fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
@@ -964,14 +969,15 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +52 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by side.
+- **Change:** modified, +57 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by side.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
   - With a daf shown (`uiState.content.dafView` of a Bavli tractate), `DafMarksButton()` stands in the diacritics
     button's place: the printed page has no nikud to hide, and the daf's marks are shown or hidden there. Under the
-    "צורת הדף" toggle, for every Bavli tractate, `DafScanButton(selected = scanView, onClick = ToggleScanView)`, with a
-    comment marked "Pardes:": the tractate's scan in place of its text or its daf (requests 41 and 46).
+    "צורת הדף" toggle, for every Bavli tractate, `DafScanButton(selected = scanView, onClick = ToggleScanView, book,
+    lineId)`, with a comment marked "Pardes:": the tractate's scan in place of its text or its daf (requests 41 and 46),
+    and the page of the line read (`primarySelectedLineId`, else `anchorId`) made ready ahead (request 56).
   - Under `ZoomButtons`, `PageSpreadsButton(uiState)`, with a comment marked "Pardes:" and its import: two pages side
     by side, shown while the tab shows pages (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס ומינוס").
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
@@ -1726,7 +1732,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +356 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +359 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 333 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -1776,8 +1782,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     removal, the scan again); and under a comment after them, a tractate's
     scan: `daf_scan` ("סריקה") and its tooltip (in place of the text or the daf), `daf_scan_missing` and its hint
     (where the scan is looked for), `…_choose` (the folder of scans) and `…_failed`; under a comment after them, the
-    settings' card of the scans, `daf_scans_*` (8: its title and what it is, the folder chosen or none, its two
-    buttons, Otzaria's folders found or none); and under a comment after them, two pages side by side:
+    settings' card of the scans, `daf_scans_*` (11: its title and what it is, the folder chosen or none, its two
+    buttons, Otzaria's folders found or none, and the pages cut into images: their heading, what they are and their
+    room, their removal); and under a comment after them, two pages side by side:
     `page_spreads` ("שני עמודים") and its tooltip.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
@@ -3360,22 +3367,20 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOutline.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 174 lines.
+- **Size:** 124 lines.
 - **What:** `PdfOutlineEntry(title, page, children)` and `PdfOutlines.read(file)`, a PDF file's own contents, its
   outline (request 52): Nucleus's binding reads no bookmarks (its `PdfiumBridge` has no such function, nor has its
-  latest release), so the private `PdfiumOutline` calls PDFium's own functions of `fpdf_doc.h` through Java's Foreign
-  Function API (`Linker.downcallHandle`), in the PDFium library the binding loaded (`SymbolLookup.loaderLookup()`, the
-  libraries `System.load` loaded for the app's class loader; else the library by its name, which the system gives as
-  the one loaded), looked for again until found: `FPDF_InitLibrary` (done by the binding before its first document,
+  latest release), so the private `PdfiumOutline` calls PDFium's own functions of `fpdf_doc.h` (`PdfiumCalls`, which
+  since request 56 holds the calls of Pardes's own, the bookmarks' and the pages drawn into pixels): `FPDF_InitLibrary` (done by the binding before its first document,
   skipped by PDFium then), `FPDF_LoadDocument` (a document of its own, which reads from the file where it is only
   what the outline needs; its path in UTF-8, as PDFium takes it on every system), `FPDF_GetPageCount`,
   `FPDFBookmark_GetFirstChild`/`GetNextSibling` (the tree), `GetTitle` (UTF-16, its spaces and line breaks one space),
   `GetDest` (which takes the action's destination when the bookmark has none of its own) and `GetAction` with
   `FPDFAction_GetType` (a bookmark that acts goes to a page of the book only by GoTo, not to another file's),
   `FPDFDest_GetDestPageIndex`, `FPDF_CloseDocument`. C's `long` (32 bits on Windows) is called with its own types on
-  each system (`longIsInt`), every call exact (`invokeExact`). A malformed file's bookmarks are bounded (each seen
-  once by its address, 20,000 at most, 64 deep). One file at a time, off the UI thread
-  (`Dispatchers.IO.limitedParallelism(1)`); anything failing gives no bookmarks, and the pages are listed.
+  each system (`PdfiumCalls.longIsInt`), every call exact (`invokeExact`). A malformed file's bookmarks are bounded
+  (each seen once by its address, 20,000 at most, 64 deep). On PDFium's thread of Pardes (`PdfiumCalls.dispatcher`);
+  anything failing gives no bookmarks, and the pages are listed.
 - **Reached from:** `PdfBookToc.kt`.
 - **Follows:** Pardes's experiment (`PdfReaderTool.kt`) and Nucleus's binding for PDFium, whose library it calls;
   Zayit's style for the rest (an `object`, KDoc, `runCatching`). The native image needs nothing more: the calls'
@@ -3383,6 +3388,41 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 - **Tests:** `PdfOutlineTest` (a PDF with every kind of bookmark, one without, a file that is none); tried in the app.
 - **Notes:** the binding's loader and dispatcher are internal, so PDFium is called once a book's reader opened it;
   its own threads call PDFium on a document each, as here.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfiumCalls.kt`
+
+- **Feature:** The user's PDF books, Scan view.
+- **Size:** 124 lines.
+- **What:** `PdfiumCalls`, PDFium's functions that Pardes calls itself, through Java's Foreign Function API
+  (`Linker.downcallHandle`), in the library Nucleus's binding ships and loads: the binding reads no bookmarks and draws
+  a page only into its own composable (requests 52 and 56). The library is found by `SymbolLookup.loaderLookup()` (the
+  libraries `System.load` loaded for the app's class loader), else by its name, which the system gives as the one
+  loaded; looked for again until found (`functions()`). `Functions`: `FPDF_InitLibrary`, `FPDF_LoadDocument`,
+  `FPDF_CloseDocument`, `FPDF_GetPageCount`, a page's `FPDF_LoadPage`, `FPDF_ClosePage`, `FPDF_GetPageWidthF`/`HeightF`,
+  `FPDFBitmap_CreateEx`, `FPDF_RenderPageBitmap`, `FPDFBitmap_Destroy`, and the bookmarks' functions of `fpdf_doc.h`.
+  `cLong`/`longIsInt`: C's long, 32 bits on Windows. Every call on `dispatcher` (`Dispatchers.IO.limitedParallelism(1)`),
+  one at a time, on documents of Pardes's own, as the binding calls PDFium on each of its threads with a document of
+  each. `rememberPdfiumLoaded()`: when the binding has not loaded PDFium yet, it is asked to, by opening `EMPTY_PDF`
+  (one empty page, its cross-reference table built) with a `rememberPdfReaderState`, as it opens a book: its loader,
+  its dispatcher and its `openPdfDocument` are internal to it.
+- **Reached from:** `PdfOutline.kt`, `PdfiumDocument.kt`, `DafScanPages.kt`, `DafScanView.kt` (`rememberPdfiumLoaded`).
+- **Follows:** Nucleus's binding, whose library it calls (its `PdfiumLibraryLoader` loads it); the shapes of its calls
+  are registered for the native image (`src/graalvm/reachability-metadata.json`).
+- **Tests:** `PdfOutlineTest`, `PdfiumDocumentTest`, `DafScanPagesTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfiumDocument.kt`
+
+- **Feature:** Scan view.
+- **Size:** 108 lines.
+- **What:** `PdfiumDocument`, a PDF opened by PDFium for Pardes (`open(file)`: `FPDF_LoadDocument` with its path, which
+  reads from the file only what it draws), its `pageCount`, a page's `size(index)` in points without drawing it, and
+  `render(index, width)`: the page drawn in gray at a width of pixels, as tall as its proportions (four times its width
+  at most), into a bitmap whose pixels Pardes holds (`FPDFBitmap_CreateEx` with `FPDFBitmap_Gray`, rows of a multiple
+  of four bytes, white first), as a `GrayPage(width, height, stride, pixels)` with `gray(x, y)`. Every call on
+  `PdfiumCalls.dispatcher` (request 56).
+- **Reached from:** `DafScanPages.kt`.
+- **Follows:** PDFium's own drawing of a page (`fpdfview.h`), as Nucleus's binding draws it into its own bitmaps.
+- **Tests:** `PdfiumDocumentTest`; tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfTocSearch.kt`
 
@@ -3462,7 +3502,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfPageList.kt`
 
 - **Feature:** The user's PDF books, Scan view, Two pages side by side.
-- **Size:** 244 lines.
+- **Size:** 263 lines.
 - **What:** `PdfPageList(reader, listState, pageWidth, modifier, spreads, selectableText, title)`: a PDF's pages in
   rows, a page each or two side by side as a book read right to left opens (`rowCount`, `rowOf`, `firstPageOf`: the
   first page alone on the left, then each odd page on the right and the next on the left; in a tractate's scan, amud b
@@ -3471,8 +3511,11 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   from Otzaria and Zayita (request 43): a page is drawn no wider than `MOST_DRAWN_PX` (1,600 pixels) and scaled up
   beyond (`drawnAtMost`, a layout that measures at that width and places with a scaled layer), and the pages of the
   two rows after the first in view are drawn ahead at their width (`PdfReaderState.prefetch`, `RenderQuality.FULL`).
-  Also `spreadPageWidth`, `pageListKey` (Page Up and Down, Ctrl + Home and End) and `turnPage`.
-- **Reached from:** `PdfBookView.kt`, `DafScanView.kt`.
+  Also `spreadPageWidth`, `pageListKey` (Page Up and Down, Ctrl + Home and End) and `turnPage`. Its rows are
+  `PageRows(pages, listState, pageWidth, modifier, spreads, title, page)`, each page drawn by the composable given
+  (request 56): `PdfPageList` draws them with the binding's `PdfPage`, and a tractate's scan from its pages cut into
+  images (`ScanPageList`); `pagesOf` and `ROWS_AHEAD` are shared with it.
+- **Reached from:** `PdfBookView.kt`, `DafScanView.kt` (the binding's way), `ScanPageList.kt` (`PageRows`).
 - **Follows:** Pardes's PDF book view, from which it was taken; Otzaria's 2,000 pixels on a page's long side and its
   pages drawn ahead, and Zayita's prefetch (ideas only: neither's code is used).
 - **Tests:** `PdfPageListTest` (the rows); tried in the app (a PDF book and a scan, a page a row and two).
@@ -3503,6 +3546,19 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   `buildTocFilter` finding a bookmark by its words, its lone chapter left out as Zayit's search leaves it, and a page by
   its number before 120 to 129). The binding opens the file first, as a book's reader does (its reader's
   constructor is internal, reached as `PdfOpenBench` reaches it).
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (a temporary folder; Kotlin Test, backtick names).
+- **Tests:** it is one (unit; PDFium's library for the system, from the binding's JAR).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfiumDocumentTest.kt`
+
+- **Feature:** Scan view.
+- **Size:** 99 lines.
+- **What:** a page of a PDF written by the test drawn by PDFium at 400 pixels, as tall as its proportions, a black
+  box's pixels dark and the paper white, and its size in points; a page the PDF has not, a width of nothing and a file
+  that is no PDF drawing nothing. `loadPdfium()` has the binding load PDFium as a book's reader does (its reader's
+  constructor reached as `PdfOpenBench` reaches it), and `pdfOfPages(count)` writes the PDF, for `DafScanPagesTest`
+  too.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (a temporary folder; Kotlin Test, backtick names).
 - **Tests:** it is one (unit; PDFium's library for the system, from the binding's JAR).
@@ -3585,29 +3641,35 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafScansCard.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 85 lines.
+- **Size:** 120 lines.
 - **What:** `DafScansCard()`, Settings › צורת הדף: "סריקות הגמרא", what the folder of scanned tractates is (a PDF a
   tractate, named after it, its pages the amudim from ב., looked in before Otzaria's), the folder chosen or none, a
-  button that chooses another and one that lets it go, and Otzaria's folders found on this computer, or none.
+  button that chooses another and one that lets it go, and Otzaria's folders found on this computer, or none; and the
+  scans' pages cut into images (`CutPages`, request 56): what they are, the room they take (`DafScanPages.bytes`,
+  `formatBytes`), and a button that removes them (`clear`).
 - **Reached from:** `DafSettingsScreen.kt`.
 - **Follows:** Pardes's settings cards (`PdfBooksCard`, `LibraryLocationCard`: their frame, `isolatedPath`).
-- **Tests:** tried in the app (a folder chosen, a tractate's scan read from it, let go).
+- **Tests:** tried in the app (a folder chosen, a tractate's scan read from it, let go; the cut pages' 20 MB shown and
+  removed).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanButton.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 31 lines.
-- **What:** `DafScanButton(selected, onClick, modifier)`, the end bar's button of a Bavli tractate ("סריקה", the
-  `ScanPage` icon, its tooltip): the tractate's scan in place of its text or its daf, while selected.
+- **Size:** 68 lines.
+- **What:** `DafScanButton(selected, onClick, modifier, book, lineId)`, the end bar's button of a Bavli tractate
+  ("סריקה", the `ScanPage` icon, its tooltip): the tractate's scan in place of its text or its daf, while selected.
+  While it is not, `ScanPageAhead` decodes the scan's page of the line read and the next into memory, 300 ms after
+  the line rests (`AHEAD_AFTER_MS`), when the scan was cut (`DafScanPages.prepare`), so that the switch draws them in
+  the next frame (request 56, "שהמעבר בין טקסט לדף יהיה בשבריר שניה").
 - **Reached from:** `VerticalBars.kt`, under the daf's own button, which sends `ToggleScanView` and passes the tab's
-  `scanView`.
+  `scanView`, the book and its line.
 - **Follows:** Zayit's `SelectableIconButtonWithToolip` buttons of the end bar, as the daf's own beside it.
 - **Tests:** tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 345 lines.
+- **Size:** 407 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -3622,13 +3684,118 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   changes. Without a scan, a word on where it is looked for and a button that chooses the folder of scans
   (`pickScansFolder`, FileKit's directory picker off the event loop, `DafScans.setFolder`), as the settings do; the line
   over a scan's foot that changed its file is gone, moved to Settings › צורת הדף as a folder (request 48). Only the tab
-  in view composes the pages and holds the file (`LocalTabSelected`), as a PDF book.
+  in view composes the pages and holds the file (`LocalTabSelected`), as a PDF book. Since request 56 the pages are
+  drawn from the scan cut into images (`ScanPages`: `rememberPdfiumLoaded`, then `DafScanPages.open` and
+  `ScanPageList`), with nothing drawn for the moment the cut is read; where PDFium cannot be called by Pardes, by the
+  binding's reader as before (`BindingScan`, the file read whole). `ScanList(pages, …, pagesList)` takes the pages'
+  count and the list that draws them; `rememberPlaced` finds the amud of the tab's place; `amudOfLine` is shared with
+  `DafScanButton`.
 - **Reached from:** `BookContentView.kt` (a `DafMode` of the scan, request 46).
 - **Follows:** `DafView`'s seams with the text view (`DafControl`, `openAt`, `onScroll`) and its titles and widths, and
-  Pardes's `PdfPageList` for the pages.
+  Pardes's `PdfPageList` and `ScanPageList` for the pages.
 - **Tests:** `DafScansTest` (the pages and amudim), `PdfPageListTest` (the rows); tried in the app (Berakhot from a
   sample Otzaria from the text and from the daf, two pages, back to the text at its amud; Shabbat, which has no daf's
-  layout, with no scan).
+  layout, with no scan; request 56: Berakhot's first switch, its pages cut in some five seconds, the next switches
+  drawn at once, two pages, Berakhot 50a first when its cut was removed).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPages.kt`
+
+- **Feature:** Scan view.
+- **Size:** 315 lines.
+- **What:** `DafScanPages`, a Talmud tractate's scans cut into an image a page (request 56, request 42 asked again on
+  2026-11-14 and the recommendations of docs/scan-speed taken on 2026-11-15, "מה עם ההמלצות של הצגה מהירה"):
+  - `open(scan)`: the cut as kept beside its pages (`ScanCut`: the scan's path, length and time, its pages, their width
+    and the first one's height, each page's height once cut), read from its `cut.json`, or begun (PDFium's page count
+    and first page's size, no page drawn); a scan changed, or a page's file gone, is cut again; its cutting started
+    when a page is missing. Null when PDFium cannot read it.
+  - The cut, in the background (`@StructuredScope`), one scan at a time, the one shown last: each page drawn by PDFium
+    2,000 pixels wide (`CUT_WIDTH`) in gray (`PdfiumDocument.render`), written as a PNG of one bit a pixel
+    (`BitonalPng`, written beside and renamed), the pages asked for first (the last asked first), then the others
+    from the one cut last, around to the start; the index written every eight pages and when the cut ends
+    (`finish`, through `invokeOnCompletion`: the document closed on PDFium's thread).
+  - `image(scan, page)`: the page decoded off the UI thread into gray (Skia's `Codec` into a `GRAY_8` bitmap, 6 MB at
+    2,000 by 3,000), the last twelve kept in memory (`shownImage`); null while it is not cut, and it is then asked for
+    first. `revision` goes up as each page is cut, for the views that wait for one. `prepare(scan, pages)` decodes
+    the pages cut into memory (the page read while the text is shown).
+  - `bytes()` and `clear()`, for the settings' card.
+  - Each scan's folder in `pardes-scans` beside the library (`DIR_NAME`, `databasePathProvider`, else
+    `LibraryLocation.currentDir`), through `ScanCutFolder`.
+- **Reached from:** `AppGraph.kt` (`dafScanPages`), `DafScanView.kt`, `ScanPageList.kt`, `DafScanButton.kt`,
+  `DafScansCard.kt`.
+- **Follows:** Zayit's `@Inject @SingleIn(AppScope::class)` classes and Pardes's `PdfBookStore` (a scope of its own,
+  `@StructuredScope`); `DafLayouts` for a folder beside the library; docs/scan-speed's recommendations (cut at the
+  user's, one bit at 2,000 pixels, drawn by Pardes, the page read ready ahead; the library reached by FFM rather than
+  a copy of the binding, as the bookmarks proved it works in the native image).
+- **Tests:** `DafScanPagesTest` (a scan cut and read back by another store, cut again when changed, a file that is no
+  PDF, the pages removed); tried in the app (Berakhot's 125 pages cut in some five seconds, 20 MB).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanCutFolder.kt`
+
+- **Feature:** Scan view.
+- **Size:** 63 lines.
+- **What:** `ScanCutFolder(root)`, where the scans' cuts are kept (request 56): `all()` (`pardes-scans` beside the
+  library), a scan's folder (`of`: its file's name, characters other than letters, digits, `_` and `-` as `_`, and a
+  hash of its path, as two scans of a tractate may be on the computer), a page's image (`page`), its index read
+  (`read`: a `ScanCut` of the file as it is now, its format and its pages' count checked, a page whose image is gone
+  not cut) and written (`write`), and `writeAtomically` (written beside, then renamed).
+- **Reached from:** `DafScanPages.kt`.
+- **Follows:** `DafLayouts`' folder beside the library; Zayit's `kotlinx.serialization` JSON.
+- **Tests:** `DafScanPagesTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BitonalPng.kt`
+
+- **Feature:** Scan view.
+- **Size:** 81 lines.
+- **What:** `BitonalPng.encode(page)`, a gray page as a PNG of one bit a pixel (black below `THRESHOLD`, 128, white
+  from it): its signature, `IHDR` (bit depth 1, grayscale), one `IDAT` of its rows unfiltered and deflated (eight
+  pixels a byte from the high bit), `IEND`, each chunk with its CRC (request 56: Skia writes no such PNG).
+- **Reached from:** `DafScanPages.kt`.
+- **Follows:** the PNG specification; docs/scan-speed's finding that one bit at 2,000 pixels keeps a page's smallest
+  print (some 140 KB a page).
+- **Tests:** `DafScanPagesTest` (a page written and read back by Skia).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanPageList.kt`
+
+- **Feature:** Scan view.
+- **Size:** 85 lines.
+- **What:** `ScanPageList(scan, cut, listState, pageWidth, modifier, spreads, title)`, a tractate's scan drawn by
+  Pardes from its pages cut into images, in `PageRows` (a page a row or two side by side, titles): each `ScanPage` an
+  `Image` of its bitmap, smoothed as it is drawn smaller (`FilterQuality.Medium`), on the page's own proportions
+  (`ScanCut.heightOf`), white with a wait while it is cut (`DafScanPages.revision`); the images of the two rows after
+  the first in view decoded ahead (`prepare`). No wait and no preview, as Nucleus's `PdfPage` has (request 56).
+- **Reached from:** `DafScanView.kt`.
+- **Follows:** Pardes's `PdfPageList` (its rows and pages ahead); docs/scan-speed's way of drawing a cut page.
+- **Tests:** tried in the app (a page a row and two, the switch from the text drawn at once).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPagesTest.kt`
+
+- **Feature:** Scan view.
+- **Size:** 111 lines.
+- **What:** a gray page written as a PNG of one bit a pixel (its signature, its `IHDR`, read back by Skia); a scan of
+  three pages cut 2,000 pixels wide in the background, a page waited for and decoded, every page cut, and opened again
+  by another store from its index with nothing cut again; a scan changed cut again, a missing file and one that is no
+  PDF with no cut, and the pages removed with their folder.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (a temporary folder, a relaxed `mockk` of the settings).
+- **Tests:** it is one (unit; PDFium's library for the system).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanSwitchBench.kt`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 335 lines.
+- **What:** a `main` that times the switch from a tractate's text to its scan as the reader waits for it, in a Compose
+  scene that Skia renders on the CPU, its frames read back every 8 ms at most: from the switch to the frame that stays
+  (and to the first with a quarter of its ink), six switches a way, the median. The ways: today's (`DafScanReader`'s
+  `ScanPages` and `ScanList`: a reader of its own, the file read and opened at the switch, `PdfPageList`), today's two
+  pages side by side, the reader kept above the switch with its amud asked for ahead (`prefetch`, all that the
+  binding's public API allows), and an image an amud cut beforehand, read and decoded at the switch or decoded ahead
+  while the text is shown. Its arguments: the scan, the folder of its cut pages (docs/scan-speed/tools/CutPages.java),
+  the screen's density.
+- **Reached from:** run by hand (docs/scan-speed/README.md).
+- **Follows:** `ScopeFlowBench` (a bench's `main`, run by docs/scope-search-speed's init script) and `DafPageTest` (an
+  `ImageComposeScene` laid out right to left).
+- **Tests:** a bench. Brought from the branch of its measurement (claude/necklaus-pdf-viewer-performance-gydsry,
+  `e1b02e45`) with request 56, which builds the way it found fastest.
 
 #### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/ScanPage.kt`
 
@@ -4220,10 +4387,11 @@ which comes first and needs no free space for it. Hooks: `main.kt`,
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/database/LibraryLocation.kt`
 
 - **Feature:** Library location.
-- **Size:** 530 lines.
+- **Size:** 532 lines.
 - **What:** `LibraryLocation`, where the library is and where it goes: `installDir` (the app's databases folder unless
   the user chose another), `chooseInstallDir` with its `Problem`s, `move` (a rename on one drive, a checked copy across
-  drives, the semantic pack's folders carried along, `NAMES`, `LEFTOVERS`), the copies kept (`copies`, `isKeptCopy`,
+  drives, the semantic pack's folders carried along, `NAMES` (with `pardes-daf` and, since request 56, the
+  scans' pages cut into images, `pardes-scans`), `LEFTOVERS`), the copies kept (`copies`, `isKeptCopy`,
   `deleteCopy`, switching back), a move killed half way undone or finished, `freeBytes`/`totalBytes`, `currentDir`.
 - **Reached from:** `main.kt` (through `PendingLibraryMove`), the onboarding's `DownloadUseCase`, `ExtractUseCase`,
   `AvailableDiskSpaceUseCase`, `InstallLocationRow`, `DatabaseCleanupUseCase.kt`, `DataSettingsViewModel.kt`,
@@ -6238,7 +6406,7 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (774 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (790 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -6450,6 +6618,27 @@ the description where something needs saying.
 | `docs/scope-search-speed/tools/bench.init.gradle` | A Gradle init script that adds `:SeforimApp:runBench`, a `main` of the JVM tests run on the library named (`-PbenchMain`, `-PbenchArgs`, `-PbenchDb`, `-PbenchQuery`), with a JFR recording on demand (`-PbenchJfr`): the app's build has no task for its benches. | Pardes's own |
 | `docs/scope-search-speed/tools/compare.py` | Two runs of ScopeFlowBench side by side: per scope and step, the median and slowest time to the first results. | Pardes's own |
 | `docs/scope-search-speed/tools/table.py` | One run of ScopeFlowBench as a table: per scope and step, the cold first round and the warm rounds, to the first results and to the end. | Pardes's own |
+
+#### The scan's speed (docs/scan-speed/)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `docs/scan-speed/README.md` | Hebrew report (2026-11-14) for request 42, asked again that day ("שהמעבר בין טקסט לדף יהיה בשבריר שניה"): the switch from a tractate's text to its scan, timed from the click to the page drawn, on branch claude/sleepy-lovelace-k4c21z (`5eaedfb`, build 47). What was run (five synthetic tractates of 160 pages in a scan's encodings, Otzaria's own being out of this session's reach; the binding's own JNI calls step by step; Skia's encoders and decoders; ScanSwitchBench; timing lines in the app, not kept), what was found (today 0.3 to 0.7 s, two pages side by side up to 1 s, at every switch, as the file is closed at the text and opened again, and over a second at a session's first; the time in the drawing, not the file: PDFium decoding the whole scanned image at each drawing, the binding's PdfPage waiting 100 ms, drawing a preview that costs 40 to 78% of the page and queuing the next rows first; a PDF an amud saving only the opening; an image an amud drawn 29 to 46 ms after the click, 17 to 27 when decoded ahead; the formats' sizes and times, and the cost of cutting a tractate), the proposal (images cut on the user's computer in the background, 1-bit at 2,000 px, drawn by Pardes without the binding's PdfPage, the current amud kept ready while the text is read, the PDF opened only to cut, the Vilna pack shipped cut, the same drawing later for PDF books), the four ways to get a page's pixels from the binding (a fork with one public function, the recommended; the internal call with the compiler's error suppressed; Java's FFM; PdfPage in an offscreen scene), the user's decisions, what was not checked, and how to run the tools. | Pardes's own |
+| `docs/scan-speed/quality.png` | The same lines of a synthetic page drawn by PDFium at 1,100 px, cut 1-bit at 2,000 px and shown at 1,100, and cut 1-bit at 1,100 (binary). | Pardes's own; made by the tools |
+| `docs/scan-speed/runs/app.txt` | The timing lines of one run of the app (Berakhot, a stand-in Otzaria whose file is the JBIG2 tractate): from the click on "סריקה" to the page list's start, the session's first switch and eight more, with the switches back to the text. | Pardes's own; measured |
+| `docs/scan-speed/runs/cut.txt` | CutPages's lines: the cost of cutting an amud (PDFium's render, its gray, Skia's PNG) and its size, per encoding and width. | Pardes's own; measured |
+| `docs/scan-speed/runs/pdfium.txt` | PdfiumBench's lines on the five tractates and a one-page PDF. | Pardes's own; measured |
+| `docs/scan-speed/runs/skia.txt` | SkiaBench's lines at 1,100 and 1,600 px, and Skia's decoding of the 1-bit and 16-gray PNGs made outside it. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-g4-d1.txt` | ScanSwitchBench's lines on the G4 tractate at density 1. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-jbig2-gen-d1.5.txt` | ScanSwitchBench's lines on the generic JBIG2 tractate at density 1.5, its pages cut at 1,600 px. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-jbig2-gen-d1.txt` | ScanSwitchBench's lines on the generic JBIG2 tractate at density 1. | Pardes's own; measured |
+| `docs/scan-speed/runs/switch-jbig2-sym-d1.txt` | ScanSwitchBench's lines on the JBIG2 tractate with a symbol dictionary at density 1. | Pardes's own; measured |
+| `docs/scan-speed/tools/CutPages.java` | Cuts a scan into an image an amud: each page rendered by PDFium at a width through the binding's JNI bridge, its gray written as a PNG by Skia, with each step's cost and the images' size. | Pardes's own |
+| `docs/scan-speed/tools/PdfiumBench.java` | Times each step of the binding for a page of a scan through its own JNI bridge, the calls its PdfDocument makes: the opening (read, native copy, parse, form environment), a page's load and links, a preview at a quarter of the width, full renders at 1,100, 1,600 and 2,048 px, and the same page again. | Pardes's own |
+| `docs/scan-speed/tools/SkiaBench.java` | A scan's pages rendered by PDFium, encoded by Skia as a cache of amudim could keep them (PNG in gray and in color, WebP lossless and lossy, gray JPEG) and decoded again, each format's size and times; and Skia's decoding of PNGs made outside it, their gray written out for that. | Pardes's own |
+| `docs/scan-speed/tools/java.sh` | Compiles and runs one of the Java tools beside it against the jars of Gradle's cache (Nucleus's PDFium binding, skiko with its Linux natives, the Kotlin stdlib, coroutines), after one build of the app. | Pardes's own |
+| `docs/scan-speed/tools/make_pages.py` | Synthetic scans of Talmud pages laid out as a Vilna daf (the Gemara, Rashi, Tosafot, notes in the margins, a header) with real text of Berakhot 2a in culmus fonts, bitonal at 300 DPI with a scan's specks and ragged edges, each page's words shuffled. | Pardes's own |
+| `docs/scan-speed/tools/make_pdfs.py` | Tractates of those pages in a scan's encodings (JBIG2 with a symbol dictionary and generic, by jbig2enc; CCITT G4, by libtiff's tiff2pdf; gray JPEG at 300 and 150 DPI), an image stream a page as in a scanned book, and the first page alone in a PDF of its own. | Pardes's own |
 
 #### The search's measurements (docs/fusion-compare/)
 
