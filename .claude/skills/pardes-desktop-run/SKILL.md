@@ -37,7 +37,10 @@ $K/gradle.sh :SeforimApp:jvmTest ktlintCheck detekt     # every Gradle run here 
    `start.sh` writes `onboarding_finished`, `database_path` (the library's `seforim.db`), a region in Israel, and
    turns off the semantic pack prompt and the update check, which would open windows over the main one. It replaces
    what an earlier run saved there. More preferences, or other values, go in `PREFS`, as `key=value` words:
-   `PREFS="open_siddur=true daf_marks=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants.
+   `PREFS="open_siddur=true daf_marks=true" $K/start.sh`. The keys are `AppSettings.kt`'s `KEY_*` constants, or a
+   `SettingsGroup`'s `<prefix>.<name>`, whose JSON value goes in XML-escaped (a quote as `&quot;`:
+   `PREFS='daf_scans.folder=&quot;/home/user/pardes-rashi-ocr/data/pdf&quot;'`); a bare quote breaks the file, which
+   Java renames `IncorrectFormatPrefs.xml` and starts without.
 4. **The locale.** The container's locale is POSIX. With it, Gradle cannot write test classes whose names have
    non-ASCII characters (`InvalidPathException: Malformed input`), xdotool cannot type Hebrew, and window titles
    read `(failure in conversion from UTF8_STRING to ANSI_X3.4-1968)`. The scripts set `LC_ALL=C.UTF-8`

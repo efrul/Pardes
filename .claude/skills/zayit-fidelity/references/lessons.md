@@ -175,7 +175,15 @@ tools and the code did when it was written.
   - the native image calls only the shapes in `reachability-metadata.json`'s `foreign` downcalls: check each new one
     is there;
   - to try PDFium from plain Java in the container, run it with `LANG=C.UTF-8`, or a Hebrew path in its arguments is
-    mangled.
+    mangled;
+  - the binding's `openPdfDocument` and `PdfDocument` are internal too: PDFium is loaded by its public
+    `rememberPdfReaderState()` opening an empty PDF (`rememberPdfiumLoaded`), and a test reaches the reader's
+    constructor by reflection;
+  - a `limitedParallelism(1)` dispatcher runs one at a time but not on one thread: a confined `Arena` lives inside one
+    non-suspending block, never across a suspension.
+- **The structured-coroutines compiler plugin crashes on `withContext(NonCancellable …)` in a `finally`**
+  (`NoSuchMethodError: FirResolvedQualifier.getClassId()`, the file's `try` as its place, 2026-11-15): clean up through
+  `currentCoroutineContext().job.invokeOnCompletion { … }` launching on a scope of the class instead (`DafScanPages`).
 - **A third party's engine is a module of its own** (`siddur-open/` is the example):
   - a copy at a pinned commit, with its licence files, never a submodule (a release must build without another
     repository, and the source archive must hold it);

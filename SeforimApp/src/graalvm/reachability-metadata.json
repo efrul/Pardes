@@ -2835,6 +2835,29 @@
                     "void*",
                     "void*"
                 ]
+            },
+            {
+                "returnType": "void*",
+                "parameterTypes": [
+                    "int",
+                    "int",
+                    "int",
+                    "void*",
+                    "int"
+                ]
+            },
+            {
+                "returnType": "void",
+                "parameterTypes": [
+                    "void*",
+                    "void*",
+                    "int",
+                    "int",
+                    "int",
+                    "int",
+                    "int",
+                    "int"
+                ]
             }
         ],
         "upcalls": [

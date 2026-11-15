@@ -9,15 +9,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.formatBytes
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.pickScansFolder
 import io.github.kdroidfilter.seforimapp.features.settings.library.isolatedPath
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -28,6 +33,9 @@ import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_scans_choose
+import seforimapp.seforimapp.generated.resources.daf_scans_cut
+import seforimapp.seforimapp.generated.resources.daf_scans_cut_description
+import seforimapp.seforimapp.generated.resources.daf_scans_cut_remove
 import seforimapp.seforimapp.generated.resources.daf_scans_description
 import seforimapp.seforimapp.generated.resources.daf_scans_folder
 import seforimapp.seforimapp.generated.resources.daf_scans_no_folder
@@ -37,12 +45,13 @@ import seforimapp.seforimapp.generated.resources.daf_scans_remove
 import seforimapp.seforimapp.generated.resources.daf_scans_title
 import java.io.File
 
-// Pardes (requests 41 and 48 of docs/DESKTOP_STAGE2.md): where the tractates' scans are looked for, in the settings
-// rather than over the scan (the user's decision of 2026-11-13).
+// Pardes (requests 41, 48 and 56 of docs/DESKTOP_STAGE2.md): where the tractates' scans are looked for, in the settings
+// rather than over the scan (the user's decision of 2026-11-13), and their pages cut into images.
 
 /**
  * Settings › צורת הדף: where the tractates' scans are looked for (DafScans): the folder of scanned tractates the user
- * chose, with a button that chooses another and one that lets it go, and Otzaria's folders, found by themselves.
+ * chose, with a button that chooses another and one that lets it go, and Otzaria's folders, found by themselves; and
+ * the room their pages cut into images take (DafScanPages), with a button that removes them.
  */
 @Composable
 fun DafScansCard() {
@@ -81,5 +90,31 @@ fun DafScansCard() {
         Text(text = stringResource(Res.string.daf_scans_otzaria), fontSize = 13.sp)
         if (otzaria.isEmpty()) Text(stringResource(Res.string.daf_scans_no_otzaria), fontSize = 12.sp, color = info)
         for (dir in otzaria) Text(isolatedPath(dir.path), fontSize = 12.sp, color = info)
+        CutPages()
+    }
+}
+
+// The scans' pages cut into images beside the library (request 56): the room they take, and their removal
+@Composable
+private fun CutPages(modifier: Modifier = Modifier) {
+    val pages = LocalAppGraph.current.dafScanPages
+    val scope = rememberCoroutineScope()
+    var bytes by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(pages) { bytes = pages.bytes() }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = stringResource(Res.string.daf_scans_cut), fontSize = 13.sp)
+        Text(
+            text = stringResource(Res.string.daf_scans_cut_description, formatBytes(bytes)),
+            fontSize = 12.sp,
+            color = JewelTheme.globalColors.text.info,
+        )
+        if (bytes > 0) {
+            OutlinedButton(onClick = {
+                scope.launch {
+                    pages.clear()
+                    bytes = pages.bytes()
+                }
+            }) { Text(stringResource(Res.string.daf_scans_cut_remove)) }
+        }
     }
 }

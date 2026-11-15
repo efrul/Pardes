@@ -179,8 +179,13 @@ fun EndVerticalBar(
                         iconDescription = stringResource(Res.string.daf_view),
                         label = stringResource(Res.string.daf_view),
                     )
-                    // Pardes: the tractate's scan in place of its text or its daf (requests 41 and 46)
-                    DafScanButton(selected = uiState.content.scanView, onClick = { onEvent(BookContentEvent.ToggleScanView) })
+                    // Pardes: the tractate's scan in place of its text or its daf (requests 41 and 46), its page ready (56)
+                    DafScanButton(
+                        selected = uiState.content.scanView,
+                        onClick = { onEvent(BookContentEvent.ToggleScanView) },
+                        book = selectedBook,
+                        lineId = uiState.content.primarySelectedLineId ?: uiState.content.anchorId,
+                    )
                 }
             }
 //            SelectableIconButtonWithToolip(
