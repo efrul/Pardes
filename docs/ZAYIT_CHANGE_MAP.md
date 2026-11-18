@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (286 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (288 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2449,8 +2449,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
-- **Feature:** Daf view.
-- **Size:** 1399 lines.
+- **Feature:** Daf view, Pages zoomed at the pointer.
+- **Size:** 1432 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
@@ -2462,7 +2462,9 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   segment read at its top (`onScroll`, `DafIndex.gemaraAt`), it opens there (`openAt`, `openOn`: the line the segment
   begins on at the view's very top, an amud's first line at the amud's own top), stays where it was left when the tab's
   place is still its own (back from the text, which was not scrolled), and keeps the place at its top when its scale
-  changes (the zoom, the view's width, also while the text was shown: `DafScale`, `requestScrollToItem`).
+  changes (the zoom, the view's width, also while the text was shown: `DafScale`, `requestScrollToItem`); while the
+  pointer zooms it, the place under the pointer instead, down and sideways (`ZoomPivot`, `ZoomAnchor`: the sideways
+  scroll a `ScrollState` of each width, request 44 of `docs/DESKTOP_STAGE3_PLAN.md`).
   `DafControl.place` says where it is (`DafPlace`: that segment, whether the tab's selected line is in view, whether a
   comment is selected by a click on itself), for the text to open in the same state. Also the amud helpers (`isBavli`, `amudOf`, `amudIndex`, `amudTitle`,
   `firstLines`), the page's marks (`dafHighlight`: passage, segments, their comments), clicks
@@ -2487,8 +2489,9 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   (`DafMode`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
-- **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`; the
-  composables have no UI test.
+- **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`,
+  `ZoomPivotTest`; the composables have no UI test; request 44 tried in the app (Berakhot 2a zoomed in with Ctrl and
+  the wheel over a word of the Mishnah: the word stays where it was).
 - **Notes:** at 1,374 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
   parts (pages, review, missing layout, marks).
@@ -3758,8 +3761,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfPageList.kt`
 
-- **Feature:** The user's PDF books, Scan view, Two pages side by side.
-- **Size:** 299 lines.
+- **Feature:** The user's PDF books, Scan view, Two pages side by side, Pages zoomed at the pointer.
+- **Size:** 335 lines.
 - **What:** `PdfPageList(reader, listState, pageWidth, modifier, spreads, selectableText, title, first, count)`: a PDF's pages in
   rows, a page each or two side by side as a book read right to left opens (`rowCount`, `rowOf`, `firstPageOf`: the
   first page alone on the left, then each odd page on the right and the next on the left; in a tractate's scan, amud b
@@ -3774,7 +3777,9 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   (160 MB), the drawn pages the binding keeps for a PDF book and the binding's scan, where its own 64 MB let two pages
   side by side push those in view out. Its pages are drawn through `pageColors` (request 42 of stage 3), in the
   dark theme's colours. Its pages are `count` from the page `first` (a tractate's in a file of several, request 52 of
-  stage 3), the rows and titles counting from it.
+  stage 3), the rows and titles counting from it. While the pointer zooms the rows, the point under it stays where it
+  is, down and sideways (`PageRows`: `ZoomPivot`, `ZoomAnchor`, `rowParts`; the sideways scroll a `ScrollState` of each
+  width, request 44 of stage 3).
   Also `spreadPageWidth`, `pageListKey` (Page Up and Down, the arrows up and down a little of a view, `step` and
   `ARROW_STEP`, as asked on 2026-11-18 with the contents following the pages, request 45 of stage 3; Ctrl + Home and
   End) and `turnPage`. Its rows are
@@ -4293,6 +4298,47 @@ text as their ink and its panel as their paper, as the daf Pardes draws is in th
 - **Size:** 37 lines.
 - **What:** black drawn as the theme's text and white as its panel; a gray between them falling between them, and the
   alpha kept.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### Pages zoomed at the pointer
+
+Request 44 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "הגדלה באצבעות תהיה סביב המקום של הסמן". While Ctrl/Cmd with the
+wheel, a trackpad's pinch or two fingers zoom pages drawn as pages (a PDF book's, a tractate's scan, the daf Pardes
+draws), the point under the pointer stays under it, down and sideways, rather than the view's top; the buttons and keys
+still keep the top. The zoom itself is Zayit's (`rememberTextZoom`, which says no place): the views watch where the
+pointer zooms themselves. Hooks: none in Zayit's files; in Pardes's `PdfPageList.kt` (`PageRows`) and `DafView.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/ZoomPivot.kt`
+
+- **Feature:** Pages zoomed at the pointer.
+- **Size:** 238 lines.
+- **What:** `ZoomPivot` (where the pointer zoomed last, in the pixels of the view it watches, and `now()`: that place
+  while a zoom's events go on, 400 ms at most since the last, else null) and `Modifier.zoomPivot` (it watches Ctrl/Cmd
+  with the wheel or a trackpad's swipe, a trackpad's pinch (`ScaleChange`) and the centre of two fingers, in the
+  initial pass, consuming nothing). The geometry, pure: `RowPart` (a part of a row across the view, a page that scales
+  or a gap that does not), `alongScaled`, `alongAt` and `sidewaysAnchored` (the sideways scroll that brings a place of
+  a row, centered in a list as wide as the view or as the row, back under the pointer once its pages are wider, and
+  that place exact, which a narrow row or the list's end may keep from it), `ListItem` and `downAnchored` (the item and
+  offset of `LazyListState.requestScrollToItem` that keep a point where it is once the items' heights past a page's
+  title grow). `ZoomAnchor`, what a list of zoomed rows keeps between frames: the width last laid out, the sideways
+  state, and the exact places last asked down and sideways (`keepDown`, `keepSideways`), so that a gesture's frames do
+  not add up their rounding, as the daf's own `DafScale` does.
+- **Reached from:** `PdfPageList.kt` (`PageRows`), `DafView.kt`.
+- **Follows:** Pardes's `DafScale` (the exact place kept between a zoom's frames, `requestScrollToItem` from a
+  `SideEffect`) and Zayit's `TextZoom` for the gestures it watches.
+- **Tests:** `ZoomPivotTest`; tried in the app (Berakhot's scan zoomed in with Ctrl and the wheel over "גליון הש"ס":
+  the heading at the same pixel before and after; the daf's word likewise).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/ZoomPivotTest.kt`
+
+- **Feature:** Pages zoomed at the pointer.
+- **Size:** 60 lines.
+- **What:** along a row, a page's parts scale and a gap or a margin does not; sideways, the point under the pointer
+  back under it as a page grows past the view, and back as it narrows, as near as a narrow row or the list's end
+  allow; down, a point in a page, in a title and in the gap after an item, none above the items; a zoom in and out
+  again back at the same place.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
