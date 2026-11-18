@@ -94,6 +94,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFind
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanReader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafView
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindListing
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.AnchorTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentAnchorIndex
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentSegment
@@ -687,6 +689,19 @@ fun BookContentView(
     // A new query or mode starts over from the viewport, and so does a session reopened
     LaunchedEffect(persistedFindQuery, smartModeEnabled) { currentMatch = null }
     LaunchedEffect(showFind) { if (!showFind) currentMatch = null }
+    // Pardes: the find told to its results pane while the bar shows it (request 55 of stage 3)
+    val shownFind =
+        findResults.takeIf {
+            showFind &&
+                persistedFindQuery.length >= 2 &&
+                it.query == persistedFindQuery &&
+                it.smart == smartModeEnabled &&
+                it.bookId == bookId
+        }
+    LaunchedEffect(shownFind, liveMatch) {
+        appGraph.bookFindHub.publish(tabId, shownFind?.let { FindListing(bookId, it.query, it.smart, it.matches, liveMatch) })
+    }
+    DisposableEffect(tabId) { onDispose { appGraph.bookFindHub.publish(tabId, null) } }
 
     // Theme-derived inputs to the HTML annotation, hoisted here so the off-screen prefetcher
     // can build keys/annotations identical to those produced inside LineItem.
@@ -868,6 +883,14 @@ fun BookContentView(
     val navigateToMatchLatest by rememberUpdatedState<(Boolean) -> Unit> { navigateToMatch(it, scope) }
     LaunchedEffect(tabId) {
         appSettings.findStepRequests(tabId).collect { forward -> navigateToMatchLatest(forward) }
+    }
+    // Pardes: a line of the results pane gone to, at its first match: the next from the match before it (request 55)
+    LaunchedEffect(tabId) {
+        appGraph.bookFindHub.goTo.filter { it.first == tabId }.collect { (_, lineIndex) ->
+            val matches = findResults.matches
+            currentMatch = matches.nextAfterLine(lineIndex - 1, forward = true)?.let { matches.next(it, forward = false) }
+            navigateToMatchLatest(true)
+        }
     }
 
     // Ctrl+Home / Ctrl+End: first or last line of the whole book, loaded or not. The line count
@@ -1386,6 +1409,7 @@ fun BookContentView(
 
         // Find-in-page bar overlay, top end as in browsers
         if (showFind) {
+            val findListShown by appSettings.flow(FindResultsSettings.shown).collectAsState()
             // Counter only once the results are those of the query as typed (none while computing)
             val results =
                 findResults.takeIf {
@@ -1413,6 +1437,9 @@ fun BookContentView(
                     // Also while on without the addon (set by opening a search result), so it can be turned off
                     onToggleSmartMode =
                         { appSettings.toggleFindSmartMode(tabId) }.takeIf { installedSemanticSearch != null || smartModeEnabled },
+                    // Pardes: every match in a pane beside the text (request 55 of stage 3)
+                    listShown = findListShown,
+                    onToggleList = { appSettings[FindResultsSettings.shown] = !findListShown },
                 )
                 LaunchedEffect(findState.text, showFind) {
                     val q = findState.text.toString()

@@ -45,6 +45,8 @@ import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabSearchViewMod
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookTextMenus
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsPane
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LayoutState
@@ -79,6 +81,7 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.book_list
 import seforimapp.seforimapp.generated.resources.commentaries
 import seforimapp.seforimapp.generated.resources.commentator_pane
+import seforimapp.seforimapp.generated.resources.find_results_pane
 import seforimapp.seforimapp.generated.resources.links
 import seforimapp.seforimapp.generated.resources.notes_pane
 import seforimapp.seforimapp.generated.resources.references
@@ -177,6 +180,16 @@ sealed class ReaderPane(
         navigation = false,
     )
 
+    // Every match of the book's find, under its contents' entries (request 55 of docs/DESKTOP_STAGE3_PLAN.md): while
+    // the find bar searches, sized by the dock
+    data object FindResults : ReaderPane(
+        "find-results",
+        Res.string.find_results_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 3, extent = 320.dp),
+        toggle = BookContentEvent.ToggleFindResults,
+        navigation = false,
+    )
+
     /**
      * A commentator split off the commentaries pane ([name], DetachedCommentators), in a pane of its own: torn off
      * the commentaries pane by its column's header, it opens where it is dropped, and from there it moves as any line
@@ -208,7 +221,7 @@ sealed class ReaderPane(
 
     companion object {
         /** The panes every reader window has, in their declaration order. */
-        val standard: List<ReaderPane> by lazy { listOf(Tree, Toc, Notes, Targum, Comments, Sources, BookDetails, References) }
+        val standard: List<ReaderPane> by lazy { listOf(Tree, Toc, Notes, Targum, Comments, Sources, BookDetails, References, FindResults) }
 
         /** The commentator pane whose satellite in window [groupId] is [satelliteId], null for any other satellite. */
         fun commentatorOf(
@@ -532,9 +545,15 @@ private fun selectedTabDemand(
                 val uiState by viewModel.uiState.collectAsState()
                 val bookDetails by LocalAppGraph.current.appSettings.bookDetailsPaneFlow
                     .collectAsState()
+                val findResults = rememberFindResultsShown(tabId)
                 PaneDemand(
                     tabId,
-                    desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails),
+                    desiredPanes(
+                        uiState,
+                        isSearch = destination is TabsDestination.Search,
+                        bookDetails = bookDetails,
+                        findResults = findResults,
+                    ),
                     viewModel::onEvent,
                     uiState.layout,
                 )
@@ -669,7 +688,7 @@ private fun writeBack(
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage = ratio
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage = ratio
         // Never planned (see plannedExtents): their size is the dock's own
-        ReaderPane.BookDetails, ReaderPane.References, is ReaderPane.Commentator -> Unit
+        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, is ReaderPane.Commentator -> Unit
     }
 }
 
@@ -681,7 +700,7 @@ private fun ReaderPane.position(layout: LayoutState): Float =
         ReaderPane.Notes -> layout.notesSplitState.positionPercentage
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage
-        ReaderPane.BookDetails, ReaderPane.References, is ReaderPane.Commentator -> 0f
+        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, is ReaderPane.Commentator -> 0f
     }
 
 /** The first pane's minimum of this pane's split (the text, for the line panes), in dp. */
@@ -702,6 +721,7 @@ private fun desiredPanes(
     uiState: BookContentState,
     isSearch: Boolean,
     bookDetails: Boolean,
+    findResults: Boolean = false,
 ): Set<ReaderPane> =
     buildSet {
         // A book's details, or a search's selected result's: one setting for every tab
@@ -716,6 +736,8 @@ private fun desiredPanes(
             if (uiState.content.showCommentaries) add(ReaderPane.Comments)
             if (uiState.content.showSources) add(ReaderPane.Sources)
             if (uiState.content.showReferences) add(ReaderPane.References)
+            // The book's find results, while its find bar searches and the pane is asked for
+            if (findResults && !isSearch) add(ReaderPane.FindResults)
             // Each split-off commentator in his pane, whether the commentaries pane is open or not
             DetachedCommentators.names(uiState.content.detachedCommentators).forEach { add(ReaderPane.Commentator(it)) }
         }
@@ -800,6 +822,8 @@ private fun BookPaneBody(
             }
             ReaderPane.References ->
                 ReferencesPane(uiState = uiState, onEvent = onEvent, diacritics = diacritics, modifier = modifier)
+            ReaderPane.FindResults ->
+                FindResultsPane(destination.tabId, uiState.navigation.selectedBook?.id ?: 0L, modifier)
             ReaderPane.Targum, ReaderPane.Comments, ReaderPane.Sources -> {
                 val book = uiState.navigation.selectedBook ?: return@BookTextMenus
                 val connections = tabUi.connections(book.id)
@@ -950,3 +974,16 @@ private fun SatelliteWorkspace.bottomPaneOutside(docked: SatellitePlacement.Dock
 }
 
 private const val GRIP_DP = 5
+
+/** Whether the tab [tabId] shows its find's results in their pane: asked for, and its find bar open on a query. */
+@Composable
+private fun rememberFindResultsShown(tabId: String): Boolean {
+    val appSettings = LocalAppGraph.current.appSettings
+    val asked by appSettings.flow(FindResultsSettings.shown).collectAsState()
+    val open by appSettings.findBarOpenFlow(tabId).collectAsState()
+    val query by appSettings.findQueryFlow(tabId).collectAsState("")
+    return asked && open && query.length >= MIN_FIND_QUERY
+}
+
+// The find's shortest query, as the text finds it
+private const val MIN_FIND_QUERY = 2

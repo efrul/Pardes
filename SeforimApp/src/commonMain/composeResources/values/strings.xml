@@ -1241,5 +1241,11 @@
     <string name="search_mode_general_tooltip">המילים וצורותיהן, בלי חיפוש לפי משמעות</string>
     <string name="search_mode_hybrid_tooltip">המילים וגם לפי משמעות, יחד: החיפוש הרגיל</string>
     <string name="search_mode_hybrid_missing">החיפוש לפי משמעות לא מותקן. אפשר להוריד אותו בהגדרות › ניהול נתונים</string>
+    <!-- Pardes: every match of a book's find in a pane beside the text (request 55 of stage 3, FindResultsPane) -->
+    <string name="find_results_pane">תוצאות החיפוש בספר</string>
+    <string name="find_results_toggle">כל התוצאות בחלונית</string>
+    <string name="find_results_none">חיפוש בספר (Ctrl+F) יציג כאן את כל התוצאות, לפי תוכן העניינים.</string>
+    <string name="find_results_count">%1$d תוצאות ב־%2$d שורות</string>
+    <string name="find_results_by_meaning">%1$d שורות קרובות במשמעות</string>
 
 </resources>

@@ -23,6 +23,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.icons.MaterialSymbolsMagicButton
+import io.github.kdroidfilter.seforimapp.icons.TableOfContents
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -49,6 +51,7 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.find_close
 import seforimapp.seforimapp.generated.resources.find_next_match
 import seforimapp.seforimapp.generated.resources.find_previous_match
+import seforimapp.seforimapp.generated.resources.find_results_toggle
 import seforimapp.seforimapp.generated.resources.find_smart_mode
 import seforimapp.seforimapp.generated.resources.search_in_page
 
@@ -77,6 +80,9 @@ fun FindInPageBar(
     // Meaning-based find; null hides its toggle where it isn't available
     smartModeEnabled: Boolean = false,
     onToggleSmartMode: (() -> Unit)? = null,
+    // Pardes: every match in a pane beside the text (request 55 of stage 3), shown or not; null hides its toggle
+    listShown: Boolean? = null,
+    onToggleList: () -> Unit = {},
 ) {
     val shape = RoundedCornerShape(8.dp)
     val focusRequester = remember { FocusRequester() }
@@ -119,6 +125,8 @@ fun FindInPageBar(
                         when (ev.key) {
                             Key.Enter, Key.NumPadEnter -> {
                                 when {
+                                    // Pardes: Alt+Enter shows or hides every match in its pane (request 55 of stage 3)
+                                    ev.isAltPressed && listShown != null -> onToggleList()
                                     ev.isCtrlPressed -> onActivate()
                                     ev.isShiftPressed -> onEnterPrev()
                                     else -> onEnterNext()
@@ -157,6 +165,8 @@ fun FindInPageBar(
             modifier = Modifier.padding(horizontal = 8.dp).height(20.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Pardes: every match in a pane beside the text (request 55 of stage 3)
+            if (listShown != null) FindListToggle(listShown, onToggleList)
             if (onToggleSmartMode != null) {
                 val smartLabel = stringResource(Res.string.find_smart_mode)
                 ShortcutTooltip(smartLabel) {
@@ -255,5 +265,24 @@ fun syncFindField(
     field.edit {
         replace(0, length, persisted)
         selection = TextRange(0, length)
+    }
+}
+
+// Pardes (request 55 of stage 3): the toggle of the pane that lists every match, beside the bar's other actions
+@Composable
+private fun FindListToggle(
+    shown: Boolean,
+    onToggle: () -> Unit,
+) {
+    val label = stringResource(Res.string.find_results_toggle)
+    ShortcutTooltip(label, "Alt+Enter") {
+        ToggleableIconButton(value = shown, onValueChange = { onToggle() }, focusable = false) {
+            Icon(
+                imageVector = TableOfContents,
+                contentDescription = label,
+                modifier = Modifier.size(16.dp),
+                tint = if (shown) JewelTheme.globalColors.outlines.focused else JewelTheme.globalColors.text.info,
+            )
+        }
     }
 }

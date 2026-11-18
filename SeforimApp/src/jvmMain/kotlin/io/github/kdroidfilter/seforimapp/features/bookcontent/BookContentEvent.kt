@@ -173,6 +173,9 @@ sealed interface BookContentEvent {
     /** Shows or hides the book-details pane (in every tab: one setting). */
     data object ToggleBookDetails : BookContentEvent
 
+    /** Pardes: shows or hides the pane of a book's find results (in every tab: one setting; request 55 of stage 3). */
+    data object ToggleFindResults : BookContentEvent
+
     data object CycleDiacritics : BookContentEvent
 
     data class ContentScrolled(
