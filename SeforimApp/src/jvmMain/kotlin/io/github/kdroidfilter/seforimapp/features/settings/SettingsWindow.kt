@@ -70,6 +70,10 @@ private fun NucleusApplicationScope.SettingsWindowView(
     ) {
         val settingsWindowState =
             rememberWindowState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(700.dp, 500.dp))
+        // A minimized window draws no frame, so the effect inside it waits: brought back from here, it draws again
+        LaunchedEffect(reopened) {
+            if (reopened > 0) settingsWindowState.isMinimized = false
+        }
         JewelDecoratedWindow(
             onCloseRequest = onClose,
             title = stringResource(Res.string.settings),
