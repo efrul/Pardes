@@ -141,6 +141,8 @@ internal data class BookSuggestion(
     val book: BookModel,
     val path: List<String>,
     val exactAcronym: Boolean = false,
+    // Pardes: a book of the author the text names (request 41 of stage 3)
+    val ofAuthor: Boolean = false,
 )
 
 /** A row of the book-stage list; see [catBookRows] for their order. */
@@ -178,6 +180,8 @@ internal sealed interface CatBookRow {
  * before the categories and the acronyms named so too (`רשי`, `מהרשא`): Tab on the name typed lists the author's books.
  * The base books whose titles the text begins come right after the text search (`שמואל`: שמואל א, שמואל ב), before
  * the other authors and categories, when they are few ([MAX_BEGUN_BOOKS]): a text that begins many names none of them.
+ * Pardes: the books of the author named as typed ([BookSuggestion.ofAuthor]), all of them, come right after the
+ * categories named so (`רמבן`: his folders, then his books; request 41 of docs/DESKTOP_STAGE3_PLAN.md).
  */
 internal fun catBookRows(
     query: String,
@@ -190,12 +194,13 @@ internal fun catBookRows(
     textSearchFirst: Boolean = false,
 ): ImmutableList<CatBookRow> {
     val key = query.searchKey()
+    val (authorBooks, listedBooks) = books.partition { it.ofAuthor }
     val (exactCategories, otherCategories) = categories.partition { it.title.searchKey() == key }
     val (exactAuthors, otherAuthors) =
         authors.partition { author ->
             listOfNotNull(author.name, AuthorNames.display(author.name), author.alias).any { it.searchKey() == key }
         }
-    val (namedBooks, otherBooks) = books.partition { it.exactAcronym || it.book.title.searchKey() == key }
+    val (namedBooks, otherBooks) = listedBooks.partition { it.exactAcronym || it.book.title.searchKey() == key }
     val (titledBooks, acronymBooks) = namedBooks.partition { it.book.title.searchKey() == key }
     val typedTitle =
         otherBooks.firstOrNull()?.takeIf { book ->
@@ -215,6 +220,7 @@ internal fun catBookRows(
         typedTitle?.let { add(CatBookRow.Book(it)) }
         (exactAuthors + bookAuthors).mapTo(this) { CatBookRow.Author(it) }
         exactCategories.mapTo(this) { CatBookRow.Category(it) }
+        authorBooks.mapTo(this) { CatBookRow.Book(it) }
         acronymBooks.mapTo(this) { CatBookRow.Book(it) }
         if (textSearch && !textSearchFirst) add(CatBookRow.TextSearch)
         begunBooks.mapTo(this) { CatBookRow.Book(it) }
@@ -232,7 +238,8 @@ private const val MAX_BEGUN_BOOKS = 5
 
 /**
  * In a book, the other books and categories [query] names, to add to its search: the categories named exactly as typed
- * first (`משנה תורה`: the category, before the books whose titles begin so), then the books, then the other categories.
+ * first (`משנה תורה`: the category, before the books whose titles begin so), then the books (the author's named so
+ * first, request 41 of stage 3), then the other categories.
  */
 internal fun tocAddRows(
     query: String,
@@ -603,7 +610,7 @@ internal fun UnifiedSearchBar(
     val mappedBookSuggestionsForBar =
         searchUi.bookSuggestions
             .map { bs ->
-                BookSuggestion(bs.book, bs.path, bs.exactAcronym)
+                BookSuggestion(bs.book, bs.path, bs.exactAcronym, bs.ofAuthor)
             }.toImmutableList()
     // Pardes: the user's PDF books the text names, before the library's other books (request 54)
     val barBookSuggestions = (myPdfBookSuggestions(referenceSearchState.text) + mappedBookSuggestionsForBar).toImmutableList()
