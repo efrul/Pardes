@@ -22,6 +22,7 @@ import io.github.kdroidfilter.seforimapp.features.pdf.PageRows
 import io.github.kdroidfilter.seforimapp.features.pdf.ROWS_AHEAD
 import io.github.kdroidfilter.seforimapp.features.pdf.pagesOf
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
@@ -51,7 +52,8 @@ internal fun ScanPageList(
     LaunchedEffect(scan, spreads) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
-            .collect { first -> pages.prepare(scan, (first + 1..first + ROWS_AHEAD).flatMap { pagesOf(it, cut.pages, spreads) }) }
+            // The rows ahead of the latest place only: a scroll that flies on leaves the ones it passed (request 48)
+            .collectLatest { first -> pages.prepare(scan, (first + 1..first + ROWS_AHEAD).flatMap { pagesOf(it, cut.pages, spreads) }) }
     }
     PageRows(cut.pages, listState, pageWidth, modifier, spreads, title) { page, width -> ScanPage(scan, cut, page, width) }
 }

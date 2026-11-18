@@ -3703,7 +3703,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   (`pageRequests`), request 49. A bar: "עמוד N מתוך M" (the first page read in the row at the top), and with `inTab`
   (build 45's tab of its own, which has no contents pane nor end bar) a field that goes to the page typed (Enter, then
   it is emptied) and the zoom's buttons (their levels, `zoomStep`), and the caller's actions. The keys: `pageListKey`. It opens at its place, and a new list at the page read at the top when the rows
-  change (`Top`), and tells its place 400 ms after a move ends, and as it leaves when it moved since.
+  change (`Top`), and tells its place 400 ms after a move ends, and as it leaves when it moved since. The binding
+  keeps `PAGES_CACHE_BYTES` of drawn pages (request 48 of stage 3).
 - **Reached from:** `PdfBookReader.kt`.
 - **Follows:** Pardes's experiment (`PdfReaderTool.kt`) for the binding; Zayit's `BookContentView` for the page keys
   and its `TextZoom` for the pointer's zoom; Pardes's daf for the zoom it shares.
@@ -3750,7 +3751,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfPageList.kt`
 
 - **Feature:** The user's PDF books, Scan view, Two pages side by side.
-- **Size:** 273 lines.
+- **Size:** 294 lines.
 - **What:** `PdfPageList(reader, listState, pageWidth, modifier, spreads, selectableText, title)`: a PDF's pages in
   rows, a page each or two side by side as a book read right to left opens (`rowCount`, `rowOf`, `firstPageOf`: the
   first page alone on the left, then each odd page on the right and the next on the left; in a tractate's scan, amud b
@@ -3758,7 +3759,12 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   its title when one is given, centered in a list as wide as the view and scrolled sideways past it. Its speed, learnt
   from Otzaria and Zayita (request 43): a page is drawn no wider than `MOST_DRAWN_PX` (1,600 pixels) and scaled up
   beyond (`drawnAtMost`, a layout that measures at that width and places with a scaled layer), and the pages of the
-  two rows after the first in view are drawn ahead at their width (`PdfReaderState.prefetch`, `RenderQuality.FULL`).
+  two rows after the first in view are drawn ahead at their width (`PdfReaderState.prefetch`, `RenderQuality.FULL`),
+  once the pages rest (`PREFETCH_REST`, 150 ms), in the way they moved, a row with two pages a row: the binding cannot
+  call a drawing back once asked, and a scroll that flew by drew every row it passed before those in view, which stayed
+  blank (request 48 of stage 3: "ובדפדוף מהיר, בעיקר בשני עמודים, לפעמים נתקע ולא מוצג כלום"). `PAGES_CACHE_BYTES`
+  (160 MB), the drawn pages the binding keeps for a PDF book and the binding's scan, where its own 64 MB let two pages
+  side by side push those in view out.
   Also `spreadPageWidth`, `pageListKey` (Page Up and Down, the arrows up and down a little of a view, `step` and
   `ARROW_STEP`, as asked on 2026-11-18 with the contents following the pages, request 45 of stage 3; Ctrl + Home and
   End) and `turnPage`. Its rows are
@@ -3768,7 +3774,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 - **Reached from:** `PdfBookView.kt`, `DafScanView.kt` (the binding's way), `ScanPageList.kt` (`PageRows`).
 - **Follows:** Pardes's PDF book view, from which it was taken; Otzaria's 2,000 pixels on a page's long side and its
   pages drawn ahead, and Zayita's prefetch (ideas only: neither's code is used).
-- **Tests:** `PdfPageListTest` (the rows); tried in the app (a PDF book and a scan, a page a row and two).
+- **Tests:** `PdfPageListTest` (the rows); tried in the app (a PDF book and a scan, a page a row and two; request
+  48: Page Down held and the wheel spun through a PDF book, two pages a row).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooksSearchTest.kt`
 
@@ -3923,7 +3930,7 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 480 lines.
+- **Size:** 481 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -3944,7 +3951,8 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   in view composes the pages and holds the file (`LocalTabSelected`), as a PDF book. Since request 56 the pages are
   drawn from the scan cut into images (`ScanPages`: `rememberPdfiumLoaded`, then `DafScanPages.open` and
   `ScanPageList`), with nothing drawn for the moment the cut is read; where PDFium cannot be called by Pardes, by the
-  binding's reader as before (`BindingScan`, the file read whole). Since request 51 of stage 3 the scans are cut by the user's word only (`DafScans.cut`): the first
+  binding's reader as before (`BindingScan`, the file read whole, `PAGES_CACHE_BYTES` of its pages kept: request
+  48 of stage 3). Since request 51 of stage 3 the scans are cut by the user's word only (`DafScans.cut`): the first
   time a scan opens, a question in its place (`CutQuestion`: what the cut gives, the room it takes and where, "כן,
   להכין" or "לא, להציג מהקובץ", which the settings change); not cut, a scan is drawn by the binding's reader, unless
   its cut was kept whole (`DafScanPages.whole`). `ScanList(pages, …, pagesList)` takes the pages'
@@ -3963,7 +3971,7 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPages.kt`
 
 - **Feature:** Scan view.
-- **Size:** 329 lines.
+- **Size:** 364 lines.
 - **What:** `DafScanPages`, a Talmud tractate's scans cut into an image a page (request 56, request 42 asked again on
   2026-11-14 and the recommendations of docs/scan-speed taken on 2026-11-15, "מה עם ההמלצות של הצגה מהירה"):
   - `open(scan)`: the cut as kept beside its pages (`ScanCut`: the scan's path, length and time, its pages, their width
@@ -3976,9 +3984,14 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
     from the one cut last, around to the start; the index written every eight pages and when the cut ends
     (`finish`, through `invokeOnCompletion`: the document closed on PDFium's thread).
   - `image(scan, page)`: the page decoded off the UI thread into gray (Skia's `Codec` into a `GRAY_8` bitmap, 6 MB at
-    2,000 by 3,000), the last twelve kept in memory (`shownImage`); null while it is not cut, and it is then asked for
+    2,000 by 3,000), the last 24 (`KEPT`: two pages side by side at a small zoom show a dozen) kept in memory (`shownImage`); null while it is not cut, and it is then asked for
     first. `revision` goes up as each page is cut, for the views that wait for one. `prepare(scan, pages)` decodes
     the pages cut into memory (the page read while the text is shown).
+  - Since request 48 of stage 3 (fast paging left pages blank): a page's data and codec freed at once (`use`), not by
+    the collector, and a bitmap whose pixels cannot be allotted no image; a page cut whose decoding failed tells the
+    views waiting for it to ask again 400 ms later (`retrySoon`, `RETRY_DELAY`), rather than being left blank; a page
+    asked for again while it waits keeps its place in the queue, and one whose cut failed is cut once more when it is
+    shown again, once a start (`failedOnce`).
   - `whole(scan)`: the cut kept beside the pages when every page is cut, nothing begun or cut, for the scans not cut by
     the user's word (request 51 of stage 3): a cut kept whole still shows.
   - `bytes()` and `clear()`, for the settings' card.
@@ -3991,7 +4004,8 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   user's, one bit at 2,000 pixels, drawn by Pardes, the page read ready ahead; the library reached by FFM rather than
   a copy of the binding, as the bookmarks proved it works in the native image).
 - **Tests:** `DafScanPagesTest` (a scan cut and read back by another store, cut again when changed, a file that is no
-  PDF, the pages removed, a cut kept whole served and none for a scan not cut); tried in the app (Berakhot's 125 pages cut in some five seconds, 20 MB).
+  PDF, the pages removed, a cut kept whole served and none for a scan not cut, a page that cannot be decoded asked
+  again); tried in the app (Berakhot's 125 pages cut in some five seconds, 20 MB).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanCutFolder.kt`
 
@@ -4021,12 +4035,12 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanPageList.kt`
 
 - **Feature:** Scan view.
-- **Size:** 85 lines.
+- **Size:** 87 lines.
 - **What:** `ScanPageList(scan, cut, listState, pageWidth, modifier, spreads, title)`, a tractate's scan drawn by
   Pardes from its pages cut into images, in `PageRows` (a page a row or two side by side, titles): each `ScanPage` an
   `Image` of its bitmap, smoothed as it is drawn smaller (`FilterQuality.Medium`), on the page's own proportions
   (`ScanCut.heightOf`), white with a wait while it is cut (`DafScanPages.revision`); the images of the two rows after
-  the first in view decoded ahead (`prepare`).
+  the first in view decoded ahead (`prepare`), for the latest place only (`collectLatest`, request 48 of stage 3).
   No wait and no preview, as Nucleus's `PdfPage` has (request 56).
 - **Reached from:** `DafScanView.kt`.
 - **Follows:** Pardes's `PdfPageList` (its rows and pages ahead); docs/scan-speed's way of drawing a cut page.
@@ -4035,12 +4049,13 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPagesTest.kt`
 
 - **Feature:** Scan view.
-- **Size:** 128 lines.
+- **Size:** 152 lines.
 - **What:** a gray page written as a PNG of one bit a pixel (its signature, its `IHDR`, read back by Skia); a scan of
   three pages cut 2,000 pixels wide in the background, a page waited for and decoded, every page cut, and opened again
   by another store from its index with nothing cut again; a scan changed cut again, a missing file and one that is no
   PDF with no cut, and the pages removed with their folder; nothing begun for a scan not cut, and a cut kept whole
-  served by another store (request 51 of stage 3).
+  served by another store (request 51 of stage 3); a page whose image is damaged decoded as none, the views waiting
+  for it told to ask again, and decoded once it is whole again (request 48 of stage 3).
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (a temporary folder, a relaxed `mockk` of the settings).
 - **Tests:** it is one (unit; PDFium's library for the system).

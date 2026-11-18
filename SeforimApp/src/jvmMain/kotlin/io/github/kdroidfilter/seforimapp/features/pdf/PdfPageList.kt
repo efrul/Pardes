@@ -46,11 +46,14 @@ import dev.nucleusframework.pdfium.PdfReaderState
 import dev.nucleusframework.pdfium.RenderQuality
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Text
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 // Pardes (requests 28 and 41 to 47 of docs/DESKTOP_STAGE2.md): the pages of a PDF one under the other, or two side by
 // side, as a PDF book of the user's and a tractate's scan show them. Its speed is learnt from Otzaria and Zayita
@@ -62,6 +65,16 @@ private const val MOST_DRAWN_PX = 1600
 
 /** The rows after the first in view whose pages are drawn ahead, at the width they are shown at. */
 internal const val ROWS_AHEAD = 2
+
+/**
+ * The memory the binding keeps drawn pages in, for a PDF book and a scan: a page drawn [MOST_DRAWN_PX] wide takes some
+ * 15 MB, and the binding's own 64 MB let two pages side by side push those in view out while the next were drawn
+ * (request 48 of docs/DESKTOP_STAGE3_PLAN.md).
+ */
+internal const val PAGES_CACHE_BYTES = 160L * 1024 * 1024
+
+/** How long the pages rest before those ahead are drawn: the binding cannot call a drawing back once asked. */
+private val PREFETCH_REST = 150.milliseconds
 
 /** The space between two pages, one under the other or side by side. */
 private val PAGE_GAP = 8.dp
@@ -100,6 +113,7 @@ internal fun spreadPageWidth(room: Dp): Dp = (room - PAGE_GAP) / 2
  * and the pages of the [ROWS_AHEAD] rows after the first in view are drawn ahead of time, at their width, so that a
  * page scrolled to is mostly drawn already.
  */
+@OptIn(FlowPreview::class)
 @Composable
 internal fun PdfPageList(
     reader: PdfReaderState,
@@ -113,11 +127,18 @@ internal fun PdfPageList(
     val pages = reader.pageCount
     val rows = rowCount(pages, spreads)
     val drawnPx = with(LocalDensity.current) { pageWidth.roundToPx() }.coerceAtMost(MOST_DRAWN_PX)
+    // Once the pages rest, the rows ahead in the way they moved (one with two pages a row): a scroll that flies by
+    // asked for every row it passed, and the binding drew them all before the pages in view (request 48)
     LaunchedEffect(reader, drawnPx, spreads) {
+        var last = listState.firstVisibleItemIndex
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
+            .debounce(PREFETCH_REST)
             .collect { first ->
-                for (row in first + 1..minOf(first + ROWS_AHEAD, rows - 1)) {
+                val ahead = if (spreads) 1 else ROWS_AHEAD
+                val rowsAhead = if (first >= last) first + 1..first + ahead else first - 1 downTo first - ahead
+                last = first
+                for (row in rowsAhead.filter { it in 0 until rows }) {
                     pagesOf(row, pages, spreads).forEach { page -> reader.prefetch(page, drawnPx, RenderQuality.FULL) }
                 }
             }

@@ -5,6 +5,7 @@ import io.github.kdroidfilter.seforimapp.features.pdf.GrayPage
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfiumDocumentTest
 import io.github.kdroidfilter.seforimapp.framework.database.DatabasePathProvider
 import io.mockk.mockk
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.jetbrains.skia.Codec
@@ -111,6 +112,29 @@ class DafScanPagesTest {
         runBlocking { withTimeout(TIMEOUT) { waitFor { pages().whole(scan) } } }
         assertEquals(listOf(3000, 3000), runBlocking { pages().whole(scan) }?.heights)
         assertTrue(File(folder, "1.png").isFile)
+    }
+
+    @Test
+    fun `a page whose image cannot be decoded is asked again, not left blank`() {
+        val scan = File(scans, "ברכות.pdf").apply { writeBytes(PdfiumDocumentTest.pdfOfPages(2)) }
+        val pages = pages()
+        runBlocking {
+            pages.open(scan)
+            withTimeout(TIMEOUT) { waitFor { (0..1).all { pages.image(scan, it) != null }.takeIf { it } } }
+        }
+        val folder = File(root, "pardes-scans").listFiles()!!.single()
+        val good = File(folder, "1.png").readBytes()
+        File(folder, "1.png").writeBytes(byteArrayOf(1, 2, 3))
+        assertNull(DafScanPages.decode(File(folder, "1.png")))
+
+        // Read anew, as at the next start: the page's decoding fails, and the views waiting for it are told to ask again
+        val fresh = pages()
+        runBlocking { withTimeout(TIMEOUT) { waitFor { fresh.whole(scan) } } }
+        val before = fresh.revision.value
+        assertNull(runBlocking { fresh.image(scan, 1) })
+        runBlocking { withTimeout(TIMEOUT) { fresh.revision.first { it > before } } }
+        File(folder, "1.png").writeBytes(good)
+        assertNotNull(runBlocking { fresh.image(scan, 1) })
     }
 
     // Asks again as pages are cut, until there is an answer
