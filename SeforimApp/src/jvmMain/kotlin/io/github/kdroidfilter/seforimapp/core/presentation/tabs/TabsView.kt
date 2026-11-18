@@ -714,6 +714,7 @@ private fun TabStripScope.RtlAwareTabStripContent(
                                                 ) + fadeOut(animationSpec = tween(exitDurationMs, easing = LinearEasing)),
                                         ) {
                                             RtlAwareTab(
+                                                tabId = tabEntry.key,
                                                 isActive = isActive,
                                                 tabData = tabEntry.data,
                                                 tabStyle = style,
@@ -843,6 +844,7 @@ private fun TabStripScope.RtlAwareTabStripContent(
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun RtlAwareTab(
+    tabId: String,
     isActive: Boolean,
     tabData: TabData,
     tabStyle: TabStyle,
@@ -1135,6 +1137,7 @@ private fun RtlAwareTab(
 
         if (contextMenuOpen) {
             TabActionsMenu(
+                tabId = tabId,
                 anchorOffset = anchorOffset,
                 contextClickOffset = contextClickOffset,
                 tabIndex = tabIndex,
@@ -1404,6 +1407,7 @@ private fun TabOverflowMenuItem(
         )
         if (contextMenuOpen) {
             TabActionsMenu(
+                tabId = tab.key,
                 anchorOffset = null,
                 contextClickOffset = contextClickOffset,
                 tabIndex = tab.stripIndex,
@@ -1454,6 +1458,7 @@ private val NewTabShortcutHint = if (PlatformInfo.isMacOS) "⌘+T" else "Ctrl+T"
 /** A tab's right-click menu, on the strip or in the overflow menu. [anchorOffset] `null`: the anchor's own corner. */
 @Composable
 private fun TabActionsMenu(
+    tabId: String,
     anchorOffset: IntOffset?,
     contextClickOffset: IntOffset,
     tabIndex: Int,
@@ -1483,6 +1488,8 @@ private fun TabActionsMenu(
     val otherDesktops = desktops.filter { it.id != currentDesktopId }
     val moveToDesktopLabels =
         otherDesktops.associate { it.id to stringResource(Res.string.tab_move_to_desktop, it.name) }
+    // Pardes: its own items, resolved here as the labels are (request 59)
+    val pardesActions = pardesTabActions(tabId)
 
     TabContextMenu(
         anchorOffset = anchorOffset,
@@ -1527,6 +1534,16 @@ private fun TabActionsMenu(
                 onClick = {
                     onDismiss()
                     onCopyLink()
+                },
+            )
+        }
+        pardesActions.forEach { action ->
+            tabContextMenuItem(
+                label = action.label,
+                icon = action.icon,
+                onClick = {
+                    onDismiss()
+                    action.onClick()
                 },
             )
         }
