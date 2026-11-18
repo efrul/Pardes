@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (280 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (282 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1029,7 +1029,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +59 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by side.
+- **Change:** modified, +62 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+  side, Pages in the dark theme's colours.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
@@ -1039,7 +1040,9 @@ The entries of this section by kind:
     lineId)`, with a comment marked "Pardes:": the tractate's scan in place of its text or its daf (requests 41 and 46),
     and the page of the line read (`primarySelectedLineId`, else `anchorId`) made ready ahead (request 56). Nor is the
     diacritics button shown while the tab shows pages (`!showsPages(uiState)`, with its import): a tractate's scan or a
-    PDF book has no nikud to hide (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`).
+    PDF book has no nikud to hide (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`). After the diacritics' branch,
+    `PageColorsButton(uiState)`, with a comment marked "Pardes:" and its import: the pages' original colours in the dark
+    theme, on a scan or a PDF book (request 42 of stage 3), in the place the diacritics button leaves there.
   - Under `ZoomButtons`, `PageSpreadsButton(uiState)`, with a comment marked "Pardes:" and its import: two pages side
     by side, shown while the tab shows pages (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס ומינוס").
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
@@ -1057,11 +1060,11 @@ The entries of this section by kind:
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
   their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; two buttons among the bar's and one under the zoom's, a branch before the diacritics button, `ZoomButtons`' body, the references' availability and the two
-  `…Enabled` lines.
+- **Merge risk:** small; two buttons among the bar's and one under the zoom's, a branch before the diacritics button and
+  a button after it, `ZoomButtons`' body, the references' availability and the two `…Enabled` lines.
 - **Smaller:** already minimal.
-- **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`); the scan's and two pages' buttons
-  were checked in the app.
+- **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`); the scan's, two pages' and the pages'
+  colours' buttons were checked in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LineReferences.kt`
 
@@ -1816,8 +1819,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +367 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 341 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +370 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 343 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1872,7 +1875,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     (request 51 of stage 3): `daf_scans_cut_enabled`, the card's box, and the question a scan asks the first time one
     opens, `daf_scan_cut_question`, its hint, `…_yes` and `…_no`; and under a comment after them, two pages side by side:
     `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a copy of a tab from its menu,
-    `tab_duplicate` ("שכפל לשונית", request 59 of stage 3).
+    `tab_duplicate` ("שכפל לשונית", request 59 of stage 3); and under a comment after it, the pages in the dark
+    theme's colours: `page_colors_original` ("צבעים מקוריים") and its tooltip (request 42 of stage 3).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -3751,7 +3755,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfPageList.kt`
 
 - **Feature:** The user's PDF books, Scan view, Two pages side by side.
-- **Size:** 294 lines.
+- **Size:** 296 lines.
 - **What:** `PdfPageList(reader, listState, pageWidth, modifier, spreads, selectableText, title)`: a PDF's pages in
   rows, a page each or two side by side as a book read right to left opens (`rowCount`, `rowOf`, `firstPageOf`: the
   first page alone on the left, then each odd page on the right and the next on the left; in a tractate's scan, amud b
@@ -3764,7 +3768,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   call a drawing back once asked, and a scroll that flew by drew every row it passed before those in view, which stayed
   blank (request 48 of stage 3: "ובדפדוף מהיר, בעיקר בשני עמודים, לפעמים נתקע ולא מוצג כלום"). `PAGES_CACHE_BYTES`
   (160 MB), the drawn pages the binding keeps for a PDF book and the binding's scan, where its own 64 MB let two pages
-  side by side push those in view out.
+  side by side push those in view out. Its pages are drawn through `pageColors` (request 42 of stage 3), in the
+  dark theme's colours.
   Also `spreadPageWidth`, `pageListKey` (Page Up and Down, the arrows up and down a little of a view, `step` and
   `ARROW_STEP`, as asked on 2026-11-18 with the contents following the pages, request 45 of stage 3; Ctrl + Home and
   End) and `turnPage`. Its rows are
@@ -3775,7 +3780,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 - **Follows:** Pardes's PDF book view, from which it was taken; Otzaria's 2,000 pixels on a page's long side and its
   pages drawn ahead, and Zayita's prefetch (ideas only: neither's code is used).
 - **Tests:** `PdfPageListTest` (the rows); tried in the app (a PDF book and a scan, a page a row and two; request
-  48: Page Down held and the wheel spun through a PDF book, two pages a row).
+  48: Page Down held and the wheel spun through a PDF book, two pages a row; request 42: a PDF book in the dark
+  theme).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/MyPdfBooksSearchTest.kt`
 
@@ -4035,16 +4041,18 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanPageList.kt`
 
 - **Feature:** Scan view.
-- **Size:** 87 lines.
+- **Size:** 93 lines.
 - **What:** `ScanPageList(scan, cut, listState, pageWidth, modifier, spreads, title)`, a tractate's scan drawn by
   Pardes from its pages cut into images, in `PageRows` (a page a row or two side by side, titles): each `ScanPage` an
   `Image` of its bitmap, smoothed as it is drawn smaller (`FilterQuality.Medium`), on the page's own proportions
   (`ScanCut.heightOf`), white with a wait while it is cut (`DafScanPages.revision`); the images of the two rows after
   the first in view decoded ahead (`prepare`), for the latest place only (`collectLatest`, request 48 of stage 3).
-  No wait and no preview, as Nucleus's `PdfPage` has (request 56).
+  No wait and no preview, as Nucleus's `PdfPage` has (request 56). In the dark theme, its text on its panel
+  (`rememberPageColors`, the image's colour filter), the paper the panel's colour (request 42 of stage 3).
 - **Reached from:** `DafScanView.kt`.
 - **Follows:** Pardes's `PdfPageList` (its rows and pages ahead); docs/scan-speed's way of drawing a cut page.
-- **Tests:** tried in the app (a page a row and two, the switch from the text drawn at once).
+- **Tests:** tried in the app (a page a row and two, the switch from the text drawn at once; request 42:
+  Berakhot's scan in the dark theme, and in its original colours).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPagesTest.kt`
 
@@ -4152,6 +4160,45 @@ Pardes's `DafView.kt`, `PdfPageList.kt`, `PdfBookView.kt` and `DafScanView.kt`, 
 - **Reached from:** `PageSpreadsButton.kt`.
 - **Follows:** Pardes's `ScanPage` beside it (an `ImageVector` built once, filled paths, rings by their winding).
 - **Tests:** none.
+
+### Pages in the dark theme's colours
+
+Request 42 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "במצב כהה, תמיכה גם ב-PDF", with the user's choice of that day:
+inverted by themselves in the dark theme, and a button of the end bar that brings the original colours back. The pages
+drawn as images, a PDF book's and a tractate's scan (cut into images or drawn by the binding), take the dark theme's
+text as their ink and its panel as their paper, as the daf Pardes draws is in the theme's colours; the button
+("צבעים מקוריים", in the diacritics button's place there) holds in every tab. Hooks: `VerticalBars.kt` (the button),
+`strings.xml`; in Pardes's `PdfPageList.kt` and `ScanPageList.kt`, the pages' colours.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageColors.kt`
+
+- **Feature:** Pages in the dark theme's colours.
+- **Size:** 110 lines.
+- **What:** `PageColorSettings` ("page_colors", a `SettingsGroup` of Zayit's kind): `original`, whether pages keep
+  their original colours in the dark theme (false by default; every tab). `inkOnPaper(ink, paper)`: the colour matrix
+  that draws black as the ink and white as the paper, each gray between them in proportion, a channel each, the alpha
+  as it is (from the identity: each channel scaled by the paper's less the ink's, offset by the ink's).
+  `rememberPageColors()`: in the dark theme its text on its panel (`JewelTheme.globalColors`), unless the original
+  colours are asked; null in the light theme. `Modifier.pageColors(colors)`: what it draws, through the colours, on a
+  layer of its own (`saveLayer` with a paint's colour filter), for the binding's `PdfPage`, which takes no filter.
+  `PageColorsButton(uiState, modifier)`: the end bar's "צבעים מקוריים" (Pardes's `ColorMode` icon, its tooltip), shown
+  in the dark theme while the tab shows a tractate's scan or a PDF book.
+- **Reached from:** `VerticalBars.kt` (the button), `PdfPageList.kt` (`pageColors`), `ScanPageList.kt`
+  (`rememberPageColors`).
+- **Follows:** Pardes's `DafMarksButton` for the button (`SelectableIconButtonWithToolip` over a flow of the
+  settings); Zayit's typed settings (`SettingsGroup`, `AppSettings.flow`).
+- **Tests:** `PageColorsTest`; tried in the app (Berakhot's scan in the dark theme, and its original colours by the
+  button).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageColorsTest.kt`
+
+- **Feature:** Pages in the dark theme's colours.
+- **Size:** 37 lines.
+- **What:** black drawn as the theme's text and white as its panel; a gray between them falling between them, and the
+  alpha kept.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is
 

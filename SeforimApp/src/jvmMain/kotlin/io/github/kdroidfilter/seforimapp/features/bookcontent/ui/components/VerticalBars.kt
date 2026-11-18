@@ -27,6 +27,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookCon
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.placesLines
+import io.github.kdroidfilter.seforimapp.features.pdf.PageColorsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.showsPages
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -160,6 +161,8 @@ fun EndVerticalBar(
                         shortcutHint = if (PlatformInfo.isMacOS) "J+⌘" else "J+Ctrl",
                     )
                 }
+                // Pardes: the pages' original colours in the dark theme, on a scan or a PDF book (request 42)
+                PageColorsButton(uiState)
                 // Shnayim mikra: in the Chumash, each verse twice and then its targum
                 if (selectedBook.isChumash) {
                     SelectableIconButtonWithToolip(

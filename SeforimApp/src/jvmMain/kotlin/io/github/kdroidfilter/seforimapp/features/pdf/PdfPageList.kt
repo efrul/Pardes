@@ -143,8 +143,10 @@ internal fun PdfPageList(
                 }
             }
     }
+    // In the dark theme, its text on its panel (request 42 of docs/DESKTOP_STAGE3_PLAN.md)
+    val colors = rememberPageColors()
     PageRows(pages, listState, pageWidth, modifier, spreads, title) { page, width ->
-        PdfPage(reader, page, Modifier.width(width).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
+        PdfPage(reader, page, Modifier.width(width).pageColors(colors).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
     }
 }
 
