@@ -21,7 +21,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -47,9 +46,12 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
@@ -63,6 +65,7 @@ import seforimapp.seforimapp.generated.resources.daf_scan_failed
 import seforimapp.seforimapp.generated.resources.daf_scan_missing
 import seforimapp.seforimapp.generated.resources.daf_scan_missing_hint
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 // Pardes (requests 41, 43, 46 and 47 of docs/DESKTOP_STAGE2.md): a Talmud tractate shown as its scan, the third of its
 // views beside its text and its daf, "גם כי יש כאלה שמעדיפים מקור וגם להשוואה בקלות".
@@ -81,6 +84,9 @@ private val MOST_PAGE_WIDTH = 1100.dp
 
 /** The room on each side of the pages, as the daf's. */
 private val PAGE_PADDING = 24.dp
+
+/** How long the pages rest before their place is told, as a PDF book's. */
+private val PLACE_DEBOUNCE = 400.milliseconds
 
 private sealed interface ScanLoad {
     data object Looking : ScanLoad
@@ -361,9 +367,12 @@ private fun FollowTheTab(
 }
 
 /**
- * Once a scroll rests, the first line of the amud read at the top told as the tab's place ([onScroll]), as the daf tells
- * its own.
+ * The first line of the amud read at the top told as the tab's place ([onScroll]), as the daf tells its own: once the
+ * pages rest there ([PLACE_DEBOUNCE]) after any move (a scroll, a page turned, the table of contents, a search), and as
+ * the view leaves when they moved since. The table of contents' jump is not a scroll the list reports in progress, and
+ * was not told (request 60 of docs/DESKTOP_STAGE3_PLAN.md).
  */
+@OptIn(FlowPreview::class)
 @Composable
 private fun TellThePlace(
     listState: LazyListState,
@@ -374,18 +383,39 @@ private fun TellThePlace(
 ) {
     val lines by rememberUpdatedState(amudLines)
     val currentOnScroll by rememberUpdatedState(onScroll)
+    val told = remember(listState) { ToldLine() }
+
+    fun lineNow(): Long? = lines[amudOfScanPage(firstPageOf(listState.firstVisibleItemIndex, spreads))]
+
+    fun tell(lineId: Long) {
+        told.line = lineId
+        place.topLineId = lineId
+        currentOnScroll(lineId)
+    }
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }
+        snapshotFlow { lineNow() }
+            .filterNotNull()
             .distinctUntilChanged()
+            // The amud the scan opened at is the tab's already
+            .onEach { if (!told.opened) told.opened(it) }
             .drop(1)
-            .filter { scrolling -> !scrolling }
-            .collect {
-                withFrameNanos { }
-                val page = firstPageOf(listState.firstVisibleItemIndex, spreads)
-                val lineId = lines[amudOfScanPage(page)] ?: return@collect
-                place.topLineId = lineId
-                currentOnScroll(lineId)
-            }
+            .debounce(PLACE_DEBOUNCE)
+            .collect { tell(it) }
+    }
+    DisposableEffect(listState) {
+        onDispose { lineNow()?.takeIf { told.opened && it != told.line }?.let(::tell) }
+    }
+}
+
+// The line last told, from the amud the scan opened at: leaving tells a newer one only
+private class ToldLine {
+    var line: Long? = null
+    var opened = false
+        private set
+
+    fun opened(lineId: Long) {
+        opened = true
+        line = lineId
     }
 }
 
