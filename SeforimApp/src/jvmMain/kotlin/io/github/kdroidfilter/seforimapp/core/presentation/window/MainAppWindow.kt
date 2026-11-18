@@ -24,6 +24,7 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.utils.detectTouchMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.hasFindInPage
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.processKeyShortcuts
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberEdgeTrimmedClipboard
 import io.github.kdroidfilter.seforimapp.core.reading.LastInput
 import io.github.kdroidfilter.seforimapp.core.reading.noteInput
 import io.github.kdroidfilter.seforimapp.core.rememberCommentaryCopyShortcut
@@ -303,6 +305,8 @@ fun NucleusApplicationScope.MainAppWindow(
             LocalViewModelStoreOwner provides windowViewModelOwner,
             // Citation links in the texts open their target in a new tab of this window
             LocalUriHandler provides rememberRefLinkUriHandler(openWindow.tabsViewModel),
+            // Pardes: a copy cut of the spaces at its ends (request 56)
+            LocalClipboard provides rememberEdgeTrimmedClipboard(),
         ) {
             MainTitleBar(Modifier.e2eCapture(openWindow.id + E2e.TITLE_BAR))
 

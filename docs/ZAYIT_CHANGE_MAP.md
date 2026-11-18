@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (273 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (275 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -444,7 +444,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +21 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source.
+- **Change:** modified, +25 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
+  A copy cut of its spaces.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
@@ -456,6 +457,9 @@ The entries of this section by kind:
   Zayit's call to `selectionCopyShortcut` had inline) and first gives the key to `rememberCommentaryCopyShortcut()`'s
   handler (`commentaryCopy`), which takes Ctrl/Cmd+Alt+C of a selection in a commentary, a targum or the daf's Rashi
   and Tosafot; comments marked "Pardes:" and an import.
+- **What, a copy cut of its spaces:** the window's content gets `LocalClipboard provides rememberEdgeTrimmedClipboard()`
+  among its locals, with a comment marked "Pardes:" and two imports: every copy in the window, Compose's own (Ctrl+C,
+  the menu's "העתקה") and the app's, is cut of the spaces at its ends (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`).
 - **Why:** the reading time counts only while the user is at the window, and stops after five minutes without mouse or
   keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`. Typing over a pane: as for
   `TypeToSearch.kt` (request 24). The copy with source: as for `CommentarySource.kt` (request 40).
@@ -1381,13 +1385,15 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/CopyWithSource.kt`
 
-- **Change:** modified, +13 −4 lines. Feature: Copy of the words alone, Copy with a commentary's source.
+- **Change:** modified, +15 −5 lines. Feature: Copy of the words alone, Copy with a commentary's source, A copy cut of its spaces.
 - **What:**
   - `selectionCopyShortcut`: Ctrl/Cmd+Shift+C copies `lettersOnly(selectedText)` (Pardes's `LettersOnly.kt`) instead of
     `HebrewTextUtils.removeAllDiacritics(selectedText)`; its KDoc says so, marked "Pardes:".
   - `formatHebrewSourceReference`: under the Talmud root, a reference whose first segment is a daf ("ב." or "ב:") is
     cited by that segment alone; Zayit's rule (the last segment dropped) now serves the references without a daf (the
     Yerushalmi's "דמאי א, א"); a comment marked "Pardes:".
+  - `buildCopyWithSourcePayload`: the selected text is cut of the spaces at its ends before the reference (a comment
+    marked "Pardes:"): a selection begun at a word's gap took the space (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`).
 - **Why:** request 39 of `docs/DESKTOP_STAGE2.md` (2026-11-12): "העתק טקסט בלבד" gets Ctrl+Shift+C, which was "העתק
   ללא ניקוד"'s; that copy stays in the menu, without a shortcut. Request 40: a commentary on the Talmud is cited by its
   book and daf, as the Gemara is; Rashi's and Tosafot's references have two segments after the daf (the Gemara's
@@ -3200,6 +3206,37 @@ asked on 2026-11-09; offered only where the selection has punctuation, with Ctrl
   alone.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `CopyWithSourceTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### A copy cut of its spaces
+
+Every copy in the window cut of the spaces at its ends: a selection begun at the gap between two words took that space,
+which the paste showed before the text (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18). Hooks:
+`MainAppWindow.kt`, `CopyWithSource.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/EdgeTrimmedClipboard.kt`
+
+- **Feature:** A copy cut of its spaces.
+- **Size:** 47 lines.
+- **What:** `rememberEdgeTrimmedClipboard()`, the window's clipboard (`LocalClipboard`) through `EdgeTrimmedClipboard`,
+  which delegates all but `setClipEntry`: a text put on it (`edgeTrimmed`, its plain text read from the entry's
+  `Transferable`) goes cut of the spaces and line breaks at its ends, as a new `StringSelection`; an entry with no text,
+  or nothing to cut, goes as it came. Compose's selection copies through `LocalClipboard` (`SelectionContainer`'s copy
+  handler, the menu's "העתקה" included), as the app's copies do (`rememberCopyToClipboard`).
+- **Reached from:** `MainAppWindow.kt` (`LocalClipboard provides`).
+- **Follows:** Pardes's `Clipboard.kt` beside it (`ClipEntry(StringSelection)`), and Zayit's `rememberRefLinkUriHandler`,
+  a local the window provides its content.
+- **Tests:** `EdgeTrimmedClipboardTest`; tried in the app (a drag begun at a gap between two words copied a space
+  first before, and none after).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/EdgeTrimmedClipboardTest.kt`
+
+- **Feature:** A copy cut of its spaces.
+- **Size:** 38 lines.
+- **What:** a selection begun at a word's gap loses the space before it; spaces and line breaks at both ends go while
+  those inside stay; a text with nothing to cut is the same entry.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's `LettersOnlyTest` (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### The reader's menu: a copy with the source of a commentary, a targum or the daf
