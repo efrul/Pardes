@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (122 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (125 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -58,7 +58,7 @@ The entries of this section by kind:
 | Kind | Files |
 |---|---|
 | Pardes feature hook | 53 |
-| Pardes feature in Zayit's file | 31 |
+| Pardes feature in Zayit's file | 34 |
 | Fix of Zayit's code | 13 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
@@ -1821,6 +1821,46 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** a modify/delete conflict if Zayit changes the font; keep it deleted.
 - **Smaller:** already minimal.
 - **Tests:** `FontCatalogTest` counts 27 fonts.
+
+#### `SeforimApp/src/jvmMain/resources/icons/notes.svg`
+
+- **Change:** modified, +2 −2 lines. Feature: Notes icon from right to left.
+- **What:** the title bar's notes button and the notes popup's footer (`NotesPopup.kt`, `PathIconKey("icons/notes.svg")`)
+  draw the notebook mirrored: the same two paths of Lucide's notebook-pen, their x coordinates mirrored in the 24-unit
+  viewport (the stripes at x 18–22, the pen at the top left), the arcs' sweep flags flipped.
+- **Why:** the notebook's stripes were on its left, as in a notebook bound for left-to-right writing; in Hebrew its
+  binding is on the right (request 58 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "לתקן באייקון הערות שיתאים לעברית
+  מימין לשמאל - הפסים בשמאל המחברת").
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** small; a conflict only if Zayit redraws the icon.
+- **Smaller:** already minimal: Jewel's SVG painters do not mirror, so the file itself is mirrored.
+- **Tests:** seen in the app.
+
+#### `SeforimApp/src/jvmMain/resources/icons/notes_dark.svg`
+
+- **Change:** modified, +2 −2 lines. Feature: Notes icon from right to left.
+- **What:** as `notes.svg`, in the dark theme's colour.
+- **Why:** the notebook's stripes were on its left, as in a notebook bound for left-to-right writing; in Hebrew its
+  binding is on the right (request 58 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "לתקן באייקון הערות שיתאים לעברית
+  מימין לשמאל - הפסים בשמאל המחברת").
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** small; as `notes.svg`.
+- **Smaller:** already minimal.
+- **Tests:** seen in the app.
+
+#### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/NotebookPen.kt`
+
+- **Change:** modified, +1 −0 lines. Feature: Notes icon from right to left.
+- **What:** `autoMirror = true` in the vector's builder, as ten other icons of the module have it (`JournalText`,
+  `ChevronRight`): in the app's right-to-left layout the notes pane's toggle, the Notes tab, the tab search, the Home
+  notes widget and the notes page draw the notebook mirrored, with its stripes on the right.
+- **Why:** the notebook's stripes were on its left, as in a notebook bound for left-to-right writing; in Hebrew its
+  binding is on the right (request 58 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "לתקן באייקון הערות שיתאים לעברית
+  מימין לשמאל - הפסים בשמאל המחברת"). The vector and the two SVGs change together, so that every notes icon looks alike.
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** small; one line in the builder.
+- **Smaller:** already minimal.
+- **Tests:** seen in the app. Pardes for Android compiles the icons' folder too, so its notes icons are mirrored as well.
 
 ### Settings and fonts
 
