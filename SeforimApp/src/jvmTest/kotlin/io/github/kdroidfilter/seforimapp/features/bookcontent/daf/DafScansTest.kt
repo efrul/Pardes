@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import io.github.kdroidfilter.seforimapp.testAppSettings
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.io.path.createTempDirectory
@@ -93,7 +94,7 @@ class DafScansTest {
     @Test
     fun `a folder chosen is looked in first, a scan right in it or folders down, then Otzaria's`() =
         runBlocking {
-            val scans = DafScans(testAppSettings()).apply { otzariaRoots = listOf(File(root, "nothing")) }
+            val scans = DafScans(testAppSettings(), mockk(relaxed = true)).apply { otzariaRoots = listOf(File(root, "nothing")) }
             val mine = scan("mine/סדר נזיקין/בבא בתרא.pdf")
             scan("mine/ברכות-ישן.txt")
 
@@ -101,7 +102,7 @@ class DafScansTest {
             scans.setFolder(File(root, "mine"))
 
             assertEquals(File(root, "mine").absolutePath, scans.folder.value)
-            assertEquals(mine, scans.of("בבא בתרא"))
+            assertEquals(mine, scans.of("בבא בתרא")?.file)
             assertNull(scans.of("ברכות"))
             scans.setFolder(null)
             assertNull(scans.folder.value)
@@ -115,12 +116,65 @@ class DafScansTest {
         val deep = scan("deep/1/2/3/עירובין.pdf")
         scan("deep/1/2/3/4/פסחים.pdf")
 
-        assertEquals(near, OtzariaScans.findIn("שבת", File(root, "mine")))
-        assertEquals(deep, OtzariaScans.findIn("עירובין", File(root, "deep")))
+        assertEquals(near, OtzariaScans.findIn("שבת", File(root, "mine"))?.file)
+        assertEquals(deep, OtzariaScans.findIn("עירובין", File(root, "deep"))?.file)
         assertNull(OtzariaScans.findIn("פסחים", File(root, "deep")), "four folders down")
+    }
+
+    @Test
+    fun `a file named otherwise is found by its tractate's words, a number before them and words after them`() {
+        val joined = scan("mine/18 - עבודה זרה הוריות עדיות מורחב - מחובר.pdf")
+        val berakhot = scan("mine/03 ברכות.pdf")
+        val metzia = scan("mine/בבא מציעא וילנא.pdf")
+        val eruvin = scan("mine/ערובין.pdf")
+        scan("mine/מכות הערות.txt")
+        val dir = File(root, "mine")
+
+        assertEquals(joined, OtzariaScans.findIn("עבודה זרה", dir, TRACTATES)?.file)
+        assertEquals(ScanFit.JOINED, OtzariaScans.findIn("הוריות", dir, TRACTATES)?.fit)
+        assertEquals(ScanFit.EXACT, OtzariaScans.findIn("ברכות", dir, TRACTATES)?.fit)
+        assertEquals(berakhot, OtzariaScans.findIn("ברכות", dir, TRACTATES)?.file)
+        assertEquals(metzia, OtzariaScans.findIn("בבא מציעא", dir, TRACTATES)?.file)
+        assertEquals(ScanFit.ALONE, OtzariaScans.findIn("בבא מציעא", dir, TRACTATES)?.fit)
+        assertNull(OtzariaScans.findIn("בבא קמא", dir, TRACTATES), "בבא קמא is not in בבא מציעא")
+        assertNull(OtzariaScans.findIn("מכות", dir, TRACTATES), "a file that is no PDF")
+        assertEquals(eruvin, OtzariaScans.findIn("עירובין", dir, TRACTATES)?.file, "without yod and vav")
+        assertEquals(true, OtzariaScans.findIn("עירובין", dir, TRACTATES)?.personal)
+    }
+
+    @Test
+    fun `the file named the tractate comes first, then one of the tractate alone, then one of several`() {
+        scan("mine/ברכות שבת.pdf")
+        val alone = scan("mine/ברכות מהדורת וילנא.pdf")
+        val exact = scan("mine/a/ברכות.pdf")
+        val dir = File(root, "mine")
+
+        assertEquals(exact, OtzariaScans.findIn("ברכות", dir, TRACTATES)?.file)
+        exact.delete()
+        assertEquals(alone, OtzariaScans.findIn("ברכות", dir, TRACTATES)?.file)
+        alone.delete()
+        assertEquals(ScanFit.JOINED, OtzariaScans.findIn("ברכות", dir, TRACTATES)?.fit)
+    }
+
+    @Test
+    fun `no tractate is found in a file named another, with or without yod and vav`() {
+        for (tractate in TRACTATES) {
+            for (other in TRACTATES - tractate) {
+                assertNull(ScanNames.fit("$other.pdf", tractate, TRACTATES), "$tractate in $other.pdf")
+            }
+            assertEquals(ScanFit.EXACT, ScanNames.fit("$tractate.pdf", tractate, TRACTATES))
+        }
     }
 
     private companion object {
         val BYTE_ORDER_MARK = Char(0xFEFF).toString()
+
+        // The Talmud Bavli's tractates, as the library names them
+        val TRACTATES =
+            (
+                "ברכות,שבת,עירובין,פסחים,שקלים,יומא,סוכה,ביצה,ראש השנה,תענית,מגילה,מועד קטן,חגיגה,יבמות,כתובות,נדרים," +
+                    "נזיר,סוטה,גיטין,קידושין,בבא קמא,בבא מציעא,בבא בתרא,סנהדרין,מכות,שבועות,עבודה זרה,הוריות,זבחים," +
+                    "מנחות,חולין,בכורות,ערכין,תמורה,כריתות,מעילה,תמיד,נדה"
+            ).split(',')
     }
 }
