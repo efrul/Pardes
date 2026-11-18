@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (288 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (291 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -672,8 +672,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +45 −2 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link, The user's PDF books.
+- **Change:** modified, +47 −2 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link, The user's PDF books, Search modes.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -687,7 +687,8 @@ The entries of this section by kind:
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
     `onNewBarOpened` to `SearchHomeViewModel`.
   - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
-    `Grade`) and `onCatalogOrderChange` (event `SetCatalogOrder`).
+    `Grade`), `onCatalogOrderChange` (event `SetCatalogOrder`) and, with a comment marked "Pardes:",
+    `onSearchModeChange` (event `SetSearchMode`, request 54 of `docs/DESKTOP_STAGE3_PLAN.md`).
   - `navigate` takes `openDesktop` and gives it a search bar's `SearchHomeNavigationEvent.OpenDesktop`; the two places
     that collect a bar's navigation (the window's, and a results tab's own) pass `rememberDesktopOpener()`.
   - `typeKey` gives a `PdfBookTab` "pdf", and the tabs' `when` shows one with `PdfBookTabContent`, each with a comment
@@ -707,15 +708,16 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModels.kt`
 
-- **Change:** modified, +56 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
-  Scan view, Search in categories, Results in the library's order, Pane layout kept.
+- **Change:** modified, +59 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
+  Scan view, Search in categories, Results in the library's order, Pane layout kept, Search modes.
 - **What:**
   - `BookContentPersistedState` gains, appended last for ProtoBuf: `detachedCommentators` (by name; 1.0.5's slot list
     is still read), `allCommentatorsBooks`, `excludedCommentatorsByBook`, `commentatorGroupsByBook`,
     `hiddenCommentatorGroupsByBook`, `dafView` and `scanView`.
   - `SearchPersistedState` gains `fetchBookIds`, `fetchCategoryIds`, `fetchBaseOnlyCategoryIds` and, last,
     `catalogOrder` (the results listed in the library's order) and `fartherLines` (how many lines found by meaning
-    alone that order leaves out); the comment of
+    alone that order leaves out), and after them `searchMode` (`SearchMode`, exact, general or hybrid, none before the
+    tab's first search: request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), with its import; the comment of
     `fetchCategoryId` says it is used again.
   - `scope` falls back to a new `wideScope`: the author's, the several books' and categories' (`SearchScope.Multi`), the
     category's (with `baseBooksOnly`), else everywhere. A search narrowed to one book goes back to it.
@@ -733,7 +735,8 @@ The entries of this section by kind:
 - **Smaller:** already minimal for the fields; the scope logic could move to a Pardes extension, but it reads private
   fields of the class.
 - **Tests:** `SessionModelsTest` (changed with it), `DetachedCommentatorsTest`, `CommentatorSelectionTest`,
-  `PaneLayoutsTest` (the panes in the session file, and an older file without them).
+  `PaneLayoutsTest` (the panes in the session file, and an older file without them), `SearchModesTest` (the mode in a
+  search's state, and one saved before it).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopSession.kt`
 
@@ -1308,8 +1311,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +317 −49 lines. Feature: Search in categories, Search in several books and categories, Book and
-  author titles search, PDF books.
+- **Change:** modified, +322 −51 lines. Feature: Search in categories, Search in several books and categories, Book and
+  author titles search, PDF books, Search modes.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
   - `CatBookRow.Category`: a category to search in. `catBookRows` orders references, books named by their title, a title
@@ -1339,6 +1342,8 @@ The entries of this section by kind:
     other books among the bar's books (`barBookSuggestions`, with a comment marked "Pardes:"), so that `catBookRows`
     puts one before the library's not named exactly (request 54). Such a book's row offers Enter only, with no text to
     search in, and Tab on it opens it (`onPickBook`), with comments marked "Pardes:"; two imports.
+  - The home page's bar is in a row with `NextSearchModeSwitch` after it (the next searches exact, general or hybrid,
+    request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), with a comment marked "Pardes:" and its import.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -1632,7 +1637,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +432 −53 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed.
+- **Change:** modified, +464 −54 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1663,6 +1668,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
     tab's saved state), and the event `SetCatalogOrder`, which saves the choice and searches again;
     `SearchUiState.fartherLines`, set from each first page by `showFartherLines` and kept with the tab: how many
     lines found by meaning alone that order leaves out.
+  - **Search modes** (request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), with comments marked "Pardes:": the engine
+    `CatalogOrderEngine` lists is `SearchModeEngine(engine, ::searchMode)`; `searchMode()`, the tab's saved mode, else
+    the next searches' (`defaultSearchMode`, hybrid only with the search by meaning installed: `meaningInstalled`,
+    `InstalledPack`, read once); `SearchUiState.searchMode`, restored with the tab; the event `SetSearchMode`, which
+    makes it the next searches' mode too (`SearchModeSettings.last`), saves it with the tab and searches again; and
+    `executeSearch` keeps with the tab the mode it searched in.
   - **Search speed:** the results' tree takes its books from the catalog (`BuildSearchTreeUseCase(repository,
     libraryCategories::books)`); and the flow that builds a tree from the first results no longer sets it once the
     facets' tree is in (`if (!facetsComputed)` in its `collect`): one finished late replaced the full tree with
@@ -1675,7 +1686,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   every search, filter and restore path of the file as it is. The tree's books from the catalog are the speed fix
   of `BuildSearchTreeUseCase.kt`; the guard is a fix of Zayit's code, seen once in the app when the first tree
   from the catalog came in after the facets'. A tab picked alone on a plain click, others added only with Ctrl/Cmd,
-  is the user's request of 2026-11-12 (request 38).
+  is the user's request of 2026-11-12 (request 38). The search modes, exact, general or hybrid, are the user's
+  decision of 2026-11-18 (request 54 of stage 3), wrapped as the library's order is.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
@@ -1683,11 +1695,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
   labels in `LibraryCategories`; keeping Zayit's name `authorBookIds` would shrink the diff.
 - **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`,
   `ResultTabsTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`,
-  `ResultsTreeLibraryBooksTest`.
+  `ResultsTreeLibraryBooksTest`, `SearchModesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +123 −33 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order.
+- **Change:** modified, +135 −34 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1710,19 +1722,25 @@ alone. Every entry below that says "Search in categories" is part of that revers
     the lines found by meaning alone it leaves out are counted before that link (`search_farther_lines`); and in the library's order every passage
     is listed (`flattenResults`' `oneBook` is `everyPassage`: no "more in this book" link, a book's lines stand
     together).
+  - Search modes (request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), each with a comment marked "Pardes:" and their
+    imports: `SearchShellActions` gains `onSearchModeChange`; beside the bar, after it in its row, `SearchModeSwitch`
+    with the tab's `state.searchMode`; `PassagePreview` takes `mode`, and marks its words with the app's engine in that
+    mode (`SearchModeEngine`): exact its phrase alone, and none by meaning but in hybrid.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
   screen's. The passage read as a book is the user's request of 2026-11-10: its text selected and copied, the book's
   menu on a right click, and scrolling up and down past it. The link to the library's order is the user's request
   of 2026-11-09, beside the status line's other choice. A tab picked alone unless Ctrl/Cmd is held, and the focus in
-  the bar after it, are the user's request of 2026-11-12 (request 38).
+  the bar after it, are the user's request of 2026-11-12 (request 38). The search modes, the user's decision of
+  2026-11-18 (request 54 of stage 3, the design's variant ב: in the bar's row).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
 - **Smaller:** already near minimal.
-- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `ResultTabsTest`; the tabs and the link to the
-  library's order were tried in the app.
+- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `ResultTabsTest`, `SearchModesTest`; the tabs,
+  the link to the library's order and the modes were tried in the app (ברכות השחר exact: one result, its phrase alone
+  marked in the passage; general, 101).
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt`
@@ -1831,8 +1849,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +382 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 354 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +390 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 361 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1892,7 +1910,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     a comment after them, two pages side by side:
     `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a copy of a tab from its menu,
     `tab_duplicate` ("שכפל לשונית", request 59 of stage 3); and under a comment after it, the pages in the dark
-    theme's colours: `page_colors_original` ("צבעים מקוריים") and its tooltip (request 42 of stage 3).
+    theme's colours: `page_colors_original` ("צבעים מקוריים") and its tooltip (request 42 of stage 3); and under a comment
+    after them, the search modes (request 54 of stage 3): `search_mode_exact`, `…_general` and `…_hybrid` ("מדויק",
+    "כללי", "היברידי"), each one's tooltip, and `search_mode_hybrid_missing` (the search by meaning not installed).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -4353,6 +4373,61 @@ pointer zooms themselves. Hooks: none in Zayit's files; in Pardes's `PdfPageList
   again back at the same place.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### Search modes
+
+Request 54 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): a search exact, general or hybrid, as the user decided: "מדויק
+מרכאות, כללי - חיפוש רחב אבל לא סמנטי, היברידי - כמו היום". Three buttons in the search bar's row (the design's variant
+ב), on the home page (the next searches' mode) and over a tab's results (its own, which becomes the next searches'
+too); hybrid, the search as it was, only with the search by meaning installed, the default then, general otherwise.
+The engine is wrapped as the library's order wraps it, the library's `SearchEngine` untouched. Hooks:
+`SearchResultViewModel.kt`, `SearchResultScreen.kt`, `TabsContent.kt`, `HomeView.kt`, `SessionModels.kt`,
+`strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/SearchModes.kt`
+
+- **Feature:** Search modes.
+- **Size:** 164 lines.
+- **What:** `SearchMode` (`EXACT`, `GENERAL`, `HYBRID`, serializable, kept in a tab's saved state by its place: new
+  modes go last), `SearchModeSettings` ("search_mode": `last`, the mode chosen last, none until one is) and
+  `AppSettings.defaultSearchMode(meaning)` (that one, else hybrid with the search by meaning installed and general
+  without it). `SearchModeEngine(engine, mode)`: the engine searched in the mode of each search, its sessions, facets,
+  snippets and marks: exact, its search of the words (`WordsEngine.words`) through the private `QuotedEngine`, which
+  searches, marks and cuts every text as exact phrases (`LongQuerySearchEngine.asQuote`, a quote typed kept) and marks
+  nothing by meaning; general, that search as it is; hybrid, the engine itself. Its own `words` are the mode's, for a
+  list in the library's order.
+- **Reached from:** `SearchResultViewModel.kt` (the engine searched), `SearchResultScreen.kt` (the passage's marks),
+  `SessionModels.kt` (`SearchPersistedState.searchMode`), `SearchModeSwitch.kt`.
+- **Follows:** Pardes's `CatalogOrderEngine` (an engine wrapped by delegation, read again at each search) and
+  `LongQuerySearchEngine` (the query as exact phrases); Zayit's typed settings (`SettingsGroup`, `enumOrNull`).
+- **Tests:** `SearchModesTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchModeSwitch.kt`
+
+- **Feature:** Search modes.
+- **Size:** 106 lines.
+- **What:** `SearchModeSwitch(selected, onSelect, modifier)`, Jewel's `SegmentedControl` of the three modes, "מדויק",
+  "כללי", "היברידי", each explained in its tooltip (an experimental `Tooltip`); without the search by meaning
+  (`InstalledPack` in the library's folder, read once off the UI thread) hybrid is dimmed, its tooltip says where it is
+  installed, and it is not chosen. `NextSearchModeSwitch(modifier)`, the home page's: the next searches' mode
+  (`SearchModeSettings.last`, else the default), set by it.
+- **Reached from:** `SearchResultScreen.kt` (beside the results' bar), `HomeView.kt` (beside the home page's bar).
+- **Follows:** Jewel's controls (`SegmentedControl`, `Tooltip`) and Pardes's settings read from `LocalAppGraph`.
+- **Tests:** tried in the app (exact chosen on the home page, ברכות השחר searched: one result, its phrase marked; the
+  tab restored exact; general chosen over the results: 101; hybrid dimmed without the pack).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/SearchModesTest.kt`
+
+- **Feature:** Search modes.
+- **Size:** 142 lines.
+- **What:** with a recording engine and its search of the words: hybrid asks the engine itself, general its words,
+  each the text as typed; exact asks its words the text as exact phrases (a quote typed kept) and marks no meaning;
+  the words a list in the library's order reads are the mode's; the next searches' mode, the one chosen last, else
+  hybrid or general by the search by meaning; a tab's mode kept in its ProtoBuf state, and one saved before it with
+  none.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests of the engines beside it (`CatalogOrderSessionTest`) and `SessionModelsTest` (ProtoBuf).
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is

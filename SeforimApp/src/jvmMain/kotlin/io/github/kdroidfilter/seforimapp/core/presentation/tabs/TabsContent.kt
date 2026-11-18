@@ -490,6 +490,8 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
             onCatalogOrderChange = { catalogOrder ->
                 viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetCatalogOrder(catalogOrder))
             },
+            // Pardes: exact, general or hybrid (request 54 of stage 3)
+            onSearchModeChange = { mode -> viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetSearchMode(mode)) },
             onScroll = { anchorId, anchorIndex, index, offset ->
                 viewModel.onEvent(
                     SearchResultViewModel.SearchResultEvents.OnScroll(anchorId, anchorIndex, index, offset),
