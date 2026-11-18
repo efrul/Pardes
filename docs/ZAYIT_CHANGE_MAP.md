@@ -3965,7 +3965,7 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/PassageReading.kt`
 
 - **Feature:** Passage read as a book.
-- **Size:** 407 lines.
+- **Size:** 425 lines.
 - **What:**
   - `PassageReading`, the state of one result's passage: its `lines` (the result's own, then those read before and
     after them, `more(before)`: 30 at a time by `lineIndex`, one reading at a time, none past the book's ends or 600
@@ -3982,7 +3982,10 @@ Hook: `SearchResultScreen.kt`. No string is added: the labels are the reader's o
     (`offset`) until the scroll takes their height (`dispatchRawDelta`), so what is read stays in its place.
   - `Modifier.passageLine(passage, lineId, onOpen)`: a click of its own opens (not a drag, not a click that lets a
     selection go, not the first of two on a word, waited for `doubleTapTimeoutMillis`), nothing consumed, so the
-    selection takes the same presses; the line pressed and the line right-clicked are kept.
+    selection takes the same presses; the line pressed and the line right-clicked are kept. Nor does a click on a link
+    of the line open it: `PassageText` gives the passage a `LocalUriHandler` that sets `PassageReading.linkOpened` before
+    opening the link, which a press clears and its release, seen last (`PointerEventPass.Final`), reads (request 46 of
+    `docs/DESKTOP_STAGE3_PLAN.md`: a link opened both itself and the result).
 - **Reached from:** `SearchResultScreen.kt` (`PassagePreview`).
 - **Follows:** the reader's `BookTextMenus` (`BookContentScreen.kt`) for the menu's items, labels and icons, and its
   helpers (`buildCopyWithSourcePayload`, `bookShareLink`, `lettersOnly`, `lookupWord`, `DictionaryLookup`); `PreviewHighlights.kt` beside
