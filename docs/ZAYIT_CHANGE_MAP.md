@@ -3749,7 +3749,7 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 407 lines.
+- **Size:** 437 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -3758,8 +3758,11 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   line brought into view, no step through comments) and says where it is (`DafControl.where`, the first line of the
   amud read at its top, `ScanPlace`), for the text to open there. It opens at the amud of the tab's place (`openAt`,
   else the tab's line, by the table of contents or the line's reference), follows the tab's line when it is chosen
-  (`FollowTheTab`: the table of contents, a search, the arrows; not the line it told itself), and once a scroll rests
-  tells the first line of the amud read at its top (`TellThePlace`, `firstLines`). The page read at the top is kept
+  (`FollowTheTab`: the table of contents, a search, the arrows; not the line it told itself), and tells the first line
+  of the amud read at its top (`TellThePlace`, `firstLines`) once the pages rest there after any move (`PLACE_DEBOUNCE`,
+  400 ms) and as the view leaves when they moved since (`ToldLine`), as a PDF book tells its place: the table of
+  contents' jump is not a scroll in progress, and was not told, so a tab left and come back to went back to the amud read
+  before it (request 60 of `docs/DESKTOP_STAGE3_PLAN.md`). The page read at the top is kept
   (`ScanPlace.page`), so the rows changing reopen the list there. It looks for the scan again when the folder of scans
   changes. Without a scan, a word on where it is looked for and a button that chooses the folder of scans
   (`pickScansFolder`, FileKit's directory picker off the event loop, `DafScans.setFolder`), as the settings do; the line
@@ -3776,7 +3779,8 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 - **Tests:** `DafScansTest` (the pages and amudim), `PdfPageListTest` (the rows); tried in the app (Berakhot from a
   sample Otzaria from the text and from the daf, two pages, back to the text at its amud; Shabbat, which has no daf's
   layout, with no scan; request 56: Berakhot's first switch, its pages cut in some five seconds, the next switches
-  drawn at once, two pages, Berakhot 50a first when its cut was removed).
+  drawn at once, two pages, Berakhot 50a first when its cut was removed; request 60: Berakhot 9a picked in the contents,
+  another tab, and back at 9a).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPages.kt`
 
