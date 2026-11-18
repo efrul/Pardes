@@ -1233,5 +1233,13 @@
     <!-- Pardes: the pages drawn as images in the dark theme's colours, and the button of their own (request 42 of stage 3, PageColors) -->
     <string name="page_colors_original">צבעים מקוריים</string>
     <string name="page_colors_original_tooltip">העמודים של הסריקה ושל ספרי PDF בצבעים המקוריים שלהם, במקום הצבעים של המצב הכהה</string>
+    <!-- Pardes: a search exact, general or hybrid, beside the search bar (request 54 of stage 3, SearchModeSwitch) -->
+    <string name="search_mode_exact">מדויק</string>
+    <string name="search_mode_general">כללי</string>
+    <string name="search_mode_hybrid">היברידי</string>
+    <string name="search_mode_exact_tooltip">הצירוף בדיוק כפי שנכתב, כמו בתוך מירכאות</string>
+    <string name="search_mode_general_tooltip">המילים וצורותיהן, בלי חיפוש לפי משמעות</string>
+    <string name="search_mode_hybrid_tooltip">המילים וגם לפי משמעות, יחד: החיפוש הרגיל</string>
+    <string name="search_mode_hybrid_missing">החיפוש לפי משמעות לא מותקן. אפשר להוריד אותו בהגדרות › ניהול נתונים</string>
 
 </resources>

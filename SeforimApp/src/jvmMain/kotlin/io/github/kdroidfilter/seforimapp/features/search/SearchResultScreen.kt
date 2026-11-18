@@ -80,6 +80,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookdetails.BookDetails
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
+import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
+import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
@@ -114,6 +116,8 @@ data class SearchShellActions(
     val onGlobalExtendedChange: (Boolean) -> Unit,
     // The results in the library's order, or by relevance
     val onCatalogOrderChange: (Boolean) -> Unit = {},
+    // Pardes: the text searched exact, general or hybrid (request 54 of stage 3)
+    val onSearchModeChange: (SearchMode) -> Unit = {},
     // In a category holding base books and others: its base books alone (the texts without their commentaries), or all
     val onScopeBaseBooksChange: (Boolean) -> Unit = {},
     val onScroll: (anchorId: Long, anchorIndex: Int, index: Int, offset: Int) -> Unit,
@@ -414,6 +418,8 @@ private fun SearchResultContentMvi(
                                     onTextChange = actions.onQueryChange,
                                     focusRequester = barFocus,
                                 )
+                                // Pardes: exact, general or hybrid, beside the bar (request 54 of stage 3)
+                                SearchModeSwitch(state.searchMode, actions.onSearchModeChange)
                             }
 
                             // Always there, as Google's, even with one category: "הכל" also undoes a kept filter
@@ -643,6 +649,8 @@ private fun SearchResultContentMvi(
                             preview = shown,
                             pieces = breadcrumbs[shown.hit.lineId],
                             query = state.executedQuery,
+                            // Pardes: its words marked as the search read them (request 54 of stage 3)
+                            mode = state.searchMode,
                             bookFontCode = bookFontCode,
                             // The passage follows the zoom, as the books
                             textSize = mainTextSize,
@@ -892,6 +900,7 @@ private fun PassagePreview(
     preview: SearchResultViewModel.PassagePreview,
     pieces: List<String>?,
     query: String,
+    mode: SearchMode,
     bookFontCode: String,
     textSize: Float,
     onOpen: () -> Unit,
@@ -907,7 +916,9 @@ private fun PassagePreview(
     val passage = rememberPassageReading(preview)
     val lines = passage.lines
     val fontFamily = FontCatalog.familyFor(bookFontCode)
-    val searchEngine = LocalAppGraph.current.searchEngine
+    // Pardes: in the search's mode, exact marking its phrase alone and none by meaning (request 54 of stage 3)
+    val appEngine = LocalAppGraph.current.searchEngine
+    val searchEngine = remember(appEngine, mode) { SearchModeEngine(appEngine) { mode } }
     val highlight = accent.copy(alpha = 0.22f)
     val scroll = rememberScrollState()
     // The found line in view, once laid out

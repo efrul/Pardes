@@ -91,6 +91,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.decodeLayout
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
 import io.github.kdroidfilter.seforimapp.features.pdf.myPdfBookSuggestions
 import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
+import io.github.kdroidfilter.seforimapp.features.search.NextSearchModeSwitch
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
@@ -482,8 +483,10 @@ private fun HomeBody(
                                 Modifier.fillMaxWidth(),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Box(homeContentModifier) {
-                                    UnifiedSearchBar(searchUi = searchUi, searchCallbacks = searchCallbacks)
+                                Row(homeContentModifier, verticalAlignment = Alignment.CenterVertically) {
+                                    UnifiedSearchBar(searchUi = searchUi, searchCallbacks = searchCallbacks, modifier = Modifier.weight(1f))
+                                    // Pardes: the next searches exact, general or hybrid, beside the bar (request 54 of stage 3)
+                                    NextSearchModeSwitch(Modifier.padding(start = 8.dp))
                                 }
                             }
                         }
