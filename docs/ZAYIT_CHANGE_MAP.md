@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (273 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (275 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2568,9 +2568,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafLayoutsCard.kt`
 
 - **Feature:** Daf layouts download.
-- **Size:** 232 lines.
+- **Size:** 243 lines.
 - **What:** Settings › צורת הדף's card for the daf's layouts (in Settings › ניהול נתונים until 2026-11-10): how many the library's folder has as released, and
-  every one it lacks, or has otherwise, downloaded at once; the download goes on when the settings close. Each
+  every one it lacks, or has otherwise, downloaded at once (`ReleaseLines`, apart since 2026-11-13 for detekt's
+  `LongMethod`); the download goes on when the settings close. Each
   tractate has a row (`Tractates`, `tractateLine`): its name, its file's version in the folder and the release's, and
   for one to download a link that downloads it alone; those to download are always listed, the others when asked
   ("כל המסכתות והגרסאות שלהן"). Marked, its frame lit and brought into view, when a start opened the settings for a
@@ -5047,7 +5048,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/PendingSemanticPackTest.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 224 lines.
+- **Size:** 233 lines.
 - **What:** the staged pack taking the old one's place, a first pack, a failed move put back with the pack kept staged,
   a fresh pack whose second folder cannot go in, a start stopped half way, another release of the library, a failure
   told once and the pack put in place at the next start, a pack dropped at the last of its starts (and a new request's
@@ -5684,18 +5685,28 @@ grade buttons' switch stood in the semantic search's card and the reviews' folde
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendCard.kt`
 
 - **Feature:** Feedback sending.
-- **Size:** 406 lines.
+- **Size:** 382 lines.
 - **What:** the pieces of Settings › משוב. `FeedbackSendCard`, the page's first card: how much of each kind waits to be
   sent, when the last package was made, the sending's progress and result, and send now or save to a file.
   `FeedbackKinds`, what the row "מה נשלח" opens: each kind with how much of it is new, a row for each other app found
   on the computer (checked, it says how many of its searches and grades there are, which are read only then), the
   queries to look over and leave out, and everything again once a package was made. `FeedbackPrivacy`, what the row
   "פרטיות ומחיקה" opens: what is never sent, the sender's id to copy or renew, and deleting from the service what this
-  sender sent. `FeedbackSendActions`, what the page's checkboxes and buttons do. Until 2026-11-12 all of it was one
+  sender sent. Until 2026-11-12 all of it was one
   long card of Settings › ניהול נתונים, with the automatic sending's and the publication's checkboxes, which are rows
   of the page now.
 - **Reached from:** `FeedbackSettingsScreen.kt`.
 - **Follows:** Zayit's data settings cards.
+- **Tests:** `FeedbackSettingsUiTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendActions.kt`
+
+- **Feature:** Feedback sending.
+- **Size:** 26 lines.
+- **What:** `FeedbackSendActions`, what the feedback page's checkboxes and buttons do. It stood in `FeedbackSendCard.kt`
+  until 2026-11-13, when detekt's `MatchingDeclarationName` asked for a file named after it (that file's only class).
+- **Reached from:** `FeedbackSettingsScreen.kt`, `FeedbackSendCard.kt`.
+- **Follows:** Zayit's action holders of its settings screens (a class of callbacks with defaults).
 - **Tests:** `FeedbackSettingsUiTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/feedback/FeedbackSendViewModel.kt`
@@ -5910,7 +5921,7 @@ with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBack
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFonts.kt`
 
 - **Feature:** User fonts.
-- **Size:** 142 lines.
+- **Size:** 138 lines.
 - **What:** `UserFonts`, the fonts in a folder (`shared`: the data folder's fonts/, `FileKit.filesDir`; `sharedOrNull`
   where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, whether
   its file is there): `add` (a TTF or OTF that Skia loads, copied under a name of its own, and whether it has an alef),
@@ -5925,14 +5936,25 @@ with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBack
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/UserFontsCard.kt`
 
 - **Feature:** User fonts.
-- **Size:** 176 lines.
+- **Size:** 164 lines.
 - **What:** `UserFontsCard`, Settings › גופנים's card after the six lists: the fonts added, each with a link that takes
   it out, a button that adds one (FileKit's picker, TTF or OTF), and what the last one came to (added; added without
-  Hebrew letters, a warning; not a font). `withMissingFont`, a list's fonts with the setting's user font whose file is
+  Hebrew letters, a warning; not a font: `FontAddResult`, in a file of its own since 2026-11-13). `withMissingFont`, a list's fonts with the setting's user font whose file is
   gone, listed as missing.
 - **Reached from:** `FontsSettingsScreen.kt`.
 - **Follows:** Zayit's settings cards (their frame and components) and the data page's file pickers.
 - **Tests:** none of the card (`UserFontsTest` for what it calls); tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontAddResult.kt`
+
+- **Feature:** User fonts.
+- **Size:** 13 lines.
+- **What:** `FontAddResult`, what the last font added came to: added, with Hebrew letters or without, or a file that is
+  not a font. It stood in `UserFontsCard.kt` until 2026-11-13, when detekt's `MatchingDeclarationName` asked for a file
+  named after it (that file's only class).
+- **Reached from:** `UserFontsCard.kt`.
+- **Follows:** Zayit's sealed results of its screens' operations.
+- **Tests:** none of its own; tried in the app with the card.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFontsTest.kt`
 
@@ -5955,7 +5977,7 @@ window's key handler), `PaneSearch.kt`, `BookTocPanel.kt`, `CategoryTreePanel.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TypeToSearch.kt`
 
 - **Feature:** Typing over a pane.
-- **Size:** 90 lines.
+- **Size:** 93 lines.
 - **What:** `TypeToSearch`: the pane under the pointer, by its window (`point`, set by `TypeToSearchTarget` from the
   pane's own hover source), `type(event, windowId)` for the window's key handler (a typed character, `KeyEventType.Unknown`,
   as a text field takes it), `textOf` (a letter or digit, no Ctrl, Alt or Meta) and `route`. `PaneSearchFocus.type`: the
@@ -6041,14 +6063,15 @@ back to its panes as their first places; which are open stays the selected tab's
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/PaneLayouts.kt`
 
 - **Feature:** Pane layout kept.
-- **Size:** 165 lines.
+- **Size:** 167 lines.
 - **What:** `SavedPane` (a pane's own id, docked side, order, extent, weight and band — `outer`, the full length of the
   window, appended last — or floating anchors, offset and size) and `SavedPanes` (a window's panes, and the split
   sides' thickness and the outer bands' order of its two docks, the orders appended last; `placementOf`, a pane's saved
   place where it may still be; `extentsOf`; `dockOf`, a dock's thickness and outer bands' order as a snapshot naming no
   pane), serializable for the session's ProtoBuf; `PaneLayouts.save`, a window's
   panes from its docks' `SatelliteLayoutSnapshot`s without the window's id (a restored window has a new one), and
-  `placementOf`, a saved pane's placement again (none for a side or anchor no longer known). A pane floating on a part
+  `placementOf`, a saved pane's placement again (none for a side or anchor no longer known; a floating one's by
+  `floatingOf`, apart since 2026-11-13 for detekt's `ReturnCount`). A pane floating on a part
   of the window only is not kept.
 - **Reached from:** `DesktopSession.kt` (`windowSnapshot`, `panesOf`, `savedPlacement`), `SessionModels.kt`
   (`WindowSnapshot.panes`).
@@ -6360,13 +6383,16 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 444 lines.
+- **Size:** 522 lines.
 - **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
   the book, looked up by title as it is typed (`booksLike`: an exact title first); the depths of its table of contents
   as buttons; where to start (`ListComboBox` of the units); how many a day; the first day (the luach's
   `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least); to
   start again at the end; the day's part beneath, as the card will show it; "שמור", "ביטול", and for a plan saved,
   "מחק תוכנית", which deletes on a second click within four seconds. The book's categories' titles are saved with it.
+  Its parts: `PlanFields` (the fields as the user sets them: `pickBook` and `pickLevel` take the start back to the
+  first unit, `toggle` keeps one day at least, `readPerDay` follows the field, `planFrom` makes the plan saved),
+  `rememberPreview`, `EditorWindow`, `BookRows`, `ScheduleRows` and `EditorButtons` (split on 2026-11-13 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on it).
 - **Reached from:** `StudyWidget.kt` (`Detached`).
 - **Follows:** Zayit's `WidgetOptionsDialog` (the window, its title bar and bottom bar) and its settings' fields.
 - **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז").
@@ -6425,9 +6451,9 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `.claude/settings.json` | Claude Code's project settings for this repository: `attribution.sessionUrl` false, which turns off the session link Claude Code adds to the commits it writes (f353d5dc's message). *Note:* Zayit has no .claude/ folder. Later Pardes commits still carry `Claude-Session:` trailers (e.g. 6be0f42b, 0c107b56). | Pardes's own |
-| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation, a drag's ghost black without a compositor). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
+| `.claude/skills/pardes-desktop-run/SKILL.md` | Claude Code skill for running Pardes for desktop built from this checkout, headless in the cloud container: Xvfb, Mesa's software EGL for Nucleus's Tao window, a small library cut from the release or the whole one (what needs it, and its size), preferences written so the app opens on Home with a region in Israel (more through `PREFS`), the UTF-8 locale, the JDKs (25 from apt for the build, the 27 Nucleus downloads for the run) and the hosts a first build needed, the Gradle wrapper every build here goes through, a click map of the 1440x900 window (the top bar, the tools menu, the settings, the siddur, the scan's button in the text view and below the two pages' button), how to type, paste, read the clipboard, select text by a drag, focus a new window and get through the GTK file picker, the feedback page as an official build shows it, the install wizard's scripts, a composable rendered in a scratch test, and the pitfalls met (the app closed before any Gradle run, a profile without a region reckoned as abroad, the first click lost, pgrep, llvmpipe's speed, the restart that a Gradle run cannot try, a timed test that fails once beside a compilation, a drag's ghost black without a compositor). *Note:* Reuses zayit-android's fetch-desktop-library.sh and androidApp/tools/make_subset_db.sh, and takes the daf layouts from a local checkout of the separate pardes-rashi-ocr repository. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/make-library.sh` | Skill script that makes the small library the headless app runs on (default /home/user/pardes-lib): the released library without its full-text index, cut to the base books given (default 103, Berakhot) with their commentaries and targumim, plus the lookup index, lexical.db, catalog.pb and release_info.txt; it then deletes the full seforim.db and copies the Talmud layouts into pardes-daf/. *Note:* Calls zayit-android's fetch-desktop-library.sh (`--no-fulltext`) and androidApp/tools/make_subset_db.sh (CONN_TYPES=1,3); needs about 8.2 GB free while it runs. | Pardes's own |
-| `.claude/skills/pardes-desktop-run/scripts/setup.sh` | Skill script that apt-installs what the container lacks to run the desktop app headless: Xvfb, xdotool, x11-utils, ImageMagick, zstd, sqlite3, xclip, Mesa's EGL, GLES and DRI drivers, mesa-utils and Noto fonts, after an `apt-get update` (stale lists once hid libegl1); it then copies central-mirror.init.gradle.kts into ~/.gradle/init.d. Idempotent. | Pardes's own |
+| `.claude/skills/pardes-desktop-run/scripts/setup.sh` | Skill script that apt-installs what the container lacks to run the desktop app headless: Xvfb, xdotool, x11-utils, ImageMagick, zstd, sqlite3, xclip, Mesa's EGL, GLES and DRI drivers, mesa-utils, Noto fonts and the build's JDK 25 (its toolchain, which Gradle cannot download where the network refuses api.foojay.io), after an `apt-get update` (stale lists once hid libegl1); it then copies central-mirror.init.gradle.kts into ~/.gradle/init.d. Idempotent. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/shot.sh` | Skill script: a screenshot of display :99 (ImageMagick `import -window root`), optionally after an xdotool click at x y and a wait, into $SHOTS (default /tmp/pardes-desktop-shots); with `CROP=<geometry>` also that region alone, to read small text. *Note:* The same as zayit-android's desktop-shot.sh, which shoots the released Zayit instead. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/start.sh` | Skill script that writes Pardes's java.util.prefs file (onboarding_finished, database_path, a region in Israel, semantic_pack_prompt and auto_update_check off, and whatever `PREFS` adds as key=value words), starts Xvfb :99 at 1440x900, runs `:SeforimApp:run` through gradle.sh with LIBGL_ALWAYS_SOFTWARE=1, and maximises the window named פרדס once it appears (up to 20 minutes). *Note:* Replaces whatever an earlier run saved in Pardes's preferences node (`Brand.settings()`). | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/central-mirror.init.gradle.kts` | Gradle init script for the cloud container alone, copied by setup.sh into ~/.gradle/init.d: it puts Google's mirror of Maven Central first among the repositories of the settings, the plugins and every project, since Maven Central answers 429 through the container's shared address. *Note:* It is not applied by the repository's build, and changes no build file. | Pardes's own |
@@ -6464,7 +6490,7 @@ the description where something needs saying.
 | `.claude/skills/zayit-android/scripts/temple-picture.py` | zayit-android script that builds the Temple countdown widget's picture from a public-domain 1850 painting ("The Siege and Destruction of Jerusalem"): Android's still JPG, three desktop JPGs, and Android's animated WebP whose fires flicker. *Note:* Stale for desktop: it writes SeforimApp/.../drawable/temple_jerusalem_in_fire_{small,medium,large}.jpg, which Zayit deleted (0c8e6c3c) and nothing reads; desktop's files/temple_jerusalem_in_fire.webp is a hand copy of the Android WebP (docs/PARDES_PLAN.md › Phase 1). | Pardes's own; its picture replaced the Shutterstock one inherited from Zayit |
 | `.claude/skills/zayit-fidelity/SKILL.md` | Claude Code skill, mandatory for every change: Pardes stays as identical to Zayit as it can be. The smallest change (nothing, a branding value, a new file behind a one-line hook, then an edit), written as Elie Gambache writes Zayit, committed as he commits, every file that differs from Zayit described in docs/ZAYIT_CHANGE_MAP.md in the same commit with check_change_map.py passing, and main reached only through the Change map check (main's ruleset: a pull request, or a fast-forward to a checked commit); merging a Zayit release (its licence first); why GitHub does not show Pardes as a fork. It points to its lessons (references/lessons.md), to the Gradle wrapper of pardes-desktop-run and to scripts/mapedit.py. | Pardes's own |
 | `.claude/skills/zayit-fidelity/references/eli-style.md` | The zayit-fidelity skill's reference on writing as Zayit's author writes it: his guidelines (AGENTS.md, CONTRIBUTING.md, CLAUDE.md, .editorconfig, detekt.yml, SeforimLibrary/AGENTS.md, CI), what his code shows (structure, state and events, Metro, settings, errors, logging, Compose, comments, KDoc, tests), how he works (Conventional Commits with their counts, one topic a branch, docs and tests with the change), and Pardes in his style. | Pardes's own; measured on Zayit v0.6.12 and its history |
-| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-11): building and checking (what CI runs where, ktlint's and detekt's findings, escapes turned into characters), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build, and what the user asked to be done again. | Pardes's own |
+| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-15): building and checking (what CI runs where, ktlint's and detekt's findings, escapes turned into characters), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build, and what the user asked to be done again. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/check_change_map.py` | The change map's check: every file that differs from the map's Zayit base has its entry (a heading with Change, What, Why, Kind, Merge risk and Tests for a Zayit file changed; Feature, Size, What, Reached from, Follows and Tests for a file added in Zayit's modules; at least a row for the others), the line counts of detailed entries match the files, no entry is left for a file back to Zayit's, and the base is the last merged release. Compares the working tree (untracked files included), or HEAD with --committed (CI); --stats prints the counts. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/mapedit.py` | A small Python class for scripts that edit the change map by entry: a file's line counts or size set to what they are now, a text replaced inside one entry or one row, a block put before a heading, each asserting it found its text once; run alone it prints each section's count of entries. *Note:* Written after a global sed hit two entries at once. | Pardes's own |
 

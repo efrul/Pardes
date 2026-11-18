@@ -52,18 +52,6 @@ import seforimapp.seforimapp.generated.resources.settings_user_fonts_remove
 import seforimapp.seforimapp.generated.resources.settings_user_fonts_title
 import java.io.File
 
-/** What the last font added came to: added, with Hebrew letters or without, or a file that is not a font. */
-internal sealed interface FontAddResult {
-    data class Added(
-        val name: String,
-        val hebrew: Boolean,
-    ) : FontAddResult
-
-    data class Failed(
-        val reason: String,
-    ) : FontAddResult
-}
-
 /**
  * Settings › גופנים: the fonts the user added ([UserFonts]), each with a link that takes it out, and a button that adds
  * one from a TTF or OTF file; it says when a font added has no Hebrew letters.

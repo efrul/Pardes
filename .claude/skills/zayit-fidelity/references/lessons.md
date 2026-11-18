@@ -89,6 +89,14 @@ tools and the code did when it was written.
 - **A parameter renamed to a local's name is shadowed by it.** `PdfBookReader`'s `alone` parameter (a tab of its own)
   met its local `alone` (a book added by itself): the local was passed on, and a book by itself got the tab's bar. Name
   them apart (`inTab`), and look for the name before a rename (2026-11-13).
+- **The PDF binding's `PdfPage` is slow by design for a scan** (docs/scan-speed, 2026-11-14): it waits 100 ms after its
+  size is known, draws a preview at a quarter of the width (which costs 40 to 78% of the page, as PDFium decodes the
+  whole scanned image either way) and keeps none of it. PDFium keeps nothing of a closed page, and every call runs on
+  one thread, in the order sent: `prefetch` of the next rows goes before the page in view. A view that holds its
+  `PdfReaderState` in its own composition reads and opens the whole file again at every switch. Speed comes from
+  drawing the page yourself (an image ready in memory shows in the next frame), not from the binding's knobs.
+- **A Compose scene in a bench closes each frame's snapshot:** `ImageComposeScene.render()` returns a new native image
+  (5 MB at 1440x900); left to the garbage collector, a loop of frames was killed for memory (2026-11-14).
 - **A Zayit test that builds a Zayit class breaks with a new constructor parameter** (`PostSelectLineTest` builds
   `BookContentViewModel` by hand): add the argument there, a relaxed `mockk`, and write the test into the map.
 - **An item that grows is measured at its new size only in a frame to come.** `scrollToItem(index, offset)` into an
