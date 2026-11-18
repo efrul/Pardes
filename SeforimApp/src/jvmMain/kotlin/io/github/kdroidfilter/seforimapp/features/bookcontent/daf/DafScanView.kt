@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -101,18 +102,20 @@ private sealed interface ScanLoad {
     data object None : ScanLoad
 
     data class Found(
-        val file: File,
+        val source: ScanSource,
     ) : ScanLoad
 }
 
 /**
  * Where the scan is, for what the reader asks of it ([DafControl]): the first line of the amud read at its top (the
- * tab's place, where the text and the daf open), the page read there, and its list of rows while it is shown.
+ * tab's place, where the text and the daf open), the page read there, and its list of rows while it is shown;
+ * [placedAnew] once the user set where the tractate begins in its file, so that the amud the list opens at is told.
  */
 private class ScanPlace(
     var topLineId: Long?,
 ) {
     var page = 0
+    var placedAnew = false
     var list: LazyListState? = null
     var rows = 0
     var spreads = false
@@ -155,9 +158,10 @@ internal fun DafScanReader(
         control.step = { false }
         control.where = { place.topLineId?.let { DafPlace(it, selectionShown = false, onComment = false) } }
     }
-    // Looked for again when the folder of scans changes
+    // Looked for again when the folder of scans changes, or a tractate's first page in its file is set
     val folder by scans.folder.collectAsState()
-    val load by produceState<ScanLoad>(ScanLoad.Looking, book.title, folder) {
+    val firstPages by scans.firstPages.collectAsState()
+    val load by produceState<ScanLoad>(ScanLoad.Looking, book.title, folder, firstPages) {
         value = runSuspendCatching { scans.of(book.title) }.getOrNull()?.let(ScanLoad::Found) ?: ScanLoad.None
     }
     Box(modifier.fillMaxSize()) {
@@ -170,7 +174,7 @@ internal fun DafScanReader(
                     modifier = Modifier.align(Alignment.Center),
                 )
             is ScanLoad.Found -> {
-                if (LocalTabSelected.current) ScanPages(state.file, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
+                if (LocalTabSelected.current) ScanPages(state.source, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
             }
         }
     }
@@ -228,24 +232,29 @@ private fun CutQuestion(
     }
 }
 
-// The cut of a scan as its view waits for it: being read or begun, ready, or none (PDFium not called here)
+// The cut of a scan as its view waits for it: being read or begun, ready, or none (PDFium not called here), with the
+// tractate's place in its file
 private sealed interface CutLoad {
     data object Opening : CutLoad
 
-    data object None : CutLoad
+    data class None(
+        val source: ScanSource,
+    ) : CutLoad
 
     data class Ready(
         val cut: ScanCut,
+        val source: ScanSource,
     ) : CutLoad
 }
 
 /**
- * The scan [file] at the amud of the tab's place: drawn from its pages cut into images ([DafScanPages], request 56),
- * or, where PDFium cannot be called by Pardes, by the binding's reader as before ([BindingScan]).
+ * The scan [source] at the amud of the tab's place: drawn from its pages cut into images ([DafScanPages], request 56),
+ * or, where PDFium cannot be called by Pardes, by the binding's reader as before ([BindingScan]). A file of the user's
+ * folder has a line above its pages that says where the tractate's daf ב. is in it, and sets it (request 52).
  */
 @Composable
 private fun ScanPages(
-    file: File,
+    source: ScanSource,
     book: Book,
     place: ScanPlace,
     zoom: Float,
@@ -262,31 +271,71 @@ private fun ScanPages(
     }
     // PDFium loaded by the binding, if no PDF was opened yet, before the cut asks it for the scan
     val loaded = rememberPdfiumLoaded()
-    val cut by produceState<CutLoad>(CutLoad.Opening, file, loaded, cutting) {
+    val file = source.file
+    val cut by produceState<CutLoad>(CutLoad.Opening, source, loaded, cutting) {
         value =
             when (loaded) {
                 null -> CutLoad.Opening
-                false -> CutLoad.None
+                false -> CutLoad.None(source)
                 // Not cut by the user's word: a cut kept whole still shows, else the binding draws the file
-                true ->
+                true -> {
+                    val placed = graph.dafScans.byBookmarks(source, book.title)
                     runSuspendCatching {
                         if (cutting == true) graph.dafScanPages.open(file) else graph.dafScanPages.whole(file)
-                    }.getOrNull()?.let(CutLoad::Ready) ?: CutLoad.None
+                    }.getOrNull()?.let { CutLoad.Ready(it, placed) } ?: CutLoad.None(placed)
+                }
             }
     }
     val placed = rememberPlaced(file, place)
-    when (val state = cut) {
-        // Nothing drawn for the moment the cut is read: the page follows in the next frames
-        CutLoad.Opening -> Box(Modifier.fillMaxSize())
-        CutLoad.None -> BindingScan(file, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
-        is CutLoad.Ready ->
-            if (placed) {
-                ScanList(state.cut.pages, book, place, zoom, lineId, scrollToLineTimestamp, onScroll) { listState, width, spreads, title ->
-                    ScanPageList(file, state.cut, listState, width, spreads = spreads, title = title)
-                }
-            } else {
-                Box(Modifier.fillMaxSize())
+    val shown = (cut as? CutLoad.Ready)?.source ?: (cut as? CutLoad.None)?.source
+    Column(Modifier.fillMaxSize()) {
+        if (shown != null && shown.personal) {
+            ScanFirstPageBar(
+                shown,
+                topPage = { shown.first + place.page },
+                onSet = { first, page ->
+                    place.page = page
+                    place.placedAnew = true
+                    graph.dafScans.setFirstPage(firstPageKey(file, book.title), first)
+                },
+            )
+        }
+        Box(Modifier.weight(1f)) {
+            when (val state = cut) {
+                // Nothing drawn for the moment the cut is read: the page follows in the next frames
+                CutLoad.Opening -> Box(Modifier.fillMaxSize())
+                is CutLoad.None -> BindingScan(state.source, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
+                is CutLoad.Ready ->
+                    if (placed) {
+                        val pages = state.source.pagesIn(state.cut.pages)
+                        // Opened again at the place's page when the tractate's first page in the file changes
+                        key(state.source.first, pages) {
+                            ScanList(
+                                pages,
+                                book,
+                                place,
+                                zoom,
+                                lineId,
+                                scrollToLineTimestamp,
+                                onScroll,
+                            ) { listState, width, spreads, title ->
+                                ScanPageList(
+                                    file,
+                                    state.cut,
+                                    listState,
+                                    width,
+                                    spreads = spreads,
+                                    title = title,
+                                    first = state.source.first,
+                                    count = pages,
+                                )
+                            }
+                        }
+                    } else {
+                        Box(Modifier.fillMaxSize())
+                    }
             }
+        }
     }
 }
 
@@ -305,10 +354,10 @@ private fun rememberPlaced(
     return placed
 }
 
-/** The scan [file] read whole and drawn by the binding's reader, where Pardes cannot call PDFium itself. */
+/** The scan [source] read whole and drawn by the binding's reader, where Pardes cannot call PDFium itself. */
 @Composable
 private fun BindingScan(
-    file: File,
+    source: ScanSource,
     book: Book,
     place: ScanPlace,
     zoom: Float,
@@ -316,6 +365,7 @@ private fun BindingScan(
     scrollToLineTimestamp: Long,
     onScroll: (lineId: Long) -> Unit,
 ) {
+    val file = source.file
     val reader = rememberPdfReaderState(cacheBytes = PAGES_CACHE_BYTES)
     var failure by remember(file) { mutableStateOf<String?>(null) }
     var opened by remember(file) { mutableStateOf(false) }
@@ -333,10 +383,24 @@ private fun BindingScan(
                 Text(stringResource(Res.string.daf_scan_failed, error), Modifier.padding(24.dp))
             }
         !opened || !placed -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else ->
-            ScanList(reader.pageCount, book, place, zoom, lineId, scrollToLineTimestamp, onScroll) { listState, width, spreads, title ->
-                PdfPageList(reader, listState, width, spreads = spreads, selectableText = false, title = title)
+        else -> {
+            val pages = source.pagesIn(reader.pageCount)
+            // Opened again at the place's page when the tractate's first page in the file changes
+            key(source.first, pages) {
+                ScanList(pages, book, place, zoom, lineId, scrollToLineTimestamp, onScroll) { listState, width, spreads, title ->
+                    PdfPageList(
+                        reader,
+                        listState,
+                        width,
+                        spreads = spreads,
+                        selectableText = false,
+                        title = title,
+                        first = source.first,
+                        count = pages,
+                    )
+                }
             }
+        }
     }
 }
 
@@ -440,9 +504,16 @@ private fun TellThePlace(
         snapshotFlow { lineNow() }
             .filterNotNull()
             .distinctUntilChanged()
-            // The amud the scan opened at is the tab's already
-            .onEach { if (!told.opened) told.opened(it) }
-            .drop(1)
+            // The amud the scan opened at is the tab's already, unless its pages were placed anew in their file
+            .onEach {
+                if (!told.opened) {
+                    told.opened(it)
+                    if (place.placedAnew) {
+                        place.placedAnew = false
+                        tell(it)
+                    }
+                }
+            }.drop(1)
             .debounce(PLACE_DEBOUNCE)
             .collect { tell(it) }
     }

@@ -16,7 +16,6 @@ import org.jetbrains.compose.resources.stringResource
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_scan
 import seforimapp.seforimapp.generated.resources.daf_scan_tooltip
-import java.io.File
 
 /**
  * Pardes (requests 41, 46 and 56 of docs/DESKTOP_STAGE2.md): the end bar's button of a Talmud tractate, under the daf's
@@ -53,14 +52,15 @@ private fun ScanPageAhead(
     val graph = LocalAppGraph.current
     val folder by graph.dafScans.folder
         .collectAsState()
-    val scan by produceState<File?>(null, book.title, folder) {
+    val scan by produceState<ScanSource?>(null, book.title, folder) {
         value = runSuspendCatching { graph.dafScans.of(book.title) }.getOrNull()
     }
     LaunchedEffect(scan, lineId) {
-        val file = scan ?: return@LaunchedEffect
+        val source = scan ?: return@LaunchedEffect
         delay(AHEAD_AFTER_MS)
         val page = lineId?.takeIf { it > 0 }?.let { amudOfLine(graph.repository, it) }?.let(::scanPageOf) ?: 0
-        graph.dafScanPages.prepare(file, listOf(page, page + 1))
+        // The file's pages: the tractate's daf ב. need not be its first (request 52 of docs/DESKTOP_STAGE3_PLAN.md)
+        graph.dafScanPages.prepare(source.file, listOf(page, page + 1).map { source.first + it })
     }
 }
 

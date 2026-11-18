@@ -2,10 +2,14 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import io.github.kdroidfilter.seforimapp.catalog.CatalogPresets
+import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.core.settings.SettingsGroup
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlines
 import io.github.kdroidfilter.seforimapp.features.settings.feedback.otzariaDataRoots
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
+import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
@@ -17,8 +21,8 @@ import java.io.File
 // by themselves (nothing of them is shipped by Pardes).
 
 /**
- * The daf view's scans' settings: the folder of scanned tractates the user chose (Settings › צורת הדף), and whether
- * scans are cut into images.
+ * The daf view's scans' settings: the folder of scanned tractates the user chose (Settings › צורת הדף), whether scans
+ * are cut into images, and the pages of its files where tractates begin.
  */
 object DafScanSettings : SettingsGroup("daf_scans") {
     /** The folder's path, looked in before Otzaria's; null for none. A folder of this computer: not carried elsewhere. */
@@ -29,6 +33,12 @@ object DafScanSettings : SettingsGroup("daf_scans") {
      * first opened; null until then (request 51 of docs/DESKTOP_STAGE3_PLAN.md). This computer's disk: not carried.
      */
     val cut by json<Boolean?>(null)
+
+    /**
+     * The page (from 0) of a file of the folder where a tractate's daf ב. is, as the user set it, by `file|tractate`
+     * ([firstPageKey]; request 52 of docs/DESKTOP_STAGE3_PLAN.md). The files of this computer: not carried.
+     */
+    val firstPages by json<Map<String, Int>>(emptyMap())
 }
 
 /**
@@ -60,22 +70,40 @@ object OtzariaScans {
             .distinctBy { runCatching { it.canonicalPath }.getOrDefault(it.path) }
 
     /**
-     * The scan of [tractate] in a folder of the user's [dir]: its PDF right in it, or in a folder in it, [depth] folders
-     * down at most, the nearest first and each level's folders by name.
+     * The scan of [tractate] in a folder of the user's [dir]: a PDF right in it, or in a folder in it, [depth] folders
+     * down at most, whose name holds the tractate's ([ScanNames], request 43 of docs/DESKTOP_STAGE3_PLAN.md), the other
+     * tractates being [tractates]. The file named the tractate first, then a file of the tractate alone, then one of
+     * several; among those, the tractate's name nearest the start of the file's, the nearest folder, the name.
      */
     fun findIn(
         tractate: String,
         dir: File,
+        tractates: Collection<String> = emptyList(),
         depth: Int = FOLDER_DEPTH,
-    ): File? {
-        val name = "$tractate.pdf"
+    ): ScanSource? {
+        val found = ArrayList<Found>()
         var level = listOf(dir)
-        repeat(depth + 1) {
-            level.firstNotNullOfOrNull { folder -> File(folder, name).takeIf { it.isFile } }?.let { return it }
+        for (down in 0..depth) {
+            for (file in level.flatMap { folder -> folder.listFiles { file -> file.isFile && file.isPdf }.orEmpty().toList() }) {
+                val fit = ScanNames.fit(file.name, tractate, tractates) ?: continue
+                found += Found(file, fit, ScanNames.indexIn(ScanNames.words(file.name), tractate), down)
+            }
             level = level.flatMap { folder -> folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name } }
         }
-        return null
+        return found
+            .minWithOrNull(compareBy({ it.fit }, { it.index }, { it.down }, { it.file.name }))
+            ?.let { ScanSource(it.file, it.fit, personal = true) }
     }
+
+    // A file whose name holds the tractate: how it fits, where the tractate's name is in it, how many folders down
+    private class Found(
+        val file: File,
+        val fit: ScanFit,
+        val index: Int,
+        val down: Int,
+    )
+
+    private val File.isPdf: Boolean get() = !name.startsWith('.') && extension.equals("pdf", ignoreCase = true)
 
     /** The scan of [tractate] in the Bavli folders [bavli]: its PDF in one of their orders' folders, or in them. */
     fun find(
@@ -111,12 +139,14 @@ object OtzariaScans {
 
 /**
  * The tractates' scans: in the folder the user chose ([DafScanSettings.folder]) first, else Otzaria's ([OtzariaScans]),
- * whose folders are looked for once a start.
+ * whose folders are looked for once a start; in a file of the user's, the tractate's place ([ScanSource.first]), set
+ * by the user or guessed, by the library's tractates ([repository]).
  */
 @Inject
 @SingleIn(AppScope::class)
 class DafScans(
     private val appSettings: AppSettings,
+    private val repository: SeforimRepository,
 ) {
     // Otzaria's data folders, its own unless a test gives others, and its Bavli folders, read at the first scan asked for
     internal var otzariaRoots: List<File>? = null
@@ -138,11 +168,69 @@ class DafScans(
         appSettings[DafScanSettings.cut] = on
     }
 
-    /** The scan of [tractate] (its book's title), or null when the folder chosen and Otzaria have none. */
-    suspend fun of(tractate: String): File? =
+    /** The first pages the user set, by `file|tractate` ([firstPageKey]). */
+    val firstPages: StateFlow<Map<String, Int>> get() = appSettings.flow(DafScanSettings.firstPages)
+
+    /**
+     * Sets the page (from 0) where daf ב. is in the file and of the tractate of [key] ([firstPageKey]), or lets it be
+     * guessed again ([page] null).
+     */
+    fun setFirstPage(
+        key: String,
+        page: Int?,
+    ) {
+        val pages = appSettings[DafScanSettings.firstPages]
+        appSettings[DafScanSettings.firstPages] = if (page == null) pages - key else pages + (key to page)
+    }
+
+    /**
+     * The scan of [tractate] (its book's title), or null when the folder chosen and Otzaria have none: in a file of the
+     * folder chosen, at the page the user set, else at the one the tractates named before it in the file's name give
+     * (their tables of contents, from the first page set for one of them), and in a file of several its pages only.
+     */
+    suspend fun of(tractate: String): ScanSource? =
         withContext(Dispatchers.IO) {
-            folder.value?.let { OtzariaScans.findIn(tractate, File(it)) } ?: OtzariaScans.find(tractate, bavli)
+            val tractates = tractates()
+            val found =
+                folder.value?.let { OtzariaScans.findIn(tractate, File(it), tractates.keys) }
+                    ?: return@withContext OtzariaScans.find(tractate, bavli)?.let { ScanSource(it) }
+            val setFirst = { title: String -> firstPages.value[firstPageKey(found.file, title)] }
+            val set = setFirst(tractate)
+            if (found.fit != ScanFit.JOINED) return@withContext found.copy(first = set ?: 0, firstSet = set != null)
+            val inName = ScanNames.tractatesIn(found.file.name, tractates.keys)
+            val amuds = inName.associateWith { title -> tractates[title]?.let { amudsOf(it) } }
+            found.copy(
+                first = set ?: firstByName(tractate, inName, amuds::get, setFirst) ?: 0,
+                count = amuds[tractate],
+                firstSet = set != null,
+            )
         }
+
+    /**
+     * [source] of [tractate] at the page its file's bookmarks give, when the user set none ([firstByBookmarks]): a file
+     * of the user's folder, read by PDFium once it is loaded.
+     */
+    suspend fun byBookmarks(
+        source: ScanSource,
+        tractate: String,
+    ): ScanSource {
+        if (!source.personal || source.firstSet) return source
+        val outline = runSuspendCatching { PdfOutlines.read(source.file) }.getOrDefault(emptyList())
+        return firstByBookmarks(tractate, outline, alone = source.fit != ScanFit.JOINED)?.let { source.copy(first = it) } ?: source
+    }
+
+    // The Talmud's tractates, the books of its orders by title, read once they are found
+    private var bavliBooks: Map<String, Long>? = null
+
+    private suspend fun tractates(): Map<String, Long> =
+        bavliBooks ?: runSuspendCatching {
+            (CatalogPresets.Ids.Categories.BAVLI_ZERAIM..CatalogPresets.Ids.Categories.BAVLI_TAHAROT)
+                .flatMap { repository.getBooksByCategory(it) }
+                .associate { it.title to it.id }
+        }.getOrDefault(emptyMap()).also { if (it.isNotEmpty()) bavliBooks = it }
+
+    // A tractate's amudim from ב., by its table of contents
+    private suspend fun amudsOf(bookId: Long): Int? = runSuspendCatching { amudCount(repository.getTocEntriesForBook(bookId)) }.getOrNull()
 
     /** Otzaria's Bavli folders found on this computer. */
     suspend fun otzariaFolders(): List<File> = withContext(Dispatchers.IO) { bavli }

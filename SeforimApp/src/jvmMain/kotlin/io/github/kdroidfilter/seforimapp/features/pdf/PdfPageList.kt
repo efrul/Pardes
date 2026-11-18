@@ -111,7 +111,8 @@ internal fun spreadPageWidth(room: Dp): Dp = (room - PAGE_GAP) / 2
  * [reader]'s pages in rows ([PageRows]), each page [pageWidth] wide, each under its [title] when one is given; their
  * text selectable when [selectableText]. A page wider than [MOST_DRAWN_PX] pixels is drawn at that width and scaled up,
  * and the pages of the [ROWS_AHEAD] rows after the first in view are drawn ahead of time, at their width, so that a
- * page scrolled to is mostly drawn already.
+ * page scrolled to is mostly drawn already. The pages are [count] from the page [first] (a tractate's in a file of
+ * several, request 52 of docs/DESKTOP_STAGE3_PLAN.md); the rows and titles count from it.
  */
 @OptIn(FlowPreview::class)
 @Composable
@@ -123,13 +124,15 @@ internal fun PdfPageList(
     spreads: Boolean = false,
     selectableText: Boolean = true,
     title: ((page: Int) -> String)? = null,
+    first: Int = 0,
+    count: Int = reader.pageCount,
 ) {
-    val pages = reader.pageCount
+    val pages = count
     val rows = rowCount(pages, spreads)
     val drawnPx = with(LocalDensity.current) { pageWidth.roundToPx() }.coerceAtMost(MOST_DRAWN_PX)
     // Once the pages rest, the rows ahead in the way they moved (one with two pages a row): a scroll that flies by
     // asked for every row it passed, and the binding drew them all before the pages in view (request 48)
-    LaunchedEffect(reader, drawnPx, spreads) {
+    LaunchedEffect(reader, drawnPx, spreads, first, count) {
         var last = listState.firstVisibleItemIndex
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
@@ -139,14 +142,14 @@ internal fun PdfPageList(
                 val rowsAhead = if (first >= last) first + 1..first + ahead else first - 1 downTo first - ahead
                 last = first
                 for (row in rowsAhead.filter { it in 0 until rows }) {
-                    pagesOf(row, pages, spreads).forEach { page -> reader.prefetch(page, drawnPx, RenderQuality.FULL) }
+                    pagesOf(row, pages, spreads).forEach { page -> reader.prefetch(first + page, drawnPx, RenderQuality.FULL) }
                 }
             }
     }
     // In the dark theme, its text on its panel (request 42 of docs/DESKTOP_STAGE3_PLAN.md)
     val colors = rememberPageColors()
     PageRows(pages, listState, pageWidth, modifier, spreads, title) { page, width ->
-        PdfPage(reader, page, Modifier.width(width).pageColors(colors).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
+        PdfPage(reader, first + page, Modifier.width(width).pageColors(colors).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
     }
 }
 
