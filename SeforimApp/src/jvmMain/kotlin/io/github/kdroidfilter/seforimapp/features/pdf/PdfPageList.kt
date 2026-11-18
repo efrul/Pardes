@@ -233,8 +233,8 @@ internal fun Modifier.drawnAtMost(px: Int): Modifier =
     }
 
 /**
- * A key over the [rows] of pages: Page Up and Down move most of a view, Ctrl + Home and End go to the first and last
- * row.
+ * A key over the [rows] of pages: Page Up and Down move most of a view, the arrows up and down a little of it (request
+ * 45 of docs/DESKTOP_STAGE3_PLAN.md), Ctrl + Home and End go to the first and last row.
  */
 internal fun pageListKey(
     event: KeyEvent,
@@ -247,6 +247,8 @@ internal fun pageListKey(
     when {
         event.key == Key.PageDown -> scope.launch { listState.turnPage(forward = true) }
         event.key == Key.PageUp -> scope.launch { listState.turnPage(forward = false) }
+        event.key == Key.DirectionDown -> scope.launch { listState.step(forward = true) }
+        event.key == Key.DirectionUp -> scope.launch { listState.step(forward = false) }
         ctrl && event.key == Key.MoveHome -> scope.launch { listState.scrollToItem(0) }
         ctrl && event.key == Key.MoveEnd -> scope.launch { listState.scrollToItem((rows - 1).coerceAtLeast(0)) }
         else -> return false
@@ -259,5 +261,13 @@ internal suspend fun LazyListState.turnPage(forward: Boolean) {
     animateScrollBy((if (forward) 1 else -1) * layoutInfo.viewportSize.height * PAGE_STEP)
 }
 
+/** Scrolls a little of a view down ([forward]) or up, as an arrow does. */
+private suspend fun LazyListState.step(forward: Boolean) {
+    animateScrollBy((if (forward) 1 else -1) * layoutInfo.viewportSize.height * ARROW_STEP)
+}
+
 /** A page key moves this much of the view, as the text's. */
 private const val PAGE_STEP = 0.9f
+
+/** An arrow moves this much of the view. */
+private const val ARROW_STEP = 0.15f
