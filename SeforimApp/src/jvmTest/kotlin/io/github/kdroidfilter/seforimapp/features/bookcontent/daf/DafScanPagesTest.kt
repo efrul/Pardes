@@ -96,6 +96,23 @@ class DafScanPagesTest {
         assertFalse(File(root, "pardes-scans").exists())
     }
 
+    @Test
+    fun `a cut kept whole serves without cutting, and nothing is begun for a scan not cut`() {
+        val scan = File(scans, "ברכות.pdf").apply { writeBytes(PdfiumDocumentTest.pdfOfPages(2)) }
+        assertNull(runBlocking { pages().whole(scan) }, "not cut: nothing begun")
+        assertFalse(File(root, "pardes-scans").exists())
+
+        val pages = pages()
+        runBlocking {
+            pages.open(scan)
+            withTimeout(TIMEOUT) { waitFor { (0..1).all { pages.image(scan, it) != null }.takeIf { it } } }
+        }
+        val folder = File(root, "pardes-scans").listFiles()!!.single()
+        runBlocking { withTimeout(TIMEOUT) { waitFor { pages().whole(scan) } } }
+        assertEquals(listOf(3000, 3000), runBlocking { pages().whole(scan) }?.heights)
+        assertTrue(File(folder, "1.png").isFile)
+    }
+
     // Asks again as pages are cut, until there is an answer
     private suspend fun <T : Any> waitFor(answer: suspend () -> T?): T {
         while (true) {

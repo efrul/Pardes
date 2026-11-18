@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -58,9 +59,14 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CircularProgressIndicator
 import org.jetbrains.jewel.ui.component.DefaultButton
+import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_scan_choose
+import seforimapp.seforimapp.generated.resources.daf_scan_cut_no
+import seforimapp.seforimapp.generated.resources.daf_scan_cut_question
+import seforimapp.seforimapp.generated.resources.daf_scan_cut_question_hint
+import seforimapp.seforimapp.generated.resources.daf_scan_cut_yes
 import seforimapp.seforimapp.generated.resources.daf_scan_failed
 import seforimapp.seforimapp.generated.resources.daf_scan_missing
 import seforimapp.seforimapp.generated.resources.daf_scan_missing_hint
@@ -194,6 +200,33 @@ private fun NoScan(
     }
 }
 
+/**
+ * Whether to cut the scans into images, asked in the scan's place the first time one opens: what it gives, the room it
+ * takes and where, and the two answers ([onAnswer]), which the settings change (request 51 of DESKTOP_STAGE3_PLAN.md).
+ */
+@Composable
+private fun CutQuestion(
+    onAnswer: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier.widthIn(max = 520.dp).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(stringResource(Res.string.daf_scan_cut_question), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(Res.string.daf_scan_cut_question_hint),
+            color = JewelTheme.globalColors.text.info,
+            textAlign = TextAlign.Center,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DefaultButton(onClick = { onAnswer(true) }) { Text(stringResource(Res.string.daf_scan_cut_yes)) }
+            OutlinedButton(onClick = { onAnswer(false) }) { Text(stringResource(Res.string.daf_scan_cut_no)) }
+        }
+    }
+}
+
 // The cut of a scan as its view waits for it: being read or begun, ready, or none (PDFium not called here)
 private sealed interface CutLoad {
     data object Opening : CutLoad
@@ -220,14 +253,24 @@ private fun ScanPages(
     onScroll: (lineId: Long) -> Unit,
 ) {
     val graph = LocalAppGraph.current
+    // Cut into images only by the user's word, asked the first time a scan opens (request 51 of DESKTOP_STAGE3_PLAN.md)
+    val cutting by graph.dafScans.cut.collectAsState()
+    if (cutting == null) {
+        Box(Modifier.fillMaxSize()) { CutQuestion(onAnswer = graph.dafScans::setCut, modifier = Modifier.align(Alignment.Center)) }
+        return
+    }
     // PDFium loaded by the binding, if no PDF was opened yet, before the cut asks it for the scan
     val loaded = rememberPdfiumLoaded()
-    val cut by produceState<CutLoad>(CutLoad.Opening, file, loaded) {
+    val cut by produceState<CutLoad>(CutLoad.Opening, file, loaded, cutting) {
         value =
             when (loaded) {
                 null -> CutLoad.Opening
                 false -> CutLoad.None
-                true -> runSuspendCatching { graph.dafScanPages.open(file) }.getOrNull()?.let(CutLoad::Ready) ?: CutLoad.None
+                // Not cut by the user's word: a cut kept whole still shows, else the binding draws the file
+                true ->
+                    runSuspendCatching {
+                        if (cutting == true) graph.dafScanPages.open(file) else graph.dafScanPages.whole(file)
+                    }.getOrNull()?.let(CutLoad::Ready) ?: CutLoad.None
             }
     }
     val placed = rememberPlaced(file, place)

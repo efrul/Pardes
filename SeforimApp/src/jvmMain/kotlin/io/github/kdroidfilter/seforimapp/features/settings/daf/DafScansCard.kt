@@ -29,12 +29,14 @@ import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.CheckboxRow
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.daf_scans_choose
 import seforimapp.seforimapp.generated.resources.daf_scans_cut
 import seforimapp.seforimapp.generated.resources.daf_scans_cut_description
+import seforimapp.seforimapp.generated.resources.daf_scans_cut_enabled
 import seforimapp.seforimapp.generated.resources.daf_scans_cut_remove
 import seforimapp.seforimapp.generated.resources.daf_scans_description
 import seforimapp.seforimapp.generated.resources.daf_scans_folder
@@ -46,7 +48,8 @@ import seforimapp.seforimapp.generated.resources.daf_scans_title
 import java.io.File
 
 // Pardes (requests 41, 48 and 56 of docs/DESKTOP_STAGE2.md): where the tractates' scans are looked for, in the settings
-// rather than over the scan (the user's decision of 2026-11-13), and their pages cut into images.
+// rather than over the scan (the user's decision of 2026-11-13), and their pages cut into images, by the user's word
+// (request 51 of docs/DESKTOP_STAGE3_PLAN.md).
 
 /**
  * Settings › צורת הדף: where the tractates' scans are looked for (DafScans): the folder of scanned tractates the user
@@ -94,15 +97,23 @@ fun DafScansCard() {
     }
 }
 
-// The scans' pages cut into images beside the library (request 56): the room they take, and their removal
+// The scans' pages cut into images beside the library (request 56), by the user's word (request 51 of stage 3): whether
+// they are cut, the room they take, and their removal
 @Composable
 private fun CutPages(modifier: Modifier = Modifier) {
     val pages = LocalAppGraph.current.dafScanPages
+    val scans = LocalAppGraph.current.dafScans
+    val cutting by scans.cut.collectAsState()
     val scope = rememberCoroutineScope()
     var bytes by remember { mutableLongStateOf(0L) }
     LaunchedEffect(pages) { bytes = pages.bytes() }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = stringResource(Res.string.daf_scans_cut), fontSize = 13.sp)
+        CheckboxRow(
+            text = stringResource(Res.string.daf_scans_cut_enabled),
+            checked = cutting == true,
+            onCheckedChange = scans::setCut,
+        )
         Text(
             text = stringResource(Res.string.daf_scans_cut_description, formatBytes(bytes)),
             fontSize = 12.sp,
