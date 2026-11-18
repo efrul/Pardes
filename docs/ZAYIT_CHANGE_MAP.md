@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (278 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (280 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -444,8 +444,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +25 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
-  A copy cut of its spaces.
+- **Change:** modified, +28 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
+  A copy cut of its spaces, Tab shortcuts.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
@@ -457,6 +457,11 @@ The entries of this section by kind:
   Zayit's call to `selectionCopyShortcut` had inline) and first gives the key to `rememberCommentaryCopyShortcut()`'s
   handler (`commentaryCopy`), which takes Ctrl/Cmd+Alt+C of a selection in a commentary, a targum or the daf's Rashi
   and Tosafot; comments marked "Pardes:" and an import.
+- **What, the tab shortcuts:** `val tabKeys = rememberTabKeys(tabsVm)` after `commentaryCopy`, with a comment marked
+  "Pardes:", and the window's preview key handler gives the key to it after the copy shortcuts
+  (`if (tabKeys(keyEvent)) return@onPreviewKeyEvent true`): Chrome's tab shortcuts in the strip's order as read, from
+  the right (stage 3). Zayit's own Ctrl+Tab branches, below it in both handlers, are reached no more while the window
+  has the focus; Zayit 0.6.13 fixes their direction itself, and its merge gives Ctrl+Tab back to them.
 - **What, a copy cut of its spaces:** the window's content gets `LocalClipboard provides rememberEdgeTrimmedClipboard()`
   among its locals, with a comment marked "Pardes:" and two imports: every copy in the window, Compose's own (Ctrl+C,
   the menu's "העתקה") and the app's, is cut of the spaces at its ends (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`).
@@ -3279,6 +3284,22 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 - **Follows:** Zayit's tab menu items (`tabContextMenuItem`'s label, icon and click).
 - **Tests:** tried in the app.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/TabKeys.kt`
+
+- **Feature:** Tab shortcuts.
+- **Size:** 93 lines.
+- **What:** `tabKeyAction(key, shift, current, count, rtl)`, what a tab shortcut does (`TabKeyAction.Select` or
+  `Move`, an index), in the strip's order as read (from the right when right to left, where the tabs' index 0 is the
+  strip's left end): Ctrl/Cmd with 1 to 8 the tab at that place and 9 the last one; Tab or Page Down the next tab and
+  Shift+Tab or Page Up the one before, round the strip; Shift+Page Down or Up the tab moved one place, not round. And
+  `rememberTabKeys(tabsViewModel)`, the window's handler of them in its layout direction, which selects or reorders
+  through `TabsEvents`.
+- **Reached from:** `MainAppWindow.kt` (the preview key handler).
+- **Follows:** Pardes's `rememberCommentaryCopyShortcut` (a handler the window calls first); Chrome's shortcuts, and in
+  Hebrew its order from the right.
+- **Tests:** `TabKeysTest`; tried in the app (Ctrl+1, Ctrl+9, Ctrl+Page Down round the strip, Ctrl+Tab to the left,
+  Ctrl+Shift+Page Down).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabDuplicate.kt`
 
 - **Feature:** A copy of a tab.
@@ -3291,6 +3312,17 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 - **Reached from:** `DesktopManager.kt` (`duplicateTab`).
 - **Follows:** `DesktopSession.stripEphemeral`, which clears a restored book tab's line and notes.
 - **Tests:** `TabDuplicateTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/TabKeysTest.kt`
+
+- **Feature:** Tab shortcuts.
+- **Size:** 57 lines.
+- **What:** four tabs read from the right: the digits, nine the last; Tab and Page Down on to the left, round the strip;
+  Shift+Tab and Page Up back to the right; Shift+Page Down and Up move the tab one place and stop at the ends; left to
+  right the index's order; no tabs, another key.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabDuplicateTest.kt`
 

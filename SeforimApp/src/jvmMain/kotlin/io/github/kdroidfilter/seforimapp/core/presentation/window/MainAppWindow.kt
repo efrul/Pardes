@@ -333,6 +333,8 @@ fun NucleusApplicationScope.MainAppWindow(
             val copyToClipboard = rememberCopyToClipboard()
             // Pardes: Ctrl/Cmd+Alt+C of a selection in a commentary, a targum or the daf's Rashi and Tosafot cites them
             val commentaryCopy = rememberCommentaryCopyShortcut()
+            // Pardes: Chrome's tab shortcuts, from the right in a right-to-left strip
+            val tabKeys = rememberTabKeys(tabsVm)
             // Intercept key combos early to avoid focus traversal consuming Tab
             Box(
                 modifier =
@@ -359,6 +361,7 @@ fun NucleusApplicationScope.MainAppWindow(
                                 copyToClipboard(selectionCopy)
                                 return@onPreviewKeyEvent true
                             }
+                            if (tabKeys(keyEvent)) return@onPreviewKeyEvent true
                             if (keyEvent.type == KeyEventType.KeyDown) {
                                 val isCtrlOrCmd = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
                                 when {
