@@ -281,6 +281,31 @@ fun DetachedCommentatorView(
     val activeQuery = if (showFind) findQuery else ""
     val paneInteractionSource = remember { MutableInteractionSource() }
     val reattach = { onEvent(BookContentEvent.ReattachCommentator(commentator)) }
+    // The selected line(s) and their commentators before the header, whose title opens the commentator's book (request 50)
+    val selection =
+        when {
+            selectedLine == null -> null
+            isManualMultiSelection -> LineSelection.Multi(selectedLineIds)
+            else -> LineSelection.Single(selectedLine.id)
+        }
+    val groups =
+        when {
+            providers == null -> emptyList()
+            selection is LineSelection.Multi -> {
+                val multiGroups by produceState<List<CommentatorGroup>>(emptyList(), selectedLineIds) {
+                    value = providers.getCommentatorGroupsForLines(selectedLineIds)
+                }
+                multiGroups
+            }
+            selection is LineSelection.Single ->
+                rememberCommentarySelectionData(
+                    lineId = selection.lineId,
+                    getCommentatorGroupsForLine = providers.getCommentatorGroupsForLine,
+                    prefetchedGroups = lineConnections[selection.lineId]?.commentatorGroups,
+                ).groups
+            else -> emptyList()
+        }
+    val commentatorId = remember(groups, commentator) { bookIdOf(commentator, groups) }
 
     Column(modifier = Modifier.fillMaxSize().hoverable(paneInteractionSource)) {
         PaneHeader(
@@ -290,51 +315,47 @@ fun DetachedCommentatorView(
             actions = {
                 ReattachCommentatorButton(text = stringResource(Res.string.commentator_reattach), onClick = reattach)
             },
+            onLabelClick =
+                if (commentatorId != null && selection != null) {
+                    { onEvent(BookContentEvent.OpenBookByIdInNewTab(commentatorId, selection.baseLineIds())) }
+                } else {
+                    null
+                },
         )
         Column(modifier = Modifier.padding(horizontal = 8.dp)) {
             when {
-                selectedLine == null -> CenteredMessage(stringResource(Res.string.select_line_for_commentaries))
+                selection == null -> CenteredMessage(stringResource(Res.string.select_line_for_commentaries))
                 providers == null -> Unit
-                isManualMultiSelection -> {
-                    val groups by produceState<List<CommentatorGroup>>(emptyList(), selectedLineIds) {
-                        value = providers.getCommentatorGroupsForLines(selectedLineIds)
-                    }
+                else ->
                     DetachedCommentatorColumn(
                         commentator = commentator,
                         groups = groups,
-                        selection = LineSelection.Multi(selectedLineIds),
+                        selection = selection,
                         providers = providers,
                         columnScroll = columnScroll,
                         onEvent = onEvent,
                         textSizes = textSizes,
                         findQueryText = activeQuery,
                         diacritics = diacritics,
+                        selectedPassage = if (selection is LineSelection.Single) contentState.selectedPassage else null,
                     )
-                }
-                else -> {
-                    val groups =
-                        rememberCommentarySelectionData(
-                            lineId = selectedLine.id,
-                            getCommentatorGroupsForLine = providers.getCommentatorGroupsForLine,
-                            prefetchedGroups = lineConnections[selectedLine.id]?.commentatorGroups,
-                        ).groups
-                    DetachedCommentatorColumn(
-                        commentator = commentator,
-                        groups = groups,
-                        selection = LineSelection.Single(selectedLine.id),
-                        providers = providers,
-                        columnScroll = columnScroll,
-                        onEvent = onEvent,
-                        textSizes = textSizes,
-                        findQueryText = activeQuery,
-                        diacritics = diacritics,
-                        selectedPassage = contentState.selectedPassage,
-                    )
-                }
             }
         }
     }
 }
+
+/** The book of [commentator] among [groups], the commentators of the selected line(s); null when it has none there. */
+private fun bookIdOf(
+    commentator: String,
+    groups: List<CommentatorGroup>,
+): Long? = groups.firstNotNullOfOrNull { group -> group.commentators.firstOrNull { it.name == commentator }?.bookId }
+
+/** The base book's lines [this] selection holds, which a commentator's book opens at. */
+private fun LineSelection.baseLineIds(): List<Long> =
+    when (this) {
+        is LineSelection.Single -> listOf(lineId)
+        is LineSelection.Multi -> lineIds
+    }
 
 /** [commentator]'s column on [selection], as in the commentaries pane's grid; a message when it has nothing there. */
 @Composable
@@ -351,10 +372,7 @@ private fun DetachedCommentatorColumn(
     // The passage selected in the text: its commentaries stand out here too, as in the commentaries pane
     selectedPassage: SelectedPassage? = null,
 ) {
-    val commentatorId =
-        remember(groups, commentator) {
-            groups.firstNotNullOfOrNull { group -> group.commentators.firstOrNull { it.name == commentator }?.bookId }
-        }
+    val commentatorId = remember(groups, commentator) { bookIdOf(commentator, groups) }
     if (commentatorId == null) {
         CenteredMessage(stringResource(Res.string.commentator_not_on_line, commentator), fontSize = textSizes.commentTextSize)
         return
