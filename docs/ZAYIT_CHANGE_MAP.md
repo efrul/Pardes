@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (121 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (122 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -59,7 +59,7 @@ The entries of this section by kind:
 |---|---|
 | Pardes feature hook | 53 |
 | Pardes feature in Zayit's file | 31 |
-| Fix of Zayit's code | 12 |
+| Fix of Zayit's code | 13 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
@@ -1824,12 +1824,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/SettingsWindow.kt`
 
-- **Change:** modified, +21 −11 lines. Feature: Settings window.
+- **Change:** modified, +25 −11 lines. Feature: Settings window.
 - **What:** the settings are a window (`JewelDecoratedWindow`, with `rememberWindowState` at the same place and size,
   700x500 in the middle) instead of a dialog (`JewelDecoratedDialog`), and its title bar `JewelTitleBar` instead of
   `JewelDialogTitleBar`: no window is blocked, and the settings minimize apart. `SettingsWindow` takes `reopened`: at
   each one the window comes back (`setMinimized(false)`, `toFront`, `requestFocus`, as `DefaultToolWindow` does), and the
-  page asked for is gone to again (`LaunchedEffect(initialDestination, reopened)`). A comment marked "Pardes:".
+  page asked for is gone to again (`LaunchedEffect(initialDestination, reopened)`). A minimized window draws no frame,
+  so that effect waits while it is minimized: a second `LaunchedEffect(reopened)`, outside the window's content, sets
+  `settingsWindowState.isMinimized = false` first (request 57 of `docs/DESKTOP_STAGE3_PLAN.md`), as `ToolWindows.kt`
+  now does. A comment marked "Pardes:".
 - **Why:** the user asked on 2026-11-11 (request 35 of `docs/DESKTOP_STAGE2.md`) to minimize the settings apart from the main
   window and use the app while they are open; Zayit's settings were a dialog modal to the window they were opened from.
   A window of its own, opened once and brought back to the front when asked for again, is how Zayit opens its tool
@@ -2032,6 +2035,21 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Tests:** none of the screen; `UserFontsTest`; the font added and chosen were tried in the app.
 
 ### Home widgets
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/ToolWindows.kt`
+
+- **Change:** modified, +4 −0 lines. Feature: Settings window (request 57 of stage 3).
+- **What:** `DefaultToolWindow` sets `windowState.isMinimized = false` in a `LaunchedEffect(reopened)` of its own,
+  outside the window's content, before its effect inside the content brings the window to the front.
+- **Why:** a minimized window draws no frame, so nothing inside it recomposes and its `LaunchedEffect(reopened)` waited:
+  a tool window asked for again while minimized stayed minimized. The settings window, made like these in Pardes, had
+  the same fault (request 57 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "לחיצה על הגדרות תחזיר לחזית גם כאשר
+  מיזערו אותם"). The window state's `isMinimized` is applied by Nucleus's window in the caller's composition, which
+  keeps running.
+- **Kind:** fix of Zayit's code, for both brands, to drop once upstream has one.
+- **Merge risk:** small; four lines before the window.
+- **Smaller:** already minimal.
+- **Tests:** none: minimizing needs a window manager, which the cloud's display has not; tried on Windows by the user.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetCard.kt`
 
