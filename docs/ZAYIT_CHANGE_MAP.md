@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (128 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (129 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (275 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (278 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 55 |
+| Pardes feature hook | 56 |
 | Pardes feature in Zayit's file | 34 |
 | Fix of Zayit's code | 14 |
 | Branding hook | 4 |
@@ -754,17 +754,38 @@ The entries of this section by kind:
 - **Tests:** `PaneLayoutsTest` (what is saved and given back); a pane moved to the left side and found there after a
   restart, tried in the app.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsView.kt`
+
+- **Change:** modified, +17 −0 lines. Feature: A copy of a tab (request 59 of stage 3).
+- **What:** `TabActionsMenu` takes the tab's id (`tabId`, first) and draws Pardes's items (`pardesTabActions(tabId)`,
+  resolved before the menu as the labels are, with a comment marked "Pardes:") after "העתק קישור", through Zayit's
+  `tabContextMenuItem` in a loop; `RtlAwareTab` takes the tab's id to pass it on (`tabEntry.key`), and so does the
+  overflow list's row (`tab.key`).
+- **Why:** a copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`,
+  2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small to medium: a parameter on two of Zayit's composables and their three calls, and a loop in the
+  menu; Zayit changes the menu now and then.
+- **Smaller:** already minimal: the menu's items are private to this file.
+- **Tests:** tried in the app (the menu's "שכפל לשונית" on the strip).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManager.kt`
 
-- **Change:** modified, +3 −0 lines. Feature: Desktop link.
+- **Change:** modified, +26 −0 lines. Feature: Desktop link, A copy of a tab.
 - **What:** `createDesktop(windowId, name, tabs: WindowSnapshot? = null)`: the tabs given are kept as the new
-  desktop's dormant snapshot before it opens, so it opens with them rather than a fresh Home.
+  desktop's dormant snapshot before it opens, so it opens with them rather than a fresh Home. And `duplicateTab(tabId,
+  windowId)`, a function of its own before `addMovedTab`, with a KDoc marked "Pardes:": a copy of a tab with its
+  reading state, beside it on the + side of the strip, selected and pinned as it is, through `addMovedTab` with the
+  destination Pardes's `duplicateDestination` gives (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`).
 - **Why:** a desktop's link opens as a new desktop holding its tabs, through the path a dormant desktop reopens by
   (its titles shown at once, each tab read only when shown), instead of opening and selecting forty tabs one by one.
+  The copy: Chrome's "Duplicate", asked for on 2026-11-18 ("אפשרות לשכפול כרטיסיה"); it is the move of a tab to
+  another window (`addMovedTab`: the state and the picture copied under a new id) that keeps the source.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small: a parameter with a default and one line.
+- **Merge risk:** small: a parameter with a default and one line, and a function apart from Zayit's.
 - **Smaller:** already minimal.
-- **Tests:** `DesktopManagerTest` (a desktop made with its tabs opens with them).
+- **Tests:** `DesktopManagerTest` (a desktop made with its tabs opens with them); `TabDuplicateTest` (the copy's
+  destination); the copy tried in the app (Berakhot 9a copied beside itself, at 9a with its panes).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DesktopSwitcher.kt`
 
@@ -1790,7 +1811,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +359 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +361 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 333 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -1843,7 +1864,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     settings' card of the scans, `daf_scans_*` (11: its title and what it is, the folder chosen or none, its two
     buttons, Otzaria's folders found or none, and the pages cut into images: their heading, what they are and their
     room, their removal); and under a comment after them, two pages side by side:
-    `page_spreads` ("שני עמודים") and its tooltip.
+    `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a copy of a tab from its menu,
+    `tab_duplicate` ("שכפל לשונית", request 59 of stage 3).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -3237,6 +3259,47 @@ which the paste showed before the text (request 56 of `docs/DESKTOP_STAGE3_PLAN.
   those inside stay; a text with nothing to cut is the same entry.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's `LettersOnlyTest` (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### Tabs: a copy, and Chrome's shortcuts
+
+A copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18), and
+Chrome's tab shortcuts, which the windows lacked (Ctrl/Cmd with 1 to 9, Page Down and Up, Shift+Page Down and Up),
+in the strip's order as read, from the right (stage 3, request 47's "where else can keys be added"). Hooks:
+`DesktopManager.kt`, `TabsView.kt`, `MainAppWindow.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/PardesTabAction.kt`
+
+- **Feature:** A copy of a tab.
+- **Size:** 34 lines.
+- **What:** `PardesTabAction(label, icon, onClick)`, an item of a tab's menu, and `pardesTabActions(tabId)`, Pardes's
+  items of the menu of a tab: "שכפל לשונית" (`AllIconsKeys.Actions.Copy`), which calls
+  `DesktopManager.duplicateTab(tabId, windowId)` for the window it is in (`LocalOpenWindow`).
+- **Reached from:** `TabsView.kt` (`TabActionsMenu`).
+- **Follows:** Zayit's tab menu items (`tabContextMenuItem`'s label, icon and click).
+- **Tests:** tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabDuplicate.kt`
+
+- **Feature:** A copy of a tab.
+- **Size:** 28 lines.
+- **What:** `duplicateDestination(destination, state)`, the destination of a copy of a tab, which then opens where the
+  tab is from the state copied with it: a book tab at the book read last (`selectedBookId`; the destination keeps the
+  book it was opened with) with no line, end line, notes or shnayim mikra of its own, which would win over the state's
+  place; a search tab with the global scope and base books (its scope would replace the state's,
+  `seedNavigationScope`); any other tab as it is.
+- **Reached from:** `DesktopManager.kt` (`duplicateTab`).
+- **Follows:** `DesktopSession.stripEphemeral`, which clears a restored book tab's line and notes.
+- **Tests:** `TabDuplicateTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabDuplicateTest.kt`
+
+- **Feature:** A copy of a tab.
+- **Size:** 46 lines.
+- **What:** a book tab's copy opens the book read last with no line of its own; a book tab never moved keeps its book;
+  a search tab's copy has no scope of its own; another tab is copied as it is.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `DesktopManagerTest` beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### The reader's menu: a copy with the source of a commentary, a targum or the daf
