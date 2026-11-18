@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (125 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (126 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 53 |
+| Pardes feature hook | 54 |
 | Pardes feature in Zayit's file | 34 |
 | Fix of Zayit's code | 13 |
 | Branding hook | 4 |
@@ -1291,15 +1291,35 @@ The entries of this section by kind:
 - **Notes:** Zayit's search UI on purpose has no category scope (`SearchScope.Category` is "read back only" there,
   with category tabs over the results): this file brings back what Zayit chose to drop.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/PaneHeader.kt`
+
+- **Change:** modified, +23 −0 lines. Feature: Commentators in their own panes (request 50 of stage 3).
+- **What:** `PaneHeader` takes `onLabelClick: (() -> Unit)? = null`, last. With it, the title shows a hand, is
+  underlined while hovered, and clicks to it (`Modifier.openingLabel`, a private extension at the end of the file);
+  without it, the title is the plain text it was. A comment marked "Pardes:".
+- **Why:** a commentator split off into a pane of its own showed its name in this header, which could not be clicked,
+  while in the commentaries pane a commentator's title opens its book (request 50 of `docs/DESKTOP_STAGE3_PLAN.md`,
+  2026-11-18: "כאשר מפרש בחלונית נפרדת אי אפשר ללחוץ על כותרת המפרש כדי לפתוח את הספר"). `DetachedCommentatorView`
+  passes the click.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; a parameter, two lines on the title, and the extension.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app: the title of a split-off commentator opens its book, and its pane still drags by the
+  header.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineCommentsView.kt`
 
-- **Change:** modified, +365 −51 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default
+- **Change:** modified, +383 −51 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default
   commentators, Copy with a commentary's source.
 - **What:**
   - `LineCommentsView` reads the book's `CommentatorSelection` (`bookCommentators`) instead of the line's
     `selectedCommentatorIds`, and the split-off commentators, and passes both to the single- and multi-line contents.
   - New `DetachedCommentatorView` (a split-off commentator's pane: a header with a "back to the commentaries" button,
     then its column on the selected line or lines) with `DetachedCommentatorColumn` and `ReattachCommentatorButton`.
+    It reads the selection and its commentator groups before the header, so that the header's title opens the
+    commentator's book in a new tab at the lines that cite it (`PaneHeader(onLabelClick)`,
+    `OpenBookByIdInNewTab(id, baseLineIds())`), as a commentator's title does in the commentaries pane (request 50 of
+    `docs/DESKTOP_STAGE3_PLAN.md`); `bookIdOf(commentator, groups)` and `LineSelection.baseLineIds()` serve both.
   - Each line's checkboxes start from its own commentators that the book shows (`shownOf(listed)`) from the first
     frame, and report changes with `listed`.
   - `CommentatorsList`: a "כל המפרשים" row (`CommentatorsCheckAllRow`, a tri-state checkbox) and a checkbox per group
