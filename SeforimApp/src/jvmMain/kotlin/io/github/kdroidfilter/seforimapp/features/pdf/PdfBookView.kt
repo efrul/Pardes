@@ -93,7 +93,7 @@ internal fun PdfBookView(
 ) {
     val appSettings = LocalAppGraph.current.appSettings
     val store = LocalAppGraph.current.pdfBookStore
-    val reader = rememberPdfReaderState()
+    val reader = rememberPdfReaderState(cacheBytes = PAGES_CACHE_BYTES)
     var failure by remember(file) { mutableStateOf<String?>(null) }
     var opened by remember(file) { mutableStateOf(false) }
     LaunchedEffect(file) {

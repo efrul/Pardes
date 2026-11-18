@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import dev.nucleusframework.pdfium.rememberPdfReaderState
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
+import io.github.kdroidfilter.seforimapp.features.pdf.PAGES_CACHE_BYTES
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfPageList
 import io.github.kdroidfilter.seforimapp.features.pdf.firstPageOf
 import io.github.kdroidfilter.seforimapp.features.pdf.rememberPdfiumLoaded
@@ -315,7 +316,7 @@ private fun BindingScan(
     scrollToLineTimestamp: Long,
     onScroll: (lineId: Long) -> Unit,
 ) {
-    val reader = rememberPdfReaderState()
+    val reader = rememberPdfReaderState(cacheBytes = PAGES_CACHE_BYTES)
     var failure by remember(file) { mutableStateOf<String?>(null) }
     var opened by remember(file) { mutableStateOf(false) }
     LaunchedEffect(file) {
