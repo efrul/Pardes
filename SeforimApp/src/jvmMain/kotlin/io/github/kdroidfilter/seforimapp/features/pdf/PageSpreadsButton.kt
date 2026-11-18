@@ -23,10 +23,7 @@ fun PageSpreadsButton(
     uiState: BookContentState,
     modifier: Modifier = Modifier,
 ) {
-    val book = uiState.navigation.selectedBook ?: return
-    // A tractate as its daf or its scan, or a PDF book
-    val tractatePages = book.isBavli && (uiState.content.dafView || uiState.content.scanView)
-    if (!tractatePages && pdfIdOf(book.id) == null) return
+    if (!showsPages(uiState)) return
     val appSettings = LocalAppGraph.current.appSettings
     val spreads by appSettings.pageSpreadsFlow.collectAsState()
     SelectableIconButtonWithToolip(
@@ -38,4 +35,14 @@ fun PageSpreadsButton(
         modifier = modifier,
         iconDescription = stringResource(Res.string.page_spreads),
     )
+}
+
+/**
+ * Whether the tab of [uiState] shows pages rather than lines: a tractate as its daf or its scan, or a PDF book. The end
+ * bar's diacritics have nothing to do on them (request 49 of docs/DESKTOP_STAGE3_PLAN.md).
+ */
+fun showsPages(uiState: BookContentState): Boolean {
+    val book = uiState.navigation.selectedBook ?: return false
+    val tractatePages = book.isBavli && (uiState.content.dafView || uiState.content.scanView)
+    return tractatePages || pdfIdOf(book.id) != null
 }

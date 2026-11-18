@@ -28,6 +28,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.placesLines
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
+import io.github.kdroidfilter.seforimapp.features.pdf.showsPages
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.icons.*
@@ -147,10 +148,11 @@ fun EndVerticalBar(
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
                 val bookHasDiacritics = selectedBook.hasNekudot || selectedBook.hasTeamim
-                // A daf shown has no diacritics to hide: the button of its marks stands in their place
+                // A daf shown has no diacritics to hide: the button of its marks stands in their place; nor have
+                // pages (Pardes, request 49)
                 if (uiState.content.dafView && selectedBook.isBavli) {
                     DafMarksButton()
-                } else if (bookHasDiacritics) {
+                } else if (bookHasDiacritics && !showsPages(uiState)) {
                     DiacriticsButton(
                         diacritics = diacritics,
                         hasTeamim = selectedBook.hasTeamim,
