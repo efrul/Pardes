@@ -21,11 +21,13 @@ import androidx.compose.ui.unit.Dp
 import io.github.kdroidfilter.seforimapp.features.pdf.PageRows
 import io.github.kdroidfilter.seforimapp.features.pdf.ROWS_AHEAD
 import io.github.kdroidfilter.seforimapp.features.pdf.pagesOf
+import io.github.kdroidfilter.seforimapp.features.pdf.rememberPageColors
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
+import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.CircularProgressIndicator
 import java.io.File
 
@@ -70,7 +72,10 @@ private fun ScanPage(
     val image by produceState(pages.shownImage(scan, page), scan, page) {
         if (value == null) value = pages.revision.mapNotNull { pages.image(scan, page) }.first()
     }
-    Box(Modifier.width(width).aspectRatio(cut.width.toFloat() / cut.heightOf(page)).background(Color.White)) {
+    // In the dark theme, its text on its panel, the paper too (request 42 of docs/DESKTOP_STAGE3_PLAN.md)
+    val colors = rememberPageColors()
+    val paper = if (colors == null) Color.White else JewelTheme.globalColors.panelBackground
+    Box(Modifier.width(width).aspectRatio(cut.width.toFloat() / cut.heightOf(page)).background(paper)) {
         val shown = image
         if (shown == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -81,6 +86,7 @@ private fun ScanPage(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.FillBounds,
                 filterQuality = FilterQuality.Medium,
+                colorFilter = colors,
             )
         }
     }
