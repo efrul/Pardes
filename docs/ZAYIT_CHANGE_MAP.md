@@ -969,7 +969,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +57 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by side.
+- **Change:** modified, +59 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by side.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
@@ -977,7 +977,9 @@ The entries of this section by kind:
     button's place: the printed page has no nikud to hide, and the daf's marks are shown or hidden there. Under the
     "צורת הדף" toggle, for every Bavli tractate, `DafScanButton(selected = scanView, onClick = ToggleScanView, book,
     lineId)`, with a comment marked "Pardes:": the tractate's scan in place of its text or its daf (requests 41 and 46),
-    and the page of the line read (`primarySelectedLineId`, else `anchorId`) made ready ahead (request 56).
+    and the page of the line read (`primarySelectedLineId`, else `anchorId`) made ready ahead (request 56). Nor is the
+    diacritics button shown while the tab shows pages (`!showsPages(uiState)`, with its import): a tractate's scan or a
+    PDF book has no nikud to hide (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`).
   - Under `ZoomButtons`, `PageSpreadsButton(uiState)`, with a comment marked "Pardes:" and its import: two pages side
     by side, shown while the tab shows pages (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס ומינוס").
   - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
@@ -3861,12 +3863,13 @@ Pardes's `DafView.kt`, `PdfPageList.kt`, `PdfBookView.kt` and `DafScanView.kt`, 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageSpreadsButton.kt`
 
 - **Feature:** Two pages side by side.
-- **Size:** 41 lines.
+- **Size:** 48 lines.
 - **What:** `PageSpreadsButton(uiState, modifier)`, the end bar's "שני עמודים" (the `PageSpread` icon, its tooltip),
-  shown while the tab shows pages (a tractate's daf or scan, a PDF book): it turns `AppSettings.pageSpreadsFlow` on and
-  off, in every tab.
+  shown while the tab shows pages: it turns `AppSettings.pageSpreadsFlow` on and off, in every tab. `showsPages(uiState)`
+  says whether the tab shows pages rather than lines (a tractate's daf or scan, a PDF book); the bar also hides the
+  diacritics button by it (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`).
 - **Reached from:** `VerticalBars.kt`, under the zoom's buttons (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס
-  ומינוס").
+  ומינוס"), and at the diacritics button.
 - **Follows:** Pardes's `DafMarksButton` (`SelectableIconButtonWithToolip` over a flow of the settings).
 - **Tests:** tried in the app.
 
