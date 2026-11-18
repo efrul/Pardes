@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.LocalTextContextMenu
 import androidx.compose.foundation.text.TextContextMenu
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
@@ -91,6 +90,10 @@ import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocalLocatedSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocatedSelection
+import io.github.kdroidfilter.seforimapp.features.pdf.RowPart
+import io.github.kdroidfilter.seforimapp.features.pdf.ZoomAnchor
+import io.github.kdroidfilter.seforimapp.features.pdf.ZoomPivot
+import io.github.kdroidfilter.seforimapp.features.pdf.zoomPivot
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Amud
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.TocNumber
@@ -443,10 +446,14 @@ private fun DafPages(
     val stepping = remember { Mutex() }
     val currentPassage by rememberUpdatedState(selectedPassage)
     val currentIndex by rememberUpdatedState(index)
+    // Pardes (request 44 of stage 3): where the pointer zooms the pages, and the place their list keeps for it
+    val pivot = remember { ZoomPivot() }
+    val anchor = remember { ZoomAnchor() }
 
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
+            .zoomPivot(pivot)
             .focusRequester(keys)
             .onKeyEvent { event ->
                 val (name, range) = selection ?: return@onKeyEvent false
@@ -479,11 +486,19 @@ private fun DafPages(
         val currentPlaces by rememberUpdatedState(places)
         val currentPerPoint by rememberUpdatedState(perPoint)
         // The same place of the page at the view's top when its scale changes (the zoom, the view's width, also while
-        // the text was shown): the list keeps its pixels, which are another place then
+        // the text was shown): the list keeps its pixels, which are another place then. While the pointer zooms, the
+        // place under it (request 44 of docs/DESKTOP_STAGE3_PLAN.md)
         SideEffect {
             val shown = control.scale
             val from = shown.perPoint
             shown.perPoint = perPoint
+            val at = pivot.now()
+            if (at != null && from != 0f && from != perPoint) {
+                anchor.keepDown(listState, pageWidth, titleHeight, at)
+                shown.index = -1
+                return@SideEffect
+            }
+            anchor.width = pageWidth
             if (from == 0f || from == perPoint) return@SideEffect
             val index = listState.firstVisibleItemIndex
             val offset = listState.firstVisibleItemScrollOffset
@@ -710,7 +725,25 @@ private fun DafPages(
             }
         }
 
-        val hScroll = rememberScrollState()
+        // Pardes: kept as the pages zoom, at the point under the pointer while it zooms them (request 44)
+        val hScroll =
+            remember(pageWidth, columns) {
+                val pointer = pivot.now()?.let { if (rtl) viewport - it.x else it.x }
+                val kept =
+                    anchor.keepSideways(anchor.sideways, pageWidth, viewport, pointer) { width ->
+                        List(
+                            columns,
+                        ) {
+                            listOf(
+                                RowPart(padding, scales = false),
+                                RowPart(width, scales = true),
+                                RowPart(padding, scales = false),
+                            )
+                        }.flatten()
+                    }
+                ScrollState(kept)
+            }
+        SideEffect { anchor.sideways = hScroll }
         Box(
             Modifier
                 .fillMaxSize()

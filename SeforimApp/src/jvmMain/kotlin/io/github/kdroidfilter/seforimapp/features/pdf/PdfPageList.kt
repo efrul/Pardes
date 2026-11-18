@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.pdf
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -156,7 +158,8 @@ internal fun PdfPageList(
 /**
  * [pages] pages in rows ([rowCount], the items of [listState]), each [pageWidth] wide and drawn by [page], centered in
  * a list as wide as the view (wider rows scroll sideways), each under its [title] when one is given: a PDF's pages
- * drawn by its reader ([PdfPageList]), or a tractate's scan from its pages cut into images.
+ * drawn by its reader ([PdfPageList]), or a tractate's scan from its pages cut into images. While the pointer zooms
+ * them, the point under it stays where it is ([ZoomPivot], request 44 of docs/DESKTOP_STAGE3_PLAN.md).
  */
 @Composable
 internal fun PageRows(
@@ -170,11 +173,28 @@ internal fun PageRows(
 ) {
     val rows = rowCount(pages, spreads)
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    val density = LocalDensity.current
+    val pivot = remember { ZoomPivot() }
+    val anchor = remember { ZoomAnchor() }
+    BoxWithConstraints(modifier.fillMaxSize().zoomPivot(pivot)) {
         // Narrower than the view, the pages are centered in a list as wide as it, which the wheel scrolls anywhere
         val rowWidth = if (spreads) pageWidth * 2 + PAGE_GAP else pageWidth
         val listWidth = max(maxWidth, rowWidth)
-        Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
+        val widthPx = with(density) { pageWidth.toPx() }
+        // Kept as the pages zoom, at the point under the pointer while it zooms them
+        val sideways =
+            remember(widthPx, spreads) {
+                val view = constraints.maxWidth.toFloat()
+                val pointer = pivot.now()?.let { if (rtl) view - it.x else it.x }
+                val gap = with(density) { PAGE_GAP.toPx() }
+                ScrollState(anchor.keepSideways(anchor.sideways, widthPx, view, pointer) { rowParts(it, gap, spreads) })
+            }
+        val titlePx = if (title != null) with(density) { PAGE_TITLE_HEIGHT.toPx() } else 0f
+        SideEffect {
+            anchor.sideways = sideways
+            anchor.keepDown(listState, widthPx, titlePx, pivot.now())
+        }
+        Box(Modifier.fillMaxSize().horizontalScroll(sideways)) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.width(listWidth).fillMaxHeight(),
@@ -198,6 +218,22 @@ internal fun PageRows(
         }
     }
 }
+
+// A row's parts across the view: a page [width] pixels wide, or two with a [gap] between them
+private fun rowParts(
+    width: Float,
+    gap: Float,
+    spreads: Boolean,
+): List<RowPart> =
+    if (spreads) {
+        listOf(
+            RowPart(width, scales = true),
+            RowPart(gap, scales = false),
+            RowPart(width, scales = true),
+        )
+    } else {
+        listOf(RowPart(width, scales = true))
+    }
 
 /** The pages of [row] ([rowCount]). */
 internal fun pagesOf(
