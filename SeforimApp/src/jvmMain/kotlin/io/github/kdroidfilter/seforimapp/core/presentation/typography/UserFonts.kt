@@ -94,11 +94,7 @@ class UserFonts(
         ZipInputStream(ByteArrayInputStream(archive)).use { zip ->
             generateSequence { zip.nextEntry }.forEach { entry ->
                 val name = entry.name.removePrefix(ARCHIVE_DIR)
-                if (entry.name.startsWith(ARCHIVE_DIR) &&
-                    name.isNotEmpty() &&
-                    '/' !in name &&
-                    File(name).extension.lowercase() in EXTENSIONS
-                ) {
+                if (entry.name.startsWith(ARCHIVE_DIR) && '/' !in name && File(name).extension.lowercase() in EXTENSIONS) {
                     dir.mkdirs()
                     File(dir, name).outputStream().use { zip.copyTo(it) }
                 }
