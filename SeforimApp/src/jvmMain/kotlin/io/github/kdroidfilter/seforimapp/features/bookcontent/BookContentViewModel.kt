@@ -19,6 +19,7 @@ import io.github.kdroidfilter.seforimapp.core.history.HistoryStore
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.pinnedTabLabel
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentStateManager
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
@@ -654,6 +655,10 @@ class BookContentViewModel(
 
                 BookContentEvent.ToggleBookDetails ->
                     appSettings.setBookDetailsPaneVisible(!appSettings.isBookDetailsPaneVisible())
+
+                // Pardes: the find results' pane, one setting for every tab (request 55 of stage 3)
+                BookContentEvent.ToggleFindResults ->
+                    appSettings[FindResultsSettings.shown] = !appSettings[FindResultsSettings.shown]
 
                 BookContentEvent.CycleDiacritics ->
                     cycleDiacriticsForCurrentCategory()

@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (129 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (130 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (291 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (294 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 56 |
+| Pardes feature hook | 57 |
 | Pardes feature in Zayit's file | 34 |
 | Fix of Zayit's code | 14 |
 | Branding hook | 4 |
@@ -377,7 +377,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +20 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books.
+- **Change:** modified, +23 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -391,17 +391,20 @@ The entries of this section by kind:
   - After them, `abstract val pdfBookStore: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore`,
     `abstract val dafScans: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScans` and
     `abstract val dafScanPages: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanPages` (request 56),
-    with a two-line comment marked "Pardes:".
+    with a two-line comment marked "Pardes:"; and after them, with a comment of its own,
+    `abstract val bookFindHub: io.github.kdroidfilter.seforimapp.features.bookcontent.find.BookFindHub` (request 55 of
+    stage 3).
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
   lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
   starts, and the commentators list reads the reader's default; the book tree and a PDF book's tab reach the user's
-  PDF books, and the daf view a tractate's scan and its pages cut into images.
+  PDF books, and the daf view a tractate's scan and its pages cut into images; a book's text and the find results pane
+  meet in the find hub.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** eleven lines among Zayit's declarations, and three imports.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`.
+- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`.
 - **Notes:** the first two types, `libraryLinks`', `pdfBookStore`'s, `dafScans`' and `dafScanPages`' are written fully qualified instead of imported, unlike every other line of the file:
   fewer import lines to conflict, but not Zayit's way.
 
@@ -806,6 +809,21 @@ The entries of this section by kind:
 - **Smaller:** already minimal.
 - **Tests:** none of the menu; `DesktopLinkTest` for the link.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/FindInPageBar.kt`
+
+- **Change:** modified, +29 −0 lines. Feature: Find results pane.
+- **What:** two parameters, last: `listShown` (null hides it) and `onToggleList`; with them, the private
+  `FindListToggle` first after the divider ("כל התוצאות בחלונית", the reader's `TableOfContents` icon, Alt+Enter in its
+  tooltip), and Alt+Enter in the field shows or hides the list before Zayit's Ctrl+Enter; comments marked "Pardes:",
+  three imports.
+- **Why:** request 55 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "חיפוש בתוך ספר פתוח יפתח חלונית בצד, שמציגה את
+  כל התוצאות מסודרות"; the bar is where a find is, and its button opens the pane beside the text.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: two defaulted parameters, a branch in the field's Enter, one line among the actions, and a
+  private composable at the file's end.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app (Alt+Enter opened the pane, its toggle marked).
+
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModelsTest.kt`
 
 - **Change:** modified, +59 −8 lines. Feature: Search in categories, Results in the library's order.
@@ -875,8 +893,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentEvent.kt`
 
-- **Change:** modified, +44 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator selection kept, Reader's default
-  commentators.
+- **Change:** modified, +47 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator selection kept, Reader's default
+  commentators, Find results pane.
 - **What:**
   - `ToggleDafView`: shows a Talmud tractate as its Vilna page, or as its text again; `ToggleScanView`: as its scan
     (request 46), or as its text again.
@@ -888,6 +906,8 @@ The entries of this section by kind:
     `CommentatorGroupChanged(lineId, group, checked, listed)` (a group's checkbox, "ראשונים על התנ״ך").
   - `CommentatorsDefaultSet` and `CommentatorsDefaultCleared`: the commentators the book shows set as the reader's
     default for it and the books beside it, and that default let go.
+  - `ToggleFindResults`, after Zayit's `ToggleBookDetails`: the pane of a book's find results shown or hidden, in every
+    tab (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`).
 - **Why:** the daf view (`4efa3e3c`) and the scan view, the commentators' own panes (`d85afee7`, `831ad272`) and the selection kept from
   line to line (`3c6bae9b`, `49b456d4`) and the reader's default commentators are driven through the reader's events, as all of Zayit's reader actions are.
 - **Kind:** Pardes feature in Zayit's file.
@@ -944,8 +964,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +73 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
-  Reader's default commentators.
+- **Change:** modified, +78 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
+  Reader's default commentators, Find results pane.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
     text, the daf and the scan are a tractate's three views), `DetachCommentator`, `ReattachCommentator` and
@@ -968,6 +988,8 @@ The entries of this section by kind:
   - `ContentScrolled` is a block: in a tab that shows a tractate's scan (`scanView`), the scan's top line also selects
     its entry in the table of contents (`contentUseCase.showInToc`), a comment marked "Pardes:": the scan selects no
     line, so its contents did not follow its pages (request 45 of `docs/DESKTOP_STAGE3_PLAN.md`).
+  - `ToggleFindResults` turns `FindResultsSettings.shown` (request 55 of stage 3), with a comment marked "Pardes:" and
+    its import.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
   opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45), its contents are
   searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54).
@@ -1160,8 +1182,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +203 −34 lines. Feature: Commentators in their own panes, A pane at the window's edge,
-  Pane layout kept.
+- **Change:** modified, +241 −35 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+  Pane layout kept, Find results pane.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
     `ReaderPane.standard`, and a `data class Commentator(name)` is a pane per split-off commentator, closed by
@@ -1185,6 +1207,12 @@ The entries of this section by kind:
     otherwise its full bottom margin. Its KDoc says so.
   - The pane layout kept: `WindowPanes` gives each pane first the place it had when its window was saved
     (`DesktopSession.savedPlacement`, on one of its `sides` or floating if it may), its sides read once into `sides`.
+  - The find results pane (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`): `ReaderPane.FindResults` ("find-results",
+    docked on the left after the references, 320 dp, sized by the dock as they are, toggled by
+    `BookContentEvent.ToggleFindResults`), among the `standard` panes; `desiredPanes` takes `findResults` and adds it
+    while the book's text is shown; `selectedTabDemand` reads it with `rememberFindResultsShown` (the setting
+    `FindResultsSettings.shown`, and the tab's find bar open on a query of two letters at least); `BookPaneBody` draws
+    it with `FindResultsPane`; its imports.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
   anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). A pane at the window's edge: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
 - **Kind:** Pardes feature in Zayit's file.
@@ -1192,7 +1220,8 @@ The entries of this section by kind:
   conflicts; `PaneSync` and `WindowPanes` are edited in their core loops.
 - **Smaller:** hard. The commentator panes could be a second list of satellites declared by a Pardes composable, leaving
   Zayit's enum as it is, but `PaneSync` needs to know them.
-- **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`; the drops at the window's edge tried in the app.
+- **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`; the drops at the window's edge tried in the app;
+  `FindResultsTest`, and the find results pane tried in the app.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/PostSelectLineTest.kt`
 
@@ -1239,7 +1268,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +391 −219 lines. Feature: Daf view, Scan view.
+- **Change:** modified, +418 −219 lines. Feature: Daf view, Scan view, Find results pane.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
     `DafView` in place of the lines' `LazyColumn`, or, for a `DafMode` of the scan, `DafScanReader` (request 46, a
@@ -1264,10 +1293,16 @@ The entries of this section by kind:
     looked for again once the pane has taken its part of the view (`PANE_WAIT`, 3 seconds at most).
   - `BookSelectionContainer` gets `selection = null` and `ownsSelection = false` on the daf.
   - The lines' `LazyColumn` and the `ContentScrollbar` move into the `else` branch: re-indented, unchanged.
+  - The find results pane (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`), with comments marked "Pardes:" and two
+    imports: the find the bar shows (`shownFind`, its query as typed, its mode and book) is told to `BookFindHub` with
+    the current match, and let go as the text leaves; a line the pane asks for (`BookFindHub.goTo`) is gone to at its
+    first match, by Zayit's own `navigateToMatch` from the match before it; `FindInPageBar` takes `listShown`
+    (`FindResultsSettings.shown`) and `onToggleList`.
 - **Why:** the daf view lives inside the text view's own frame, so that everything the reader does around the text
   works on the daf too (`e00754a4`, `8d3825e7`, `d334af46`, `efad35cc`); the user asked on 2026-11-09 that the arrows
   move within Rashi and Tosafot when the focus is on them, and that the text open from the daf in the same state (what
-  is seen and what is focused).
+  is seen and what is focused). On 2026-11-18, that a book's find list all its results in a pane (request 55 of stage
+  3): the text keeps its find as Zayit's code holds it, and tells the pane through the hub.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the re-indented block is the heart of Zayit's reader (some 220 lines), and every Zayit change
   there conflicts. Without whitespace the change is about 90 lines.
@@ -1849,8 +1884,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +390 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 361 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +396 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 366 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1912,7 +1947,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `tab_duplicate` ("שכפל לשונית", request 59 of stage 3); and under a comment after it, the pages in the dark
     theme's colours: `page_colors_original` ("צבעים מקוריים") and its tooltip (request 42 of stage 3); and under a comment
     after them, the search modes (request 54 of stage 3): `search_mode_exact`, `…_general` and `…_hybrid` ("מדויק",
-    "כללי", "היברידי"), each one's tooltip, and `search_mode_hybrid_missing` (the search by meaning not installed).
+    "כללי", "היברידי"), each one's tooltip, and `search_mode_hybrid_missing` (the search by meaning not installed); and
+    under a comment after them, the find results pane (request 55 of stage 3): `find_results_pane` (its title),
+    `…_toggle` (the find bar's button), `…_none`, `…_count` and `…_by_meaning`.
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -4428,6 +4465,60 @@ The engine is wrapped as the library's order wraps it, the library's `SearchEngi
   none.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests of the engines beside it (`CatalogOrderSessionTest`) and `SessionModelsTest` (ProtoBuf).
+- **Tests:** it is one (unit).
+
+### Find results pane
+
+Request 55 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "חיפוש בתוך ספר פתוח יפתח חלונית בצד, שמציגה את כל התוצאות
+מסודרות". A button of the find bar, or Alt+Enter, opens a pane beside the text (on the left, after the references) that
+lists every match of the book's find under the entries of its table of contents, each line with its text around its
+first match and how many it has; the current match's line marked and kept in view; a line clicked gone to. One setting
+for every tab, kept; the pane shows while the find bar searches. The text keeps its find as Zayit's code holds it and
+tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `BookContentView.kt`, `FindInPageBar.kt`,
+`BookContentEvent.kt`, `BookContentViewModel.kt`, `AppGraph.kt`, `ReaderPanes.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/BookFindHub.kt`
+
+- **Feature:** Find results pane.
+- **Size:** 96 lines.
+- **What:** `FindResultsSettings` ("find_results": `shown`, the pane asked for); `FindListing` (a tab's find: its
+  book, query, mode, matches and current match); `FoundLine` and `BookFindMatches.foundLines()` (the lines matched, once
+  each with their counts, read through Zayit's public `nextAfterLine` and `next`, its class untouched); and
+  `BookFindHub`, `@Inject @SingleIn(AppScope::class)`: `found` (each tab's find, `publish`) and `goTo` (the lines the
+  pane asks a tab to go to).
+- **Reached from:** `AppGraph.kt` (`bookFindHub`), `BookContentView.kt`, `FindResultsPane.kt`, `ReaderPanes.kt` and
+  `BookContentViewModel.kt` (the setting).
+- **Follows:** Pardes's `PdfBookStore` (`shown` and `pageRequests`, a reader and its pane talking through flows);
+  Zayit's typed settings (`SettingsGroup`).
+- **Tests:** `FindResultsTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsPane.kt`
+
+- **Feature:** Find results pane.
+- **Size:** 195 lines.
+- **What:** `FindResultsPane(tabId, bookId, modifier)`: the tab's find from the hub, "2889 תוצאות ב־1376 שורות" (by
+  meaning, "N שורות קרובות במשמעות"), then its lines in a `LazyColumn` under their entries of the table of contents
+  (`findRows`, `entryTitles`: `getLineTocMappingsForBook` and `getBookToc`, read once a book), each a Zayit
+  `ResultRow` with its text around its first match (`findSnippet`, `findAllMatchesNormalized` on the query as the text
+  normalizes it, cut at words, the line read once it is on screen), the find's words marked by `SnippetText` (none by
+  meaning) and "(3)" for a line of several; the current match's line marked and kept in view; a line clicked asks the
+  text to go to it. A word on the find (Ctrl+F) when the tab has none.
+- **Reached from:** `ReaderPanes.kt` (`BookPaneBody`).
+- **Follows:** Pardes's `LinePlacesView` (Zayit's result rows and snippets in a pane of the reader), and the reader's
+  panes' frame.
+- **Tests:** `FindResultsTest` (the rows, the pieces); tried in the app (בר found in Berakhot, the pane by its pages,
+  a line clicked gone to at its match, 11/2889).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsTest.kt`
+
+- **Feature:** Find results pane.
+- **Size:** 72 lines.
+- **What:** the lines found once each in reading order with their counts; each run under its entry of the contents,
+  none for a book without; a line's piece cut around its first match at words, nikud aside, and its start when nothing
+  matches; the hub keeping a tab's find and passing a line asked for.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names; Zayit's `BookFindMatches` built as its own tests
+  build it).
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is
