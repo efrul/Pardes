@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (294 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (296 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1884,8 +1884,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +396 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 366 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +398 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 367 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1949,7 +1949,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     after them, the search modes (request 54 of stage 3): `search_mode_exact`, `…_general` and `…_hybrid` ("מדויק",
     "כללי", "היברידי"), each one's tooltip, and `search_mode_hybrid_missing` (the search by meaning not installed); and
     under a comment after them, the find results pane (request 55 of stage 3): `find_results_pane` (its title),
-    `…_toggle` (the find bar's button), `…_none`, `…_count` and `…_by_meaning`.
+    `…_toggle` (the find bar's button), `…_none`, `…_count` and `…_by_meaning`; and under a comment after them, a find
+    in a PDF book (request 48 of stage 3): `pdf_find_no_text` (a scan with no text layer has nothing to find).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -3772,7 +3773,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 321 lines.
+- **Size:** 327 lines.
 - **What:** `PdfBookView(file, place, onPlace, tabId, modifier, inTab, actions)`: the file read whole into the
   binding off the UI thread (`runSuspendCatching`, a missing native library caught too), a missing file or a failure
   said, and its pages in `PdfPageList`, their text selectable, one under the other or two side by side
@@ -3784,7 +3785,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   (build 45's tab of its own, which has no contents pane nor end bar) a field that goes to the page typed (Enter, then
   it is emptied) and the zoom's buttons (their levels, `zoomStep`), and the caller's actions. The keys: `pageListKey`. It opens at its place, and a new list at the page read at the top when the rows
   change (`Top`), and tells its place 400 ms after a move ends, and as it leaves when it moved since. The binding
-  keeps `PAGES_CACHE_BYTES` of drawn pages (request 48 of stage 3).
+  keeps `PAGES_CACHE_BYTES` of drawn pages (request 48 of stage 3). A find in its text (request 48 of stage 3): a
+  `PdfFind` for the binding, its marks given to the pages, and `PdfFindBar` over them, top end.
 - **Reached from:** `PdfBookReader.kt`.
 - **Follows:** Pardes's experiment (`PdfReaderTool.kt`) for the binding; Zayit's `BookContentView` for the page keys
   and its `TextZoom` for the pointer's zoom; Pardes's daf for the zoom it shares.
@@ -3831,8 +3833,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfPageList.kt`
 
 - **Feature:** The user's PDF books, Scan view, Two pages side by side, Pages zoomed at the pointer.
-- **Size:** 335 lines.
-- **What:** `PdfPageList(reader, listState, pageWidth, modifier, spreads, selectableText, title, first, count)`: a PDF's pages in
+- **Size:** 344 lines.
+- **What:** `PdfPageList(reader, listState, pageWidth, modifier, spreads, selectableText, title, first, count, marks)`: a PDF's pages in
   rows, a page each or two side by side as a book read right to left opens (`rowCount`, `rowOf`, `firstPageOf`: the
   first page alone on the left, then each odd page on the right and the next on the left; in a tractate's scan, amud b
   on the right and amud a on the left, as printed), the right page first in a view laid out from the right, each under
@@ -3848,14 +3850,16 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   dark theme's colours. Its pages are `count` from the page `first` (a tractate's in a file of several, request 52 of
   stage 3), the rows and titles counting from it. While the pointer zooms the rows, the point under it stays where it
   is, down and sideways (`PageRows`: `ZoomPivot`, `ZoomAnchor`, `rowParts`; the sideways scroll a `ScrollState` of each
-  width, request 44 of stage 3).
+  width, request 44 of stage 3). Each page is drawn under the marks of its find's matches (`marks`, `findMarks`), over
+  its colours, not through them (request 48 of stage 3).
   Also `spreadPageWidth`, `pageListKey` (Page Up and Down, the arrows up and down a little of a view, `step` and
   `ARROW_STEP`, as asked on 2026-11-18 with the contents following the pages, request 45 of stage 3; Ctrl + Home and
   End) and `turnPage`. Its rows are
   `PageRows(pages, listState, pageWidth, modifier, spreads, title, page)`, each page drawn by the composable given
   (request 56): `PdfPageList` draws them with the binding's `PdfPage`, and a tractate's scan from its pages cut into
   images (`ScanPageList`); `pagesOf` and `ROWS_AHEAD` are shared with it.
-- **Reached from:** `PdfBookView.kt`, `DafScanView.kt` (the binding's way), `ScanPageList.kt` (`PageRows`).
+- **Reached from:** `PdfBookView.kt` (with its find's marks), `DafScanView.kt` (the binding's way), `ScanPageList.kt`
+  (`PageRows`).
 - **Follows:** Pardes's PDF book view, from which it was taken; Otzaria's 2,000 pixels on a page's long side and its
   pages drawn ahead, and Zayita's prefetch (ideas only: neither's code is used).
 - **Tests:** `PdfPageListTest` (the rows); tried in the app (a PDF book and a scan, a page a row and two; request
@@ -4519,6 +4523,50 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names; Zayit's `BookFindMatches` built as its own tests
   build it).
+- **Tests:** it is one (unit).
+
+### A find in a PDF book
+
+Request 48 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מה אפשר לשפר במציג ה-PDF, ומה עם חיפוש?". Ctrl/Cmd+F over a
+PDF book opens Zayit's find bar over its pages, top end: its text found in the pages as the PDF library reads them
+(`pageTextLayout`, every character with its box), matched as a book's lines are (nikud and final letters aside, and
+backwards for a PDF that keeps its Hebrew from left to right), the matches counted as each page's come, each marked on
+its page (the current one in another colour), Enter and Shift+Enter, Ctrl/Cmd+G and F3 going from match to match. A
+scan with no text layer says it has none. Hooks: none in Zayit's files; in Pardes's `PdfBookView.kt`, `PdfPageList.kt`
+and `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfFind.kt`
+
+- **Feature:** A find in a PDF book.
+- **Size:** 330 lines.
+- **What:** `PdfMatch` (a match: its page, and its boxes there, a box a line, as fractions of the page from its top
+  left); `PageChars` (a page's characters and their boxes in points, as the binding's `PageTextLayout` reads them,
+  `chars()`, or as a test writes them); `pageMatches`, `pageText` (the characters as a text, with the character of each
+  letter) and `boxesOf` (a match's characters' boxes joined a box a line, those with no box left aside); `PageMark` and
+  `PdfFind`, the find as it goes: its query, the matches found so far page by page (the pages' text read once a book,
+  their boxes only for a page with matches), the current one, done, and no text at all; `step` round the book.
+  `PdfFindBar(find, reader, tabId, listState, spreads, modifier)`: Zayit's `FindInPageBar` while the tab's find bar is
+  open (`findBarOpenFlow`, `findQueryFlow`, `findFocusRequestFlow`, `findStepRequests`, `setFindQuery`,
+  `closeFindBar`, as a book's text uses them), its counter the matches, a match revealed in its page's row a third of
+  the view down, and "אין טקסט בקובץ" under it for a scan. `Modifier.findMarks`, the marks drawn over a page.
+- **Reached from:** `PdfBookView.kt` (the bar and the marks), `PdfPageList.kt` (`findMarks`).
+- **Follows:** Zayit's find in a book's text (`FindInPageBar`, `findAllMatchesNormalized`, `normalizeQueryForHebrew`,
+  the find's settings and keys) and Pardes's PDF reader's use of the binding (`PdfReaderState`, never PDFium called
+  from a second thread).
+- **Tests:** `PdfFindTest`; tried in the app ("Page 1" in a test book: 11 matches, Enter to 1/11 with its mark).
+- **Notes:** a book opened in a tab of the home page gets no Ctrl/Cmd+F: Zayit's window keys ask for a find only in a
+  tab whose destination is a book's (`hasFindInPage`); a book's own tab has it. Its matches are not in the find
+  results pane (request 55), which lists a book's lines.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfFindTest.kt`
+
+- **Feature:** A find in a PDF book.
+- **Size:** 77 lines.
+- **What:** with a page's characters written by the test: a word found on its line, its box a fraction of the page
+  from its top left; a match over two lines, a box each, the line break left aside; nikud and final letters aside, a
+  page that keeps its Hebrew backwards found too, a letter alone no find, and a page with no text none.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### The passage beside the results, read as a book is

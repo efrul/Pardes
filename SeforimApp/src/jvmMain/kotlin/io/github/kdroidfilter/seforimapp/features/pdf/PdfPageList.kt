@@ -128,6 +128,7 @@ internal fun PdfPageList(
     title: ((page: Int) -> String)? = null,
     first: Int = 0,
     count: Int = reader.pageCount,
+    marks: Map<Int, List<PageMark>> = emptyMap(),
 ) {
     val pages = count
     val rows = rowCount(pages, spreads)
@@ -151,7 +152,15 @@ internal fun PdfPageList(
     // In the dark theme, its text on its panel (request 42 of docs/DESKTOP_STAGE3_PLAN.md)
     val colors = rememberPageColors()
     PageRows(pages, listState, pageWidth, modifier, spreads, title) { page, width ->
-        PdfPage(reader, first + page, Modifier.width(width).pageColors(colors).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
+        // The find's marks over the page, outside its colours (request 48 of stage 3)
+        Box(Modifier.width(width).findMarks(marks[first + page])) {
+            PdfPage(
+                reader,
+                first + page,
+                Modifier.width(width).pageColors(colors).drawnAtMost(MOST_DRAWN_PX),
+                selectableText = selectableText,
+            )
+        }
     }
 }
 

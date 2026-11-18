@@ -148,7 +148,12 @@ internal fun PdfBookView(
                 !file.isFile -> Text(stringResource(Res.string.pdf_book_missing, file.path), Modifier.padding(16.dp))
                 error != null -> Text(stringResource(Res.string.pdf_book_failed, error), Modifier.padding(16.dp))
                 !opened -> CircularProgressIndicator()
-                else -> PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::zoomDaf)
+                else -> {
+                    // Its find, Ctrl/Cmd+F as a book's (request 48 of docs/DESKTOP_STAGE3_PLAN.md)
+                    val find = remember(reader) { PdfFind() }
+                    PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::zoomDaf, marks = find.marks)
+                    PdfFindBar(find, reader, tabId, listState, spreads, Modifier.align(Alignment.TopEnd))
+                }
             }
         }
     }
@@ -166,6 +171,7 @@ private fun PdfPages(
     spreads: Boolean,
     zoom: Float,
     onZoom: (Float) -> Unit,
+    marks: Map<Int, List<PageMark>> = emptyMap(),
 ) {
     val keys = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -188,7 +194,7 @@ private fun PdfPages(
             .focusable(),
     ) {
         val base = if (spreads) spreadPageWidth(maxWidth) else maxWidth
-        PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads)
+        PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads, marks = marks)
     }
     LaunchedEffect(Unit) { keys.requestFocus() }
 }
