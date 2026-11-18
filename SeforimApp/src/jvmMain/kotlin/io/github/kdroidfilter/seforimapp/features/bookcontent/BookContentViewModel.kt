@@ -658,7 +658,7 @@ class BookContentViewModel(
                 BookContentEvent.CycleDiacritics ->
                     cycleDiacriticsForCurrentCategory()
 
-                is BookContentEvent.ContentScrolled ->
+                is BookContentEvent.ContentScrolled -> {
                     contentUseCase.updateContentScrollPosition(
                         event.bookId,
                         event.anchorId,
@@ -666,6 +666,9 @@ class BookContentViewModel(
                         event.scrollIndex,
                         event.scrollOffset,
                     )
+                    // Pardes: a scan's table of contents follows its pages, which select no line (request 45)
+                    if (stateManager.state.value.content.scanView) contentUseCase.showInToc(event.anchorId)
+                }
 
                 is BookContentEvent.ContentScrollToLineIndex ->
                     scrollToLineIndex(event.lineIndex)

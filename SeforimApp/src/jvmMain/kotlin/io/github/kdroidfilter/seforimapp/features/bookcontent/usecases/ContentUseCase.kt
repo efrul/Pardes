@@ -295,6 +295,22 @@ class ContentUseCase(
     }
 
     /**
+     * Pardes: the table of contents' entry of [lineId] selected, as a selected line's is, the line itself not: the entry
+     * of the amud at a scan's top follows its pages (request 45 of docs/DESKTOP_STAGE3_PLAN.md).
+     */
+    suspend fun showInToc(lineId: Long) {
+        val tocId = runSuspendCatching { repository.getTocEntryIdForLine(lineId) }.getOrNull() ?: return
+        if (tocId == stateManager.state.value.toc.selectedEntryId) return
+        val tocPath = buildTocPathToRoot(tocId)
+        stateManager.updateToc(save = false) {
+            copy(
+                selectedEntryId = tocId,
+                breadcrumbPath = tocPath,
+            )
+        }
+    }
+
+    /**
      * Met à jour la position de scroll du contenu
      */
     fun updateContentScrollPosition(

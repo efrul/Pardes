@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (126 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (128 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -57,9 +57,9 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 54 |
+| Pardes feature hook | 55 |
 | Pardes feature in Zayit's file | 34 |
-| Fix of Zayit's code | 13 |
+| Fix of Zayit's code | 14 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
@@ -911,7 +911,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +69 −10 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
+- **Change:** modified, +73 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
   Reader's default commentators.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
@@ -932,6 +932,9 @@ The entries of this section by kind:
     `openTocSearchMatch` lets it open a match first (`open`, its page).
   - The commentaries' prefetch reads the book's `commentatorSelection`: with whole groups checked, each line prefetches
     its own commentators of those groups (`shownOn`), not only those remembered by name.
+  - `ContentScrolled` is a block: in a tab that shows a tractate's scan (`scanView`), the scan's top line also selects
+    its entry in the table of contents (`contentUseCase.showInToc`), a comment marked "Pardes:": the scan selects no
+    line, so its contents did not follow its pages (request 45 of `docs/DESKTOP_STAGE3_PLAN.md`).
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
   opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45), its contents are
   searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54).
@@ -943,6 +946,33 @@ The entries of this section by kind:
 - **Tests:** `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`, `DetachedCommentatorsTest`;
   `PostSelectLineTest` builds the view model with a relaxed `PdfBookStore`; `PdfOutlineTest` (the contents searched);
   tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocView.kt`
+
+- **Change:** modified, +6 −4 lines. Feature: The contents following the pages (request 45 of stage 3).
+- **What:** the skip of the next scroll to the selected entry, after a click in the pane, is the entry clicked
+  (`skipAutoCenterFor`, its id) rather than a flag (`skipNextAutoCenter`); the scroll skipped is that entry's alone, and
+  the skip is let go at the next selection whatever it is.
+- **Why:** a click on the entry already selected changes no selection, so the flag stayed set and swallowed the next
+  scroll to an entry: a PDF book paged or a scan scrolled after it left its contents behind once (request 45 of
+  `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "מעבר עמודים בpdf לא מעביר מקביל את תוכן העניינים").
+- **Kind:** fix of Zayit's code, for both brands, to drop once upstream has one.
+- **Merge risk:** small; the variable and its three uses.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app: the scan's contents follow its pages after a click on the entry selected.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/usecases/ContentUseCase.kt`
+
+- **Change:** modified, +16 −0 lines. Feature: The contents following the pages (request 45 of stage 3).
+- **What:** `showInToc(lineId)`, a function of its own before `updateContentScrollPosition`, with a KDoc marked
+  "Pardes:": the table of contents' entry of a line selected (`selectedEntryId`, `breadcrumbPath`), as `selectLine`
+  selects it, the line itself not; nothing when the entry is selected already.
+- **Why:** a tractate's scan selects no line, so its contents stayed on the entry chosen last while its pages moved
+  (request 45 of `docs/DESKTOP_STAGE3_PLAN.md`); `BookContentViewModel` calls it as the scan tells its place.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; a function apart from Zayit's.
+- **Smaller:** the eight lines repeat `selectLine`'s end, which stays as Zayit wrote it.
+- **Tests:** tried in the app: the scan's contents follow its top amud.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/state/BookContentState.kt`
 
@@ -3582,7 +3612,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfPageList.kt`
 
 - **Feature:** The user's PDF books, Scan view, Two pages side by side.
-- **Size:** 263 lines.
+- **Size:** 273 lines.
 - **What:** `PdfPageList(reader, listState, pageWidth, modifier, spreads, selectableText, title)`: a PDF's pages in
   rows, a page each or two side by side as a book read right to left opens (`rowCount`, `rowOf`, `firstPageOf`: the
   first page alone on the left, then each odd page on the right and the next on the left; in a tractate's scan, amud b
@@ -3591,7 +3621,9 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   from Otzaria and Zayita (request 43): a page is drawn no wider than `MOST_DRAWN_PX` (1,600 pixels) and scaled up
   beyond (`drawnAtMost`, a layout that measures at that width and places with a scaled layer), and the pages of the
   two rows after the first in view are drawn ahead at their width (`PdfReaderState.prefetch`, `RenderQuality.FULL`).
-  Also `spreadPageWidth`, `pageListKey` (Page Up and Down, Ctrl + Home and End) and `turnPage`. Its rows are
+  Also `spreadPageWidth`, `pageListKey` (Page Up and Down, the arrows up and down a little of a view, `step` and
+  `ARROW_STEP`, as asked on 2026-11-18 with the contents following the pages, request 45 of stage 3; Ctrl + Home and
+  End) and `turnPage`. Its rows are
   `PageRows(pages, listState, pageWidth, modifier, spreads, title, page)`, each page drawn by the composable given
   (request 56): `PdfPageList` draws them with the binding's `PdfPage`, and a tractate's scan from its pages cut into
   images (`ScanPageList`); `pagesOf` and `ROWS_AHEAD` are shared with it.
