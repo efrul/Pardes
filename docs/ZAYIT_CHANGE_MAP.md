@@ -1816,8 +1816,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +361 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 333 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +367 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 341 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1868,7 +1868,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     (where the scan is looked for), `…_choose` (the folder of scans) and `…_failed`; under a comment after them, the
     settings' card of the scans, `daf_scans_*` (11: its title and what it is, the folder chosen or none, its two
     buttons, Otzaria's folders found or none, and the pages cut into images: their heading, what they are and their
-    room, their removal); and under a comment after them, two pages side by side:
+    room, their removal, cut once the user agreed); and under a comment after them, the scans cut by the user's word
+    (request 51 of stage 3): `daf_scans_cut_enabled`, the card's box, and the question a scan asks the first time one
+    opens, `daf_scan_cut_question`, its hint, `…_yes` and `…_no`; and under a comment after them, two pages side by side:
     `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a copy of a tab from its menu,
     `tab_duplicate` ("שכפל לשונית", request 59 of stage 3).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
@@ -3854,16 +3856,19 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScans.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 132 lines.
+- **Size:** 149 lines.
 - **What:** `DafScanSettings`, a `SettingsGroup` of Zayit's kind ("daf_scans"): `folder`, the folder of scanned
-  tractates the user chose (a path, null for none; not portable, a folder of this computer). `OtzariaScans`:
+  tractates the user chose (a path, null for none; not portable, a folder of this computer), and `cut`, whether scans
+  are cut into images (request 51 of stage 3: "החיתוך של הגמרא לתמונות יהיה אפשרות שצריך להפעיל"), null until the
+  user answered the question a scan asks the first time one opens (not portable either: this computer's disk).
+  `OtzariaScans`:
   `bavliFolders` (the Talmud Bavli's folders of the libraries that Otzaria's data folders point at, their pointer
   files UTF-8 with a byte order mark: the folder of its books database (`library_database_path.txt`), where its app
   downloads the scans; its library's (`library_path.txt`), the `אוצריא` in it or beside it; and the library it makes
   by default, `books` in its data folder), `find` (a tractate's `<title>.pdf` in one of them, or in one of their
   orders' folders, by name) and `findIn` (a tractate's PDF in a folder of the user's or in the folders in it, three
   down at most, the nearest first). And `DafScans`, `@Inject @SingleIn(AppScope::class)` over `AppSettings`: `folder`
-  (a flow of the setting), `setFolder`, `of` (the folder chosen first, else Otzaria's, its folders read once a start)
+  (a flow of the setting), `setFolder`, `cut` and `setCut`, `of` (the folder chosen first, else Otzaria's, its folders read once a start)
   and `otzariaFolders`; a test gives its own data folders (`otzariaRoots`). Until 2026-11-13 a file was linked to
   each tractate (table `daf_scan`, `DafScans.sq`): the user moved the choice to the settings, as a folder (request 48),
   and the table is left in their user DB, unread.
@@ -3889,16 +3894,17 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafScansCard.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 120 lines.
+- **Size:** 131 lines.
 - **What:** `DafScansCard()`, Settings › צורת הדף: "סריקות הגמרא", what the folder of scanned tractates is (a PDF a
   tractate, named after it, its pages the amudim from ב., looked in before Otzaria's), the folder chosen or none, a
   button that chooses another and one that lets it go, and Otzaria's folders found on this computer, or none; and the
-  scans' pages cut into images (`CutPages`, request 56): what they are, the room they take (`DafScanPages.bytes`,
-  `formatBytes`), and a button that removes them (`clear`).
+  scans' pages cut into images (`CutPages`, request 56): whether they are cut (a box, `DafScans.setCut`, the question
+  of a scan's first opening answered again: request 51 of stage 3), what they are, the room they take
+  (`DafScanPages.bytes`, `formatBytes`), and a button that removes them (`clear`).
 - **Reached from:** `DafSettingsScreen.kt`.
 - **Follows:** Pardes's settings cards (`PdfBooksCard`, `LibraryLocationCard`: their frame, `isolatedPath`).
 - **Tests:** tried in the app (a folder chosen, a tractate's scan read from it, let go; the cut pages' 20 MB shown and
-  removed).
+  removed; the box checked and unchecked).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanButton.kt`
 
@@ -3917,7 +3923,7 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 437 lines.
+- **Size:** 480 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -3938,7 +3944,10 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   in view composes the pages and holds the file (`LocalTabSelected`), as a PDF book. Since request 56 the pages are
   drawn from the scan cut into images (`ScanPages`: `rememberPdfiumLoaded`, then `DafScanPages.open` and
   `ScanPageList`), with nothing drawn for the moment the cut is read; where PDFium cannot be called by Pardes, by the
-  binding's reader as before (`BindingScan`, the file read whole). `ScanList(pages, …, pagesList)` takes the pages'
+  binding's reader as before (`BindingScan`, the file read whole). Since request 51 of stage 3 the scans are cut by the user's word only (`DafScans.cut`): the first
+  time a scan opens, a question in its place (`CutQuestion`: what the cut gives, the room it takes and where, "כן,
+  להכין" or "לא, להציג מהקובץ", which the settings change); not cut, a scan is drawn by the binding's reader, unless
+  its cut was kept whole (`DafScanPages.whole`). `ScanList(pages, …, pagesList)` takes the pages'
   count and the list that draws them; `rememberPlaced` finds the amud of the tab's place; `amudOfLine` is shared with
   `DafScanButton`.
 - **Reached from:** `BookContentView.kt` (a `DafMode` of the scan, request 46).
@@ -3948,12 +3957,13 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   sample Otzaria from the text and from the daf, two pages, back to the text at its amud; Shabbat, which has no daf's
   layout, with no scan; request 56: Berakhot's first switch, its pages cut in some five seconds, the next switches
   drawn at once, two pages, Berakhot 50a first when its cut was removed; request 60: Berakhot 9a picked in the contents,
-  another tab, and back at 9a).
+  another tab, and back at 9a; request 51: the question as a scan first opened, Berakhot drawn from its file when
+  it was answered no).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPages.kt`
 
 - **Feature:** Scan view.
-- **Size:** 315 lines.
+- **Size:** 329 lines.
 - **What:** `DafScanPages`, a Talmud tractate's scans cut into an image a page (request 56, request 42 asked again on
   2026-11-14 and the recommendations of docs/scan-speed taken on 2026-11-15, "מה עם ההמלצות של הצגה מהירה"):
   - `open(scan)`: the cut as kept beside its pages (`ScanCut`: the scan's path, length and time, its pages, their width
@@ -3969,6 +3979,8 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
     2,000 by 3,000), the last twelve kept in memory (`shownImage`); null while it is not cut, and it is then asked for
     first. `revision` goes up as each page is cut, for the views that wait for one. `prepare(scan, pages)` decodes
     the pages cut into memory (the page read while the text is shown).
+  - `whole(scan)`: the cut kept beside the pages when every page is cut, nothing begun or cut, for the scans not cut by
+    the user's word (request 51 of stage 3): a cut kept whole still shows.
   - `bytes()` and `clear()`, for the settings' card.
   - Each scan's folder in `pardes-scans` beside the library (`DIR_NAME`, `databasePathProvider`, else
     `LibraryLocation.currentDir`), through `ScanCutFolder`.
@@ -3979,7 +3991,7 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   user's, one bit at 2,000 pixels, drawn by Pardes, the page read ready ahead; the library reached by FFM rather than
   a copy of the binding, as the bookmarks proved it works in the native image).
 - **Tests:** `DafScanPagesTest` (a scan cut and read back by another store, cut again when changed, a file that is no
-  PDF, the pages removed); tried in the app (Berakhot's 125 pages cut in some five seconds, 20 MB).
+  PDF, the pages removed, a cut kept whole served and none for a scan not cut); tried in the app (Berakhot's 125 pages cut in some five seconds, 20 MB).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanCutFolder.kt`
 
@@ -4023,11 +4035,12 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPagesTest.kt`
 
 - **Feature:** Scan view.
-- **Size:** 111 lines.
+- **Size:** 128 lines.
 - **What:** a gray page written as a PNG of one bit a pixel (its signature, its `IHDR`, read back by Skia); a scan of
   three pages cut 2,000 pixels wide in the background, a page waited for and decoded, every page cut, and opened again
   by another store from its index with nothing cut again; a scan changed cut again, a missing file and one that is no
-  PDF with no cut, and the pages removed with their folder.
+  PDF with no cut, and the pages removed with their folder; nothing begun for a scan not cut, and a cut kept whole
+  served by another store (request 51 of stage 3).
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (a temporary folder, a relaxed `mockk` of the settings).
 - **Tests:** it is one (unit; PDFium's library for the system).

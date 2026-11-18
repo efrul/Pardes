@@ -123,6 +123,20 @@ class DafScanPages(
         return cut
     }
 
+    /**
+     * The cut of [scan] as kept beside its pages, when every page is cut; null otherwise. Nothing is begun or cut: with
+     * scans not cut by the user's word, a cut kept whole still shows (request 51 of docs/DESKTOP_STAGE3_PLAN.md).
+     */
+    internal suspend fun whole(scan: File): ScanCut? {
+        val key = scan.absolutePath
+        val kept =
+            withContext(Dispatchers.IO) {
+                synchronized(this@DafScanPages) { cuts[key] }?.takeIf { it.isOf(scan) }
+                    ?: folders.read(scan)
+            }
+        return kept?.takeIf { cut -> cut.heights.all { it > 0 } }?.also { synchronized(this) { cuts[key] = it } }
+    }
+
     /** The page [page] of [scan] as kept in memory, at once; null when it is not. */
     internal fun shownImage(
         scan: File,

@@ -1205,8 +1205,14 @@
     <string name="daf_scans_otzaria">הסריקות של אוצריא שנמצאו במחשב</string>
     <string name="daf_scans_no_otzaria">לא נמצאו במחשב סריקות של אוצריא.</string>
     <string name="daf_scans_cut">עמודי הסריקות</string>
-    <string name="daf_scans_cut_description">כדי שהסריקה תוצג מיד, פרדס שומר כל עמוד שלה כתמונה, בתיקייה pardes-scans שליד הספרייה, בפעם הראשונה שהיא נפתחת. העמודים תופסים עכשיו %1$s.</string>
+    <string name="daf_scans_cut_description">כשההכנה מופעלת, פרדס שומר כל עמוד של סריקה כתמונה, בתיקייה pardes-scans שליד הספרייה, בפעם הראשונה שהיא נפתחת, כדי שתוצג מיד. העמודים תופסים עכשיו %1$s.</string>
     <string name="daf_scans_cut_remove">מחיקת העמודים</string>
+    <!-- Pardes: the scans cut into images by the user's word only, asked when a scan first opens (request 51 of stage 3) -->
+    <string name="daf_scans_cut_enabled">הכנת הסריקות לתצוגה מהירה</string>
+    <string name="daf_scan_cut_question">להכין את הסריקות לתצוגה מהירה?</string>
+    <string name="daf_scan_cut_question_hint">פרדס יכול לשמור כל עמוד של סריקה כתמונה, בפעם הראשונה שמסכת נפתחת, ואז העמודים מוצגים מיד. התמונות תופסות בין 20 ל־60MB למסכת, בתיקייה pardes-scans שליד הספרייה. בלי ההכנה הסריקה מוצגת מהקובץ עצמו, לאט יותר. אפשר לשנות את הבחירה, ולמחוק את התמונות, בהגדרות › צורת הדף.</string>
+    <string name="daf_scan_cut_yes">כן, להכין</string>
+    <string name="daf_scan_cut_no">לא, להציג מהקובץ</string>
     <!-- Pardes: pages two side by side (request 47, PageSpreadsButton) -->
     <string name="page_spreads">שני עמודים</string>
     <string name="page_spreads_tooltip">שני עמודים זה לצד זה, כספר פתוח: עמוד ב מימין ועמוד א משמאל</string>

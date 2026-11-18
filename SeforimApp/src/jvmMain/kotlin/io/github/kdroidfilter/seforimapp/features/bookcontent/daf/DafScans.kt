@@ -16,10 +16,19 @@ import java.io.File
 // folder of scanned tractates the user chooses in the settings, and Otzaria's scans on the user's own computer, found
 // by themselves (nothing of them is shipped by Pardes).
 
-/** The daf view's scans' settings: the folder of scanned tractates the user chose (Settings › צורת הדף). */
+/**
+ * The daf view's scans' settings: the folder of scanned tractates the user chose (Settings › צורת הדף), and whether
+ * scans are cut into images.
+ */
 object DafScanSettings : SettingsGroup("daf_scans") {
     /** The folder's path, looked in before Otzaria's; null for none. A folder of this computer: not carried elsewhere. */
     val folder by json<String?>(null)
+
+    /**
+     * Whether a scan is cut into an image a page, which shows it at once (DafScanPages), as the user answered when a scan
+     * first opened; null until then (request 51 of docs/DESKTOP_STAGE3_PLAN.md). This computer's disk: not carried.
+     */
+    val cut by json<Boolean?>(null)
 }
 
 /**
@@ -119,6 +128,14 @@ class DafScans(
     /** Chooses [dir] as the folder of scans, or none. */
     fun setFolder(dir: File?) {
         appSettings[DafScanSettings.folder] = dir?.absolutePath
+    }
+
+    /** Whether scans are cut into images, as the user answered; null while not asked (request 51). */
+    val cut: StateFlow<Boolean?> get() = appSettings.flow(DafScanSettings.cut)
+
+    /** Cuts scans into images from now on, or not ([on]). */
+    fun setCut(on: Boolean) {
+        appSettings[DafScanSettings.cut] = on
     }
 
     /** The scan of [tractate] (its book's title), or null when the folder chosen and Otzaria have none. */
