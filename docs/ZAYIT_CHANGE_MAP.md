@@ -3586,13 +3586,16 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookToc.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 190 lines.
+- **Size:** 211 lines.
 - **What:** `PdfBookToc(tabId, bookId, modifier)`, a PDF book's contents in the reader's own contents pane (request 49:
   "סרגל תוכן עניינים רגיל כמו שיש לכל הספרים", in place of the field that went to a page), drawn by Zayit's
   `BookTocView` as the library's books' contents are: the PDF's own bookmarks (request 52, "אין תמיכה בתוכן עניינים"),
   read by `PdfOutlines` once the tab's reader opened the book (`PdfBookStore.shown`, which also says PDFium is loaded),
-  kept with the book they are of (another book opened in the tab shows none of the last one's), else its pages ("עמוד N"). The entry of the page at the reader's top is the one selected (and scrolled to), and one
-  clicked goes to its page (`goToPage`); a bookmark with others under it opens them instead, the first one opens at
+  kept with the book they are of (another book opened in the tab shows none of the last one's), and under them, below
+  a divider, its pages ("עמוד N", `PdfPagesView`), half of the pane each, as Zayit's `BookTocPanel` shows a book's two
+  divisions (request 48 of stage 3: "גם כשיש תוכן עניינים יופיעו גם העמודים, כמו בספרים עם שתי חלוקות"); its pages
+  alone when it has none. The entry of the page at the reader's top is the one selected in each (and scrolled to), and
+  one clicked goes to its page (`goToPage`); a bookmark with others under it opens them instead, the first one opens at
   the start when it holds some, and those above the entry read open as the reader moves on, as Zayit's contents do
   (`TocUseCase.toggleTocEntry`, `loadRootToc`, `expandPathToTocEntry`). `PdfOutlineToc` and `pdfOutlineToc` turn the
   bookmarks into Zayit's `TocEntry` rows, numbered in the book's order: each one's page, the entries above it
@@ -3601,10 +3604,10 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   of them in the book's order too (`entries`), which `PdfTocSearch` searches, with `pageLabel` ("עמוד N").
 - **Reached from:** `BookTocPanel.kt`.
 - **Follows:** Zayit's contents pane (`BookTocView`'s list of entries and their children, `TocEntry`) and its
-  `TocUseCase` for what opens and closes.
+  `TocUseCase` for what opens and closes; its `BookTocPanel` for the two divisions (`HorizontalDivider`, a weight each).
 - **Tests:** `PdfOutlineTest` (the bookmarks as contents); tried in the app (a book with bookmarks: a chapter opened,
   a section clicked gone to, the entry read selected and its chapter opened while scrolling, the same when the book is
-  opened again; a book without bookmarks: its pages).
+  opened again, its pages under its bookmarks since request 48 of stage 3; a book without bookmarks: its pages).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfOutline.kt`
 
@@ -3669,19 +3672,20 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfTocSearch.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 77 lines.
+- **Size:** 74 lines.
 - **What:** `PdfTocSearch(pdfBooks, stateManager)`, the contents pane's search in the PDF book open in a reader (request
   53: "למה אין חיפוש בתוכן עניינים?"), run as Zayit's `TocUseCase` runs a book's: `search(query)` filters the book's
   whole contents with Zayit's `buildTocFilter` through a `PaneSearchRunner` of its own (the field's state, the
   searches of successive keys cancelling each other), the contents being its bookmarks as the pane draws them
-  (`pdfOutlineToc`), or its pages when it has none ("12" finds "עמוד 12", before 120 to 129); `open(id)` closes the
-  field and goes to the match's page (`PdfBookStore.goToPage`). Each says whether the book open is a PDF book, so the
-  view model hands every other book to Zayit's use case. The contents are read once a book (kept when not empty).
+  (`pdfOutlineToc`) and its pages after them, as the pane shows both (request 48 of stage 3; "12" finds "עמוד 12",
+  before 120 to 129); `open(id)` closes the field and goes to the match's page (`PdfBookStore.goToPage`). Each says
+  whether the book open is a PDF book, so the view model hands every other book to Zayit's use case. The contents are
+  read once a book, kept once its reader told its pages.
 - **Reached from:** `BookContentViewModel.kt`.
 - **Follows:** Zayit's `TocUseCase.search` and `selectSearchEntry` (the same field, the same filter, the double Enter
   guarded); its `PaneSearchRunner`.
 - **Tests:** `PdfOutlineTest` (a bookmark by its words, a page by its number); tried in the app ("סימן ב" found and
-  gone to, "12" in a book without bookmarks).
+  gone to, "12" in a book without bookmarks, and in one with them since request 48 of stage 3).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
@@ -4010,7 +4014,8 @@ tractate. Hooks: `VerticalBars.kt` (the button), `BookContentEvent.kt`, `BookCon
   Pardes from its pages cut into images, in `PageRows` (a page a row or two side by side, titles): each `ScanPage` an
   `Image` of its bitmap, smoothed as it is drawn smaller (`FilterQuality.Medium`), on the page's own proportions
   (`ScanCut.heightOf`), white with a wait while it is cut (`DafScanPages.revision`); the images of the two rows after
-  the first in view decoded ahead (`prepare`). No wait and no preview, as Nucleus's `PdfPage` has (request 56).
+  the first in view decoded ahead (`prepare`).
+  No wait and no preview, as Nucleus's `PdfPage` has (request 56).
 - **Reached from:** `DafScanView.kt`.
 - **Follows:** Pardes's `PdfPageList` (its rows and pages ahead); docs/scan-speed's way of drawing a cut page.
 - **Tests:** tried in the app (a page a row and two, the switch from the text drawn at once).

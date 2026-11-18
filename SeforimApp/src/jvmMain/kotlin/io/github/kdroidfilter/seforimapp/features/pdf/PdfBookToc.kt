@@ -1,6 +1,8 @@
 package io.github.kdroidfilter.seforimapp.features.pdf
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,6 +13,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import io.github.kdroidfilter.seforimapp.core.presentation.components.HorizontalDivider
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.booktoc.BookTocView
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
@@ -21,14 +25,15 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.pdf_book_toc_page
 
 // Pardes (requests 49 and 52 of docs/DESKTOP_STAGE2.md): a PDF book's contents in the reader's own contents pane, "סרגל
-// תוכן עניינים רגיל כמו שיש לכל הספרים", in place of the field that went to a page: the PDF's own bookmarks, else its
-// pages.
+// תוכן עניינים רגיל כמו שיש לכל הספרים", in place of the field that went to a page: the PDF's own bookmarks, and its
+// pages under them, as a book's two divisions (request 48 of docs/DESKTOP_STAGE3_PLAN.md), or its pages alone.
 
 /**
  * The contents of the PDF book [bookId] shown in the tab [tabId], drawn as the library's books' contents are
- * ([BookTocView]): its own bookmarks ([PdfOutlines]), read once its reader opened it, or its pages when it has none, as
- * the reader tells them ([PdfBookStore.shown]). The entry of the page at the reader's top is the one selected, and an
- * entry clicked goes to its page; one with entries under it opens them, as in a book's contents.
+ * ([BookTocView]): its own bookmarks ([PdfOutlines]), read once its reader opened it, above its pages as a book's two
+ * divisions are, or its pages alone when it has none, as the reader tells them ([PdfBookStore.shown]). The entry of the
+ * page at the reader's top is the one selected in each, and an entry clicked goes to its page; one with entries under
+ * it opens them, as in a book's contents.
  */
 @Composable
 fun PdfBookToc(
@@ -54,9 +59,25 @@ fun PdfBookToc(
     val goTo = { page: Int -> store.goToPage(tabId, page) }
     if (bookmarks.isNotEmpty()) {
         val toc = remember(bookId, bookmarks, label) { pdfOutlineToc(bookId, bookmarks) { page -> pageLabel(label, page) } }
-        PdfOutlineView(toc, pages.page, goTo, modifier)
+        Column(modifier) {
+            PdfOutlineView(toc, pages.page, goTo, Modifier.weight(1f))
+            Box(Modifier.padding(vertical = 8.dp)) { HorizontalDivider() }
+            PdfPagesView(bookId, pages, label, goTo, Modifier.weight(1f))
+        }
         return
     }
+    PdfPagesView(bookId, pages, label, goTo, modifier)
+}
+
+// The pages, "עמוד N" each ([label]), the one at the reader's top selected
+@Composable
+private fun PdfPagesView(
+    bookId: Long,
+    pages: PdfPagesShown,
+    label: String,
+    goTo: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val entries =
         remember(bookId, pages.count, label) {
             (1..pages.count)
