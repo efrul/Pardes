@@ -249,7 +249,10 @@ A build for the user to try, from a branch, before anything reaches `main`:
    `android-site.yml` publishes the changelog from `main`, and the section belongs to the public release. `git revert`
    writes its commit as the container's own identity: run it with `-c user.name=efrul -c user.email=…`, or amend it
    with `--reset-author` (a plain `--amend` keeps the author), and check `git log -1 --format='%an | %cn'` before the
-   push (2026-11-13: one went out as Claude, and was amended and pushed again).
+   push (2026-11-13: one went out as Claude, and was amended and pushed again). `git revert` takes no `-q`: given it,
+   it prints its usage and makes no commit, and an `--amend` after it renames the commit before, the changelog's own
+   (2026-11-19: the push was refused, and the branch went back to the pushed commit). Read the revert's line in
+   `git log -1` before amending it.
 
 A session cannot delete a release. Tell the user which pre-releases can go once tried: Pardes for Android 0.3.0 to
 0.4.1 reads only the 30 newest releases.
