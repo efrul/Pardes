@@ -17,7 +17,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** A search exact, general or hybrid (request 54): which engine is asked, and the text it is asked. */
+/** A search by its words alone or by meaning too (request 54): which engine is asked, and the text it is asked. */
 class SearchModesTest {
     // An engine that writes down the texts it is asked to search
     private open class Recording : SearchEngine {
@@ -60,16 +60,19 @@ class SearchModesTest {
             near: Int,
         ): String = rawText
 
-        override fun highlightsByMeaning(query: String): Boolean = true
+        // The search of the words marks no meaning
+        override fun highlightsByMeaning(query: String): Boolean = false
 
         override fun close() = Unit
     }
 
-    // The hybrid engine: its own search, and its search of the words apart
+    // The hybrid engine: its own search, marked by meaning, and its search of the words apart
     private class Hybrid(
         override val words: Recording,
     ) : Recording(),
-        WordsEngine
+        WordsEngine {
+        override fun highlightsByMeaning(query: String): Boolean = true
+    }
 
     private val lexical = Recording()
     private val hybrid = Hybrid(lexical)
@@ -94,42 +97,42 @@ class SearchModesTest {
     }
 
     @Test
-    fun `exact asks the search of the words the text as an exact phrase, a quote typed kept, and marks no meaning`() {
+    fun `a tab saved exact by a testers' build searches as general, the text as typed, and marks no meaning`() {
         search(SearchMode.EXACT, "ברכות השחר")
-        search(SearchMode.EXACT, "\"ברכות\" השחר")
-        assertEquals(
-            listOf("\"ברכות השחר\"", "facets \"ברכות השחר\"", "\"ברכות\" \"השחר\"", "facets \"ברכות\" \"השחר\""),
-            lexical.asked,
-        )
+        assertEquals(listOf("ברכות השחר", "facets ברכות השחר"), lexical.asked)
         assertTrue(hybrid.asked.isEmpty())
         assertFalse(SearchModeEngine(hybrid) { SearchMode.EXACT }.highlightsByMeaning("ברכות"))
         assertTrue(SearchModeEngine(hybrid) { SearchMode.HYBRID }.highlightsByMeaning("ברכות"))
     }
 
     @Test
-    fun `the words a list in the library's order reads are the mode's`() {
-        val mode = arrayOf(SearchMode.EXACT)
+    fun `the words a list in the library's order reads are the search of the words, in either mode`() {
+        val mode = arrayOf(SearchMode.HYBRID)
         val engine = SearchModeEngine(hybrid) { mode[0] }
         engine.words.openSession("ברכות השחר")
         mode[0] = SearchMode.GENERAL
         engine.words.openSession("ברכות השחר")
-        assertEquals(listOf("\"ברכות השחר\"", "ברכות השחר"), lexical.asked)
+        assertEquals(listOf("ברכות השחר", "ברכות השחר"), lexical.asked)
+        assertTrue(hybrid.asked.isEmpty())
     }
 
     @Test
-    fun `the next searches take the mode chosen last, else hybrid where the search by meaning is installed`() {
+    fun `a new search is by meaning where it is installed, the home page's choice taken once`() {
         val settings = testAppSettings()
         assertEquals(SearchMode.HYBRID, settings.defaultSearchMode(meaning = true))
         assertEquals(SearchMode.GENERAL, settings.defaultSearchMode(meaning = false))
-        settings[SearchModeSettings.last] = SearchMode.EXACT
-        assertEquals(SearchMode.EXACT, settings.defaultSearchMode(meaning = true))
+        settings[SearchModeSettings.last] = SearchMode.GENERAL
+        assertEquals(SearchMode.GENERAL, settings.takeSearchMode(meaning = true))
+        assertEquals(SearchMode.HYBRID, settings.takeSearchMode(meaning = true), "the next one by meaning again")
+        settings[SearchModeSettings.last] = SearchMode.HYBRID
+        assertEquals(SearchMode.GENERAL, settings.defaultSearchMode(meaning = false), "no hybrid without the pack")
     }
 
     @OptIn(ExperimentalSerializationApi::class)
     @Test
     fun `a tab's mode is kept with its search, and one saved before it has none`() {
-        val saved = ProtoBuf.encodeToByteArray(SearchPersistedState(query = "ברכות", searchMode = SearchMode.EXACT))
-        assertEquals(SearchMode.EXACT, ProtoBuf.decodeFromByteArray<SearchPersistedState>(saved).searchMode)
+        val saved = ProtoBuf.encodeToByteArray(SearchPersistedState(query = "ברכות", searchMode = SearchMode.GENERAL))
+        assertEquals(SearchMode.GENERAL, ProtoBuf.decodeFromByteArray<SearchPersistedState>(saved).searchMode)
         val before = ProtoBuf.encodeToByteArray(Before(query = "ברכות"))
         assertNull(ProtoBuf.decodeFromByteArray<SearchPersistedState>(before).searchMode)
     }

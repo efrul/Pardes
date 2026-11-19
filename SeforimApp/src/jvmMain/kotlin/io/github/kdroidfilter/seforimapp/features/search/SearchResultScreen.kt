@@ -420,9 +420,9 @@ private fun SearchResultContentMvi(
                                     autoFocus = false,
                                     onTextChange = actions.onQueryChange,
                                     focusRequester = barFocus,
+                                    // Pardes: the search by meaning or not, at the bar's end (request 54 of stage 3)
+                                    trailing = { SearchModeSwitch(state.searchMode, actions.onSearchModeChange) },
                                 )
-                                // Pardes: exact, general or hybrid, beside the bar (request 54 of stage 3)
-                                SearchModeSwitch(state.searchMode, actions.onSearchModeChange)
                             }
 
                             // Always there, as Google's, even with one category: "הכל" also undoes a kept filter

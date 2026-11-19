@@ -37,13 +37,13 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntityFinder
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
-import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchStatePersistenceUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchTocUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocLineIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
 import io.github.kdroidfilter.seforimapp.features.search.domain.defaultSearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.fartherLinesOf
+import io.github.kdroidfilter.seforimapp.features.search.domain.takeSearchMode
 import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
 import io.github.kdroidfilter.seforimapp.features.search.semantic.SessionViews
 import io.github.kdroidfilter.seforimapp.features.search.semantic.otherTabCategories
@@ -173,7 +173,7 @@ class SearchResultViewModel(
     // Pardes: the search by meaning installed, which hybrid needs (request 54 of stage 3)
     private val meaningInstalled by lazy { InstalledPack.read(LibraryLocation.currentDir(appSettings)) is InstalledPack.InUse }
 
-    // Pardes: the tab's search mode, else the one the next searches take (request 54 of stage 3)
+    // Pardes: the tab's search mode, else the one a new search takes (request 54 of stage 3)
     private fun searchMode(): SearchMode = persistedSearchState().searchMode ?: appSettings.defaultSearchMode(meaningInstalled)
 
     // The engine, in the tab's search mode, its sessions in the library's order while the tab asks for it
@@ -390,9 +390,8 @@ class SearchResultViewModel(
                 executeSearch()
             }
 
-            // Pardes: the tab's mode, which the next searches take too (request 54 of stage 3)
+            // Pardes: the tab's mode (request 54 of stage 3)
             is SearchResultEvents.SetSearchMode -> {
-                appSettings[SearchModeSettings.last] = event.mode
                 _uiState.value = _uiState.value.copy(searchMode = event.mode)
                 updatePersistedSearch { it.copy(searchMode = event.mode) }
                 executeSearch()
@@ -1242,8 +1241,8 @@ class SearchResultViewModel(
         currentJob?.cancel()
         _breadcrumbs.value = persistentMapOf()
         // Reset persisted scroll/anchor so restoration targets the top for fresh results. Pardes: the mode searched in
-        // kept with the tab (request 54 of stage 3)
-        val mode = searchMode()
+        // kept with the tab, a new one's taken from the home page's choice or the default (request 54 of stage 3)
+        val mode = persistedSearchState().searchMode ?: appSettings.takeSearchMode(meaningInstalled)
         _uiState.value = _uiState.value.copy(searchMode = mode)
         updatePersistedSearch {
             it.copy(

@@ -91,7 +91,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.decodeLayout
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
 import io.github.kdroidfilter.seforimapp.features.pdf.myPdfBookSuggestions
 import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
-import io.github.kdroidfilter.seforimapp.features.search.BarWithSearchMode
+import io.github.kdroidfilter.seforimapp.features.search.NextSearchModeSwitch
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
@@ -479,10 +479,17 @@ private fun HomeBody(
                             }
                         }
                         FullWidthSection(gapAfter = 4.dp) {
-                            // Pardes: the next searches exact, general or hybrid, beside the bar (request 54 of stage 3)
-                            BarWithSearchMode(Modifier.fillMaxWidth()) {
+                            Box(
+                                Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Box(homeContentModifier) {
-                                    UnifiedSearchBar(searchUi = searchUi, searchCallbacks = searchCallbacks)
+                                    UnifiedSearchBar(
+                                        searchUi = searchUi,
+                                        searchCallbacks = searchCallbacks,
+                                        // Pardes: the next searches by meaning or not, at the bar's end (request 54 of stage 3)
+                                        trailing = { NextSearchModeSwitch() },
+                                    )
                                 }
                             }
                         }
@@ -517,6 +524,8 @@ internal fun UnifiedSearchBar(
     onTextChange: (String) -> Unit = {},
     // Pardes: the main field's focus, for the results page to come back to it once a tab is picked
     focusRequester: FocusRequester? = null,
+    // Pardes: at the field's end, after its clear button: the search by meaning's toggle (request 54 of stage 3)
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     // Keep state outside the sections so it persists across their recompositions
     val scope = rememberCoroutineScope()
@@ -697,6 +706,7 @@ internal fun UnifiedSearchBar(
         onGlobalExtendedChange = { searchCallbacks.onGlobalExtendedChange(it) },
         isBookLoading = searchUi.isReferenceLoading && !isTocInTopBar,
         isTocLoading = searchUi.isTocLoading && isTocInTopBar,
+        trailing = trailing,
         // Tab on a book: the bar's book if it is the first, else one more searched with the others
         onPickBook = { picked ->
             // Pardes: a PDF book of the user's has no text to search in, and Tab opens it (request 54)
@@ -1463,6 +1473,8 @@ private fun SearchBar(
     // Loading flags for predictive lists
     isBookLoading: Boolean = false,
     isTocLoading: Boolean = false,
+    // Pardes: at the field's end, after its clear button (request 54 of stage 3)
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     // Suggestion state is shared across all tabs via the single SearchHomeViewModel, but every
     // open tab stays composed. A Popup renders in its own window and escapes the layout(0,0) trick
@@ -1912,16 +1924,20 @@ private fun SearchBar(
             },
             // Clears the typed text, keeping the picked book
             trailingIcon = {
-                if (state.text.isNotEmpty()) {
-                    Icon(
-                        AllIconsKeys.Actions.Close,
-                        stringResource(Res.string.search_clear),
-                        Modifier
-                            .clickable {
-                                state.clearText()
-                                effectiveFocusRequester.requestFocus()
-                            }.pointerHoverIcon(PointerIcon.Hand),
-                    )
+                // Pardes: the caller's own after the clear button, in a row with it (request 54 of stage 3)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (state.text.isNotEmpty()) {
+                        Icon(
+                            AllIconsKeys.Actions.Close,
+                            stringResource(Res.string.search_clear),
+                            Modifier
+                                .clickable {
+                                    state.clearText()
+                                    effectiveFocusRequester.requestFocus()
+                                }.pointerHoverIcon(PointerIcon.Hand),
+                        )
+                    }
+                    trailing?.invoke()
                 }
             },
             leadingIcon = {
