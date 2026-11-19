@@ -211,7 +211,9 @@ tools and the code did when it was written.
 
 ## Zayit's later code, and its licence
 
-Pardes stays on 0.6.12; the rest of Zayit is read, never merged (`SKILL.md` › Merging a Zayit release).
+Main stays on 0.6.12; 0.6.13 is merged on the branch `claude/zayit-0.6.13` (2026-11-19), which reaches main only once
+SeforimOpenSiddur's author and Amud's authors agree in writing (`SKILL.md` › Merging a Zayit release). The rest of
+Zayit is read, never merged.
 
 - Read it in a scratch clone outside the repository:
   `git fetch --filter=blob:none --shallow-since=2026-10-10 --no-tags https://github.com/kdroidFilter/Zayit master`,
@@ -221,6 +223,13 @@ Pardes stays on 0.6.12; the rest of Zayit is read, never merged (`SKILL.md` › 
 - Being AGPL is not leave to take it: it is later than Pardes's base, so the user is asked first, with the commit,
   its date and that test. One was taken so, on 2026-11-11: the siddur's keyboard scrolling (`21659516`), recorded in
   the map's section 5.
+- **A Zayit release can move Nucleus past Pardes's decorated-window-tao**, whose version then no longer outranks the
+  release's: rebuild the fork on the new release (`nucleus-fork/README.md`; for 0.6.13, efrul/Nucleus's branch
+  `claude/tearoff-on-202611011507`, a new branch beside the old one rather than a force-push). Its publish script's
+  last step (`republish-local.py`, the other modules into Maven Local) can be refused by Maven Central (HTTP 429):
+  Pardes needs only the tao module, which is published before it.
+- **A worktree-isolated agent's git commands run in its own worktree**: a clone it needs (the Nucleus fork) goes to
+  the scratchpad, with plain `git -C <dir> …` commands, no `-c` options and no compound shell lines around them.
 - **A file from a fork of Zayit may hold Zayit's later code.** Before taking it, diff it against Pardes's own copy
   of the same file and find where each difference comes from.
 
