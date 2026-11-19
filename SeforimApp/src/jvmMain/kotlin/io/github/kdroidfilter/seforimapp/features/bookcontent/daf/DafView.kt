@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.TextContextMenu
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -200,6 +201,13 @@ class DafControl {
     internal var step: suspend (forward: Boolean) -> Boolean = { false }
     internal var where: () -> DafPlace? = { null }
     internal val scale = DafScale()
+
+    /**
+     * The tractate's comments of Rashi and Tosafot printed on the daf, and where each line is printed, once the daf read
+     * its layout: the find on the daf searches them too ([rememberDafFound]); null before, and while it is not shown.
+     */
+    var printed by mutableStateOf<DafPrinted?>(null)
+        internal set
 
     suspend fun scrollPage(forward: Boolean) = page(forward)
 
@@ -396,6 +404,19 @@ private fun DafPages(
     val byName = remember(file) { file.amudim.associateBy { it.amud } }
     val index by produceState<DafIndex?>(null, file, order) { value = withContext(Dispatchers.Default) { DafIndex(file, order) } }
     val places = index?.places.orEmpty()
+    // Pardes: the comments printed, for the find to search them too while the daf is shown (stage 3)
+    DisposableEffect(index, control) {
+        val books =
+            file.library
+                ?.books
+                .orEmpty()
+                .filterKeys { it != GEMARA_COLUMN }
+                .values
+                .flatten()
+                .toSet()
+        control.printed = index?.let { DafPrinted(it.comments, it.places, books) }
+        onDispose { control.printed = null }
+    }
     // Pardes: the amudim two side by side, as a Gemara open (request 47): the list's items are rows of them then, their
     // lines' places still the order's
     val spreads by graph.appSettings.pageSpreadsFlow

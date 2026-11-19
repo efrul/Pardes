@@ -94,6 +94,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFind
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanReader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafView
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafFound
 import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindListing
 import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.AnchorTarget
@@ -636,7 +637,8 @@ fun BookContentView(
 
     // Matches across the whole book, not only its loaded pages (#451): Lucene candidates
     // confirmed off-main; smart mode wraps its semantic lines. Navigation and count read from it.
-    val findResults by androidx.compose.runtime.produceState(
+    // Pardes: the Gemara's, with the daf's comments below (stage 3)
+    val textFindResults by androidx.compose.runtime.produceState(
         FindResults.None,
         showFind,
         smartModeEnabled,
@@ -681,6 +683,20 @@ fun BookContentView(
             .onFailure { e -> debugln { "find-in-book failed: $e" } }
     }
 
+    // Pardes: on the daf, the comments of Rashi and Tosafot printed on it found too, in the daf's order (stage 3)
+    val dafFound by rememberDafFound(
+        textFindResults.matches,
+        textFindResults.query.takeUnless { textFindResults.smart },
+        dafControl.printed.takeIf { daf != null },
+        appGraph.repository,
+    )
+    val findResults by remember {
+        derivedStateOf {
+            val text = textFindResults
+            dafFound?.takeIf { it.gemara === text.matches }?.let { FindResults(text.query, false, text.bookId, it.matches) } ?: text
+        }
+    }
+
     var currentMatch by remember(bookId) { mutableStateOf<BookFindMatches.Match?>(null) }
     // The current match while it belongs to the results shown: one kept from older results isn't
     val liveMatch = currentMatch?.takeIf { it in findResults.matches }
@@ -699,7 +715,12 @@ fun BookContentView(
                 it.bookId == bookId
         }
     LaunchedEffect(shownFind, liveMatch) {
-        appGraph.bookFindHub.publish(tabId, shownFind?.let { FindListing(bookId, it.query, it.smart, it.matches, liveMatch) })
+        val books =
+            dafControl.printed
+                ?.takeIf { daf != null }
+                ?.books
+                .orEmpty()
+        appGraph.bookFindHub.publish(tabId, shownFind?.let { FindListing(bookId, it.query, it.smart, it.matches, liveMatch, books) })
     }
     DisposableEffect(tabId) { onDispose { appGraph.bookFindHub.publish(tabId, null) } }
 
