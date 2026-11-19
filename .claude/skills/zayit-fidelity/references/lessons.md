@@ -105,6 +105,18 @@ tools and the code did when it was written.
 - **A top-level value that Zayit's code reads in composition** (an add-on's `installed…`) can follow a setting: a
   getter over a snapshot state that `AppSettings` mirrors its preference into (`OpenSiddurSwitch`). A plain
   `StateFlow.value` there would not recompose the menus that read it.
+- **The tab strip's first tab is at its left end, from the right as from the left.** A window's tabs (`group.ids`,
+  `TabsState.tabs`) start beside the new tab's button: in RTL the strip reverses the list and lays it out from the
+  right, so index 0 lands on the left. The split view first drew its halves the other way round from the strip
+  (2026-11-19); `TabKeys` reads the order the same way.
+- **A click on a row in a pane takes the keyboard's focus**, whether the row asked for it or not: after a click in the
+  contents, the arrows go to the contents and not to the text. The tree's keys build on that (`TreeKeys`): Escape and
+  Enter on a leaf give the focus back with `BookContentEvent.FocusText`.
+- **The structured-coroutines plugin refuses a `launch` on a scope field** unless it is marked `@StructuredScope`
+  (`TreeKeys`, `PassageReading`), at compile time (`SCOPE_003`).
+- **A book opened in a tab of the home page gets no Ctrl/Cmd+F** when its destination stays the home page's: Zayit's
+  window keys ask for a find only in a tab whose destination is a book's (`hasFindInPage`). A book opened from the
+  home page's search bar becomes a book's tab and has it (2026-11-18, the PDF find).
 
 ## Data and settings
 
@@ -251,6 +263,13 @@ Each of these was built, shown, and sent back. They say what the user expects:
   siddur's days of Iyar are ordinary weekdays until a custom is picked.
 - **Zayit's own rendering is the reference.** A wrong link in a Gemara line was settled by the user's screenshot of
   the same page in Zayit: compare with Zayit before defending a result.
+- **A new control is drawn as the ones it stands beside** (stage 3, 2026-11-18). The search modes, first Jewel's grey
+  segmented control, were redone as one pill as high as the search bar, the mode chosen marked as the category tabs
+  mark theirs ("תדייק עיצובית"); the tree's keyboard row, first a gold ring, is shown as the contents' search shows
+  its match ("הפוקוס יראה כמו במקומות שהוא קיים, כמו בתוכן העניינים לאחר חיפוש בו"). Look for the control's look in
+  the app before drawing a new one.
+- **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
+  to the text's right beside the contents ("יהיה בימין").
 
 Show a screenshot of a choice of design before building on it, and ask of each new control: does it behave as the
 one beside it does?
