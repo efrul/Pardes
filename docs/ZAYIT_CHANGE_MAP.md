@@ -1355,7 +1355,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +440 −220 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot.
+- **Change:** modified, +444 −220 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
     `DafView` in place of the lines' `LazyColumn`, or, for a `DafMode` of the scan, `DafScanReader` (request 46, a
@@ -1389,9 +1389,10 @@ The entries of this section by kind:
   - The daf's find in Rashi and Tosafot (the user's word of 2026-11-19: "במצב צורת הדף החיפוש יהיה גם על רש"י
     ותוספות"), with comments marked "Pardes:" and an import: Zayit's `findResults` is renamed `textFindResults`, and
     `findResults` is derived from it: on the daf, the Gemara's matches with the comments printed there
-    (`rememberDafFound` over `DafControl.printed`, while `daf` is set and the find is not by meaning), the Gemara's
-    alone until those are worked out; so the count, Enter and F3 (`navigateToMatch`, to the line by
-    `DafControl.scrollToLine`), the current match drawn on the daf and the results pane all go through them.
+    (`rememberDafFound` over `DafControl.printed` while `daf` is set, by its words or by meaning, with the search
+    engine), the Gemara's alone until those are worked out; so the count, Enter and F3 (`navigateToMatch`, to the line
+    by `DafControl.scrollToLine`), the current match drawn on the daf and the results pane all go through them. By
+    meaning, the comments found (`dafComments`) are marked whole on the daf with the Gemara's lines (`DafFind.lines`).
 - **Why:** the daf view lives inside the text view's own frame, so that everything the reader does around the text
   works on the daf too (`e00754a4`, `8d3825e7`, `d334af46`, `efad35cc`); the user asked on 2026-11-09 that the arrows
   move within Rashi and Tosafot when the focus is on them, and that the text open from the daf in the same state (what
@@ -2782,23 +2783,26 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafFindComments.kt`
 
 - **Feature:** The daf's find in Rashi and Tosafot.
-- **Size:** 143 lines.
+- **Size:** 191 lines.
 - **What:** the user asked on 2026-11-19 that the find on the daf search Rashi and Tosafot too ("במצב צורת הדף החיפוש
   יהיה גם על רש"י ותוספות"). `DafPrinted` (the tractate's comments of each column as read, where each line is printed,
-  and the commentaries' books, from `DafIndex` and the layout's `library.books`), `DafFound` (the Gemara's matches and
-  the merged ones), `rememberDafFound(gemara, query, printed, repository)` (the merge off the UI thread, the comments'
-  text read once a tractate in a `ConcurrentHashMap`; null off the daf, by meaning, and until it is worked out), and
-  `withComments`: the comments' lines read 500 at a time, their matches counted as the text's are
-  (`findAllMatchesNormalized` on `plainTextFromHtml`), and every line found ordered as the daf is read: amud by amud,
-  the Gemara's, then Rashi's, then Tosafot's (`columnRank`), each from its top down, a Gemara line the daf does not
-  print at the end; their line indices their places in that order (the daf goes to a match by its line, the results
-  pane to a line by its index). `GEMARA_COLUMN`, the layout's "G".
+  and the commentaries' books, from `DafIndex` and the layout's `library.books`), `DafFound` (the Gemara's matches, the
+  merged ones, and the comments found), `rememberDafFound(gemara, query, smart, printed, repository, searchEngine)` (the
+  merge off the UI thread, the comments' text read once a tractate in a `ConcurrentHashMap`; null off the daf, and
+  until it is worked out), `withComments`: the comments' lines read 500 at a time and their matches counted as the
+  text's are (`findAllMatchesNormalized` on `plainTextFromHtml`); and by meaning (the user's question, "למה?", when
+  the daf's find by meaning searched the Gemara alone), `withMeaningComments`: each commentary's lines on the daf that
+  `SearchEngine.semanticFind` finds in its book (60, `MEANING_LIMIT`, as the Gemara's), each once. Both order every
+  line found as the daf is read (`inDafOrder`): amud by amud, the Gemara's, then Rashi's, then Tosafot's
+  (`columnRank`), each from its top down, a Gemara line the daf does not print at the end; their line indices their
+  places in that order (the daf goes to a match by its line, the results pane to a line by its index).
+  `GEMARA_COLUMN`, the layout's "G".
 - **Reached from:** `BookContentView.kt` (`findResults`), `DafView.kt` (`DafControl.printed`).
 - **Follows:** Zayit's `findInBook` (its chunks, its confirmation and its `BookFindMatches`, built as its own are);
   Pardes's `DafIndex`.
 - **Tests:** `DafFindCommentsTest`; tried in the app (Berakhot on the daf: "כלומר", none in the Gemara, 112 in 109 lines
   of Rashi and Tosafot, Enter going from one to the next on the daf; "שמע", 944 in 688 lines, under each amud the
-  Gemara's, Rashi's and Tosafot's).
+  Gemara's, Rashi's and Tosafot's). By meaning not tried in the cloud, which has no semantic pack.
 
 #### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/GemaraPage.kt`
 
@@ -3106,10 +3110,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafFindCommentsTest.kt`
 
 - **Feature:** The daf's find in Rashi and Tosafot.
-- **Size:** 71 lines.
+- **Size:** 84 lines.
 - **What:** over two amudim made for it: each amud's matches as it is read, the Gemara's, then Rashi's, then
   Tosafot's, their line indices their places, a comment matched twice counted so; the Gemara's matches as they are for
-  a query too short; the comments' text read once, as the text shows it.
+  a query too short; the comments' text read once, as the text shows it; by meaning, each commentary's lines found on
+  the daf in that order, a line the daf does not print left out, the comments marked whole.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, backtick names; Zayit's `BookFindMatches` built as its own tests build it.
 - **Tests:** it is one (unit).
