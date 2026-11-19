@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (311 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (314 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -531,8 +531,9 @@ The entries of this section by kind:
   where the tab has a find and its bar is open, shows or hides the find's results pane (`FindResultsSettings.shown`)
   from anywhere in the tab, before Zayit's Alt shortcuts; `ENTER_KEYS` at the file's end, a comment marked "Pardes:" and
   an import.
-- **Why:** when the selected tab shows the daf, the zoom keys zoom the daf (30% to 400%), not the text (`8d3825e7`). The
-  pane's Alt+Enter worked only in the find field (request 71 of stage 3, 2026-11-19: "יוכל להסגר ולהיפתח על ידי קיצור
+- **Why:** when the selected tab shows the daf, the zoom keys zoom the daf (30% to 400%), not the text (`8d3825e7`; the
+  daf alone again since request 63 of the list after the third testers' build, `AppSettings.zoomIn`). The pane's
+  Alt+Enter worked only in the find field (request 71 of stage 3, 2026-11-19: "יוכל להסגר ולהיפתח על ידי קיצור
   המקשים גם כשהפוקוס לא על שורת החיפוש").
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small; three branches of one `when`.
@@ -568,7 +569,8 @@ The entries of this section by kind:
 - **Change:** modified, +10 −3 lines. Feature: Daf view.
 - **What:** the macOS menu's zoom items call `appSettings.zoomIn/zoomOut(selectedTabId(tabsViewModel))`; a private
   `selectedTabId` reads the selected tab's id from the `TabsViewModel`.
-- **Why:** as for `WindowUtils.kt`: the menu zooms the daf when the selected tab shows one (`8d3825e7`).
+- **Why:** as for `WindowUtils.kt`: the menu zooms the daf when the selected tab shows one (`8d3825e7`), the daf alone
+  (request 63 of the list after the third testers' build).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small.
 - **Smaller:** already minimal.
@@ -682,7 +684,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +287 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
+- **Change:** modified, +272 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
   smart siddur, The Home's big name shown or hidden.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
@@ -693,12 +695,12 @@ The entries of this section by kind:
     And whether pages are shown two side by side, as a book open (`page_spreads`, `pageSpreadsFlow`, the end bar's
     button: the daf, a tractate's scan, a PDF book; off at first; portable, reset by `clearAll()`).
   - **Zoom of the selected tab:** `dafShown`/`dafHidden`/`showsDaf` count the views that show a daf per tab
-    (`dafViewsFlow`), and `zoomIn`/`zoomOut(tabId)` zoom the text as before, and the daf with it to its next level
-    when the tab shows one: the panes beside a daf (the commentaries, the references) are drawn in the text's size,
-    and did not follow the zoom until the user asked on 2026-11-10. `zoomDaf(zoom)`, the daf's own pointer zoom (a
-    pinch, Ctrl + wheel over it), zooms the text by the same ratio, as the same gestures over the text zoom the panes
-    (asked on 2026-11-11); the text's size before its limits is kept (`dafText`), so zooming out and back gives the
-    size it was.
+    (`dafViewsFlow`), and `zoomIn`/`zoomOut(tabId)` zoom the daf alone to its next level when the tab shows one (its
+    pages: a daf, a scan, a PDF book), else the text as before. The user asked on 2026-11-10 and 11 that the panes
+    beside a daf (the commentaries, the references, drawn in the text's size) follow the daf's zoom, and the zoom and a
+    pinch over the daf zoomed the text too (`zoomDaf`, `dafText`); after the third testers' build, request 63: "שגודל
+    המפרשים/ אחרים לא יהיה מושפע מגודל צורת הדף", with the user's choice "רוחב החלונית, זום נפרד": the daf's zoom is its
+    own, and `zoomDaf` and `dafText` are gone (a pinch over the daf sets its zoom, `setDafZoom`).
   - **Library location:** `getLibraryInstallDir`/`setLibraryInstallDir` (`library_install_dir`, not portable) and
     `flush()`, which writes the preferences now, before a step that relies on them.
   - **Semantic packs:** `semantic_pack_prompt`, whether a start without a pack opens the settings on it; and the newest
@@ -1164,8 +1166,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +62 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
-  side, Pages in the dark theme's colours.
+- **Change:** modified, +64 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+  side, Pages in the dark theme's colours, A whole page in the view.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`.
@@ -1179,10 +1181,12 @@ The entries of this section by kind:
     `PageColorsButton(uiState)`, with a comment marked "Pardes:" and its import: the pages' original colours in the dark
     theme, on a scan or a PDF book (request 42 of stage 3), in the place the diacritics button leaves there.
   - Under `ZoomButtons`, `PageSpreadsButton(uiState)`, with a comment marked "Pardes:" and its import: two pages side
-    by side, shown while the tab shows pages (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס ומינוס").
-  - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf and the text
-    (`zoomIn/zoomOut`), are enabled while either can still be zoomed, and their tooltips say "400% max" / "30% min";
-    otherwise the text, as before.
+    by side, shown while the tab shows pages (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס ומינוס"); and under it
+    `PageFitButton(uiState)`, with its import: a whole page in the view (request 63 of the list after the third testers'
+    build).
+  - `ZoomButtons(tabId)`: with the tab's view showing a daf (`dafViewsFlow`), the buttons zoom the daf alone
+    (`zoomIn/zoomOut`, request 63 of that list), each enabled while the daf can still be zoomed that way, their
+    tooltips saying "400% max" / "30% min"; otherwise the text, as before.
   - The references pane's button is enabled for a line with a link of the other kinds too:
     `repository.getReferencesForLines(placesLineIds).isNotEmpty() || libraryLinks.any(placesLineIds)`, with
     `val libraryLinks = LocalAppGraph.current.libraryLinks`.
@@ -1195,7 +1199,7 @@ The entries of this section by kind:
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
   their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; two buttons among the bar's and one under the zoom's, a branch before the diacritics button and
+- **Merge risk:** small; two buttons among the bar's and two under the zoom's, a branch before the diacritics button and
   a button after it, `ZoomButtons`' body, the references' availability and the two `…Enabled` lines.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`); the scan's, two pages' and the pages'
@@ -1397,7 +1401,8 @@ The entries of this section by kind:
     comment marked "Pardes:" and its import), given the daf's control, zoom, the tab's line, anchor and request to
     scroll, and the daf's `onScroll`: the scan has the daf's keys, zoom and place, and the text opens where it was.
   - The daf's own `LazyListState` and `DafControl`; its own zoom by the same gestures (`rememberTextZoom` over
-    `dafZoomFlow`, in percent, `PERCENT = 100f`, given to `AppSettings.zoomDaf`, which zooms the text with it);
+    `dafZoomFlow`, in percent, `PERCENT = 100f`, given to `AppSettings.setDafZoom`: the daf's alone, since request 63
+    of the list after the third testers' build, with a comment marked "Pardes:");
     `dafShown`/`dafHidden` while it is shown, so the zoom keys know.
   - The content is not hidden for initial positioning on the daf (its lines' list is not laid out there).
   - Find in page, Ctrl+Home/End and Page Up/Down act on the daf through `dafControl` (`scrollToLine`, `scrollToEdge`,
@@ -2064,7 +2069,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +397 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +400 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 364 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -2124,7 +2129,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     card's list of the folder's tractates, `daf_scans_first_pages`, its description, `…_none`, `daf_scans_first_page_row`,
     `daf_scans_first_guessed` ("לפי ניחוש"), `daf_scans_first_pages_checked` ("למסכתות המסומנות: דף ב. בעמוד") and
     `daf_scans_first_pages_set` ("קביעה"); and under a comment after them, two pages side by side:
-    `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a copy of a tab from its menu,
+    `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a whole page in the view (request 63
+    of stage 3): `page_fit` ("עמוד שלם") and its tooltip; and under a comment after them, a copy of a tab from its menu,
     `tab_duplicate` ("שכפל לשונית", request 59 of stage 3); and under a comment after it, two tabs side by side from a
     tab's menu (request 59 of stage 3): `tab_split_beside` ("הצגה לצד הלשונית הנוכחית"), `tab_split_new` and
     `tab_split_end`; and under a comment after them, the pages in the dark
@@ -2704,8 +2710,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
-- **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot.
-- **Size:** 1453 lines.
+- **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot, A whole page in the view.
+- **Size:** 1464 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
@@ -2741,7 +2747,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   the right, the next amud a on the left), each amud as wide as half the view at the zoom's 1 (`columns`), drawn by
   the local `AmudColumn`, the right one first in a view laid out from the right; the lines' places stay the order's,
   and `itemOfAmud` and `amudOfItem` turn them into the list's items and back (`reveal`, `openOn`, the place told, the
-  last amud's end); turned on or off, the daf reopens at the segment that was at its top (`before`, `openOn`).
+  last amud's end); turned on or off, the daf reopens at the segment that was at its top (`before`, `openOn`). The
+  pages are as wide as the view at the zoom's 1, with no widest (request 63 of the list after the third testers'
+  build: "אין טעם ברווח גדול בשוליים", where `MAX_PAGE_WIDTH`, 1100 dp, left the margins of a wide view), and with the
+  end bar's "עמוד שלם" no wider than leaves an amud of the tractate's usual height whole in the view (`blockAspect`,
+  the median amud's height over `blockWidth`; `fittedPageWidth`, `rememberWholePage`), its title and margin aside.
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
   (`DafMode`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
@@ -3045,10 +3055,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/settings/DafZoomTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 119 lines.
-- **What:** the daf's own settings: the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
-  shows one, level by level; the daf's own zoom (a pinch) zooms the text by the same ratio, the same text back at the
-  same zoom, and goes on from the next level; the views' count; the daf's marks hidden until asked and reset, and shown at first for whoever had one of the two former settings on; the zoom kept and reset.
+- **Size:** 111 lines.
+- **What:** the daf's own settings: the zoom keys, buttons and menu zoom the text, or a tab's daf alone while it shows
+  one, level by level, the text's size as it was (request 63 of the list after the third testers' build); the daf's
+  own zoom (a pinch) zooms it alone, and goes on from the next level; the views' count; the daf's marks hidden until asked and reset, and shown at first for whoever had one of the two former settings on; the zoom kept and reset.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's settings tests (`testAppSettings()`).
 - **Tests:** it is one (unit, `AppSettings`).
@@ -4148,12 +4158,13 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 327 lines.
+- **Size:** 334 lines.
 - **What:** `PdfBookView(file, place, onPlace, tabId, modifier, inTab, actions)`: the file read whole into the
   binding off the UI thread (`runSuspendCatching`, a missing native library caught too), a missing file or a failure
   said, and its pages in `PdfPageList`, their text selectable, one under the other or two side by side
-  (`pageSpreadsFlow`), as wide as the view at a zoom of 1 (two, half of it each). The zoom is the daf's, global
-  (`dafZoomFlow`, `zoomDaf`), and the view counts as the tab's daf (`dafShown`/`dafHidden`), so the end bar's buttons,
+  (`pageSpreadsFlow`), as wide as the view at a zoom of 1 (two, half of it each), and with "עמוד שלם" no wider than
+  leaves a page whole in the view (request 63 of the list after the third testers' build: the first page's size,
+  `pageSize`, `fittedPageWidth`). The zoom is the daf's, global (`dafZoomFlow`, `setDafZoom`), and the view counts as the tab's daf (`dafShown`/`dafHidden`), so the end bar's buttons,
   the window's zoom keys and the menu zoom it; `rememberTextZoom` for Ctrl + wheel and pinches. Its pages are told to the tab's
   contents pane (`PdfBookStore.showPages`, the page at the top as it changes) and it goes to a page clicked there
   (`pageRequests`), request 49. A bar: "עמוד N מתוך M" (the first page read in the row at the top), and with `inTab`
@@ -4233,6 +4244,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   `PageRows(pages, listState, pageWidth, modifier, spreads, title, page)`, each page drawn by the composable given
   (request 56): `PdfPageList` draws them with the binding's `PdfPage`, and a tractate's scan from its pages cut into
   images (`ScanPageList`); `pagesOf` and `ROWS_AHEAD` are shared with it.
+  `PAGE_GAP` and `PAGE_TITLE_HEIGHT` are internal, for a whole page's room in the scan and a PDF book (request 63 of
+  the list after the third testers' build).
 - **Reached from:** `PdfBookView.kt` (with its find's marks), `DafScanView.kt` (the binding's way), `ScanPageList.kt`
   (`PageRows`).
 - **Follows:** Pardes's PDF book view, from which it was taken; Otzaria's 2,000 pixels on a page's long side and its
@@ -4489,7 +4502,7 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 579 lines.
+- **Size:** 588 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -4533,6 +4546,10 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   המסכת"): it is set in Settings › צורת הדף. `ScanList(pages, madeOf, …, pagesList)` takes the pages' count and the
   list that draws them; `rememberPlaced` finds the amud of the tab's place;
   `amudOfLine` is shared with `DafScanButton`.
+  As wide as the view at the zoom's 1, with no widest, since request 63 of the list after the third testers' build
+  (`MOST_PAGE_WIDTH`, 1100 dp, gone), and with "עמוד שלם" no wider than leaves a page whole in the view (`ScanList`'s
+  `aspect`: the cut's first page's height over its width, or the binding's first page's size, `pageSize`;
+  `fittedPageWidth`, its title and gaps aside: `PAGE_TITLE_HEIGHT`, `PAGE_GAP`).
 - **Reached from:** `BookContentView.kt` (a `DafMode` of the scan, request 46).
 - **Follows:** `DafView`'s seams with the text view (`DafControl`, `openAt`, `onScroll`) and its titles and widths, and
   Pardes's `PdfPageList` and `ScanPageList` for the pages.
@@ -4736,6 +4753,53 @@ Pardes's `DafView.kt`, `PdfPageList.kt`, `PdfBookView.kt` and `DafScanView.kt`, 
 - **Reached from:** `PageSpreadsButton.kt`.
 - **Follows:** Pardes's `ScanPage` beside it (an `ImageVector` built once, filled paths, rings by their winding).
 - **Tests:** none.
+
+### A whole page in the view
+
+Request 63 of the list after the third testers' build of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-19): "בהצגת צורת הדף -
+צריך שגודל החלון יתאים לגודל הדף המוצג, אין טעם ברווח גדול בשוליים של החלון. בנוסף - שגודל המפרשים/ אחרים לא יהיה
+מושפע מגודל צורת הדף", with the user's choice "רוחב החלונית, זום נפרד". The pages the end bar's zoom zooms (the daf
+Pardes draws, a tractate's scan, a PDF book) are as wide as the view at the zoom's 1, with no widest; a button under two
+pages' ("עמוד שלם", every tab) fits a whole page in the view's height instead; and their zoom is their own, the text's
+size, and the panes beside them, as they were. Hooks: `VerticalBars.kt` (the button, `ZoomButtons`), `AppSettings.kt`
+(`zoomIn`/`zoomOut`), `BookContentView.kt` (the daf's pinch), `strings.xml`; in Pardes's own files, `DafView.kt`,
+`DafScanView.kt`, `PdfBookView.kt` and `PdfPageList.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFit.kt`
+
+- **Feature:** A whole page in the view.
+- **Size:** 69 lines.
+- **What:** request 63 of the list after the third testers' build ("בהצגת צורת הדף - צריך שגודל החלון יתאים לגודל
+  הדף המוצג, אין טעם ברווח גדול בשוליים של החלון", the user's choice "רוחב החלונית, זום נפרד"): `PageFitSettings`
+  ("page_fit": `whole`, off at first, portable as a typed setting of Zayit's kind), `fittedPageWidth(room, height,
+  aspect, whole, around)` (a page's width at the zoom's 1: the view's, and with `whole` no wider than leaves a page of
+  that shape whole in it, the room around it aside; the view's while its shape is not known), `rememberWholePage()`, and
+  `PageFitButton(uiState, modifier)`, the end bar's "עמוד שלם" (the `PageFit` icon, its tooltip) under two pages', shown
+  while the tab shows pages (`showsPages`), in every tab.
+- **Reached from:** `VerticalBars.kt` (the button), `DafView.kt`, `DafScanView.kt` and `PdfBookView.kt` (the width).
+- **Follows:** `PageSpreadsButton.kt` beside it (`SelectableIconButtonWithToolip` over a setting, `showsPages`); Zayit's
+  typed settings (`SettingsGroup`, `AppSettings.flow`).
+- **Tests:** `PageFitTest`; tried in the app (Berakhot 18a's scan and daf whole in the view, the daf as wide as the view
+  with the side panes closed, the commentaries' size kept as the daf was zoomed in twice).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFitTest.kt`
+
+- **Feature:** A whole page in the view.
+- **Size:** 25 lines.
+- **What:** a page as wide as the view with no widest; a whole page no wider than leaves it whole in the view, a narrow
+  view's width; a page whose shape is not known yet as wide as the view.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `icons/src/commonMain/kotlin/io/github/kdroidfilter/seforimapp/icons/PageFit.kt`
+
+- **Feature:** A whole page in the view.
+- **Size:** 89 lines.
+- **What:** `PageFit`, a 16 dp icon: a page's frame with three lines, within the view's four corners.
+- **Reached from:** `PageFit.kt` (`PageFitButton`).
+- **Follows:** Pardes's `PageSpread` beside it (an `ImageVector` built once, filled paths, a ring by its winding).
+- **Tests:** none; seen in the app's end bar.
 
 ### Pages in the dark theme's colours
 

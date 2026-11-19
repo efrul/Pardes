@@ -94,6 +94,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.pdf.RowPart
 import io.github.kdroidfilter.seforimapp.features.pdf.ZoomAnchor
 import io.github.kdroidfilter.seforimapp.features.pdf.ZoomPivot
+import io.github.kdroidfilter.seforimapp.features.pdf.fittedPageWidth
+import io.github.kdroidfilter.seforimapp.features.pdf.rememberWholePage
 import io.github.kdroidfilter.seforimapp.features.pdf.zoomPivot
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Amud
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
@@ -257,9 +259,6 @@ private sealed interface DafLoad {
     ) : DafLoad
 }
 
-/** The page's widest at the zoom's 1 (and no wider than the view); the zoom widens or narrows it. */
-private const val MAX_PAGE_WIDTH = 1100f
-
 /** Laid out at this many pixels a point, drawn at any width: the text's size is the zoom's, its places scaled. */
 private const val LAYOUT_SCALE = 2f
 
@@ -273,8 +272,9 @@ private val PagePadding = 24.dp
  * A Talmud tractate as printed in the Vilna Shas, inside the text view's own frame (its zoom, keys, selection and
  * menu): every amud of the tractate's layout (its file in the library's pardes-daf folder) one below the other, each
  * at its own height as printed, with its name above it; with no layout for the tractate, a word on it and a button to
- * import one. The pages are as wide as the view at a [zoom] of 1, at most [MAX_PAGE_WIDTH] dp: the daf's own zoom,
- * from 0.3 (more of the pages in view) to 4 (wider than the view, a sideways scroll showing the rest).
+ * import one. The pages are as wide as the view at a [zoom] of 1 (Pardes, request 63 of stage 3: no widest, and no wider
+ * than leaves a whole amud in the view when asked, `PageFitSettings`): the daf's own zoom, from 0.3 (more of the pages
+ * in view) to 4 (wider than the view, a sideways scroll showing the rest).
  *
  * The page answers as the text does, its panes the text's: a click on a Gemara word selects its segment
  * ([onSelectLine]; with Ctrl or Cmd, adds it), or, inside words a comment's dibbur quotes, that passage
@@ -430,6 +430,15 @@ private fun DafPages(
                 .sorted()
                 .let { it[it.size / 2] }
         }
+    // Pardes: and its usual height, an amud whole in the view when asked (request 63 of stage 3)
+    val blockAspect =
+        remember(file, blockWidth) {
+            file.amudim
+                .map { it.block[3] - it.block[1] }
+                .sorted()
+                .let { it[it.size / 2] / blockWidth }
+        }
+    val whole = rememberWholePage()
     // And one size of letters: a scan's boxes are taller on one amud than on another, the print's letters are not
     val layouts = remember(file, gemara, rashi, density) { LayoutCache(KEPT_LAYOUTS, DafSizes.of(blockWidth)) }
     val measurer = remember(resolver, density) { TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0) }
@@ -497,13 +506,15 @@ private fun DafPages(
         val padding = with(density) { PagePadding.toPx() }
         // Pardes: two amudim side by side share the view (request 47)
         val columns = if (rows != null) 2 else 1
-        val base = minOf(viewport / columns - 2 * padding, with(density) { MAX_PAGE_WIDTH.dp.toPx() }).coerceAtLeast(1f)
+        val titleHeight = with(density) { TitleHeight.toPx() }
+        val viewportHeight = constraints.maxHeight.toFloat()
+        val base =
+            fittedPageWidth(viewport / columns - 2 * padding, viewportHeight, blockAspect, whole, around = titleHeight + padding)
+                .coerceAtLeast(1f)
         val pageWidth = base * zoom
         val perPoint = pageWidth / blockWidth
         // As wide as the view, or as the page once the zoom makes it wider (a wider amud takes some of its margin)
         val contentWidth = maxOf(viewport, (pageWidth + 2 * padding) * columns)
-        val titleHeight = with(density) { TitleHeight.toPx() }
-        val viewportHeight = constraints.maxHeight.toFloat()
         val currentPlaces by rememberUpdatedState(places)
         val currentPerPoint by rememberUpdatedState(perPoint)
         // The same place of the page at the view's top when its scale changes (the zoom, the view's width, also while
