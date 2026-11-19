@@ -1,7 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlineEntry
-import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import java.io.File
 
@@ -78,21 +77,6 @@ internal fun firstByName(
     val from = (index - 1 downTo 0).firstOrNull { set(inName[it]) != null }
     val start = from?.let { set(inName[it]) } ?: 0
     return inName.subList(from ?: 0, index).fold(start as Int?) { sum, before -> sum?.let { total -> amuds(before)?.let { total + it } } }
-}
-
-/**
- * The page of the file whose page [top] (from 0) is the amud [amud] (`5a`): where the tractate's daf ב. is then; null
- * when that falls before the file's start.
- */
-internal fun firstFromTop(
-    top: Int,
-    amud: String,
-): Int? = scanPageOf(amud)?.let { top - it }?.takeIf { it >= 0 }
-
-/** The daf a user typed (`ה`, `ה'`, `5`), from 2; null when it is none. */
-internal fun dafTyped(text: String): Int? {
-    val typed = ReferenceParser.normalizeName(text).replace(" ", "")
-    return (typed.toIntOrNull() ?: ReferenceParser.hebrewNumeralValue(typed))?.takeIf { it >= 2 }
 }
 
 // A bookmark of daf ב. (`ב`, `ב.`, `דף ב`, `דף ב עמוד א`, `ב ע"א`)

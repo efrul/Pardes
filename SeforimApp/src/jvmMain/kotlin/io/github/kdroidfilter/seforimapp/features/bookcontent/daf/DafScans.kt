@@ -208,6 +208,20 @@ class DafScans(
         }
 
     /**
+     * Every tractate the folder chosen holds, each in the file its scan is drawn from ([of]) at the page of its daf ב.
+     * there, set or guessed (by its file's bookmarks too when [bookmarks], PDFium loaded: [byBookmarks]), by file and in
+     * their order in its name: the rows of Settings › צורת הדף where the user sets them, one or several at once (request
+     * 65 of the list after the third testers' build). None without a folder.
+     */
+    suspend fun inFolder(bookmarks: Boolean = false): List<Pair<String, ScanSource>> {
+        if (folder.value == null) return emptyList()
+        val titles = tractates().keys
+        return titles
+            .mapNotNull { title -> of(title)?.takeIf { it.personal }?.let { title to if (bookmarks) byBookmarks(it, title) else it } }
+            .sortedWith(compareBy({ it.second.file.name }, { ScanNames.tractatesIn(it.second.file.name, titles).indexOf(it.first) }))
+    }
+
+    /**
      * [source] of [tractate] at the page its file's bookmarks give, when the user set none ([firstByBookmarks]): a file
      * of the user's folder, read by PDFium once it is loaded.
      */

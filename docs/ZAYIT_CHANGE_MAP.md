@@ -2064,7 +2064,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +400 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +397 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 364 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -2119,10 +2119,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
     room, their removal, cut once the user agreed); and under a comment after them, the scans cut by the user's word
     (request 51 of stage 3): `daf_scans_cut_enabled`, the card's box, and the question a scan asks the first time one
     opens, `daf_scan_cut_question`, its hint, `…_yes` and `…_no`; and under a comment after them, a tractate's daf ב.
-    in a file of the user's (request 52 of stage 3): the line above its scan, `daf_scan_first_page` and its guessed
-    form, `…_fix`, `…_top` ("העמוד שכותרתו %1$s הוא בעצם דף"), `…_amud_a`, `…_amud_b` and `…_reset` ("חזרה לניחוש"),
-    and the card's list, `daf_scans_first_pages`, its description, `…_none` and `daf_scans_first_page_row`; and under
-    a comment after them, two pages side by side:
+    in a file of the user's (request 52 of stage 3), set in the card only since request 65 of the list after the third
+    testers' build (the line above the scan and its six strings gone): `daf_scan_first_reset` ("חזרה לניחוש"), and the
+    card's list of the folder's tractates, `daf_scans_first_pages`, its description, `…_none`, `daf_scans_first_page_row`,
+    `daf_scans_first_guessed` ("לפי ניחוש"), `daf_scans_first_pages_checked` ("למסכתות המסומנות: דף ב. בעמוד") and
+    `daf_scans_first_pages_set` ("קביעה"); and under a comment after them, two pages side by side:
     `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a copy of a tab from its menu,
     `tab_duplicate` ("שכפל לשונית", request 59 of stage 3); and under a comment after it, two tabs side by side from a
     tab's menu (request 59 of stage 3): `tab_split_beside` ("הצגה לצד הלשונית הנוכחית"), `tab_split_new` and
@@ -3089,6 +3090,18 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   `build/reports/daf/layouts-card.png`.
 - **Reached from:** the JVM tests.
 - **Follows:** `FeedbackSendCardUiTest` (Compose UI test on the desktop, Jewel's `IntUiTheme`, right to left).
+- **Tests:** it is one (Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafScansCardUiTest.kt`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 86 lines.
+- **What:** request 65 of the list after the third testers' build: the card's list of the folder's tractates drawn
+  with three (one alone guessed, two of a joined file, one set): "לפי ניחוש" beside the two guessed, "חזרה לניחוש"
+  giving the set one back to the guess, two checked and set to the third page at once (2 from 0); a page typed beside
+  a tractate saved on Enter, not at each key; a page typed from 1, none for 0 or a letter.
+- **Reached from:** the JVM tests.
+- **Follows:** `DafLayoutsCardUiTest` beside it (Compose UI test on the desktop, Jewel's `IntUiTheme`, right to left).
 - **Tests:** it is one (Compose UI).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayoutsTest.kt`
@@ -4317,7 +4330,7 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScans.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 252 lines.
+- **Size:** 266 lines.
 - **What:** `DafScanSettings`, a `SettingsGroup` of Zayit's kind ("daf_scans"): `folder`, the folder of scanned
   tractates the user chose (a path, null for none; not portable, a folder of this computer), `cut`, whether scans
   are cut into images (request 51 of stage 3: "החיתוך של הגמרא לתמונות יהיה אפשרות שצריך להפעיל"), null until the
@@ -4340,8 +4353,10 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   `firstByName`; in a file of several tractates, its pages only), `byBookmarks` (the page of daf ב. by the file's
   bookmarks, `firstByBookmarks`, once PDFium is loaded, when the user set none; read once a file as it is, its path,
   size and time, `bookmarked`, `NO_BOOKMARK` for none, and a read that failed not kept: before, each time a scan was
-  shown again, where a failed read moved its pages, request 60 of the list after the third testers' build) and
-  `otzariaFolders`; a test gives its
+  shown again, where a failed read moved its pages, request 60 of the list after the third testers' build),
+  `inFolder` (every tractate the folder holds, each in the file its scan is drawn from at its page, set or guessed, by
+  its bookmarks too when asked, by file and in their order in its name: the rows of the settings' card, request 65 of
+  that list) and `otzariaFolders`; a test gives its
   own data folders (`otzariaRoots`). Until 2026-11-13 a file was linked to
   each tractate (table `daf_scan`, `DafScans.sq`): the user moved the choice to the settings, as a folder (request 48),
   and the table is left in their user DB, unread.
@@ -4385,7 +4400,7 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanSource.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 105 lines.
+- **Size:** 89 lines.
 - **What:** `ScanSource(file, fit, personal, first, count, firstSet)`, a tractate's scan and its place in its file
   (request 52 of `docs/DESKTOP_STAGE3_PLAN.md`: "בתיקייה אישית של גמרות, לקבוע לכל מסכת באיזה עמוד בקובץ נמצא דף ב"):
   the file's page of its daf ב., its pages there (`pagesIn`), whether the user set it. `firstPageKey` and
@@ -4393,36 +4408,20 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   tractate's amudim from ב. by its table of contents); the guesses: `firstByBookmarks` (under the bookmark named after
   the tractate, its bookmark of daf ב. (`ב`, `דף ב.`, `ב ע"א`), else its own page; in a file of the tractate alone, a
   bookmark of daf ב. anywhere) and `firstByName` (after the amudim of the tractates named before it in the file's
-  name, from the page set for the nearest of them); and for the line that sets it, `firstFromTop` (the file's page of
-  daf ב. when its page at the top is a given amud) and `dafTyped` (a daf typed in letters or digits, from 2).
-- **Reached from:** `DafScans.kt`, `DafScanView.kt`, `DafScanButton.kt`, `ScanFirstPageBar.kt`, `DafScansCard.kt`.
+  name, from the page set for the nearest of them). The line above the scan that set it, and its `firstFromTop` and
+  `dafTyped`, went with request 65 of the list after the third testers' build: it is set in the settings.
+- **Reached from:** `DafScans.kt`, `DafScanView.kt`, `DafScanButton.kt`, `DafScansCard.kt`.
 - **Follows:** the daf's amud helpers (`amudOf`, `amudIndex`, `scanPageOf`), and Pardes's `PdfOutlines` for the
   bookmarks.
 - **Tests:** `ScanSourceTest`.
 
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanFirstPageBar.kt`
-
-- **Feature:** The scan of the page in the daf view.
-- **Size:** 123 lines.
-- **What:** `ScanFirstPageBar(source, topPage, onSet, modifier)`, the line above the pages of a scan from the user's
-  folder (request 52): the file's name, "דף ב. בעמוד N של הקובץ" (", לפי ניחוש" when guessed) and "תיקון", which asks
-  what the page at the top really is: "העמוד שכותרתו ג. הוא בעצם דף [ ] עמוד א / עמוד ב", saved by its button or
-  Enter (Escape cancels), and "חזרה לניחוש" when the user set it; it gives the file's page of daf ב. and the tractate's
-  page then at the top.
-- **Reached from:** `DafScanView.kt` (`ScanPages`).
-- **Follows:** Pardes's PDF book bar (`PdfBookView`'s go-to field: a `TextField` with its Enter key) and Zayit's Jewel
-  controls (`Link`, `RadioButtonRow`, `DefaultButton`, `OutlinedButton`, the shared `save_button` and `settings_cancel`).
-- **Tests:** tried in the app (a file of two tractates with two title pages: each set from a page of its own, in the
-  cut scan and in the one drawn from the file, and back to the guess).
-
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanSourceTest.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 139 lines.
+- **Size:** 126 lines.
 - **What:** a tractate's amudim by its table of contents; in a file of several, a tractate after the amudim of those
   before it, from the page set for the nearest of them, none when one is not known; the bookmarks of daf ב. under the
-  tractate's own, or its own page, or anywhere in a file of it alone; the page at the top named by its daf and amud,
-  and a daf typed; a tractate's pages, its count at most the file's; and through `DafScans` with a repository of
+  tractate's own, or its own page, or anywhere in a file of it alone; a tractate's pages, its count at most the file's; and through `DafScans` with a repository of
   `mockk`, a joined file of the folder placing each tractate, the user's page first, and back to the guess.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's `DafScansTest` beside it (a temporary folder, `testAppSettings`) and its tests with a `mockk`
@@ -4441,24 +4440,36 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names) and its UI tests (`DafLayoutsCardUiTest`).
 - **Tests:** it is one (unit and UI).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafScansCard.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 193 lines.
+- **Size:** 301 lines.
 - **What:** `DafScansCard()`, Settings › צורת הדף: "סריקות הגמרא", what the folder of scanned tractates is (a PDF a
   tractate, named after it, its pages the amudim from ב., looked in before Otzaria's), the folder chosen or none, a
   button that chooses another and one that lets it go, and Otzaria's folders found on this computer, or none; the
-  pages of the user's files where tractates' daf ב. is, as the user set them above their scans (`FirstPages`, request
-  52 of stage 3: "דף ב. בקבצים שלך", each tractate and its file with its page, from 1, changed as it is typed, and
-  "חזרה לניחוש"); and the
+  pages of the user's files where tractates' daf ב. is (`FirstPages`, request 52 of stage 3), set here only since
+  request 65 of the list after the third testers' build ("הגדרת עמוד לדף ב - תהיה דרך ההגדרות ולא מתצוגת המסכת...
+  ואפשרות להגדיר לכמה מסכתות יחד"): every tractate of the folder, in the file its scan is drawn from, by file and in its
+  order in the file's name (`DafScans.inFolder`, guessed by the bookmarks too once PDFium is loaded,
+  `rememberPdfiumLoaded`), read again when the folder or a page set changes; `FirstPagesContent(rows, onSet)` draws
+  them, `FirstPage` a row's data: "דף ב. בקבצים שלך", what the page is (as a PDF reader counts its pages, guessed by the
+  bookmarks or the tractates before it, the following ones of a joined file moving with one set), and a row a tractate
+  (`FirstPageRow`: a Jewel `CheckboxRow` with its tractate and file, its fields one under the other, its page from 1
+  saved on Enter or as its field is left and not at each key, `pageTyped`, since a page set opens the scans shown
+  again; "לפי ניחוש" beside a page guessed, "חזרה לניחוש" beside one set); the tractates checked set to one page at
+  once (`CheckedPages`: "למסכתות המסומנות: דף ב. בעמוד", a field and "קביעה", the boxes and the field cleared after);
+  "אין מסכתות בתיקייה שלך." for none; and the
   scans' pages cut into images (`CutPages`, request 56): whether they are cut (a box, `DafScans.setCut`, the question
   of a scan's first opening answered again: request 51 of stage 3), what they are, the room they take
   (`DafScanPages.bytes`, `formatBytes`), and a button that removes them (`clear`).
 - **Reached from:** `DafSettingsScreen.kt`.
 - **Follows:** Pardes's settings cards (`PdfBooksCard`, `LibraryLocationCard`: their frame, `isolatedPath`).
-- **Tests:** tried in the app (a folder chosen, a tractate's scan read from it, let go; the cut pages' 20 MB shown and
-  removed; the box checked and unchecked; request 52: the page set for הוריות in a file of two tractates listed, its
-  row wrapped beside its field).
+- **Tests:** `DafScansCardUiTest`; tried in the app (a folder chosen, a tractate's scan read from it, let go; the cut
+  pages' 20 MB shown and removed; the box checked and unchecked; request 52: the page set for הוריות in a file of two
+  tractates listed, its row wrapped beside its field; request 65: ברכות, בבא בתרא and a joined file of עבודה זרה and
+  הוריות listed, הוריות at 151 after עבודה זרה's 150 amudim, בבא בתרא and ברכות checked and set to page 3 at once,
+  עבודה זרה set to 3 with Enter and הוריות at 153 after it).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanButton.kt`
 
@@ -4478,7 +4489,7 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 601 lines.
+- **Size:** 579 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -4517,10 +4528,10 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   its cut was kept whole (`DafScanPages.whole`). Since requests 43 and 52 of stage 3 a scan is a `ScanSource`: the
   tractate's pages are those of its file from its daf ב. (`ScanSource.first`, `pagesIn`), placed by the file's bookmarks
   once PDFium is loaded (`DafScans.byBookmarks`, carried by `CutLoad`), looked for again when a first page is set
-  (`DafScans.firstPages`); above the pages of a file of the user's folder, `ScanFirstPageBar`, whose page set opens the
-  list again at the page that was at the top (`ScanPlace.placedAnew`: that amud told as the tab's place, and not placed
-  again by the tab's line; the list alone opened again, `key`, the binding's reader kept). `ScanList(pages, …,
-  pagesList)` takes the pages' count and the list that draws them; `rememberPlaced` finds the amud of the tab's place;
+  (`DafScans.firstPages`), the list alone opened again at its page (`key`, the binding's reader kept). The line above
+  the pages that set it went with request 65 of the list after the third testers' build ("תהיה דרך ההגדרות ולא מתצוגת
+  המסכת"): it is set in Settings › צורת הדף. `ScanList(pages, madeOf, …, pagesList)` takes the pages' count and the
+  list that draws them; `rememberPlaced` finds the amud of the tab's place;
   `amudOfLine` is shared with `DafScanButton`.
 - **Reached from:** `BookContentView.kt` (a `DafMode` of the scan, request 46).
 - **Follows:** `DafView`'s seams with the text view (`DafControl`, `openAt`, `onScroll`) and its titles and widths, and
