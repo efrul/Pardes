@@ -57,6 +57,9 @@ class DesktopSession internal constructor(
     /** Every tab of the desktop, in declaration order. */
     val tabs = mutableStateListOf<TabItem>()
 
+    // Pardes: two tabs of a window side by side (request 59 of stage 3)
+    val splits = TabSplits()
+
     // Plain maps: a workspace is created on first lookup, which may happen while a snapshot flow
     // reads — a state write there would throw.
     private val navPaneWorkspaces = HashMap<String, SatelliteWorkspace>()
@@ -305,6 +308,8 @@ class DesktopSession internal constructor(
                 }
                 restoredByGroup[groupId] = snapshot
                 snapshot.panes?.let { restoredPanes[groupId] = it }
+                // Pardes: its two tabs side by side, as it was left
+                snapshot.split?.let { splits.restore(groupId, it) }
                 TabGroupSnapshot(
                     id = groupId,
                     tabIds = snapshot.destinations.map { it.tabId },
@@ -341,6 +346,8 @@ class DesktopSession internal constructor(
             panes =
                 PaneLayouts.save(groupId, navPaneWorkspaces[groupId]?.snapshot(), linePaneWorkspaces[groupId]?.snapshot())
                     ?: restoredPanes[groupId],
+            // Pardes: its two tabs side by side, while both are there
+            split = splits.of(groupId, group.ids),
         )
     }
 

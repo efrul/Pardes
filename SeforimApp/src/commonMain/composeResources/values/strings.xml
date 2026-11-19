@@ -1230,6 +1230,10 @@
     <string name="page_spreads_tooltip">שני עמודים זה לצד זה, כספר פתוח: עמוד ב מימין ועמוד א משמאל</string>
     <!-- Pardes: a copy of a tab, from its menu (request 59 of stage 3, PardesTabAction.kt) -->
     <string name="tab_duplicate">שכפל לשונית</string>
+    <!-- Pardes: two tabs side by side, from a tab's menu (request 59 of stage 3, TabSplitView.kt) -->
+    <string name="tab_split_beside">הצגה לצד הלשונית הנוכחית</string>
+    <string name="tab_split_new">פיצול עם לשונית חדשה</string>
+    <string name="tab_split_end">סיום התצוגה המפוצלת</string>
     <!-- Pardes: the pages drawn as images in the dark theme's colours, and the button of their own (request 42 of stage 3, PageColors) -->
     <string name="page_colors_original">צבעים מקוריים</string>
     <string name="page_colors_original_tooltip">העמודים של הסריקה ושל ספרי PDF בצבעים המקוריים שלהם, במקום הצבעים של המצב הכהה</string>

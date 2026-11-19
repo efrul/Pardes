@@ -170,6 +170,8 @@ fun TabsContent() {
         tabIds.forEach { tabId ->
             val tabItem = session.item(tabId) ?: return@forEach
             val isSelected = tabId == currentTabId
+            // Pardes: two tabs side by side (request 59 of stage 3), each in its half
+            val half = openWindow.splitHalfOf(tabId)
             val saveableKey = saveableKeyFor(tabItem.destination)
             key(saveableKey) {
                 saveableStateHolder.SaveableStateProvider(saveableKey) {
@@ -179,11 +181,12 @@ fun TabsContent() {
                             modifier =
                                 Modifier
                                     .fillMaxSize()
+                                    .splitHalf(half) { openWindow.selectTab(tabId) }
                                     .layout { measurable, constraints ->
                                         // Selected: measure + place normally. Hidden: skip both so
                                         // the subtree stays composed (alive) but incurs no layout
                                         // or draw cost.
-                                        if (isSelected) {
+                                        if (isSelected || half != null) {
                                             val placeable = measurable.measure(constraints)
                                             layout(placeable.width, placeable.height) {
                                                 placeable.place(0, 0)
@@ -255,6 +258,8 @@ fun TabsContent() {
                 }
             }
         }
+        // Pardes: the grip between the halves of a split (request 59 of stage 3)
+        TabSplitGrip(openWindow)
     }
 }
 

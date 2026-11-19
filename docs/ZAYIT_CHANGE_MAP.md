@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (298 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (301 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -480,9 +480,11 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
 
-- **Change:** modified, +3 −0 lines. Feature: A pane at the window's edge.
+- **Change:** modified, +8 −1 lines. Feature: A pane at the window's edge, Two tabs side by side.
 - **What:** the reader's `DockLayout` takes `outerBandSides = LineOuterBandSides`, under a comment marked "Pardes:" (a
-  pane dropped at the window's edge runs its full length), and its import.
+  pane dropped at the window's edge runs its full length), and its import. Two tabs side by side (request 59 of
+  stage 3): the book's text counts as ready (`LocalBookTextReady`) for the tab shown beside the one selected too
+  (`shownBeside`), which has no panes of its own to wait for, with a comment marked "Pardes:" and its import.
 - **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, steps 1 and 4 of the docking in its plan,
   2026-11-12) that a side pane run from the top of the window to its bottom while something is open under the text.
   It is done pane by pane, by the drop (the mock-up approved on 2026-11-12): a pane released on the strip along the
@@ -675,7 +677,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +47 −2 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+- **Change:** modified, +53 −3 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
   Desktop link, The user's PDF books, Search modes.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
@@ -696,6 +698,10 @@ The entries of this section by kind:
     that collect a bar's navigation (the window's, and a results tab's own) pass `rememberDesktopOpener()`.
   - `typeKey` gives a `PdfBookTab` "pdf", and the tabs' `when` shows one with `PdfBookTabContent`, each with a comment
     marked "Pardes:"; two imports.
+  - Two tabs side by side (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`), with comments marked "Pardes:": each tab's
+    half of a split shown (`splitHalfOf`), its box laid in it by `splitHalf` before Zayit's layout (a press in it
+    selects it), Zayit's layout measuring a tab shown beside the one selected too (`isSelected || half != null`), and
+    the grip between the halves after the tabs (`TabSplitGrip`).
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
@@ -711,7 +717,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModels.kt`
 
-- **Change:** modified, +59 −5 lines. Feature: Commentators in their own panes, Commentator selection kept, Daf view,
+- **Change:** modified, +62 −5 lines. Feature: Two tabs side by side, Commentators in their own panes, Commentator selection kept, Daf view,
   Scan view, Search in categories, Results in the library's order, Pane layout kept, Search modes.
 - **What:**
   - `BookContentPersistedState` gains, appended last for ProtoBuf: `detachedCommentators` (by name; 1.0.5's slot list
@@ -727,7 +733,8 @@ The entries of this section by kind:
   - `withScope` writes `"category"` and `"multi"` scopes and their ids instead of turning a category into everywhere; a
     private `SearchScope.categoriesInBaseBooks()` lists the categories searched in their base books.
   - `WindowSnapshot` gains, appended last, `panes` (`SavedPanes`, PaneLayouts.kt): the window's reader docks as the
-    user left them; its import.
+    user left them; its import. And after it `split` (`TabSplit`, TabSplits.kt): the window's two tabs side by side
+    (request 59 of stage 3); its import.
 - **Why:** a tab restored at start must come back with its torn-off commentators (`831ad272`), its commentator
   selection (`3c6bae9b`, `49b456d4`), its daf view (`4efa3e3c`) or scan view, its search scope (`54180126`, `574f3d55`,
   `37d4fe60`) and the order of its results; a window, with its panes where the user put them (step 3 of the docking).
@@ -743,7 +750,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopSession.kt`
 
-- **Change:** modified, +40 −1 lines. Feature: Commentators in their own panes (Windows), Pane layout kept, The user's PDF books.
+- **Change:** modified, +47 −1 lines. Feature: Commentators in their own panes (Windows), Pane layout kept, The user's PDF books, Two tabs side by side.
 - **What:** `panesOf` creates each `SatelliteWorkspace` with `gripIcon` and `gripDraggingIcon` set to
   `PointerIcon.Hand` on Windows, with a comment: Windows has no open or closed hand, and Nucleus would show its
   four-arrow move cursor over every pane's grip, the floating windows' title bars included.
@@ -755,6 +762,9 @@ The entries of this section by kind:
   restored); two imports.
 - **What, the PDF books:** `tabTypeFor` gives a `PdfBookTab` `TabType.BOOK` (a book's icon), with a comment marked
   "Pardes:"; its import.
+- **What, two tabs side by side** (request 59 of stage 3), each with a comment marked "Pardes:": `splits`, the
+  desktop's `TabSplits`; `restore` gives a window its saved pair, and `windowSnapshot` saves it while both its tabs
+  stand next to each other (`splits.of`).
 - **Why:** the four-arrow cursor over every pane header looked wrong on Windows (`9de93f98`, `0447981b`). The panes
   kept: as for `PaneLayouts.kt`. A PDF book of the user's opens in a tab of its own (request 28), and every destination
   has a branch in `tabTypeFor`.
@@ -767,11 +777,14 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsView.kt`
 
-- **Change:** modified, +17 −0 lines. Feature: A copy of a tab (request 59 of stage 3).
+- **Change:** modified, +23 −3 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3).
 - **What:** `TabActionsMenu` takes the tab's id (`tabId`, first) and draws Pardes's items (`pardesTabActions(tabId)`,
   resolved before the menu as the labels are, with a comment marked "Pardes:") after "העתק קישור", through Zayit's
   `tabContextMenuItem` in a loop; `RtlAwareTab` takes the tab's id to pass it on (`tabEntry.key`), and so does the
-  overflow list's row (`tab.key`).
+  overflow list's row (`tab.key`). Two tabs side by side (request 59 of stage 3): `RtlAwareTab` draws a tab of its
+  window's split joined to its partner, with a comment marked "Pardes:": its joint (`splitJoint`), no padding and no
+  rounding on that edge (`splitPadding`, `splitShape` in place of the 8 dp rounding), a light tint when it has none and
+  an outline (`splitFrame` in place of `background`).
 - **Why:** a copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`,
   2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there.
 - **Kind:** Pardes feature hook.
@@ -1931,8 +1944,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +398 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 367 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +402 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 370 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -1991,7 +2004,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     and the card's list, `daf_scans_first_pages`, its description, `…_none` and `daf_scans_first_page_row`; and under
     a comment after them, two pages side by side:
     `page_spreads` ("שני עמודים") and its tooltip; and under a comment after them, a copy of a tab from its menu,
-    `tab_duplicate` ("שכפל לשונית", request 59 of stage 3); and under a comment after it, the pages in the dark
+    `tab_duplicate` ("שכפל לשונית", request 59 of stage 3); and under a comment after it, two tabs side by side from a
+    tab's menu (request 59 of stage 3): `tab_split_beside` ("הצגה לצד הלשונית הנוכחית"), `tab_split_new` and
+    `tab_split_end`; and under a comment after them, the pages in the dark
     theme's colours: `page_colors_original` ("צבעים מקוריים") and its tooltip (request 42 of stage 3); and under a comment
     after them, the search modes (request 54 of stage 3): `search_mode_exact`, `…_general` and `…_hybrid` ("מדויק",
     "כללי", "היברידי"), each one's tooltip, and `search_mode_hybrid_missing` (the search by meaning not installed); and
@@ -3405,11 +3420,12 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/PardesTabAction.kt`
 
-- **Feature:** A copy of a tab.
+- **Feature:** A copy of a tab, Two tabs side by side.
 - **Size:** 34 lines.
 - **What:** `PardesTabAction(label, icon, onClick)`, an item of a tab's menu, and `pardesTabActions(tabId)`, Pardes's
   items of the menu of a tab: "שכפל לשונית" (`AllIconsKeys.Actions.Copy`), which calls
-  `DesktopManager.duplicateTab(tabId, windowId)` for the window it is in (`LocalOpenWindow`).
+  `DesktopManager.duplicateTab(tabId, windowId)` for the window it is in (`LocalOpenWindow`), and the items of its
+  window's split (`splitTabActions`, request 59 of stage 3).
 - **Reached from:** `TabsView.kt` (`TabActionsMenu`).
 - **Follows:** Zayit's tab menu items (`tabContextMenuItem`'s label, icon and click).
 - **Tests:** tried in the app.
@@ -3462,6 +3478,69 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
   a search tab's copy has no scope of its own; another tab is copied as it is.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `DesktopManagerTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### Two tabs side by side
+
+Request 59 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "כרטיסיות מחוברות כמו בכרום", the user's choice: Chrome's split
+view. A tab's menu shows another tab beside the one selected ("הצגה לצד הלשונית הנוכחית", the tab moved next to it),
+splits the tab selected with a new tab ("פיצול עם לשונית חדשה"), or ends the split ("סיום התצוגה המפוצלת"). The two
+texts stand side by side, the window's earlier tab on the left as the strip lays them out, a grip between them that
+moves the split (a quarter to three quarters); a press in the half not selected selects it, and the window's panes,
+bars, breadcrumb and keys act on the tab selected, as they always did. In the strip the two are joined as one, a tint
+and an outline round them. The split is shown while one of the two is selected and they stand next to each other
+(moved apart, one closed or dragged to another window, it is not), and kept with the window in the session. Hooks:
+`TabsContent.kt`, `TabsView.kt`, `WindowBody.kt`, `DesktopSession.kt`, `SessionModels.kt`, Pardes's
+`PardesTabAction.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabSplits.kt`
+
+- **Feature:** Two tabs side by side.
+- **Size:** 117 lines.
+- **What:** `TabSplit(first, second, ratio)`, a window's two tabs and the left one's share (serializable, kept in
+  `WindowSnapshot.split`; `contains`, `partnerOf`); `SplitHalf(left, ratio)`; `TabSplits`, the desktop's pairs by
+  window (`of`: the pair while its tabs stand next to each other, `split`, `end`, `setRatio` between a quarter and three
+  quarters, `saved`, `restore`), observable state; `adjacentIn`; `splitHalf(split, ids, selected, tabId)`, the half a
+  tab is drawn in while its pair is shown: the window's earlier tab on the left, as the strip lays it out (its first
+  tab at the left end, beside the new tab's button, from the right as from the left).
+- **Reached from:** `DesktopSession.kt` (`splits`, the session), `SessionModels.kt`, `TabSplitView.kt`.
+- **Follows:** Pardes's `PaneLayouts` (a window's state kept in its `WindowSnapshot`, appended last for ProtoBuf) and
+  Zayit's session classes.
+- **Tests:** `TabSplitsTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabSplitView.kt`
+
+- **Feature:** Two tabs side by side.
+- **Size:** 236 lines.
+- **What:** on `OpenWindow`: `shownSplit` (the pair while one of the two is selected), `splitHalfOf`, `shownBeside`,
+  `splitBeside` (a tab moved next to the selected one and split with it), `splitWithNewTab` (a new tab, as Ctrl+T
+  makes it, opened beside the selected one and split with it), `splitTabActions` (the menu's item: the end for one of
+  the two, beside the selected one for another tab, a new tab for the selected one) and `selectTab`.
+  `Modifier.splitHalf(half, onPress)`, a tab's box laid in its half and a press in it selecting it; `leftWidth`;
+  `TabSplitGrip`, the grip between the halves (a draggable 6 dp strip, the east-west cursor) that moves the split. The
+  strip's look: `splitJoint`, `SplitJoint`, `splitShape`, `splitPadding` and `splitFrame` (a tab of a pair joined to its
+  partner, rounded and padded on its outer edge alone, tinted when it is not selected, and outlined).
+- **Reached from:** `TabsContent.kt`, `TabsView.kt` (`RtlAwareTab`), `WindowBody.kt`, `PardesTabAction.kt`.
+- **Follows:** Zayit's `TabsContent` (every tab composed, the selected one laid out), its `RtlAwareTab` (the tab's
+  rounding, padding and tint), `TabSearchPopup`'s selection of a tab (`TabsEvents.OnSelect` by its index), and Chrome's
+  split view.
+- **Tests:** `TabSplitsTest` (the model); tried in the app: a split with a new tab, Berakhot beside it, the other half
+  pressed and selected (the contents pane and the bars following it), the grip dragged, the split kept over a restart,
+  ended from the menu, and a tab shown beside the current one from its menu.
+- **Notes:** a drag in the strip that takes one of the two away, or pins one, ends the split rather than moving them
+  together, as Chrome's would; each tab keeps its own panes, so the window's panes change as the selection crosses
+  over.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabSplitsTest.kt`
+
+- **Feature:** Two tabs side by side.
+- **Size:** 75 lines.
+- **What:** a pair shown while its tabs stand next to each other, not once moved apart, closed or ended; a tab with
+  itself no pair; the window's earlier tab on the left whichever is selected; no half while another tab is selected,
+  nor for a tab outside the pair; the split moved between a quarter and three quarters; a window's split kept in its
+  ProtoBuf snapshot, and one saved before it read with none.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names) and `SessionModelsTest` (ProtoBuf).
 - **Tests:** it is one (unit).
 
 ### Keys in the book tree and the contents
