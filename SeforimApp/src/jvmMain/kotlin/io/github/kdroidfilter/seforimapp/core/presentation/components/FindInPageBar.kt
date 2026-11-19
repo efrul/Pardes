@@ -5,8 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,8 +38,6 @@ import io.github.kdroidfilter.seforimapp.icons.TableOfContents
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.Orientation
-import org.jetbrains.jewel.ui.component.Divider
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.IconActionButton
 import org.jetbrains.jewel.ui.component.Text
@@ -96,16 +94,8 @@ fun FindInPageBar(
         }
     }
 
-    Row(
-        modifier =
-            modifier
-                .shadow(6.dp, shape)
-                .background(JewelTheme.globalColors.panelBackground, shape)
-                .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
-                .height(36.dp)
-                .padding(start = 10.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    // Pardes: the field, its counter and the actions in one row, or the actions in a second in a narrow view (FindBarRows)
+    val field: @Composable RowScope.() -> Unit = {
         Icon(
             key = AllIconsKeys.Actions.Find,
             contentDescription = null,
@@ -117,6 +107,9 @@ fun FindInPageBar(
             undecorated = true,
             modifier =
                 Modifier
+                    // Pardes: narrower in a narrow view (a tab beside another), so the counter and the actions keep
+                    // their places; measured after them, as a weighted child is
+                    .weight(1f, fill = false)
                     .width(200.dp)
                     .focusRequester(focusRequester)
                     .onPreviewKeyEvent { ev ->
@@ -160,10 +153,8 @@ fun FindInPageBar(
                 modifier = Modifier.widthIn(min = COUNTER_MIN_WIDTH),
             )
         }
-        Divider(
-            orientation = Orientation.Vertical,
-            modifier = Modifier.padding(horizontal = 8.dp).height(20.dp),
-        )
+    }
+    val actions: @Composable RowScope.() -> Unit = {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
             // Pardes: every match in a pane beside the text (request 55 of stage 3)
             if (listShown != null) FindListToggle(listShown, onToggleList)
@@ -213,6 +204,17 @@ fun FindInPageBar(
             )
         }
     }
+    FindBarRows(
+        modifier = modifier,
+        frameModifier =
+            Modifier
+                .shadow(6.dp, shape)
+                .background(JewelTheme.globalColors.panelBackground, shape)
+                .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
+                .padding(start = 10.dp, end = 4.dp),
+        field = field,
+        actions = actions,
+    )
 }
 
 // Fits "999/9999" at 12sp; larger counts still widen the slot

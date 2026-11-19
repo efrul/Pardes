@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (306 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (307 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -849,13 +849,20 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/FindInPageBar.kt`
 
-- **Change:** modified, +29 −0 lines. Feature: Find results pane.
+- **Change:** modified, +48 −17 lines. Feature: Find results pane, Two tabs side by side.
 - **What:** two parameters, last: `listShown` (null hides it) and `onToggleList`; with them, the private
   `FindListToggle` first after the divider ("כל התוצאות בחלונית", the reader's `TableOfContents` icon, Alt+Enter in its
   tooltip), and Alt+Enter in the field shows or hides the list before Zayit's Ctrl+Enter; comments marked "Pardes:",
-  three imports.
+  three imports. And the bar in a narrow view (a tab beside another, the user's word of 2026-11-19: "לא רק בpdf
+  תתקן"): its `Row` is split into two local lambdas, `field` (the icon, the field and its counter, the field weighted,
+  `weight(1f, fill = false)` before its 200 dp, so it narrows first) and `actions` (the buttons' `Row`), which
+  Pardes's `FindBarRows` lays in one row with Zayit's divider, or the actions in a second row under a narrower view;
+  the frame (shadow, background, border, padding) given to it as `frameModifier`, the bar's height there; the
+  divider's and the height's imports go, `RowScope` comes.
 - **Why:** request 55 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "חיפוש בתוך ספר פתוח יפתח חלונית בצד, שמציגה את
-  כל התוצאות מסודרות"; the bar is where a find is, and its button opens the pane beside the text.
+  כל התוצאות מסודרות"; the bar is where a find is, and its button opens the pane beside the text. Zayit's field kept
+  200 dp in any width, and in a tab beside another the counter and the actions went past the view's edge, in a book,
+  on the daf and over a PDF alike: a fix that holds for Zayit's narrow windows as well.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small: two defaulted parameters, a branch in the field's Enter, one line among the actions, and a
   private composable at the file's end.
@@ -3634,6 +3641,20 @@ and an outline round them. The split is shown while one of the two is selected a
 - **Notes:** a drag in the strip that takes one of the two away, or pins one, ends the split rather than moving them
   together, as Chrome's would; each tab keeps its own panes, so the window's panes change as the selection crosses
   over.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/FindBarRows.kt`
+
+- **Feature:** Two tabs side by side.
+- **Size:** 53 lines.
+- **What:** `FindBarRows(field, actions, modifier, frameModifier)`, the find bar's rows inside its frame: in one row, as
+  Zayit's, the field part, the divider and the actions; under `ONE_ROW_WIDTH` (380 dp: the icon, a field of 120 dp,
+  the counter, the divider and five actions), the actions in a second row under the field, at its end, each row 36 dp
+  (`BoxWithConstraints`). The user found the bar's actions past the view's edge in a tab beside another, in a book,
+  on the daf and over a PDF (2026-11-19: "לא רק בpdf תתקן").
+- **Reached from:** `FindInPageBar.kt`.
+- **Follows:** Zayit's `FindInPageBar` (its frame, its divider, its row's height and alignment).
+- **Tests:** tried in the app (a split's half narrowed to about 150 px: the counter and the field in one row, the five
+  actions under them; the other half, about 460 px, in one row with every action).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabSplitsTest.kt`
 
