@@ -72,6 +72,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.EnhancedHorizontalSplitPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.asStable
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.listMove
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.pageRows
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.BookContentPanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.ContentAwareScrollbarShell
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
@@ -374,7 +376,8 @@ private fun SearchResultContentMvi(
                     preview?.let { openResult(it.hit) }
                     return true
                 }
-                else -> return false
+                // Pardes: Home and End, a page up and down, as the book tree's keys (request 47 of stage 3)
+                else -> listMove(items.size, index, event.key, listState.pageRows()) ?: return false
             }
         actions.onSelectResult(items[next].hit.lineId)
         scope.launch { listState.animateScrollToItem(next) }

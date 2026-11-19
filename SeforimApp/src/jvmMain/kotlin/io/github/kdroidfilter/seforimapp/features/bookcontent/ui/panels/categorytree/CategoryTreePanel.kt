@@ -87,6 +87,8 @@ fun CategoryTreePanel(
                     onBookClick = bookClick(onEvent) { onEvent(BookContentEvent.BookTreeSearchBookSelected(it.id)) },
                     onScroll = { _, _ -> },
                     selectedBookIdOverride = activeId,
+                    // Pardes: the focus back to the text (request 47 of stage 3)
+                    onLeave = { onEvent(BookContentEvent.FocusText) },
                 )
             }
         }
@@ -106,6 +108,8 @@ private fun NavigationTree(
             onBookClick = onBookClick,
             onScroll = { index, offset -> onEvent(BookContentEvent.BookTreeScrolled(index, offset)) },
             onCategoryRevealComplete = { onEvent(BookContentEvent.CategoryRevealed) },
+            // Pardes: the focus back to the text (request 47 of stage 3)
+            onLeave = { onEvent(BookContentEvent.FocusText) },
         )
     }
 }

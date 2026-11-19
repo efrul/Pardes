@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (130 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (131 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (296 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (298 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 57 |
+| Pardes feature hook | 58 |
 | Pardes feature in Zayit's file | 34 |
 | Fix of Zayit's code | 14 |
 | Branding hook | 4 |
@@ -1004,17 +1004,29 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocView.kt`
 
-- **Change:** modified, +6 −4 lines. Feature: The contents following the pages (request 45 of stage 3).
-- **What:** the skip of the next scroll to the selected entry, after a click in the pane, is the entry clicked
-  (`skipAutoCenterFor`, its id) rather than a flag (`skipNextAutoCenter`); the scroll skipped is that entry's alone, and
-  the skip is let go at the next selection whatever it is.
+- **Change:** modified, +30 −6 lines. Feature: The contents following the pages (request 45 of stage 3), Keys in the book
+  tree and the contents (request 47 of stage 3).
+- **What:**
+  - The skip of the next scroll to the selected entry, after a click in the pane, is the entry clicked
+    (`skipAutoCenterFor`, its id) rather than a flag (`skipNextAutoCenter`); the scroll skipped is that entry's alone,
+    and the skip is let go at the next selection whatever it is.
+  - The keys of the pane, with comments marked "Pardes:" and their imports: `BookTocView` takes `onLeave` (Escape, and
+    Enter on an entry, give the focus back to the text), keeps its keys (`rememberTreeKeys`, on the entry selected) and
+    gives its box `treeKeys` with a row for each entry shown (its depth, whether it has children and is open, and the
+    click the row's own makes: a parent opens or closes, an entry goes to its place or filters, its auto-scroll skipped
+    as a click's); the entry shown as selected is the keys' row while the pane has the focus (`TreeKeys.shown`), as
+    the pane's search shows its match. The overload of the reader's state passes `FocusText` as `onLeave`.
 - **Why:** a click on the entry already selected changes no selection, so the flag stayed set and swallowed the next
   scroll to an entry: a PDF book paged or a scan scrolled after it left its contents behind once (request 45 of
-  `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "מעבר עמודים בpdf לא מעביר מקביל את תוכן העניינים").
-- **Kind:** fix of Zayit's code, for both brands, to drop once upstream has one.
-- **Merge risk:** small; the variable and its three uses.
-- **Smaller:** already minimal.
-- **Tests:** tried in the app: the scan's contents follow its pages after a click on the entry selected.
+  `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "מעבר עמודים בpdf לא מעביר מקביל את תוכן העניינים"). The keys are request 47
+  of the same plan ("מקשים בעץ הספרים, איך מקובל בעורכי קוד"), their row shown as the user asked: "הפוקוס יראה כמו במקומות
+  שהוא קיים, כמו בתוכן העניינים לאחר חיפוש בו".
+- **Kind:** fix of Zayit's code, for both brands, to drop once upstream has one; Pardes feature hook.
+- **Merge risk:** small; the variable and its three uses; the keys' four lines before the box, its modifier and the
+  entry selected passed to its rows.
+- **Smaller:** the keys' rows repeat the row's own click (four lines), which stays as Zayit wrote it.
+- **Tests:** `TreeKeysTest`; tried in the app: the scan's contents follow its pages after a click on the entry
+  selected; Shabbat's contents gone through with the arrows, the keys' row as the search's match.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/usecases/ContentUseCase.kt`
 
@@ -1531,7 +1543,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryTreePanel.kt`
 
-- **Change:** modified, +20 −8 lines. Feature: Typing over a pane, The user's PDF books.
+- **Change:** modified, +24 −8 lines. Feature: Typing over a pane, The user's PDF books, Keys in the book tree and the
+  contents.
 - **What:**
   - `TypeToSearchTarget(paneHoverSource)` before the pane's column, with a comment marked "Pardes:": the same for the
     book tree's search (`ToggleBookTreeSearch`); two imports.
@@ -1540,6 +1553,8 @@ The entries of this section by kind:
     "Pardes:"; its import.
   - The search's state given to the pane passes through `myPdfBooksIn`, with a comment marked "Pardes:" and its import:
     the user's PDF books its query names are found too (request 51).
+  - Both trees, the library's and the search's, are given `onLeave` (`FocusText`), with a comment marked "Pardes:":
+    Escape, and Enter on a book, give the focus back to the text (request 47 of stage 3).
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
   contents and get straight to a daf, without the search button first, and without hurting anything else. The user's
   PDF books are a category of the book tree (request 28, the user's decision of 2026-11-12), found by its search
@@ -1549,6 +1564,34 @@ The entries of this section by kind:
   with any change of Zayit's to its arguments.
 - **Smaller:** already minimal.
 - **Tests:** `TypeToSearchTest`, `PdfBookStoreTest` (the rows), `MyPdfBooksSearchTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryBookTreeView.kt`
+
+- **Change:** modified, +32 −3 lines. Feature: Keys in the book tree and the contents (request 47 of stage 3).
+- **What:**
+  - `TreeItem` gains, after its content and under a comment marked "Pardes:", what the keys need of a row: `folder`,
+    `open` and `click`; `buildTreeItems` fills them, a category's (its expansion, `onCategoryClick`) and a book's
+    (`onBookClick`, which opens it in a new tab with Ctrl/Cmd held, as a click with them).
+  - `CategoryBookTreeView` takes `onLeave` (Escape, and Enter on a book, give the focus back to the text), keeps its
+    keys (`rememberTreeKeys`, on the book or category selected, `treeSelectedKey`) before it builds its rows, and gives
+    its box `treeKeys` with a row for each tree item.
+  - The row the keys are on is shown as selected while the tree has the focus, in place of the selection, as the pane's
+    search shows its match: `buildTreeItems` takes `focusedId` (the keys' row, `TreeKeys.shown`), which a book's
+    `isSelected` takes first, and `CategoryItem` takes `isFocused`, highlighted as a category selected in search mode.
+  - Each with a comment marked "Pardes:", and their imports.
+- **Why:** request 47 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מקשים בעץ הספרים, איך מקובל בעורכי קוד": the tree had
+  no keys at all, only its pane's search. Code editors' trees (IntelliJ's project view, VS Code's explorer) move a row
+  of their own with the arrows, open and close a folder with the arrows toward and away from its inside, and open with
+  Enter; right to left, the arrow left goes in. The row shown as the user asked: "הפוקוס יראה כמו במקומות שהוא קיים, כמו
+  בתוכן העניינים לאחר חיפוש בו".
+- **Kind:** Pardes feature hook.
+- **Merge risk:** medium: `buildTreeItems` builds every row, and Zayit edits the tree from time to time; the hooks are
+  three fields with defaults, three arguments in each row's construction, a parameter, and three lines before the box.
+- **Smaller:** the rows' clicks could be found from the ids and the navigation's categories and books, without fields,
+  at the cost of a lookup of Pardes's own.
+- **Tests:** `TreeKeysTest`; tried in the app: a folder clicked, the arrows down, out to the parent and closed, in and
+  opened, Enter on שבת (opened, the focus back in the text); End to "הספרים שלי" and down by the keys to a PDF book
+  opened with Enter.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/UserDataBackup.kt`
 
@@ -1735,7 +1778,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +135 −34 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes.
+- **Change:** modified, +139 −35 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -1762,6 +1805,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     imports: `SearchShellActions` gains `onSearchModeChange`; beside the bar, after it in its row, `SearchModeSwitch`
     with the tab's `state.searchMode`; `PassagePreview` takes `mode`, and marks its words with the app's engine in that
     mode (`SearchModeEngine`): exact its phrase alone, and none by meaning but in hybrid.
+  - The list's keys take Home, End, Page Up and Page Down besides its arrows (`listMove`, `pageRows`, the book tree's,
+    request 47 of `docs/DESKTOP_STAGE3_PLAN.md`), in place of the branch that let any other key go, with a comment
+    marked "Pardes:" and two imports.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -3416,6 +3462,49 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
   a search tab's copy has no scope of its own; another tab is copied as it is.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `DesktopManagerTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### Keys in the book tree and the contents
+
+Request 47 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מקשים בעץ הספרים, איך מקובל בעורכי קוד". The book tree and the
+table of contents (the PDF books' bookmarks with it) take the keys of code editors' trees, right to left: the arrows
+up and down move a row of the keys' own, shown as the row selected while the tree has the keyboard's focus, as a pane's
+search shows its match (the user's word: "הפוקוס יראה כמו במקומות שהוא קיים, כמו בתוכן העניינים לאחר חיפוש בו"); the arrow
+left opens a closed folder or goes into an open one, the arrow right closes an open folder or goes up to the parent;
+Enter clicks the row (Ctrl/Cmd+Enter, a book in a new tab); Home and End, Page Up and Page Down; Escape gives the focus
+back to the text, as Enter does once it opened a leaf. A press on a row gives the tree the focus. The search results'
+list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `CategoryBookTreeView.kt`,
+`BookTocView.kt`, `CategoryTreePanel.kt`, `SearchResultScreen.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeys.kt`
+
+- **Feature:** Keys in the book tree and the contents.
+- **Size:** 275 lines.
+- **What:** the pure part: `TreeNode` (a row's depth, folder and open), `TreeKey` and `treeKeyOf` (a key of the tree's,
+  the arrow left going in from the right), `TreeMove` and `treeMove` (what a key does from the row the keys are on:
+  a row, the ends, a page, in, out, a click), `listMove` (Home, End and the page keys of a list whose arrows are its
+  own) and `pageRows`. `TreeKeyRow` (a row's key in the list, node and click); `NavigationState.treeSelectedKey` (the
+  book tree's key of its row selected, an override first). `TreeKeys`, the keys' row (`focused`), whether the tree has
+  the focus, and `shown` (the row shown as selected then); `rememberTreeKeys(selected)`, on the row selected whenever
+  it changes; `Modifier.treeKeys(keys, listState, rows, onLeave)`, the focus requester, the keys in the preview pass
+  (Ctrl/Cmd, Alt and Shift with them left to the window, but Ctrl/Cmd+Enter), the row revealed (`revealItem`) and a
+  press on a folder's row giving the tree the focus on that row.
+- **Reached from:** `CategoryBookTreeView.kt`, `BookTocView.kt`, `SearchResultScreen.kt`.
+- **Follows:** the search results' keys (`onPreviewKeyEvent` before `focusable`), `PaneSearch`'s `revealItem`, the
+  arrows read right to left as `BreadcrumbPopup` reads them, and code editors' trees (IntelliJ, VS Code, WAI-ARIA).
+- **Tests:** `TreeKeysTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeysTest.kt`
+
+- **Feature:** Keys in the book tree and the contents.
+- **Size:** 98 lines.
+- **What:** right to left, the arrow left goes in and the right out (left to right, the other way); up, down, the ends
+  and a page, kept inside the tree; before any row, the first, or the last for End; in opens a closed folder, goes
+  into an open one, nothing on a leaf or an empty folder; out closes an open folder, else goes up to the parent,
+  nothing at the top; Enter clicks a folder as a leaf; a list takes Home, End and the page keys alone; the book tree's
+  row selected, a book before its category, an override before the selection.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### The reader's menu: a copy with the source of a commentary, a targum or the daf

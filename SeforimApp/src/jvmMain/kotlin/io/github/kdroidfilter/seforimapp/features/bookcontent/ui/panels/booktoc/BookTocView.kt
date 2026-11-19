@@ -22,7 +22,11 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.ROOT_TOC_KEY
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.VisibleTocEntry
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TreeKeyRow
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TreeNode
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberTreeKeys
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.treeKeys
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -71,6 +75,8 @@ fun BookTocView(
     onToggle: ((TocEntry, Boolean) -> Unit)? = null,
     // Title search: ranges to highlight per matching entry; other entries are dimmed context
     highlights: Map<Long, List<IntRange>>? = null,
+    // Pardes: Escape, and Enter on an entry, give the focus back to the text (request 47 of stage 3)
+    onLeave: (() -> Unit)? = null,
 ) {
     val visibleEntries =
         remember(tocEntries, expandedEntries, tocChildren, showCounts, onlyWithResults, tocCounts) {
@@ -125,7 +131,20 @@ fun BookTocView(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().padding(bottom = 8.dp)) {
+    // Pardes: the contents' keys, as the book tree's (request 47 of stage 3)
+    val keys = rememberTreeKeys(selectedTocOverride ?: selectedTocEntryId)
+    val keyRows =
+        visibleEntries.map { visible ->
+            TreeKeyRow(visible.entry.id, TreeNode(visible.level, visible.hasChildren, visible.isExpanded)) {
+                if (visible.hasChildren) {
+                    onEntryExpand(visible.entry)
+                } else {
+                    skipAutoCenterFor = visible.entry.id
+                    if (onTocFilter != null) onTocFilter(visible.entry) else onEntryClick(visible.entry)
+                }
+            }
+        }
+    Box(modifier = modifier.fillMaxSize().padding(bottom = 8.dp).treeKeys(keys, listState, keyRows, onLeave)) {
         VerticallyScrollableContainer(
             scrollState = listState as ScrollableState,
         ) {
@@ -139,7 +158,8 @@ fun BookTocView(
                 ) { visibleEntry ->
                     TocEntryItem(
                         visibleEntry = visibleEntry,
-                        selectedTocEntryId = selectedTocOverride ?: selectedTocEntryId,
+                        // Pardes: the keys' row in place of the selection while the pane has the focus (request 47 of stage 3)
+                        selectedTocEntryId = (keys.shown as? Long) ?: selectedTocOverride ?: selectedTocEntryId,
                         onEntryClick = { entry ->
                             skipAutoCenterFor = entry.id
                             if (onTocFilter != null) onTocFilter(entry) else onEntryClick(entry)
@@ -220,6 +240,8 @@ fun BookTocView(
         onTocFilter = onTocFilter,
         multiSelectIds = multiSelectIds,
         onToggle = onToggle,
+        // Pardes: the focus back to the text (request 47 of stage 3)
+        onLeave = { onEvent(BookContentEvent.FocusText) },
     )
 }
 
