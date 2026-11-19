@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (131 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (132 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -64,7 +64,7 @@ The entries of this section by kind:
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
 | Licence removal | 4 |
-| Documentation | 2 |
+| Documentation | 3 |
 | Renamed Zayit file | 2 |
 | Build or CI | 1 |
 
@@ -176,7 +176,7 @@ The entries of this section by kind:
 
 #### `CLAUDE.md`
 
-- **Change:** modified, +10 −0 lines. Feature: Repository, Pardes's rules.
+- **Change:** modified, +37 −29 lines. Feature: Repository, Pardes's rules, Zayit's notes brought up to date.
 - **What:**
   - A section "Pardes, the Android app (`androidApp/`)": the name and authorship rule (based on Zayit by Elie
     (Elyahou) Gambache, not made by him), the separate Gradle build, and never editing desktop sources for Android.
@@ -189,15 +189,36 @@ The entries of this section by kind:
     `semantic-*` releases.
   - Security: the Kaggle account is never named in the repository, its workflows or their logs.
   - Git: commits as `efrul <342689225+efrul@users.noreply.github.com>`, author and committer, signed off.
+  - Zayit's own notes brought up to date where the code had left them (stage 3 of `docs/DESKTOP_STAGE3_PLAN.md`,
+    2026-11-19): the cross-window drag is Nucleus's `TabWorkspace` (there is no `TabDockManager`); a tab's state is
+    its `TabPersistedState` in `TabPersistedStateStore` (there is no `TabStateManager` nor `TabAwareViewModel`), and
+    the "State Persistence" example uses it; every tab stays composed and only the selected one is laid out (there
+    is no LRU of three compositions); and the libraries' versions are those of `gradle/libs.versions.toml` (Compose
+    1.12.1, Jewel 0.41, Kotlin 2.4.20, Metro 1.4.5, …).
 - **Why:** this file is what every Claude Code session reads first, so Pardes's rules go where they cannot be missed;
-  Zayit's text is kept word for word around them (`docs/PARDES_PLAN.md` › Phase 1, `CLAUDE.md` conflict).
+  Zayit's text is kept word for word around them (`docs/PARDES_PLAN.md` › Phase 1, `CLAUDE.md` conflict). Zayit's
+  notes named classes and versions that are no longer there, and sent sessions after them.
 - **Kind:** documentation.
 - **Merge risk:** each Zayit release edits this file (0.6.13 changes its licence line); the additions are separate
-  paragraphs, so conflicts are small, but they happen.
+  paragraphs, so conflicts are small, but they happen. The notes brought up to date are Zayit's own lines: a release
+  that corrects them too meets them, and takes its own wording.
 - **Smaller:** the three Pardes paragraphs could become one pointer to a Pardes file; they stay here because they
   must be read by every session.
 - **Tests:** none.
 - **Notes:** Zayit's "PRs target `master`" line stays as Zayit wrote it; efrul/Pardes's default branch is `main`.
+
+#### `TAB_SYSTEM_README.md`
+
+- **Change:** modified, +6 −0 lines. Feature: Zayit's notes brought up to date.
+- **What:** a note marked "Pardes", under the title: what of the file describes an older tab system (the LRU of
+  retained compositions, `TabStateManager`, `TabDockManager`) and what holds today (every tab composed and the
+  selected one laid out, `TabPersistedStateStore`, Nucleus's `TabWorkspace`), and `CLAUDE.md`'s points for the rest.
+- **Why:** `CLAUDE.md` sends every session here "for complete details", and the details had gone out of date with
+  Zayit's own code (stage 3 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-19); a note keeps Zayit's text as it is.
+- **Kind:** documentation.
+- **Merge risk:** small; a paragraph of its own under the title.
+- **Smaller:** already minimal; rewriting the file would be Zayit's to do.
+- **Tests:** none.
 
 #### `LINE_SELECTION_README.md`
 
