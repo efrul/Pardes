@@ -699,7 +699,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +53 −3 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+- **Change:** modified, +55 −4 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
   Desktop link, The user's PDF books, Search modes.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
@@ -723,7 +723,9 @@ The entries of this section by kind:
   - Two tabs side by side (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`), with comments marked "Pardes:": each tab's
     half of a split shown (`splitHalfOf`), its box laid in it by `splitHalf` before Zayit's layout (a press in it
     selects it), Zayit's layout measuring a tab shown beside the one selected too (`isSelected || half != null`), and
-    the grip between the halves after the tabs (`TabSplitGrip`).
+    the grip between the halves after the tabs (`TabSplitGrip`); and the tab beside the selected one counts as on
+    screen (`LocalTabShown`, provided with Zayit's `LocalTabSelected`), so that a PDF book's pages and a tractate's
+    scan draw there too, while its focus and popups stay the selected tab's.
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
@@ -1260,6 +1262,11 @@ The entries of this section by kind:
     while the book's text is shown; `selectedTabDemand` reads it with `rememberFindResultsShown` (the setting
     `FindResultsSettings.shown`, and the tab's find bar open on a query of two letters at least); `BookPaneBody` draws
     it with `FindResultsPane`; its imports.
+  - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
+    `docs/DESKTOP_STAGE3_PLAN.md`, the user's word of 2026-11-19: "לאחר פתיחת העץ אין עדין פוקוס עליו עד שלוחצים
+    עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
+    panes the same tab's demand adds (not those of a tab switched to, nor at start), and `PaneBody` provides each
+    pane's key (`LocalPaneFocusKey`, the window's and the pane's ids) around its content, indented once.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
   anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). A pane at the window's edge: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
   - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
@@ -3540,8 +3547,11 @@ and an outline round them. The split is shown while one of the two is selected a
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabSplitView.kt`
 
 - **Feature:** Two tabs side by side.
-- **Size:** 236 lines.
-- **What:** on `OpenWindow`: `shownSplit` (the pair while one of the two is selected), `splitHalfOf`, `shownBeside`,
+- **Size:** 244 lines.
+- **What:** `LocalTabShown`, whether the tab drawn is on screen (the selected one, or the one beside it in a split
+  shown), for what is drawn only on screen: a PDF book's pages and a tractate's scan, which first stayed blank beside
+  the selected tab (the user's question of 2026-11-19, "מה קורה שלוחצים על כותרת כל אחת מהכרטיסיות כשפתוח pdf?"). On
+  `OpenWindow`: `shownSplit` (the pair while one of the two is selected), `splitHalfOf`, `shownBeside`,
   `splitBeside` (a tab moved next to the selected one and split with it), `splitWithNewTab` (a new tab, as Ctrl+T
   makes it, opened beside the selected one and split with it), `splitTabActions` (the menu's item: the end for one of
   the two, beside the selected one for another tab, a new tab for the selected one) and `selectTab`.
@@ -4023,7 +4033,7 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 - **Size:** 98 lines.
 - **What:** `PdfBookReader(tabId, pdfId, modifier, inTab)`: it reads the book, shows `PdfBookView` at its place
   and keeps each place it tells; a book removed is said so; for a book added alone by build 45 (`isAlone`), a delete
-  button with a tooltip takes it out of the list and closes the tab (a folder's books go with their folder). Only the tab in view composes the view: every tab of a window stays composed
+  button with a tooltip takes it out of the list and closes the tab (a folder's books go with their folder). Only the tab in view composes the view (`LocalTabShown`: the selected tab, or the one beside it in a split, request 59 of stage 3): every tab of a window stays composed
   (`TabsContent`), and a PDF's pages take memory as its file does (the binding reads the whole file and caches up to
   76 MB of drawn pages); back in view, it opens again where it was left.
 - **Reached from:** `BookContentPanel.kt` (a PDF book in the text's place, request 45), `PdfBookTabContent.kt`.
@@ -4320,7 +4330,8 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   changes. Without a scan, a word on where it is looked for and a button that chooses the folder of scans
   (`pickScansFolder`, FileKit's directory picker off the event loop, `DafScans.setFolder`), as the settings do; the line
   over a scan's foot that changed its file is gone, moved to Settings › צורת הדף as a folder (request 48). Only the tab
-  in view composes the pages and holds the file (`LocalTabSelected`), as a PDF book. Since request 56 the pages are
+  in view composes the pages and holds the file (`LocalTabShown`, the one beside the selected tab in a split too), as a
+  PDF book. Since request 56 the pages are
   drawn from the scan cut into images (`ScanPages`: `rememberPdfiumLoaded`, then `DafScanPages.open` and
   `ScanPageList`), with nothing drawn for the moment the cut is read; where PDFium cannot be called by Pardes, by the
   binding's reader as before (`BindingScan`, the file read whole, `PAGES_CACHE_BYTES` of its pages kept: request
