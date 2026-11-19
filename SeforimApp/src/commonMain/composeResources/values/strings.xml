@@ -1244,6 +1244,7 @@
     <string name="find_results_toggle">כל התוצאות בחלונית</string>
     <string name="find_results_none">חיפוש בספר (Ctrl+F) יציג כאן את כל התוצאות, לפי תוכן העניינים.</string>
     <string name="find_results_count">%1$d תוצאות ב־%2$d שורות</string>
+    <string name="find_results_pages_count">%1$d תוצאות ב־%2$d עמודים</string>
     <string name="find_results_by_meaning">%1$d שורות קרובות במשמעות</string>
     <!-- Pardes: a find in a PDF book (request 48 of stage 3, PdfFind) -->
     <string name="pdf_find_no_text">אין טקסט בקובץ: זו סריקה בלי שכבת טקסט, ואין בה מה לחפש</string>

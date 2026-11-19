@@ -2000,7 +2000,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +396 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +397 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 364 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -2067,7 +2067,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     after them, the search by meaning's toggle at the search bar's end (request 54 of stage 3):
     `search_mode_hybrid_missing` (the search by meaning not installed; its tooltip on is the find bar's own); and
     under a comment after them, the find results pane (request 55 of stage 3): `find_results_pane` (its title),
-    `…_toggle` (the find bar's button), `…_none`, `…_count` and `…_by_meaning`; and under a comment after them, a find
+    `…_toggle` (the find bar's button), `…_none`, `…_count`, `…_pages_count` (a PDF book's) and `…_by_meaning`; and
+    under a comment after them, a find
     in a PDF book (request 48 of stage 3): `pdf_find_no_text` (a scan with no text layer has nothing to find).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
@@ -4731,14 +4732,16 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/BookFindHub.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 96 lines.
+- **Size:** 143 lines.
 - **What:** `FindResultsSettings` ("find_results": `shown`, the pane asked for); `FindListing` (a tab's find: its
-  book, query, mode, matches and current match); `FoundLine` and `BookFindMatches.foundLines()` (the lines matched, once
+  book, query, mode, matches and current match); `PdfFindListing` and `PdfFound` (a tab's find in its PDF book: its
+  query, its matches' pages and pieces, the current one, done, and no text at all); `FoundLine` and `BookFindMatches.foundLines()` (the lines matched, once
   each with their counts, read through Zayit's public `nextAfterLine` and `next`, its class untouched); and
   `BookFindHub`, `@Inject @SingleIn(AppScope::class)`: `found` (each tab's find, `publish`) and `goTo` (the lines the
-  pane asks a tab to go to).
-- **Reached from:** `AppGraph.kt` (`bookFindHub`), `BookContentView.kt`, `FindResultsPane.kt`, `ReaderPanes.kt` and
-  `BookContentViewModel.kt` (the setting).
+  pane asks a tab to go to), and for a PDF book `pdfFound` (`publishPdf`) and `pdfGoTo` (`goToPdfMatch`, the match by
+  its place in the find's matches).
+- **Reached from:** `AppGraph.kt` (`bookFindHub`), `BookContentView.kt`, `PdfFind.kt`, `FindResultsPane.kt`,
+  `ReaderPanes.kt` and `BookContentViewModel.kt` (the setting).
 - **Follows:** Pardes's `PdfBookStore` (`shown` and `pageRequests`, a reader and its pane talking through flows);
   Zayit's typed settings (`SettingsGroup`).
 - **Tests:** `FindResultsTest`.
@@ -4746,7 +4749,7 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsPane.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 280 lines.
+- **Size:** 443 lines.
 - **What:** `FindResultsPane(tabId, bookId, modifier, onLeave)`: the tab's find from the hub, "2889 תוצאות ב־1376 שורות" (by
   meaning, "N שורות קרובות במשמעות"), then its lines in a `LazyColumn` under their entries of the table of contents
   (`findRows`, `entryTitles`: `getLineTocMappingsForBook` and `getBookToc`, read once a book), each a Zayit
@@ -4759,7 +4762,13 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
   "כאשר הפוקוס על חלונית הצד - כמו בתוצאות חיפוש חץ למעלה למטה יעבור בין התוצאות כאשר התוצאה מסומנת"): up and down go
   from line to line, the text with them, the line asked marked ahead of the text's answer (`asked`, so that keys
   pressed fast go on from it); Home, End and a page up and down as the book tree's (`listMove`, `pageRows`); Enter and
-  Escape give the focus back to the text (`onLeave`). A word on the find (Ctrl+F) when the tab has none.
+  Escape give the focus back to the text (`onLeave`). A word on the find (Ctrl+F) when the tab has none. A PDF book's
+  find, listed as a book's (request 48; the user showed the pane empty over one, 2026-11-19): the private
+  `PdfFindResults`, "12 תוצאות ב־5 עמודים", each match under the bookmark it comes after (`pdfFindRows`: the bookmarks
+  read as the contents pane reads them, `PdfOutlines`, at any depth) or under its page, with its piece of the page
+  (`FindRow.InPage`), the find's words marked, the current one marked and kept in view, a match clicked or reached by
+  the same keys gone to on its page (`BookFindHub.goToPdfMatch`); "אין טקסט בקובץ" for a scan. The keys of both lists
+  move by `findListMove`; `pieceAround`, a piece of a text around a range, is the found line's and the PDF page's.
 - **Reached from:** `ReaderPanes.kt` (`BookPaneBody`).
 - **Follows:** Pardes's `LinePlacesView` (Zayit's result rows and snippets in a pane of the reader), and the reader's
   panes' frame.
@@ -4769,11 +4778,13 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsTest.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 96 lines.
+- **Size:** 127 lines.
 - **What:** the lines found once each in reading order with their counts; each run under its entry of the contents,
   none for a book without; a line's piece cut around its first match at words, nikud aside, and its start when nothing
   matches; by meaning, the passage the search highlights, bold (`rangeSnippet`), and the line's start when it
-  highlights nothing (a `mockk` engine); the hub keeping a tab's find and passing a line asked for.
+  highlights nothing (a `mockk` engine); a PDF book's matches under the bookmark before them, at any depth, and under
+  their page before the first and in a book with none; the keys from the row before or after, from the first when none
+  is current; the hub keeping a tab's find and passing a line asked for.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names; Zayit's `BookFindMatches` built as its own tests
   build it).
@@ -4804,17 +4815,22 @@ and `strings.xml`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfFind.kt`
 
 - **Feature:** A find in a PDF book.
-- **Size:** 330 lines.
+- **Size:** 382 lines.
 - **What:** `PdfMatch` (a match: its page, and its boxes there, a box a line, as fractions of the page from its top
-  left); `PageChars` (a page's characters and their boxes in points, as the binding's `PageTextLayout` reads them,
+  left, and its `piece`, the page's text around it on one line, `pieceAround`, turned round for a page kept
+  backwards); `PageChars` (a page's characters and their boxes in points, as the binding's `PageTextLayout` reads them,
   `chars()`, or as a test writes them); `pageMatches`, `pageText` (the characters as a text, with the character of each
   letter) and `boxesOf` (a match's characters' boxes joined a box a line, those with no box left aside); `PageMark` and
   `PdfFind`, the find as it goes: its query, the matches found so far page by page (the pages' text read once a book,
-  their boxes only for a page with matches), the current one, done, and no text at all; `step` round the book.
+  their boxes only for a page with matches), the current one, done, and no text at all; `step` round the book,
+  `select` (a match the results pane asks for) and `listing` (the find as the pane lists it).
   `PdfFindBar(find, reader, tabId, listState, spreads, modifier)`: Zayit's `FindInPageBar` while the tab's find bar is
   open (`findBarOpenFlow`, `findQueryFlow`, `findFocusRequestFlow`, `findStepRequests`, `setFindQuery`,
   `closeFindBar`, as a book's text uses them), its counter the matches, a match revealed in its page's row a third of
-  the view down, and "אין טקסט בקובץ" under it for a scan. `Modifier.findMarks`, the marks drawn over a page.
+  the view down, and "אין טקסט בקובץ" under it for a scan; the results pane's button and Alt+Enter as a book's bar has
+  them (`FindResultsSettings.shown`), the find told to the pane while the bar is open (`BookFindHub.publishPdf`) and
+  the match it asks for gone to (`pdfGoTo`): the user showed the pane empty over a PDF book after the second testers'
+  build. `Modifier.findMarks`, the marks drawn over a page.
 - **Reached from:** `PdfBookView.kt` (the bar and the marks), `PdfPageList.kt` (`findMarks`).
 - **Follows:** Zayit's find in a book's text (`FindInPageBar`, `findAllMatchesNormalized`, `normalizeQueryForHebrew`,
   the find's settings and keys) and Pardes's PDF reader's use of the binding (`PdfReaderState`, never PDFium called
@@ -4827,10 +4843,11 @@ and `strings.xml`.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfFindTest.kt`
 
 - **Feature:** A find in a PDF book.
-- **Size:** 77 lines.
+- **Size:** 84 lines.
 - **What:** with a page's characters written by the test: a word found on its line, its box a fraction of the page
   from its top left; a match over two lines, a box each, the line break left aside; nikud and final letters aside, a
-  page that keeps its Hebrew backwards found too, a letter alone no find, and a page with no text none.
+  page that keeps its Hebrew backwards found too, a letter alone no find, and a page with no text none; each match's
+  piece of its page on one line, turned round for a page kept backwards.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
