@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -110,28 +112,95 @@ internal fun StudyPlanEditor(
     val repository = graph.repository
     val store = graph.studyPlanStore
     val scope = rememberCoroutineScope()
-    val accent = rememberAccentColor(JewelTheme.isDark)
     val inIsrael = state.inIsrael
-
-    var book by remember { mutableStateOf<Book?>(null) }
-    var bookLoaded by remember { mutableStateOf(plan.id == 0L) }
+    val fields = remember { PlanFields(plan) }
     LaunchedEffect(plan.id) {
-        if (plan.id != 0L) book = runSuspendCatching { repository.bookOf(plan) }.getOrNull()
-        bookLoaded = true
+        if (plan.id != 0L) fields.book = runSuspendCatching { repository.bookOf(plan) }.getOrNull()
+        fields.bookLoaded = true
     }
-    val entries by produceState<List<TocEntry>>(emptyList(), book) {
-        value = book?.let { runSuspendCatching { repository.getTocEntriesForBook(it.id) }.getOrNull() }.orEmpty()
+    LaunchedEffect(fields) { fields.readPerDay() }
+    val entries by produceState<List<TocEntry>>(emptyList(), fields.book) {
+        value = fields.book?.let { runSuspendCatching { repository.getTocEntriesForBook(it.id) }.getOrNull() }.orEmpty()
     }
     val levels = remember(entries) { studyLevels(entries) }
-    var level by remember { mutableIntStateOf(plan.level) }
     // A book whose depths do not have the one chosen: its first
-    val shownLevel = levels.firstOrNull { it.level == level } ?: levels.firstOrNull()
+    val shownLevel = levels.firstOrNull { it.level == fields.level } ?: levels.firstOrNull()
     val units = remember(entries, shownLevel) { shownLevel?.let { studyUnits(entries, it.level) }.orEmpty() }
-    var start by remember { mutableStateOf(plan.start) }
-    val startIndex = remember(units, start) { startIndexOf(units, start) }
-    val perDayField = remember { TextFieldState(plan.perDay.toString()) }
-    var perDay by remember { mutableIntStateOf(plan.perDay) }
-    LaunchedEffect(perDayField) {
+    val startIndex = remember(units, fields.start) { startIndexOf(units, fields.start) }
+    val preview = rememberPreview(fields, units, startIndex, inIsrael)
+
+    fun save() {
+        val chosen = fields.book ?: return
+        val unit = units.getOrNull(startIndex) ?: return
+        val level = shownLevel?.level ?: return
+        scope.launch {
+            val path = runSuspendCatching { repository.categoryPathOf(chosen) }.getOrNull().orEmpty()
+            store.save(fields.planFrom(plan, chosen, path, level, unit.headings))
+            onClose()
+        }
+    }
+
+    EditorWindow(onClose) {
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            BookRows(fields, levels, shownLevel, units, startIndex)
+            ScheduleRows(fields, inIsrael)
+            preview?.let { part -> PreviewBox(part, units) }
+        }
+        Spacer(Modifier.height(8.dp))
+        Divider(orientation = Orientation.Horizontal)
+        Spacer(Modifier.height(8.dp))
+        val delete: () -> Unit = {
+            scope.launch {
+                store.delete(plan.id)
+                onClose()
+            }
+        }
+        EditorButtons(
+            canSave = fields.book != null && units.isNotEmpty(),
+            onSave = ::save,
+            onClose = onClose,
+            onDelete = delete.takeIf { plan.id != 0L },
+        )
+    }
+}
+
+/** The editor's fields as the user sets them, from [plan]'s; the book is read when the editor opens. */
+@Stable
+private class PlanFields(
+    plan: StudyPlan,
+) {
+    var book by mutableStateOf<Book?>(null)
+    var bookLoaded by mutableStateOf(plan.id == 0L)
+    var level by mutableIntStateOf(plan.level)
+    var start by mutableStateOf(plan.start)
+    val perDayField = TextFieldState(plan.perDay.toString())
+    var perDay by mutableIntStateOf(plan.perDay)
+    var startDay by mutableStateOf(plan.startDay)
+    var weekdays by mutableStateOf(plan.weekdays)
+    var restart by mutableStateOf(plan.restart)
+
+    /** Another book, or another depth: the start goes back to its first unit. */
+    fun pickBook(picked: Book) {
+        book = picked
+        start = emptyList()
+    }
+
+    fun pickLevel(picked: Int) {
+        level = picked
+        start = emptyList()
+    }
+
+    /** [day] chosen or not, while some day stays chosen: a plan is learnt on some day. */
+    fun toggle(day: DayOfWeek) {
+        val next = if (day in weekdays) weekdays - day else weekdays + day
+        if (next.isNotEmpty()) weekdays = next
+    }
+
+    /** Follows the field of how many a day: a whole number from 1 to 999 is taken, anything else keeps the last. */
+    suspend fun readPerDay() {
         snapshotFlow { perDayField.text.toString() }.collect { text ->
             text
                 .trim()
@@ -140,53 +209,61 @@ internal fun StudyPlanEditor(
                 ?.let { perDay = it }
         }
     }
-    var startDay by remember { mutableStateOf(plan.startDay) }
-    var weekdays by remember { mutableStateOf(plan.weekdays) }
-    var restart by remember { mutableStateOf(plan.restart) }
-    var deleting by remember { mutableStateOf(false) }
 
+    /** [plan] with these fields: the book [chosen], under [path], studied by [level] from [start]. */
+    fun planFrom(
+        plan: StudyPlan,
+        chosen: Book,
+        path: List<String>,
+        level: Int,
+        start: List<String>,
+    ): StudyPlan =
+        plan.copy(
+            bookId = chosen.id,
+            bookTitle = chosen.title,
+            categoryPath = path,
+            level = level,
+            start = start,
+            perDay = perDay,
+            startDay = startDay,
+            weekdays = weekdays,
+            restart = restart,
+        )
+}
+
+/** The day's part the fields give today, as the card will show it; null while the book has no units. */
+@Composable
+private fun rememberPreview(
+    fields: PlanFields,
+    units: List<StudyUnit>,
+    startIndex: Int,
+    inIsrael: Boolean,
+): DayPart? {
     val today = LocalDate.now()
-    val preview =
-        remember(units, startIndex, perDay, startDay, weekdays, restart, inIsrael) {
-            if (units.isEmpty()) {
-                null
-            } else {
-                val before = today < startDay
-                dayPart(
-                    startIndex = startIndex,
-                    count = units.size,
-                    perDay = perDay,
-                    restart = restart,
-                    daysBefore = if (before) 0 else studyDaysBetween(startDay, today) { isStudyDay(it, weekdays, inIsrael) },
-                    studyDay = isStudyDay(today, weekdays, inIsrael),
-                    beforeStart = before,
-                )
-            }
-        }
-
-    fun save() {
-        val chosen = book ?: return
-        val unit = units.getOrNull(startIndex) ?: return
-        val level = shownLevel?.level ?: return
-        scope.launch {
-            val path = runSuspendCatching { repository.categoryPathOf(chosen) }.getOrNull().orEmpty()
-            store.save(
-                plan.copy(
-                    bookId = chosen.id,
-                    bookTitle = chosen.title,
-                    categoryPath = path,
-                    level = level,
-                    start = unit.headings,
-                    perDay = perDay,
-                    startDay = startDay,
-                    weekdays = weekdays,
-                    restart = restart,
-                ),
+    return remember(units, startIndex, fields.perDay, fields.startDay, fields.weekdays, fields.restart, inIsrael) {
+        if (units.isEmpty()) {
+            null
+        } else {
+            val before = today < fields.startDay
+            dayPart(
+                startIndex = startIndex,
+                count = units.size,
+                perDay = fields.perDay,
+                restart = fields.restart,
+                daysBefore = if (before) 0 else studyDaysBetween(fields.startDay, today) { isStudyDay(it, fields.weekdays, inIsrael) },
+                studyDay = isStudyDay(today, fields.weekdays, inIsrael),
+                beforeStart = before,
             )
-            onClose()
         }
     }
+}
 
+/** The editor's window: its title bar, and [content] in a column over the panel's background. */
+@Composable
+private fun EditorWindow(
+    onClose: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     with(LocalNucleusApplicationScope.current) {
         IntUiTheme(theme = ThemeUtils.buildThemeDefinition(), styling = ThemeUtils.buildComponentStyling()) {
             JewelDecoratedDialog(
@@ -209,119 +286,120 @@ internal fun StudyPlanEditor(
                         .fillMaxSize()
                         .background(JewelTheme.globalColors.panelBackground)
                         .padding(16.dp),
-                ) {
-                    Column(
-                        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        FormRow("ספר") {
-                            if (bookLoaded) {
-                                BookField(book, onPick = { picked ->
-                                    book = picked
-                                    start = emptyList()
-                                })
-                            }
-                        }
-                        if (book != null && levels.isEmpty()) {
-                            Hint("לספר הזה אין תוכן עניינים לחלק לפיו.")
-                        }
-                        if (levels.isNotEmpty()) {
-                            FormRow("לומדים לפי") {
-                                Column {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        levels.forEach { option ->
-                                            val selected = option.level == shownLevel?.level
-                                            val pick = {
-                                                level = option.level
-                                                start = emptyList()
-                                            }
-                                            if (selected) {
-                                                DefaultButton(onClick = pick) { Text(option.name.one) }
-                                            } else {
-                                                OutlinedButton(onClick = pick) { Text(option.name.one) }
-                                            }
-                                        }
-                                    }
-                                    Hint("הרמות שבתוכן העניינים של הספר")
-                                }
-                            }
-                            FormRow("מתחילים מ־") {
-                                ListComboBox(
-                                    items = units.map { it.headings.joinToString(", ") },
-                                    selectedIndex = startIndex,
-                                    onSelectedItemChange = { index -> units.getOrNull(index)?.let { start = it.headings } },
-                                    modifier = Modifier.fillMaxWidth().testTag("study-start"),
-                                )
-                            }
-                            FormRow("בכל יום") {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    TextField(perDayField, Modifier.width(72.dp).testTag("study-per-day"))
-                                    Text(if (perDay == 1) shownLevel?.name?.one.orEmpty() else shownLevel?.name?.many.orEmpty())
-                                }
-                            }
-                        }
-                        FormRow("מתאריך") {
-                            LuachDateButton(
-                                label = hebrewFormatter.format(JewishCalendar(startDay.toKotlinLocalDate(), inIsrael)),
-                                selected = startDay,
-                                inIsrael = inIsrael,
-                                accent = accent,
-                                onSelect = { startDay = it },
-                            )
-                        }
-                        FormRow("בימים") {
-                            Column {
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    WEEK.forEach { day ->
-                                        DayToggle(weekdayLetter(day), day in weekdays, accent) {
-                                            val next = if (day in weekdays) weekdays - day else weekdays + day
-                                            // A plan is learnt on some day
-                                            if (next.isNotEmpty()) weekdays = next
-                                        }
-                                    }
-                                }
-                                Hint("כששבת לא מסומנת, מדלגים גם על יום טוב")
-                            }
-                        }
-                        FormRow("") {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Checkbox(checked = restart, onCheckedChange = { restart = it })
-                                Text("בסוף הספר, להתחיל מחדש")
-                            }
-                        }
-                        preview?.let { part -> PreviewBox(part, units) }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Divider(orientation = Orientation.Horizontal)
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        DefaultButton(onClick = ::save, enabled = book != null && units.isNotEmpty()) { Text("שמור") }
-                        OutlinedButton(onClick = onClose) { Text("ביטול") }
-                        Spacer(Modifier.weight(1f))
-                        if (plan.id != 0L) {
-                            HoverBox(onClick = {
-                                if (deleting) {
-                                    scope.launch {
-                                        store.delete(plan.id)
-                                        onClose()
-                                    }
-                                } else {
-                                    deleting = true
-                                }
-                            }) {
-                                Text(
-                                    if (deleting) "לחיצה נוספת מוחקת" else "מחק תוכנית",
-                                    color = Color(0xFFC62828),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                                )
-                            }
+                    content = content,
+                )
+            }
+        }
+    }
+}
+
+/** The book, the depth of its contents studied by, where to start and how many a day. */
+@Composable
+private fun BookRows(
+    fields: PlanFields,
+    levels: List<StudyLevel>,
+    shownLevel: StudyLevel?,
+    units: List<StudyUnit>,
+    startIndex: Int,
+) {
+    FormRow("ספר") {
+        if (fields.bookLoaded) BookField(fields.book, onPick = fields::pickBook)
+    }
+    if (fields.book != null && levels.isEmpty()) {
+        Hint("לספר הזה אין תוכן עניינים לחלק לפיו.")
+    }
+    if (levels.isNotEmpty()) {
+        FormRow("לומדים לפי") {
+            Column {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    levels.forEach { option ->
+                        val pick = { fields.pickLevel(option.level) }
+                        if (option.level == shownLevel?.level) {
+                            DefaultButton(onClick = pick) { Text(option.name.one) }
+                        } else {
+                            OutlinedButton(onClick = pick) { Text(option.name.one) }
                         }
                     }
                 }
+                Hint("הרמות שבתוכן העניינים של הספר")
+            }
+        }
+        FormRow("מתחילים מ־") {
+            ListComboBox(
+                items = units.map { it.headings.joinToString(", ") },
+                selectedIndex = startIndex,
+                onSelectedItemChange = { index -> units.getOrNull(index)?.let { fields.start = it.headings } },
+                modifier = Modifier.fillMaxWidth().testTag("study-start"),
+            )
+        }
+        FormRow("בכל יום") {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(fields.perDayField, Modifier.width(72.dp).testTag("study-per-day"))
+                Text(if (fields.perDay == 1) shownLevel?.name?.one.orEmpty() else shownLevel?.name?.many.orEmpty())
+            }
+        }
+    }
+}
+
+/** From which date, on which days, and whether to start again at the book's end. */
+@Composable
+private fun ScheduleRows(
+    fields: PlanFields,
+    inIsrael: Boolean,
+) {
+    val accent = rememberAccentColor(JewelTheme.isDark)
+    // One column, with the editor's spacing between its rows
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        FormRow("מתאריך") {
+            LuachDateButton(
+                label = hebrewFormatter.format(JewishCalendar(fields.startDay.toKotlinLocalDate(), inIsrael)),
+                selected = fields.startDay,
+                inIsrael = inIsrael,
+                accent = accent,
+                onSelect = { fields.startDay = it },
+            )
+        }
+        FormRow("בימים") {
+            Column {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    WEEK.forEach { day -> DayToggle(weekdayLetter(day), day in fields.weekdays, accent) { fields.toggle(day) } }
+                }
+                Hint("כששבת לא מסומנת, מדלגים גם על יום טוב")
+            }
+        }
+        FormRow("") {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Checkbox(checked = fields.restart, onCheckedChange = { fields.restart = it })
+                Text("בסוף הספר, להתחיל מחדש")
+            }
+        }
+    }
+}
+
+/** Save and cancel, and with [onDelete] (a plan already saved) a delete asked for twice. */
+@Composable
+private fun EditorButtons(
+    canSave: Boolean,
+    onSave: () -> Unit,
+    onClose: () -> Unit,
+    onDelete: (() -> Unit)?,
+) {
+    var deleting by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        DefaultButton(onClick = onSave, enabled = canSave) { Text("שמור") }
+        OutlinedButton(onClick = onClose) { Text("ביטול") }
+        Spacer(Modifier.weight(1f))
+        if (onDelete != null) {
+            HoverBox(onClick = { if (deleting) onDelete() else deleting = true }) {
+                Text(
+                    if (deleting) "לחיצה נוספת מוחקת" else "מחק תוכנית",
+                    color = Color(0xFFC62828),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                )
             }
         }
     }
