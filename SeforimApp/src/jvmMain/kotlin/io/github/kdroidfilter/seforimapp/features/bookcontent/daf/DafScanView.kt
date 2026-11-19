@@ -110,15 +110,52 @@ private sealed interface ScanLoad {
  * Where the scan is, for what the reader asks of it ([DafControl]): the first line of the amud read at its top (the
  * tab's place, where the text and the daf open), the page read there, and its list of rows while it is shown;
  * [placedAnew] once the user set where the tractate begins in its file, so that the amud the list opens at is told.
+ * Pardes (request 60 of the list after the third testers' build, docs/DESKTOP_STAGE3_PLAN.md): kept as long as the tab,
+ * as the daf keeps its list (BookContentView's dafListState), its list ([listFor]), the first line of each amud
+ * ([amudLines], read once a tractate) and the tab's line it followed last ([follow]): the tab shown again shows the scan
+ * where it was left, and a line chosen in the table of contents is the scan's place at once.
  */
-private class ScanPlace(
+internal class ScanPlace(
     var topLineId: Long?,
+    private var followed: Pair<Long?, Long>? = null,
 ) {
     var page = 0
     var placedAnew = false
     var list: LazyListState? = null
     var rows = 0
     var spreads = false
+
+    /** The first line of every amud, by the table of contents: where the text and the daf open for an amud of the scan. */
+    var amudLines by mutableStateOf(emptyMap<String, Long>())
+
+    // The list kept, with what its rows were made of
+    private var kept: Pair<Any, LazyListState>? = null
+
+    /** Whether a list is kept: the scan shown again opens where it was left, without looking for its page. */
+    val keepsList: Boolean get() = kept != null
+
+    /**
+     * The list of rows made of [madeOf] (the file, the tractate's first page in it, its pages, two a row or one): the one
+     * kept for them, else [new], kept from then on.
+     */
+    fun listFor(
+        madeOf: Any,
+        new: () -> LazyListState,
+    ): LazyListState = kept?.takeIf { it.first == madeOf }?.second ?: new().also { kept = madeOf to it }
+
+    /**
+     * The tab's line [lineId], asked at [timestamp], to go to: null when it was asked before (the scan opened at it, or
+     * the tab is shown again) or the scan is at it.
+     */
+    fun follow(
+        lineId: Long?,
+        timestamp: Long,
+    ): Long? {
+        val asked = lineId to timestamp
+        if (asked == followed) return null
+        followed = asked
+        return lineId?.takeIf { it > 0 && it != topLineId }
+    }
 }
 
 /**
@@ -146,7 +183,10 @@ internal fun DafScanReader(
     val scans = graph.dafScans
     val repository = graph.repository
     val scope = rememberCoroutineScope()
-    val place = remember(book.id) { ScanPlace(openAt ?: lineId) }
+    val place = remember(book.id) { ScanPlace(openAt ?: lineId, followed = lineId to scrollToLineTimestamp) }
+    LaunchedEffect(place) {
+        place.amudLines = runSuspendCatching { firstLines(repository.getTocEntriesForBook(book.id)) }.getOrDefault(emptyMap())
+    }
     // What the reader asks of the daf asked of the scan while it is shown; where it was, after (the text opens there)
     SideEffect {
         control.page = { forward -> place.list?.turnPage(forward) }
@@ -312,6 +352,7 @@ private fun ScanPages(
                         key(state.source.first, pages) {
                             ScanList(
                                 pages,
+                                madeOf = Triple(file, state.source.first, pages),
                                 book,
                                 place,
                                 zoom,
@@ -339,15 +380,17 @@ private fun ScanPages(
     }
 }
 
-// Whether the page the scan opens at is known: the amud of the tab's place, set in [place]
+// Whether the page the scan opens at is known: the amud of the tab's place, set in [place]; at once when its list is
+// kept, which opens where it was left
 @Composable
 private fun rememberPlaced(
     file: File,
     place: ScanPlace,
 ): Boolean {
     val repository = LocalAppGraph.current.repository
-    var placed by remember(file) { mutableStateOf(false) }
+    var placed by remember(file) { mutableStateOf(place.keepsList) }
     LaunchedEffect(file) {
+        if (placed) return@LaunchedEffect
         place.page = place.topLineId?.let { amudOfLine(repository, it) }?.let(::scanPageOf) ?: 0
         placed = true
     }
@@ -387,7 +430,12 @@ private fun BindingScan(
             val pages = source.pagesIn(reader.pageCount)
             // Opened again at the place's page when the tractate's first page in the file changes
             key(source.first, pages) {
-                ScanList(pages, book, place, zoom, lineId, scrollToLineTimestamp, onScroll) { listState, width, spreads, title ->
+                ScanList(pages, Triple(file, source.first, pages), book, place, zoom, lineId, scrollToLineTimestamp, onScroll) {
+                    listState,
+                    width,
+                    spreads,
+                    title,
+                    ->
                     PdfPageList(
                         reader,
                         listState,
@@ -406,11 +454,13 @@ private fun BindingScan(
 
 /**
  * The scan's [pages] in their list ([pagesList]: its state, each page's width, two side by side or not, and each one's
- * title), at the page of [place], following the tab and telling it where it is.
+ * title), at the page of [place], following the tab and telling it where it is; the list kept with the tab for the
+ * rows they are made of ([madeOf]).
  */
 @Composable
 private fun ScanList(
     pages: Int,
+    madeOf: Any,
     book: Book,
     place: ScanPlace,
     zoom: Float,
@@ -420,12 +470,15 @@ private fun ScanList(
     pagesList: @Composable (listState: LazyListState, width: Dp, spreads: Boolean, title: (Int) -> String) -> Unit,
 ) {
     val graph = LocalAppGraph.current
-    val repository = graph.repository
     val spreads by graph.appSettings.pageSpreadsFlow
         .collectAsState()
     val rows = rowCount(pages, spreads)
-    // At the page read at the top, kept as it scrolls: the rows changed (a page each, or two), a new list opens there
-    val listState = remember(spreads) { LazyListState(rowOf(place.page.coerceIn(0, (pages - 1).coerceAtLeast(0)), spreads)) }
+    // At the page read at the top, kept as it scrolls and with the tab (request 60): the rows changed (a page each, or
+    // two, another file or first page), a new list opens there
+    val listState =
+        remember(madeOf, spreads) {
+            place.listFor(madeOf to spreads) { LazyListState(rowOf(place.page.coerceIn(0, (pages - 1).coerceAtLeast(0)), spreads)) }
+        }
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex }.collect { place.page = firstPageOf(it, spreads) }
     }
@@ -435,12 +488,8 @@ private fun ScanList(
         place.spreads = spreads
     }
     DisposableEffect(place) { onDispose { place.list = null } }
-    // The first line of every amud, by the table of contents: where the text and the daf open for an amud of the scan
-    val amudLines by produceState(emptyMap<String, Long>(), book.id) {
-        value = runSuspendCatching { firstLines(repository.getTocEntriesForBook(book.id)) }.getOrDefault(emptyMap())
-    }
     FollowTheTab(listState, place, lineId, scrollToLineTimestamp)
-    TellThePlace(listState, spreads, place, amudLines, onScroll)
+    TellThePlace(listState, spreads, place, onScroll)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val room = maxWidth - PAGE_PADDING * 2
         val base = if (spreads) min(spreadPageWidth(room), MOST_PAGE_WIDTH) else min(room, MOST_PAGE_WIDTH)
@@ -449,9 +498,10 @@ private fun ScanList(
 }
 
 /**
- * The tab's line ([lineId]) brought into view when it changes or the tab asks ([scrollToLineTimestamp]): the table of
+ * The tab's line ([lineId]) brought to the top when it changes or the tab asks ([scrollToLineTimestamp]): the table of
  * contents, a search, a step of the arrows. Not at first (the scan opened at the tab's place), nor for the line the scan
- * told itself.
+ * told itself, nor again when the tab is shown again ([ScanPlace.follow]). The line gone to is the scan's place at once
+ * (request 60): the tab left right after it comes back to it.
  */
 @Composable
 private fun FollowTheTab(
@@ -462,15 +512,11 @@ private fun FollowTheTab(
 ) {
     val repository = LocalAppGraph.current.repository
     val list by rememberUpdatedState(listState)
-    var opened by remember { mutableStateOf(false) }
     LaunchedEffect(lineId, scrollToLineTimestamp) {
-        if (!opened) {
-            opened = true
-            return@LaunchedEffect
-        }
-        val id = lineId?.takeIf { it > 0 && it != place.topLineId } ?: return@LaunchedEffect
+        val id = place.follow(lineId, scrollToLineTimestamp) ?: return@LaunchedEffect
         val page = amudOfLine(repository, id)?.let(::scanPageOf) ?: return@LaunchedEffect
-        list.reveal(place.rowOfPage(page))
+        list.bringToTop(place.rowOfPage(page))
+        place.topLineId = id
     }
 }
 
@@ -486,14 +532,12 @@ private fun TellThePlace(
     listState: LazyListState,
     spreads: Boolean,
     place: ScanPlace,
-    amudLines: Map<String, Long>,
     onScroll: (lineId: Long) -> Unit,
 ) {
-    val lines by rememberUpdatedState(amudLines)
     val currentOnScroll by rememberUpdatedState(onScroll)
     val told = remember(listState) { ToldLine() }
 
-    fun lineNow(): Long? = lines[amudOfScanPage(firstPageOf(listState.firstVisibleItemIndex, spreads))]
+    fun lineNow(): Long? = place.amudLines[amudOfScanPage(firstPageOf(listState.firstVisibleItemIndex, spreads))]
 
     fun tell(lineId: Long) {
         told.line = lineId
@@ -540,6 +584,11 @@ private fun ScanPlace.rowOfPage(page: Int): Int = rowOf(page, spreads).coerceIn(
 /** Scrolls to [row] unless it is in view. */
 private suspend fun LazyListState.reveal(row: Int) {
     if (layoutInfo.visibleItemsInfo.none { it.index == row }) scrollToItem(row)
+}
+
+/** Scrolls [row] to the top, as the table of contents opens an amud, unless it is there already. */
+internal suspend fun LazyListState.bringToTop(row: Int) {
+    if (firstVisibleItemIndex != row || firstVisibleItemScrollOffset != 0) scrollToItem(row)
 }
 
 /** The amud (`35b`) of the line [lineId], by its entry in the table of contents, else by its reference. */
