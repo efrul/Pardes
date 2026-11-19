@@ -101,7 +101,9 @@ Coordinates on the maximised 1440x900 window:
 - Hebrew: `xdotool type --delay 100 "בבא בתרא"`, with `LC_ALL=C.UTF-8` exported in the shell that runs it (in the
   container's POSIX locale it fails with "Invalid multi-byte sequence"); keys `xdotool key ctrl+t`, `Return`,
   `Escape`, `Down`, `Next` (PageDown), `Prior`. To replace a field's text, clear it with `BackSpace`s: `ctrl+a` then
-  typing once gave `||||`.
+  typing once gave `||||`. Typed Hebrew can come out wrong without a sign (2026-11-19: "כלומר" reached the find as
+  "כלררר", and the find found nothing): read the field in a screenshot, or paste instead,
+  `printf 'כלומר' | xclip -selection clipboard`, then `xdotool key ctrl+a ctrl+v`.
 - **`xdotool key ctrl+v` does not paste** (it types letters): type the text. Read the clipboard with
   `xclip -selection clipboard -o -t UTF8_STRING`, a few seconds after the copy (llvmpipe).
 - **A new window gets no keyboard focus** (Xvfb has no window manager): `xdotool windowfocus <id>`, then

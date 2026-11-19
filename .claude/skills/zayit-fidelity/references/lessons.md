@@ -165,7 +165,11 @@ tools and the code did when it was written.
 - **Several commits from one working tree:** each commit carries its own entries and must pass
   `check_change_map.py --committed`. Make the earlier state of a file by undoing the later change in a script (exact
   replacements that assert they were found), commit it with its entry, then put the final file back and write the
-  final entry. `git stash push -- <paths>` sets whole files aside.
+  final entry. `git stash push -- <paths>` sets whole files aside. A hunk of the map staged alone
+  (`git diff -U0 | git apply --cached --unidiff-zero`) lands at the working tree's line number: an entry added after
+  hunks left unstaged went into the middle of another section's paragraph (2026-11-19, put back by the next commit),
+  and `git stash pop` after it wrote the entry twice. The check counts entries, not where they sit: read
+  `git diff --cached` of the map before the commit.
 - The documents that list the hooks move with them: `branding/README.md`, the Pardes paragraph of `CLAUDE.md`, the
   licences list (`branding/pardes/assetsExtra/common/licenses/README.md`).
 
