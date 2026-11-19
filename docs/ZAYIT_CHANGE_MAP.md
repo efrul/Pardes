@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (133 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (135 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (307 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (308 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,8 +57,8 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 58 |
-| Pardes feature in Zayit's file | 34 |
+| Pardes feature hook | 59 |
+| Pardes feature in Zayit's file | 35 |
 | Fix of Zayit's code | 15 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
@@ -525,14 +525,43 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/WindowUtils.kt`
 
-- **Change:** modified, +6 −6 lines. Feature: Daf view.
+- **Change:** modified, +17 −6 lines. Feature: Daf view, Find results pane.
 - **What:** in `processKeyShortcuts`, Ctrl with Plus, Equals or Minus calls `appSettings.zoomIn(tabId)` /
-  `zoomOut(tabId)` instead of `increaseTextSize()` / `decreaseTextSize()`; the debug messages say "zooming".
-- **Why:** when the selected tab shows the daf, the zoom keys zoom the daf (30% to 400%), not the text (`8d3825e7`).
+  `zoomOut(tabId)` instead of `increaseTextSize()` / `decreaseTextSize()`; the debug messages say "zooming". And Alt+Enter,
+  where the tab has a find and its bar is open, shows or hides the find's results pane (`FindResultsSettings.shown`)
+  from anywhere in the tab, before Zayit's Alt shortcuts; `ENTER_KEYS` at the file's end, a comment marked "Pardes:" and
+  an import.
+- **Why:** when the selected tab shows the daf, the zoom keys zoom the daf (30% to 400%), not the text (`8d3825e7`). The
+  pane's Alt+Enter worked only in the find field (request 71 of stage 3, 2026-11-19: "יוכל להסגר ולהיפתח על ידי קיצור
+  המקשים גם כשהפוקוס לא על שורת החיפוש").
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small; three branches of one `when`.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DisplaySettingsScreen.kt`
+
+- **Change:** modified, +3 −0 lines. Feature: The Home's big name shown or hidden.
+- **What:** `HomeLogoCard()` right after the wallpaper's card, with a comment marked "Pardes:", and its import.
+- **Why:** request 67 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-19): "אפשרות בהגדרות תצוגה להסתיר את הכיתוב הגדול של פרדס
+  בדף הבית"; the card sits with the Home's other look, its wallpaper.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one line among the cards.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/author/AuthorScreen.kt`
+
+- **Change:** modified, +3 −1 lines. Feature: An author's books shown.
+- **What:** in `BooksPane`, `openByDefault` is `true` (Zayit's: open only with two folders or fewer), with a comment
+  marked "Pardes:": every folder of the author's books opens with its books.
+- **Why:** request 66 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-19): "חיפוש ובחירה במחבר 'חפץ חיים' מציג תיקיות ולא את כל
+  ספריו": an author's page showed nine closed folders ("מפרשים (1)", "אחרונים (4)", "אחרונים (6)"…) and none of the
+  nineteen books.
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** small: one line.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app (the Chafetz Chaim's page: his nineteen books under their nine folders).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/AppNativeMenuBar.kt`
 
@@ -653,8 +682,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +284 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
-  smart siddur.
+- **Change:** modified, +287 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
+  smart siddur, The Home's big name shown or hidden.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`),
     its marks shown or hidden (`daf_marks`, `dafMarksFlow`: the unsure lines drawn lighter and the review's marks, the end
@@ -683,7 +712,9 @@ The entries of this section by kind:
     siddur's addon reads the switch where it has no graph to take the settings from. And the custom of the State of
     Israel's days in Iyar the open siddur asks on those days, with its flow (`siddur_israeli_prayer_custom`, an
     `IsraeliPrayerCustom`'s name), after Zayit's three siddur preferences. Both are portable.
-  - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`, `OpenSiddurSwitch`.
+  - **The Home's big name:** `HomeLogoSettings.shown`'s key among `PORTABLE_KEYS`, as the wallpaper's (request 67 of
+    stage 3), with a comment marked "Pardes:".
+  - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`, `OpenSiddurSwitch`, `HomeLogoSettings`.
 - **Why:** Zayit keeps every preference here with its flow, so Pardes's features keep theirs here too (`8d3825e7` and
   the daf commits, `58586e1a`, `cb0f0a27`, `90f8a24a`, `ddf604d8`). The siddur's switch is the one preference here
   that is mirrored outside the class: `installedSiddur` is a top-level value Zayit's code reads in composition and
@@ -849,7 +880,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/FindInPageBar.kt`
 
-- **Change:** modified, +48 −17 lines. Feature: Find results pane, Two tabs side by side.
+- **Change:** modified, +62 −18 lines. Feature: Find results pane, Two tabs side by side.
 - **What:** two parameters, last: `listShown` (null hides it) and `onToggleList`; with them, the private
   `FindListToggle` first after the divider ("כל התוצאות בחלונית", the reader's `TableOfContents` icon, Alt+Enter in its
   tooltip), and Alt+Enter in the field shows or hides the list before Zayit's Ctrl+Enter; comments marked "Pardes:",
@@ -858,7 +889,10 @@ The entries of this section by kind:
   `weight(1f, fill = false)` before its 200 dp, so it narrows first) and `actions` (the buttons' `Row`), which
   Pardes's `FindBarRows` lays in one row with Zayit's divider, or the actions in a second row under a narrower view;
   the frame (shadow, background, border, padding) given to it as `frameModifier`, the bar's height there; the
-  divider's and the height's imports go, `RowScope` comes.
+  divider's and the height's imports go, `RowScope` comes. The counter's slot, blank beside the field while the count is
+  short, takes a click as the field's (request 68 of stage 3, 2026-11-19: "העכבר יכול למקד את מיקום הסמן עד אזור מסוים,
+  נגיעה בשמאל יותר לא משפיעה"): the text cursor over it, and a click focuses the field with the caret at the query's
+  end (`placeCursorAtEnd`); four imports.
 - **Why:** request 55 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "חיפוש בתוך ספר פתוח יפתח חלונית בצד, שמציגה את
   כל התוצאות מסודרות"; the bar is where a find is, and its button opens the pane beside the text. Zayit's field kept
   200 dp in any width, and in a tab beside another the counter and the actions went past the view's edge, in a book,
@@ -1443,8 +1477,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +343 −60 lines. Feature: Search in categories, Search in several books and categories, Book and
-  author titles search, PDF books, Search modes.
+- **Change:** modified, +363 −69 lines. Feature: Search in categories, Search in several books and categories, Book and
+  author titles search, PDF books, Search modes, The Home's big name shown or hidden, A card's book in place of the
+  Home.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
   - `CatBookRow.Category`: a category to search in. `catBookRows` orders references, books named by their title, a title
@@ -1478,6 +1513,11 @@ The entries of this section by kind:
     row (the clear button's lines indented once): the search by meaning's toggle (request 54 of
     `docs/DESKTOP_STAGE3_PLAN.md`); the home page's bar is given `NextSearchModeSwitch`. Each with a comment marked
     "Pardes:", and its import.
+  - In `HomeBody`, the logo's section (the big name above the search bar) only while `HomeLogoSettings.shown`
+    (request 67 of stage 3), indented once inside its `if`; and the cards' `openTab` replaces the Home's tab with a
+    new one (`replaceCurrentTabWithNewTabId`, as the history's, the notes' and the favourites' pages open a book)
+    while the Home is the tab selected (`LocalTabSelected`, read through `rememberUpdatedState`), else opens a new tab
+    as Zayit's did (a card's own window over another tab); each with a comment marked "Pardes:", and two imports.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -1653,7 +1693,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryBookTreeView.kt`
 
-- **Change:** modified, +32 −3 lines. Feature: Keys in the book tree and the contents (request 47 of stage 3).
+- **Change:** modified, +40 −3 lines. Feature: Keys in the book tree and the contents (request 47 of stage 3), The open book in
+  the book tree.
 - **What:**
   - `TreeItem` gains, after its content and under a comment marked "Pardes:", what the keys need of a row: `folder`,
     `open` and `click`; `buildTreeItems` fills them, a category's (its expansion, `onCategoryClick`) and a book's
@@ -1664,6 +1705,11 @@ The entries of this section by kind:
   - The row the keys are on is shown as selected while the tree has the focus, in place of the selection, as the pane's
     search shows its match: `buildTreeItems` takes `focusedId` (the keys' row, `TreeKeys.shown`), which a book's
     `isSelected` takes first, and `CategoryItem` takes `isFocused`, highlighted as a category selected in search mode.
+  - The open book's row brought into view as the tree opens, and as another book opens (request 61 of stage 3, the
+    user's word of 2026-11-19: "כאשר נפתח רשימת הספרים - תפתח על הספר שהפוקוס עליו"): after the scroll is restored, a
+    `LaunchedEffect` on the open book (`navigationState.selectedBook`, none in the search's filter, which passes
+    `selectedBookIdOverride`) calls `revealItem` on its row, which scrolls only when the row is out of view, so a book
+    clicked in the tree leaves the list where it is.
   - Each with a comment marked "Pardes:", and their imports.
 - **Why:** request 47 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מקשים בעץ הספרים, איך מקובל בעורכי קוד": the tree had
   no keys at all, only its pane's search. Code editors' trees (IntelliJ's project view, VS Code's explorer) move a row
@@ -2017,7 +2063,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +397 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +400 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 364 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -2086,7 +2132,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     under a comment after them, the find results pane (request 55 of stage 3): `find_results_pane` (its title),
     `…_toggle` (the find bar's button), `…_none`, `…_count`, `…_pages_count` (a PDF book's) and `…_by_meaning`; and
     under a comment after them, a find
-    in a PDF book (request 48 of stage 3): `pdf_find_no_text` (a scan with no text layer has nothing to find).
+    in a PDF book (request 48 of stage 3): `pdf_find_no_text` (a scan with no text layer has nothing to find). After
+    Zayit's wallpaper strings, under a comment: `settings_show_home_logo` and its description (request 67 of stage 3).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -3660,6 +3707,18 @@ and an outline round them. The split is shown while one of the two is selected a
 - **Follows:** Zayit's `FindInPageBar` (its frame, its divider, its row's height and alignment).
 - **Tests:** tried in the app (a split's half narrowed to about 150 px: the counter and the field in one row, the five
   actions under them; the other half, about 460 px, in one row with every action).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/HomeLogoCard.kt`
+
+- **Feature:** The Home's big name shown or hidden.
+- **Size:** 31 lines.
+- **What:** `HomeLogoSettings` ("home_logo": `shown`, on by default), and `HomeLogoCard()`, Settings › תצוגה's card for
+  it ("הצג את השם הגדול בדף הבית"), a `SettingCard` as the wallpaper's. The user asked on 2026-11-19 (request 67): "אפשרות
+  בהגדרות תצוגה להסתיר את הכיתוב הגדול של פרדס בדף הבית".
+- **Reached from:** `DisplaySettingsScreen.kt` (the card), `HomeView.kt` (`HomeBody`'s logo), `AppSettings.kt` (the
+  backup's keys).
+- **Follows:** Zayit's typed settings (`SettingsGroup`) and its `SettingCard`, as Pardes's `OpenSiddurCard`.
+- **Tests:** tried in the app.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabSplitsTest.kt`
 

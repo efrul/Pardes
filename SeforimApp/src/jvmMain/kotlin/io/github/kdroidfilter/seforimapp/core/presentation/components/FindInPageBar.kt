@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.core.presentation.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -29,6 +31,8 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -150,7 +154,16 @@ fun FindInPageBar(
                 fontSize = 12.sp,
                 textAlign = TextAlign.End,
                 maxLines = 1,
-                modifier = Modifier.widthIn(min = COUNTER_MIN_WIDTH),
+                modifier =
+                    Modifier
+                        .widthIn(min = COUNTER_MIN_WIDTH)
+                        // Pardes: its blank beside the field is the field's, a click there putting the caret at the
+                        // query's end (request 68 of stage 3: "נגיעה בשמאל יותר לא משפיעה")
+                        .pointerHoverIcon(PointerIcon.Text)
+                        .clickable(interactionSource = null, indication = null) {
+                            focusRequester.requestFocus()
+                            state.edit { placeCursorAtEnd() }
+                        },
             )
         }
     }

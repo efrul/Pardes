@@ -9,6 +9,7 @@ import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.IntUiThemes
 import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoSettings
 import io.github.kdroidfilter.seforimapp.features.siddur.OpenSiddurSwitch
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
@@ -891,6 +892,8 @@ class AppSettings(
                 KEY_ACCENT_COLOR,
                 KEY_HOME_WIDGETS_LAYOUT,
                 KEY_SHOW_HOME_WALLPAPER,
+                // Pardes: the Home's big name, as its wallpaper (request 67 of stage 3)
+                HomeLogoSettings.shown.key,
                 KEY_COMPACT_MODE,
             )
 

@@ -170,6 +170,14 @@ fun CategoryBookTreeView(
         currentOnCategoryRevealComplete()
     }
 
+    // Pardes: the open book's row brought into view as the tree opens, and as another book opens, as the contents keeps
+    // its entry in view (request 61 of stage 3); a row in view stays where it is (a book clicked in the tree)
+    val openBookId = navigationState.selectedBook?.id?.takeIf { selectedBookIdOverride == null }
+    val openBookRow = openBookId?.let { id -> treeItems.indexOfFirst { it.id == "book_$id" } } ?: -1
+    LaunchedEffect(openBookId, openBookRow >= 0, hasRestored) {
+        if (hasRestored && openBookRow >= 0) listState.revealItem(openBookRow)
+    }
+
     /* ---------------------------------------------------------------------
      * UI.
      * -------------------------------------------------------------------- */

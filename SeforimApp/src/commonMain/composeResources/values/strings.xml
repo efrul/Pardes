@@ -725,6 +725,9 @@
     <string name="settings_error_reporting_description">כאשר אפשרות זו מופעלת, נשלח דיווח טכני אנונימי במקרה של שגיאה או קריסה: פרטי השגיאה, גרסת האפליקציה ומערכת ההפעלה. הדיווח אינו כולל כתובת IP, שם מחשב או שם משתמש, ולא את תוכן הלימוד, החיפושים או ההערות שלכם.</string>
     <string name="settings_show_home_wallpaper">הצג תמונת רקע בדף הבית</string>
     <string name="settings_show_home_wallpaper_description">כאשר אפשרות זו מופעלת, יוצג נוף של כרם זיתים כרקע דקורטיבי בדף הבית.</string>
+    <!-- Pardes: the Home's big name shown or hidden (request 67 of stage 3) -->
+    <string name="settings_show_home_logo">הצג את השם הגדול בדף הבית</string>
+    <string name="settings_show_home_logo_description">כאשר אפשרות זו מופעלת, השם הגדול של היישום מוצג מעל שורת החיפוש בדף הבית. כשהיא כבויה, שורת החיפוש עולה למעלה.</string>
     <string name="settings_compact_mode">מצב קומפקטי לסרגל הצדדי</string>
     <string name="settings_compact_mode_description">כאשר אפשרות זו מופעלת, הסרגלים הצדדיים יוצגו בצורה צפופה יותר: האייקונים יהיו קטנים יותר והטקסט שמתחת לאייקונים לא יוצג.</string>
     <string name="settings_max_commentators_per_page">מספר מרבי של מפרשים בעמוד</string>
