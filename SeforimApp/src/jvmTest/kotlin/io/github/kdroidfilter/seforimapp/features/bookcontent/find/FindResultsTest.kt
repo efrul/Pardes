@@ -1,6 +1,11 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.find
 
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookFindMatches
+import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
+import io.github.kdroidfilter.seforimlibrary.search.TextHighlights
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -68,5 +73,24 @@ class FindResultsTest {
             assertEquals("a" to 7, asked.await())
             hub.publish("a", null)
             assertNull(hub.found.value["a"])
+        }
+
+    @Test
+    fun `a line found by meaning shows the passage the search highlights in it, bold`() =
+        runBlocking {
+            val engine = mockk<SearchEngine>()
+            val text = "אמר רבי יוחנן כך"
+            val passage = listOf(4..12)
+            coEvery { engine.highlights(listOf(text), "שאלה") } returns listOf(TextHighlights(passage, byMeaning = true))
+            every { engine.rangeSnippet(text, passage, any(), any()) } returns "אמר <b>רבי יוחנן</b> כך"
+            assertEquals("אמר <b>רבי יוחנן</b> כך", meaningSnippet(engine, "<p>אמר   רבי יוחנן כך</p>", "שאלה"))
+        }
+
+    @Test
+    fun `a line the search highlights nothing in shows its start`() =
+        runBlocking {
+            val engine = mockk<SearchEngine>()
+            coEvery { engine.highlights(any(), any()) } returns listOf(TextHighlights(emptyList()))
+            assertEquals("אמר רבי יוחנן", meaningSnippet(engine, "אמר רבי יוחנן", "שאלה"))
         }
 }
