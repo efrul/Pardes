@@ -176,7 +176,8 @@ fun TabsContent() {
             key(saveableKey) {
                 saveableStateHolder.SaveableStateProvider(saveableKey) {
                     val tabOwner = session.ownerOf(tabId)
-                    CompositionLocalProvider(LocalTabSelected provides isSelected) {
+                    // Pardes: the tab beside the selected one is on screen too (request 59 of stage 3)
+                    CompositionLocalProvider(LocalTabSelected provides isSelected, LocalTabShown provides (isSelected || half != null)) {
                         Box(
                             modifier =
                                 Modifier

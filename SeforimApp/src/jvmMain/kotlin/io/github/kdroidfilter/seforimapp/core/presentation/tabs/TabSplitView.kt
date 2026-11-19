@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,13 @@ import kotlin.math.roundToInt
 // Pardes (request 59 of docs/DESKTOP_STAGE3_PLAN.md, the user's choice of 2026-11-18: Chrome's split view): a
 // window's two tabs side by side, their texts each in its half, a grip between them that moves the split, a press in
 // the half not selected selecting it; in the strip, the two joined as one.
+
+/**
+ * Whether the tab drawn here is on screen: the tab selected, or the one beside it in a split shown. What is drawn only
+ * while on screen (a PDF book's pages, a tractate's scan) asks this rather than `LocalTabSelected`, which the tab
+ * beside the selected one is not: its focus and its popups stay the selected tab's.
+ */
+val LocalTabShown = compositionLocalOf { true }
 
 /** The split of this window shown now: its pair, while one of the two is the tab selected; null otherwise. */
 fun OpenWindow.shownSplit(): TabSplit? {

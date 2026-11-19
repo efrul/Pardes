@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import dev.nucleusframework.pdfium.rememberPdfReaderState
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
-import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
+import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabShown
 import io.github.kdroidfilter.seforimapp.features.pdf.PAGES_CACHE_BYTES
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfPageList
 import io.github.kdroidfilter.seforimapp.features.pdf.firstPageOf
@@ -174,7 +174,7 @@ internal fun DafScanReader(
                     modifier = Modifier.align(Alignment.Center),
                 )
             is ScanLoad.Found -> {
-                if (LocalTabSelected.current) ScanPages(state.source, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
+                if (LocalTabShown.current) ScanPages(state.source, book, place, zoom, lineId, scrollToLineTimestamp, onScroll)
             }
         }
     }
