@@ -1392,7 +1392,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +320 −53 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +343 −60 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
@@ -1423,9 +1423,10 @@ The entries of this section by kind:
     other books among the bar's books (`barBookSuggestions`, with a comment marked "Pardes:"), so that `catBookRows`
     puts one before the library's not named exactly (request 54). Such a book's row offers Enter only, with no text to
     search in, and Tab on it opens it (`onPickBook`), with comments marked "Pardes:"; two imports.
-  - The home page's bar, in its box of `homeContentModifier` as Zayit has it, is centered by `BarWithSearchMode` in
-    place of the box that centered it: under the logo as before, the next searches exact, general or hybrid beside it
-    (request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), with a comment marked "Pardes:" and its import.
+  - `UnifiedSearchBar` and `SearchBar` take `trailing`, put at the field's end after its clear button, the two in a
+    row (the clear button's lines indented once): the search by meaning's toggle (request 54 of
+    `docs/DESKTOP_STAGE3_PLAN.md`); the home page's bar is given `NextSearchModeSwitch`. Each with a comment marked
+    "Pardes:", and its import.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -1750,7 +1751,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +464 −54 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
+- **Change:** modified, +463 −54 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -1783,10 +1784,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     lines found by meaning alone that order leaves out.
   - **Search modes** (request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), with comments marked "Pardes:": the engine
     `CatalogOrderEngine` lists is `SearchModeEngine(engine, ::searchMode)`; `searchMode()`, the tab's saved mode, else
-    the next searches' (`defaultSearchMode`, hybrid only with the search by meaning installed: `meaningInstalled`,
+    a new search's (`defaultSearchMode`, hybrid only with the search by meaning installed: `meaningInstalled`,
     `InstalledPack`, read once); `SearchUiState.searchMode`, restored with the tab; the event `SetSearchMode`, which
-    makes it the next searches' mode too (`SearchModeSettings.last`), saves it with the tab and searches again; and
-    `executeSearch` keeps with the tab the mode it searched in.
+    saves it with the tab alone and searches again; and `executeSearch` keeps with the tab the mode it searched in, a
+    new tab's taken from the home page's choice or the default (`takeSearchMode`).
   - **Search speed:** the results' tree takes its books from the catalog (`BuildSearchTreeUseCase(repository,
     libraryCategories::books)`); and the flow that builds a tree from the first results no longer sets it once the
     facets' tree is in (`if (!facetsComputed)` in its `collect`): one finished late replaced the full tree with
@@ -1836,9 +1837,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     is listed (`flattenResults`' `oneBook` is `everyPassage`: no "more in this book" link, a book's lines stand
     together).
   - Search modes (request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), each with a comment marked "Pardes:" and their
-    imports: `SearchShellActions` gains `onSearchModeChange`; beside the bar, after it in its row, `SearchModeSwitch`
-    with the tab's `state.searchMode`; `PassagePreview` takes `mode`, and marks its words with the app's engine in that
-    mode (`SearchModeEngine`): exact its phrase alone, and none by meaning but in hybrid.
+    imports: `SearchShellActions` gains `onSearchModeChange`; the bar's `trailing` is `SearchModeSwitch` with the tab's
+    `state.searchMode`; `PassagePreview` takes `mode`, and marks its words with the app's engine in that mode
+    (`SearchModeEngine`): none by meaning but in hybrid.
   - The list's keys take Home, End, Page Up and Page Down besides its arrows (`listMove`, `pageRows`, the book tree's,
     request 47 of `docs/DESKTOP_STAGE3_PLAN.md`), in place of the branch that let any other key go, with a comment
     marked "Pardes:" and two imports.
@@ -1965,8 +1966,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +402 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 370 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +396 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 364 Hebrew strings added in twenty-one blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2029,8 +2030,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     tab's menu (request 59 of stage 3): `tab_split_beside` ("הצגה לצד הלשונית הנוכחית"), `tab_split_new` and
     `tab_split_end`; and under a comment after them, the pages in the dark
     theme's colours: `page_colors_original` ("צבעים מקוריים") and its tooltip (request 42 of stage 3); and under a comment
-    after them, the search modes (request 54 of stage 3): `search_mode_exact`, `…_general` and `…_hybrid` ("מדויק",
-    "כללי", "היברידי"), each one's tooltip, and `search_mode_hybrid_missing` (the search by meaning not installed); and
+    after them, the search by meaning's toggle at the search bar's end (request 54 of stage 3):
+    `search_mode_hybrid_missing` (the search by meaning not installed; its tooltip on is the find bar's own); and
     under a comment after them, the find results pane (request 55 of stage 3): `find_results_pane` (its title),
     `…_toggle` (the find bar's button), `…_none`, `…_count` and `…_by_meaning`; and under a comment after them, a find
     in a PDF book (request 48 of stage 3): `pdf_find_no_text` (a scan with no text layer has nothing to find).
@@ -4609,64 +4610,63 @@ pointer zooms themselves. Hooks: none in Zayit's files; in Pardes's `PdfPageList
 
 ### Search modes
 
-Request 54 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): a search exact, general or hybrid, as the user decided: "מדויק
-מרכאות, כללי - חיפוש רחב אבל לא סמנטי, היברידי - כמו היום". Three buttons in the search bar's row (the design's variant
-ב), on the home page (the next searches' mode) and over a tab's results (its own, which becomes the next searches'
-too); hybrid, the search as it was, only with the search by meaning installed, the default then, general otherwise.
-The engine is wrapped as the library's order wraps it, the library's `SearchEngine` untouched. Hooks:
-`SearchResultViewModel.kt`, `SearchResultScreen.kt`, `TabsContent.kt`, `HomeView.kt`, `SessionModels.kt`,
-`strings.xml`.
+Request 54 of `docs/DESKTOP_STAGE3_PLAN.md`: a search by its words alone or by meaning too. On 2026-11-18 the user
+decided three modes ("מדויק מרכאות, כללי - חיפוש רחב אבל לא סמנטי, היברידי - כמו היום"); on 2026-11-19, "תוריד את מדויק,
+והעיצוב יתבסס על המצבים הקיימים בחיפוש בתוך ספר שכבר יש שם את זה" and "ברירת מחדל תהיה עם סמנטי". So the search bar ends
+with the in-book find's own toggle of its smart find: lit, the search by meaning too (hybrid, the search as it was);
+off, the words alone (general). A new search is by meaning wherever the search by meaning is installed; the home
+page's toggle chooses for the next search, which takes it once; a tab's toggle is its own, kept with it. The engine
+is wrapped as the library's order wraps it, the library's `SearchEngine` untouched. Hooks: `SearchResultViewModel.kt`,
+`SearchResultScreen.kt`, `TabsContent.kt`, `HomeView.kt`, `SessionModels.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/SearchModes.kt`
 
 - **Feature:** Search modes.
-- **Size:** 164 lines.
+- **Size:** 114 lines.
 - **What:** `SearchMode` (`EXACT`, `GENERAL`, `HYBRID`, serializable, kept in a tab's saved state by its place: new
-  modes go last), `SearchModeSettings` ("search_mode": `last`, the mode chosen last, none until one is) and
-  `AppSettings.defaultSearchMode(meaning)` (that one, else hybrid with the search by meaning installed and general
-  without it). `SearchModeEngine(engine, mode)`: the engine searched in the mode of each search, its sessions, facets,
-  snippets and marks: exact, its search of the words (`WordsEngine.words`) through the private `QuotedEngine`, which
-  searches, marks and cuts every text as exact phrases (`LongQuerySearchEngine.asQuote`, a quote typed kept) and marks
-  nothing by meaning; general, that search as it is; hybrid, the engine itself. Its own `words` are the mode's, for a
-  list in the library's order.
-- **Reached from:** `SearchResultViewModel.kt` (the engine searched), `SearchResultScreen.kt` (the passage's marks),
-  `SessionModels.kt` (`SearchPersistedState.searchMode`), `SearchModeSwitch.kt`.
-- **Follows:** Pardes's `CatalogOrderEngine` (an engine wrapped by delegation, read again at each search) and
-  `LongQuerySearchEngine` (the query as exact phrases); Zayit's typed settings (`SettingsGroup`, `enumOrNull`).
+  modes go last; `EXACT` no longer offered, kept for its place, which tabs saved by the first testers' build of stage
+  3 hold, and searched as general), `SearchModeSettings` ("search_mode": `last`, the mode the home page's toggle chose
+  for the next search), `AppSettings.defaultSearchMode(meaning)` (that one, else hybrid with the search by meaning
+  installed and general without it; never hybrid without it) and `takeSearchMode(meaning)` (the default, the home
+  page's choice taken: the searches after it are by meaning again). `SearchModeEngine(engine, mode)`: the engine
+  searched in the mode of each search, its sessions, facets, snippets and marks: hybrid, the engine itself; otherwise
+  its search of the words (`WordsEngine.words`, the engine itself when it has no other). Its own `words` are that
+  search of the words, for a list in the library's order.
+- **Reached from:** `SearchResultViewModel.kt` (the engine searched, a new search's mode), `SearchResultScreen.kt` (the
+  passage's marks), `SessionModels.kt` (`SearchPersistedState.searchMode`), `SearchModeSwitch.kt`.
+- **Follows:** Pardes's `CatalogOrderEngine` (an engine wrapped by delegation, read again at each search); Zayit's
+  typed settings (`SettingsGroup`, `enumOrNull`).
 - **Tests:** `SearchModesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchModeSwitch.kt`
 
 - **Feature:** Search modes.
-- **Size:** 216 lines.
-- **What:** `SearchModeSwitch(selected, onSelect, modifier)`: the three modes, "מדויק", "כללי", "היברידי", in one pill
-  as the search bar is drawn (its height, 40 dp, its background and border from the theme's text field, round ends),
-  the one chosen marked as the results' category tabs mark theirs (the accent's tint, border and text), a mode hovered
-  tinted, each a radio button of the group (`selectable`) explained in its tooltip (an experimental `Tooltip`);
-  without the search by meaning (`InstalledPack` in the library's folder, read once off the UI thread) hybrid is
-  dimmed, its tooltip says where it is installed, and it is not chosen. `NextSearchModeSwitch(modifier)`, the home
-  page's: the next searches' mode (`SearchModeSettings.last`, else the default), set by it. `BarWithSearchMode(
-  modifier, bar)`, the home page's bar centered as Zayit centers it, under the logo, the next searches' mode beside
-  it at its end, outside its width, and under it on a page too narrow for both (a `Layout`). The design is the user's
-  variant ב, refined as the user asked on 2026-11-18 ("תדייק עיצובית"), where Jewel's `SegmentedControl` stood beside
-  the bar lower than it, grey and square, and the home page's bar was pushed off the logo's middle.
-- **Reached from:** `SearchResultScreen.kt` (beside the results' bar), `HomeView.kt` (`BarWithSearchMode`, the home
-  page's bar).
-- **Follows:** Zayit's `CategoryTab` (a chip's colours, hover and hand pointer) and `rememberPillTextFieldStyle` (the
-  bar's pill), Jewel's `Tooltip`, and Pardes's settings read from `LocalAppGraph`.
-- **Tests:** tried in the app (exact chosen on the home page, ברכות השחר searched: one result, its phrase marked; the
-  tab restored exact; general chosen over the results: 101; hybrid dimmed without the pack; the pill as high as the
-  bar, the home page's bar under the logo's middle).
+- **Size:** 87 lines.
+- **What:** `SearchModeSwitch(selected, onSelect, modifier)`: the search by meaning turned on or off as the in-book
+  find turns its smart find, the find bar's own toggle (Jewel's `ToggleableIconButton`, not focusable, with
+  `MaterialSymbolsMagicButton` at 16 dp, in the accent when on and the info colour when off) and tooltip ("חיפוש חכם
+  לפי משמעות", `find_smart_mode`); on gives hybrid, off general. Without the search by meaning (`InstalledPack` in the
+  library's folder, read once off the UI thread) it is off and disabled, its tooltip saying where it is installed.
+  `NextSearchModeSwitch(modifier)`, the home page's: the next search's mode (`SearchModeSettings.last`, else the
+  default), set by it.
+- **Reached from:** `HomeView.kt` and `SearchResultScreen.kt`, at their search bar's end (`UnifiedSearchBar`'s
+  `trailing`).
+- **Follows:** Zayit's find bar (`FindInPageBar`'s smart-mode toggle, its icon, colours and tooltip), Jewel's
+  `Tooltip`, and Pardes's settings read from `LocalAppGraph`.
+- **Tests:** tried in the app (the toggle at the home page's bar's end and over the results; disabled without the
+  pack, its tooltip saying where it is installed).
+- **Notes:** first drawn as Jewel's segmented control of three modes beside the bar (2026-11-18), then as a pill of
+  them as high as the bar ("תדייק עיצובית"), then as this toggle (2026-11-19).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/SearchModesTest.kt`
 
 - **Feature:** Search modes.
-- **Size:** 142 lines.
+- **Size:** 145 lines.
 - **What:** with a recording engine and its search of the words: hybrid asks the engine itself, general its words,
-  each the text as typed; exact asks its words the text as exact phrases (a quote typed kept) and marks no meaning;
-  the words a list in the library's order reads are the mode's; the next searches' mode, the one chosen last, else
-  hybrid or general by the search by meaning; a tab's mode kept in its ProtoBuf state, and one saved before it with
-  none.
+  each the text as typed; a tab saved exact by a testers' build searches as general and marks no meaning; the words a
+  list in the library's order reads are the search of the words in either mode; a new search by meaning where it is
+  installed, the home page's choice taken once, and no hybrid without the pack; a tab's mode kept in its ProtoBuf
+  state, and one saved before it with none.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests of the engines beside it (`CatalogOrderSessionTest`) and `SessionModelsTest` (ProtoBuf).
 - **Tests:** it is one (unit).
