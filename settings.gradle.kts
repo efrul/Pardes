@@ -90,7 +90,7 @@ dependencyResolutionManagement {
         // in the repository until upstream has it; every other Nucleus module is the release's. See nucleus-fork/README.md.
         exclusiveContent {
             forRepository { maven(rootDir.resolve("nucleus-fork/maven")) { name = "NucleusFork" } }
-            filter { includeVersion("dev.nucleusframework", "nucleus.decorated-window-tao", "3.0.0-dev-202610272317-2-tearoff") }
+            filter { includeVersion("dev.nucleusframework", "nucleus.decorated-window-tao", "3.0.0-dev-202611011507-2-tearoff") }
         }
         mavenLocal()
         google {
