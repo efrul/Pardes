@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (310 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (311 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -4317,7 +4317,7 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScans.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 237 lines.
+- **Size:** 252 lines.
 - **What:** `DafScanSettings`, a `SettingsGroup` of Zayit's kind ("daf_scans"): `folder`, the folder of scanned
   tractates the user chose (a path, null for none; not portable, a folder of this computer), `cut`, whether scans
   are cut into images (request 51 of stage 3: "החיתוך של הגמרא לתמונות יהיה אפשרות שצריך להפעיל"), null until the
@@ -4338,7 +4338,10 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   else Otzaria's, its folders read once a start: in a file of the folder, the tractate at the page the user set, else
   at the one the tractates named before it in the file's name give, from the page set for the nearest of them,
   `firstByName`; in a file of several tractates, its pages only), `byBookmarks` (the page of daf ב. by the file's
-  bookmarks, `firstByBookmarks`, once PDFium is loaded, when the user set none) and `otzariaFolders`; a test gives its
+  bookmarks, `firstByBookmarks`, once PDFium is loaded, when the user set none; read once a file as it is, its path,
+  size and time, `bookmarked`, `NO_BOOKMARK` for none, and a read that failed not kept: before, each time a scan was
+  shown again, where a failed read moved its pages, request 60 of the list after the third testers' build) and
+  `otzariaFolders`; a test gives its
   own data folders (`otzariaRoots`). Until 2026-11-13 a file was linked to
   each tractate (table `daf_scan`, `DafScans.sq`): the user moved the choice to the settings, as a folder (request 48),
   and the table is left in their user DB, unread.
@@ -4426,6 +4429,18 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   repository.
 - **Tests:** it is one (unit).
 
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/ScanPlaceTest.kt`
+
+- **Feature:** The scan of the page in the daf view.
+- **Size:** 85 lines.
+- **What:** request 60 of the list after the third testers' build: the scan's list kept for the rows it was made of
+  and made anew for others (two pages a row); the tab's line followed once, not again when asked before, nor when it
+  is the scan's place, nor none; and, composed (`runDesktopComposeUiTest`), a list of twenty pages taken to the sixth
+  as the contents take it (`bringToTop`), hidden as a tab left, and shown again at the sixth, the same list, the line
+  not followed again.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names) and its UI tests (`DafLayoutsCardUiTest`).
+- **Tests:** it is one (unit and UI).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafScansCard.kt`
 
 - **Feature:** The scan of the page in the daf view.
@@ -4463,7 +4478,7 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 552 lines.
+- **Size:** 601 lines.
 - **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
   control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
   daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
@@ -4477,7 +4492,17 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   400 ms) and as the view leaves when they moved since (`ToldLine`), as a PDF book tells its place: the table of
   contents' jump is not a scroll in progress, and was not told, so a tab left and come back to went back to the amud read
   before it (request 60 of `docs/DESKTOP_STAGE3_PLAN.md`). The page read at the top is kept
-  (`ScanPlace.page`), so the rows changing reopen the list there. It looks for the scan again when the folder of scans
+  (`ScanPlace.page`), so the rows changing reopen the list there. The user found the place lost again after the third
+  testers' build (request 60 of the next list): the scan was the only reading view whose list did not live as long as
+  its tab, and a line chosen in the contents while the first line of each amud was still read again (the tab just
+  shown) was taken for the amud the scan opened at, and never told. Now `ScanPlace` (internal, for its test) keeps, as
+  the daf keeps its list, the list itself (`listFor`, by what its rows are made of: the file, the tractate's first page
+  in it, its pages, two a row or one; `ScanList`'s `madeOf`), so the tab shown again shows the scan at the row and
+  offset it was left at, `rememberPlaced` not looking for its page then (`keepsList`); the first line of each amud
+  (`amudLines`, a snapshot state read once a tractate by `DafScanReader`); and the tab's line it followed last
+  (`follow`, from the line and time it opened at): `FollowTheTab` follows each line once, not again when the tab is
+  shown again, brings its page to the top (`bringToTop`, as the contents open an amud, where `reveal` left a page in
+  view where it was) and makes it the scan's place at once. It looks for the scan again when the folder of scans
   changes. Without a scan, a word on where it is looked for and a button that chooses the folder of scans
   (`pickScansFolder`, FileKit's directory picker off the event loop, `DafScans.setFolder`), as the settings do; the line
   over a scan's foot that changed its file is gone, moved to Settings › צורת הדף as a folder (request 48). Only the tab
@@ -4500,11 +4525,13 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 - **Reached from:** `BookContentView.kt` (a `DafMode` of the scan, request 46).
 - **Follows:** `DafView`'s seams with the text view (`DafControl`, `openAt`, `onScroll`) and its titles and widths, and
   Pardes's `PdfPageList` and `ScanPageList` for the pages.
-- **Tests:** `DafScansTest` (the pages and amudim), `PdfPageListTest` (the rows); tried in the app (Berakhot from a
+- **Tests:** `DafScansTest` (the pages and amudim), `PdfPageListTest` (the rows), `ScanPlaceTest` (the list kept, a line
+  followed once, the scan shown again where the contents took it); tried in the app (Berakhot from a
   sample Otzaria from the text and from the daf, two pages, back to the text at its amud; Shabbat, which has no daf's
   layout, with no scan; request 56: Berakhot's first switch, its pages cut in some five seconds, the next switches
   drawn at once, two pages, Berakhot 50a first when its cut was removed; request 60: Berakhot 9a picked in the contents,
-  another tab, and back at 9a; request 51: the question as a scan first opened, Berakhot drawn from its file when
+  another tab, and back at 9a; request 60 of the next list: Berakhot 18a picked in the contents and another tab within
+  0.2 s, back at 18a, and the middle of 15b scrolled to, another tab, and back at the same height; request 51: the question as a scan first opened, Berakhot drawn from its file when
   it was answered no; requests 43 and 52: "03 ברכות.pdf" found, and a file named "18 - עבודה זרה הוריות עדיות מורחב -
   מחובר.pdf", two title pages, עבודה זרה and הוריות, cut and drawn from the file: עבודה זרה at the file's first page
   until the page titled ג., its daf ב., was set as such, הוריות then at its daf ב. by the page set, and set again from

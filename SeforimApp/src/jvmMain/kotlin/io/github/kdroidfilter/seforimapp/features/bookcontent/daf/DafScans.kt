@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 // Pardes (requests 41 and 48 of docs/DESKTOP_STAGE2.md): the scan of a tractate's pages, beside the text and the daf
 // Pardes draws, "גם כי יש כאלה שמעדיפים מקור וגם להשוואה בקלות". Its sources, as the user decided on 2026-11-13: a
@@ -215,9 +216,20 @@ class DafScans(
         tractate: String,
     ): ScanSource {
         if (!source.personal || source.firstSet) return source
-        val outline = runSuspendCatching { PdfOutlines.read(source.file) }.getOrDefault(emptyList())
-        return firstByBookmarks(tractate, outline, alone = source.fit != ScanFit.JOINED)?.let { source.copy(first = it) } ?: source
+        val file = source.file
+        // Pardes: read once a file as it is, not each time its scan is shown again, where a read that failed moved its
+        // pages (request 60 of the list after the third testers' build); a failed read is not kept
+        val key = "${file.path}|${file.length()}|${file.lastModified()}|$tractate|${source.fit}"
+        val first =
+            bookmarked[key] ?: run {
+                val outline = runSuspendCatching { PdfOutlines.read(file) }.getOrNull() ?: return source
+                (firstByBookmarks(tractate, outline, alone = source.fit != ScanFit.JOINED) ?: NO_BOOKMARK).also { bookmarked[key] = it }
+            }
+        return if (first == NO_BOOKMARK) source else source.copy(first = first)
     }
+
+    // The page each file's bookmarks give a tractate, by the file as it is and the tractate; NO_BOOKMARK for none
+    private val bookmarked = ConcurrentHashMap<String, Int>()
 
     // The Talmud's tractates, the books of its orders by title, read once they are found
     private var bavliBooks: Map<String, Long>? = null
@@ -235,3 +247,6 @@ class DafScans(
     /** Otzaria's Bavli folders found on this computer. */
     suspend fun otzariaFolders(): List<File> = withContext(Dispatchers.IO) { bavli }
 }
+
+// A file whose bookmarks give the tractate no page, as DafScans.byBookmarks keeps it
+private const val NO_BOOKMARK = -1
