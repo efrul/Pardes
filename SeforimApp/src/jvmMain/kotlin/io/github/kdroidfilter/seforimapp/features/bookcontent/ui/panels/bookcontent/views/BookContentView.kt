@@ -686,16 +686,20 @@ fun BookContentView(
     // Pardes: on the daf, the comments of Rashi and Tosafot printed on it found too, in the daf's order (stage 3)
     val dafFound by rememberDafFound(
         textFindResults.matches,
-        textFindResults.query.takeUnless { textFindResults.smart },
+        textFindResults.query,
+        textFindResults.smart,
         dafControl.printed.takeIf { daf != null },
         appGraph.repository,
+        appGraph.searchEngine,
     )
     val findResults by remember {
         derivedStateOf {
             val text = textFindResults
-            dafFound?.takeIf { it.gemara === text.matches }?.let { FindResults(text.query, false, text.bookId, it.matches) } ?: text
+            dafFound?.takeIf { it.gemara === text.matches }?.let { FindResults(text.query, text.smart, text.bookId, it.matches) } ?: text
         }
     }
+    // Pardes: the comments found by meaning, marked whole on the daf as the Gemara's lines found so are
+    val dafComments = dafFound?.takeIf { it.gemara === textFindResults.matches }?.comments.orEmpty()
 
     var currentMatch by remember(bookId) { mutableStateOf<BookFindMatches.Match?>(null) }
     // The current match while it belongs to the results shown: one kept from older results isn't
@@ -1157,7 +1161,7 @@ fun BookContentView(
                     DafFind(
                         query = persistedFindQuery.takeIf { showFind && !smartModeEnabled && it.length >= 2 },
                         current = liveMatch?.let { it.lineId to it.ordinal },
-                        lines = if (showFind && smartModeEnabled) semanticFindIds else emptySet(),
+                        lines = if (showFind && smartModeEnabled) semanticFindIds + dafComments else emptySet(),
                     ),
             )
         } else {

@@ -13,6 +13,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.find.foundLines
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookFindMatches
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
+import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
@@ -34,33 +35,46 @@ class DafPrinted(
     val books: Set<Long> = emptySet(),
 )
 
-/** The find's matches in the Gemara ([gemara]), and those with the comments printed on the daf ([matches]). */
+/**
+ * The find's matches in the Gemara ([gemara]), those with the comments printed on the daf ([matches]), and the comments
+ * found ([comments]: by meaning, the daf marks them whole, as it marks the Gemara's lines found so).
+ */
 @Immutable
 class DafFound(
     val gemara: BookFindMatches,
     val matches: BookFindMatches,
+    val comments: Set<Long> = emptySet(),
 )
 
 /**
- * The find's matches of [query] in the Gemara ([gemara]) with those in the comments [printed] on the daf
- * ([withComments], their lines read from [repository]), worked out off the UI thread; null when the daf is not shown ([printed] null), for the smart mode
- * ([query] null), and until they are. The comments' text is read once a tractate.
+ * The find's matches of [query] in the Gemara ([gemara]) with those in the comments [printed] on the daf, worked out
+ * off the UI thread: by its words ([withComments], the lines read from [repository], their text once a tractate), or
+ * by meaning ([smart], the user's question of 2026-11-19 "למה?": [withMeaningComments], each commentary's lines that
+ * [searchEngine] finds, as the Gemara's). Null when the daf is not shown ([printed] null), and until they are.
  */
 @Composable
 fun rememberDafFound(
     gemara: BookFindMatches,
-    query: String?,
+    query: String,
+    smart: Boolean,
     printed: DafPrinted?,
     repository: SeforimRepository,
+    searchEngine: SearchEngine,
 ): State<DafFound?> {
     // Read by one search at a time, but a search dropped for the next may still be writing
     val texts = remember(printed) { ConcurrentHashMap<Long, String>() }
-    return produceState<DafFound?>(null, gemara, query, printed) {
+    return produceState<DafFound?>(null, gemara, query, smart, printed) {
         value =
-            if (printed == null || query == null) {
+            if (printed == null) {
                 null
             } else {
-                runSuspendCatching { DafFound(gemara, withComments(gemara, printed, query, texts, repository::getLinesByIds)) }.getOrNull()
+                runSuspendCatching {
+                    if (smart) {
+                        withMeaningComments(gemara, printed, query) { book -> searchEngine.semanticFind(query, book, MEANING_LIMIT) }
+                    } else {
+                        DafFound(gemara, withComments(gemara, printed, query, texts, repository::getLinesByIds))
+                    }
+                }.getOrNull()
             }
     }
 }
@@ -88,24 +102,55 @@ internal suspend fun withComments(
         val lines = loadLines(chunk)
         withContext(Dispatchers.Default) { for (line in lines) texts[line.id] = plainTextFromHtml(line.content) }
     }
+    val counts =
+        withContext(Dispatchers.Default) {
+            ids.mapNotNull { id -> texts[id]?.let { findAllMatchesNormalized(it, q).size }?.takeIf { it > 0 }?.let { id to it } }
+        }
+    return inDafOrder(gemara, counts, printed)
+}
+
+/**
+ * The Gemara's lines found by meaning ([gemara]) with each commentary's lines on the daf that [findByMeaning] finds
+ * (the search by meaning of one book, as the Gemara's: its words fused with the lines closest in meaning), in the
+ * daf's order as [withComments] puts them, each once.
+ */
+internal suspend fun withMeaningComments(
+    gemara: BookFindMatches,
+    printed: DafPrinted,
+    query: String,
+    findByMeaning: suspend (bookId: Long) -> List<Long>,
+): DafFound {
+    if (normalizeQueryForHebrew(query).length < MIN_QUERY) return DafFound(gemara, gemara)
+    val printedComments =
+        printed.comments.values
+            .flatten()
+            .toSet()
+    val found =
+        printed.books
+            .flatMap { findByMeaning(it) }
+            .filter { it in printedComments }
+            .distinct()
+    return DafFound(gemara, inDafOrder(gemara, found.map { it to 1 }, printed), found.toSet())
+}
+
+// The Gemara's matches and the comments' ([comments], each with its count), as the daf is read: amud by amud, the
+// Gemara's, then Rashi's, then Tosafot's, each from its top down; their line indices their places in that order
+private fun inDafOrder(
+    gemara: BookFindMatches,
+    comments: List<Pair<Long, Int>>,
+    printed: DafPrinted,
+): BookFindMatches {
     val column =
         printed.comments.entries
-            .flatMap { (name, comments) -> comments.map { it to columnRank(name) } }
+            .flatMap { (name, ids) -> ids.map { it to columnRank(name) } }
             .toMap()
+    val lines = gemara.foundLines().map { Found(it.lineId, it.count, 0, it.lineIndex) }
     val found =
-        withContext(Dispatchers.Default) {
-            val lines = gemara.foundLines().map { Found(it.lineId, it.count, 0, it.lineIndex) }
-            val comments =
-                ids.mapNotNull { id ->
-                    val count = texts[id]?.let { findAllMatchesNormalized(it, q).size } ?: 0
-                    if (count > 0) Found(id, count, column[id] ?: COMMENT, Int.MAX_VALUE) else null
-                }
-            (lines + comments).sortedWith(
-                compareBy<Found>({ printed.places[it.lineId]?.first ?: Int.MAX_VALUE }, { it.column })
-                    .thenBy { printed.places[it.lineId]?.second ?: Float.MAX_VALUE }
-                    .thenBy { it.lineIndex },
-            )
-        }
+        (lines + comments.map { (id, count) -> Found(id, count, column[id] ?: COMMENT, Int.MAX_VALUE) }).sortedWith(
+            compareBy<Found>({ printed.places[it.lineId]?.first ?: Int.MAX_VALUE }, { it.column })
+                .thenBy { printed.places[it.lineId]?.second ?: Float.MAX_VALUE }
+                .thenBy { it.lineIndex },
+        )
     val firstOccurrence = IntArray(found.size + 1)
     found.forEachIndexed { i, line -> firstOccurrence[i + 1] = firstOccurrence[i] + line.count }
     return BookFindMatches(
@@ -141,3 +186,6 @@ private const val MIN_QUERY = 2
 
 // The comments read at a time, as the find reads the Gemara's lines
 private const val CHUNK = 500
+
+// A commentary's lines found by meaning, as many as the Gemara's (BookContentView's SMART_FIND_LIMIT)
+private const val MEANING_LIMIT = 60

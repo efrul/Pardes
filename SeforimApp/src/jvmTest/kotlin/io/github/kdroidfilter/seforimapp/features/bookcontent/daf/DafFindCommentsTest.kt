@@ -24,6 +24,7 @@ class DafFindCommentsTest {
                     21L to (0 to 5f),
                     22L to (1 to 30f),
                 ),
+            books = setOf(2L, 3L),
         )
     private val comments =
         listOf(
@@ -67,5 +68,17 @@ class DafFindCommentsTest {
         }
         assertEquals(listOf(21L, 22L, 11L, 12L).sorted(), asked.sorted())
         assertTrue(texts.values.none { "<b>" in it }, "kept as the text shows it")
+    }
+
+    @Test
+    fun `by meaning, each commentary's lines found on the daf come in its order too, each once`() {
+        // Rashi's book (2) finds 12 and a line the daf does not print; Tosafot's (3) finds 21
+        val found =
+            runBlocking {
+                withMeaningComments(gemara, printed, "שאלה") { book -> if (book == 2L) listOf(12L, 99L) else listOf(21L) }
+            }
+        assertEquals(listOf(1L, 21L, 3L, 12L), found.matches.foundLines().map { it.lineId })
+        assertEquals(setOf(12L, 21L), found.comments, "the comments the daf marks whole")
+        assertEquals(4, found.matches.occurrences)
     }
 }
