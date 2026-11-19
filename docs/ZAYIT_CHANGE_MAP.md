@@ -398,7 +398,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +23 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane.
+- **Change:** modified, +26 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -414,7 +414,8 @@ The entries of this section by kind:
     `abstract val dafScanPages: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanPages` (request 56),
     with a two-line comment marked "Pardes:"; and after them, with a comment of its own,
     `abstract val bookFindHub: io.github.kdroidfilter.seforimapp.features.bookcontent.find.BookFindHub` (request 55 of
-    stage 3).
+    stage 3); and after it, with a comment of its own, `abstract val paneFocusRequests:
+    io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneFocusRequests` (request 47 of stage 3).
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
@@ -1228,8 +1229,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +241 −35 lines. Feature: Commentators in their own panes, A pane at the window's edge,
-  Pane layout kept, Find results pane.
+- **Change:** modified, +254 −39 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+  Pane layout kept, Find results pane, Keys in the book tree and the contents.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
     `ReaderPane.standard`, and a `data class Commentator(name)` is a pane per split-off commentator, closed by
@@ -1261,6 +1262,11 @@ The entries of this section by kind:
     it with `FindResultsPane`; its imports.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
   anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). A pane at the window's edge: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
+  - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
+    `docs/DESKTOP_STAGE3_PLAN.md`, the user's word of 2026-11-19: "לאחר פתיחת העץ אין עדין פוקוס עליו עד שלוחצים
+    עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
+    panes the same tab's demand adds (not those of a tab switched to, nor at start), and `PaneBody` provides each
+    pane's key (`LocalPaneFocusKey`, the window's and the pane's ids) around its content, indented once.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the enum's every entry was rewritten, so any Zayit change to a pane's declaration, or a new pane,
   conflicts; `PaneSync` and `WindowPanes` are edited in their core loops.
@@ -3581,7 +3587,7 @@ list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeys.kt`
 
 - **Feature:** Keys in the book tree and the contents.
-- **Size:** 275 lines.
+- **Size:** 323 lines.
 - **What:** the pure part: `TreeNode` (a row's depth, folder and open), `TreeKey` and `treeKeyOf` (a key of the tree's,
   the arrow left going in from the right), `TreeMove` and `treeMove` (what a key does from the row the keys are on:
   a row, the ends, a page, in, out, a click), `listMove` (Home, End and the page keys of a list whose arrows are its
@@ -3590,8 +3596,11 @@ list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `
   the focus, and `shown` (the row shown as selected then); `rememberTreeKeys(selected)`, on the row selected whenever
   it changes; `Modifier.treeKeys(keys, listState, rows, onLeave)`, the focus requester, the keys in the preview pass
   (Ctrl/Cmd, Alt and Shift with them left to the window, but Ctrl/Cmd+Enter), the row revealed (`revealItem`) and a
-  press on a folder's row giving the tree the focus on that row.
-- **Reached from:** `CategoryBookTreeView.kt`, `BookTocView.kt`, `SearchResultScreen.kt`.
+  press on a folder's row giving the tree the focus on that row. `PaneFocusRequests` (`@Inject @SingleIn(AppScope)`, in
+  `AppGraph`): the panes just opened, by `LocalPaneFocusKey`, whose tree takes the keyboard's focus once drawn
+  (`rememberTreeKeys` waits for its pane's request, then a frame), as a code editor's tree does as it opens.
+- **Reached from:** `CategoryBookTreeView.kt`, `BookTocView.kt`, `SearchResultScreen.kt`, `ReaderPanes.kt`
+  (`PaneFocusRequests`, `LocalPaneFocusKey`), `AppGraph.kt`.
 - **Follows:** the search results' keys (`onPreviewKeyEvent` before `focusable`), `PaneSearch`'s `revealItem`, the
   arrows read right to left as `BreadcrumbPopup` reads them, and code editors' trees (IntelliJ, VS Code, WAI-ARIA).
 - **Tests:** `TreeKeysTest`.

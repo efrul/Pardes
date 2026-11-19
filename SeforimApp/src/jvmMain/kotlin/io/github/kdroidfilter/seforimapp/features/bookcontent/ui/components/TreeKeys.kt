@@ -12,6 +12,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -31,9 +33,16 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
+import io.github.kdroidfilter.seforimapp.framework.di.AppScope
+import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 // Pardes (request 47 of docs/DESKTOP_STAGE3_PLAN.md: "מקשים בעץ הספרים, איך מקובל בעורכי קוד"): the keys of the book
@@ -235,7 +244,10 @@ class TreeKeys internal constructor(
     }
 }
 
-/** A tree's keys, on the row [selected] (its key in the list) whenever that changes. */
+/**
+ * A tree's keys, on the row [selected] (its key in the list) whenever that changes; the tree takes the keyboard's
+ * focus once drawn when its pane was just opened ([PaneFocusRequests], by [LocalPaneFocusKey]).
+ */
 @Composable
 fun rememberTreeKeys(selected: Any?): TreeKeys {
     val scope = rememberCoroutineScope()
@@ -243,7 +255,43 @@ fun rememberTreeKeys(selected: Any?): TreeKeys {
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     SideEffect { keys.rtl = rtl }
     LaunchedEffect(keys, selected) { if (selected != null) keys.focused = selected }
+    // Only in a reader's pane, which has the graph (a test of the tree alone has neither)
+    val focusKey = LocalPaneFocusKey.current
+    if (focusKey != null) {
+        val requests = LocalAppGraph.current.paneFocusRequests
+        LaunchedEffect(keys, focusKey) {
+            requests.await(focusKey)
+            // Once the tree is laid out, its focus requester attached
+            withFrameNanos { }
+            runCatching { keys.focusRequester.requestFocus() }
+        }
+    }
     return keys
+}
+
+/** The pane a tree is drawn in, by its window and its own id ("<window>:<pane>"), for [PaneFocusRequests]; none outside one. */
+val LocalPaneFocusKey = staticCompositionLocalOf<String?> { null }
+
+/**
+ * The panes asked to give their tree the keyboard's focus once drawn: a window's book tree or contents just opened by
+ * the user (its button, Ctrl/Cmd+B), as a code editor's tree takes the focus as it opens; by "<window>:<pane>", each
+ * request once.
+ */
+@Inject
+@SingleIn(AppScope::class)
+class PaneFocusRequests {
+    private val pending = MutableStateFlow<Set<String>>(emptySet())
+
+    /** The panes of these [keys] were just opened. */
+    fun opened(keys: Collection<String>) {
+        if (keys.isNotEmpty()) pending.update { it + keys }
+    }
+
+    // Waits for a request for [key], and takes it
+    internal suspend fun await(key: String) {
+        pending.first { key in it }
+        pending.update { it - key }
+    }
 }
 
 /**

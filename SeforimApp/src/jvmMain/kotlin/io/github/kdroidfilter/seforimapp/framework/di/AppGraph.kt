@@ -75,6 +75,9 @@ abstract class AppGraph : ViewModelGraph {
 
     // Pardes: a book's find, told by its text to the results pane (request 55 of stage 3)
     abstract val bookFindHub: io.github.kdroidfilter.seforimapp.features.bookcontent.find.BookFindHub
+
+    // Pardes: the book tree or contents just opened takes the keyboard's focus (request 47 of stage 3)
+    abstract val paneFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneFocusRequests
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync
