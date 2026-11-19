@@ -181,11 +181,11 @@ sealed class ReaderPane(
     )
 
     // Every match of the book's find, under its contents' entries (request 55 of docs/DESKTOP_STAGE3_PLAN.md): while
-    // the find bar searches, sized by the dock
+    // the find bar searches, sized by the dock, on the text's right beside the contents
     data object FindResults : ReaderPane(
         "find-results",
         Res.string.find_results_pane,
-        SatellitePlacement.Docked(DockSide.Left, order = 3, extent = 320.dp),
+        SatellitePlacement.Docked(DockSide.Right, order = 1, extent = 320.dp),
         toggle = BookContentEvent.ToggleFindResults,
         navigation = false,
     )

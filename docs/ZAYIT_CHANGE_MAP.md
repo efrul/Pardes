@@ -1208,7 +1208,7 @@ The entries of this section by kind:
   - The pane layout kept: `WindowPanes` gives each pane first the place it had when its window was saved
     (`DesktopSession.savedPlacement`, on one of its `sides` or floating if it may), its sides read once into `sides`.
   - The find results pane (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`): `ReaderPane.FindResults` ("find-results",
-    docked on the left after the references, 320 dp, sized by the dock as they are, toggled by
+    docked on the text's right beside the contents, as the user asked, 320 dp, sized by the dock, toggled by
     `BookContentEvent.ToggleFindResults`), among the `standard` panes; `desiredPanes` takes `findResults` and adds it
     while the book's text is shown; `selectedTabDemand` reads it with `rememberFindResultsShown` (the setting
     `FindResultsSettings.shown`, and the tab's find bar open on a query of two letters at least); `BookPaneBody` draws
@@ -4474,7 +4474,7 @@ The engine is wrapped as the library's order wraps it, the library's `SearchEngi
 ### Find results pane
 
 Request 55 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "חיפוש בתוך ספר פתוח יפתח חלונית בצד, שמציגה את כל התוצאות
-מסודרות". A button of the find bar, or Alt+Enter, opens a pane beside the text (on the left, after the references) that
+מסודרות". A button of the find bar, or Alt+Enter, opens a pane beside the text (on its right, beside the contents: "יהיה בימין") that
 lists every match of the book's find under the entries of its table of contents, each line with its text around its
 first match and how many it has; the current match's line marked and kept in view; a line clicked gone to. One setting
 for every tab, kept; the pane shows while the find bar searches. The text keeps its find as Zayit's code holds it and
