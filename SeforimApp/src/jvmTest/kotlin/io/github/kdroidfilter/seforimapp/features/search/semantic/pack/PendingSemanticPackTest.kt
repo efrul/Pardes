@@ -180,20 +180,29 @@ class PendingSemanticPackTest {
         val to = File(root, "to")
         val pauses = mutableListOf<Long>()
         val pause: (Long) -> Unit = { pauses += it }
-        var refusals = 2
-        val inUseTwice: (File, File) -> Unit = { _, _ -> if (refusals-- > 0) throw AccessDeniedException(from.path) }
-        PendingSemanticPack.renameWaiting(from, to, inUseTwice, pause)
+        PendingSemanticPack.renameWaiting(from, to, failing(2) { AccessDeniedException(from.path) }, pause)
         assertEquals(2, pauses.size)
 
         pauses.clear()
-        val taken: (File, File) -> Unit = { _, _ -> throw FileAlreadyExistsException(to.path) }
-        assertFailsWith<FileAlreadyExistsException> { PendingSemanticPack.renameWaiting(from, to, taken, pause) }
+        assertFailsWith<FileAlreadyExistsException> {
+            PendingSemanticPack.renameWaiting(from, to, failing(Int.MAX_VALUE) { FileAlreadyExistsException(to.path) }, pause)
+        }
         assertTrue(pauses.isEmpty())
 
         // In use for good: given up after ten seconds of pauses
-        val inUse: (File, File) -> Unit = { _, _ -> throw AccessDeniedException(from.path) }
-        assertFailsWith<AccessDeniedException> { PendingSemanticPack.renameWaiting(from, to, inUse, pause) }
+        assertFailsWith<AccessDeniedException> {
+            PendingSemanticPack.renameWaiting(from, to, failing(Int.MAX_VALUE) { AccessDeniedException(from.path) }, pause)
+        }
         assertEquals(10_000L, pauses.sum())
+    }
+
+    /** A move that throws [failure] its first [times] times, then moves nothing. */
+    private fun failing(
+        times: Int,
+        failure: () -> Exception,
+    ): (File, File) -> Unit {
+        var left = times
+        return { _, _ -> if (left-- > 0) throw failure() }
     }
 
     /** A link to nowhere where the old index was: not there to move aside, but in the way of the new one. */
