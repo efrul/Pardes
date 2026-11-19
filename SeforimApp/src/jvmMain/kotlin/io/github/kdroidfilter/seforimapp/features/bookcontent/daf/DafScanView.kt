@@ -29,15 +29,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import dev.nucleusframework.pdfium.rememberPdfReaderState
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabShown
 import io.github.kdroidfilter.seforimapp.features.pdf.PAGES_CACHE_BYTES
+import io.github.kdroidfilter.seforimapp.features.pdf.PAGE_GAP
+import io.github.kdroidfilter.seforimapp.features.pdf.PAGE_TITLE_HEIGHT
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfPageList
 import io.github.kdroidfilter.seforimapp.features.pdf.firstPageOf
+import io.github.kdroidfilter.seforimapp.features.pdf.fittedPageWidth
 import io.github.kdroidfilter.seforimapp.features.pdf.rememberPdfiumLoaded
+import io.github.kdroidfilter.seforimapp.features.pdf.rememberWholePage
 import io.github.kdroidfilter.seforimapp.features.pdf.rowCount
 import io.github.kdroidfilter.seforimapp.features.pdf.rowOf
 import io.github.kdroidfilter.seforimapp.features.pdf.spreadPageWidth
@@ -86,9 +89,6 @@ internal fun amudOfScanPage(page: Int): String = "${page / 2 + 2}${if (page % 2 
 
 /** The order of 2a, a scan's first page. */
 private val FIRST_AMUD = amudIndex("2a")
-
-/** The page's widest at the zoom's 1 (and no wider than the view), as the daf's. */
-private val MOST_PAGE_WIDTH = 1100.dp
 
 /** The room on each side of the pages, as the daf's. */
 private val PAGE_PADDING = 24.dp
@@ -339,6 +339,7 @@ private fun ScanPages(
                         ScanList(
                             pages,
                             madeOf = Triple(file, state.source.first, pages),
+                            aspect = state.cut.height.toFloat() / state.cut.width,
                             book,
                             place,
                             zoom,
@@ -404,6 +405,10 @@ private fun BindingScan(
             .onFailure { failure = it.message ?: it::class.simpleName }
     }
     val placed = rememberPlaced(file, place)
+    // A page's height over its width, for a whole page in the view (request 63 of stage 3)
+    val aspect by produceState<Float?>(null, reader, opened) {
+        if (opened) value = runSuspendCatching { reader.pageSize(source.first)?.let { it.heightPoints / it.widthPoints } }.getOrNull()
+    }
     val error = failure ?: reader.error?.message
     when {
         error != null ->
@@ -415,7 +420,7 @@ private fun BindingScan(
             val pages = source.pagesIn(reader.pageCount)
             // Opened again at the place's page when the tractate's first page in the file changes
             key(source.first, pages) {
-                ScanList(pages, Triple(file, source.first, pages), book, place, zoom, lineId, scrollToLineTimestamp, onScroll) {
+                ScanList(pages, Triple(file, source.first, pages), aspect, book, place, zoom, lineId, scrollToLineTimestamp, onScroll) {
                     listState,
                     width,
                     spreads,
@@ -446,6 +451,7 @@ private fun BindingScan(
 private fun ScanList(
     pages: Int,
     madeOf: Any,
+    aspect: Float?,
     book: Book,
     place: ScanPlace,
     zoom: Float,
@@ -475,9 +481,12 @@ private fun ScanList(
     DisposableEffect(place) { onDispose { place.list = null } }
     FollowTheTab(listState, place, lineId, scrollToLineTimestamp)
     TellThePlace(listState, spreads, place, onScroll)
+    val whole = rememberWholePage()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val room = maxWidth - PAGE_PADDING * 2
-        val base = if (spreads) min(spreadPageWidth(room), MOST_PAGE_WIDTH) else min(room, MOST_PAGE_WIDTH)
+        // As wide as the view (Pardes, request 63 of stage 3: no widest), and no wider than a whole page in it when asked
+        val share = if (spreads) spreadPageWidth(room) else room
+        val base = fittedPageWidth(share.value, maxHeight.value, aspect, whole, around = (PAGE_TITLE_HEIGHT + PAGE_GAP * 2).value).dp
         pagesList(listState, base * zoom, spreads) { page -> "${book.title} ${amudTitle(amudOfScanPage(page))}" }
     }
 }

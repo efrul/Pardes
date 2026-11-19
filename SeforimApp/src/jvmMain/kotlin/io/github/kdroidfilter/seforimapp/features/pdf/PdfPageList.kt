@@ -79,10 +79,10 @@ internal const val PAGES_CACHE_BYTES = 160L * 1024 * 1024
 private val PREFETCH_REST = 150.milliseconds
 
 /** The space between two pages, one under the other or side by side. */
-private val PAGE_GAP = 8.dp
+internal val PAGE_GAP = 8.dp
 
 /** The height of a page's title above it, as the daf's amudim have theirs. */
-private val PAGE_TITLE_HEIGHT = 36.dp
+internal val PAGE_TITLE_HEIGHT = 36.dp
 
 /**
  * The rows of [pages] pages: a page each, or with [spreads] two side by side as a book read right to left opens, the

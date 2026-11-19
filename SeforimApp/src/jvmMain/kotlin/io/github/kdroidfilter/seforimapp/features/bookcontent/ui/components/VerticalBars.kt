@@ -28,6 +28,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.placesLines
 import io.github.kdroidfilter.seforimapp.features.pdf.PageColorsButton
+import io.github.kdroidfilter.seforimapp.features.pdf.PageFitButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.showsPages
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -143,8 +144,9 @@ fun EndVerticalBar(
         position = VerticalLateralBarPosition.End,
         topContent = {
             ZoomButtons(tabId = uiState.tabId)
-            // Pardes: two pages side by side, while pages are shown (request 47)
+            // Pardes: two pages side by side, while pages are shown (request 47), and a whole page in the view (63)
             PageSpreadsButton(uiState)
+            PageFitButton(uiState)
 
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
@@ -340,8 +342,8 @@ private data class LineResourceAvailability(
 )
 
 /**
- * The zoom in and out shared by the reading screens' end bars: of the text, and of the daf with it when the reading view
- * of [tabId] shows one (a button stays on while either can still be zoomed).
+ * The zoom in and out shared by the reading screens' end bars: of the text, or of the daf alone when the reading view of
+ * [tabId] shows one (Pardes, request 63 of stage 3), each button on while that can still be zoomed.
  */
 @Composable
 fun ZoomButtons(tabId: String = "") {
@@ -350,8 +352,8 @@ fun ZoomButtons(tabId: String = "") {
     val dafZoom by appSettings.dafZoomFlow.collectAsState()
     val dafViews by appSettings.dafViewsFlow.collectAsState()
     val daf = tabId in dafViews
-    val canZoomIn = (daf && dafZoom < AppSettings.MAX_DAF_ZOOM) || rawTextSize < AppSettings.MAX_TEXT_SIZE
-    val canZoomOut = (daf && dafZoom > AppSettings.MIN_DAF_ZOOM) || rawTextSize > AppSettings.MIN_TEXT_SIZE
+    val canZoomIn = if (daf) dafZoom < AppSettings.MAX_DAF_ZOOM else rawTextSize < AppSettings.MAX_TEXT_SIZE
+    val canZoomOut = if (daf) dafZoom > AppSettings.MIN_DAF_ZOOM else rawTextSize > AppSettings.MIN_TEXT_SIZE
     val maxHint = if (daf) "${(AppSettings.MAX_DAF_ZOOM * 100).roundToInt()}% max" else "${AppSettings.MAX_TEXT_SIZE.toInt()}sp max"
     val minHint = if (daf) "${(AppSettings.MIN_DAF_ZOOM * 100).roundToInt()}% min" else "${AppSettings.MIN_TEXT_SIZE.toInt()}sp min"
     SelectableIconButtonWithToolip(

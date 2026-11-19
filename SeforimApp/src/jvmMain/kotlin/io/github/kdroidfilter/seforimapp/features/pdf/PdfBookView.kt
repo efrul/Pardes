@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -140,7 +141,7 @@ internal fun PdfBookView(
             spreads = spreads,
             goTo = inTab,
             zoom = zoom.takeIf { inTab },
-            onZoom = appSettings::zoomDaf,
+            onZoom = appSettings::setDafZoom,
             actions = actions,
         )
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -151,7 +152,7 @@ internal fun PdfBookView(
                 else -> {
                     // Its find, Ctrl/Cmd+F as a book's (request 48 of docs/DESKTOP_STAGE3_PLAN.md)
                     val find = remember(reader) { PdfFind() }
-                    PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::zoomDaf, marks = find.marks)
+                    PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::setDafZoom, marks = find.marks)
                     PdfFindBar(find, reader, tabId, listState, spreads, Modifier.align(Alignment.TopEnd))
                 }
             }
@@ -185,6 +186,11 @@ private fun PdfPages(
             animate = LocalTabSelected.current,
         )
     val rows = rowCount(reader.pageCount, spreads)
+    // A page's height over its width, for a whole page in the view (request 63 of stage 3)
+    val aspect by produceState<Float?>(null, reader) {
+        value = runSuspendCatching { reader.pageSize(0)?.let { it.heightPoints / it.widthPoints } }.getOrNull()
+    }
+    val whole = rememberWholePage()
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -193,7 +199,8 @@ private fun PdfPages(
             .onPreviewKeyEvent { event -> pageListKey(event, listState, scope, rows) }
             .focusable(),
     ) {
-        val base = if (spreads) spreadPageWidth(maxWidth) else maxWidth
+        val share = if (spreads) spreadPageWidth(maxWidth) else maxWidth
+        val base = fittedPageWidth(share.value, maxHeight.value, aspect, whole, around = (PAGE_GAP * 2).value).dp
         PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads, marks = marks)
     }
     LaunchedEffect(Unit) { keys.requestFocus() }
