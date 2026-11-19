@@ -221,7 +221,7 @@ jobs:
 
           $NOTE
 
-          פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.12 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
+          פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס נבנה מהקוד הפתוח של זית 0.6.12 ושונה כדי לפעול באנדרואיד, ומופץ תחת אותו רישיון, רישיון זית הציבורי 1.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`).
 
           ### מה חדש בגרסה $VERSION
           $(cat "$RUNNER_TEMP/whatsnew.md")
@@ -241,7 +241,7 @@ jobs:
           - בלי אינטרנט אפשר לעדכן את הספרייה מקבצים שהועברו למכשיר: הגדרות › ניהול נתונים › עדכון מקבצים.
 
           ---
-          Copyright (C) 2025 Elie Gambache. GNU AGPL v3 with an additional attribution term (§7b), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
+          Copyright (C) 2025-2026 Elie Gambache. Zayit Public License 1.0 (the GNU AGPL v3 with a grant back, an attribution term and a trademark clause), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
           Powered by the technologies that drive Zayit — https://zayitapp.com/
 
           נבנה מ-commit \`$GITHUB_SHA\`. SHA-256 של ה-APK: \`$SHA256\`

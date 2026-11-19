@@ -1,7 +1,7 @@
 package io.github.kdroidfilter.seforimapp.android.ui.onboarding
 
 /**
- * Pardes's own LICENSE (the repository's, AGPL-3.0 with Zayit's §7b terms), not upstream's file. In the app the link
+ * Pardes's own LICENSE (the repository's, the Zayit Public License 1.0), not upstream's file. In the app the link
  * opens the copy bundled in the APK instead (BundledLicenceLinks); the address is for anyone reading the text elsewhere.
  */
 internal const val PARDES_LICENSE_URL = "https://github.com/efrul/Pardes/blob/HEAD/LICENSE"
@@ -33,10 +33,10 @@ internal const val CONDITIONS_MARKDOWN = """
 פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.
 
 זית ו־SeforimLibrary: ⁦Copyright (C) 2025 Elie Gambache⁩. הליבה של זית היא קוד פתוח, המופץ תחת רישיון
-[**AGPL v3**]($PARDES_LICENSE_URL)
-עם תנאי ייחוס נוסף: ⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩
+[**רישיון זית הציבורי 1.0 (Zayit Public License)**]($PARDES_LICENSE_URL), המבוסס על AGPL v3,
+עם תנאי ייחוס: ⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩
 
-פרדס נבנה מהקוד הפתוח של זית 0.6.12, ושונה ב־2026 כדי לפעול באנדרואיד. גם הוא מופץ תחת רישיון AGPL v3, ו[קוד המקור שלו](https://github.com/efrul/Pardes) זמין תחת אותו רישיון. הוא מסופק כמות שהוא, ללא כל אחריות.
+פרדס נבנה מהקוד הפתוח של זית 0.6.12, ושונה ב־2026 כדי לפעול באנדרואיד. גם הוא מופץ תחת רישיון זית הציבורי 1.0, ו[קוד המקור שלו](https://github.com/efrul/Pardes) זמין תחת אותו רישיון. הוא מסופק כמות שהוא, ללא כל אחריות.
 
 נוסח הרישיון המלא, וגם הרישיונות של הספריות, הגופנים והנתונים שבפרדס, נמצאים בהגדרות › רישיונות.
 

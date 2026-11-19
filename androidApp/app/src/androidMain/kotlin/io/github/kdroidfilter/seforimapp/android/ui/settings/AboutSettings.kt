@@ -14,7 +14,7 @@ internal fun AboutSettings(wide: Boolean) {
 }
 
 /**
- * Desktop ConditionsSettingsScreen: CONDITIONS_MARKDOWN, the same text the onboarding's licence step shows. Its AGPL
+ * Desktop ConditionsSettingsScreen: CONDITIONS_MARKDOWN, the same text the onboarding's licence step shows. Its licence
  * link opens the licence bundled in the APK.
  */
 @Composable
@@ -25,9 +25,9 @@ internal fun TermsSettings(wide: Boolean) {
 private val ABOUT_MD = """
 ### אודות פרדס
 
-פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. פרדס נבנה מהקוד הפתוח של זית 0.6.12 (רישיון AGPL-3.0), ושונה כדי לפעול באנדרואיד.
+פרדס הוא יישום לאנדרואיד ללימוד התורה, המבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה. פרדס נבנה מהקוד הפתוח של זית 0.6.12 (היום רישיון זית הציבורי 1.0, המבוסס על AGPL-3.0), ושונה כדי לפעול באנדרואיד.
 
-גם פרדס מופץ תחת רישיון AGPL-3.0, ו[קוד המקור שלו](https://github.com/efrul/Pardes) זמין תחת אותו רישיון. המודולים הקנייניים של הגרסאות הרשמיות של זית (החיפוש הסמנטי, הסידור החכם המלא וקישורי הפסוקים המצוטטים בתלמוד) אינם כלולים בו.
+גם פרדס מופץ תחת רישיון זית הציבורי 1.0, ו[קוד המקור שלו](https://github.com/efrul/Pardes) זמין תחת אותו רישיון. המודולים הקנייניים של הגרסאות הרשמיות של זית (החיפוש הסמנטי, הסידור החכם המלא וקישורי הפסוקים המצוטטים בתלמוד) אינם כלולים בו.
 
 ⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩
 

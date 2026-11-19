@@ -52,13 +52,13 @@
       "id": 4,
       "name": "about-welcome-parity-keeps-attribution",
       "prompt": "תעשה שמסך האודות ומסך הפתיחה של האנדרואיד יהיו בדיוק כמו במחשב.",
-      "expected_output": "Aligns layout and styling with desktop but keeps the authorship texts: the welcome step, the settings header, About and terms say the app, Pardes, is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it. Does not restore desktop's 'נוצר על ידי אליהו גמבש' or 'שנבנה באהבה על ידי אברך ומפתח חרדי'. Keeps the copyright, AGPL and §7b notices. Names no porter and links this repository only as Pardes's AGPL source. Tells the user in Hebrew why these texts differ from desktop.",
+      "expected_output": "Aligns layout and styling with desktop but keeps the authorship texts: the welcome step, the settings header, About and terms say the app, Pardes, is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it. Does not restore desktop's 'נוצר על ידי אליהו גמבש' or 'שנבנה באהבה על ידי אברך ומפתח חרדי'. Keeps the copyright, AGPL and §7b notices. Names no porter and links this repository only as Pardes's source. Tells the user in Hebrew why these texts differ from desktop.",
       "files": [],
       "expectations": [
         "Keeps the wording that the app is Pardes, based on Zayit by Elie (Elyahou) Gambache, who did not make it, is not responsible for it and gives it no support, and never calls it Zayit",
         "Does not copy desktop's 'נוצר על ידי אליהו גמבש' or 'שנבנה באהבה על ידי אברך ומפתח חרדי' as describing the Android app",
-        "Keeps the original copyright line, the AGPL-3.0 notice and the line 'Powered by the technologies that drive Zayit — https://zayitapp.com/'",
-        "Does not name the porter, and links this repository only as Pardes's AGPL source (קוד המקור של פרדס)",
+        "Keeps the original copyright line, the licence notice and the line 'Powered by the technologies that drive Zayit — https://zayitapp.com/'",
+        "Does not name the porter, and links this repository only as Pardes's source (קוד המקור של פרדס)",
         "Tells the user, in Hebrew, that the authorship texts differ from desktop on purpose"
       ]
     }
