@@ -1251,7 +1251,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +254 −39 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+- **Change:** modified, +256 −39 lines. Feature: Commentators in their own panes, A pane at the window's edge,
   Pane layout kept, Find results pane, Keys in the book tree and the contents.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
@@ -1281,7 +1281,8 @@ The entries of this section by kind:
     `BookContentEvent.ToggleFindResults`), among the `standard` panes; `desiredPanes` takes `findResults` and adds it
     while the book's text is shown; `selectedTabDemand` reads it with `rememberFindResultsShown` (the setting
     `FindResultsSettings.shown`, and the tab's find bar open on a query of two letters at least); `BookPaneBody` draws
-    it with `FindResultsPane`; its imports.
+    it with `FindResultsPane`, whose Enter and Escape give the focus back to the text (`BookContentEvent.FocusText`);
+    its imports.
   - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
     `docs/DESKTOP_STAGE3_PLAN.md`, the user's word of 2026-11-19: "לאחר פתיחת העץ אין עדין פוקוס עליו עד שלוחצים
     עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
@@ -4745,14 +4746,20 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsPane.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 195 lines.
-- **What:** `FindResultsPane(tabId, bookId, modifier)`: the tab's find from the hub, "2889 תוצאות ב־1376 שורות" (by
+- **Size:** 280 lines.
+- **What:** `FindResultsPane(tabId, bookId, modifier, onLeave)`: the tab's find from the hub, "2889 תוצאות ב־1376 שורות" (by
   meaning, "N שורות קרובות במשמעות"), then its lines in a `LazyColumn` under their entries of the table of contents
   (`findRows`, `entryTitles`: `getLineTocMappingsForBook` and `getBookToc`, read once a book), each a Zayit
   `ResultRow` with its text around its first match (`findSnippet`, `findAllMatchesNormalized` on the query as the text
-  normalizes it, cut at words, the line read once it is on screen), the find's words marked by `SnippetText` (none by
-  meaning) and "(3)" for a line of several; the current match's line marked and kept in view; a line clicked asks the
-  text to go to it. A word on the find (Ctrl+F) when the tab has none.
+  normalizes it, cut at words, the line read once it is on screen), the find's words marked by `SnippetText`, and "(3)"
+  for a line of several. By meaning, as the search's results show a line found so (the user, 2026-11-19: "אין הדגשות
+  במצב סמנטי"): `meaningSnippet`, a piece around the passage closest in meaning (`SearchEngine.highlights` on
+  `SnippetSources.clean` of the line, then `rangeSnippet`), bold, or `findSnippet` when nothing is highlighted; the current match's line marked and kept in view; a line clicked asks the
+  text to go to it, and gives the list the keyboard's focus. With it, as the search's results (the user, 2026-11-19:
+  "כאשר הפוקוס על חלונית הצד - כמו בתוצאות חיפוש חץ למעלה למטה יעבור בין התוצאות כאשר התוצאה מסומנת"): up and down go
+  from line to line, the text with them, the line asked marked ahead of the text's answer (`asked`, so that keys
+  pressed fast go on from it); Home, End and a page up and down as the book tree's (`listMove`, `pageRows`); Enter and
+  Escape give the focus back to the text (`onLeave`). A word on the find (Ctrl+F) when the tab has none.
 - **Reached from:** `ReaderPanes.kt` (`BookPaneBody`).
 - **Follows:** Pardes's `LinePlacesView` (Zayit's result rows and snippets in a pane of the reader), and the reader's
   panes' frame.
@@ -4762,23 +4769,16 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsTest.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 72 lines.
+- **Size:** 96 lines.
 - **What:** the lines found once each in reading order with their counts; each run under its entry of the contents,
   none for a book without; a line's piece cut around its first match at words, nikud aside, and its start when nothing
-  matches; the hub keeping a tab's find and passing a line asked for.
+  matches; by meaning, the passage the search highlights, bold (`rangeSnippet`), and the line's start when it
+  highlights nothing (a `mockk` engine); the hub keeping a tab's find and passing a line asked for.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names; Zayit's `BookFindMatches` built as its own tests
   build it).
 - **Tests:** it is one (unit).
 
-### A find in a PDF book
-
-Request 48 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מה אפשר לשפר במציג ה-PDF, ומה עם חיפוש?". Ctrl/Cmd+F over a
-PDF book opens Zayit's find bar over its pages, top end: its text found in the pages as the PDF library reads them
-(`pageTextLayout`, every character with its box), matched as a book's lines are (nikud and final letters aside, and
-backwards for a PDF that keeps its Hebrew from left to right), the matches counted as each page's come, each marked on
-its page (the current one in another colour), Enter and Shift+Enter, Ctrl/Cmd+G and F3 going from match to match. A
-scan with no text layer says it has none. Hooks: none in Zayit's files; in Pardes's `PdfBookView.kt`, `PdfPageList.kt`
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/text/FindWordBreaksTest.kt`
 
 - **Feature:** Find results pane.
@@ -4791,6 +4791,14 @@ scan with no text layer says it has none. Hooks: none in Zayit's files; in Parde
 - **Follows:** Zayit's `HebrewSearchTest` beside it (Kotlin Test, backtick names, `findAllMatchesOriginal`).
 - **Tests:** it is one (unit).
 
+### A find in a PDF book
+
+Request 48 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מה אפשר לשפר במציג ה-PDF, ומה עם חיפוש?". Ctrl/Cmd+F over a
+PDF book opens Zayit's find bar over its pages, top end: its text found in the pages as the PDF library reads them
+(`pageTextLayout`, every character with its box), matched as a book's lines are (nikud and final letters aside, and
+backwards for a PDF that keeps its Hebrew from left to right), the matches counted as each page's come, each marked on
+its page (the current one in another colour), Enter and Shift+Enter, Ctrl/Cmd+G and F3 going from match to match. A
+scan with no text layer says it has none. Hooks: none in Zayit's files; in Pardes's `PdfBookView.kt`, `PdfPageList.kt`
 and `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfFind.kt`
