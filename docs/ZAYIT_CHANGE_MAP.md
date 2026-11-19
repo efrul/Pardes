@@ -4662,20 +4662,26 @@ is wrapped as the library's order wraps it, the library's `SearchEngine` untouch
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchModeSwitch.kt`
 
 - **Feature:** Search modes.
-- **Size:** 87 lines.
+- **Size:** 125 lines.
 - **What:** `SearchModeSwitch(selected, onSelect, modifier)`: the search by meaning turned on or off as the in-book
-  find turns its smart find, the find bar's own toggle (Jewel's `ToggleableIconButton`, not focusable, with
-  `MaterialSymbolsMagicButton` at 16 dp, in the accent when on and the info colour when off) and tooltip ("חיפוש חכם
-  לפי משמעות", `find_smart_mode`); on gives hybrid, off general. Without the search by meaning (`InstalledPack` in the
-  library's folder, read once off the UI thread) it is off and disabled, its tooltip saying where it is installed.
+  find turns its smart find, with the find's icon (`MaterialSymbolsMagicButton` at 16 dp, in the accent when on and
+  the info colour when off) and tooltip ("חיפוש חכם לפי משמעות", `find_smart_mode`); on gives hybrid, off general.
+  Drawn as the search field's clear button, not as the find bar's `ToggleableIconButton`, whose grey background did
+  not suit the field (the user, 2026-11-19: "הרקע האפור לא מתאים ומעבר עכבר לא מסמן שלחיץ"): a 26 dp circle with no
+  background of its own, `toggleable` (`Role.Switch`, no indication) kept out of the focus as the find's toggle is
+  (`focusProperties { canFocus = false }`), and under the pointer a hand and the accent at 14% (`HOVER_ALPHA`).
+  Without the search by meaning (`InstalledPack` in the library's folder, read once off the UI thread) it is off and
+  disabled, in the disabled colour, with no hand, its tooltip saying where it is installed.
   `NextSearchModeSwitch(modifier)`, the home page's: the next search's mode (`SearchModeSettings.last`, else the
   default), set by it.
 - **Reached from:** `HomeView.kt` and `SearchResultScreen.kt`, at their search bar's end (`UnifiedSearchBar`'s
   `trailing`).
-- **Follows:** Zayit's find bar (`FindInPageBar`'s smart-mode toggle, its icon, colours and tooltip), Jewel's
-  `Tooltip`, and Pardes's settings read from `LocalAppGraph`.
-- **Tests:** tried in the app (the toggle at the home page's bar's end and over the results; disabled without the
-  pack, its tooltip saying where it is installed).
+- **Follows:** Zayit's find bar (`FindInPageBar`'s smart-mode toggle, its icon, colours and tooltip), the search
+  field's clear button (an icon with a hand, `HomeView.kt`), Jewel's `Tooltip`, and Pardes's settings read from
+  `LocalAppGraph`.
+- **Tests:** tried in the app (the toggle at the home page's bar's end and over the results, on, off and under the
+  pointer, with a stand-in for the pack that was never committed; disabled without the pack, its tooltip saying
+  where it is installed).
 - **Notes:** first drawn as Jewel's segmented control of three modes beside the bar (2026-11-18), then as a pill of
   them as high as the bar ("תדייק עיצובית"), then as this toggle (2026-11-19).
 
