@@ -1346,7 +1346,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +322 −51 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +320 −53 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
@@ -1377,8 +1377,9 @@ The entries of this section by kind:
     other books among the bar's books (`barBookSuggestions`, with a comment marked "Pardes:"), so that `catBookRows`
     puts one before the library's not named exactly (request 54). Such a book's row offers Enter only, with no text to
     search in, and Tab on it opens it (`onPickBook`), with comments marked "Pardes:"; two imports.
-  - The home page's bar is in a row with `NextSearchModeSwitch` after it (the next searches exact, general or hybrid,
-    request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), with a comment marked "Pardes:" and its import.
+  - The home page's bar, in its box of `homeContentModifier` as Zayit has it, is centered by `BarWithSearchMode` in
+    place of the box that centered it: under the logo as before, the next searches exact, general or hybrid beside it
+    (request 54 of `docs/DESKTOP_STAGE3_PLAN.md`), with a comment marked "Pardes:" and its import.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -4447,16 +4448,25 @@ The engine is wrapped as the library's order wraps it, the library's `SearchEngi
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchModeSwitch.kt`
 
 - **Feature:** Search modes.
-- **Size:** 106 lines.
-- **What:** `SearchModeSwitch(selected, onSelect, modifier)`, Jewel's `SegmentedControl` of the three modes, "מדויק",
-  "כללי", "היברידי", each explained in its tooltip (an experimental `Tooltip`); without the search by meaning
-  (`InstalledPack` in the library's folder, read once off the UI thread) hybrid is dimmed, its tooltip says where it is
-  installed, and it is not chosen. `NextSearchModeSwitch(modifier)`, the home page's: the next searches' mode
-  (`SearchModeSettings.last`, else the default), set by it.
-- **Reached from:** `SearchResultScreen.kt` (beside the results' bar), `HomeView.kt` (beside the home page's bar).
-- **Follows:** Jewel's controls (`SegmentedControl`, `Tooltip`) and Pardes's settings read from `LocalAppGraph`.
+- **Size:** 216 lines.
+- **What:** `SearchModeSwitch(selected, onSelect, modifier)`: the three modes, "מדויק", "כללי", "היברידי", in one pill
+  as the search bar is drawn (its height, 40 dp, its background and border from the theme's text field, round ends),
+  the one chosen marked as the results' category tabs mark theirs (the accent's tint, border and text), a mode hovered
+  tinted, each a radio button of the group (`selectable`) explained in its tooltip (an experimental `Tooltip`);
+  without the search by meaning (`InstalledPack` in the library's folder, read once off the UI thread) hybrid is
+  dimmed, its tooltip says where it is installed, and it is not chosen. `NextSearchModeSwitch(modifier)`, the home
+  page's: the next searches' mode (`SearchModeSettings.last`, else the default), set by it. `BarWithSearchMode(
+  modifier, bar)`, the home page's bar centered as Zayit centers it, under the logo, the next searches' mode beside
+  it at its end, outside its width, and under it on a page too narrow for both (a `Layout`). The design is the user's
+  variant ב, refined as the user asked on 2026-11-18 ("תדייק עיצובית"), where Jewel's `SegmentedControl` stood beside
+  the bar lower than it, grey and square, and the home page's bar was pushed off the logo's middle.
+- **Reached from:** `SearchResultScreen.kt` (beside the results' bar), `HomeView.kt` (`BarWithSearchMode`, the home
+  page's bar).
+- **Follows:** Zayit's `CategoryTab` (a chip's colours, hover and hand pointer) and `rememberPillTextFieldStyle` (the
+  bar's pill), Jewel's `Tooltip`, and Pardes's settings read from `LocalAppGraph`.
 - **Tests:** tried in the app (exact chosen on the home page, ברכות השחר searched: one result, its phrase marked; the
-  tab restored exact; general chosen over the results: 101; hybrid dimmed without the pack).
+  tab restored exact; general chosen over the results: 101; hybrid dimmed without the pack; the pill as high as the
+  bar, the home page's bar under the logo's middle).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/SearchModesTest.kt`
 
