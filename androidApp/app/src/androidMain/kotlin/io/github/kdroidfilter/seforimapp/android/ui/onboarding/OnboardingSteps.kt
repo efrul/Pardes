@@ -87,7 +87,7 @@ internal fun LicenceStep(accepted: Boolean, onAcceptedChange: (Boolean) -> Unit,
         title = DesktopStrings.licenseScreenTitle,
         bottomAction = { AccentButton(DesktopStrings.nextButton, onNext, enabled = accepted) },
     ) {
-        // Its AGPL link opens the licence bundled in the APK: no network is needed this early.
+        // Its licence link opens the licence bundled in the APK: no network is needed this early.
         BundledLicenceLinks { MarkdownText(CONDITIONS_MARKDOWN, Modifier.fillMaxWidth()) }
         // Desktop puts the checkbox, centered, after the last paragraph.
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

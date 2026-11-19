@@ -531,7 +531,7 @@ jobs:
 
           $NOTE
 
-          פרדס למחשב הוא יישום ללימוד התורה ל־Windows, למק וללינוקס, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס למחשב נבנה מהקוד הפתוח של זית 0.6.12 ושונה כדי לפעול כיישום נפרד בשם פרדס, ומופץ תחת אותו רישיון, AGPL-3.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`), וגם ב־https://github.com/efrul/Pardes.
+          פרדס למחשב הוא יישום ללימוד התורה ל־Windows, למק וללינוקס, המבוסס על [זית](https://github.com/kdroidFilter/Zayit) מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה, ולכן אין לפנות אליו או לפרויקט זית בבעיות שלו. פרדס למחשב נבנה מהקוד הפתוח של זית 0.6.13 ושונה כדי לפעול כיישום נפרד בשם פרדס, ומופץ תחת אותו רישיון, רישיון זית הציבורי 1.0. קוד המקור המלא של בנייה זו, כולל SeforimLibrary, מצורף למטה (\`$SRC\`), וגם ב־https://github.com/efrul/Pardes.
 
           המודולים הקנייניים של הגרסאות הרשמיות של זית (הסידור החכם, החיפוש הסמנטי וקישורי הפסוקים המצוטטים בתלמוד) אינם קוד פתוח, ואינם כלולים בפרדס. גם הגיבוי ל־Google Drive של זית אינו זמין בפרדס; הייצוא והייבוא של גיבוי לקובץ נשארים.
 
@@ -548,7 +548,7 @@ jobs:
           - פרדס שהותקן מ־Windows, מהמק, מ־deb או מ־rpm מתעדכן מתוכו. על גרסה חדשה הוא מודיע, ובאישורכם מוריד אותה ומתקין אותה מעל הקיימת. עדכון קטן, שבו משתנה רק המספר האחרון של הגרסה, יורד מעצמו כשפרדס נפתח; ב־Windows, ובלינוקס כשהחבילה חתומה, הוא גם מותקן בלי לשאול כשסוגרים את פרדס, ובשאר המקרים רק באישורכם. הספרייה וההגדרות נשמרות.
 
           ---
-          Copyright (C) 2025 Elie Gambache. GNU AGPL v3 with an additional attribution term (§7b), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
+          Copyright (C) 2025-2026 Elie Gambache. Zayit Public License 1.0 (the GNU AGPL v3 with a grant back, an attribution term and a trademark clause), see [LICENSE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE).
           Powered by the technologies that drive Zayit — https://zayitapp.com/
 
           נבנה מ-commit \`$GITHUB_SHA\`.

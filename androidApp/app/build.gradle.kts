@@ -331,7 +331,7 @@ tasks.matching { it.name.endsWith("AndroidTestAssets") }.configureEach { depends
 
 /**
  * The licence texts copied into the APK's assets/licenses rather than kept twice in the repository: the repository's
- * LICENSE (AGPL-3.0 with Zayit's §7b terms, word for word), Lucene's LICENSE.txt and NOTICE.txt (lucene-android), and
+ * LICENSE (the Zayit Public License 1.0, word for word), Lucene's LICENSE.txt and NOTICE.txt (lucene-android), and
  * the semantic search model's notice (semantic-model/NOTICE.md: Dicta's model under CC BY 4.0, which every copy of the
  * model carries too, as pardes-model/NOTICE.md).
  */

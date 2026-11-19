@@ -6,7 +6,7 @@ package io.github.kdroidfilter.seforimapp.branding
  * authorship rules of the zayit-android skill.
  */
 object BrandInfo {
-    /** The app's own source code (AGPL), opened by the GitHub button of Settings › כללי. */
+    /** The app's own source code (the Zayit Public License), opened by the GitHub button of Settings › כללי. */
     const val SOURCE_URL = "https://github.com/efrul/Pardes"
 
     /** The last line of an error report mailed to Sefaria. */

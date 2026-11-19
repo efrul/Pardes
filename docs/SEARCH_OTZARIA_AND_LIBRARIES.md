@@ -13,7 +13,7 @@
   ([otzaria-semantic-search](https://github.com/Otzaria/otzaria-semantic-search)), כולל המודל, הם תחת "Personal Use License":
   מותר רק לשימוש פרטי, ואסור בכל מוצר או פרויקט ציבורי, גם חינמי וגם קוד פתוח. מהם לומדים רעיונות בלבד, ולא מעתיקים קוד.
 - מנוע החיפוש הלקסיקלי שלהם, [otzaria_search_engine](https://github.com/Otzaria/otzaria_search_engine) (Rust,‏ Tantivy), הוא
-  תחת MIT. פרדס (AGPL) רשאי להשתמש בקוד שלו עם קרדיט. המילונים שהוא טוען (התרגום הארמי וראשי התיבות) הם קבצים של האפליקציה,
+  תחת MIT. פרדס (רישיון זית הציבורי, המבוסס על AGPL) רשאי להשתמש בקוד שלו עם קרדיט. המילונים שהוא טוען (התרגום הארמי וראשי התיבות) הם קבצים של האפליקציה,
   ולא חלק מה־MIT. הרשימות של אוצריא אסורות לפרדס.
 - גרסאות שנבדקו: האפליקציה `1168fb8`, ‏otzaria_search_engine ‏`8ef29fd`, ‏otzaria-semantic-search ‏`2c5b2c2`, ‏CirrusSearch ‏`083a28f`,
   ‏CourtListener ‏`0363a7b` (כולן מ־6 עד 8.11.2026).

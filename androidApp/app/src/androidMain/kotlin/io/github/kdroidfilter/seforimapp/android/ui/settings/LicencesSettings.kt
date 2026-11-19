@@ -68,7 +68,7 @@ internal class LicenceDoc(val title: String, val asset: String? = null, @param:R
 private fun bundled(title: String, file: String) = LicenceDoc(title, asset = "licenses/$file")
 
 private object Docs {
-    val pardes = bundled("GNU AGPL v3 ותנאי 7ב", "Pardes-LICENSE.txt")
+    val pardes = bundled("רישיון זית הציבורי 1.0", "Pardes-LICENSE.txt")
     val apache = bundled("Apache License 2.0", "Apache-2.0.txt")
     val lgpl = bundled("GNU LGPL v2.1", "LGPL-2.1.txt")
     val gpl = bundled("GNU GPL v2", "GPL-2.0.txt")
@@ -235,7 +235,7 @@ private val dataCredits = listOf(
 
 /**
  * Latin text inside the RTL pages, isolated (LRI…PDI) so that its punctuation stays where it belongs. A title with
- * Hebrew in it ("GNU AGPL v3 ותנאי 7ב") is left to the RTL paragraph, which orders its words right.
+ * Hebrew in it ("רישיון זית הציבורי 1.0") is left to the RTL paragraph, which orders its words right.
  */
 private fun isolated(text: String) = if (text.any { it in '֐'..'׿' }) text else "⁦$text⁩"
 
@@ -332,7 +332,7 @@ internal fun LicenceTextDialog(doc: LicenceDoc, onDismiss: () -> Unit) {
 }
 
 /**
- * Opens the AGPL link of תנאים and of the onboarding licence step, [PARDES_LICENSE_URL], as the bundled LICENSE, so it
+ * Opens the licence link of תנאים and of the onboarding licence step, [PARDES_LICENSE_URL], as the bundled LICENSE, so it
  * reads offline and always matches this build; other links open as usual.
  */
 @Composable
@@ -376,12 +376,12 @@ private fun reflow(text: String): List<String> =
     }
 
 private const val LICENCES_INTRO =
-    "פרדס מופץ תחת רישיון GNU AGPL v3 עם תנאי ייחוס נוסף, וכולל רכיבים של אחרים, כל אחד ברישיון שלו. כאן רשומים " +
+    "פרדס מופץ תחת רישיון זית הציבורי 1.0, המבוסס על GNU AGPL v3, וכולל רכיבים של אחרים, כל אחד ברישיון שלו. כאן רשומים " +
         "כולם, ונוסח כל רישיון נפתח בלחיצה על שמו."
 
 private val PARDES_LICENCE = listOf(
     "פרדס מבוסס על זית מאת אליהו גמבש ואינו מטעמו: הוא לא יצר אותו, אינו אחראי לו ואינו נותן לו תמיכה.",
-    "זית ו־SeforimLibrary: ⁦Copyright (C) 2025 Elie Gambache⁩, ברישיון GNU AGPL v3 עם תנאי ייחוס נוסף לפי סעיף 7ב:",
+    "זית ו־SeforimLibrary: ⁦Copyright (C) 2025 Elie Gambache⁩, ברישיון זית הציבורי 1.0, עם תנאי ייחוס לפי סעיף 4:",
     "⁦Powered by the technologies that drive Zayit — https://zayitapp.com/⁩",
     "גם פרדס מופץ תחת רישיון זה, וקוד המקור שלו זמין תחת אותו רישיון. הוא מסופק כמות שהוא, ללא כל אחריות.",
 )
