@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +99,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ResolvedReference
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoSettings
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
@@ -434,8 +436,14 @@ private fun HomeBody(
         remember(userLocation, community, appSettings) {
             HomeWidgetsState(userLocation, community, HomeWidgetsLayout(appSettings))
         }
+    // Pardes: the big name above the search bar, shown or hidden (request 67 of stage 3)
+    val logoShown by appSettings.flow(HomeLogoSettings.shown).collectAsState()
     val tabs = LocalOpenWindow.current.tabsViewModel
-    SideEffect { widgetsState.openTab = tabs::openTab }
+    // Pardes: a card's book opens in place of the Home while it is the tab selected, as the page's tree, search and
+    // catalog open theirs (request 72 of stage 3: "פתיחת ספר ממסך הבית משאירה את כרטיסיית הבית פתוחה"); from a card's own
+    // window over another tab, in a new tab
+    val homeSelected by rememberUpdatedState(LocalTabSelected.current)
+    SideEffect { widgetsState.openTab = { if (homeSelected) tabs.replaceCurrentTabWithNewTabId(it) else tabs.openTab(it) } }
     if (E2e.enabled && LocalTabSelected.current) SideEffect { E2e.homeWidgets = widgetsState }
     // Composed here, outside the page, so a card's window doesn't depend on the page's composition
     val widgetsLayoutRaw by appSettings.homeWidgetsLayoutFlow.collectAsState()
@@ -468,14 +476,17 @@ private fun HomeBody(
                     ) {
                         // Scrolls with the page instead of floating over the widgets
                         FullWidthSection(gapAfter = 4.dp) { CatalogRow(onEvent = onEvent) }
-                        FullWidthSection(gapAfter = 4.dp) {
-                            BoxWithConstraints(
-                                Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                // Scale logo width proportionally; height follows the image aspect ratio
-                                val logoWidth = (maxWidth * 0.50f).coerceIn(320.dp, 450.dp)
-                                LogoImage(modifier = Modifier.width(logoWidth))
+                        // Pardes: the big name hidden by the setting of Settings › תצוגה (request 67 of stage 3)
+                        if (logoShown) {
+                            FullWidthSection(gapAfter = 4.dp) {
+                                BoxWithConstraints(
+                                    Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    // Scale logo width proportionally; height follows the image aspect ratio
+                                    val logoWidth = (maxWidth * 0.50f).coerceIn(320.dp, 450.dp)
+                                    LogoImage(modifier = Modifier.width(logoWidth))
+                                }
                             }
                         }
                         FullWidthSection(gapAfter = 4.dp) {

@@ -36,6 +36,7 @@ import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.theme.PreviewContainer
@@ -103,6 +104,8 @@ private fun DisplaySettingsView(
                 checked = state.showHomeWallpaper,
                 onCheckedChange = { onEvent(DisplaySettingsEvents.SetShowHomeWallpaper(it)) },
             )
+            // Pardes: the Home's big name shown or hidden (request 67 of stage 3)
+            HomeLogoCard()
 
             SettingCard(
                 title = Res.string.settings_compact_mode,
