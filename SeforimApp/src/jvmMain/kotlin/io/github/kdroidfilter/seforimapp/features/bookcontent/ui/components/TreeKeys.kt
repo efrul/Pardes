@@ -81,8 +81,12 @@ internal sealed interface TreeMove {
     ) : TreeMove
 }
 
-/** A key of a tree's own: up, down, into a folder and out of it, Enter, the ends, a page up and down. */
-internal enum class TreeKey { UP, DOWN, IN, OUT, ENTER, HOME, END, PAGE_UP, PAGE_DOWN }
+/**
+ * A key of a tree's own: up, down, into a folder and out of it, Enter, the ends, a page up and down, and the numeric
+ * keypad's plus and minus, which open and close a folder as IntelliJ's trees do (request 69 of the list after the third
+ * testers' build: "המקשים בעץ - תבדוק שזה באמת תומך כמו בג'טבריינס").
+ */
+internal enum class TreeKey { UP, DOWN, IN, OUT, ENTER, HOME, END, PAGE_UP, PAGE_DOWN, EXPAND, COLLAPSE }
 
 /**
  * The tree's key [key] is, the view laid out from the right when [rtl] (where a closed folder's chevron points left,
@@ -102,14 +106,16 @@ internal fun treeKeyOf(
         Key.MoveEnd -> TreeKey.END
         Key.PageUp -> TreeKey.PAGE_UP
         Key.PageDown -> TreeKey.PAGE_DOWN
+        Key.NumPadAdd -> TreeKey.EXPAND
+        Key.NumPadSubtract -> TreeKey.COLLAPSE
         else -> null
     }
 
 /**
  * What [key] does in a tree of [nodes], the keys on the row [focused] (-1 before any: the first row, or the last for
  * End), [page] rows in view: a row up or down, the first or the last, a page; in, a closed folder opened and an open
- * one's first row; out, an open folder closed and any other row's parent; Enter, the row clicked. Null when it does
- * nothing: no rows, nothing further in or out.
+ * one's first row; out, an open folder closed and any other row's parent; Enter, the row clicked; the keypad's plus a
+ * closed folder opened, its minus an open one closed. Null when it does nothing: no rows, nothing further in or out.
  */
 internal fun treeMove(
     nodes: List<TreeNode>,
@@ -142,6 +148,8 @@ internal fun treeMove(
             } else {
                 (focused - 1 downTo 0).firstOrNull { nodes[it].level < node.level }?.let { TreeMove.Focus(it) }
             }
+        TreeKey.EXPAND -> TreeMove.Click(focused).takeIf { node.folder && !node.open }
+        TreeKey.COLLAPSE -> TreeMove.Click(focused).takeIf { node.folder && node.open }
     }
 }
 

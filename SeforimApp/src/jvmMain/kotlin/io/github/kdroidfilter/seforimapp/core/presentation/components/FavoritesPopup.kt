@@ -109,13 +109,28 @@ private fun FavoritesPopupContent(onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
+    // Pardes: up and down mark a favorite, Enter opens it (request 69 of stage 3)
+    val keys = rememberPopupKeys(query)
+    val shown = rootEntries + folders.flatMap { folder -> entries.filter { it.folderId == folder.id } }
+    keys.rows =
+        buildList {
+            var item = 0
+            rootEntries.forEach { entry -> add(PopupKeyRow(item++) { openFavorite(entry) }) }
+            folders.forEach { folder ->
+                val folderEntries = entries.filter { it.folderId == folder.id }
+                if (folderEntries.isNotEmpty()) item++
+                folderEntries.forEach { entry -> add(PopupKeyRow(item++) { openFavorite(entry) }) }
+            }
+        }
+
     Column(
         modifier =
             Modifier
                 .width(340.dp)
                 .background(JewelTheme.globalColors.panelBackground, PopupShape)
                 .border(1.dp, JewelTheme.globalColors.borders.normal, PopupShape)
-                .padding(8.dp),
+                .padding(8.dp)
+                .popupKeys(keys, onEscape = onDismiss),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         PopupSearchField(
@@ -125,13 +140,14 @@ private fun FavoritesPopupContent(onDismiss: () -> Unit) {
             focusRequester = focusRequester,
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = 380.dp)) {
+        LazyColumn(modifier = Modifier.heightIn(max = 380.dp), state = keys.listState) {
             items(rootEntries, key = { "fav-" + it.key }) { entry ->
                 PopupRow(
                     label = entry.title,
                     tabType = TabType.BOOK,
                     onClick = { openFavorite(entry) },
                     onClose = null,
+                    selected = keys.marks(shown.indexOf(entry)),
                 )
             }
             folders.forEach { folder ->
@@ -144,6 +160,7 @@ private fun FavoritesPopupContent(onDismiss: () -> Unit) {
                             tabType = TabType.BOOK,
                             onClick = { openFavorite(entry) },
                             onClose = null,
+                            selected = keys.marks(shown.indexOf(entry)),
                         )
                     }
                 }

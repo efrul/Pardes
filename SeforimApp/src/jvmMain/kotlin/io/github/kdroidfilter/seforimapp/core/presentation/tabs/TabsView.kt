@@ -114,7 +114,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.jewel.foundation.InternalJewelApi
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.foundation.theme.LocalContentColor
 import org.jetbrains.jewel.ui.Orientation
@@ -1923,7 +1922,6 @@ private fun Modifier.fadeCutEnd(
     }
 
 // Tab context menu using native Jewel styling
-@OptIn(InternalJewelApi::class)
 @Composable
 private fun TabContextMenu(
     anchorOffset: IntOffset?,
@@ -1932,14 +1930,6 @@ private fun TabContextMenu(
     style: MenuStyle = JewelTheme.menuStyle,
     content: MenuScope.() -> Unit,
 ) {
-    val menuController =
-        remember(onDismissRequest) {
-            DefaultMenuController(onDismissRequest = {
-                onDismissRequest()
-                true
-            })
-        }
-
     val positionProvider =
         remember(anchorOffset, contextClickOffset) {
             object : PopupPositionProvider {
@@ -1964,16 +1954,17 @@ private fun TabContextMenu(
             }
         }
 
-    Popup(
+    // Pardes: Jewel's own popup menu, which answers the keys (up, down, Enter, Escape) as the Tools menu does (request 69
+    // of stage 3)
+    PopupMenu(
+        onDismissRequest = {
+            onDismissRequest()
+            true
+        },
         popupPositionProvider = positionProvider,
-        onDismissRequest = onDismissRequest,
-        properties = PopupProperties(focusable = true),
-        cornerSize = style.metrics.cornerSize,
-    ) {
-        CompositionLocalProvider(LocalMenuController provides menuController) {
-            MenuContent(content = content)
-        }
-    }
+        style = style,
+        content = content,
+    )
 }
 
 private fun MenuScope.tabContextMenuItem(

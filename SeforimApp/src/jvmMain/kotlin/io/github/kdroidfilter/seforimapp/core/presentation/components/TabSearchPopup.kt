@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -167,13 +167,41 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
+    fun selectTab(row: OpenTabRow) {
+        val index =
+            row.window.tabsViewModel.state.value.tabs
+                .indexOfFirst { it.destination.tabId == row.tab.destination.tabId }
+        if (index >= 0) {
+            row.window.tabsViewModel.onEvent(TabsEvents.OnSelect(index))
+            row.window.requestFocus()
+            desktopManager.onWindowFocused(row.window.id)
+        }
+        onDismiss()
+    }
+
+    fun openEntry(entry: VisitEntry) {
+        entry.destination()?.let(currentWindow.tabsViewModel::openTab)
+        onDismiss()
+    }
+
+    // Pardes: up and down mark a row, Enter opens it (request 69 of stage 3)
+    val keys = rememberPopupKeys(query)
+    keys.rows =
+        buildList {
+            var item = if (filteredTabs.isNotEmpty()) 1 else 0
+            filteredTabs.forEach { row -> add(PopupKeyRow(item++) { selectTab(row) }) }
+            if (historyEntries.isNotEmpty()) item++
+            historyEntries.forEach { entry -> add(PopupKeyRow(item++) { openEntry(entry) }) }
+        }
+
     Column(
         modifier =
             Modifier
                 .width(340.dp)
                 .background(JewelTheme.globalColors.panelBackground, PopupShape)
                 .border(1.dp, JewelTheme.globalColors.borders.normal, PopupShape)
-                .padding(8.dp),
+                .padding(8.dp)
+                .popupKeys(keys, onEscape = onDismiss),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         PopupSearchField(
@@ -183,25 +211,16 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
             focusRequester = focusRequester,
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = 380.dp)) {
+        LazyColumn(modifier = Modifier.heightIn(max = 380.dp), state = keys.listState) {
             if (filteredTabs.isNotEmpty()) {
                 item(key = "header-tabs") { PopupSectionHeader(stringResource(Res.string.open_tabs)) }
-                items(filteredTabs, key = { "tab-" + it.tab.destination.tabId }) { row ->
+                itemsIndexed(filteredTabs, key = { _, it -> "tab-" + it.tab.destination.tabId }) { i, row ->
                     val label = row.tab.title.ifBlank { homeLabel }
                     PopupRow(
                         label = label,
                         tabType = if (row.tab.title.isBlank()) null else row.tab.tabType,
-                        onClick = {
-                            val index =
-                                row.window.tabsViewModel.state.value.tabs
-                                    .indexOfFirst { it.destination.tabId == row.tab.destination.tabId }
-                            if (index >= 0) {
-                                row.window.tabsViewModel.onEvent(TabsEvents.OnSelect(index))
-                                row.window.requestFocus()
-                                desktopManager.onWindowFocused(row.window.id)
-                            }
-                            onDismiss()
-                        },
+                        onClick = { selectTab(row) },
+                        selected = keys.marks(i),
                         onClose = {
                             val index =
                                 row.window.tabsViewModel.state.value.tabs
@@ -213,15 +232,13 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
             }
             if (historyEntries.isNotEmpty()) {
                 item(key = "header-history") { PopupSectionHeader(stringResource(Res.string.history_title)) }
-                items(historyEntries, key = { "hist-" + it.key }) { entry ->
+                itemsIndexed(historyEntries, key = { _, it -> "hist-" + it.key }) { i, entry ->
                     PopupRow(
                         label = entry.title,
                         tabType = if (entry.kind == VisitKind.BOOK) TabType.BOOK else TabType.SEARCH,
-                        onClick = {
-                            entry.destination()?.let(currentWindow.tabsViewModel::openTab)
-                            onDismiss()
-                        },
+                        onClick = { openEntry(entry) },
                         onClose = null,
+                        selected = keys.marks(filteredTabs.size + i),
                     )
                 }
             }
@@ -329,17 +346,25 @@ internal fun PopupRow(
     tabType: TabType?,
     onClick: () -> Unit,
     onClose: (() -> Unit)?,
+    // Pardes: the row the keys mark, as the breadcrumb's popup marks its own (request 69 of stage 3)
+    selected: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
     val accent = JewelTheme.globalColors.outlines.focused
+    val background =
+        when {
+            selected -> accent.copy(alpha = 0.16f)
+            isHovered -> accent.copy(alpha = 0.08f)
+            else -> Color.Transparent
+        }
 
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .hoverable(interactionSource)
-                .background(if (isHovered) accent.copy(alpha = 0.08f) else Color.Transparent, RowShape)
+                .background(background, RowShape)
                 .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,

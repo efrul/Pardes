@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,9 +73,11 @@ fun TocJumpDropdown(
             render.forEach { quick ->
                 val hoverSource = remember { MutableInteractionSource() }
                 val isHovered by hoverSource.collectIsHoveredAsState()
+                // Pardes: the row the keys moved to marked as the one hovered (request 69 of stage 3)
+                val isFocused by hoverSource.collectIsFocusedAsState()
                 val backgroundColor by animateColorAsState(
                     targetValue =
-                        if (isHovered) {
+                        if (isHovered || isFocused) {
                             JewelTheme.globalColors.outlines.focused
                                 .copy(alpha = 0.12f)
                         } else {
