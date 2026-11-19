@@ -51,6 +51,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LayoutState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.SplitDefaults
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.LocalPaneFocusKey
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.LocalPaneSatellite
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.CommentsPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.DetachedCommentatorPane
@@ -382,6 +383,7 @@ private fun PaneSync(
 ) {
     val demand = rememberUpdatedState(selectedTabDemand(session, groupId))
     val splitterDp = 0f
+    val focusRequests = LocalAppGraph.current.paneFocusRequests
     LaunchedEffect(window, session, groupId, splitterDp) {
         val effectScope = this
         var saveJob: Job? = null
@@ -475,6 +477,10 @@ private fun PaneSync(
                 }
                 for (pane in frame.registered) {
                     if (pane in current.panes) workspace(pane).open(pane.idIn(groupId)) else workspace(pane).close(pane.idIn(groupId))
+                }
+                // Pardes: the book tree or contents the tab just opened takes the keyboard's focus (request 47 of stage 3)
+                applied?.takeIf { it.first == current.tabId }?.let { (_, before) ->
+                    focusRequests.opened((current.panes - before).filter { it.navigation }.map { it.idIn(groupId) })
                 }
                 applied = wanted
                 appliedRegistered = frame.registered
@@ -753,10 +759,13 @@ private fun SatelliteScope.PaneBody(
     val item = session.group(groupId)?.selectedId?.let(session::item) ?: return
     val tabId = item.destination.tabId
     key(tabId) {
-        when (val destination = item.destination) {
-            is TabsDestination.Home, is TabsDestination.BookContent -> BookPaneBody(session, destination, pane, search = null)
-            is TabsDestination.Search -> BookPaneBody(session, destination, pane, search = destination)
-            else -> Unit
+        // Pardes: the pane a tree is drawn in, to take the focus as it opens (request 47 of stage 3)
+        CompositionLocalProvider(LocalPaneFocusKey provides pane.idIn(groupId)) {
+            when (val destination = item.destination) {
+                is TabsDestination.Home, is TabsDestination.BookContent -> BookPaneBody(session, destination, pane, search = null)
+                is TabsDestination.Search -> BookPaneBody(session, destination, pane, search = destination)
+                else -> Unit
+            }
         }
     }
 }
