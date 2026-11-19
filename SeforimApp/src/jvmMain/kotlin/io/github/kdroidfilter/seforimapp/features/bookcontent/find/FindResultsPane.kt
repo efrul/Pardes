@@ -92,8 +92,12 @@ fun FindResultsPane(
         return
     }
     val lines = remember(listing.matches) { listing.matches.foundLines() }
-    val titles by produceState(emptyMap<Long, String>(), bookId) {
-        value = runSuspendCatching { entryTitles(graph.repository, bookId) }.getOrDefault(emptyMap())
+    // The book's entries, and those of the other books its matches hold lines of (the daf's commentaries)
+    val titles by produceState(emptyMap<Long, String>(), bookId, listing.books) {
+        value =
+            runSuspendCatching {
+                (listOf(bookId) + listing.books).fold(emptyMap<Long, String>()) { all, id -> all + entryTitles(graph.repository, id) }
+            }.getOrDefault(emptyMap())
     }
     val rows = remember(lines, titles) { findRows(lines, titles) }
     val current = listing.current?.lineIndex
@@ -175,25 +179,27 @@ private fun FoundLineRow(
 ) {
     val graph = LocalAppGraph.current
     val bookFontCode by graph.appSettings.bookFontCodeFlow.collectAsState()
-    // Read once it is on screen, off the UI thread
-    val snippet by produceState("", line.lineId, listing.query, listing.smart) {
+    // Read once it is on screen, off the UI thread; with the title of its book when it is another's (a comment of Rashi
+    // or Tosafot, found on the daf)
+    val shown by produceState("" to null as String?, line.lineId, listing.query, listing.smart) {
         value =
             withContext(Dispatchers.Default) {
                 runSuspendCatching {
-                    val content =
-                        graph.repository
-                            .getLine(line.lineId)
-                            ?.content
-                            .orEmpty()
-                    if (listing.smart) {
-                        meaningSnippet(graph.searchEngine, content, listing.query)
-                    } else {
-                        findSnippet(plainTextFromHtml(content), listing.query)
-                    }
-                }.getOrNull().orEmpty()
+                    val found = graph.repository.getLine(line.lineId)
+                    val content = found?.content.orEmpty()
+                    val snippet =
+                        if (listing.smart) {
+                            meaningSnippet(graph.searchEngine, content, listing.query)
+                        } else {
+                            findSnippet(plainTextFromHtml(content), listing.query)
+                        }
+                    snippet to found?.bookId?.takeIf { it != listing.bookId }?.let { graph.repository.getBook(it)?.title }
+                }.getOrNull() ?: ("" to null)
             }
     }
+    val (snippet, source) = shown
     ResultRow(selected = selected, onClick = onClick) {
+        if (source != null) Text(source, color = JewelTheme.globalColors.text.info, fontSize = 11.sp)
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.weight(1f)) { SnippetText(snippet, listing.query.takeUnless { listing.smart }, bookFontCode) }
             if (line.count > 1) Text("(${line.count})", color = JewelTheme.globalColors.text.info, fontSize = 12.sp)

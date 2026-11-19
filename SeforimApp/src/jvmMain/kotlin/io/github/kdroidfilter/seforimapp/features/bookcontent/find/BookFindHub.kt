@@ -22,7 +22,10 @@ object FindResultsSettings : SettingsGroup("find_results") {
     val shown by boolean(false)
 }
 
-/** A tab's find in its book [bookId]: its [query], whether by meaning ([smart]), its [matches] and the [current] one. */
+/**
+ * A tab's find in its book [bookId]: its [query], whether by meaning ([smart]), its [matches] and the [current] one;
+ * the other [books] its matches hold lines of (on the daf, Rashi's and Tosafot's), whose contents name them too.
+ */
 @Immutable
 data class FindListing(
     val bookId: Long,
@@ -30,6 +33,7 @@ data class FindListing(
     val smart: Boolean,
     val matches: BookFindMatches,
     val current: BookFindMatches.Match?,
+    val books: Set<Long> = emptySet(),
 )
 
 /**
