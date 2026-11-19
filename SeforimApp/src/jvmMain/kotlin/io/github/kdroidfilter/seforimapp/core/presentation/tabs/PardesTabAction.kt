@@ -20,15 +20,15 @@ internal data class PardesTabAction(
 
 /**
  * Pardes's items of the menu of the tab [tabId], after Zayit's own and before the closing ones: a copy of the tab, as
- * Chrome's "Duplicate" (request 59 of docs/DESKTOP_STAGE3_PLAN.md).
+ * Chrome's "Duplicate", and its window's split view, as Chrome's (request 59 of docs/DESKTOP_STAGE3_PLAN.md).
  */
 @Composable
 internal fun pardesTabActions(tabId: String): List<PardesTabAction> {
     val desktopManager = LocalAppGraph.current.desktopManager
-    val windowId = LocalOpenWindow.current.id
+    val openWindow = LocalOpenWindow.current
     return listOf(
         PardesTabAction(stringResource(Res.string.tab_duplicate), AllIconsKeys.Actions.Copy) {
-            desktopManager.duplicateTab(tabId, windowId)
+            desktopManager.duplicateTab(tabId, openWindow.id)
         },
-    )
+    ) + openWindow.splitTabActions(tabId)
 }

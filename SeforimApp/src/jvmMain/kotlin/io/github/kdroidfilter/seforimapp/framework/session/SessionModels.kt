@@ -10,6 +10,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.SplitDefault
 import io.github.kdroidfilter.seforimapp.features.search.SearchTabCache
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
 import io.github.kdroidfilter.seforimapp.framework.desktop.SavedPanes
+import io.github.kdroidfilter.seforimapp.framework.desktop.TabSplit
 import kotlinx.serialization.Serializable
 
 /**
@@ -159,6 +160,8 @@ data class WindowSnapshot(
     val geometry: SavedGeometry? = null,
     // Pardes: its reader docks as the user left them (PaneLayouts). Appended last: the session is ProtoBuf
     val panes: SavedPanes? = null,
+    // Pardes: its two tabs side by side (TabSplits, request 59 of stage 3). Appended last as well
+    val split: TabSplit? = null,
 )
 
 @Serializable

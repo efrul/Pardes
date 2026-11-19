@@ -908,6 +908,9 @@ private fun RtlAwareTab(
             tabState.isHovered -> accent.copy(alpha = 0.10f)
             else -> Color.Transparent
         }
+    // Pardes: a tab of a split joined to its partner (request 59 of stage 3)
+    val joint = LocalOpenWindow.current.splitJoint(tabId)
+    val shape = splitShape(joint, 8.dp)
     val resolvedContentColor =
         tabStyle.colors
             .contentFor(tabState)
@@ -955,9 +958,9 @@ private fun RtlAwareTab(
                 modifier
                     .height(tabStyle.metrics.tabHeight)
                     .width(widthForThisTab)
-                    .padding(horizontal = TabOuterHorizontalPadding, vertical = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(backgroundColor)
+                    .splitPadding(joint, horizontal = TabOuterHorizontalPadding, vertical = 4.dp)
+                    .clip(shape)
+                    .splitFrame(joint, backgroundColor, accent, shape)
                     .alpha(dragAlpha)
                     .onGloballyPositioned { coords ->
                         val pos = coords.positionInWindow()
