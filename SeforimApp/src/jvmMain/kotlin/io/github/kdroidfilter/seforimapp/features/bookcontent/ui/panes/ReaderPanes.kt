@@ -832,9 +832,12 @@ private fun BookPaneBody(
             ReaderPane.References ->
                 ReferencesPane(uiState = uiState, onEvent = onEvent, diacritics = diacritics, modifier = modifier)
             ReaderPane.FindResults ->
-                FindResultsPane(destination.tabId, uiState.navigation.selectedBook?.id ?: 0L, modifier) {
-                    onEvent(BookContentEvent.FocusText)
-                }
+                FindResultsPane(
+                    destination.tabId,
+                    uiState.navigation.selectedBook?.id ?: 0L,
+                    modifier,
+                    onHide = { onEvent(BookContentEvent.ToggleFindResults) },
+                ) { onEvent(BookContentEvent.FocusText) }
             ReaderPane.Targum, ReaderPane.Comments, ReaderPane.Sources -> {
                 val book = uiState.navigation.selectedBook ?: return@BookTextMenus
                 val connections = tabUi.connections(book.id)

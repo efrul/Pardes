@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (308 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (310 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1292,7 +1292,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +256 −39 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+- **Change:** modified, +259 −39 lines. Feature: Commentators in their own panes, A pane at the window's edge,
   Pane layout kept, Find results pane, Keys in the book tree and the contents.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
@@ -1322,8 +1322,9 @@ The entries of this section by kind:
     `BookContentEvent.ToggleFindResults`), among the `standard` panes; `desiredPanes` takes `findResults` and adds it
     while the book's text is shown; `selectedTabDemand` reads it with `rememberFindResultsShown` (the setting
     `FindResultsSettings.shown`, and the tab's find bar open on a query of two letters at least); `BookPaneBody` draws
-    it with `FindResultsPane`, whose Enter and Escape give the focus back to the text (`BookContentEvent.FocusText`);
-    its imports.
+    it with `FindResultsPane`, whose Enter and Escape give the focus back to the text (`BookContentEvent.FocusText`)
+    and whose header's minimize hides it as the find bar's button does (`onHide`, `BookContentEvent.ToggleFindResults`,
+    request 62); its imports.
   - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
     `docs/DESKTOP_STAGE3_PLAN.md`, the user's word of 2026-11-19: "לאחר פתיחת העץ אין עדין פוקוס עליו עד שלוחצים
     עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
@@ -4854,8 +4855,12 @@ Request 55 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "חיפוש בתוך �
 lists every match of the book's find under the entries of its table of contents, each line with its text around its
 first match and how many it has; the current match's line marked and kept in view; a line clicked gone to. One setting
 for every tab, kept; the pane shows while the find bar searches. The text keeps its find as Zayit's code holds it and
-tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `BookContentView.kt`, `FindInPageBar.kt`,
-`BookContentEvent.kt`, `BookContentViewModel.kt`, `AppGraph.kt`, `ReaderPanes.kt`, `strings.xml`.
+tells it to a hub, as a PDF book's reader and its contents pane talk. Request 62 (after the third testers' build: "את
+בורר תוצאות החיפוש יוכלו למזער ולחפש בו כמו בתוכן העניינים וספרים. בנוסף יוצג לכותרת של כל תוצאה לא רק הפסוק אלא גם
+הרמה שמעל"): the pane has the other panes' header, with their minimize and search (by its entries' titles, as the
+contents' search), each entry is its whole place in the contents ("פרק כ, פסוק יז") and a line cut after its own number
+keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookContentEvent.kt`, `BookContentViewModel.kt`,
+`AppGraph.kt`, `ReaderPanes.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/BookFindHub.kt`
 
@@ -4878,16 +4883,23 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsPane.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 449 lines.
-- **What:** `FindResultsPane(tabId, bookId, modifier, onLeave)`: the tab's find from the hub, "2889 תוצאות ב־1376 שורות" (by
-  meaning, "N שורות קרובות במשמעות"), then its lines in a `LazyColumn` under their entries of the table of contents
-  (`findRows`, `entryTitles`: `getLineTocMappingsForBook` and `getBookToc`, read once a book), each a Zayit
+- **Size:** 587 lines.
+- **What:** `FindResultsPane(tabId, bookId, modifier, onHide, onLeave)`: under a header as the other panes' (request 62:
+  Zayit's `PaneHeader`, the pane's grip and its dock button, "תוצאות החיפוש בספר", its minimize hiding the pane,
+  `onHide`, and while the tab has a find, Zayit's `PaneSearchButton`, "חיפוש כותרת", and a letter typed over the pane
+  opening the search with it, `TypeToSearchTarget`), the private `BookFindResults`: the tab's find from the hub, "2889
+  תוצאות ב־1376 שורות" (by meaning, "N שורות קרובות במשמעות"), then its lines in a `LazyColumn` under their entries of
+  the table of contents, each entry its whole place (`findRows`, `entryTitles`: `getLineTocMappingsForBook`, and
+  `entryPaths` of `getBookToc` and `getBookCore`'s title, read once a book: the titles from the top down to the entry,
+  joined by commas, the top one left out when it is the book's title over another, as the search's results write a
+  line's place: "פרק כ, פסוק יז"; `EntryTitle`), all under the results' search (`FindRowsSearchLayout`), each a Zayit
   `ResultRow` (a line of another book, a comment found on the daf, with that book's title above it; the titles of
   the listing's other books read with the book's own) with its text around its first match (`findSnippet`, `findAllMatchesNormalized` on the query as the text
-  normalizes it, cut at words, the line read once it is on screen), the find's words marked by `SnippetText`, and "(3)"
-  for a line of several. By meaning, as the search's results show a line found so (the user, 2026-11-19: "אין הדגשות
+  normalizes it, cut at words, the line read once it is on screen; a piece cut after the line's own number, a verse's
+  "(יז)", with it first, `withOwnNumber`, request 62), the find's words marked by `SnippetText`, and "(3)" for a line
+  of several. By meaning, as the search's results show a line found so (the user, 2026-11-19: "אין הדגשות
   במצב סמנטי"): `meaningSnippet`, a piece around the passage closest in meaning (`SearchEngine.highlights` on
-  `SnippetSources.clean` of the line, then `rangeSnippet`), bold, or `findSnippet` when nothing is highlighted; the current match's line marked and kept in view; a line clicked asks the
+  `SnippetSources.clean` of the line, then `rangeSnippet`, its own number kept), bold, or `findSnippet` when nothing is highlighted; the current match's line marked and kept in view; a line clicked asks the
   text to go to it, and gives the list the keyboard's focus. With it, as the search's results (the user, 2026-11-19:
   "כאשר הפוקוס על חלונית הצד - כמו בתוצאות חיפוש חץ למעלה למטה יעבור בין התוצאות כאשר התוצאה מסומנת"): up and down go
   from line to line, the text with them, the line asked marked ahead of the text's answer (`asked`, so that keys
@@ -4897,13 +4909,19 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
   `PdfFindResults`, "12 תוצאות ב־5 עמודים", each match under the bookmark it comes after (`pdfFindRows`: the bookmarks
   read as the contents pane reads them, `PdfOutlines`, at any depth) or under its page, with its piece of the page
   (`FindRow.InPage`), the find's words marked, the current one marked and kept in view, a match clicked or reached by
-  the same keys gone to on its page (`BookFindHub.goToPdfMatch`); "אין טקסט בקובץ" for a scan. The keys of both lists
-  move by `findListMove`; `pieceAround`, a piece of a text around a range, is the found line's and the PDF page's.
+  the same keys gone to on its page (`BookFindHub.goToPdfMatch`), under the same results' search; "אין טקסט בקובץ" for a
+  scan. The keys of both lists move by `findListMove`; `pieceAround`, a piece of a text around a range, is the found
+  line's and the PDF page's; `FindRow.matchId`, a row's line index or PDF match's place, is what the results' search
+  goes to, and a row chosen there gives the list back the keyboard's focus. The body inset 8 dp, as the contents'.
 - **Reached from:** `ReaderPanes.kt` (`BookPaneBody`).
 - **Follows:** Pardes's `LinePlacesView` (Zayit's result rows and snippets in a pane of the reader), and the reader's
-  panes' frame.
-- **Tests:** `FindResultsTest` (the rows, the pieces); tried in the app (בר found in Berakhot, the pane by its pages,
-  a line clicked gone to at its match, 11/2889).
+  panes' frame; Zayit's `BookTocPanel` and `CategoryTreePanel` (a header with its search button over
+  `PaneSearchLayout`); Zayit's `GetBreadcrumbPiecesUseCase` (a line's place).
+- **Tests:** `FindResultsTest` (the rows, the pieces), `FindResultsSearchTest` (the places, the own number); tried in
+  the app (בר found in Berakhot, the pane by its pages, a line clicked gone to at its match, 11/2889; request 62:
+  אברהם in Rashi on Genesis under "פרק יב, פסוק ב", "יב" typed in the pane's search keeping chapter 12's and the verses
+  יב, Enter on the third going to it, 7/136, and closing the search; אבימלך in Genesis, "(יז) …ויתפלל"; the minimize
+  hiding the pane and the find bar's button showing it again).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsTest.kt`
 
@@ -4918,6 +4936,41 @@ tells it to a hub, as a PDF book's reader and its contents pane talk. Hooks: `Bo
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names; Zayit's `BookFindMatches` built as its own tests
   build it).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsSearch.kt`
+
+- **Feature:** Find results pane.
+- **Size:** 194 lines.
+- **What:** the results pane searched as the contents and the book tree are (request 62: "יוכלו למזער ולחפש בו כמו
+  בתוכן העניינים וספרים"). `FindResultsSearch` (`@Stable`, `rememberFindResultsSearch(tabId)`): its bar shown, the
+  query typed (`queryChanged`, ignored once hidden, as the contents' search ignores a query flushed after Escape),
+  `toggle`, `close`, and its field's `PaneSearchFocus`. `FindFilterResult` (`PaneSearchResult`) and
+  `filterFindRows(rows, query)`: the rows under the entries whose title matches as the contents' search matches theirs
+  (Zayit's `tocQueryTokens` and `matchTocText`: each word of the query the start of a word of the title, nikud, quotes
+  and final letters aside), the ranges of each title it matched, its matches the rows' `FindRow.matchId`, and the best
+  the first under the entry with the most whole words, as the contents' search's. `FindRowsSearchLayout`: Zayit's
+  `PaneSearchLayout` with "חיפוש כותרת" and "לא נמצאו כותרות" (the contents' strings), the pane's list while nothing is
+  typed, else the rows kept, the active one marked and kept in view (`revealItem`); a row chosen by a click or Enter is
+  gone to and the bar hidden, as the contents' search opens its entry and hides. `EntryTitle`: an entry over its lines,
+  13 sp semibold, its matched words marked with `SearchHighlightColor` as the contents' search marks a title's.
+- **Reached from:** `FindResultsPane.kt` (`BookFindResults`, `PdfFindResults`).
+- **Follows:** Zayit's `BookTocPanel` (`PaneSearchLayout`, `TocSearchResults`), `TocSearch.kt` and `BookTocView`'s
+  highlighted titles.
+- **Tests:** `FindResultsSearchTest`; tried in the app (see `FindResultsPane.kt`).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsSearchTest.kt`
+
+- **Feature:** Find results pane.
+- **Size:** 83 lines.
+- **What:** request 62: an entry's place, its titles from the top without the book's own title over them (Rashi on
+  Genesis' "פרק כ, פסוק יז"), the book's title kept for a line of its own entry and a top entry that is not it kept;
+  an entry that is its own ancestor still placed; the results' search keeping the lines under the titles it matches,
+  their line indices, the words matched, nothing for no word typed; Enter on the first line of the entry with the
+  most whole words; a PDF book's matches by their bookmark, by their place; a piece cut after the line's own number
+  keeping it first ("(יז) …"), a piece not cut as it is, a line with none, a geresh and the search's dots.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/text/FindWordBreaksTest.kt`
