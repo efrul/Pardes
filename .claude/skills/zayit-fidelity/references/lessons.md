@@ -122,6 +122,13 @@ tools and the code did when it was written.
   Enter on a leaf give the focus back with `BookContentEvent.FocusText`.
 - **The structured-coroutines plugin refuses a `launch` on a scope field** unless it is marked `@StructuredScope`
   (`TreeKeys`, `PassageReading`), at compile time (`SCOPE_003`).
+- **The tab beside the selected one is shown, not selected.** In a split (`TabSplits`) the other half is measured and
+  drawn, but `LocalTabSelected` is false there: the PDF book and the Gemara scan, which draw their pages only in the
+  selected tab, left that half blank (2026-11-19). Ask `LocalTabShown` for what is on screen, and `LocalTabSelected`
+  for what has the keys and the panes.
+- **A composable that many screens use reads `LocalAppGraph` only where it needs it.** A UI test composes it without
+  a graph and fails with "No AppGraph provided" (`BookTocViewAutoCenterUiTest`, when `rememberTreeKeys` read it in
+  every tree): it reads it only inside a pane that asks for the focus (`LocalPaneFocusKey`, 2026-11-19).
 - **A book opened in a tab of the home page gets no Ctrl/Cmd+F** when its destination stays the home page's: Zayit's
   window keys ask for a find only in a tab whose destination is a book's (`hasFindInPage`). A book opened from the
   home page's search bar becomes a book's tab and has it (2026-11-18, the PDF find).
@@ -278,7 +285,13 @@ Each of these was built, shown, and sent back. They say what the user expects:
   segmented control, were redone as one pill as high as the search bar, the mode chosen marked as the category tabs
   mark theirs ("תדייק עיצובית"); the tree's keyboard row, first a gold ring, is shown as the contents' search shows
   its match ("הפוקוס יראה כמו במקומות שהוא קיים, כמו בתוכן העניינים לאחר חיפוש בו"). Look for the control's look in
-  the app before drawing a new one.
+  the app before drawing a new one. Then the pill went too: the search by meaning became the in-book find's own
+  toggle of its smart find, at the search bar's end, and the exact search was dropped ("תוריד את מדויק, והעיצוב
+  יתבסס על המצבים הקיימים בחיפוש בתוך ספר", 2026-11-19), on by default ("ברירית מחדל תהיה עם סמנטי"). A control
+  the app has already beats a new one, and fewer choices beat a finer one.
+- **What opens is ready for the keys.** The book tree and the contents, opened by their button or shortcut, took the
+  keys only once clicked ("לאחר פתחיחת העץ אין עדין פוקוס עליו עד שלוחצים עליו", 2026-11-19): a pane opened to be
+  used takes the focus.
 - **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
   to the text's right beside the contents ("יהיה בימין").
 

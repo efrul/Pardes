@@ -209,10 +209,11 @@ The entries of this section by kind:
 
 #### `TAB_SYSTEM_README.md`
 
-- **Change:** modified, +6 −0 lines. Feature: Zayit's notes brought up to date.
+- **Change:** modified, +8 −0 lines. Feature: Zayit's notes brought up to date, Two tabs side by side.
 - **What:** a note marked "Pardes", under the title: what of the file describes an older tab system (the LRU of
   retained compositions, `TabStateManager`, `TabDockManager`) and what holds today (every tab composed and the
-  selected one laid out, `TabPersistedStateStore`, Nucleus's `TabWorkspace`), and `CLAUDE.md`'s points for the rest.
+  selected one laid out, `TabPersistedStateStore`, Nucleus's `TabWorkspace`), and `CLAUDE.md`'s points for the rest;
+  and Pardes's split view, whose tab beside the selected one is on screen (`LocalTabShown`) but not selected.
 - **Why:** `CLAUDE.md` sends every session here "for complete details", and the details had gone out of date with
   Zayit's own code (stage 3 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-19); a note keeps Zayit's text as it is.
 - **Kind:** documentation.
@@ -700,7 +701,7 @@ The entries of this section by kind:
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
 - **Change:** modified, +55 −4 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link, The user's PDF books, Search modes.
+  Desktop link, The user's PDF books, Search modes, Two tabs side by side.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,

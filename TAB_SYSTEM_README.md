@@ -5,6 +5,8 @@
 > state is its `TabPersistedState` in `TabPersistedStateStore` (no `TabStateManager`); and tabs move between windows
 > through Nucleus's `TabWorkspace` (`DesktopManager.linkWorkspaces`, no `TabDockManager`). `CLAUDE.md` › Memory-Efficient
 > Tab System has the current points.
+> A split view (`TabSplits`, Pardes's own) measures and places two tabs side by side: the one beside the selected tab
+> is on screen (`LocalTabShown`) but not selected (`LocalTabSelected`).
 
 This app uses a custom tab system rendered by `TabsContent` **without Compose
 Navigation**. Each open tab owns a `SimpleTabViewModelOwner` (its own
