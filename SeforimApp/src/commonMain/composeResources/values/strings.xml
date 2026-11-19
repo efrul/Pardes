@@ -1217,17 +1217,14 @@
     <string name="daf_scan_cut_yes">כן, להכין</string>
     <string name="daf_scan_cut_no">לא, להציג מהקובץ</string>
     <!-- Pardes: a tractate's daf ב. in a file of the user's folder, set above its scan and in the card (request 52 of stage 3, ScanFirstPageBar) -->
-    <string name="daf_scan_first_page">דף ב. בעמוד %1$d של הקובץ</string>
-    <string name="daf_scan_first_page_guess">דף ב. בעמוד %1$d של הקובץ, לפי ניחוש</string>
-    <string name="daf_scan_first_fix">תיקון</string>
-    <string name="daf_scan_first_top">העמוד שכותרתו %1$s הוא בעצם דף</string>
-    <string name="daf_scan_first_amud_a">עמוד א</string>
-    <string name="daf_scan_first_amud_b">עמוד ב</string>
     <string name="daf_scan_first_reset">חזרה לניחוש</string>
     <string name="daf_scans_first_pages">דף ב. בקבצים שלך</string>
-    <string name="daf_scans_first_pages_description">בסריקה מהתיקייה שלך, השורה שמעל העמודים אומרת באיזה עמוד של הקובץ נמצא דף ב. של המסכת, ומתקנת אותו: למשל בקובץ של כמה מסכתות, או בקובץ שיש בו עמודים לפני דף ב. העמודים שנקבעו:</string>
-    <string name="daf_scans_first_pages_none">עוד לא נקבע עמוד לאף מסכת.</string>
+    <string name="daf_scans_first_pages_description">לכל מסכת שבתיקייה שלך, העמוד בקובץ שבו נמצא דף ב. שלה, כמו שתוכנת PDF מונה את העמודים. פרדס מנחש אותו לפי הסימניות של הקובץ, ובקובץ של כמה מסכתות לפי המסכתות שלפניה. אפשר לתקן: לכתוב את העמוד ליד המסכת, או לסמן כמה מסכתות ולקבוע לכולן אותו עמוד. בקובץ של כמה מסכתות, המסכתות שאחרי מסכת שנקבעה זזות איתה.</string>
+    <string name="daf_scans_first_pages_none">אין מסכתות בתיקייה שלך.</string>
     <string name="daf_scans_first_page_row">%1$s, בקובץ «%2$s»: דף ב. בעמוד</string>
+    <string name="daf_scans_first_guessed">לפי ניחוש</string>
+    <string name="daf_scans_first_pages_checked">למסכתות המסומנות: דף ב. בעמוד</string>
+    <string name="daf_scans_first_pages_set">קביעה</string>
     <!-- Pardes: pages two side by side (request 47, PageSpreadsButton) -->
     <string name="page_spreads">שני עמודים</string>
     <string name="page_spreads_tooltip">שני עמודים זה לצד זה, כספר פתוח: עמוד ב מימין ועמוד א משמאל</string>

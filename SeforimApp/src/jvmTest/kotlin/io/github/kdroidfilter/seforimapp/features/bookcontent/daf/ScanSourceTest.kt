@@ -73,19 +73,6 @@ class ScanSourceTest {
     }
 
     @Test
-    fun `the page at the top named by its daf and amud gives the tractate's first page`() {
-        assertEquals(4, firstFromTop(10, "5a"), "5a is the tractate's sixth page")
-        assertEquals(10, firstFromTop(10, "2a"))
-        assertNull(firstFromTop(3, "5a"), "before the file's start")
-        assertEquals(5, dafTyped("ה"))
-        assertEquals(5, dafTyped("ה'"))
-        assertEquals(12, dafTyped("יב"))
-        assertEquals(40, dafTyped(" 40 "))
-        assertNull(dafTyped("א"), "a tractate begins at daf ב")
-        assertNull(dafTyped("abc"))
-    }
-
-    @Test
     fun `a tractate's pages are its count, at most the file's after its first`() {
         val file = File(root, "x.pdf")
 
