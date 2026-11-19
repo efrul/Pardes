@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (132 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (133 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (303 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (304 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -59,7 +59,7 @@ The entries of this section by kind:
 |---|---|
 | Pardes feature hook | 58 |
 | Pardes feature in Zayit's file | 34 |
-| Fix of Zayit's code | 14 |
+| Fix of Zayit's code | 15 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
@@ -861,6 +861,25 @@ The entries of this section by kind:
   private composable at the file's end.
 - **Smaller:** already minimal.
 - **Tests:** tried in the app (Alt+Enter opened the pane, its toggle marked).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/text/HebrewSearch.kt`
+
+- **Change:** modified, +38 −1 lines. Feature: Find results pane (a fix of Zayit's code).
+- **What:**
+  - `findAllMatchesNormalized` matches on `wordBreaksAsSpaces(stripDiacriticsWithMap(text))`: a private function at the
+    file's end that turns each run of what parts two words, spaces of any width (the thin space of `&thinsp;`), a maqaf
+    (U+05BE) or a paseq (U+05C0), into one space mapped to the run's first character, so a match is still highlighted
+    on its own letters; the text is returned as it was when it holds no such run.
+  - `normalizeQueryForHebrew` turns the query's paseq into a space and a run of spaces into one, after Zayit's maqaf.
+  - Comments marked "Pardes:", two constants and a regex.
+- **Why:** the user found 20 lines for "כה אמר" in Isaiah with the find and about 57 with the search (2026-11-19: "איך
+  בראשי מצא 57 ובספר 20?"). Zayit turns the query's maqaf into a space but keeps the text's, and the paseq too: Isaiah
+  writes כֹּה־אָמַר twenty times and כֹּה&thinsp;׀ אָמַר eight, which Lucene's candidates held and the confirmation dropped.
+  With the fix the find gives 48 lines, the count in the library's own lines.
+- **Kind:** fix of Zayit's code (it holds for Zayit as well).
+- **Merge risk:** small: one line in each function, and a private function at the file's end.
+- **Smaller:** already minimal.
+- **Tests:** `FindWordBreaksTest` (Pardes's own, section 2); Zayit's `HebrewSearchTest` passes unchanged.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/session/SessionModelsTest.kt`
 
@@ -4760,6 +4779,18 @@ PDF book opens Zayit's find bar over its pages, top end: its text found in the p
 backwards for a PDF that keeps its Hebrew from left to right), the matches counted as each page's come, each marked on
 its page (the current one in another colour), Enter and Shift+Enter, Ctrl/Cmd+G and F3 going from match to match. A
 scan with no text layer says it has none. Hooks: none in Zayit's files; in Pardes's `PdfBookView.kt`, `PdfPageList.kt`
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/text/FindWordBreaksTest.kt`
+
+- **Feature:** Find results pane.
+- **Size:** 54 lines.
+- **What:** the find's matcher with a maqaf or a paseq between words (Isaiah's כֹּה־אָמַר and כֹּה&thinsp;׀ אָמַר): found by
+  the query's space and highlighted on their own letters; a query's maqaf finding both writings; a run of spaces, in
+  the query or the text, as one; a line's count of matches; words written together staying one word; the query's
+  paseq a space.
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `HebrewSearchTest` beside it (Kotlin Test, backtick names, `findAllMatchesOriginal`).
+- **Tests:** it is one (unit).
+
 and `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfFind.kt`
