@@ -73,6 +73,17 @@ class TreeKeysTest {
     }
 
     @Test
+    fun `the keypad's plus opens a closed folder and its minus closes an open one, as IntelliJ's trees`() {
+        assertEquals(TreeKey.EXPAND, treeKeyOf(Key.NumPadAdd, rtl = true))
+        assertEquals(TreeKey.COLLAPSE, treeKeyOf(Key.NumPadSubtract, rtl = true))
+        assertEquals(TreeMove.Click(4), move(4, TreeKey.EXPAND))
+        assertNull(move(1, TreeKey.EXPAND), "open already")
+        assertEquals(TreeMove.Click(1), move(1, TreeKey.COLLAPSE))
+        assertNull(move(4, TreeKey.COLLAPSE), "closed already")
+        assertNull(move(2, TreeKey.COLLAPSE), "a leaf: not to its parent, as the arrow does")
+    }
+
+    @Test
     fun `Enter clicks the row, a folder as a leaf`() {
         assertEquals(TreeMove.Click(2), move(2, TreeKey.ENTER))
         assertEquals(TreeMove.Click(4), move(4, TreeKey.ENTER))

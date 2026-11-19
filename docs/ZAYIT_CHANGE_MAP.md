@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (135 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (141 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (314 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (316 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -59,7 +59,7 @@ The entries of this section by kind:
 |---|---|
 | Pardes feature hook | 59 |
 | Pardes feature in Zayit's file | 35 |
-| Fix of Zayit's code | 15 |
+| Fix of Zayit's code | 21 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
@@ -835,21 +835,29 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsView.kt`
 
-- **Change:** modified, +23 −3 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3).
+- **Change:** modified, +33 −22 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
+  keys in the popups.
 - **What:** `TabActionsMenu` takes the tab's id (`tabId`, first) and draws Pardes's items (`pardesTabActions(tabId)`,
   resolved before the menu as the labels are, with a comment marked "Pardes:") after "העתק קישור", through Zayit's
   `tabContextMenuItem` in a loop; `RtlAwareTab` takes the tab's id to pass it on (`tabEntry.key`), and so does the
   overflow list's row (`tab.key`). Two tabs side by side (request 59 of stage 3): `RtlAwareTab` draws a tab of its
   window's split joined to its partner, with a comment marked "Pardes:": its joint (`splitJoint`), no padding and no
   rounding on that edge (`splitPadding`, `splitShape` in place of the 8 dp rounding), a light tint when it has none and
-  an outline (`splitFrame` in place of `background`).
+  an outline (`splitFrame` in place of `background`). `TabContextMenu` (a tab's menu, and the overflow's) is Jewel's
+  `PopupMenu` at the same place, with a comment marked "Pardes:", in place of a `Popup` holding Jewel's `MenuContent`
+  under a `DefaultMenuController` of its own (and its `@OptIn(InternalJewelApi::class)`): the same items drawn the same
+  way, now answering the keys, up and down, Enter and Escape, as the Tools menu (`ToolsMenuButton`, Jewel's
+  `PopupMenu`) does.
 - **Why:** a copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`,
-  2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there.
+  2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there. The menu's
+  keys: request 69 of the list after the third testers' build ("צריך תמיכה מלאה במקשים... מקש ימני על כרטיסיה... (כלים
+  כן עובד...)"): the popup had no key handling, which Jewel's `PopupMenu` gives; a fix Zayit can take as it is.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: a parameter on two of Zayit's composables and their three calls, and a loop in the
   menu; Zayit changes the menu now and then.
 - **Smaller:** already minimal: the menu's items are private to this file.
-- **Tests:** tried in the app (the menu's "שכפל לשונית" on the strip).
+- **Tests:** tried in the app (the menu's "שכפל לשונית" on the strip; request 69: the menu drawn as before, the arrow
+  down three times on "העתק קישור", Escape closing it).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManager.kt`
 
@@ -879,6 +887,87 @@ The entries of this section by kind:
 - **Merge risk:** one line.
 - **Smaller:** already minimal.
 - **Tests:** none of the menu; `DesktopLinkTest` for the link.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TabSearchPopup.kt`
+
+- **Change:** modified, +46 −21 lines. Feature: The keys in the popups.
+- **What:** in `TabSearchPopupContent`, a tab's row and a history entry's open through two local functions
+  (`selectTab`, `openEntry`, the rows' own code moved there unchanged), and with comments marked "Pardes:" the
+  popup's keys (`rememberPopupKeys(query)`, `PopupKeyRow`s for the open tabs and the history in their order, the
+  headers counted, `Modifier.popupKeys` on the popup's frame, the list's state `keys.listState`): up and down mark a
+  row, Enter opens it, Escape closes the popup; `itemsIndexed` for the two lists, each row `selected = keys.marks(…)`.
+  `PopupRow` takes `selected` (last, `false` by default) and draws it as the breadcrumb's popup draws its own (16% of
+  the accent; hovered, 8%, as before); its import.
+- **Why:** request 69 of the list after the third testers' build: "צריך תמיכה מלאה במקשים, כל תיבה שנפתחת תתמך
+  בזה... בכניסה להיסטוריה... היסטוריה והערות מהשורה למעלה". Zayit's breadcrumb popup answers the keys; the title bar's
+  popups, built on the same rows, did not.
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small to medium: the two rows' click code moved into functions, a parameter on `PopupRow`.
+- **Smaller:** the rows' code could stay inline, the keys calling it through the rows' callbacks.
+- **Tests:** `PopupKeysUiTest`; tried in the app (Ctrl+Shift+A, the arrow down twice on משנה ברורה's tab, Enter selecting
+  it).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/NotesPopup.kt`
+
+- **Change:** modified, +23 −2 lines. Feature: The keys in the popups.
+- **What:** with a comment marked "Pardes:", the popup's keys (`rememberPopupKeys(query)`, a `PopupKeyRow` for each
+  note in the books' order, each book's header counted, each opening its note as its row does), `Modifier.popupKeys`
+  on its frame, `keys.listState` on its list, and each note's row `selected` by its place among the notes.
+- **Why:** as for `TabSearchPopup.kt`, request 69 ("היסטוריה והערות מהשורה למעלה").
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small.
+- **Smaller:** already minimal.
+- **Tests:** `PopupKeysUiTest` (the keys).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/FavoritesPopup.kt`
+
+- **Change:** modified, +19 −2 lines. Feature: The keys in the popups.
+- **What:** with a comment marked "Pardes:", the popup's keys (`rememberPopupKeys(query)`, a `PopupKeyRow` for each
+  favorite as listed, the root's first, then each folder's after its header, each opening it with `openFavorite`),
+  `Modifier.popupKeys` on its frame, `keys.listState` on its list, and each row `selected` by its place among those
+  shown.
+- **Why:** as for `TabSearchPopup.kt`, request 69.
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small.
+- **Smaller:** already minimal.
+- **Tests:** `PopupKeysUiTest` (the keys); tried in the app (Escape closing it).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DropdownButton.kt`
+
+- **Change:** modified, +11 −0 lines. Feature: The keys in the popups.
+- **What:** with a comment marked "Pardes:", the popup's frame takes the keys as it opens (a `FocusRequester` asked in a
+  `LaunchedEffect`, `focusable`) and `Modifier.dropdownKeys`: up and down move the focus from row to row (the first
+  row from none), Escape closes it; Enter and Space click the row in focus, as a clickable row takes them. Its
+  imports.
+- **Why:** request 69 of the list after the third testers' build: "כמו למשל הטאבים של הקטגוריות במסך הבית": the home's
+  catalog dropdowns opened from the keyboard and then answered none.
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small: a few modifiers on the popup's frame.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app (תלמוד בבלי opened, the arrow down three times on עירובין, Enter opening it).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/CatalogDropdown.kt`
+
+- **Change:** modified, +7 −2 lines. Feature: The keys in the popups.
+- **What:** each book's row in the two dropdowns (one category's, several categories') reads whether it has the focus
+  (`collectIsFocusedAsState` on its interaction source, with a comment marked "Pardes:") and is tinted then as when
+  hovered; the import.
+- **Why:** as for `DropdownButton.kt`: the row the keys moved to is seen.
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small: a line and a condition in each of two rows.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app (see `DropdownButton.kt`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TocJumpDropdown.kt`
+
+- **Change:** modified, +4 −1 lines. Feature: The keys in the popups.
+- **What:** as `CatalogDropdown.kt`, for the rows of a book's contents' dropdown: tinted when in focus as when hovered,
+  with a comment marked "Pardes:"; the import.
+- **Why:** as for `DropdownButton.kt`.
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app with the catalog's rows, which are drawn the same way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/FindInPageBar.kt`
 
@@ -3771,10 +3860,12 @@ list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeys.kt`
 
 - **Feature:** Keys in the book tree and the contents.
-- **Size:** 323 lines.
+- **Size:** 331 lines.
 - **What:** the pure part: `TreeNode` (a row's depth, folder and open), `TreeKey` and `treeKeyOf` (a key of the tree's,
-  the arrow left going in from the right), `TreeMove` and `treeMove` (what a key does from the row the keys are on:
-  a row, the ends, a page, in, out, a click), `listMove` (Home, End and the page keys of a list whose arrows are its
+  the arrow left going in from the right; the numeric keypad's plus and minus, `EXPAND` and `COLLAPSE`, as IntelliJ's
+  trees have them, request 69 of the list after the third testers' build: "המקשים בעץ - תבדוק שזה באמת תומך כמו
+  בג'טבריינס"), `TreeMove` and `treeMove` (what a key does from the row the keys are on: a row, the ends, a page, in,
+  out, a click; plus a closed folder opened, minus an open one closed), `listMove` (Home, End and the page keys of a list whose arrows are its
   own) and `pageRows`. `TreeKeyRow` (a row's key in the list, node and click); `NavigationState.treeSelectedKey` (the
   book tree's key of its row selected, an override first). `TreeKeys`, the keys' row (`focused`), whether the tree has
   the focus, and `shown` (the row shown as selected then); `rememberTreeKeys(selected)`, on the row selected whenever
@@ -3792,15 +3883,52 @@ list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeysTest.kt`
 
 - **Feature:** Keys in the book tree and the contents.
-- **Size:** 98 lines.
+- **Size:** 109 lines.
 - **What:** right to left, the arrow left goes in and the right out (left to right, the other way); up, down, the ends
   and a page, kept inside the tree; before any row, the first, or the last for End; in opens a closed folder, goes
   into an open one, nothing on a leaf or an empty folder; out closes an open folder, else goes up to the parent,
-  nothing at the top; Enter clicks a folder as a leaf; a list takes Home, End and the page keys alone; the book tree's
+  nothing at the top; the keypad's plus opens a closed folder and its minus closes an open one, neither moving to a
+  parent; Enter clicks a folder as a leaf; a list takes Home, End and the page keys alone; the book tree's
   row selected, a book before its category, an override before the selection.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
+
+### The keys in the popups
+
+Request 69 of the list after the third testers' build of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-19): "צריך תמיכה מלאה
+במקשים, כל תיבה שנפתחת תתמך בזה כמו למשל הטאבים של הקטגוריות במסך הבית, בכניסה להיסטוריה, מקש ימני על כרטיסיה,
+היסטוריה והערות מהשורה למעלה (כלים כן עובד...)". The title bar's popups (the tab search and its history, the
+favorites, the notes) mark a row with the arrows and open it with Enter, as Zayit's breadcrumb popup does; a tab's menu
+is Jewel's popup menu, as the Tools menu; the home's catalog dropdowns move the focus from row to row, the row in focus
+tinted as when hovered; the keypad's plus and minus open and close a folder of the trees. Hooks: `TabSearchPopup.kt`,
+`NotesPopup.kt`, `FavoritesPopup.kt`, `TabsView.kt`, `DropdownButton.kt`, `CatalogDropdown.kt`, `TocJumpDropdown.kt`;
+the trees' keys in Pardes's `TreeKeys.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeys.kt`
+
+- **Feature:** The keys in the popups.
+- **Size:** 106 lines.
+- **What:** `PopupKeyRow` (a row's place among the list's items, headers counted, and what it opens); `PopupKeys`
+  (`@Stable`: the row marked, `index`, among the `rows` that open something, the first at first; `marks(row)`; the
+  list's `listState`), `rememberPopupKeys(vararg inputs)` (on the first row again as the field's text changes, the row
+  marked kept in view with `revealItem`), and `Modifier.popupKeys(keys, onEscape)` (in the preview pass, before the
+  popup's field: up and down mark a row, Enter opens it, Escape closes); and `Modifier.dropdownKeys(focusManager,
+  onEscape)` for a dropdown's popup (up and down move the focus, `FocusDirection.Next`/`Previous`, Escape closes).
+- **Reached from:** `TabSearchPopup.kt`, `NotesPopup.kt`, `FavoritesPopup.kt`, `DropdownButton.kt`.
+- **Follows:** Zayit's `BreadcrumbPopup` (its keys in the preview pass of the popup's frame, its marked row and its
+  colours), `PaneSearch`'s `revealItem`.
+- **Tests:** `PopupKeysUiTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeysUiTest.kt`
+
+- **Feature:** The keys in the popups.
+- **Size:** 60 lines.
+- **What:** a popup's field and its list of three rows under a header (Zayit's `PopupSectionHeader` and `PopupRow`):
+  the arrow down past the last row staying on it, up a row, Enter opening the second, Escape closing the popup.
+- **Reached from:** the JVM tests.
+- **Follows:** `DafLayoutsCardUiTest` (Compose UI test on the desktop, Jewel's `IntUiTheme`).
+- **Tests:** it is one (Compose UI).
 
 ### The reader's menu: a copy with the source of a commentary, a targum or the daf
 
