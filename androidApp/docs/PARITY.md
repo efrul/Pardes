@@ -1,6 +1,6 @@
-# Parity with desktop Zayit 0.6.12
+# Parity with desktop Zayit 0.6.13
 
-The base is desktop Zayit 0.6.12 (upstream `kdroidFilter/Zayit` tag `v0.6.12`, SeforimLibrary `4f07145`) since 2026-10-29; it was 0.6.11 from 2026-10-28, 0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20, and 0.6.1 before. The lists below started as a gap list from comparing the real 0.6.1 sources (tag `v0.6.1` and SeforimLibrary `381fbea`) with this Android app, area by area, on 2026-10-13: 119 gaps, plus 12 from a completeness review. What each later desktop release changed, and what became of it here, is under "Later desktop releases".
+The base is desktop Zayit 0.6.13 (upstream `kdroidFilter/Zayit` tag `v0.6.13`, SeforimLibrary `18735a0`) on the branch `claude/zayit-0.6.13` since 2026-11-19, until its licence's permissions come (`docs/PARDES_PLAN.md`); it was 0.6.12 (SeforimLibrary `4f07145`) from 2026-10-29, 0.6.11 from 2026-10-28, 0.6.10 from 2026-10-26, 0.6.7 from 2026-10-20, and 0.6.1 before. The lists below started as a gap list from comparing the real 0.6.1 sources (tag `v0.6.1` and SeforimLibrary `381fbea`) with this Android app, area by area, on 2026-10-13: 119 gaps, plus 12 from a completeness review. What each later desktop release changed, and what became of it here, is under "Later desktop releases".
 
 - **Severity:** **H** = a missing or broken feature the user will notice; **M** = a noticeable difference; **L** = polish.
 - **Tick an item when it lands.** Before porting anything, read the desktop code it names, as 0.6.12 has it (`git diff v0.6.1 v0.6.12 -- <path>` shows what changed since the audit). The full findings, with desktop and Android file:line references and fix plans, were produced by the audit workflow; re-run a focused audit for an area rather than trusting stale line numbers.
@@ -9,9 +9,9 @@ The base is desktop Zayit 0.6.12 (upstream `kdroidFilter/Zayit` tag `v0.6.12`, S
   - Google Drive backup: a desktop loopback OAuth client;
   - the full template siddur: a private package;
   - the Talmud's verse quote links (0.6.5): a private package too, in the official builds only.
-- **Different on purpose: authorship.** Desktop's welcome ("שנבנה באהבה על ידי אברך ומפתח חרדי"), settings header ("נוצר על ידי אליהו גמבש"), About and terms describe desktop Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, AGPL and §7b notices are kept. Not a gap.
+- **Different on purpose: authorship.** Desktop's welcome ("שנבנה באהבה על ידי אברך ומפתח חרדי"), settings header ("נוצר על ידי אליהו גמבש"), About and terms describe desktop Zayit. Where desktop says who made the app (the welcome step, the settings header, About, the terms), Pardes says instead that it is based on Zayit by Elie (Elyahou) Gambache, who did not make it and is not responsible for it; his copyright, licence and attribution notices are kept. Not a gap.
 
-## Later desktop releases (0.6.2 to 0.6.12)
+## Later desktop releases (0.6.2 to 0.6.13)
 
 The base was desktop 0.6.1 (SeforimLibrary `381fbea`, in an Android-only submodule) until 2026-10-20, then 0.6.7, 0.6.10 from 2026-10-26, 0.6.11 from 2026-10-28, and since 2026-10-29 it is 0.6.12: Android compiles the repository's own SeforimLibrary submodule at `4f07145`, the commit desktop 0.6.11 and 0.6.12 build with (0.6.6 to 0.6.10 built with `7ddf045`), and `androidApp/upstream/SeforimLibrary` is gone. Upstream's release commits, for `git log` between them (the `v0.6.1`, `v0.6.7` and `v0.6.10` tags are the ones to fetch): 0.6.2 `41988a7d`, 0.6.3 `56bb1c3a` (SeforimLibrary `2265fcb`), 0.6.4 `b6331c88`, 0.6.5 `c13ffdde`, 0.6.6 `fb78498d` (SeforimLibrary `7ddf045`), 0.6.7 `7549ca72`, 0.6.8 `971f7dd6`, 0.6.9 `de3696ca`, 0.6.10 `02ccd881`, 0.6.11 `44febc5b` (SeforimLibrary `4f07145`), 0.6.12 `d7777e2e` (the same). No release since 0.6.1 raised the minimum library version (`20261011170830`).
 
@@ -161,6 +161,21 @@ Fixes land in waves:
 2. Shell, settings and tools.
 3. Search and reader.
 4. Final sweep.
+
+### 0.6.13
+
+The move to 0.6.13 (2026-11-19, on the branch `claude/zayit-0.6.13`), from `git diff v0.6.12 v0.6.13` upstream.
+SeforimLibrary moves to `18735a0`: its licence, a generator fix and a blacklist line, nothing the app reads, so the
+library, the deltas, the Lucene index and the user `.sq` files stay as they are.
+
+| Upstream change | Release | Change | Here |
+|---|---|---|---|
+| `1b9f1f21` and after | 0.6.13 | The Zayit Public License 1.0 in place of the AGPL v3 with its §7b term; the CLA and its workflow gone | **Ported**: the licence step, About, the settings header and the licences page name it (`LicenceText.kt`, `AboutSettings.kt`, `SettingsPages.kt`, `LicencesSettings.kt`), the APK bundles it as `Pardes-LICENSE.txt` |
+| `CycledTabIndexTest` | 0.6.13 | Ctrl+Tab in the strip's reading order, from the right | **Not applicable**: Android has no tab strip keys |
+| `SupportDialog.kt`, `heart.svg` | 0.6.13 | A title bar heart on Windows that opens a dialog selling Zayit's author's apps on the Microsoft Store | **Not applicable**, and hidden on desktop Pardes (`Brand.SUPPORT_BUTTON`) |
+| `StoreUpdates.kt`, `AppUpdateService.kt` | 0.6.13 | Updates of the Microsoft Store install from the Store itself | **Not applicable** |
+| `SiddurScreen.kt` (`addons/siddur/enabled`) | 0.6.13 | Zayit's private siddur's screen | **Not applicable**: Zayit's private module |
+| site, CI | 0.6.13 | Zayit's site, its download page, the Linux tarball and the Store's workflow | **Not applicable** |
 
 ## Pardes desktop's semantic search
 

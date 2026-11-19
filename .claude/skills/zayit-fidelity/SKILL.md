@@ -168,8 +168,10 @@ main into it, describe its files in the map, then merge it. Never rename the job
    - a trademark clause.
 
    It is not an OSI licence. Merging 0.6.13 or later brings that licence into Pardes, so it is the user's decision:
-   ask before merging, with the facts. On 2026-11-09 the user decided to stay on 0.6.12 for now; a later release is
-   asked about again, its licence first. How to read Zayit's later code without merging it, and how to tell whether
+   ask before merging, with the facts. On 2026-11-09 the user decided to stay on 0.6.12 for now; on 2026-11-18, to merge
+   0.6.13 on a branch of its own, `claude/zayit-0.6.13` (done on 2026-11-19), which reaches main only once the authors
+   of SeforimOpenSiddur (AGPL v3) and Amud (GPL v3) agree in writing, as their licences forbid further terms on the
+   work that carries them. A later release is asked about again, its licence first. How to read Zayit's later code without merging it, and how to tell whether
    one commit is still under the AGPL: references/lessons.md › Zayit's later code.
 2. **Merge** as `branding/README.md` › Merging a Zayit release says:
    - fetch the tag into a private ref (`git fetch --no-tags https://github.com/kdroidFilter/Zayit

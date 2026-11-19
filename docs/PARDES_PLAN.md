@@ -26,6 +26,15 @@ terms, and Zayit's Microsoft Store package, which Pardes leaves out (`branding/b
 reports, so its build hides that switch (`CrashReporting.isAvailable`). Android 0.7.0 and desktop 1.0.4 are its first
 versions on 0.6.12 (`androidApp/docs/PARITY.md` › 0.6.12).
 
+On the branch `claude/zayit-0.6.13` (2026-11-19) the base is Zayit 0.6.13 (`Merge Zayit v0.6.13 into Pardes`), with
+SeforimLibrary at `18735a0` and SeforimAcronymizer at `a1551d8`, as 0.6.13 pins them. 0.6.13 is under the Zayit Public
+License 1.0, so the branch reaches main only once SeforimOpenSiddur's author and Amud's authors agree in writing to
+Pardes distributing their work beside it (the user's decision of 2026-11-18, `docs/DESKTOP_STAGE3_PLAN.md`). It brings
+Ctrl+Tab in the strip's reading order, the Microsoft Store's updates (inert in Pardes, which builds no AppX) and a title
+bar heart that sells Zayit's author's apps, which Pardes hides (`Brand.SUPPORT_BUTTON`); Pardes's
+decorated-window-tao is rebuilt on its Nucleus (`nucleus-fork/README.md`). For Android it changes nothing but the
+licence (`androidApp/docs/PARITY.md` › 0.6.13).
+
 ## Decisions taken after the review (2026-10-20)
 
 - **No pull request to Zayit**, but the code stays fit for Zayit: personal books follow Zayit's conventions so Zayit

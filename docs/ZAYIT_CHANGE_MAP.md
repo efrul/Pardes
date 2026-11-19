@@ -1,6 +1,6 @@
 # The change map: Pardes against Zayit (מפת השינויים)
 
-<!-- zayit-base: v0.6.12 4bb1b68a4a0aea320405d536b67dc298ae3aaeb8 -->
+<!-- zayit-base: v0.6.13 d2379f1e0791ab8e79ad48444a040384af593fa9 -->
 
 Pardes is based on Zayit by Elie (Elyahou) Gambache and is not on his behalf: he did not make it, is not
 responsible for it and gives it no support. This repository carries Zayit's whole history and merges its releases,
@@ -8,8 +8,10 @@ and its desktop app is Zayit's code built as Pardes for desktop. This file descr
 differs from the Zayit release it is based on**: every file of Zayit's that Pardes changes, deletes or renames, and
 every file Pardes adds.
 
-- **Base:** Zayit v0.6.12 (`d7777e2e`, 2026-10-29), merged by `164a91f2` ("Merge Zayit v0.6.12 into Pardes").
-  SeforimLibrary and SeforimAcronymizer are at Zayit's pins (`4f07145`, `dea83b3`), unchanged.
+- **Base:** Zayit v0.6.13 (`e999a27c`, 2026-11-03), merged by `efabaccb` ("Merge Zayit v0.6.13 into Pardes") on the
+  branch `claude/zayit-0.6.13`, which reaches main only once SeforimOpenSiddur's and Amud's authors agree in writing
+  (v0.6.13 is under the Zayit Public License 1.0). SeforimLibrary and SeforimAcronymizer are at Zayit's pins
+  (`18735a0`, `a1551d8`), unchanged. Before it, Zayit v0.6.12 (`d7777e2e`, 2026-10-29), merged by `164a91f2`.
 - **Written** from 2026-11-05 to 2026-11-09 from the whole diff of every file and its Pardes commits. Then
   876 files differed: 779 added, 89 modified, 6 deleted, 2 renamed.
   Today's numbers: `python3 .claude/skills/zayit-fidelity/scripts/check_change_map.py --stats`.
@@ -39,8 +41,8 @@ every file Pardes adds.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
 
-To see a file's change: `git diff d7777e2e -- <path>`; its commits:
-`git log --no-merges --format='%h %ad %s' --date=short d7777e2e..HEAD -- <path>`.
+To see a file's change: `git diff e999a27c -- <path>`; its commits:
+`git log --no-merges --format='%h %ad %s' --date=short e999a27c..HEAD -- <path>`.
 
 ## Contents
 
@@ -60,8 +62,8 @@ The entries of this section by kind:
 | Pardes feature hook | 53 |
 | Pardes feature in Zayit's file | 31 |
 | Fix of Zayit's code | 12 |
-| Branding hook | 4 |
-| Removed Zayit file | 5 |
+| Branding hook | 5 |
+| Removed Zayit file | 4 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
 | Licence removal | 4 |
 | Documentation | 2 |
@@ -91,18 +93,6 @@ The entries of this section by kind:
   each merged Zayit release (`27da1951`, "Remove Zayit's Dependabot configuration from the fork").
 - **Kind:** removed Zayit file.
 - **Merge risk:** a modify/delete conflict when Zayit changes it (it did in `c7e25b46`); keep it deleted.
-- **Tests:** none.
-
-#### `.github/workflows/cla.yaml`
-
-- **Change:** deleted. Feature: Repository.
-- **What:** Zayit's CLA Assistant workflow (`pull_request_target` with write permissions), which asks every
-  contributor to sign Zayit's `CLA.md` and stores the signatures on a `cla-signatures` branch.
-- **Why:** the agreement grants rights to Zayit's maintainer, not to Pardes; Pardes takes no outside contributions
-  under it. It came with the merge of Zayit 0.6.7 and was removed in that branch (`dbaff6a7`; `docs/PARDES_PLAN.md`
-  › Introduced cleanly by the merge). Zayit itself deleted it in 0.6.13, when it dropped the CLA.
-- **Kind:** removed Zayit file.
-- **Merge risk:** a merge of 0.6.13 deletes it on both sides: no conflict.
 - **Tests:** none.
 
 #### `.github/workflows/ci.yaml`
@@ -192,8 +182,9 @@ The entries of this section by kind:
 - **Why:** this file is what every Claude Code session reads first, so Pardes's rules go where they cannot be missed;
   Zayit's text is kept word for word around them (`docs/PARDES_PLAN.md` › Phase 1, `CLAUDE.md` conflict).
 - **Kind:** documentation.
-- **Merge risk:** each Zayit release edits this file (0.6.13 changes its licence line); the additions are separate
-  paragraphs, so conflicts are small, but they happen.
+- **Merge risk:** each Zayit release edits this file (0.6.13 changed its CLA line to a licence line, the merge's
+  conflict here, Pardes's authorship line kept after it); the additions are separate paragraphs, so conflicts are
+  small, but they happen.
 - **Smaller:** the three Pardes paragraphs could become one pointer to a Pardes file; they stay here because they
   must be read by every session.
 - **Tests:** none.
@@ -305,16 +296,18 @@ The entries of this section by kind:
 
 #### `gradle/libs.versions.toml`
 
-- **Change:** modified, +5 −1 lines. Feature: Commentators in their own panes.
+- **Change:** modified, +6 −2 lines. Feature: Commentators in their own panes, Zayit after the base.
 - **What:**
-  - A version `nucleusTao = "3.0.0-dev-202610272317-2-tearoff"`, with a three-line comment.
+  - A version `nucleusTao = "3.0.0-dev-202611011507-2-tearoff"`, with a three-line comment: the fork's tao rebuilt on
+    the release 0.6.13 takes (`3.0.0-dev-202611011507`).
   - `nucleus-decorated-window-tao` takes `nucleusTao` instead of `nucleus`.
+  - `filament-kmp` at 0.7.12: Zayit's `5f7d53cb` (2026-11-06, after 0.6.13), taken on this branch (section 5).
 - **Why:** the commentator's pane torn off the reader needs `Modifier.satelliteTearOffHandle`, and a pane dropped at
   the window's edge the docks' outer bands, which only Pardes's fork of Nucleus (efrul/Nucleus) has; that one module
   comes from `nucleus-fork/maven` until Nucleus releases them (`831ad272`, `0447981b`, `nucleus-fork/README.md`).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** Zayit bumps `nucleus` often (0.6.13 does): `nucleusTao` must then be rebuilt for the new release or
-  dropped once Nucleus has the tear-off.
+- **Merge risk:** Zayit bumps `nucleus` often (0.6.13 did, and the fork was rebuilt on it): `nucleusTao` must then be
+  rebuilt for the new release or dropped once Nucleus has the tear-off. The filament line goes once a release has it.
 - **Smaller:** already minimal.
 - **Tests:** the build; `CommentatorPaneIdTest` (the panes' ids; the tear-off itself is drawn by Nucleus).
 
@@ -323,7 +316,7 @@ The entries of this section by kind:
 - **Change:** modified, +7 −0 lines. Feature: Commentators in their own panes, the open smart siddur.
 - **What:** in `dependencyResolutionManagement.repositories`, an `exclusiveContent` repository `NucleusFork`
   (`nucleus-fork/maven`) that serves only `dev.nucleusframework:nucleus.decorated-window-tao` at
-  `3.0.0-dev-202610272317-2-tearoff`, with a two-line comment. And `include(":siddur-open")`, after Zayit's last
+  `3.0.0-dev-202611011507-2-tearoff`, with a two-line comment. And `include(":siddur-open")`, after Zayit's last
   `include`: the open siddur's engine as a module of this build.
 - **Why:** as for `gradle/libs.versions.toml`: that one module from the repository, every other module from the
   release (`0447981b`). The engine's copy (`siddur-open/README.md`) is compiled here, with this build's Kotlin and
@@ -444,11 +437,12 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +21 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source.
+- **Change:** modified, +21 −23 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
-  its comment and its import: the settings are a window of their own, composed once in `main.kt`.
+  its comment and its import: the settings are a window of their own, composed once in `main.kt`. Zayit's support
+  dialog after it (0.6.13) stays, never opened in Pardes (`TitleBarActionsButtonsView.kt`).
 - **What, typing over a pane:** the key handler's last branch, for a key event that is not a key's press (a typed
   character no text field took), gives it to `TypeToSearch.type` instead of returning false, with a comment marked
   "Pardes:" and its import.
@@ -460,11 +454,26 @@ The entries of this section by kind:
   keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`. Typing over a pane: as for
   `TypeToSearch.kt` (request 24). The copy with source: as for `CommentarySource.kt` (request 40).
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small, but Zayit edits this file (0.6.13 changes Ctrl+Tab here): the two lines sit in the window's
-  modifier chain and key handler.
+- **Merge risk:** small, but Zayit edits this file (0.6.13 changed Ctrl+Tab and added the support dialog beside the
+  settings dialog Pardes removed, the merge's one conflict here): the two lines sit in the window's modifier chain and
+  key handler.
 - **Smaller:** already minimal.
 - **Tests:** `ReadingTimeStoreTest` (the store); the hook has none; `SettingsWindowReopenTest`; `TypeToSearchTest`;
   `CommentarySourceTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TitleBarActionsButtonsView.kt`
+
+- **Change:** modified, +3 −1 lines. Feature: Branding.
+- **What:** the title bar's heart, Zayit's "support my work" (0.6.13, Windows only), shows only where
+  `Brand.SUPPORT_BUTTON` is true: its `if (PlatformInfo.isWindows)` takes `&& Brand.SUPPORT_BUTTON`, with a comment
+  marked "Pardes:" and the import.
+- **Why:** the heart opens a dialog that sells Zayit's author's apps on the Microsoft Store; Pardes is not Zayit, and
+  its users would be sent to buy his apps from an app he does not make (the plan of stage 3, the merge of 0.6.13).
+  Zayit's brand keeps it (`branding/zayit`'s `Brand.SUPPORT_BUTTON = true`).
+- **Kind:** branding hook.
+- **Merge risk:** small; the button's condition, which a Zayit change to the button meets.
+- **Smaller:** already minimal.
+- **Tests:** the build with both brands.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
 
@@ -1171,8 +1180,10 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +391 −219 lines. Feature: Daf view, Scan view.
+- **Change:** modified, +398 −219 lines. Feature: Daf view, Scan view, Zayit after the base.
 - **What:**
+  - Zayit's `28f49ba8` (2026-11-14, after 0.6.13), taken on this branch (section 5): the selected line is brought into
+    view once the list is laid out (seven lines).
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
     `DafView` in place of the lines' `LazyColumn`, or, for a `DafMode` of the scan, `DafScanReader` (request 46, a
     comment marked "Pardes:" and its import), given the daf's control, zoom, the tab's line, anchor and request to
@@ -6547,7 +6558,7 @@ the description where something needs saying.
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-LICENSE.txt` | MIT licence of ONNX Runtime, which runs the semantic search's model (1.17.1 on desktop). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from ONNX Runtime (MIT); same text as androidApp/app/src/androidMain/assets/licenses/ONNX-Runtime-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-ThirdPartyNotices.txt` | ONNX Runtime's third-party notices (6,508 lines). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Differs from androidApp's copy, which is ONNX Runtime 1.22.0's (a665f012). | copied from ONNX Runtime (MIT) |
 | `branding/pardes/assetsExtra/common/licenses/PDFium-LICENSES.txt` | PDFium's licence (BSD 3-Clause) and those of the components of others it is built with (Abseil, AGG 2.3, Brotli, Dragonbox, fast_float, FreeType, HarfBuzz, Highway, ICU, Little CMS, libjpeg-turbo, libyuv, LLVM libc, OpenJPEG, libpng, LibTIFF, simdutf, zlib) and of pdfium-binaries, word for word under a header each (1,739 lines), for the PDF reading experiment, whose Windows builds carry PDFium. Shipped as a plain file in the install folder's licenses/ and listed in its README.md. | the texts the PDFium binaries' build ships, as pypdfium2 5.15.2's wheel carries them (its dist-info licenses/BUILD_LICENSES; FreeType's converted from Latin-1) |
-| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
+| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (the Zayit Public License 1.0 since the merge of Zayit 0.6.13, the AGPL v3 with §7b before it; based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
 | `branding/pardes/assetsExtra/common/licenses/Radix-Icons-LICENSE.txt` | MIT licence of Radix Icons, drawn in the app's icons module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Radix Icons (MIT); same text as androidApp/app/src/androidMain/assets/licenses/Radix-Icons-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/Robius-LICENSE-MIT.txt` | MIT licence of Project Robius's robius-share, derived source in Nucleus's share module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Project Robius (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-robius.txt |
 | `branding/pardes/assetsExtra/common/licenses/SLF4J-LICENSE.txt` | MIT licence of SLF4J. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from SLF4J (MIT) |
@@ -6568,8 +6579,8 @@ the description where something needs saying.
 | `branding/pardes/composeResources/drawable/zayit_new_logo.png` | 1556x715 base layer of the Home logo (`LogoImage` in HomeView.kt): the word פרדס on one line, in gold. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_new_logo.png (the lettering זית between olive branches) |
 | `branding/pardes/composeResources/drawable/zayit_new_logo_text.png` | 1556x715 white mask of the word פרדס, which `LogoImage` paints over the base layer in gold in light mode and in the accent colour in dark mode. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_new_logo_text.png (the mask of זית) |
 | `branding/pardes/composeResources/drawable/zayit_transparent.png` | 645x746 picture of the onboarding's welcome (InitScreen): the Pardes icon, 560 px, centred on a transparent ground. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_transparent.png (a gold olive branch) |
-| `branding/pardes/composeResources/files/ABOUT.md` | Pardes for desktop's About page (Settings › אודות, AboutSettingsScreen), in Hebrew: based on Zayit by Elie Gambache and not on his behalf, built from Zayit 0.6.12's open source, his copyright, AGPL v3, the §7b line, Pardes's source, Zayit's private modules left out, and thanks (Zayit and SeforimLibrary, Sefaria and Otzaria, Klei Kodesh's book search and dictionary data, the libraries, fonts, Emoji One, the licences folder, the temple picture's painting). *Note:* The §7b line ends with a space before U+2069, so the autolinker keeps the mark out of the link (branding/README.md › Texts); Klei Kodesh's line, whose address stood right before the mark and was no link, has it as a Markdown link, and no longer says how Klei Kodesh came by Torat Emet's dictionary (the user's request of 2026-11-10; the licences index still does). It does not credit Dicta's model, which CONDITIONS.md and the licences index do. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/ABOUT.md (the author's first-person About) |
-| `branding/pardes/composeResources/files/CONDITIONS.md` | Pardes for desktop's terms (the onboarding's licence step and Settings › תנאים, through `ConditionsText`), in Hebrew: the books' sources and rights, Rashi Amiti left out, Culmus, Emoji One, the temple painting, the app's licence (based on Zayit and not on his behalf, his copyright, AGPL v3, §7b, built from 0.6.12), the private modules left out, Dicta's model (CC BY 4.0) and privacy: no error reports, and the feedback sent only with the user's consent (what, where to, the question asked at the first install with its boxes checked at first, the searches made in Zayit and in Otzaria on the same computer when the user leaves them checked, their files read only then and never changed; what the open site shows everyone: the figures and the daf marks, and the searches' words only when "פרסום במאגר הפתוח" stayed checked, else to the maintainer alone, never the sender's id; how to stop it and delete it, and that copies others downloaded stay). *Note:* Keeps Zayit's `<!-- if:self-update -->` and `<!-- if:update-helper -->` blocks. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/CONDITIONS.md |
+| `branding/pardes/composeResources/files/ABOUT.md` | Pardes for desktop's About page (Settings › אודות, AboutSettingsScreen), in Hebrew: based on Zayit by Elie Gambache and not on his behalf, built from Zayit 0.6.13's open source, his copyright, the Zayit Public License 1.0 (based on the AGPL v3), the attribution line, Pardes's source, Zayit's private modules left out, and thanks (Zayit and SeforimLibrary, Sefaria and Otzaria, Klei Kodesh's book search and dictionary data, the libraries, fonts, Emoji One, the licences folder, the temple picture's painting). *Note:* The §7b line ends with a space before U+2069, so the autolinker keeps the mark out of the link (branding/README.md › Texts); Klei Kodesh's line, whose address stood right before the mark and was no link, has it as a Markdown link, and no longer says how Klei Kodesh came by Torat Emet's dictionary (the user's request of 2026-11-10; the licences index still does). It does not credit Dicta's model, which CONDITIONS.md and the licences index do. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/ABOUT.md (the author's first-person About) |
+| `branding/pardes/composeResources/files/CONDITIONS.md` | Pardes for desktop's terms (the onboarding's licence step and Settings › תנאים, through `ConditionsText`), in Hebrew: the books' sources and rights, Rashi Amiti left out, Culmus, Emoji One, the temple painting, the app's licence (based on Zayit and not on his behalf, his copyright, the Zayit Public License 1.0 based on the AGPL v3, the attribution line, built from 0.6.13), the private modules left out, Dicta's model (CC BY 4.0) and privacy: no error reports, and the feedback sent only with the user's consent (what, where to, the question asked at the first install with its boxes checked at first, the searches made in Zayit and in Otzaria on the same computer when the user leaves them checked, their files read only then and never changed; what the open site shows everyone: the figures and the daf marks, and the searches' words only when "פרסום במאגר הפתוח" stayed checked, else to the maintainer alone, never the sender's id; how to stop it and delete it, and that copies others downloaded stay). *Note:* Keeps Zayit's `<!-- if:self-update -->` and `<!-- if:update-helper -->` blocks. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/CONDITIONS.md |
 | `branding/pardes/composeResources/values/strings.xml` | The ten strings Pardes for desktop changes, each put by BrandResources in place of Zayit's string of the same name: app_name (פרדס), the onboarding's title bar, welcome title and subtitle, extraction tip and finish message, the Settings › כללי header's created-by, licence and private-modules lines (the §7b line in LRI…PDI), and update_dialog_message. *Note:* Never Zayit's "נוצר על ידי אליהו גמבש" or "שנבנה באהבה…" (the zayit-android skill's authorship rules). | Pardes's own; overrides those names in Zayit's SeforimApp/src/commonMain/composeResources/values/strings.xml |
 | `branding/pardes/desktopAppIcons/LinuxIcon.png` | 1024x1024 Pardes icon of the Linux packages (deb, rpm, pacman), which brand.gradle sets as `linux.iconFile`. *Note:* Not an overlay: brand.gradle points Nucleus at it. The same bytes as the brand's AppIcon.png. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/LinuxIcon.png (the olive branch icon) |
 | `branding/pardes/desktopAppIcons/MacosIcon.icns` | macOS icon set (PNG entries from 32 to 1024 px) of the dmg and zip, which brand.gradle sets as `macOS.iconFile`. *Note:* Added with the macOS builds (0c107b56, desktop 1.0.2). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/MacosIcon.icns (one 1024 px image) |
@@ -6579,7 +6590,7 @@ the description where something needs saying.
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Where an installed desktop Zayit keeps its seforim.db, which Pardes offers on first run to use in place: Zayit's `database_path` preference in the java.util.prefs root (a lexical.db path ignored), then Zayit's default databases folder beside Pardes's data folder; `OTHER_APP_NAME` is "זית למחשב". `otherAppUserDatabases()`: where Zayit keeps its user database, whose searches the user may send with Pardes's own (beside Pardes's data folder, and under a Microsoft Store package's roaming folder). *Note:* Read by ForeignLibraries, LibraryLocationViewModel and ZayitSearches. Its KDoc names the Windows and Linux folders only, though macOS is built since 1.0.2. Leaves out SEFORIMAPP_DATABASE_PATH, which Pardes reads as its own. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandUpdates.kt` | Pardes's update source: `provider` is a `PardesDesktopReleases`, which AppUpdateService takes before Zayit's GitHubProvider, so a Pardes build never downloads Zayit's installer. | Pardes's own |
 | `branding/pardes/kotlin/io/github/kdroidfilter/seforimapp/branding/PardesDesktopReleases.kt` | Nucleus `UpdateProvider` that reads the GitHub release list of Pardes's repository (unauthenticated API, per_page=100), takes the newest published `desktop-<x.y.z>-<run>[-r<attempt>]` release carrying this platform's latest*.yml (pre-releases only when Nucleus allows them), and gives its files' download URLs. *Note:* Needed because the repository's Latest release is Android's. Its KDoc says it was written against nucleus.updater-runtime 3.0.0-dev-202610200221; the app now uses 3.0.0-dev-202610272317. | Pardes's own |
-| `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Zayit's `Brand`, for `-Pseforimapp.brand=zayit`: `APP_ID` is Zayit's own data-folder id and `settings()` is multiplatform-settings' `Settings()` over the java.util.prefs root, as Zayit's code has them; `OPEN_SIDDUR` is false, so a Zayit build offers no switch for a siddur it does not carry. | Pardes's own; holds the literals of Zayit's main.kt and AppCoreBindings.kt |
+| `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/Brand.kt` | Zayit's `Brand`, for `-Pseforimapp.brand=zayit`: `APP_ID` is Zayit's own data-folder id and `settings()` is multiplatform-settings' `Settings()` over the java.util.prefs root, as Zayit's code has them; `OPEN_SIDDUR` is false, so a Zayit build offers no switch for a siddur it does not carry; `SUPPORT_BUTTON` is true, upstream's title bar heart. | Pardes's own; holds the literals of Zayit's main.kt and AppCoreBindings.kt |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandInfo.kt` | Zayit's `BrandInfo` values: its GitHub source link, error report signature, zayit_backup_ prefix, zayit.desktop launcher id and User-Agent, plus LIBRARY_FOLDER_NAME "Zayit library" for the library-location feature. *Note:* LIBRARY_FOLDER_NAME has no Zayit counterpart: the library location is a Pardes feature written for both brands. | Pardes's own; holds the literals of Zayit's GeneralSettingsScreen, BookErrorReport, DataSettingsViewModel, AppLinuxQuicklist and HttpFileDownloader |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandLibraries.kt` | Zayit's `BrandLibraries`: no other app's library (`OTHER_APP_NAME` empty, `otherAppDatabases()` empty) and no other app's user database (`otherAppUserDatabases()` empty), so the onboarding and the library cleanup behave as Zayit's. | Pardes's own |
 | `branding/zayit/kotlin/io/github/kdroidfilter/seforimapp/branding/BrandUpdates.kt` | Zayit's `BrandUpdates`: `provider` is null, so AppUpdateService builds Zayit's GitHubProvider as released. | Pardes's own |
@@ -6761,11 +6772,11 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `nucleus-fork/README.md` | Explains why Pardes for desktop takes one Nucleus module, nucleus.decorated-window-tao, from a fork of Nucleus on Pardes's GitHub account (branch claude/elegant-bardeen-oq55hp: commentator-tearoff and the outer bands) as 3.0.0-dev-202610272317-2-tearoff in maven/: `Modifier.satelliteTearOffHandle`, `SatelliteDragOrigin.HostElement` and pointer-icon parameters for the commentator tear-off, and the docks' outer bands (`DockLayout(outerBandSides = …)`, `SatellitePlacement.Docked.outer`, `SatelliteWorkspace.outerBandOrder`) for a pane dropped at the window's edge; how to update it, and when to delete it. *Note:* The fork changes no native code, and every other Nucleus module stays Zayit's pin from Maven Central. To be deleted once Nucleus has the API. | Pardes's own |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.jar` | The fork's build of nucleus.decorated-window-tao (1,067 classes and the release's native libraries for macOS, Windows and Linux, 6.3 MB), read through the exclusive NucleusFork repository of settings.gradle.kts (`nucleusTao` in libs.versions.toml); as the higher version it wins over the tao the other Nucleus modules ask for. *Note:* A binary committed to git without LFS, in three versions (0447981b, 9de93f98, then the one with the outer bands, as 3.0.0-dev-202610272317-2-tearoff). | built from Pardes's fork of Nucleus (MIT) and copied in by nucleus-fork/vendor.py; replaces at build time Maven Central's nucleus.decorated-window-tao 3.0.0-dev-202610272317, Zayit's pin |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.module` | Gradle module metadata of the vendored tao: version 3.0.0-dev-202610272317-2-tearoff, apiElements and runtimeElements on the jar alone, and the Nucleus dependencies (decorated-window-core, core-runtime, energy-manager) at the release 3.0.0-dev-202610272317, with angle-natives 8037.1, Compose desktop 1.12.1 and Kotlin stdlib 2.4.20. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py (dependencies set back to the release, sources and javadoc variants dropped) |
-| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202610272317-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202610272317-2-tearoff.pom` | Maven POM of the vendored tao, with the fork's version and the same dependencies as its Gradle module, for tools that do not read Gradle metadata. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py |
-| `nucleus-fork/vendor.py` | Copies the fork's tao jar, POM and Gradle module from Maven Local into nucleus-fork/maven after the fork's scripts/publish-tearoff-local.sh, setting every other Nucleus dependency back to the base release 3.0.0-dev-202610272317 and keeping only the jar's variants. *Note:* Deletes and rewrites nucleus-fork/maven on every run. | Pardes's own |
+| `nucleus-fork/README.md` | Explains why Pardes for desktop takes one Nucleus module, nucleus.decorated-window-tao, from a fork of Nucleus on Pardes's GitHub account (branch claude/tearoff-on-202611011507: commentator-tearoff and the outer bands, first on claude/elegant-bardeen-oq55hp over 3.0.0-dev-202610272317) as 3.0.0-dev-202611011507-2-tearoff in maven/: `Modifier.satelliteTearOffHandle`, `SatelliteDragOrigin.HostElement` and pointer-icon parameters for the commentator tear-off, and the docks' outer bands (`DockLayout(outerBandSides = …)`, `SatellitePlacement.Docked.outer`, `SatelliteWorkspace.outerBandOrder`) for a pane dropped at the window's edge; how to update it, and when to delete it. *Note:* The fork changes no native code, and every other Nucleus module stays Zayit's pin from Maven Central. To be deleted once Nucleus has the API. | Pardes's own |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202611011507-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202611011507-2-tearoff.jar` | The fork's build of nucleus.decorated-window-tao (1,067 classes and the release's native libraries for macOS, Windows and Linux, 6.3 MB), read through the exclusive NucleusFork repository of settings.gradle.kts (`nucleusTao` in libs.versions.toml); as the higher version it wins over the tao the other Nucleus modules ask for. *Note:* A binary committed to git without LFS, in four versions (0447981b, 9de93f98, the one with the outer bands as 3.0.0-dev-202610272317-2-tearoff, then the same on Zayit 0.6.13's Nucleus as 3.0.0-dev-202611011507-2-tearoff). | built from Pardes's fork of Nucleus (MIT, branch claude/tearoff-on-202611011507) and copied in by nucleus-fork/vendor.py; replaces at build time Maven Central's nucleus.decorated-window-tao 3.0.0-dev-202611011507, Zayit's pin |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202611011507-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202611011507-2-tearoff.module` | Gradle module metadata of the vendored tao: version 3.0.0-dev-202611011507-2-tearoff, apiElements and runtimeElements on the jar alone, and the Nucleus dependencies (decorated-window-core, core-runtime, energy-manager) at the release 3.0.0-dev-202611011507, with angle-natives 8037.1, Compose desktop 1.12.1 and Kotlin stdlib 2.4.20. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py (dependencies set back to the release, sources and javadoc variants dropped) |
+| `nucleus-fork/maven/dev/nucleusframework/nucleus.decorated-window-tao/3.0.0-dev-202611011507-2-tearoff/nucleus.decorated-window-tao-3.0.0-dev-202611011507-2-tearoff.pom` | Maven POM of the vendored tao, with the fork's version and the same dependencies as its Gradle module, for tools that do not read Gradle metadata. | generated by the fork's Gradle publishing, rewritten by nucleus-fork/vendor.py |
+| `nucleus-fork/vendor.py` | Copies the fork's tao jar, POM and Gradle module from Maven Local into nucleus-fork/maven after the fork's scripts/publish-tearoff-local.sh, setting every other Nucleus dependency back to the base release 3.0.0-dev-202611011507 and keeping only the jar's variants. *Note:* Deletes and rewrites nucleus-fork/maven on every run. | Pardes's own |
 
 #### The open siddur's engine (`siddur-open/`)
 
@@ -7064,12 +7075,12 @@ build leaves out for it.
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/search/SearchTocPane.kt` | `SearchTocPane`, a book search's TOC pane on a tablet: the book's entries with results and their counts; checking entries narrows the results to them. | Port of desktop 0.6.10's BookTocPanel.kt SearchBookTocPanel |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/search/SearchViewModel.kt` | `SearchViewModel` and `SearchUiState`: a search's first page with its facets, pages of 25, the category tabs, "more from this book" and back, the author, category, base-books and several-books scopes, the meaning search's facets (`withMeaningHits`) and other categories, the tablet's preview and the knowledge panel. | Port of desktop 0.6.10's features/search/SearchResultViewModel.kt on the same Lucene engine, with Pardes for desktop's categories and meaning facets |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/search/UnifiedSearchBar.kt` | `UnifiedSearchBar`, the smart search bar and its suggestion rows (the text search in base books or all, books, places, TOC entries, authors, categories, the picked chips, "חיפוש בתוך"), keyboard navigation and Enter, the typewriter placeholder, and the suggestions panel above or below the field; `SearchBarActions`. *Note:* The app's largest file (1,741 lines); `UnifiedSearchBar` is one composable of about 800 lines. | Port of desktop 0.6.10's HomeView.kt UnifiedSearchBar, SearchBar and SuggestionsPanel, and texteffects' TypewriterPlaceholder, with Pardes for desktop's categories and several books |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/AboutSettings.kt` | Settings › אודות and תנאים: a section on Pardes (an Android app based on Zayit by Elie Gambache and not on his behalf, its source under the AGPL with the §7b terms) and desktop's thanks in the app's words (Klei Kodesh's address a Markdown link, as on desktop since 2026-11-10: `MarkdownText` makes no link of a bare address); the terms page shows `CONDITIONS_MARKDOWN`. | Pardes's own text in place of desktop 0.6.10's AboutSettingsScreen (whose ABOUT.md speaks in its author's first person) and ConditionsSettingsScreen |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/AboutSettings.kt` | Settings › אודות and תנאים: a section on Pardes (an Android app based on Zayit by Elie Gambache and not on his behalf, its source under the Zayit Public License 1.0, based on the AGPL) and desktop's thanks in the app's words (Klei Kodesh's address a Markdown link, as on desktop since 2026-11-10: `MarkdownText` makes no link of a bare address); the terms page shows `CONDITIONS_MARKDOWN`. | Pardes's own text in place of desktop 0.6.10's AboutSettingsScreen (whose ABOUT.md speaks in its author's first person) and ConditionsSettingsScreen |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/AppUpdateSection.kt` | The app update's UI: `AppUpdateBanner` atop the app's header card for the states that ask for an action (a new version, the download, the install permission, a failure), `AppUpdateStatusLine` under the version, and `AppUpdateDialog` (the version, its size, what is new, "הורד והתקן" or "מאוחר יותר"). | Port of desktop 0.6.10's GeneralSettingsScreen update banner and line (0.6.8) and features/update/UpdateDialog.kt, for Pardes's own updater |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/DataSettings.kt` | Settings › ניהול נתונים: the incremental library updates, the library's place, the semantic search card, then "ייצוא הנתונים שלי" (desktop's backup archive), "ייבוא נתונים" (staged for the next start), "איפוס האפליקציה", and updates from files or a folder; no Google Drive card. *Note:* A file-level `MainScope()` runs the jobs that outlive the screen. | Port of desktop 0.6.10's DataSettingsScreen and DataSettingsViewModel, with Android's sections |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/DbDeltaUpdateSection.kt` | `DbDeltaUpdateSection`, the incremental update card: its status, a progress bar while a phase runs, "check for updates", the update found with its size and the metered-network warning, "הורד עכשיו", cancel until the database part is committed, and dismiss. | Port of desktop 0.6.10's features/settings/dbupdate/DbDeltaUpdateSection.kt, its English literals in Hebrew |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/LibraryLocationSection.kt` | "מיקום הספרייה": where the library is (the phone or a memory card), moving it to the other place with its progress and cancel, and switching to, or deleting, a library found in the other place. | Pardes's own; sizes counted as desktop's LibraryLocation.size, with the semantic pack |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/LicencesSettings.kt` | Settings › רישיונות: Pardes's licence (the repository's AGPL-3.0 with §7b) and the credits of everything the APK carries (libraries, icons, fonts, the model, Klei Kodesh's and other data, the stars, the Temple painting), each licence text opened offline from assets/licenses (`LicenceDoc`, `Credit`), the Creative Commons ones online. *Note:* The Bona Nova SC credit says 2017; its OFL text says 2020. | Pardes's own (desktop has no such page) |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/LicencesSettings.kt` | Settings › רישיונות: Pardes's licence (the repository's Zayit Public License 1.0) and the credits of everything the APK carries (libraries, icons, fonts, the model, Klei Kodesh's and other data, the stars, the Temple painting), each licence text opened offline from assets/licenses (`LicenceDoc`, `Credit`), the Creative Commons ones online. *Note:* The Bona Nova SC credit says 2017; its OFL text says 2020. | Pardes's own (desktop has no such page) |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/SemanticPackSection.kt` | `SemanticPackSection`, the semantic search card in Settings › ניהול נתונים: the files beside the library and their version, download or import (files picked together), progress, problems, the room an install needs, "לפתוח את המסך הזה בכל הפעלה", framed and scrolled into view when the settings open on it; hidden where the device cannot run it. | Port of Pardes for desktop's features/settings/semantic/SemanticPackCard |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/SemanticPackStrings.kt` | `SemanticPackStrings`, the semantic card's and its notification's texts (desktop's `semantic_pack_*` and `semantic_problem_*`), with Android's own lines for picking files and the library's storage. *Note:* Text for users in Kotlin constants, where Zayit keeps it in strings.xml. | Pardes for desktop's strings.xml semantic keys, with Android's additions |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/ui/settings/SettingsComponents.kt` | The settings pages' controls: the page column, `SettingsCard` (marked with an accent border when opened for it), `SettingCheckCard`, check rows, labelled controls, action rows, `ZDropdown`, `ZTextField`, the error banner, links and `MarkdownText`. *Note:* `ErrorBanner` and `MarkdownText` repeat onboarding/OnboardingComponents.kt's. | Port of desktop 0.6.10's settings components (SectionCard, SettingCard, the dropdowns) |
@@ -7537,47 +7548,33 @@ are a script's, not detekt's.
 
 ## 5. Zayit after the base
 
-Zayit has one release that Pardes has not merged: **v0.6.13** (`e999a27c`, 2026-11-03). It has 26 commits and 38
-files (+1,127 −238). On 2026-11-09 Zayit's `master` was one pull request past it (`677d8cb0`, 2026-11-06), which
-bumps filament-kmp to 0.7.12 in `gradle/libs.versions.toml`.
+The base is **v0.6.13** (`e999a27c`, 2026-11-03), merged on the branch `claude/zayit-0.6.13` by `efabaccb` on
+2026-11-19. Zayit has no release after it. On 2026-11-19 its `master` was five commits past it, two of them taken here:
 
-- **The licence changes.** On 2026-11-01 (`1b9f1f21`, "chore(license): move to the Zayit Public License, drop the
-  CLA") Zayit left the AGPL v3 with the §7b term for the **Zayit Public License 1.0** (`LICENSE`, SPDX
-  `LicenseRef-Zayit-PL-1.0`). Its submodules SeforimLibrary and SeforimAcronymizer moved to commits under it
-  (`58cffe4a`). Its own text says it is not the AGPL and not an OSI licence. Its terms:
-  - **Base:** the AGPL v3's text, unmodified, with no "or any later version".
-  - **Section 3, grant back:** whoever conveys a modified version, offers it over a network, or submits a change
-    gives the licensor (Elie Gambache) a perpetual, irrevocable licence on those modifications, "under any terms,
-    including proprietary terms", and a patent licence. Nothing has to be sent to him; it covers any copy he
-    obtains lawfully, a public repository included.
-  - **Section 4, attribution:** the "Powered by the technologies that drive Zayit — https://zayitapp.com/" line, also
-    on output made with an automated system or a language model that is based on the software.
-  - **Section 5, trademarks:** no right to the names "Zayit" or "זית" or their logos, beyond the attribution and
-    saying where the software comes from. A modified version must not be presented as an official build.
-- **For Pardes:**
-  - Everything Pardes has is Zayit 0.6.12 or earlier, released under the AGPL v3 with §7b, and stays under it. The
-    one exception is the siddur's keyboard scrolling (`21659516`), which is later than 0.6.12 but was committed
-    under the same licence, before `1b9f1f21`.
-  - Merging 0.6.13 or a later release brings code under the new licence, and with it Section 3's grant back on
-    Pardes's own modifications of that code.
-  - That is the user's decision, not part of a routine merge (the `zayit-fidelity` skill › Merging a Zayit release).
-  - **Decided on 2026-11-09:** Pardes stays on 0.6.12 for now. Each later release is asked about again, its licence
-    first.
-- **The rest of 0.6.13:**
-  - the Microsoft Store install updates from the Store (`be6eae68`; `framework/update/StoreUpdates.kt`,
-    `AppUpdateService.kt`);
-  - Ctrl+Tab follows the tab strip's right-to-left order (`f1f41116`; `MainAppWindow.kt`, `CycledTabIndexTest.kt`);
-  - a heart in the Windows title bar opens a dialog that supports the author's work (`b121a5b3`;
-    `features/support/SupportDialog.kt`, `TitleBarActionsButtonsView.kt`, three `support_app_*.png`);
-  - the private siddur scrolls with the keyboard (`21659516`, 2026-11-01, before the licence change and under the
-    AGPL v3): Pardes's open siddur's screen has these 44 lines since 2026-11-11, at the user's word;
-  - Nucleus 3.0.0-dev-202611011507 (`df678943`; `gradle/libs.versions.toml`);
-  - the website, release CI and the Microsoft Store package.
-- **Where a merge would meet Pardes's changes:** ten files Pardes also changes:
-  - `CLAUDE.md`, `SeforimApp/build.gradle.kts`, `strings.xml`, `MainAppWindow.kt`, `AppUpdateService.kt` and
-    `gradle/libs.versions.toml`;
-  - `README.MD` and `README_HE.md`, which Pardes renamed;
-  - `cla.yaml` and `deploy.yaml`, which Pardes deleted.
+- **Taken on this branch:**
+  - `5f7d53cb` (2026-11-06), filament-kmp 0.7.12 (`gradle/libs.versions.toml`): the 3D widgets' fix;
+  - `28f49ba8` (2026-11-14), a book's selected line brought into view only once its list is laid out
+    (`BookContentView.kt`): the title of a book opened at a line no longer goes off the top.
+- **Left out:** the pages of Zayit's other apps on its site (`de7462f8`, `e6572974`) and the merges of the two above.
+
+**The licence.** v0.6.13 is under the **Zayit Public License 1.0** (`LICENSE`, SPDX `LicenseRef-Zayit-PL-1.0`, from
+`1b9f1f21` of 2026-11-01): the AGPL v3's text, unmodified, plus a grant back to the licensor on every modification
+conveyed, offered over a network or submitted (Section 3, "under any terms, including proprietary terms"), the
+attribution line "Powered by the technologies that drive Zayit — https://zayitapp.com/" (Section 4), and a trademark
+clause (Section 5). It is not the AGPL and not an OSI licence. SeforimLibrary (`18735a0`) and SeforimAcronymizer
+(`a1551d8`) moved to it as well. So Pardes on this branch is distributed under it (Section 2b), and its own
+modifications are granted back.
+
+**Why the branch waits.** Pardes carries SeforimOpenSiddur (AGPL v3, `siddur-open/`) and Amud's annotations
+(GPL v3); both licences forbid further terms on the work that carries them (sections 5c and 10). The user decided on
+2026-11-18 to merge on this branch and to ask both for written permission (efrul/Pardes#27 for SeforimOpenSiddur, an
+issue in Nt-f/amud for Amud); the branch reaches main only once both agree. Otherwise the user chooses between
+leaving the siddur out and not merging.
+
+**What the merge did** (`efabaccb`): five conflicts (`deploy.yaml` kept removed, `CLAUDE.md`, `strings.xml`,
+`MainAppWindow.kt`, `gradle/libs.versions.toml`); Pardes's decorated-window-tao rebuilt on Nucleus
+3.0.0-dev-202611011507 (`nucleus-fork/README.md`); the title bar heart hidden (`Brand.SUPPORT_BUTTON`); the Microsoft
+Store's updates inert (no AppX build); `CLA.md` and `cla.yaml` gone, as upstream's.
 
 ## 6. Not a fork on GitHub
 
