@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, Check, Copy, Download, ExternalLink, HardDrive, Smartphone, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowDown, Check, Copy, Download, ExternalLink, HardDrive, Smartphone, Sparkles } from 'lucide-react';
 import { Navigation } from '../components/Navigation';
 import { SiteFooter } from '../components/SiteFooter';
 import { useDownloadCount } from '../hooks/useDownloadCount';
@@ -226,11 +226,23 @@ export function DownloadPage() {
                     </p>
                   )}
                   {selected === 'windows' ? (
-                    <WindowsAction packages={packages} arch={detected?.os === 'windows' ? detected.arch : null} />
+                    <WindowsAction />
                   ) : (
                     <TerminalAction os={selected} />
                   )}
-                  <FileList os={selected} packages={packages} />
+                  <p className="mt-8 pt-5 text-center text-sm" style={{ borderTop: '1px solid var(--card-border)' }}>
+                    <a
+                      href="#offline"
+                      className="dl-link"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        document.getElementById('offline')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
+                      {t('dl.offlineLink')}
+                      <ArrowDown size={13} />
+                    </a>
+                  </p>
                 </motion.div>
               </AnimatePresence>
             )}
@@ -246,7 +258,7 @@ export function DownloadPage() {
           )}
         </motion.section>
 
-        <OfflineSection parts={libraryParts} />
+        <OfflineSection os={selected} packages={releaseError ? [] : release && packages} parts={libraryParts} />
       </main>
 
       <SiteFooter page="download" />
@@ -286,21 +298,18 @@ function OsPicker({ selected, detectedOs, onSelect }: { selected: Os | null; det
   );
 }
 
-function WindowsAction({ packages, arch }: { packages: Package[]; arch: Arch | null }) {
+// The Microsoft Store's own installer for Zayit: a small .exe that installs the Store version, which the Store updates
+const STORE_INSTALLER_URL = 'https://get.microsoft.com/installer/download/9NC26MP2QMPS?cid=website_cta_psi';
+
+function WindowsAction() {
   const { t } = useTranslation();
-  const installers = packages.filter((p) => p.format === 'exe');
-  const recommended = installers.find((p) => p.arch === (arch ?? 'x64')) ?? installers[0] ?? packages[0];
-  if (!recommended) return null;
 
   return (
     <div className="text-center">
-      <motion.a href={recommended.url} className="dl-primary" whileTap={{ scale: 0.97 }} transition={press}>
+      <motion.a href={STORE_INSTALLER_URL} className="dl-primary" whileTap={{ scale: 0.97 }} transition={press}>
         <Download size={20} />
         {t('dl.windows.cta')}
       </motion.a>
-      <p className="mt-3 text-sm" style={{ color: 'var(--gold-muted)' }}>
-        {archLabel(t, 'windows', recommended.arch)} · {formatSize(recommended.size)}
-      </p>
       <p className="mt-5 text-sm" style={{ color: 'var(--text-muted)' }}>
         {t('dl.windows.hint')}
       </p>
@@ -342,17 +351,16 @@ function TerminalAction({ os }: { os: 'mac' | 'linux' }) {
 
 const FORMAT_ORDER: Format[] = ['exe', 'msi', 'dmg', 'deb', 'rpm', 'pacman'];
 
+/** The full installers of `os`, which install without a connection. */
 function FileList({ os, packages }: { os: Os; packages: Package[] }) {
   const { t } = useTranslation();
-  if (packages.length === 0) return null;
   const sorted = [...packages].sort(
     (a, b) => FORMAT_ORDER.indexOf(a.format) - FORMAT_ORDER.indexOf(b.format) || b.arch.localeCompare(a.arch),
   );
 
   return (
-    <div className="mt-8 pt-6" style={{ borderTop: '1px solid var(--card-border)' }}>
-      <h2 className="dl-label">{t('dl.files.title')}</h2>
-      <ul className="mt-2">
+    <>
+      <ul>
         {sorted.map((p) => (
           <li key={p.name}>
             <a href={p.url} className="dl-row">
@@ -372,22 +380,23 @@ function FileList({ os, packages }: { os: Os; packages: Package[] }) {
         ))}
       </ul>
       {os === 'mac' && (
-        <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--gold-muted)' }}>
+        <p className="px-3 pt-3 pb-1 text-xs leading-relaxed" style={{ color: 'var(--gold-muted)' }}>
           {t('dl.files.macNote')}
         </p>
       )}
-    </div>
+    </>
   );
 }
 
-function OfflineSection({ parts }: { parts: Asset[] | null }) {
+/** What a computer without internet needs: the app's full installers for `os`, and the library's parts. */
+function OfflineSection({ os, packages, parts }: { os: Os | null; packages: Package[] | null; parts: Asset[] | null }) {
   const { t } = useTranslation();
-  if (parts?.length === 0) return null;
-  const total = parts?.reduce((sum, p) => sum + p.size, 0) ?? 0;
+  if (packages?.length === 0 && parts?.length === 0) return null;
 
   return (
     <motion.section
-      className="max-w-3xl mx-auto mt-20"
+      id="offline"
+      className="max-w-3xl mx-auto mt-20 scroll-mt-28"
       initial={{ opacity: 0, y: RISE }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
@@ -410,35 +419,61 @@ function OfflineSection({ parts }: { parts: Asset[] | null }) {
           </ol>
         </div>
 
-        <div className="dl-card !p-3">
-          {parts === null ? (
-            <div className="p-3 space-y-3">
-              {[0, 1, 2].map((i) => <div key={i} className="dl-skeleton h-10" />)}
+        <div className="space-y-6">
+          {packages?.length !== 0 && (
+            <div>
+              <h3 className="dl-label px-1 mb-2">{t('dl.offline.app')}</h3>
+              <div className="dl-card !p-3">
+                {packages === null || os === null ? <RowsSkeleton count={2} /> : <FileList os={os} packages={packages} />}
+              </div>
             </div>
-          ) : (
-            <>
-              <ul>
-                {parts.map((p) => (
-                  <li key={p.name}>
-                    <a href={p.url} className="dl-row">
-                      <span className="min-w-0 truncate text-sm font-medium" dir="ltr" style={{ color: 'var(--text-main)' }}>
-                        {p.name}
-                      </span>
-                      <span className="dl-row-size">{formatSize(p.size)}</span>
-                      <Download size={18} className="dl-row-icon" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-              <p className="px-3 pt-3 pb-1 flex justify-between text-sm" style={{ borderTop: '1px solid var(--card-border)', color: 'var(--gold-muted)' }}>
-                <span>{t('dl.offline.total')}</span>
-                <span className="tabular-nums">{formatSize(total)}</span>
-              </p>
-            </>
+          )}
+          {parts?.length !== 0 && (
+            <div>
+              <h3 className="dl-label px-1 mb-2">{t('dl.offline.library')}</h3>
+              <div className="dl-card !p-3">
+                {parts === null ? <RowsSkeleton count={3} /> : <LibraryParts parts={parts} />}
+              </div>
+            </div>
           )}
         </div>
       </div>
     </motion.section>
+  );
+}
+
+function LibraryParts({ parts }: { parts: Asset[] }) {
+  const { t } = useTranslation();
+  const total = parts.reduce((sum, p) => sum + p.size, 0);
+
+  return (
+    <>
+      <ul>
+        {parts.map((p) => (
+          <li key={p.name}>
+            <a href={p.url} className="dl-row">
+              <span className="min-w-0 truncate text-sm font-medium" dir="ltr" style={{ color: 'var(--text-main)' }}>
+                {p.name}
+              </span>
+              <span className="dl-row-size">{formatSize(p.size)}</span>
+              <Download size={18} className="dl-row-icon" />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p className="px-3 pt-3 pb-1 flex justify-between text-sm" style={{ borderTop: '1px solid var(--card-border)', color: 'var(--gold-muted)' }}>
+        <span>{t('dl.offline.total')}</span>
+        <span className="tabular-nums">{formatSize(total)}</span>
+      </p>
+    </>
+  );
+}
+
+function RowsSkeleton({ count }: { count: number }) {
+  return (
+    <div className="p-3 space-y-3" aria-hidden>
+      {Array.from({ length: count }, (_, i) => <div key={i} className="dl-skeleton h-10" />)}
+    </div>
   );
 }
 

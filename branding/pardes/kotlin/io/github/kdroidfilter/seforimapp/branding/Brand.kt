@@ -17,4 +17,7 @@ object Brand {
 
     /** The build carries the open smart siddur (addons/siddur/open, which branding/brand.gradle compiles for Pardes). */
     const val OPEN_SIDDUR = true
+
+    /** No title bar heart: Zayit's "support my work" sells its author's apps, and Pardes is not Zayit. */
+    const val SUPPORT_BUTTON = false
 }

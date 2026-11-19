@@ -12,4 +12,7 @@ object Brand {
 
     /** No open smart siddur: upstream's siddur is its own (addons/siddur/enabled) or none. */
     const val OPEN_SIDDUR = false
+
+    /** The title bar heart, upstream's "support my work" (Windows). */
+    const val SUPPORT_BUTTON = true
 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.collectAsState
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
+import io.github.kdroidfilter.seforimapp.branding.Brand
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.IntUiThemes
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.hasFindInPage
@@ -24,6 +25,8 @@ import seforimapp.seforimapp.generated.resources.*
 private object SystemThemeIconAnchor
 
 private val SystemTheme = PathIconKey("icons/system_theme.svg", SystemThemeIconAnchor::class.java)
+
+val HeartIcon = PathIconKey("icons/heart.svg", SystemThemeIconAnchor::class.java)
 
 @Composable
 fun TitleBarActionsButtonsView() {
@@ -46,6 +49,7 @@ fun TitleBarActionsButtonsView() {
 
     // Access the window's tabs outside of callbacks to avoid reading CompositionLocals in non-composable contexts
     val tabsViewModel: TabsViewModel = LocalOpenWindow.current.tabsViewModel
+    val windowId = LocalOpenWindow.current.id
     val tabsState = tabsViewModel.state.collectAsState().value
     val currentTab = tabsState.tabs.getOrNull(tabsState.selectedTabIndex)
     val findEnabled = currentTab?.destination?.hasFindInPage(appGraph.tabPersistedStateStore) == true
@@ -90,6 +94,17 @@ fun TitleBarActionsButtonsView() {
             contentDescription = stringResource(Res.string.update_titlebar_tooltip),
             onClick = { appGraph.appUpdateService.openDialog() },
             tooltipText = stringResource(Res.string.update_titlebar_tooltip),
+        )
+    }
+
+    // Support my work: links to the paid apps on the Microsoft Store
+    // Pardes: not in Pardes, which is not Zayit and does not sell its author's apps (Brand.SUPPORT_BUTTON)
+    if (PlatformInfo.isWindows && Brand.SUPPORT_BUTTON) {
+        TitleBarActionButton(
+            key = HeartIcon,
+            contentDescription = stringResource(Res.string.support_tooltip),
+            onClick = { mainAppState.openSupportDialog(windowId) },
+            tooltipText = stringResource(Res.string.support_tooltip),
         )
     }
 

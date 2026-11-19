@@ -13,8 +13,8 @@ import json
 import os
 import shutil
 
-BASE = "3.0.0-dev-202610272317"
-FORK = "3.0.0-dev-202610272317-2-tearoff"
+BASE = "3.0.0-dev-202611011507"
+FORK = "3.0.0-dev-202611011507-2-tearoff"
 ARTIFACT = "nucleus.decorated-window-tao"
 GROUP_PATH = "dev/nucleusframework"
 

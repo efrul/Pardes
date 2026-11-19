@@ -173,6 +173,8 @@ kotlin {
             implementation(libs.nucleus.decorated.window.jewel)
             implementation(libs.nucleus.graalvm.runtime)
             implementation(libs.nucleus.updater.runtime)
+            // Updates of the Microsoft Store install, from the Store itself
+            implementation(libs.nucleus.microsoft.store)
             implementation(libs.nucleus.native.http)
             implementation(libs.nucleus.energy.manager)
             implementation(libs.nucleus.launcher.macos)
@@ -280,6 +282,8 @@ nucleus.application {
             TargetFormat.Pacman,
             // Microsoft Store package, built locally (packageGraalvmAppX), unsigned: the Store signs it
             TargetFormat.AppX,
+            // the app folder as a .tar.gz on the GitHub release, which the Flathub manifest repackages
+            TargetFormat.Tar,
         )
         vendor = "KDroidFilter"
         cleanupNativeLibs = true
@@ -338,8 +342,9 @@ nucleus.application {
                 backgroundColor = "transparent"
                 minVersion = "10.0.17763.0"
                 maxVersionTested = "10.0.26100.0"
-                storeLogo.set(project.file("desktopAppIcons/appx/StoreLogo.png"))
-                square44x44Logo.set(project.file("desktopAppIcons/appx/Square44x44Logo.png"))
+                // Sources at least 4x their size: Nucleus makes every scale and target size from them
+                storeLogo.set(project.file("desktopAppIcons/LinuxIcon.png"))
+                square44x44Logo.set(project.file("desktopAppIcons/LinuxIcon.png"))
                 square150x150Logo.set(project.file("desktopAppIcons/appx/Square150x150Logo.png"))
                 wide310x150Logo.set(project.file("desktopAppIcons/appx/Wide310x150Logo.png"))
             }
