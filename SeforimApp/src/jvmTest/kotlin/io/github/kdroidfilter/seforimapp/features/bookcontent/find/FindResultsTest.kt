@@ -1,6 +1,8 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.find
 
+import androidx.compose.ui.input.key.Key
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookFindMatches
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlineEntry
 import io.github.kdroidfilter.seforimlibrary.search.SearchEngine
 import io.github.kdroidfilter.seforimlibrary.search.TextHighlights
 import io.mockk.coEvery
@@ -93,4 +95,33 @@ class FindResultsTest {
             coEvery { engine.highlights(any(), any()) } returns listOf(TextHighlights(emptyList()))
             assertEquals("אמר רבי יוחנן", meaningSnippet(engine, "אמר רבי יוחנן", "שאלה"))
         }
+
+    @Test
+    fun `a PDF book's matches come under the bookmark before them, and under their page before the first or with none`() {
+        val found = listOf(PdfFound(0, "א"), PdfFound(4, "ב"), PdfFound(5, "ג"), PdfFound(9, "ד"))
+        val bookmarks = listOf(PdfOutlineEntry("פרק א", 3, listOf(PdfOutlineEntry("סימן ב", 5))), PdfOutlineEntry("בלי עמוד", null))
+        assertEquals(
+            listOf(
+                FindRow.Entry("עמוד 1"),
+                FindRow.InPage(0, found[0]),
+                FindRow.Entry("פרק א"),
+                FindRow.InPage(1, found[1]),
+                FindRow.Entry("סימן ב"),
+                FindRow.InPage(2, found[2]),
+                FindRow.InPage(3, found[3]),
+            ),
+            pdfFindRows(found, bookmarks) { "עמוד ${it + 1}" },
+        )
+        assertEquals(FindRow.Entry("עמוד 10"), pdfFindRows(found, emptyList()) { "עמוד ${it + 1}" }[6], "a book with no bookmarks")
+    }
+
+    @Test
+    fun `the keys go from the row before or after, from the first when none is current`() {
+        assertEquals(0, findListMove(Key.DirectionDown, 5, -1, 3))
+        assertEquals(4, findListMove(Key.DirectionDown, 5, 4, 3))
+        assertEquals(1, findListMove(Key.DirectionUp, 5, 2, 3))
+        assertEquals(0, findListMove(Key.DirectionUp, 5, -1, 3))
+        assertEquals(4, findListMove(Key.MoveEnd, 5, 1, 3))
+        assertNull(findListMove(Key.A, 5, 1, 3))
+    }
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -33,8 +34,13 @@ import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.components.FindInPageBar
 import io.github.kdroidfilter.seforimapp.core.presentation.text.findAllMatchesNormalized
 import io.github.kdroidfilter.seforimapp.core.presentation.text.normalizeQueryForHebrew
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.PdfFindListing
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.PdfFound
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.pieceAround
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
@@ -52,12 +58,14 @@ import kotlin.math.min
 
 /**
  * A match of the find in a PDF book: its [page] (from 0), and its boxes there, a box a line it runs over, each a
- * fraction of the page's width and height from its top left (the page drawn at any size marks it at once).
+ * fraction of the page's width and height from its top left (the page drawn at any size marks it at once); the
+ * [piece] of the page's text around it, as the results pane lists it.
  */
 @Immutable
 data class PdfMatch(
     val page: Int,
     val boxes: List<Rect>,
+    val piece: String = "",
 )
 
 /**
@@ -111,14 +119,34 @@ internal fun pageMatches(
     val q = normalizeQueryForHebrew(query)
     if (q.length < MIN_QUERY) return emptyList()
     val (text, chars) = pageText(page)
-    return textMatches(text, q).map { range -> PdfMatch(index, boxesOf(page, range.mapNotNull { chars.getOrNull(it) })) }
+    return textMatches(text, q).map { match ->
+        PdfMatch(index, boxesOf(page, match.range.mapNotNull { chars.getOrNull(it) }), match.piece)
+    }
 }
 
-// The matches of the normalized query [q] in a page's [text]; when none, of [q] backwards
+// A match's range in its page's text, and its piece of that text, read in its order
+private class TextMatch(
+    val range: IntRange,
+    val piece: String,
+)
+
+// The matches of the normalized query [q] in a page's [text]; when none, of [q] backwards, their pieces turned round
 private fun textMatches(
     text: String,
     q: String,
-): List<IntRange> = findAllMatchesNormalized(text, q).ifEmpty { findAllMatchesNormalized(text, q.reversed()) }
+): List<TextMatch> {
+    val ahead = findAllMatchesNormalized(text, q)
+    if (ahead.isNotEmpty()) return ahead.map { TextMatch(it, pieceOf(text, it)) }
+    return findAllMatchesNormalized(text, q.reversed()).map { TextMatch(it, pieceOf(text, it).reversed()) }
+}
+
+// The page's text around [range], on one line: PDFium parts its lines with line breaks
+private fun pieceOf(
+    text: String,
+    range: IntRange,
+): String = pieceAround(text, range).replace(LINE_BREAKS, " ")
+
+private val LINE_BREAKS = Regex("\\s+")
 
 /** The page's characters as a text, and the character of each of its letters (a code point may be two). */
 internal fun pageText(page: PageChars): Pair<String, IntArray> {
@@ -226,7 +254,7 @@ internal class PdfFind {
             if (ranges.isEmpty()) continue
             // The boxes, from the page's layout again: only a page with matches keeps them
             val layout = runSuspendCatching { reader.pageTextLayout(page) }.getOrNull()?.chars() ?: continue
-            ranges.mapTo(found) { range -> PdfMatch(page, boxesOf(layout, range.mapNotNull { chars.getOrNull(it) })) }
+            ranges.mapTo(found) { match -> PdfMatch(page, boxesOf(layout, match.range.mapNotNull { chars.getOrNull(it) }), match.piece) }
             matches = found.toList()
         }
         noText = letters == 0
@@ -239,6 +267,18 @@ internal class PdfFind {
         current = if (current < 0) (if (forward) 0 else all.lastIndex) else (current + if (forward) 1 else -1).mod(all.size)
         return all[current]
     }
+
+    /** The match [index], made the current one, as the results pane asks; null when there is none such. */
+    fun select(index: Int): PdfMatch? {
+        val match = matches.getOrNull(index) ?: return null
+        current = index
+        return match
+    }
+
+    /** The find as the results pane lists it, once it searches [query]; null before. */
+    fun listing(query: String): PdfFindListing? =
+        takeIf { query.length >= MIN_QUERY && this.query == query }
+            ?.let { PdfFindListing(query, matches.map { PdfFound(it.page, it.piece) }, current, done, noText) }
 }
 
 /**
@@ -260,6 +300,7 @@ internal fun PdfFindBar(
     val open by appSettings.findBarOpenFlow(tabId).collectAsState()
     val query by appSettings.findQueryFlow(tabId).collectAsState()
     val focusRequest by appSettings.findFocusRequestFlow(tabId).collectAsState()
+    val listShown by appSettings.flow(FindResultsSettings.shown).collectAsState()
     val scope = rememberCoroutineScope()
     val list by rememberUpdatedState(listState)
     val twoPages by rememberUpdatedState(spreads)
@@ -277,6 +318,14 @@ internal fun PdfFindBar(
         scope.launch { find.step(forward)?.let { reveal(it) } }
     }
     LaunchedEffect(tabId) { appSettings.findStepRequests(tabId).collect { forward -> step(forward) } }
+    // The find told to the results pane while the bar is open, and the match the pane asks for gone to (request 55)
+    val hub = LocalAppGraph.current.bookFindHub
+    val listing = find.listing(query).takeIf { open }
+    LaunchedEffect(listing) { hub.publishPdf(tabId, listing) }
+    DisposableEffect(tabId) { onDispose { hub.publishPdf(tabId, null) } }
+    LaunchedEffect(tabId) {
+        hub.pdfGoTo.filter { it.first == tabId }.collect { (_, index) -> find.select(index)?.let { reveal(it) } }
+    }
     if (!open) return
     val field = remember(tabId) { TextFieldState(query) }
     LaunchedEffect(field) {
@@ -294,6 +343,9 @@ internal fun PdfFindBar(
             matchCount = find.matches.size.takeIf { find.query == query && (find.done || it > 0) },
             matchPosition = (find.current + 1).takeIf { it > 0 },
             showCounter = true,
+            // The results pane's button and Alt+Enter, as a book's bar has them (request 55)
+            listShown = listShown,
+            onToggleList = { appSettings[FindResultsSettings.shown] = !listShown },
         )
         if (find.done && find.noText) {
             Text(

@@ -74,4 +74,11 @@ class PdfFindTest {
             pageMatches(letters(IntArray(0), FloatArray(0)), 0, "שלום").isEmpty(),
         )
     }
+
+    @Test
+    fun `each match keeps the piece of its page around it, on one line and read in its order`() {
+        val matches = pageMatches(page("אמר רבי יוחנן", "ברוך שאמר"), 0, "שאמר")
+        assertEquals("אמר רבי יוחנן ברוך שאמר", matches.single().piece)
+        assertEquals("ברוך", pageMatches(page("ךורב"), 0, "ברוך").single().piece, "a page kept backwards, turned round")
+    }
 }

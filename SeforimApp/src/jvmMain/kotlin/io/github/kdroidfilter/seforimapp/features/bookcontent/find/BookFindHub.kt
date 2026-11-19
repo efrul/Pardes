@@ -32,6 +32,27 @@ data class FindListing(
     val current: BookFindMatches.Match?,
 )
 
+/**
+ * A PDF book's find in a tab (request 48 of stage 3, its results listed as a book's: "חיפוש בספר PDF יציג את התוצאות
+ * בחלונית"): its [query], its [matches] found so far in reading order, the [current] one (-1 before Enter), whether
+ * every page was read ([done]), and whether the book has no text at all ([noText]: a scan with no text layer).
+ */
+@Immutable
+data class PdfFindListing(
+    val query: String,
+    val matches: List<PdfFound>,
+    val current: Int,
+    val done: Boolean,
+    val noText: Boolean,
+)
+
+/** A match of a PDF book's find: its [page] (from 0), and the [piece] of the page's text around it. */
+@Immutable
+data class PdfFound(
+    val page: Int,
+    val piece: String,
+)
+
 /** A line the find matched: its place in the book, its id, and how many times it matched. */
 @Immutable
 data class FoundLine(
@@ -74,6 +95,16 @@ class BookFindHub {
     /** The lines the pane asks for: the tab's id and the line's place in its book. */
     val goTo: SharedFlow<Pair<String, Int>> = _goTo.asSharedFlow()
 
+    private val _pdfFound = MutableStateFlow<Map<String, PdfFindListing>>(emptyMap())
+
+    /** Each tab's find in its PDF book, by the tab's id, while the find bar shows its matches. */
+    val pdfFound: StateFlow<Map<String, PdfFindListing>> = _pdfFound.asStateFlow()
+
+    private val _pdfGoTo = MutableSharedFlow<Pair<String, Int>>(extraBufferCapacity = GO_TO_BUFFER)
+
+    /** The matches of a PDF book the pane asks for: the tab's id and the match's place in the find's matches. */
+    val pdfGoTo: SharedFlow<Pair<String, Int>> = _pdfGoTo.asSharedFlow()
+
     /** Tells the find of the tab [tabId], or that it has none ([listing] null). */
     fun publish(
         tabId: String,
@@ -88,6 +119,22 @@ class BookFindHub {
         lineIndex: Int,
     ) {
         _goTo.tryEmit(tabId to lineIndex)
+    }
+
+    /** Tells the find of the tab [tabId] in its PDF book, or that it has none ([listing] null). */
+    fun publishPdf(
+        tabId: String,
+        listing: PdfFindListing?,
+    ) {
+        _pdfFound.update { if (listing == null) it - tabId else it + (tabId to listing) }
+    }
+
+    /** Asks the PDF book's reader of the tab [tabId] to go to its find's match [index]. */
+    fun goToPdfMatch(
+        tabId: String,
+        index: Int,
+    ) {
+        _pdfGoTo.tryEmit(tabId to index)
     }
 
     private companion object {

@@ -36,6 +36,9 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.findAllMatchesNo
 import io.github.kdroidfilter.seforimapp.core.presentation.text.normalizeQueryForHebrew
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.listMove
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.pageRows
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlineEntry
+import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlines
+import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
 import io.github.kdroidfilter.seforimapp.features.search.ResultRow
 import io.github.kdroidfilter.seforimapp.features.search.SnippetText
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -51,6 +54,9 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.find_results_by_meaning
 import seforimapp.seforimapp.generated.resources.find_results_count
 import seforimapp.seforimapp.generated.resources.find_results_none
+import seforimapp.seforimapp.generated.resources.find_results_pages_count
+import seforimapp.seforimapp.generated.resources.pdf_book_toc_page
+import seforimapp.seforimapp.generated.resources.pdf_find_no_text
 
 // Pardes (request 55 of docs/DESKTOP_STAGE3_PLAN.md): every match of a book's find in a pane beside the text, under the
 // entries of its table of contents, each line with a piece of it around its match.
@@ -72,9 +78,16 @@ fun FindResultsPane(
 ) {
     val graph = LocalAppGraph.current
     val found by graph.bookFindHub.found.collectAsState()
+    val pdfFound by graph.bookFindHub.pdfFound.collectAsState()
     val listing = found[tabId]?.takeIf { it.bookId == bookId }
     val info = JewelTheme.globalColors.text.info
     if (listing == null) {
+        // Pardes: a PDF book's find, listed as a book's (request 48 of stage 3)
+        val pdf = pdfFound[tabId]
+        if (pdf != null) {
+            PdfFindResults(tabId, bookId, pdf, modifier, onLeave)
+            return
+        }
         Box(modifier.padding(16.dp)) { Text(stringResource(Res.string.find_results_none), color = info, fontSize = 13.sp) }
         return
     }
@@ -99,17 +112,11 @@ fun FindResultsPane(
     fun onKey(event: KeyEvent): Boolean {
         if (event.type != KeyEventType.KeyDown || lines.isEmpty()) return false
         val at = (asked ?: current)?.let { lineIndex -> lines.indexOfFirst { it.lineIndex == lineIndex } } ?: -1
-        val next =
-            when (event.key) {
-                Key.DirectionDown -> (at + 1).coerceAtMost(lines.lastIndex)
-                Key.DirectionUp -> (at - 1).coerceAtLeast(0)
-                Key.Enter, Key.NumPadEnter, Key.Escape -> {
-                    onLeave()
-                    return true
-                }
-                else -> listMove(lines.size, at.coerceAtLeast(0), event.key, listState.pageRows()) ?: return false
-            }
-        goTo(lines[next])
+        if (event.key in LEAVE_KEYS) {
+            onLeave()
+            return true
+        }
+        goTo(lines[findListMove(event.key, lines.size, at, listState.pageRows()) ?: return false])
         return true
     }
     // The current match's line kept in view, as the text goes from match to match
@@ -149,6 +156,8 @@ fun FindResultsPane(
                             // The keys go on from the line clicked
                             runCatching { focus.requestFocus() }
                         }
+                    // A PDF book's, listed by PdfFindResults
+                    is FindRow.InPage -> Unit
                 }
             }
         }
@@ -201,6 +210,12 @@ internal sealed interface FindRow {
     data class Found(
         val line: FoundLine,
     ) : FindRow
+
+    /** A match of a PDF book's find: its place in the find's matches, and its page and piece. */
+    data class InPage(
+        val index: Int,
+        val found: PdfFound,
+    ) : FindRow
 }
 
 /** The lines found, each under the entry of the table of contents it belongs to ([titles], by line), once a run. */
@@ -227,8 +242,14 @@ internal fun findSnippet(
     query: String,
 ): String {
     val match = findAllMatchesNormalized(text, normalizeQueryForHebrew(query)).firstOrNull() ?: return cut(text, 0, SNIPPET_SPAN)
-    return cut(text, match.first - SNIPPET_SPAN / 2, match.last + SNIPPET_SPAN / 2)
+    return pieceAround(text, match)
 }
+
+/** A piece of [text] around [range], cut at words, with an ellipsis where it is cut: a found line's, or a PDF page's. */
+internal fun pieceAround(
+    text: String,
+    range: IntRange,
+): String = cut(text, range.first - SNIPPET_SPAN / 2, range.last + SNIPPET_SPAN / 2)
 
 // [text] from [start] to [end], at the words around them, an ellipsis where it is cut
 private fun cut(
@@ -278,3 +299,145 @@ internal suspend fun entryTitles(
 
 // The letters a line's piece holds around its match, half on each side
 private const val SNIPPET_SPAN = 120
+
+// Pardes (request 48 of docs/DESKTOP_STAGE3_PLAN.md): a PDF book's find in the same pane, as the user showed it empty
+// after the second testers' build.
+
+/**
+ * The find [pdf] of the tab [tabId] in its PDF book [bookId], listed as a book's: "12 תוצאות ב־5 עמודים", then each
+ * match under the book's bookmark it comes after, or under its page when the book has none ([pdfFindRows]), with the
+ * piece of the page around it, the find's words marked; the current match marked and kept in view, a match clicked gone
+ * to on its page ([BookFindHub.goToPdfMatch]), and the same keys as a book's list. A scan with no text says so.
+ */
+@Composable
+private fun PdfFindResults(
+    tabId: String,
+    bookId: Long,
+    pdf: PdfFindListing,
+    modifier: Modifier = Modifier,
+    onLeave: () -> Unit = {},
+) {
+    val graph = LocalAppGraph.current
+    val info = JewelTheme.globalColors.text.info
+    if (pdf.done && pdf.noText) {
+        Box(modifier.padding(16.dp)) { Text(stringResource(Res.string.pdf_find_no_text), color = info, fontSize = 13.sp) }
+        return
+    }
+    val bookmarks by produceState(emptyList<PdfOutlineEntry>(), bookId) {
+        value =
+            runSuspendCatching {
+                pdfIdOf(bookId)?.let { graph.pdfBookStore.book(it) }?.let { PdfOutlines.read(it.file) }
+            }.getOrNull().orEmpty()
+    }
+    val label = stringResource(Res.string.pdf_book_toc_page)
+    val rows = remember(pdf.matches, bookmarks, label) { pdfFindRows(pdf.matches, bookmarks) { label.format(it + 1) } }
+    val listState = rememberLazyListState()
+    val focus = remember { FocusRequester() }
+    // The match the keys asked for, ahead of the reader's answer
+    var asked by remember(pdf.query) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(pdf.current) { if (pdf.current == asked) asked = null }
+    val current = asked ?: pdf.current
+    LaunchedEffect(current, rows) {
+        val index = rows.indexOfFirst { it is FindRow.InPage && it.index == current }
+        if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
+    }
+
+    fun goTo(index: Int) {
+        asked = index
+        graph.bookFindHub.goToPdfMatch(tabId, index)
+    }
+
+    fun onKey(event: KeyEvent): Boolean {
+        if (event.type != KeyEventType.KeyDown || pdf.matches.isEmpty()) return false
+        if (event.key in LEAVE_KEYS) {
+            onLeave()
+            return true
+        }
+        goTo(findListMove(event.key, pdf.matches.size, current, listState.pageRows()) ?: return false)
+        return true
+    }
+    Column(modifier) {
+        val pages = remember(pdf.matches) { pdf.matches.distinctBy { it.page }.size }
+        Text(
+            stringResource(Res.string.find_results_pages_count, pdf.matches.size, pages),
+            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            color = info,
+            fontSize = 12.sp,
+        )
+        val bookFontCode by graph.appSettings.bookFontCodeFlow.collectAsState()
+        LazyColumn(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .focusRequester(focus)
+                .onPreviewKeyEvent(::onKey)
+                .focusable(),
+            state = listState,
+        ) {
+            items(rows.size) { index ->
+                when (val row = rows[index]) {
+                    is FindRow.Entry ->
+                        Text(
+                            row.title,
+                            Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 2.dp),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                        )
+                    is FindRow.InPage ->
+                        ResultRow(selected = row.index == current, onClick = {
+                            goTo(row.index)
+                            runCatching { focus.requestFocus() }
+                        }) { SnippetText(row.found.piece, pdf.query, bookFontCode) }
+                    // A book's, listed by FindResultsPane
+                    is FindRow.Found -> Unit
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A PDF book's [matches], each under the last of its [bookmarks] (read in order, at any depth) whose page is not after
+ * the match's, once a run; under its page's title ([pageTitle], from its page from 0) before the first bookmark and in
+ * a book with none.
+ */
+internal fun pdfFindRows(
+    matches: List<PdfFound>,
+    bookmarks: List<PdfOutlineEntry>,
+    pageTitle: (Int) -> String,
+): List<FindRow> {
+    val marks = buildList { bookmarks.flattenInto(this) }.sortedBy { it.first }
+    return buildList {
+        var last: String? = null
+        matches.forEachIndexed { index, found ->
+            val title = marks.lastOrNull { it.first <= found.page }?.second ?: pageTitle(found.page)
+            if (title != last) add(FindRow.Entry(title))
+            last = title
+            add(FindRow.InPage(index, found))
+        }
+    }
+}
+
+// The bookmarks with a page, depth first in reading order, as (page, title)
+private fun List<PdfOutlineEntry>.flattenInto(out: MutableList<Pair<Int, String>>) {
+    for (entry in this) {
+        entry.page?.let { out += it to entry.title }
+        entry.children.flattenInto(out)
+    }
+}
+
+/** Where up, down, Home, End and a page up and down go in a list of [count] from [at] (-1 for none); null for another key. */
+internal fun findListMove(
+    key: Key,
+    count: Int,
+    at: Int,
+    page: Int,
+): Int? =
+    when (key) {
+        Key.DirectionDown -> (at + 1).coerceAtMost(count - 1)
+        Key.DirectionUp -> (at - 1).coerceAtLeast(0)
+        else -> listMove(count, at.coerceAtLeast(0), key, page)
+    }
+
+// The keys that give the focus back to the text, as the book tree's
+private val LEAVE_KEYS = setOf(Key.Enter, Key.NumPadEnter, Key.Escape)
