@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (143 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (144 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -58,7 +58,7 @@ The entries of this section by kind:
 | Kind | Files |
 |---|---|
 | Pardes feature hook | 59 |
-| Pardes feature in Zayit's file | 35 |
+| Pardes feature in Zayit's file | 36 |
 | Fix of Zayit's code | 23 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
@@ -952,7 +952,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DropdownButton.kt`
 
-- **Change:** modified, +29 −2 lines. Feature: The keys in the popups.
+- **Change:** modified, +32 −2 lines. Feature: The keys in the popups.
 - **What:** with a comment marked "Pardes:", the popup's frame takes the keys as it opens (a `FocusRequester` asked in a
   `LaunchedEffect`, `focusable`) and `Modifier.dropdownKeys`: up and down move the focus from row to row (the first
   row from none), Escape closes it; Enter and Space click the row in focus, as a clickable row takes them. Its
@@ -965,7 +965,10 @@ The entries of this section by kind:
   pointer's moves over the frame (a `pointerInput` before Zayit's `focusRequester`, which goes on the same line after
   it), and provided to the rows (`LocalDropdownMarking`, a `CompositionLocalProvider` around Zayit's `popupContent`
   call, under a comment marked "Pardes:"). And the rows' marking centred: a start padding as the scrollbar's room on
-  the end, before Zayit's, under a comment marked "Pardes:" ("ההדגשה לא ממורכזת", 2026-11-20). Two imports.
+  the end, before Zayit's, under a comment marked "Pardes:" ("ההדגשה לא ממורכזת", 2026-11-20). And the arrows round the
+  list's ends at once, as every popup of the app ("תוודא שבכולם", 2026-11-20): the frame tells whether it holds the focus
+  itself (`frameFocused`, an `onFocusChanged` after `dropdownKeys`), which the focus rounding the last row comes to
+  first. Three imports.
 - **Why:** request 69 of the list after the third testers' build: "כמו למשל הטאבים של הקטגוריות במסך הבית": the home's
   catalog dropdowns opened from the keyboard and then answered none.
 - **Kind:** Fix of Zayit's code.
@@ -1345,6 +1348,18 @@ The entries of this section by kind:
 - **Smaller:** already minimal.
 - **Tests:** `LibraryLinksTest` (the tab of its own, after the references); Zayit's `LineReferencesTest` passes unchanged.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BreadcrumbPopup.kt`
+
+- **Change:** modified, +3 −2 lines. Feature: The keys in the popups.
+- **What:** the popup's up and down arrows round its list's ends, from the last row to the first and back (`mod` of the
+  list's size in place of Zayit's `coerceAtMost` and `coerceAtLeast`), under a comment marked "Pardes:".
+- **Why:** the user's word of 2026-11-20, of the popups that round their ends and those that stop at them: "היא קיימת
+  בחלקם המעגלים, תוודא שבכולם". Jewel's menus round theirs, and so does every popup of the app now.
+- **Kind:** Pardes feature in Zayit's file.
+- **Merge risk:** small: the two arrows' lines.
+- **Smaller:** already minimal.
+- **Tests:** none of its own; the same rounding as `PopupKeys.move`, which `PopupKeysUiTest` tries.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LinePlacesView.kt`
 
 - **Change:** modified, +3 −1 lines. Feature: More links.
@@ -1611,7 +1626,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +370 −73 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +379 −74 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes, The Home's big name shown or hidden, A card's book in place of the
   Home, Daily study plans.
 - **What:**
@@ -1655,6 +1670,11 @@ The entries of this section by kind:
   - `dedupAdjacent`, `SuggestionKind`, `SuggestionRow`, `RowAction` and `baseBooksDetail` become `internal`, each with
     a comment marked "Pardes:" (`RowAction`'s and `dedupAdjacent`'s in their KDoc): a study plan's field finds its book
     or category as the bar does and draws its rows as the bar's (request 64 of stage 3).
+  - The bar's arrows round its list's ends, from the last row to the first and back, up from none the last
+    (`focusedIndex` by `mod` in place of Zayit's `coerceIn`), as every popup of the app (the user's word of 2026-11-20:
+    "תוודא שבכולם"); and its two lists' scrolling brings a row out of view into it (`scrollToItem`, after Zayit's step
+    at the first and last rows in view, which a jump from one end to the other did not reach). Comments marked
+    "Pardes:".
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -3977,13 +3997,15 @@ keys in Pardes's `TreeKeys.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeys.kt`
 
 - **Feature:** The keys in the popups.
-- **Size:** 272 lines.
+- **Size:** 274 lines.
 - **What:** `PopupKeyRow` (a row's place among the list's items, headers counted, and what it opens); `PopupKeys`
   (`@Stable`: the row marked, `index`, among the `rows` that open something, the first at first; `marks(row)`; the
   list's `listState`), `rememberPopupKeys(vararg inputs)` (on the first row again as the field's text changes, the row
   marked kept in view with `revealItem`), and `Modifier.popupKeys(keys, onEscape)` (in the preview pass, before the
   popup's field: up and down mark a row, Enter opens it, Escape closes); and `Modifier.dropdownKeys(focusManager,
-  onEscape)` for a dropdown's popup (up and down move the focus, `FocusDirection.Next`/`Previous`, Escape closes);
+  onEscape)` for a dropdown's popup (up and down move the focus, `FocusDirection.Next`/`Previous`, Escape closes), its
+  ends rounded at once, again past the frame when the focus comes there (`frameFocused`); `PopupKeys.move` rounds the
+  list's ends too, as every popup of the app since 2026-11-20 ("תוודא שבכולם");
   `DropdownMarking` (`@Stable`: `byKeys`, the keys moved the focus last; `pointerMoved`, the pointer moved since, a move
   being a new place only, not a list scrolled under a still pointer, its first place only noted, as IntelliJ's
   `ListPopupImpl.isMouseMoved` reads it; `keysMoved`, `pointerAt`) and
@@ -4008,7 +4030,8 @@ keys in Pardes's `TreeKeys.kt`.
 - **Feature:** The keys in the popups.
 - **Size:** 81 lines.
 - **What:** a popup's field and its list of three rows under a header (Zayit's `PopupSectionHeader` and `PopupRow`):
-  the arrow down past the last row staying on it, up a row, Enter opening the second, Escape closing the popup; and a
+  the arrow down past the last row coming to the first and up from it to the last, Enter opening the third, Escape
+  closing the popup; and a
   dropdown's `DropdownMarking`: its first place only noted, then marked by the keys until the pointer moves to a new
   place, not when it is told the same place again (a list scrolled under it).
 - **Reached from:** the JVM tests.
@@ -7900,12 +7923,12 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 756 lines.
+- **Size:** 757 lines.
 - **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
   the book or the category studied ("לומדים", request 64 of stage 3), found in one field as the search's bar finds them
   (`SourceField`; `sourcesNamed`: the bar's lookup's books, acronyms too, and the library's categories, a category in
   its base books alone too, in `catBookRows`' order, drawn by the bar's `SuggestionRow`; up and down mark one, Enter or
-  a click picks it, Escape puts the title picked back); the depths of a book's table of contents as buttons, a daf where
+  a click picks it, Escape puts the title picked back; the arrows round the list's ends); the depths of a book's table of contents as buttons, a daf where
   it goes by amud, or a category's units by name (`categoryUnitNames`); where to start (`ListComboBox` of the units);
   how many ("הספק") for how many days (`PERIOD_DAYS`, a `ListComboBox`); the first day (the luach's
   `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least), for

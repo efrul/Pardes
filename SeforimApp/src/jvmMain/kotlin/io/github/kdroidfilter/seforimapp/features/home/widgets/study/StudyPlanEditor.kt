@@ -683,8 +683,9 @@ private fun SourceField(
             Modifier.fillMaxWidth().testTag("study-source").onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown || rows.isEmpty()) return@onPreviewKeyEvent false
                 when (event.key) {
-                    Key.DirectionDown -> marked = (marked + 1).coerceAtMost(rows.lastIndex)
-                    Key.DirectionUp -> marked = (marked - 1).coerceAtLeast(0)
+                    // Round from the last row to the first and back, as every popup of the app
+                    Key.DirectionDown -> marked = (marked + 1).mod(rows.size)
+                    Key.DirectionUp -> marked = (marked - 1).mod(rows.size)
                     Key.Enter, Key.NumPadEnter -> pick(rows[marked])
                     // The text typed goes, the title picked comes back
                     Key.Escape -> {

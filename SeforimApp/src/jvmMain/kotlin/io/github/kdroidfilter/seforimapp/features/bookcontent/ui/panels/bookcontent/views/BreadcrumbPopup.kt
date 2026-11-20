@@ -125,12 +125,13 @@ private fun BreadcrumbPopupContent(
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     when (event.key) {
+                        // Pardes: round from the last row to the first and back, as every popup of the app (2026-11-20)
                         Key.DirectionDown -> {
-                            filtered.getOrNull((selectedIndex + 1).coerceAtMost(filtered.lastIndex))?.let { selectedKey = it.key }
+                            filtered.getOrNull((selectedIndex + 1).mod(filtered.size.coerceAtLeast(1)))?.let { selectedKey = it.key }
                             true
                         }
                         Key.DirectionUp -> {
-                            filtered.getOrNull((selectedIndex - 1).coerceAtLeast(0))?.let { selectedKey = it.key }
+                            filtered.getOrNull((selectedIndex - 1).mod(filtered.size.coerceAtLeast(1)))?.let { selectedKey = it.key }
                             true
                         }
                         Key.Escape -> {
