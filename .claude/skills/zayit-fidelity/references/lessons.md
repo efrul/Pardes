@@ -314,6 +314,9 @@ Each of these was built, shown, and sent back. They say what the user expects:
   used takes the focus.
 - **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
   to the text's right beside the contents ("יהיה בימין").
+- **A thing is named as the user names it.** The setting that hides the Home's big lettering was titled "הצג את השם
+  הגדול בדף הבית"; the user asked to fix the wording ("תתקן נוסח", 2026-11-20), and it says their own words of the
+  request now, "הכיתוב הגדול של פרדס".
 - **What the app can tell by itself, it does not ask.** The study plan's editor had a "ספר | קטגוריה" choice over two
   fields; the user asked for one field that tells a book from a category as the search's bar does, with the bar's
   code ("זה יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף", 2026-11-19). It now finds both
