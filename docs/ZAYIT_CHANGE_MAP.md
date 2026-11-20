@@ -1388,7 +1388,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +259 −39 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+- **Change:** modified, +263 −40 lines. Feature: Commentators in their own panes, A pane at the window's edge,
   Pane layout kept, Find results pane, Keys in the book tree and the contents.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
@@ -1420,7 +1420,12 @@ The entries of this section by kind:
     `FindResultsSettings.shown`, and the tab's find bar open on a query of two letters at least); `BookPaneBody` draws
     it with `FindResultsPane`, whose Enter and Escape give the focus back to the text (`BookContentEvent.FocusText`)
     and whose header's minimize hides it as the find bar's button does (`onHide`, `BookContentEvent.ToggleFindResults`,
-    request 62); its imports.
+    request 62); its imports. It does not float (`floatable`, a local of `WindowPanes` under a comment marked
+    "Pardes:", given to Zayit's `floatable` argument in place of `!pane.fixed` and to `savedPlacement`, so a place
+    saved floating is not given back): as the contents beside it, it stays in its window, and its header has no "פתח
+    בחלון נפרד" (the user's word of 2026-11-20: "אפשר לבטל פתח בחלון נפרד"). Floated, it was composed in a window of
+    its own with no `LocalOpenWindow`, which its type-to-search reads, and the app stopped ("No OpenWindow provided",
+    in desktop-1.0.10-55).
   - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
     `docs/DESKTOP_STAGE3_PLAN.md`, the user's word of 2026-11-19: "לאחר פתיחת העץ אין עדין פוקוס עליו עד שלוחצים
     עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
@@ -1439,7 +1444,7 @@ The entries of this section by kind:
 - **Smaller:** hard. The commentator panes could be a second list of satellites declared by a Pardes composable, leaving
   Zayit's enum as it is, but `PaneSync` needs to know them.
 - **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`; the drops at the window's edge tried in the app;
-  `FindResultsTest`, and the find results pane tried in the app.
+  `FindResultsTest`, and the find results pane tried in the app (its header without "פתח בחלון נפרד" since 2026-11-20).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/PostSelectLineTest.kt`
 
