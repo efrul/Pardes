@@ -50,8 +50,10 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentCol
 import io.github.kdroidfilter.seforimapp.features.home.widgets.shownDateHere
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
+import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.Icon
@@ -60,6 +62,7 @@ import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.home_widget_name_study_plans
+import seforimapp.seforimapp.generated.resources.scope_base_books_label
 import java.time.LocalDate
 import java.util.UUID
 import java.util.WeakHashMap
@@ -70,9 +73,9 @@ import java.util.WeakHashMap
 // in StudyPlanEditor.kt. Ideas only from Otzaria's "לשקוד" add-on, which has no licence.
 
 /**
- * A plan as the card shows it on a day: its book in this library (null: not there), its units and the day's part; the
- * part a click opens ([held]): the day's, or on a day without study (before the plan starts too) where it holds, the
- * next day of study's.
+ * A plan as the card shows it on a day: its book in this library (null: not there, or a category's plan), its units and
+ * the day's part; the part a click opens ([held]): the day's, or on a day without study (before the plan starts too)
+ * where it holds, the next day of study's; whether its book or category is in this library ([found]).
  */
 @Immutable
 internal data class ShownPlan(
@@ -82,34 +85,93 @@ internal data class ShownPlan(
     val units: List<StudyUnit>,
     val part: DayPart,
     val held: DayPart.Part? = part as? DayPart.Part,
+    val found: Boolean = book != null,
 )
 
 /** [plan]'s book in this library: by its id while it has the same title, else by its title. */
 internal suspend fun SeforimRepository.bookOf(plan: StudyPlan): Book? =
     getBookCore(plan.bookId)?.takeIf { it.title == plan.bookTitle } ?: getBookByTitle(plan.bookTitle)
 
-/** [plan] on [day], in Israel or abroad ([inIsrael]): its book read from the library, the day's part reckoned. */
+/**
+ * Pardes (request 64 of stage 3): [plan]'s category in this library: by its id while it has the same title, else by its
+ * path's titles from the root.
+ */
+internal suspend fun SeforimRepository.categoryOf(plan: StudyPlan): Category? {
+    getCategory(plan.category)?.takeIf { it.title == plan.categoryPath.lastOrNull() }?.let { return it }
+    var level = getRootCategories()
+    var found: Category? = null
+    for (title in plan.categoryPath) {
+        found = level.firstOrNull { it.title == title } ?: return null
+        level = getCategoryChildren(found.id)
+    }
+    return found
+}
+
+/** The books under [category] as the book tree lists them: its own, then each of its categories' in turn. */
+internal suspend fun SeforimRepository.booksInTreeOrder(category: Category): List<Book> =
+    getBooksByCategory(category.id) + getCategoryChildren(category.id).flatMap { booksInTreeOrder(it) }
+
+/** [category]'s books (its base books alone with [baseBooksOnly]) with their tables of contents, in the book tree's order. */
+internal suspend fun SeforimRepository.planBooks(
+    category: Category,
+    baseBooksOnly: Boolean = false,
+): List<PlanBook> =
+    booksInTreeOrder(category)
+        .filter { !baseBooksOnly || it.isBaseBook }
+        .map { PlanBook(it.id, it.title, getTocEntriesForBook(it.id)) }
+
+/** Where [plan]'s part of [day] is marked done: the day itself, or the first day of a part for several days. */
+internal fun markDay(
+    plan: StudyPlan,
+    day: LocalDate,
+): LocalDate = periodStart(plan.startDay, day, plan.periodDays)
+
+/**
+ * [plan] on [day], in Israel or abroad ([inIsrael]): its book read from the library (a category's books, request 64 of
+ * stage 3), its units by its unit, the day's part reckoned: of the days of study for a part a day, of its period for one
+ * of several days, every day of which shows it.
+ */
 internal suspend fun SeforimRepository.shownPlan(
     plan: StudyPlan,
     day: LocalDate,
     inIsrael: Boolean,
 ): ShownPlan {
-    val book = bookOf(plan) ?: return ShownPlan(plan, null, UnitName("יחידה", "יחידות"), emptyList(), DayPart.Finished)
-    val entries = getTocEntriesForBook(book.id)
-    val units = studyUnits(entries, plan.level)
-    val name = unitNameOf(entries.filter { it.level == plan.level }.map { it.text })
+    val missing = ShownPlan(plan, null, UnitName("יחידה", "יחידות"), emptyList(), DayPart.Finished, found = false)
+    val book: Book?
+    val units: List<StudyUnit>
+    val name: UnitName
+    if (plan.category != 0L) {
+        val books = planBooks(categoryOf(plan) ?: return missing, plan.baseBooksOnly)
+        book = null
+        units = categoryUnits(books, plan.unitName)
+        name = categoryUnitNames(books).firstOrNull { it.one == plan.unitName } ?: UnitName(plan.unitName, "יחידות")
+    } else {
+        book = bookOf(plan) ?: return missing
+        val entries = getTocEntriesForBook(book.id)
+        units = bookUnits(entries, plan.level, plan.unitName)
+        name =
+            bookUnitNames(studyLevels(entries)).firstOrNull { it.one == plan.unitName }
+                ?: unitNameOf(entries.filter { it.level == plan.level }.map { it.text })
+    }
 
-    fun studyDay(date: LocalDate) = isStudyDay(date, plan.weekdays, inIsrael)
+    val daily = plan.periodDays <= 1
+
+    fun studyDay(date: LocalDate) = !daily || isStudyDay(date, plan.weekdays, inIsrael)
     val before = day < plan.startDay
     val startIndex = startIndexOf(units, plan.start)
-    val daysBefore = if (before) 0 else studyDaysBetween(plan.startDay, day, ::studyDay)
+    val daysBefore =
+        when {
+            before -> 0
+            daily -> studyDaysBetween(plan.startDay, day, ::studyDay)
+            else -> periodIndex(plan.startDay, day, plan.periodDays)
+        }
     val part = dayPart(startIndex, units.size, plan.perDay, plan.restart, daysBefore, studyDay(day), before)
     // On a day without study, a click opens where the plan holds: the next day of study's part
     val held =
         part as? DayPart.Part
             ?: (dayPart(startIndex, units.size, plan.perDay, plan.restart, daysBefore, studyDay = true) as? DayPart.Part)
                 .takeIf { part == DayPart.Rest || part == DayPart.NotYet }
-    return ShownPlan(plan, book, name, units, part, held)
+    return ShownPlan(plan, book, name, units, part, held, found = true)
 }
 
 /** Where a part is in its book: the line its first unit starts on, and the last line of its last one. */
@@ -119,6 +181,8 @@ internal suspend fun SeforimRepository.linesOf(
     indexes: List<Int>,
 ): Pair<Long?, Long?> {
     val first = units.getOrNull(indexes.first()) ?: return null to null
+    // A whole book (a category's plan by books): opened at its start, nothing marked
+    if (first.tocId == 0L) return null to null
     // A part across the book's end is marked to the end
     val last = units[indexes.last()].takeIf { indexes.last() >= indexes.first() }
     val endIndex = (last?.nextLineId?.let { getLine(it)?.lineIndex }?.minus(1) ?: (book.totalLines - 1)).coerceAtLeast(0)
@@ -167,20 +231,26 @@ internal object StudyWidget : HomeWidget {
                 runSuspendCatching { store.plans().map { graph.repository.shownPlan(it, day, inIsrael) } }.getOrNull()
                     ?: emptyList()
         }
-        val done by produceState(emptySet<Long>(), revision, day) { value = store.doneOn(day) }
+        // Each plan's mark on the day, or on its period's first day for a part of several days (request 64 of stage 3)
+        val done by produceState(emptySet<Long>(), revision, day, plans) {
+            value = plans.orEmpty().filter { store.isDone(it.plan.id, markDay(it.plan, day)) }.mapTo(HashSet()) { it.plan.id }
+        }
         val shown = plans ?: return WidgetCardLoading(modifier)
         val scope = rememberCoroutineScope()
         StudyCard(
             plans = shown,
             done = done,
             today = day == LocalDate.now(),
-            onDone = { plan, checked -> scope.launch { store.setDone(plan.id, day, checked) } },
+            onDone = { plan, checked -> scope.launch { store.setDone(plan.id, markDay(plan, day), checked) } },
             onOpen = { plan ->
-                val book = plan.book
                 val part = plan.held
-                if (book != null && part != null) {
+                if (plan.found && part != null) {
                     scope.launch {
-                        val (lineId, endLineId) = graph.repository.linesOf(book, plan.units, part.indexes)
+                        // A category's part opens in its first unit's book, marked through its last unit there
+                        val first = plan.units[part.indexes.first()]
+                        val book = plan.book ?: graph.repository.getBookCore(first.bookId) ?: return@launch
+                        val inBook = part.indexes.takeWhile { plan.units[it].bookId == first.bookId }
+                        val (lineId, endLineId) = graph.repository.linesOf(book, plan.units, inBook)
                         state.openTab(
                             TabsDestination.BookContent(
                                 bookId = book.id,
@@ -292,7 +362,10 @@ private fun PlanRow(
         ) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp)) {
                 Text(
-                    plan.book?.title ?: plan.plan.bookTitle,
+                    // A category's plan: its title, marked in its base books alone as the bar marks it (request 64 of stage 3)
+                    plan.book?.title ?: plan.plan.bookTitle.let {
+                        if (plan.plan.baseBooksOnly) stringResource(Res.string.scope_base_books_label, it) else it
+                    },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -329,19 +402,33 @@ private fun partText(plan: ShownPlan): String =
         is DayPart.Part -> partLabel(part.indexes.map { plan.units[it] })
         DayPart.Rest -> "אין לימוד היום"
         DayPart.NotYet -> "מתחילים ב־${plan.plan.startDay.dayOfMonth}.${plan.plan.startDay.monthValue}"
-        DayPart.Finished -> if (plan.book == null) "הספר לא נמצא בספרייה" else "סיימת את הספר"
+        DayPart.Finished ->
+            when {
+                plan.plan.category != 0L && !plan.found -> "הקטגוריה לא נמצאה בספרייה"
+                !plan.found -> "הספר לא נמצא בספרייה"
+                plan.plan.category != 0L -> "סיימת את הקטגוריה"
+                else -> "סיימת את הספר"
+            }
     }
 
-/** "6 סעיפים ביום · יום 41", "5 פרקים ביום, חוץ משבת ויום טוב", "פרק ביום · סיימת להיום". */
+/** "6 סעיפים ביום · יום 41", "5 פרקים ביום, חוץ משבת ויום טוב", "פרק ביום · סיימת להיום", "10 פרקים בשבוע · שבוע 3". */
 private fun metaText(
     plan: ShownPlan,
     isDone: Boolean,
     today: Boolean,
 ): String {
-    val pace = listOfNotNull(perDayLabel(plan.plan.perDay, plan.name), weekdaysLabel(plan.plan.weekdays)).joinToString(", ")
+    val daily = plan.plan.periodDays <= 1
+    val days = weekdaysLabel(plan.plan.weekdays).takeIf { daily }
+    val pace = listOfNotNull(perPeriodLabel(plan.plan.perDay, plan.name, plan.plan.periodDays), days).joinToString(", ")
     val part = plan.part as? DayPart.Part ?: return pace
+    val which =
+        when (plan.plan.periodDays) {
+            1 -> "יום"
+            7 -> "שבוע"
+            else -> "חלק"
+        }
     return when {
-        isDone -> "$pace · ${if (today) "סיימת להיום" else "סומן"}"
-        else -> "$pace · יום ${part.day}"
+        isDone -> "$pace · ${if (today && daily) "סיימת להיום" else "סומן"}"
+        else -> "$pace · $which ${part.day}"
     }
 }

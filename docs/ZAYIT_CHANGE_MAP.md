@@ -399,7 +399,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +26 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane.
+- **Change:** modified, +29 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -415,7 +415,9 @@ The entries of this section by kind:
     `abstract val dafScanPages: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanPages` (request 56),
     with a two-line comment marked "Pardes:"; and after them, with a comment of its own,
     `abstract val bookFindHub: io.github.kdroidfilter.seforimapp.features.bookcontent.find.BookFindHub` (request 55 of
-    stage 3); and after it, with a comment of its own, `abstract val paneFocusRequests:
+    stage 3); after it, with a comment of its own, `abstract val lookupSearch:
+    io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService` (request 64 of stage 3); and after it,
+    with a comment of its own, `abstract val paneFocusRequests:
     io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneFocusRequests` (request 47 of stage 3).
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
@@ -423,13 +425,14 @@ The entries of this section by kind:
   lookup, and the references pane and its button the links of the other kinds; `main.kt` warms the categories up as the app
   starts, and the commentators list reads the reader's default; the book tree and a PDF book's tab reach the user's
   PDF books, and the daf view a tractate's scan and its pages cut into images; a book's text and the find results pane
-  meet in the find hub.
+  meet in the find hub; a study plan's field finds books by the search bar's lookup, as the bar does.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** eleven lines among Zayit's declarations, and three imports.
+- **Merge risk:** thirteen declarations among Zayit's, with their comments, and three imports.
 - **Smaller:** already minimal.
 - **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`.
-- **Notes:** the first two types, `libraryLinks`', `pdfBookStore`'s, `dafScans`' and `dafScanPages`' are written fully qualified instead of imported, unlike every other line of the file:
-  fewer import lines to conflict, but not Zayit's way.
+- **Notes:** the first two types, and those of `libraryLinks`, `pdfBookStore`, `dafScans`, `dafScanPages`,
+  `bookFindHub`, `lookupSearch` and `paneFocusRequests`, are written fully qualified instead of imported, unlike every
+  other line of the file: fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
 
@@ -1572,9 +1575,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +363 −69 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +370 −73 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes, The Home's big name shown or hidden, A card's book in place of the
-  Home.
+  Home, Daily study plans.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
   - `CatBookRow.Category`: a category to search in. `catBookRows` orders references, books named by their title, a title
@@ -1613,6 +1616,9 @@ The entries of this section by kind:
     new one (`replaceCurrentTabWithNewTabId`, as the history's, the notes' and the favourites' pages open a book)
     while the Home is the tab selected (`LocalTabSelected`, read through `rememberUpdatedState`), else opens a new tab
     as Zayit's did (a card's own window over another tab); each with a comment marked "Pardes:", and two imports.
+  - `dedupAdjacent`, `SuggestionKind`, `SuggestionRow`, `RowAction` and `baseBooksDetail` become `internal`, each with
+    a comment marked "Pardes:" (`RowAction`'s and `dedupAdjacent`'s in their KDoc): a study plan's field finds its book
+    or category as the bar does and draws its rows as the bar's (request 64 of stage 3).
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -1620,7 +1626,9 @@ The entries of this section by kind:
   (`מהרשא` gave a book an acronym names so, `רשי` a category) and that `שמואל` not bring שמואל א after four authors and
   four categories. On 2026-11-15 that typing a PDF book's name in the bar shows it ("למה כתיבה בשורת החיפוש שם ספר
   pdf לא מציגה אותו?"). On 2026-11-18 that an author's name bring all his books, not only his folders (request 41 of
-  stage 3: "חיפוש בקטגוריה לפי שם של מחבר יביא את כל ספריו כהצעות למטה, לא רק את התיקיות של ספריו").
+  stage 3: "חיפוש בקטגוריה לפי שם של מחבר יביא את כל ספריו כהצעות למטה, לא רק את התיקיות של ספריו"). On 2026-11-19
+  that a study plan's book or category be found in one field as the search finds them (request 64 of stage 3: "זה
+  יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף").
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: `HomeView.kt` is one of Zayit's largest files (some 1,900 lines), and the edits run through
   its search bar's key handling, its rows and its panels.
@@ -1629,7 +1637,7 @@ The entries of this section by kind:
 - **Tests:** `CatBookRowsTest`, `CategorySuggestionsE2ETest`, `ScopeItemsTest`, `CategorySuggestionsTest`,
   `BookSuggestionsE2ETest`; `MyPdfBooksSearchTest` (the PDF books suggested); tried in the app (a PDF book first in
   the bar, opened by Enter; request 41: רמב"ן typed, his row, his folder, then his books, and the same with תלמוד ›
-  בבלי picked).
+  בבלי picked; request 64: a study plan's field, מועד and שוע typed, their categories and books in the bar's rows).
 - **Notes:** Zayit's search UI on purpose has no category scope (`SearchScope.Category` is "read back only" there,
   with category tabs over the results): this file brings back what Zayit chose to drop.
 
@@ -7713,18 +7721,24 @@ approved that day): a Home widget, "הלימוד שלי", lists the user's plans
 of contents at one depth, so many a day, from a chosen unit and date, on chosen days (without Shabbat, without Yom Tov
 too), again from the start at its end if asked. The day's part is reckoned from the date, never stored; a tick marks it
 learnt; a click opens the book on it, marked through its end. The plans and ticks are kept in the user DB, so the
-backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no licence. Hooks: `AppGraph.kt`,
-`AppCoreBindings.kt`, `strings.xml`, `WidgetSizesScreenshotTest.kt`.
+backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no licence. Since 2026-11-19 (request 64 of
+`docs/DESKTOP_STAGE3_PLAN.md`) a plan is also a whole category, or its base books alone, studied book after book; by a
+unit named in each book (a chapter, a daf of two amudim, a book); and a part for two or three days, a week or two;
+its book or category is found in one field as the search's bar finds them, with the bar's code. Hooks: `AppGraph.kt`,
+`AppCoreBindings.kt`, `strings.xml`, `WidgetSizesScreenshotTest.kt`, `HomeView.kt`.
 
 #### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/StudyPlans.sq`
 
 - **Feature:** Daily study plans.
-- **Size:** 58 lines.
+- **Size:** 86 lines.
 - **What:** the tables `study_plan` (the book by id, title and categories' titles; the depth; the first unit by its
   headings, `\u001F` between two; how many a day; the first day as an epoch day; the weekdays as bits, Sunday lowest;
   whether to start again; the order) and `study_plan_done` (a plan's days marked learnt, key `planId, day`), and their
   queries `selectAll`, `insert` (last in order), `lastInsertId`, `update`, `delete`, `deleteDoneOf`, `markDone`,
-  `unmarkDone` and `selectDoneOn`.
+  `unmarkDone` and `selectDoneOn`. Since request 64 of stage 3, `study_plan_more`, what a plan holds besides, made in
+  a user DB of before by `CREATE TABLE IF NOT EXISTS` (a plan without a row is a book's by its depth, a part a day): its
+  category by id (0 for a book), in its base books alone, its unit by name, and the days of a part; with `selectMore`,
+  `saveMore` (`INSERT OR REPLACE`), `deleteMore`, and `isDone` (a plan's tick on a day).
 - **Reached from:** `StudyPlanStore.kt` (through SQLDelight's generated `UserSettingsDb`).
 - **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`, and `CommentatorDefaults.sq`, which
   keeps a book by names so that a new library finds it.
@@ -7733,10 +7747,13 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStore.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 146 lines.
+- **Size:** 195 lines.
 - **What:** `StudyPlan` (a plan's book, depth, first unit, pace, first day, weekdays and restart) and `StudyPlanStore`,
   the plans and their ticks in the user DB: `plans`, `save` (a new one last, its id), `delete` (with its ticks),
-  `doneOn` and `setDone`, and a `revision` flow; the weekdays as one number (`toMask`, `weekdaysOf`).
+  `doneOn` and `setDone`, and a `revision` flow; the weekdays as one number (`toMask`, `weekdaysOf`). Since request 64
+  of stage 3, a plan's `category`, `baseBooksOnly`, `unitName` (`DAF_UNIT`, `BOOK_UNIT`) and `periodDays`, kept in
+  `study_plan_more` (`saveMore`: a row only for a plan that needs one, deleted with the plan), and `isDone` (a plan's
+  tick on a day, a part of several days ticked on its first).
 - **Reached from:** `AppCoreBindings.kt` (`provideStudyPlanStore`), `AppGraph.kt`, `StudyWidget.kt`,
   `StudyPlanEditor.kt`.
 - **Follows:** Zayit's user-DB stores (`ShnayimMikraStore`: a SQLDelight table, `Dispatchers.IO`, a `revision` flow).
@@ -7745,7 +7762,7 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyParts.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 271 lines.
+- **Size:** 417 lines.
 - **What:** the units of a plan and the day's part, plain functions: a table of contents in reading order
   (`readingOrder`), the depths worth studying by (`studyLevels`, more than one entry each), a depth's units with their
   headings and the line the next one starts on (`studyUnits`), where a plan starts by headings (`startIndexOf`), what a
@@ -7753,7 +7770,12 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
   (`isStudyDay`: one of its weekdays, and not Yom Tov while Shabbat is not one of them, KosherKotlin's
   `isYomTovAssurBemelacha`, in Israel or abroad), the days learnt between two dates, the day's part (`dayPart`: on from
   the days before, past the end from the start again or done), and the texts (`partLabel` "פרקים כג–כז",
-  `perDayLabel`, `weekdaysLabel`).
+  `perPeriodLabel` "10 פרקים בשבוע", `weekdaysLabel`). Since request 64 of stage 3: a unit's book (`StudyUnit.bookId`),
+  a category's books with their contents (`PlanBook`), a daf of two amudim (`dafUnits`), a book's units by a unit's
+  name (`bookUnits`), a category's book after book, a book without the unit as one (`categoryUnits`), the names a
+  category or a book can be learnt by (`categoryUnitNames`, the commonest first, a daf, a book; `bookUnitNames`), and
+  the parts of several days (`PERIOD_DAYS`, `periodLabel`, `periodIndex` and `periodStart`: a week or two from Sunday,
+  two or three days from the plan's first).
 - **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
 - **Follows:** the luach widgets' day reckoning (`LuachData.kt`: `JewishCalendar` by date and region).
 - **Tests:** `StudyPartsTest`.
@@ -7762,7 +7784,7 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyWidget.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 347 lines.
+- **Size:** 434 lines.
 - **What:** the Home widget `StudyWidget` ("הלימוד שלי", 6×4 cells, from 4×3 to 12×8) and its card `StudyCard`: a row
   for each plan with the box ticked once the day's part is learnt, the book, the part, its pace, its day of study and a
   bar of how far into the book it reaches, a pencil on hover to edit it, and "+ תוכנית חדשה"; `shownPlan` reads a plan's
@@ -7771,42 +7793,60 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
   it holds, the next day of study's, as the user asked on 2026-11-13);
   `linesOf`, the part's first line and its last, for the tab to mark (`TabsDestination.BookContent`'s `endLineId`); the
   plan being edited is kept per Home's state (`editedPlan`) and its editor composed in `Detached`; its menu has "תוכנית
-  חדשה…".
+  חדשה…". Since request 64 of stage 3: a category's plan (`categoryOf`: by id while its title is the same, else by its
+  path's titles from the root; `booksInTreeOrder`; `planBooks`, its base books alone when the plan says so), its title
+  marked so as the bar's chip (`scope_base_books_label`: "שולחן ערוך (ספרי יסוד)"), whether its book or category is in
+  the library (`ShownPlan.found`), a part of several days shown every day of its period ("שבוע 3") and ticked on its
+  first day (`markDay`), a whole book opened at its start, a category's part opened in its first unit's book, marked
+  through its units there, and "הקטגוריה לא נמצאה בספרייה", "סיימת את הקטגוריה".
 - **Reached from:** the widget registry (`availableHomeWidgets`, generated by `:widgetprocessor` from every `HomeWidget`
   object).
 - **Follows:** Zayit's `ShnayimMikraWidget` (a tick per part of the day, a click that opens it marked, the shown date),
   and Pardes's `LearningSplitWidget` (a card fed by a store, read off the UI thread with `produceState`).
 - **Tests:** `StudyCardUiTest`; tried in the app (a plan made in the editor, two more and a tick kept over a restart, a
-  click that opened משנה ברורה on the day's סימן).
+  click that opened משנה ברורה on the day's סימן; request 64: סדר מועד by פרק, three a week, ticked, opened on משנה שבת;
+  שולחן ערוך in its base books alone, three סימנים a week, "שבוע 1").
 - **Notes:** the Hebrew texts are literals in Kotlin; the header's gear of the mock-up is left out (the menu and the
   pencil edit a plan).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 522 lines.
+- **Size:** 756 lines.
 - **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
-  the book, looked up by title as it is typed (`booksLike`: an exact title first); the depths of its table of contents
-  as buttons; where to start (`ListComboBox` of the units); how many a day; the first day (the luach's
-  `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least); to
-  start again at the end; the day's part beneath, as the card will show it; "שמור", "ביטול", and for a plan saved,
-  "מחק תוכנית", which deletes on a second click within four seconds. The book's categories' titles are saved with it.
-  Its parts: `PlanFields` (the fields as the user sets them: `pickBook` and `pickLevel` take the start back to the
-  first unit, `toggle` keeps one day at least, `readPerDay` follows the field, `planFrom` makes the plan saved),
-  `rememberPreview`, `EditorWindow`, `BookRows`, `ScheduleRows` and `EditorButtons` (split on 2026-11-13 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on it).
+  the book or the category studied ("לומדים", request 64 of stage 3), found in one field as the search's bar finds them
+  (`SourceField`; `sourcesNamed`: the bar's lookup's books, acronyms too, and the library's categories, a category in
+  its base books alone too, in `catBookRows`' order, drawn by the bar's `SuggestionRow`; up and down mark one, Enter or
+  a click picks it, Escape puts the title picked back); the depths of a book's table of contents as buttons, a daf where
+  it goes by amud, or a category's units by name (`categoryUnitNames`); where to start (`ListComboBox` of the units);
+  how many ("הספק") for how many days (`PERIOD_DAYS`, a `ListComboBox`); the first day (the luach's
+  `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least), for
+  a part a day only; to start again at the end; the part beneath ("היום", "השבוע"), as the card will show it; "שמור",
+  "ביטול", and for a plan saved, "מחק תוכנית", which deletes on a second click within four seconds. The book's
+  categories' titles are saved with it (a category's own path for a category's plan). Its parts: `PlanFields` (the
+  fields as the user sets them: `pickBook`, `pickCategory`, `pickLevel` and `pickUnit` take the start back to the first
+  unit, `toggle` keeps one day at least, `readPerDay` follows the field, `planFrom` and `planOf` make the plan saved, a
+  book's or a category's), `rememberPreview`, `EditorWindow`, `BookRows`, `ScheduleRows` and `EditorButtons` (split on
+  2026-11-13 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on it), and
+  `SourceField`.
 - **Reached from:** `StudyWidget.kt` (`Detached`).
 - **Follows:** Zayit's `WidgetOptionsDialog` (the window, its title bar and bottom bar) and its settings' fields.
-- **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז").
+- **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז";
+  request 64: מועד typed, משנה › סדר מועד picked by the arrows and Enter, by פרק; שוע typed, שולחן ערוך whole and in
+  its base books alone, the latter picked, three סימנים a week; a saved plan reopened with its fields, תהילים picked by
+  a click, Escape back to the title picked).
 - **Notes:** the Hebrew texts are literals in Kotlin.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPartsTest.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 122 lines.
+- **Size:** 183 lines.
 - **What:** a book's units at a depth in reading order, under the headings above them, and where each ends; a start found
   by headings, or by its own heading in a new library; the depths' names, the Bavli's by the amud; Yom Tov skipped with
   Shabbat, the second day abroad, Chol HaMoed learnt; the day's part on from the days before, done or again at the end;
-  the parts' names, the paces and the days in words.
+  the parts' names, the paces and the days in words. Since request 64 of stage 3: a daf of two amudim named by itself;
+  a category book after book, a book without the unit as one; a category's units' names; a part of a week from Sunday
+  and of three days from the plan's first day.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's widget tests (`LearningSplitTest`), Kotlin Test.
 - **Tests:** it is one (unit).
@@ -7814,9 +7854,11 @@ backup carries them. Ideas only from Otzaria's "לשקוד" add-on, which has no
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStoreTest.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 69 lines.
+- **Size:** 103 lines.
 - **What:** a plan kept with every field, a new one last, changed in place; a day's tick marked and unmarked; a plan
-  deleted with its ticks; the weekdays as one number and back.
+  deleted with its ticks; the weekdays as one number and back. Since request 64 of stage 3: a category's plan keeps its
+  category, its base books alone, its unit and its days, and a book's plain plan none; a part of several days ticked on
+  its first day, and unticked with its plan.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's store tests (an in-memory `UserSettingsDb`).
 - **Tests:** it is one (unit).

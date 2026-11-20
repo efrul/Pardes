@@ -18,6 +18,12 @@ import java.time.LocalDate
  * contents at depth [level], [perDay] of them a day, from the one whose headings are [start] (from the book's top
  * level down), from [startDay] on the [weekdays] chosen; when Shabbat is not one of them, Yom Tov is skipped too. At
  * the book's end it starts again if [restart], else it is done.
+ *
+ * Request 64 of the list after the third testers' build: a whole [category] studied (its id, 0 for a book; its books in
+ * the book tree's order, [bookTitle] its title and [categoryPath] its own path), or its base books alone
+ * ([baseBooksOnly], as the search's bar offers a category: תלמוד בבלי's tractates), the unit by its name in each book
+ * ([unitName]: "פרק"; "" the depth [level]; [DAF_UNIT] two amudim; [BOOK_UNIT] a book), and [perDay] units for
+ * [periodDays] days (1 a day; 7 a week, from Sunday, and 14 two; 2 or 3 from [startDay]).
  */
 @Immutable
 data class StudyPlan(
@@ -31,7 +37,19 @@ data class StudyPlan(
     val startDay: LocalDate,
     val weekdays: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
     val restart: Boolean = true,
-)
+    val category: Long = 0,
+    val baseBooksOnly: Boolean = false,
+    val unitName: String = "",
+    val periodDays: Int = 1,
+) {
+    companion object {
+        /** A unit of two amudim, as a daf is learnt (the Bavli's contents go by amud). */
+        const val DAF_UNIT = "דף"
+
+        /** A book a unit, in a category's plan. */
+        const val BOOK_UNIT = "ספר"
+    }
+}
 
 /**
  * The user's study plans and the days each one's part was marked done, in the user DB (tables study_plan and
@@ -49,7 +67,18 @@ class StudyPlanStore(
     /** Every plan, in the order they were made. */
     suspend fun plans(): List<StudyPlan> =
         withContext(Dispatchers.IO) {
-            queries.selectAll().executeAsList().map { it.toPlan() }
+            val more = queries.selectMore().executeAsList().associateBy { it.planId }
+            queries.selectAll().executeAsList().map { row ->
+                val plan = row.toPlan()
+                more[row.id]?.let {
+                    plan.copy(
+                        category = it.categoryId,
+                        baseBooksOnly = it.baseBooksOnly != 0L,
+                        unitName = it.unitName,
+                        periodDays = it.periodDays.toInt().coerceAtLeast(1),
+                    )
+                } ?: plan
+            }
         }
 
     /** Saves [plan], a new one (id 0) last; its id. */
@@ -70,7 +99,7 @@ class StudyPlanStore(
                             restart = if (plan.restart) 1L else 0L,
                             createdAt = System.currentTimeMillis(),
                         )
-                        queries.lastInsertId().executeAsOne()
+                        queries.lastInsertId().executeAsOne().also { saveMore(it, plan) }
                     } else {
                         queries.update(
                             bookId = plan.bookId,
@@ -84,6 +113,7 @@ class StudyPlanStore(
                             restart = if (plan.restart) 1L else 0L,
                             id = plan.id,
                         )
+                        saveMore(plan.id, plan)
                         plan.id
                     }
                 }
@@ -91,15 +121,34 @@ class StudyPlanStore(
             id
         }
 
+    // A plan's more (request 64): a row only for a plan that needs one, a book's by its depth a part a day having none
+    private fun saveMore(
+        id: Long,
+        plan: StudyPlan,
+    ) {
+        if (plan.category == 0L && plan.unitName.isEmpty() && plan.periodDays <= 1) {
+            queries.deleteMore(id)
+        } else {
+            queries.saveMore(id, plan.category, if (plan.baseBooksOnly) 1L else 0L, plan.unitName, plan.periodDays.toLong())
+        }
+    }
+
     /** Deletes plan [id] and its marks. */
     suspend fun delete(id: Long): Unit =
         withContext(Dispatchers.IO) {
             queries.transaction {
                 queries.deleteDoneOf(id)
+                queries.deleteMore(id)
                 queries.delete(id)
             }
             _revision.update { it + 1 }
         }
+
+    /** Whether plan [planId]'s part of [day] (the first day of its period, for a plan of several days) was marked done. */
+    suspend fun isDone(
+        planId: Long,
+        day: LocalDate,
+    ): Boolean = withContext(Dispatchers.IO) { queries.isDone(planId, day.toEpochDay()).executeAsOne() > 0 }
 
     /** The plans whose part of [day] was marked done. */
     suspend fun doneOn(day: LocalDate): Set<Long> =
