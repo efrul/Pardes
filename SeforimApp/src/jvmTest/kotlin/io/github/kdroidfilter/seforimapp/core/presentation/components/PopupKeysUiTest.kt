@@ -63,6 +63,9 @@ class PopupKeysUiTest {
     @Test
     fun `a dropdown's rows are marked by the keys until the pointer moves, not as a list scrolls under it`() {
         val marking = DropdownMarking()
+        // Its first place only noted, as IntelliJ's popups: a popup opened under a still pointer
+        marking.pointerAt(Offset(8f, 20f))
+        assertFalse(marking.pointerMoved)
         marking.pointerAt(Offset(10f, 20f))
         assertTrue(marking.pointerMoved)
         marking.keysMoved()

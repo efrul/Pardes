@@ -91,6 +91,7 @@ import io.github.kdroidfilter.seforimapp.core.deeplink.toShareLink
 import io.github.kdroidfilter.seforimapp.core.presentation.components.ActionIcon
 import io.github.kdroidfilter.seforimapp.core.presentation.components.BelowAnchorEndPositionProvider
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SharedIcon
+import io.github.kdroidfilter.seforimapp.core.presentation.components.SingleMarkPopupMenu
 import io.github.kdroidfilter.seforimapp.core.presentation.components.TitleBarActionButton
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.presentation.window.TabDragGhostCard
@@ -1955,8 +1956,8 @@ private fun TabContextMenu(
         }
 
     // Pardes: Jewel's own popup menu, which answers the keys (up, down, Enter, Escape) as the Tools menu does (request 69
-    // of stage 3)
-    PopupMenu(
+    // of stage 3), one item marked at a time as in IntelliJ's menus
+    SingleMarkPopupMenu(
         onDismissRequest = {
             onDismissRequest()
             true

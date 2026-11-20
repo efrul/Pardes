@@ -56,20 +56,39 @@ class TreeKeysTest {
     }
 
     @Test
-    fun `in opens a closed folder, goes into an open one, and does nothing on a leaf or an empty folder`() {
+    fun `in opens a closed folder, and from an open one or a leaf goes on to the next row, as IntelliJ's trees`() {
         assertEquals(TreeMove.Click(4), move(4, TreeKey.IN))
         assertEquals(TreeMove.Focus(1), move(0, TreeKey.IN))
-        assertNull(move(2, TreeKey.IN))
-        assertNull(move(5, TreeKey.IN))
+        assertEquals(TreeMove.Focus(3), move(2, TreeKey.IN), "a leaf: the next row")
+        assertEquals(TreeMove.Focus(4), move(3, TreeKey.IN), "the last leaf of a folder: the row after it")
+        assertNull(move(5, TreeKey.IN), "the last row")
     }
 
     @Test
-    fun `out closes an open folder, else goes up to the parent, and does nothing at the top`() {
+    fun `out closes an open folder, else goes up to the parent`() {
         assertEquals(TreeMove.Click(1), move(1, TreeKey.OUT))
         assertEquals(TreeMove.Focus(1), move(3, TreeKey.OUT))
         assertEquals(TreeMove.Focus(0), move(4, TreeKey.OUT))
         assertEquals(TreeMove.Click(0), move(0, TreeKey.OUT))
         assertNull(treeMove(listOf(TreeNode(0)), 0, TreeKey.OUT, 3))
+    }
+
+    @Test
+    fun `out on a closed row at the top goes to the nearest open folder above it, else to the first row, as IntelliJ's`() {
+        // תנ"ך (open) › תורה (open) › בראשית; נביאים (closed); כתובים (closed)
+        val top =
+            listOf(
+                TreeNode(0, folder = true, open = true),
+                TreeNode(1, folder = true, open = true),
+                TreeNode(2),
+                TreeNode(0, folder = true, open = false),
+                TreeNode(0, folder = true, open = false),
+            )
+        assertEquals(TreeMove.Focus(1), treeMove(top, 4, TreeKey.OUT, 3), "the nearest open folder, תורה")
+        assertEquals(TreeMove.Focus(1), treeMove(top, 3, TreeKey.OUT, 3))
+        val closed = List(3) { TreeNode(0, folder = true, open = false) }
+        assertEquals(TreeMove.Focus(0), treeMove(closed, 2, TreeKey.OUT, 3), "none open: the first row")
+        assertNull(treeMove(closed, 0, TreeKey.OUT, 3))
     }
 
     @Test

@@ -21,6 +21,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -31,8 +32,15 @@ import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.relocation.BringIntoViewModifierNode
 import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.window.PopupPositionProvider
+import io.github.kdroidfilter.seforimapp.core.presentation.theme.ThemeUtils
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
+import org.jetbrains.jewel.ui.component.MenuScope
+import org.jetbrains.jewel.ui.component.PopupMenu
+import org.jetbrains.jewel.ui.component.styling.MenuStyle
+import org.jetbrains.jewel.ui.theme.menuStyle
 import kotlin.math.roundToInt
 
 // Pardes (request 69 of the list after the third testers' build, docs/DESKTOP_STAGE3_PLAN.md: "צריך תמיכה מלאה במקשים,
@@ -151,10 +159,15 @@ internal class DropdownMarking {
         pointerMoved = false
     }
 
-    /** The pointer at [at] in the popup: a move only when it is elsewhere, not a list scrolled under it again. */
+    /**
+     * The pointer at [at] in the popup, read as IntelliJ's popups read it (ListPopupImpl.isMouseMoved): its first place
+     * only noted (a popup opened under a still pointer), then a move only when it is elsewhere, not a list scrolled
+     * under it again.
+     */
     fun pointerAt(at: Offset) {
-        if (at == pointer) return
+        val last = pointer
         pointer = at
+        if (last == null || last == at) return
         byKeys = false
         pointerMoved = true
     }
@@ -236,5 +249,24 @@ private class RevealAtOnceNode(
                 else -> return
             }
         scrollState.scrollTo(target.roundToInt())
+    }
+}
+
+/**
+ * Jewel's [PopupMenu] (the Tools menu, a tab's, a card's) marking one item at a time, as IntelliJ's own menus do: in
+ * Jewel's Swing compatibility mode (the app's theme again, as Zayit's dialogs take it, `swingCompatMode` on) an item is
+ * tinted only while in focus, which the pointer's hover gives it (Jewel's MenuItem), and not again under a still pointer
+ * once the arrows moved on; Jewel's own mode tints the hovered item too, in the same colour
+ * (FocusableComponentState.chooseValue), so that two items were marked (2026-11-20).
+ */
+@Composable
+internal fun SingleMarkPopupMenu(
+    onDismissRequest: (InputMode) -> Boolean,
+    popupPositionProvider: PopupPositionProvider,
+    style: MenuStyle = JewelTheme.menuStyle,
+    content: MenuScope.() -> Unit,
+) {
+    IntUiTheme(theme = ThemeUtils.buildThemeDefinition(), styling = ThemeUtils.buildComponentStyling(), swingCompatMode = true) {
+        PopupMenu(onDismissRequest = onDismissRequest, popupPositionProvider = popupPositionProvider, style = style, content = content)
     }
 }
