@@ -491,6 +491,10 @@ class SearchHomeViewModel(
 
     /** Searches in the books of [author], listed to pick one of them instead. */
     fun onPickAuthor(author: AuthorHit) {
+        // Pardes: the name typed is gone from the bar, which skips telling it: the author's books are listed whole, not
+        // those whose titles have it (the user's word, 2026-11-20: "למה פה אין את כל ספריו?"), as applyScopeItems does
+        referenceQuery.value = ""
+        authorBooks = emptyList()
         showAuthor(author, showSuggestions = true)
         viewModelScope.launch {
             val books =
