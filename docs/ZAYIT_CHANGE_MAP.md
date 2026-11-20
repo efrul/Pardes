@@ -937,14 +937,20 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DropdownButton.kt`
 
-- **Change:** modified, +14 −1 lines. Feature: The keys in the popups.
+- **Change:** modified, +29 −2 lines. Feature: The keys in the popups.
 - **What:** with a comment marked "Pardes:", the popup's frame takes the keys as it opens (a `FocusRequester` asked in a
   `LaunchedEffect`, `focusable`) and `Modifier.dropdownKeys`: up and down move the focus from row to row (the first
   row from none), Escape closes it; Enter and Space click the row in focus, as a clickable row takes them. Its
   imports. And on the rows' column, after Zayit's padding (its comma moved to the new last line), with a comment
   marked "Pardes:", `revealAtOnce(scrollState)`: the row the keys move to comes into view at once, as the app's lists
   reveal theirs, and not by the scroll's animation, which under a held arrow made the list glide behind the keys (the
-  user's word of 2026-11-20: "הגלילה במקשים בלשוניות הללו מרגישה אחרת בגלילה רציפה משאר האפליקציה").
+  user's word of 2026-11-20: "הגלילה במקשים בלשוניות הללו מרגישה אחרת בגלילה רציפה משאר האפליקציה"). One row marked
+  at a time, as in a menu (the user's word of 2026-11-20: "עכשיו שתי שורות מסומנות באותו צבע. מה התקן?"): a
+  `DropdownMarking` remembered under a comment marked "Pardes:", given to `dropdownKeys` and `revealAtOnce`, told the
+  pointer's moves over the frame (a `pointerInput` before Zayit's `focusRequester`, which goes on the same line after
+  it), and provided to the rows (`LocalDropdownMarking`, a `CompositionLocalProvider` around Zayit's `popupContent`
+  call, under a comment marked "Pardes:"). And the rows' marking centred: a start padding as the scrollbar's room on
+  the end, before Zayit's, under a comment marked "Pardes:" ("ההדגשה לא ממורכזת", 2026-11-20). Two imports.
 - **Why:** request 69 of the list after the third testers' build: "כמו למשל הטאבים של הקטגוריות במסך הבית": the home's
   catalog dropdowns opened from the keyboard and then answered none.
 - **Kind:** Fix of Zayit's code.
@@ -952,15 +958,18 @@ The entries of this section by kind:
 - **Smaller:** already minimal.
 - **Tests:** tried in the app (תלמוד בבלי opened, the arrow down three times on עירובין, Enter opening it; משנה
   opened, the arrow down 25 times 35 ms apart: 25 rows down, כתובות marked at the list's bottom at once, one row
-  tinted).
+  tinted; תלמוד בבלי: the arrow on עירובין, the pointer moved to סוכה, which alone was marked, the arrow then on ביצה,
+  סוכה under the still pointer not marked; the marking with as much room on its right as on its left).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/CatalogDropdown.kt`
 
-- **Change:** modified, +7 −2 lines. Feature: The keys in the popups.
+- **Change:** modified, +12 −2 lines. Feature: The keys in the popups.
 - **What:** each book's row in the two dropdowns (one category's, several categories') reads whether it has the focus
   (`collectIsFocusedAsState` on its interaction source, with a comment marked "Pardes:") and is tinted then at once
   with the hovered row's tint (`keyMarkedBackground` in its `background`), Zayit's tint animated in as the pointer
-  comes kept as it was, so that no fading trail follows a held arrow (2026-11-20); the import.
+  comes kept as it was, so that no fading trail follows a held arrow (2026-11-20); and takes the focus as the pointer
+  moves over it (`rememberHoverFocus`, given to a `focusRequester` before Zayit's `clickable`): one row marked at a
+  time, by the keys or the pointer, as in a menu (2026-11-20). The two imports.
 - **Why:** as for `DropdownButton.kt`: the row the keys moved to is seen.
 - **Kind:** Fix of Zayit's code.
 - **Merge risk:** small: a line and a condition in each of two rows.
@@ -969,9 +978,10 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TocJumpDropdown.kt`
 
-- **Change:** modified, +4 −1 lines. Feature: The keys in the popups.
+- **Change:** modified, +7 −1 lines. Feature: The keys in the popups.
 - **What:** as `CatalogDropdown.kt`, for the rows of a book's contents' dropdown: tinted at once while in focus with
-  the hovered row's tint (`keyMarkedBackground`), with a comment marked "Pardes:"; the import.
+  the hovered row's tint (`keyMarkedBackground`), with a comment marked "Pardes:", and the focus taken as the pointer
+  moves over the row (`rememberHoverFocus`, a `focusRequester`); the two imports.
 - **Why:** as for `DropdownButton.kt`.
 - **Kind:** Fix of Zayit's code.
 - **Merge risk:** small.
@@ -3933,17 +3943,22 @@ the trees' keys in Pardes's `TreeKeys.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeys.kt`
 
 - **Feature:** The keys in the popups.
-- **Size:** 171 lines.
+- **Size:** 240 lines.
 - **What:** `PopupKeyRow` (a row's place among the list's items, headers counted, and what it opens); `PopupKeys`
   (`@Stable`: the row marked, `index`, among the `rows` that open something, the first at first; `marks(row)`; the
   list's `listState`), `rememberPopupKeys(vararg inputs)` (on the first row again as the field's text changes, the row
   marked kept in view with `revealItem`), and `Modifier.popupKeys(keys, onEscape)` (in the preview pass, before the
   popup's field: up and down mark a row, Enter opens it, Escape closes); and `Modifier.dropdownKeys(focusManager,
   onEscape)` for a dropdown's popup (up and down move the focus, `FocusDirection.Next`/`Previous`, Escape closes);
-  `keyMarkedBackground(focused, hovered)`, a dropdown row's tint at once while the keys mark it; and
-  `Modifier.revealAtOnce(scrollState)` (`RevealAtOnceElement`, `RevealAtOnceNode`, a `BringIntoViewModifierNode` on
-  the rows' column inside its scroll): the row the focus moves to scrolled into view at once, to the list's top or
-  bottom edge, its request answered there and not by the scroll's animated one (2026-11-20).
+  `DropdownMarking` (`@Stable`: `byKeys`, the keys moved the focus last; `pointerMoved`, the pointer moved since, a move
+  being a new place only, not a list scrolled under a still pointer; `keysMoved`, `pointerAt`) and
+  `LocalDropdownMarking`, one row of a dropdown marked at a time as in a menu; `rememberHoverFocus(interactionSource)`,
+  the row the pointer moved over taking the focus; `keyMarkedBackground(focused, hovered)`, a dropdown row's tint at
+  once while in focus, Zayit's hover tint only while the keys do not mark the rows; and
+  `Modifier.revealAtOnce(scrollState, marking)` (`RevealAtOnceElement`, `RevealAtOnceNode`, a
+  `BringIntoViewModifierNode` on the rows' column inside its scroll): the row the keys move the focus to scrolled into
+  view at once, to the list's top or bottom edge, its request answered there and not by the scroll's animated one, and
+  a row the pointer gave the focus to left where it is (2026-11-20).
 - **Reached from:** `TabSearchPopup.kt`, `NotesPopup.kt`, `FavoritesPopup.kt`, `DropdownButton.kt`.
 - **Follows:** Zayit's `BreadcrumbPopup` (its keys in the preview pass of the popup's frame, its marked row and its
   colours), `PaneSearch`'s `revealItem`.
@@ -3952,9 +3967,11 @@ the trees' keys in Pardes's `TreeKeys.kt`.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeysUiTest.kt`
 
 - **Feature:** The keys in the popups.
-- **Size:** 60 lines.
+- **Size:** 78 lines.
 - **What:** a popup's field and its list of three rows under a header (Zayit's `PopupSectionHeader` and `PopupRow`):
-  the arrow down past the last row staying on it, up a row, Enter opening the second, Escape closing the popup.
+  the arrow down past the last row staying on it, up a row, Enter opening the second, Escape closing the popup; and a
+  dropdown's `DropdownMarking`: marked by the keys until the pointer moves to a new place, not when it is told the same
+  place again (a list scrolled under it).
 - **Reached from:** the JVM tests.
 - **Follows:** `DafLayoutsCardUiTest` (Compose UI test on the desktop, Jewel's `IntUiTheme`).
 - **Tests:** it is one (Compose UI).

@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasSetTextAction
@@ -16,9 +17,10 @@ import io.github.kdroidfilter.seforim.tabs.TabType
 import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** The title bar's popups answer the keys (request 69 of the list after the third testers' build). */
+/** The title bar's popups and the home's dropdowns answer the keys (request 69 of the list after the third testers' build). */
 @OptIn(ExperimentalTestApi::class)
 class PopupKeysUiTest {
     private val books = listOf("בראשית", "שמות", "ויקרא")
@@ -57,4 +59,20 @@ class PopupKeysUiTest {
             field.performKeyInput { pressKey(Key.Escape) }
             assertTrue(closed)
         }
+
+    @Test
+    fun `a dropdown's rows are marked by the keys until the pointer moves, not as a list scrolls under it`() {
+        val marking = DropdownMarking()
+        marking.pointerAt(Offset(10f, 20f))
+        assertTrue(marking.pointerMoved)
+        marking.keysMoved()
+        assertTrue(marking.byKeys)
+        assertFalse(marking.pointerMoved)
+        // The same place again: a list scrolled under a still pointer
+        marking.pointerAt(Offset(10f, 20f))
+        assertTrue(marking.byKeys)
+        marking.pointerAt(Offset(12f, 20f))
+        assertFalse(marking.byKeys)
+        assertTrue(marking.pointerMoved)
+    }
 }
