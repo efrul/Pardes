@@ -314,6 +314,9 @@ fun WindowPanes(window: OpenWindow) {
         key(pane) {
             val commentator = pane as? ReaderPane.Commentator
             val sides = if (pane.navigation) NavigationDockSides else LineDockSides
+            // Pardes: the find results pane stays in its window, as the contents beside it (the user's word, 2026-11-20:
+            // "אפשר לבטל פתח בחלון נפרד"); a window of its own had no OpenWindow for its type-to-search
+            val floatable = !pane.fixed && pane != ReaderPane.FindResults
             Satellite(
                 workspace = pane.workspaceIn(session, groupId),
                 id = pane.idIn(groupId),
@@ -322,12 +325,12 @@ fun WindowPanes(window: OpenWindow) {
                 // Read once, when the dock first meets the commentator: from then on its place is its own. Pardes: the
                 // place the pane had when the window was saved first
                 initialPlacement =
-                    session.savedPlacement(groupId, pane.id, sides, floatable = !pane.fixed)
+                    session.savedPlacement(groupId, pane.id, sides, floatable = floatable)
                         ?: commentator?.let { commentatorHome(commentators.indexOf(it.name)) }
                         ?: pane.home,
                 initiallyOpen = false,
                 dockSides = sides,
-                floatable = !pane.fixed,
+                floatable = floatable,
                 reorderable = !pane.fixed,
                 // Zayit's windows are usually maximized: a pane pulled out stays on screen.
                 hideWhileOwnerFullscreenOrMaximized = false,
