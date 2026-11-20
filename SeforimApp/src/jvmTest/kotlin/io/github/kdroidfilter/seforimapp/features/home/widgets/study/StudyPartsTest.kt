@@ -1,6 +1,7 @@
 package io.github.kdroidfilter.seforimapp.features.home.widgets.study
 
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishCalendar
+import io.github.kdroidfilter.seforimapp.core.study.StudyPlan
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.DayOfWeek
@@ -112,11 +113,71 @@ class StudyPartsTest {
 
     @Test
     fun `a plan's pace and days in words`() {
-        assertEquals("פרק ביום", perDayLabel(1, UnitName("פרק", "פרקים")))
-        assertEquals("6 סעיפים ביום", perDayLabel(6, UnitName("סעיף", "סעיפים")))
+        assertEquals("פרק ביום", perPeriodLabel(1, UnitName("פרק", "פרקים"), 1))
+        assertEquals("6 סעיפים ביום", perPeriodLabel(6, UnitName("סעיף", "סעיפים"), 1))
         assertNull(weekdaysLabel(everyDay))
         assertEquals("חוץ משבת ויום טוב", weekdaysLabel(notShabbat))
         assertEquals("בימים א, ג, ה, חוץ מיום טוב", weekdaysLabel(setOf(DayOfWeek.SUNDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY)))
         assertEquals("בימים ו, ש", weekdaysLabel(setOf(DayOfWeek.FRIDAY, DayOfWeek.SATURDAY)))
+    }
+
+    // Request 64 of the list after the third testers' build: a category, a daf, a part for several days
+
+    private fun entry(
+        id: Long,
+        parent: Long?,
+        level: Int,
+        text: String,
+        line: Long = id * 10,
+    ) = TocEntry(id = id, bookId = 1, parentId = parent, text = text, level = level, lineId = line)
+
+    // A tractate by amud, a book by chapter, and one without contents
+    private val tractate =
+        PlanBook(1, "ברכות", listOf(entry(1, null, 0, "ברכות"), entry(2, 1, 1, "דף ב."), entry(3, 1, 1, "דף ב:"), entry(4, 1, 1, "דף ג.")))
+    private val chapters = PlanBook(2, "פאה", listOf(entry(11, null, 0, "פאה"), entry(12, 11, 1, "פרק א"), entry(13, 11, 1, "פרק ב")))
+    private val bare = PlanBook(3, "דמאי", emptyList())
+
+    @Test
+    fun `a daf is its two amudim, named by itself`() {
+        val dafs = dafUnits(studyUnits(tractate.entries, 1))
+        assertEquals(listOf(listOf("דף ב"), listOf("דף ג")), dafs.map { it.headings })
+        assertEquals(20L, dafs.first().lineId)
+        assertEquals(40L, dafs.first().nextLineId, "it ends where the next daf begins")
+        assertEquals(listOf("דף ב", "דף ג"), bookUnits(tractate.entries, 1, StudyPlan.DAF_UNIT).map { it.headings.last() })
+    }
+
+    @Test
+    fun `a category is studied book after book, a book without the unit as one`() {
+        val units = categoryUnits(listOf(chapters, bare), "פרק")
+        assertEquals(listOf(listOf("פאה", "פרק א"), listOf("פאה", "פרק ב"), listOf("דמאי")), units.map { it.headings })
+        assertEquals(listOf(2L, 2L, 3L), units.map { it.bookId })
+        assertEquals("פאה, פרקים א–ב", partLabel(units.take(2)))
+        assertEquals("פאה, פרק ב – דמאי", partLabel(units.drop(1)))
+        assertEquals(
+            listOf("ברכות", "פאה", "דמאי"),
+            categoryUnits(listOf(tractate, chapters, bare), StudyPlan.BOOK_UNIT).map {
+                it.headings.single()
+            },
+        )
+    }
+
+    @Test
+    fun `a category is learnt by its books' units, a daf where they go by amud, or a book`() {
+        assertEquals(listOf("עמוד", "פרק", "דף", "ספר"), categoryUnitNames(listOf(tractate, chapters)).map { it.one })
+        assertEquals(listOf("עמוד", "דף"), bookUnitNames(studyLevels(tractate.entries)).map { it.one })
+    }
+
+    @Test
+    fun `a part for a week goes from Sunday, one for three days from the plan's first day`() {
+        // Thursday 2026-11-19; its week's Sunday is the 15th
+        val start = LocalDate.of(2026, 11, 19)
+        assertEquals(0, periodIndex(start, start.plusDays(2), 7), "Shabbat, the same week")
+        assertEquals(1, periodIndex(start, start.plusDays(3), 7), "the next Sunday")
+        assertEquals(LocalDate.of(2026, 11, 22), periodStart(start, start.plusDays(5), 7))
+        assertEquals(1, periodIndex(start, start.plusDays(3), 3))
+        assertEquals(start.plusDays(3), periodStart(start, start.plusDays(4), 3))
+        assertEquals(start.plusDays(4), periodStart(start, start.plusDays(4), 1), "a part a day: the day")
+        assertEquals("10 פרקים בשבוע", perPeriodLabel(10, UnitName("פרק", "פרקים"), 7))
+        assertEquals("דף בשלושה ימים", perPeriodLabel(1, UnitName("דף", "דפים"), 3))
     }
 }

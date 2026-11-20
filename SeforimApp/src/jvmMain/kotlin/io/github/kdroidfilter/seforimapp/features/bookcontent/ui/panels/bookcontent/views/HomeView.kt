@@ -1189,9 +1189,10 @@ private fun textSearchLabel(
         else -> stringResource(Res.string.search_text_row, query)
     }
 
-// A category's suggestion in its base books alone says so, beside the same category whole
+// A category's suggestion in its base books alone says so, beside the same category whole. Pardes: internal, as
+// [SuggestionRow], for a study plan's field (request 64 of stage 3).
 @Composable
-private fun baseBooksDetail(hit: CategoryHit): String? =
+internal fun baseBooksDetail(hit: CategoryHit): String? =
     if (hit.baseBooksOnly) stringResource(Res.string.category_base_books_only) else null
 
 /** A book's or category's name on its chip; a category in its base books alone is marked (`תלמוד (ספרי יסוד)`). */
@@ -1203,8 +1204,9 @@ private fun ScopeItem.chipLabel(): String =
  * Collapses adjacent breadcrumb segments when the next segment strictly extends
  * the previous by a common separator (comma/space/colon/dash). This keeps
  * suggestions concise while preserving the most specific path.
+ * Pardes: internal, as [SuggestionRow], for a study plan's field (request 64 of stage 3).
  */
-private fun dedupAdjacent(parts: List<String>): List<String> {
+internal fun dedupAdjacent(parts: List<String>): List<String> {
     if (parts.isEmpty()) return parts
 
     fun extends(
@@ -1294,7 +1296,7 @@ private fun String.withBold(part: String?): AnnotatedString {
 }
 
 /** What a suggestion row leads to, shown by its icon. */
-private enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK, CATEGORY }
+internal enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK, CATEGORY }
 
 // A chip of a book or category picked in the bar: several fit beside the text
 private val SCOPE_CHIP_MAX_WIDTH = 160.dp
@@ -1315,8 +1317,9 @@ private fun SuggestionIcon(kind: SuggestionKind) {
     }
 }
 
+// Pardes: internal, shared with a study plan's field of books and categories (request 64 of stage 3)
 @Composable
-private fun SuggestionRow(
+internal fun SuggestionRow(
     parts: List<String>,
     onClick: () -> Unit,
     kind: SuggestionKind,
@@ -2100,9 +2103,9 @@ private fun SearchBar(
     }
 }
 
-/** One thing a suggestion row does: its keys (`↵`, `Tab`) and what they do. */
+/** One thing a suggestion row does: its keys (`↵`, `Tab`) and what they do. Pardes: internal, as [SuggestionRow]. */
 @Immutable
-private class RowAction(
+internal class RowAction(
     val keys: String,
     val label: String,
     val onClick: () -> Unit,

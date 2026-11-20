@@ -56,3 +56,31 @@ DELETE FROM study_plan_done WHERE planId = :planId AND day = :day;
 
 selectDoneOn:
 SELECT planId FROM study_plan_done WHERE day = :day;
+
+-- Pardes: what a plan holds besides (request 64 of the list after the third testers' build: "תמיכה גם לימוד קטגוריה,
+-- קצב לפי כמה סוגי הרמות חלוקה והספק שלא תלוי רק ביום אחד אלא בכמה ימים/ שבוע"), in a table of its own, which
+-- CREATE TABLE IF NOT EXISTS makes in a user DB of before; a plan without a row is a book's, by its depth, a part a day.
+-- A category studied whole (its id in the library it was made in, 0 for a book: the plan's categoryPath is then the
+-- category's own path, its bookTitle the category's title) or its base books alone (1, as the search's bar offers it:
+-- תלמוד בבלי's tractates without their commentaries), the unit by its name in each book ("פרק"; "" the plan's level;
+-- "דף" two amudim; "ספר" a book), and how many days a part is for (1 a day, 7 a week from Sunday).
+CREATE TABLE IF NOT EXISTS study_plan_more (
+    planId INTEGER PRIMARY KEY NOT NULL,
+    categoryId INTEGER NOT NULL,
+    baseBooksOnly INTEGER NOT NULL DEFAULT 0,
+    unitName TEXT NOT NULL,
+    periodDays INTEGER NOT NULL
+);
+
+selectMore:
+SELECT * FROM study_plan_more;
+
+saveMore:
+INSERT OR REPLACE INTO study_plan_more(planId, categoryId, baseBooksOnly, unitName, periodDays)
+VALUES (:planId, :categoryId, :baseBooksOnly, :unitName, :periodDays);
+
+deleteMore:
+DELETE FROM study_plan_more WHERE planId = :planId;
+
+isDone:
+SELECT COUNT(*) FROM study_plan_done WHERE planId = :planId AND day = :day;
