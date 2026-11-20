@@ -132,8 +132,24 @@ tools and the code did when it was written.
 - **A book opened in a tab of the home page gets no Ctrl/Cmd+F** when its destination stays the home page's: Zayit's
   window keys ask for a find only in a tab whose destination is a book's (`hasFindInPage`). A book opened from the
   home page's search bar becomes a book's tab and has it (2026-11-18, the PDF find).
+- **A popup takes the keys only through a node in focus.** The home's dropdowns (`DropdownButton`) answered no arrow
+  until their popup's box was `focusable()` with a `FocusRequester` asked for in a `LaunchedEffect` (request 69 of
+  stage 3, 2026-11-19); Jewel's `PopupMenu` does it by itself, which is why a tab's menu became one.
+- **A piece of Zayit's file opened for Pardes takes its types along.** `SuggestionRow` made `internal` for the study
+  plan's field failed with `EXPOSED_PARAMETER_TYPE`: its `actions` are a `List<RowAction>`, a private class, which had
+  to be opened too (2026-11-19). Count each word changed in the map's entry.
+- **A UI test launches through the composition too:** `SCOPE_003` refuses a `scope.launch` on a scope taken out of
+  `setContent`; drive the change with a state the test sets and a `LaunchedEffect` inside `setContent` (request 60 of
+  stage 3).
+- **A PDF's page size is nullable** (`PdfDocument.pageSize(i)`, a page that cannot be read): `?.let` it, as the daf's
+  whole-page fit does (request 63 of stage 3).
 
 ## Data and settings
+
+- **The user DB has no migrations** (`Schema.create`, every table `CREATE TABLE IF NOT EXISTS`): what a released
+  table lacks goes in a table of its own, keyed by the first's id, which a user DB of before simply gets
+  (`study_plan_more`, request 64 of stage 3). A column added to such a table before its release still meets the
+  container's own user DB made by an earlier run: `ALTER TABLE` it there (or drop the table) before trying the app.
 
 - `UserSettingsDb.Schema.create` runs at every start with `CREATE TABLE IF NOT EXISTS`: a new table in a `.sq` file
   needs no migration.
@@ -298,6 +314,10 @@ Each of these was built, shown, and sent back. They say what the user expects:
   used takes the focus.
 - **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
   to the text's right beside the contents ("יהיה בימין").
+- **What the app can tell by itself, it does not ask.** The study plan's editor had a "ספר | קטגוריה" choice over two
+  fields; the user asked for one field that tells a book from a category as the search's bar does, with the bar's
+  code ("זה יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף", 2026-11-19). It now finds both
+  with the bar's lookup and draws them with its rows, a category in its base books alone too.
 
 Show a screenshot of a choice of design before building on it, and ask of each new control: does it behave as the
 one beside it does?

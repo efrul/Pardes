@@ -92,6 +92,7 @@ Coordinates on the maximised 1440x900 window:
 | The tools menu's rows (the siddur first when it is on) | 127, 59 + 25 a row |
 | Settings (a 700x500 window at +370+200): its pages from כללי down (כללי, תצוגה, פרופיל, גופנים, צורת הדף, ניהול נתונים, משוב, אודות, תנאים), its "סגור" | 1000, 270 + 34 a row / 422, 669 |
 | The siddur: the day's name (opens the date picker), the first part in the contents | 1000, 67 / 1304, 99 |
+| The Home's widget gallery: its pencil (bottom left); its last row (הלימוד שלי, השמיים) after 9 wheel clicks down at 600, 760; its check, which closes it | 42, 856 / 870, 780 / 142, 624 |
 
 - A row of controls moves with the width of the text before it (the siddur's day arrows, a settings card below an
   opened one): take a screenshot and read the place, don't reuse yesterday's.
@@ -104,7 +105,9 @@ Coordinates on the maximised 1440x900 window:
   typing once gave `||||`. Typed Hebrew can come out wrong without a sign (2026-11-19: "כלומר" reached the find as
   "כלררר", and the find found nothing): read the field in a screenshot, or paste instead,
   `printf 'כלומר' | xclip -selection clipboard`, then `xdotool key ctrl+a ctrl+v`.
-- **`xdotool key ctrl+v` does not paste** (it types letters): type the text. Read the clipboard with
+- **Paste with the clipboard filled by `xclip`:** `printf 'מועד' | xclip -selection clipboard`, then `xdotool key
+  ctrl+v` (or `ctrl+a ctrl+v` to replace the field's text) pastes it into a Compose field (2026-11-20, the study plan's
+  field; an older note here said it typed letters). Read the clipboard with
   `xclip -selection clipboard -o -t UTF8_STRING`, a few seconds after the copy (llvmpipe).
 - **A new window gets no keyboard focus** (Xvfb has no window manager): `xdotool windowfocus <id>`, then
   `xdotool key --window <id> …` or `type --window <id> …`. `xwininfo -root -tree` lists the windows; the main one is
@@ -173,6 +176,11 @@ its stale report (`rm -f SeforimApp/build/reports/ktlint/*/*.txt`) if ktlint the
 - llvmpipe is slow: a frame can take a second; give a screen 3 to 8 s after a click before the screenshot, 15 after
   opening a book, a search or the siddur. A menu item "missing" from a screenshot was twice only a frame not drawn yet.
 - `shot.sh name 0 0 5` clicks at (0, 0): pass no coordinates to wait without a click.
+- **A widget added from the Home's gallery did not come back at the next start** (twice on 2026-11-20, the study
+  plans' card), though its data did (the user DB): add it again after each `start.sh`. The session's tabs come back
+  in another order, with another selected: find the Home's tab in a screenshot before clicking it.
+- `stop.sh` says "still running" while a dialog of the app is open (a study plan's editor, a dropdown): close it
+  (its "ביטול", Escape) and stop again.
 - The cut library's lookup index is the full release's: the Home search suggests books the subset does not have,
   which fail to open. Open books through the catalog chips or the book tree instead.
 - The working directory resets between commands: give absolute paths, or `cd` in the same command.
