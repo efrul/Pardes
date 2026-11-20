@@ -132,6 +132,12 @@ tools and the code did when it was written.
 - **A book opened in a tab of the home page gets no Ctrl/Cmd+F** when its destination stays the home page's: Zayit's
   window keys ask for a find only in a tab whose destination is a book's (`hasFindInPage`). A book opened from the
   home page's search bar becomes a book's tab and has it (2026-11-18, the PDF find).
+- **Rows moved by the focus scroll in with the scroll's animation; the app's lists jump to theirs.** In the home's
+  dropdowns, a held arrow made the list glide behind the keys and the hover tint (animated for the pointer) left a
+  fading trail: "מרגישה אחרת בגלילה רציפה משאר האפליקציה" (2026-11-20). `revealAtOnce` answers the rows' bring-into-view
+  requests in a `BringIntoViewModifierNode` inside the scroll, and the row the keys mark is tinted at once
+  (`keyMarkedBackground`). Compose 1.12 deprecates both `BringIntoViewSpec.scrollAnimationSpec` ("no longer supported")
+  and `onFocusedBoundsChanged`: the node is the way left.
 - **A popup takes the keys only through a node in focus.** The home's dropdowns (`DropdownButton`) answered no arrow
   until their popup's box was `focusable()` with a `FocusRequester` asked for in a `LaunchedEffect` (request 69 of
   stage 3, 2026-11-19); Jewel's `PopupMenu` does it by itself, which is why a tab's menu became one.

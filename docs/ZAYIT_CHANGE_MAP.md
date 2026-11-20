@@ -937,24 +937,30 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DropdownButton.kt`
 
-- **Change:** modified, +11 −0 lines. Feature: The keys in the popups.
+- **Change:** modified, +14 −1 lines. Feature: The keys in the popups.
 - **What:** with a comment marked "Pardes:", the popup's frame takes the keys as it opens (a `FocusRequester` asked in a
   `LaunchedEffect`, `focusable`) and `Modifier.dropdownKeys`: up and down move the focus from row to row (the first
   row from none), Escape closes it; Enter and Space click the row in focus, as a clickable row takes them. Its
-  imports.
+  imports. And on the rows' column, after Zayit's padding (its comma moved to the new last line), with a comment
+  marked "Pardes:", `revealAtOnce(scrollState)`: the row the keys move to comes into view at once, as the app's lists
+  reveal theirs, and not by the scroll's animation, which under a held arrow made the list glide behind the keys (the
+  user's word of 2026-11-20: "הגלילה במקשים בלשוניות הללו מרגישה אחרת בגלילה רציפה משאר האפליקציה").
 - **Why:** request 69 of the list after the third testers' build: "כמו למשל הטאבים של הקטגוריות במסך הבית": the home's
   catalog dropdowns opened from the keyboard and then answered none.
 - **Kind:** Fix of Zayit's code.
 - **Merge risk:** small: a few modifiers on the popup's frame.
 - **Smaller:** already minimal.
-- **Tests:** tried in the app (תלמוד בבלי opened, the arrow down three times on עירובין, Enter opening it).
+- **Tests:** tried in the app (תלמוד בבלי opened, the arrow down three times on עירובין, Enter opening it; משנה
+  opened, the arrow down 25 times 35 ms apart: 25 rows down, כתובות marked at the list's bottom at once, one row
+  tinted).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/CatalogDropdown.kt`
 
 - **Change:** modified, +7 −2 lines. Feature: The keys in the popups.
 - **What:** each book's row in the two dropdowns (one category's, several categories') reads whether it has the focus
-  (`collectIsFocusedAsState` on its interaction source, with a comment marked "Pardes:") and is tinted then as when
-  hovered; the import.
+  (`collectIsFocusedAsState` on its interaction source, with a comment marked "Pardes:") and is tinted then at once
+  with the hovered row's tint (`keyMarkedBackground` in its `background`), Zayit's tint animated in as the pointer
+  comes kept as it was, so that no fading trail follows a held arrow (2026-11-20); the import.
 - **Why:** as for `DropdownButton.kt`: the row the keys moved to is seen.
 - **Kind:** Fix of Zayit's code.
 - **Merge risk:** small: a line and a condition in each of two rows.
@@ -964,8 +970,8 @@ The entries of this section by kind:
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TocJumpDropdown.kt`
 
 - **Change:** modified, +4 −1 lines. Feature: The keys in the popups.
-- **What:** as `CatalogDropdown.kt`, for the rows of a book's contents' dropdown: tinted when in focus as when hovered,
-  with a comment marked "Pardes:"; the import.
+- **What:** as `CatalogDropdown.kt`, for the rows of a book's contents' dropdown: tinted at once while in focus with
+  the hovered row's tint (`keyMarkedBackground`), with a comment marked "Pardes:"; the import.
 - **Why:** as for `DropdownButton.kt`.
 - **Kind:** Fix of Zayit's code.
 - **Merge risk:** small.
@@ -3922,13 +3928,17 @@ the trees' keys in Pardes's `TreeKeys.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeys.kt`
 
 - **Feature:** The keys in the popups.
-- **Size:** 106 lines.
+- **Size:** 171 lines.
 - **What:** `PopupKeyRow` (a row's place among the list's items, headers counted, and what it opens); `PopupKeys`
   (`@Stable`: the row marked, `index`, among the `rows` that open something, the first at first; `marks(row)`; the
   list's `listState`), `rememberPopupKeys(vararg inputs)` (on the first row again as the field's text changes, the row
   marked kept in view with `revealItem`), and `Modifier.popupKeys(keys, onEscape)` (in the preview pass, before the
   popup's field: up and down mark a row, Enter opens it, Escape closes); and `Modifier.dropdownKeys(focusManager,
-  onEscape)` for a dropdown's popup (up and down move the focus, `FocusDirection.Next`/`Previous`, Escape closes).
+  onEscape)` for a dropdown's popup (up and down move the focus, `FocusDirection.Next`/`Previous`, Escape closes);
+  `keyMarkedBackground(focused, hovered)`, a dropdown row's tint at once while the keys mark it; and
+  `Modifier.revealAtOnce(scrollState)` (`RevealAtOnceElement`, `RevealAtOnceNode`, a `BringIntoViewModifierNode` on
+  the rows' column inside its scroll): the row the focus moves to scrolled into view at once, to the list's top or
+  bottom edge, its request answered there and not by the scroll's animated one (2026-11-20).
 - **Reached from:** `TabSearchPopup.kt`, `NotesPopup.kt`, `FavoritesPopup.kt`, `DropdownButton.kt`.
 - **Follows:** Zayit's `BreadcrumbPopup` (its keys in the preview pass of the popup's frame, its marked row and its
   colours), `PaneSearch`'s `revealItem`.

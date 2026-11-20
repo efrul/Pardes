@@ -131,7 +131,9 @@ fun DropdownButton(
                             .fillMaxWidth()
                             .verticalScroll(scrollState)
                             // Reserve space so content doesn't shift when scrollbar appears
-                            .padding(end = if (showScrollbar) 12.dp else 0.dp),
+                            .padding(end = if (showScrollbar) 12.dp else 0.dp)
+                            // Pardes: the row the keys move to comes into view at once (request 69 of stage 3)
+                            .revealAtOnce(scrollState),
                     ) {
                         popupContent { popupOpen = false }
                     }
