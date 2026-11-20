@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.core.presentation.components
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -12,12 +13,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.requireLayoutCoordinates
+import androidx.compose.ui.relocation.BringIntoViewModifierNode
+import androidx.compose.ui.unit.toSize
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
+import org.jetbrains.jewel.foundation.theme.JewelTheme
+import kotlin.math.roundToInt
 
 // Pardes (request 69 of the list after the third testers' build, docs/DESKTOP_STAGE3_PLAN.md: "צריך תמיכה מלאה במקשים,
 // כל תיבה שנפתחת תתמך בזה... היסטוריה והערות מהשורה למעלה"): the title bar's popups (the tab search and its history,
@@ -104,3 +115,57 @@ internal fun Modifier.dropdownKeys(
         }
         true
     }
+
+/**
+ * A dropdown row's background ([DropdownButton]'s rows): [hovered], Zayit's tint as the pointer comes, or the same tint at
+ * once while the keys mark the row ([focused]), as the app's lists mark theirs: no fading trail under held arrows.
+ */
+@Composable
+internal fun keyMarkedBackground(
+    focused: Boolean,
+    hovered: Color,
+): Color =
+    if (focused) {
+        JewelTheme.globalColors.outlines.focused
+            .copy(alpha = 0.12f)
+    } else {
+        hovered
+    }
+
+/**
+ * The rows of a column scrolled by [scrollState] come into view at once when they ask (the row the keys move the focus
+ * to), as the app's lists reveal theirs ([revealItem]), not by the scroll's animation: on the column, inside its scroll,
+ * it answers its rows' requests itself.
+ */
+internal fun Modifier.revealAtOnce(scrollState: ScrollState): Modifier = this then RevealAtOnceElement(scrollState)
+
+private data class RevealAtOnceElement(
+    val scrollState: ScrollState,
+) : ModifierNodeElement<RevealAtOnceNode>() {
+    override fun create() = RevealAtOnceNode(scrollState)
+
+    override fun update(node: RevealAtOnceNode) {
+        node.scrollState = scrollState
+    }
+}
+
+private class RevealAtOnceNode(
+    var scrollState: ScrollState,
+) : Modifier.Node(),
+    BringIntoViewModifierNode {
+    override suspend fun bringIntoView(
+        childCoordinates: LayoutCoordinates,
+        boundsProvider: () -> Rect?,
+    ) {
+        val bounds = boundsProvider() ?: Rect(Offset.Zero, childCoordinates.size.toSize())
+        val top = requireLayoutCoordinates().localPositionOf(childCoordinates, bounds.topLeft).y
+        val first = scrollState.value
+        val target =
+            when {
+                top < first -> top
+                top + bounds.height > first + scrollState.viewportSize -> top + bounds.height - scrollState.viewportSize
+                else -> return
+            }
+        scrollState.scrollTo(target.roundToInt())
+    }
+}

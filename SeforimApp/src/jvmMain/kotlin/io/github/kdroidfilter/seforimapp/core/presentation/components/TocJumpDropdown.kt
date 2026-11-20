@@ -73,11 +73,11 @@ fun TocJumpDropdown(
             render.forEach { quick ->
                 val hoverSource = remember { MutableInteractionSource() }
                 val isHovered by hoverSource.collectIsHoveredAsState()
-                // Pardes: the row the keys moved to marked as the one hovered (request 69 of stage 3)
+                // Pardes: the row the keys moved to marked at once, as the app's lists mark theirs (request 69 of stage 3)
                 val isFocused by hoverSource.collectIsFocusedAsState()
                 val backgroundColor by animateColorAsState(
                     targetValue =
-                        if (isHovered || isFocused) {
+                        if (isHovered) {
                             JewelTheme.globalColors.outlines.focused
                                 .copy(alpha = 0.12f)
                         } else {
@@ -89,7 +89,7 @@ fun TocJumpDropdown(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(6.dp))
-                        .background(backgroundColor)
+                        .background(keyMarkedBackground(isFocused, backgroundColor))
                         .clickable(
                             indication = null,
                             interactionSource = hoverSource,
