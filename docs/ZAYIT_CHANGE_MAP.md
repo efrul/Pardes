@@ -3834,8 +3834,9 @@ and an outline round them. The split is shown while one of the two is selected a
 - **Feature:** The Home's big name shown or hidden.
 - **Size:** 31 lines.
 - **What:** `HomeLogoSettings` ("home_logo": `shown`, on by default), and `HomeLogoCard()`, Settings › תצוגה's card for
-  it ("הצג את השם הגדול בדף הבית"), a `SettingCard` as the wallpaper's. The user asked on 2026-11-19 (request 67): "אפשרות
-  בהגדרות תצוגה להסתיר את הכיתוב הגדול של פרדס בדף הבית".
+  it ("הצג את הכיתוב הגדול של פרדס בדף הבית", in the user's words since 2026-11-20: "תתקן נוסח"), a `SettingCard` as
+  the wallpaper's. The user asked on 2026-11-19 (request 67): "אפשרות בהגדרות תצוגה להסתיר את הכיתוב הגדול של פרדס בדף
+  הבית".
 - **Reached from:** `DisplaySettingsScreen.kt` (the card), `HomeView.kt` (`HomeBody`'s logo), `AppSettings.kt` (the
   backup's keys).
 - **Follows:** Zayit's typed settings (`SettingsGroup`) and its `SettingCard`, as Pardes's `OpenSiddurCard`.
