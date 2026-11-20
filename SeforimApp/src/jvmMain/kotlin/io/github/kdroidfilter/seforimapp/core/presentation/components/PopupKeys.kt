@@ -71,8 +71,9 @@ internal class PopupKeys(
     /** Whether the row [row] (its place among [rows]) is the one marked. */
     fun marks(row: Int): Boolean = row == index
 
+    // Round from the last row to the first and back, as every popup of the app (2026-11-20: "תוודא שבכולם")
     internal fun move(by: Int) {
-        if (rows.isNotEmpty()) index = (index + by).coerceIn(0, rows.lastIndex)
+        if (rows.isNotEmpty()) index = (index + by).mod(rows.size)
     }
 
     internal fun open() {
@@ -118,18 +119,19 @@ internal fun Modifier.popupKeys(
 internal fun Modifier.dropdownKeys(
     focusManager: FocusManager,
     marking: DropdownMarking? = null,
+    // Whether the popup's frame, no row, has the focus: the focus rounding the last row comes there first
+    frameFocused: () -> Boolean = { false },
     onEscape: () -> Unit,
 ): Modifier =
     onPreviewKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
         when (event.key) {
-            Key.DirectionDown -> {
+            Key.DirectionDown, Key.DirectionUp -> {
                 marking?.keysMoved()
-                focusManager.moveFocus(FocusDirection.Next)
-            }
-            Key.DirectionUp -> {
-                marking?.keysMoved()
-                focusManager.moveFocus(FocusDirection.Previous)
+                val direction = if (event.key == Key.DirectionDown) FocusDirection.Next else FocusDirection.Previous
+                focusManager.moveFocus(direction)
+                // From the last row to the first and back at once, not by the frame, which marks nothing
+                if (frameFocused()) focusManager.moveFocus(direction)
             }
             Key.Escape -> onEscape()
             else -> return@onPreviewKeyEvent false

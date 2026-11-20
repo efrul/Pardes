@@ -26,7 +26,7 @@ class PopupKeysUiTest {
     private val books = listOf("בראשית", "שמות", "ויקרא")
 
     @Test
-    fun `up and down mark a row from the field, Enter opens it, Escape closes the popup`() =
+    fun `up and down mark a row from the field, round its ends, Enter opens it, Escape closes the popup`() =
         runDesktopComposeUiTest(width = 360, height = 300) {
             val opened = mutableListOf<String>()
             var closed = false
@@ -55,7 +55,7 @@ class PopupKeysUiTest {
                 pressKey(Key.DirectionUp)
                 pressKey(Key.Enter)
             }
-            assertEquals(listOf("שמות"), opened, "the second row: down past the last stays on it")
+            assertEquals(listOf("ויקרא"), opened, "down past the last row comes to the first, and up from it to the last")
             field.performKeyInput { pressKey(Key.Escape) }
             assertTrue(closed)
         }

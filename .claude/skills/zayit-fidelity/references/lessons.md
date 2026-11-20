@@ -329,6 +329,12 @@ Each of these was built, shown, and sent back. They say what the user expects:
   `FocusableComponentState.chooseValue` puts hovered before focused. Jewel's Swing compatibility mode drops the hover
   and pressed tints, so that only focus marks; `LocalSwingCompatMode` is internal, so `SingleMarkPopupMenu` enters the
   app's theme again with `IntUiTheme(…, swingCompatMode = true)`, as Zayit's dialogs enter it.
+- **A list's arrows round its ends in every popup alike** ("היא קיימת בחלקם המעגלים, תוודא שבכולם", 2026-11-20).
+  Jewel's menus rounded theirs, the home's dropdowns rounded with a blank step (Compose's focus search gives the
+  popup's frame the focus between the last row and the first: `frameFocused`, and move again), and the others stopped
+  at the ends; the bar's list also stepped its scroll only at the rows in view, which a jump to the other end missed.
+  Jewel's combo boxes stay as they are: their arrows change the value as they go, and IntelliJ's combo boxes do not
+  round either.
 - **IntelliJ's own code is at hand when its standard is asked for.** Its sources come as `-sources.jar` from
   `www.jetbrains.com/intellij-repository/releases` (`com/jetbrains/intellij/platform/ui-tree`, `util-ui`, `core-ui`),
   and single files from `raw.githubusercontent.com/JetBrains/intellij-community` (github.com itself answers 403 here).

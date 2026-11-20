@@ -889,6 +889,9 @@ private fun SuggestionsPanel(
                     // Scroll up when at first visible
                     val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
                     if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
+                } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
+                    // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
+                    listState.scrollToItem(focusedIndex)
                 }
             }
         }
@@ -1064,6 +1067,9 @@ private fun TocSuggestionsPanel(
             } else if (firstVisible != null && focusedIndex == firstVisible) {
                 val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
                 if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
+            } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
+                // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
+                listState.scrollToItem(focusedIndex)
             }
         }
     }
@@ -1852,7 +1858,9 @@ private fun SearchBar(
                                 if (ev.type == KeyEventType.KeyDown) {
                                     val total = if (isTocMode) totalTocRows else totalCatBook
                                     val step = if (ev.key == Key.DirectionDown) 1 else -1
-                                    if (total > 0) focusedIndex = (focusedIndex + step).coerceIn(0, total - 1)
+                                    // Pardes: round from the last row to the first and back, as every popup of the app,
+                                    // up from none the last (2026-11-20)
+                                    if (total > 0) focusedIndex = (focusedIndex.coerceAtLeast(if (step > 0) -1 else 0) + step).mod(total)
                                 }
                                 true
                             }

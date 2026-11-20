@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -116,11 +117,13 @@ fun DropdownButton(
                 val focusManager = LocalFocusManager.current
                 val keys = remember { FocusRequester() }
                 LaunchedEffect(Unit) { keys.requestFocus() }
-                // One row marked at a time, by the keys or the pointer, as in a menu (2026-11-20)
+                // One row marked at a time, by the keys or the pointer, as in a menu, the arrows round its ends (2026-11-20)
                 val marking = remember { DropdownMarking() }
+                var frameFocused by remember { mutableStateOf(false) }
                 Box(
                     Modifier
-                        .dropdownKeys(focusManager, marking) { popupOpen = false }
+                        .dropdownKeys(focusManager, marking, { frameFocused }) { popupOpen = false }
+                        .onFocusChanged { frameFocused = it.isFocused }
                         .pointerInput(marking) {
                             awaitPointerEventScope {
                                 while (true) {
