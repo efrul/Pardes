@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (316 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (317 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -1921,7 +1921,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchHomeViewModel.kt`
 
-- **Change:** modified, +276 −15 lines. Feature: Search in categories, Book and author titles search, Desktop link.
+- **Change:** modified, +280 −15 lines. Feature: Search in categories, Book and author titles search, Desktop link.
 - **What:**
   - `SearchHomeUiState` gains `categorySuggestions`, `selectedScopeCategory` and `scopeItems` (the books and categories
     picked, in order).
@@ -1947,18 +1947,23 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - `SearchHomeNavigationEvent.OpenDesktop(name, tabs)`, and in `submitSearch`, before Zayit's own link: a desktop's
     link (`parseDesktopLink`) whose books the library has (`asWindow(libraryCategories.books())`) sends it instead
     of a search of the link's text.
+  - `onPickAuthor` empties `referenceQuery` and the author's books listed before (`authorBooks`) first, with a comment
+    marked "Pardes:", as `applyScopeItems` does: Zayit's bar clears its field as it picks the author without telling
+    the view model (`skipNextReferenceQuery`), so the books were filtered by the name typed, and an author found by an
+    alias listed only the books it names (חפץ חיים: 4 of his 19). A fix of Zayit's code, which Zayit can take as it is.
 - **Why:** search in a whole category (`54180126`), in several books and categories together (`574f3d55`), in a
   category's base books (`37d4fe60`), books and authors found by name (`67fe471e`), a new tab's bar empty as in Zayit
   (`03c84c1f`), the commentaries on a book by their time, which the user asked to type on 2026-11-09. A desktop's
   link is opened where Zayit opens a tab's, pasted into the bar, and by the bar's same navigation events. An author's
   books, all of them, after his folders: request 41 of stage 3 (2026-11-18), the author's row (and Tab on it, its
-  only way to his books) being hidden while categories are picked.
+  only way to his books) being hidden while categories are picked. An author picked, all his books: the user's
+  screenshot of desktop-1.0.10-55, "למה פה אין את כל ספריו?" (2026-11-20).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the edits run through Zayit's suggestion pipeline and its scope functions.
 - **Smaller:** the category and scope state could be a Pardes helper class the ViewModel delegates to; the suggestion
   pipeline's edits stay.
 - **Tests:** `CategorySuggestionsTest`, `ScopeItemsTest`, `CategoryScopeSearchTest`, `CategorySuggestionsE2ETest`,
-  `AuthorBooksTest`, `CommentaryGroupsTest`, `DesktopLinkPasteTest`.
+  `AuthorBooksTest`, `CommentaryGroupsTest`, `DesktopLinkPasteTest`, `AuthorPickTest` (it fails on Zayit's code).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
@@ -6661,6 +6666,17 @@ Hooks: `LuceneLookupSearchService.kt`, `AppCoreBindings.kt`, `SearchHomeViewMode
   only begun or blank none (request 41).
 - **Reached from:** the JVM tests.
 - **Follows:** `AuthorNamesTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/AuthorPickTest.kt`
+
+- **Feature:** Book and author titles search.
+- **Size:** 46 lines.
+- **What:** the bar's view model with a library whose author (id 10) has three books: חפץ חיים typed, the author picked
+  as the bar picks it (its field cleared without telling), and all three books listed, not the one whose title has
+  the alias. On Zayit's `onPickAuthor` it fails (2026-11-20).
+- **Reached from:** the JVM tests.
+- **Follows:** `DesktopLinkPasteTest` beside it (the view model with a mocked repository and the test settings).
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/search/titles/TitleSearchBench.kt`
