@@ -56,10 +56,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.rememberCursorPositionProvider
 import dev.nucleusframework.window.tao.TaoPointerIcons
+import io.github.kdroidfilter.seforimapp.core.presentation.components.SingleMarkPopupMenu
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.MenuScope
-import org.jetbrains.jewel.ui.component.PopupMenu
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.separator
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
@@ -235,7 +235,8 @@ private fun WidgetMenu(
     val removeLabel = stringResource(Res.string.home_widgets_remove)
     val editLabel = stringResource(Res.string.home_widgets_edit)
     val ownItems = widget.menuItems(state)
-    PopupMenu(
+    // Pardes: one item marked at a time, as in IntelliJ's menus (2026-11-20)
+    SingleMarkPopupMenu(
         onDismissRequest = {
             onDismiss()
             true

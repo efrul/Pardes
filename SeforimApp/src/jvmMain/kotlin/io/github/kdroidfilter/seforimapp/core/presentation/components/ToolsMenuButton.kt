@@ -15,7 +15,6 @@ import io.github.kdroidfilter.seforimapp.features.siddur.openSiddurTab
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.jewel.ui.component.PopupMenu
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
 import seforimapp.seforimapp.generated.resources.Res
@@ -43,7 +42,8 @@ fun ToolsMenuButton() {
             tooltipText = label,
         )
         if (visible) {
-            PopupMenu(
+            // Pardes: one item marked at a time, as in IntelliJ's menus (2026-11-20)
+            SingleMarkPopupMenu(
                 onDismissRequest = {
                     visible = false
                     true

@@ -325,7 +325,16 @@ Each of these was built, shown, and sent back. They say what the user expects:
   pointer's move marks the row under it, the arrows go on from the row marked, and a still pointer's row is not
   marked again until it moves (`DropdownMarking`). Zayit's breadcrumb popup takes the other accepted way, two tints
   (the keys' 0.16, the pointer's 0.08). Jewel 0.41's `PopupMenu` (the Tools menu, a tab's) moves its focus to the row
-  hovered, yet keeps the hover tint, in the same colour, on the row under a still pointer after an arrow.
+  hovered, yet keeps the hover tint, in the same colour, on the row under a still pointer after an arrow: its
+  `FocusableComponentState.chooseValue` puts hovered before focused. Jewel's Swing compatibility mode drops the hover
+  and pressed tints, so that only focus marks; `LocalSwingCompatMode` is internal, so `SingleMarkPopupMenu` enters the
+  app's theme again with `IntUiTheme(…, swingCompatMode = true)`, as Zayit's dialogs enter it.
+- **IntelliJ's own code is at hand when its standard is asked for.** Its sources come as `-sources.jar` from
+  `www.jetbrains.com/intellij-repository/releases` (`com/jetbrains/intellij/platform/ui-tree`, `util-ui`, `core-ui`),
+  and single files from `raw.githubusercontent.com/JetBrains/intellij-community` (github.com itself answers 403 here).
+  Read there on 2026-11-20: `TreeAction` (in on a leaf or an open folder goes to the next row; out from the top level
+  goes to the nearest open folder above, else the first row; a page is the view less four rows) and
+  `ListPopupImpl.isMouseMoved` (a popup notes the pointer's first place only, and a move is a new place).
 - **A thing is named as the user names it.** The setting that hides the Home's big lettering was titled "הצג את השם
   הגדול בדף הבית"; the user asked to fix the wording ("תתקן נוסח", 2026-11-20), and it says their own words of the
   request now, "הכיתוב הגדול של פרדס".

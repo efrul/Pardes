@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (141 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (143 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -59,7 +59,7 @@ The entries of this section by kind:
 |---|---|
 | Pardes feature hook | 59 |
 | Pardes feature in Zayit's file | 35 |
-| Fix of Zayit's code | 21 |
+| Fix of Zayit's code | 23 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
@@ -838,7 +838,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsView.kt`
 
-- **Change:** modified, +33 −22 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
+- **Change:** modified, +34 −22 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
   keys in the popups.
 - **What:** `TabActionsMenu` takes the tab's id (`tabId`, first) and draws Pardes's items (`pardesTabActions(tabId)`,
   resolved before the menu as the labels are, with a comment marked "Pardes:") after "העתק קישור", through Zayit's
@@ -850,7 +850,8 @@ The entries of this section by kind:
   `PopupMenu` at the same place, with a comment marked "Pardes:", in place of a `Popup` holding Jewel's `MenuContent`
   under a `DefaultMenuController` of its own (and its `@OptIn(InternalJewelApi::class)`): the same items drawn the same
   way, now answering the keys, up and down, Enter and Escape, as the Tools menu (`ToolsMenuButton`, Jewel's
-  `PopupMenu`) does.
+  `PopupMenu`) does; since 2026-11-20 Pardes's `SingleMarkPopupMenu`, which marks one item at a time as IntelliJ's
+  menus do, its comment saying so.
 - **Why:** a copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`,
   2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there. The menu's
   keys: request 69 of the list after the third testers' build ("צריך תמיכה מלאה במקשים... מקש ימני על כרטיסיה... (כלים
@@ -934,6 +935,20 @@ The entries of this section by kind:
 - **Merge risk:** small.
 - **Smaller:** already minimal.
 - **Tests:** `PopupKeysUiTest` (the keys); tried in the app (Escape closing it).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/ToolsMenuButton.kt`
+
+- **Change:** modified, +2 −2 lines. Feature: The keys in the popups.
+- **What:** the Tools menu is Pardes's `SingleMarkPopupMenu` in place of Jewel's `PopupMenu` (the same arguments and
+  items), with a comment marked "Pardes:"; Jewel's `PopupMenu` import goes.
+- **Why:** the user's word of 2026-11-20 ("איך זה בתפריט כלים שנפתח והאם זה טוב שם?", then "IntelliJ לפי התקן שלהם תעמיק
+  בו ותיישם"): after an arrow the item under a still pointer kept its hover tint, in the colour of the item the keys
+  marked, so that two items were marked; IntelliJ's menus mark one.
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small: the call's name and an import.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app (the arrow twice, the pointer on תפילת היום, which alone was marked, the arrow on ממיר
+  מידות, תפילת היום under the still pointer no longer tinted).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/DropdownButton.kt`
 
@@ -2570,6 +2585,17 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Smaller:** already minimal.
 - **Tests:** none: minimizing needs a window manager, which the cloud's display has not; tried on Windows by the user.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetFrame.kt`
+
+- **Change:** modified, +3 −2 lines. Feature: The keys in the popups.
+- **What:** a card's menu (`WidgetMenu`) is Pardes's `SingleMarkPopupMenu` in place of Jewel's `PopupMenu` (the same
+  arguments and items), with a comment marked "Pardes:"; its import in place of Jewel's.
+- **Why:** as for `ToolsMenuButton.kt`: one item marked at a time, as in IntelliJ's menus (2026-11-20).
+- **Kind:** Fix of Zayit's code.
+- **Merge risk:** small: the call's name and an import.
+- **Smaller:** already minimal.
+- **Tests:** as for `ToolsMenuButton.kt`, whose menu is drawn the same way.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetCard.kt`
 
 - **Change:** modified, +5 −1 lines. Feature: Tests on a CI runner.
@@ -3895,13 +3921,17 @@ list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeys.kt`
 
 - **Feature:** Keys in the book tree and the contents.
-- **Size:** 331 lines.
+- **Size:** 351 lines.
 - **What:** the pure part: `TreeNode` (a row's depth, folder and open), `TreeKey` and `treeKeyOf` (a key of the tree's,
   the arrow left going in from the right; the numeric keypad's plus and minus, `EXPAND` and `COLLAPSE`, as IntelliJ's
   trees have them, request 69 of the list after the third testers' build: "המקשים בעץ - תבדוק שזה באמת תומך כמו
   בג'טבריינס"), `TreeMove` and `treeMove` (what a key does from the row the keys are on: a row, the ends, a page, in,
-  out, a click; plus a closed folder opened, minus an open one closed), `listMove` (Home, End and the page keys of a list whose arrows are its
-  own) and `pageRows`. `TreeKeyRow` (a row's key in the list, node and click); `NavigationState.treeSelectedKey` (the
+  out, a click; plus a closed folder opened, minus an open one closed), the arrows as IntelliJ's own code has them
+  (`TreeAction`, read on 2026-11-20 at the user's word: "IntelliJ לפי התקן שלהם תעמיק בו ותיישם"): in opens a closed
+  folder, or from an open one or a leaf goes on to the next row; out closes an open folder, or goes up to the parent,
+  or from the top level, which has none, to the nearest open folder above it, else to the first row (`outOf`);
+  `listMove` (Home, End and the page keys of a list whose arrows are its own) and `pageRows` (the rows in view but
+  four, as IntelliJ's trees page, `PAGE_KEPT_ROWS`). `TreeKeyRow` (a row's key in the list, node and click); `NavigationState.treeSelectedKey` (the
   book tree's key of its row selected, an override first). `TreeKeys`, the keys' row (`focused`), whether the tree has
   the focus, and `shown` (the row shown as selected then); `rememberTreeKeys(selected)`, on the row selected whenever
   it changes; `Modifier.treeKeys(keys, listState, rows, onLeave)`, the focus requester, the keys in the preview pass
@@ -3918,11 +3948,12 @@ list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeysTest.kt`
 
 - **Feature:** Keys in the book tree and the contents.
-- **Size:** 109 lines.
+- **Size:** 128 lines.
 - **What:** right to left, the arrow left goes in and the right out (left to right, the other way); up, down, the ends
-  and a page, kept inside the tree; before any row, the first, or the last for End; in opens a closed folder, goes
-  into an open one, nothing on a leaf or an empty folder; out closes an open folder, else goes up to the parent,
-  nothing at the top; the keypad's plus opens a closed folder and its minus closes an open one, neither moving to a
+  and a page, kept inside the tree; before any row, the first, or the last for End; in opens a closed folder, and from
+  an open one or a leaf goes on to the next row, nothing on the last row; out closes an open folder, else goes up to
+  the parent; out on a closed row at the top goes to the nearest open folder above it, else to the first row, as
+  IntelliJ's (2026-11-20); the keypad's plus opens a closed folder and its minus closes an open one, neither moving to a
   parent; Enter clicks a folder as a leaf; a list takes Home, End and the page keys alone; the book tree's
   row selected, a book before its category, an override before the selection.
 - **Reached from:** the JVM tests.
@@ -3936,14 +3967,17 @@ Request 69 of the list after the third testers' build of `docs/DESKTOP_STAGE3_PL
 היסטוריה והערות מהשורה למעלה (כלים כן עובד...)". The title bar's popups (the tab search and its history, the
 favorites, the notes) mark a row with the arrows and open it with Enter, as Zayit's breadcrumb popup does; a tab's menu
 is Jewel's popup menu, as the Tools menu; the home's catalog dropdowns move the focus from row to row, the row in focus
-tinted as when hovered; the keypad's plus and minus open and close a folder of the trees. Hooks: `TabSearchPopup.kt`,
-`NotesPopup.kt`, `FavoritesPopup.kt`, `TabsView.kt`, `DropdownButton.kt`, `CatalogDropdown.kt`, `TocJumpDropdown.kt`;
-the trees' keys in Pardes's `TreeKeys.kt`.
+tinted as when hovered; the keypad's plus and minus open and close a folder of the trees. Since 2026-11-20, as
+IntelliJ's own code has them (the user's word: "IntelliJ לפי התקן שלהם תעמיק בו ותיישם"): one row or item marked at a
+time in the dropdowns and Jewel's menus, the pointer's real moves marking the row under it, and the trees' arrows of
+IntelliJ's `TreeAction`. Hooks: `TabSearchPopup.kt`, `NotesPopup.kt`, `FavoritesPopup.kt`, `TabsView.kt`,
+`DropdownButton.kt`, `CatalogDropdown.kt`, `TocJumpDropdown.kt`, `ToolsMenuButton.kt`, `WidgetFrame.kt`; the trees'
+keys in Pardes's `TreeKeys.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeys.kt`
 
 - **Feature:** The keys in the popups.
-- **Size:** 240 lines.
+- **Size:** 272 lines.
 - **What:** `PopupKeyRow` (a row's place among the list's items, headers counted, and what it opens); `PopupKeys`
   (`@Stable`: the row marked, `index`, among the `rows` that open something, the first at first; `marks(row)`; the
   list's `listState`), `rememberPopupKeys(vararg inputs)` (on the first row again as the field's text changes, the row
@@ -3951,14 +3985,19 @@ the trees' keys in Pardes's `TreeKeys.kt`.
   popup's field: up and down mark a row, Enter opens it, Escape closes); and `Modifier.dropdownKeys(focusManager,
   onEscape)` for a dropdown's popup (up and down move the focus, `FocusDirection.Next`/`Previous`, Escape closes);
   `DropdownMarking` (`@Stable`: `byKeys`, the keys moved the focus last; `pointerMoved`, the pointer moved since, a move
-  being a new place only, not a list scrolled under a still pointer; `keysMoved`, `pointerAt`) and
+  being a new place only, not a list scrolled under a still pointer, its first place only noted, as IntelliJ's
+  `ListPopupImpl.isMouseMoved` reads it; `keysMoved`, `pointerAt`) and
   `LocalDropdownMarking`, one row of a dropdown marked at a time as in a menu; `rememberHoverFocus(interactionSource)`,
   the row the pointer moved over taking the focus; `keyMarkedBackground(focused, hovered)`, a dropdown row's tint at
   once while in focus, Zayit's hover tint only while the keys do not mark the rows; and
   `Modifier.revealAtOnce(scrollState, marking)` (`RevealAtOnceElement`, `RevealAtOnceNode`, a
   `BringIntoViewModifierNode` on the rows' column inside its scroll): the row the keys move the focus to scrolled into
   view at once, to the list's top or bottom edge, its request answered there and not by the scroll's animated one, and
-  a row the pointer gave the focus to left where it is (2026-11-20).
+  a row the pointer gave the focus to left where it is (2026-11-20). And `SingleMarkPopupMenu`, Jewel's `PopupMenu`
+  (the Tools menu, a tab's, a card's) inside the app's theme again (`IntUiTheme` with Zayit's `ThemeUtils`, as its
+  dialogs take it) in Jewel's Swing compatibility mode, where an item is tinted only while in focus, which the
+  pointer's hover gives it: one item marked at a time, as IntelliJ's menus (Jewel's own mode tints the hovered item
+  too, in the same colour, `FocusableComponentState.chooseValue`).
 - **Reached from:** `TabSearchPopup.kt`, `NotesPopup.kt`, `FavoritesPopup.kt`, `DropdownButton.kt`.
 - **Follows:** Zayit's `BreadcrumbPopup` (its keys in the preview pass of the popup's frame, its marked row and its
   colours), `PaneSearch`'s `revealItem`.
@@ -3967,11 +4006,11 @@ the trees' keys in Pardes's `TreeKeys.kt`.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeysUiTest.kt`
 
 - **Feature:** The keys in the popups.
-- **Size:** 78 lines.
+- **Size:** 81 lines.
 - **What:** a popup's field and its list of three rows under a header (Zayit's `PopupSectionHeader` and `PopupRow`):
   the arrow down past the last row staying on it, up a row, Enter opening the second, Escape closing the popup; and a
-  dropdown's `DropdownMarking`: marked by the keys until the pointer moves to a new place, not when it is told the same
-  place again (a list scrolled under it).
+  dropdown's `DropdownMarking`: its first place only noted, then marked by the keys until the pointer moves to a new
+  place, not when it is told the same place again (a list scrolled under it).
 - **Reached from:** the JVM tests.
 - **Follows:** `DafLayoutsCardUiTest` (Compose UI test on the desktop, Jewel's `IntUiTheme`).
 - **Tests:** it is one (Compose UI).

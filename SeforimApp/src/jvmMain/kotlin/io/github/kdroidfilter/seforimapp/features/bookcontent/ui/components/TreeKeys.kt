@@ -49,9 +49,10 @@ import kotlinx.coroutines.launch
 // tree and of the table of contents as the IntelliJ project view and VS Code's explorer have them, right to left. The
 // arrows up and down move a row of the keys' own, shown as the row selected while the tree has the keyboard's focus, as
 // a pane's search shows its match (the user's word: "הפוקוס יראה כמו במקומות שהוא קיים, כמו בתוכן העניינים לאחר חיפוש
-// בו"); the arrow a closed folder's chevron points to opens it, or goes into an open one, and the other arrow closes
-// it, or goes up to the parent; Enter clicks the row; Home and End, Page Up and Page Down; Escape gives the focus back
-// to the text.
+// בו"); the arrow a closed folder's chevron points to opens it, or goes on to the next row, and the other arrow closes
+// it, or goes up to the parent (from the top level, to the nearest open folder above); Enter clicks the row; Home and
+// End, Page Up and Page Down; Escape gives the focus back to the text. The arrows as IntelliJ's own code has them
+// (TreeAction, read on 2026-11-20 at the user's word: "IntelliJ לפי התקן שלהם תעמיק בו ותיישם").
 
 /** A row of a tree as its keys see it: its depth, and whether it is a folder, one that opens, and open. */
 @Immutable
@@ -135,22 +136,35 @@ internal fun treeMove(
         TreeKey.PAGE_UP -> TreeMove.Focus((focused - page).coerceAtLeast(0))
         TreeKey.PAGE_DOWN -> TreeMove.Focus((focused + page).coerceAtMost(last))
         TreeKey.ENTER -> TreeMove.Click(focused)
+        // IntelliJ's (TreeAction.selectChild): a closed folder opens, an open one or a leaf goes on to the next row
         TreeKey.IN ->
             when {
-                !node.folder -> null
-                !node.open -> TreeMove.Click(focused)
-                focused < last && nodes[focused + 1].level > node.level -> TreeMove.Focus(focused + 1)
+                node.folder && !node.open -> TreeMove.Click(focused)
+                focused < last -> TreeMove.Focus(focused + 1)
                 else -> null
             }
+        // IntelliJ's (TreeAction.selectParent): an open folder closes, a row goes up to its parent, and a row at the top
+        // level, which has none, to the nearest open folder above it, else to the first row
         TreeKey.OUT ->
-            if (node.folder && node.open) {
-                TreeMove.Click(focused)
-            } else {
-                (focused - 1 downTo 0).firstOrNull { nodes[it].level < node.level }?.let { TreeMove.Focus(it) }
+            when {
+                node.folder && node.open -> TreeMove.Click(focused)
+                else -> outOf(nodes, focused)?.let { TreeMove.Focus(it) }
             }
         TreeKey.EXPAND -> TreeMove.Click(focused).takeIf { node.folder && !node.open }
         TreeKey.COLLAPSE -> TreeMove.Click(focused).takeIf { node.folder && node.open }
     }
+}
+
+// Where the arrow out goes from the row [focused], no open folder: up to its parent, or from the top level, which has
+// none, to the nearest open folder above it (IntelliJ's TreeAction.selectParent), else to the first row
+private fun outOf(
+    nodes: List<TreeNode>,
+    focused: Int,
+): Int? {
+    val level = nodes[focused].level
+    return (focused - 1 downTo 0).firstOrNull { nodes[it].level < level }
+        ?: (focused - 1 downTo 0).firstOrNull { nodes[it].folder && nodes[it].open }
+        ?: 0.takeIf { focused > 0 }
 }
 
 /**
@@ -181,8 +195,14 @@ fun NavigationState.treeSelectedKey(
     (bookOverride ?: selectedBook?.id)?.let { "book_$it" }
         ?: (categoryOverride ?: selectedCategory?.id)?.let { "category_$it" }
 
-/** The rows a page of [this] list moves: those in view but one, at least one. */
-internal fun LazyListState.pageRows(): Int = (layoutInfo.visibleItemsInfo.size - 1).coerceAtLeast(1)
+/**
+ * The rows a page of [this] list moves: those in view but some kept in it, as IntelliJ's trees page (the view's height
+ * less four rows, TreeAction.pageDown), at least one.
+ */
+internal fun LazyListState.pageRows(): Int = (layoutInfo.visibleItemsInfo.size - PAGE_KEPT_ROWS).coerceAtLeast(1)
+
+// The rows a page keeps in view, IntelliJ's four, one of them the row only partly in view
+private const val PAGE_KEPT_ROWS = 4
 
 /**
  * A tree's keys: the row they are on and whether the tree has the keyboard's focus. [rememberTreeKeys] keeps it on the
