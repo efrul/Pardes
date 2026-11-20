@@ -320,6 +320,12 @@ Each of these was built, shown, and sent back. They say what the user expects:
   used takes the focus.
 - **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
   to the text's right beside the contents ("יהיה בימין").
+- **One row marked, never two alike.** The home's dropdowns tinted the keys' row and the pointer's alike ("עכשיו שתי
+  שורות מסומנות באותו צבע. מה התקן?", 2026-11-20). The standard, as in the OS's menus and IntelliJ's popups: the
+  pointer's move marks the row under it, the arrows go on from the row marked, and a still pointer's row is not
+  marked again until it moves (`DropdownMarking`). Zayit's breadcrumb popup takes the other accepted way, two tints
+  (the keys' 0.16, the pointer's 0.08). Jewel 0.41's `PopupMenu` (the Tools menu, a tab's) moves its focus to the row
+  hovered, yet keeps the hover tint, in the same colour, on the row under a still pointer after an arrow.
 - **A thing is named as the user names it.** The setting that hides the Home's big lettering was titled "הצג את השם
   הגדול בדף הבית"; the user asked to fix the wording ("תתקן נוסח", 2026-11-20), and it says their own words of the
   request now, "הכיתוב הגדול של פרדס".

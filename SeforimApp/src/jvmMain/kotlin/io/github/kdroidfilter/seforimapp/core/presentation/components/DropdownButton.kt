@@ -10,6 +10,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -114,10 +116,19 @@ fun DropdownButton(
                 val focusManager = LocalFocusManager.current
                 val keys = remember { FocusRequester() }
                 LaunchedEffect(Unit) { keys.requestFocus() }
+                // One row marked at a time, by the keys or the pointer, as in a menu (2026-11-20)
+                val marking = remember { DropdownMarking() }
                 Box(
                     Modifier
-                        .dropdownKeys(focusManager) { popupOpen = false }
-                        .focusRequester(keys)
+                        .dropdownKeys(focusManager, marking) { popupOpen = false }
+                        .pointerInput(marking) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type == PointerEventType.Move) marking.pointerAt(event.changes.first().position)
+                                }
+                            }
+                        }.focusRequester(keys)
                         .focusable()
                         .then(if (popupWidthMatchButton) Modifier.width(widthDp) else Modifier)
                         .requiredHeightIn(min = minPopupHeight, max = maxPopupHeight)
@@ -130,12 +141,15 @@ fun DropdownButton(
                         Modifier
                             .fillMaxWidth()
                             .verticalScroll(scrollState)
+                            // Pardes: the rows' marking centred, as much room on the start side as the scrollbar's (2026-11-20)
+                            .padding(start = if (showScrollbar) 12.dp else 0.dp)
                             // Reserve space so content doesn't shift when scrollbar appears
                             .padding(end = if (showScrollbar) 12.dp else 0.dp)
                             // Pardes: the row the keys move to comes into view at once (request 69 of stage 3)
-                            .revealAtOnce(scrollState),
+                            .revealAtOnce(scrollState, marking),
                     ) {
-                        popupContent { popupOpen = false }
+                        // Pardes: the rows' marking (request 69 of stage 3)
+                        CompositionLocalProvider(LocalDropdownMarking provides marking) { popupContent { popupOpen = false } }
                     }
                     if (showScrollbar) {
                         VerticalScrollbar(
