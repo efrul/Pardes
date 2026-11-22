@@ -9,9 +9,10 @@ tools and the code did when it was written.
 ## Building and checking
 
 - **Only the Change map check runs on a push to a branch.** Lint and tests run in CI on a pull request to `main`.
-  So run them here before every push: `.claude/skills/pardes-desktop-run/scripts/gradle.sh :SeforimApp:jvmTest
-  ktlintCheck detekt` (the wrapper sets the locale and keeps Zayit's private packages out). A cold build gets through
-  Maven Central's 429 with the mirror that `pardes-desktop-run`'s `setup.sh` installs.
+  So run them here before every push: `.claude/skills/pardes-desktop-run/scripts/gradle.sh --continue
+  :SeforimApp:jvmTest ktlintCheck :SeforimApp:detektJvmMainSourceSet :SeforimApp:detektJvmTestSourceSet` (the wrapper
+  sets the locale and keeps Zayit's private packages out; detekt below). A cold build gets through Maven Central's 429
+  with the mirror that `pardes-desktop-run`'s `setup.sh` installs.
 - **The check needs the base commit.** In a shallow clone it fails with `git diff … exit 128`:
   `git fetch --depth=1 origin <the base's sha>` first.
 - **ktlint:**
@@ -33,7 +34,12 @@ tools and the code did when it was written.
 - **`detekt` checks nothing of SeforimApp.** Its `detekt` task is NO-SOURCE (a multiplatform module); its source
   sets' tasks are `:SeforimApp:detektJvmMainSourceSet` and `:SeforimApp:detektJvmTestSourceSet`, which report the
   issues beyond `SeforimApp/detekt-baseline-jvmMainSourceSet.xml` (308 on 2026-11-13, most of them old). Run them on a
-  change and look at its own files' lines; `LongParameterList` is not reported on composables. Its
+  change and look at its own files' lines; `LongParameterList` is not reported on composables. They always fail on the
+  old issues, so give Gradle `--continue` (or the tests stop with them) and count what is new against the base's own
+  run, in a worktree of `main` (`git worktree add --detach <dir> origin/main`, its submodules by `git submodule update
+  --init --reference .git/modules/<name>`): an issue is new when its file, rule and message, numbers aside, are not in
+  the base's list. Stage 3 ran only `detekt`, and its 32 issues (main 299, the branch 331, none in the tests) came to
+  light only at the public release, 2026-11-22. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
   `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
   plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class
@@ -289,6 +295,18 @@ A build for the user to try, from a branch, before anything reaches `main`:
 
 A session cannot delete a release. Tell the user which pre-releases can go once tried: Pardes for Android 0.3.0 to
 0.4.1 reads only the 30 newest releases.
+
+### The public release, and the Apple Silicon Mac
+
+The public release is the same run on `main` after the stage's pull request merges, without `quick`, with the
+changelog's section kept. Its slow build is the Apple Silicon Mac's native image, on a GitHub runner of 7 GB where
+GraalVM spends most of its time in the garbage collector: 2 h 06 for 1.0.7, 2 h 54 for 1.0.9, and for 1.0.10's code
+anywhere from 2 h 01 to 3 h 25, or an `OutOfMemoryError` after 3 h 21 (CI of efrul/Pardes#47, 2026-11-22). The others
+take under 45 minutes. A build had 180 minutes until 1.0.10 (efrul/Pardes#47 gives 300). When that Mac cannot make
+it, `without_mac_arm64` publishes the rest at once, without `latest-mac.yml` (installed Macs keep their version), and
+`add_mac_arm64: desktop-<x.y.z>-<run>` builds that Mac from the release's own commit and adds it with the Macs'
+feed; the workflow's definition comes from the ref the run is dispatched on (1.0.10's from the branch with the 300
+minutes). Before a release, look at the time CI's Mac build took on the same code.
 
 ## What the user asked to be done again
 
