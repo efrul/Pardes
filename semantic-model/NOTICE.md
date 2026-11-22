@@ -17,6 +17,10 @@ Models trained from run 3 on also learn from pairs made from:
   Klei Kodesh's developer wrote (2026-11-04), Klei Kodesh received Torat Emet's permission long ago; that permission was
   given to Klei Kodesh.
 
+Models trained from 2026-11-19 on also learn from the searches Pardes's users graded in the app and sent, with their
+consent, to improve its search: the results they marked relevant and not relevant, sent without anything that
+identifies them.
+
 Dicta does not endorse Pardes or this conversion. The model is provided as is, without warranties.
 
 Pardes is based on Zayit by Elie (Elyahou) Gambache, who did not make Pardes and is not responsible for it. Neither
