@@ -296,6 +296,18 @@ A build for the user to try, from a branch, before anything reaches `main`:
 A session cannot delete a release. Tell the user which pre-releases can go once tried: Pardes for Android 0.3.0 to
 0.4.1 reads only the 30 newest releases.
 
+### The public release, and the Apple Silicon Mac
+
+The public release is the same run on `main` after the stage's pull request merges, without `quick`, with the
+changelog's section kept. Its slow build is the Apple Silicon Mac's native image, on a GitHub runner of 7 GB where
+GraalVM spends most of its time in the garbage collector: 2 h 06 for 1.0.7, 2 h 54 for 1.0.9, and for 1.0.10's code
+anywhere from 2 h 01 to 3 h 25, or an `OutOfMemoryError` after 3 h 21 (CI of efrul/Pardes#47, 2026-11-22). The others
+take under 45 minutes. A build had 180 minutes until 1.0.10 (efrul/Pardes#47 gives 300). When that Mac cannot make
+it, `without_mac_arm64` publishes the rest at once, without `latest-mac.yml` (installed Macs keep their version), and
+`add_mac_arm64: desktop-<x.y.z>-<run>` builds that Mac from the release's own commit and adds it with the Macs'
+feed; the workflow's definition comes from the ref the run is dispatched on (1.0.10's from the branch with the 300
+minutes). Before a release, look at the time CI's Mac build took on the same code.
+
 ## What the user asked to be done again
 
 Each of these was built, shown, and sent back. They say what the user expects:
