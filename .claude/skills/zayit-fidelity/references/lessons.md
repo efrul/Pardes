@@ -44,6 +44,10 @@ tools and the code did when it was written.
   `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
   plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class
   makes for itself unless its property is (`DafDownloads`, `PdfBookStore`).
+- **detekt counts `let`, `also`, `forEach` and `use` as nesting in a function's cyclomatic complexity**: a `?.let` and
+  an `&&` added to Zayit's `BreadcrumbPopupContent` took it from 15 to 17 (2026-11-22). Move such a step into a shared
+  helper (`PopupMarking.reveal`, `markOnPointer` over the list's items) rather than inline it. A file at 15 functions
+  takes its new one into a second file for a second concern (`PopupMarking.kt`, `StudySourceField.kt`).
 - **Kotlin, as it bit:**
   - a constructor or function that ends in a lambda parameter keeps it last, or every caller's trailing lambda binds
     to the new parameter (`FeedbackSource(database) { … }`);
@@ -155,6 +159,22 @@ tools and the code did when it was written.
   stage 3).
 - **A PDF's page size is nullable** (`PdfDocument.pageSize(i)`, a page that cannot be read): `?.let` it, as the daf's
   whole-page fit does (request 63 of stage 3).
+
+- **`scrollToItem` puts its item at the top.** Zayit's `revealItem` used it for a row not in view, so a step down from
+  the row at the bottom (whose next row starts exactly at the view's end, not in `visibleItemsInfo`) was a page's jump,
+  and a step up a row's: "למעלה אחד אחד ולמטה מחליף הרבה בבת אחת" (requests 75 and 76 of the list after the public
+  release, 2026-11-22). The reader's selected line, the search's results, the find pane and the bar's lists each had a
+  way of their own, all with the same jump or an animation. A row below the view comes in at the bottom:
+  `scrollToItem`, then back by the room left under it, the layout info current at once (`forceRemeasure`).
+- **A zoom kept as a share of the view changes with every pane.** The daf's zoom times the view's width shrank the
+  pages as a side pane or the commentaries opened (request 73, 2026-11-22): a zoom is a size (`ZOOM_ONE_WIDTH`), and a
+  fit ("עמוד שלם", the view's width) a zoom set once, from the fit the view tells (`PageFits`, by the tab's id).
+- **One marking for every popup** (`PopupMarking.kt`, request 74): a popup whose field keeps the focus marks by index,
+  its list told the pointer by `markOnPointer` (a `PointerInputModifierNode` on the `LazyColumn`, the positions the
+  list's own offsets); a popup with no field marks by focus (`rememberHoverFocus`); Jewel's menus mark one item inside
+  `SingleMarkMenus`. A popup's pointer `Enter` is no move, and its first `Move` only noted: a popup opened under a
+  still pointer marks nothing. A modifier factory cannot `rememberUpdatedState` its lambda: make it a node whose
+  `update` takes the new one, or the lambda reads stale values (`filtered` in the breadcrumb's popup).
 
 ## Data and settings
 
@@ -341,8 +361,9 @@ Each of these was built, shown, and sent back. They say what the user expects:
 - **One row marked, never two alike.** The home's dropdowns tinted the keys' row and the pointer's alike ("עכשיו שתי
   שורות מסומנות באותו צבע. מה התקן?", 2026-11-20). The standard, as in the OS's menus and IntelliJ's popups: the
   pointer's move marks the row under it, the arrows go on from the row marked, and a still pointer's row is not
-  marked again until it moves (`DropdownMarking`). Zayit's breadcrumb popup takes the other accepted way, two tints
-  (the keys' 0.16, the pointer's 0.08). Jewel 0.41's `PopupMenu` (the Tools menu, a tab's) moves its focus to the row
+  marked again until it moves (`DropdownMarking`, every popup's `PopupMarking` since request 74). Zayit's breadcrumb
+  popup took the other accepted way, two tints (the keys' 0.16, the pointer's 0.08), until request 74 made every popup
+  mark one row (2026-11-22). Jewel 0.41's `PopupMenu` (the Tools menu, a tab's) moves its focus to the row
   hovered, yet keeps the hover tint, in the same colour, on the row under a still pointer after an arrow: its
   `FocusableComponentState.chooseValue` puts hovered before focused. Jewel's Swing compatibility mode drops the hover
   and pressed tints, so that only focus marks; `LocalSwingCompatMode` is internal, so `SingleMarkPopupMenu` enters the
@@ -367,5 +388,8 @@ Each of these was built, shown, and sent back. They say what the user expects:
   code ("זה יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף", 2026-11-19). It now finds both
   with the bar's lookup and draws them with its rows, a category in its base books alone too.
 
+- **The same behaviour everywhere, by the same code** ("למה זה לא קוד משותף לכולם?", 2026-11-22). Each popup had kept
+  its own rows and tints, and each fix had gone into each popup in place, so the next popup missed it. A behaviour
+  asked of one list or menu is built once, in a shared file, and every popup reaches it.
 Show a screenshot of a choice of design before building on it, and ask of each new control: does it behave as the
 one beside it does?
