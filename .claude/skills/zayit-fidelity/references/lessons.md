@@ -9,9 +9,10 @@ tools and the code did when it was written.
 ## Building and checking
 
 - **Only the Change map check runs on a push to a branch.** Lint and tests run in CI on a pull request to `main`.
-  So run them here before every push: `.claude/skills/pardes-desktop-run/scripts/gradle.sh :SeforimApp:jvmTest
-  ktlintCheck detekt` (the wrapper sets the locale and keeps Zayit's private packages out). A cold build gets through
-  Maven Central's 429 with the mirror that `pardes-desktop-run`'s `setup.sh` installs.
+  So run them here before every push: `.claude/skills/pardes-desktop-run/scripts/gradle.sh --continue
+  :SeforimApp:jvmTest ktlintCheck :SeforimApp:detektJvmMainSourceSet :SeforimApp:detektJvmTestSourceSet` (the wrapper
+  sets the locale and keeps Zayit's private packages out; detekt below). A cold build gets through Maven Central's 429
+  with the mirror that `pardes-desktop-run`'s `setup.sh` installs.
 - **The check needs the base commit.** In a shallow clone it fails with `git diff … exit 128`:
   `git fetch --depth=1 origin <the base's sha>` first.
 - **ktlint:**
@@ -33,7 +34,12 @@ tools and the code did when it was written.
 - **`detekt` checks nothing of SeforimApp.** Its `detekt` task is NO-SOURCE (a multiplatform module); its source
   sets' tasks are `:SeforimApp:detektJvmMainSourceSet` and `:SeforimApp:detektJvmTestSourceSet`, which report the
   issues beyond `SeforimApp/detekt-baseline-jvmMainSourceSet.xml` (308 on 2026-11-13, most of them old). Run them on a
-  change and look at its own files' lines; `LongParameterList` is not reported on composables. Its
+  change and look at its own files' lines; `LongParameterList` is not reported on composables. They always fail on the
+  old issues, so give Gradle `--continue` (or the tests stop with them) and count what is new against the base's own
+  run, in a worktree of `main` (`git worktree add --detach <dir> origin/main`, its submodules by `git submodule update
+  --init --reference .git/modules/<name>`): an issue is new when its file, rule and message, numbers aside, are not in
+  the base's list. Stage 3 ran only `detekt`, and its 32 issues (main 299, the branch 331, none in the tests) came to
+  light only at the public release, 2026-11-22. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
   `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
   plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class

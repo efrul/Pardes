@@ -64,6 +64,8 @@ The rules below are mandatory for every change, in every session, desktop or And
    itself for a UI change (`pardes-desktop-run` for desktop, `zayit-android` for Android). ktlint must pass, as in
    his CI. detekt is his configured standard: a new file keeps to `detekt.yml`, and a change to his file adds no
    issue to it (his largest files are already past the size limits; don't make them grow more than the hook needs).
+   - In SeforimApp, `detekt` checks nothing: its source sets' tasks do, and they fail on old issues, so count the new
+     ones against `main`'s (`references/lessons.md` › Building and checking).
    - `androidApp/` has neither ktlint nor detekt yet (the map's section 4): keep its code to the same 140 columns
      and `detekt.yml` limits by hand.
    - Run Gradle through `.claude/skills/pardes-desktop-run/scripts/gradle.sh`: it sets `LC_ALL=C.UTF-8`, puts a `gh`
