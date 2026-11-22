@@ -108,4 +108,17 @@ class DafZoomTest {
         assertEquals(AppSettings.DEFAULT_DAF_ZOOM, settings.dafZoomFlow.value)
         assertEquals(AppSettings.DEFAULT_DAF_ZOOM, settings.getDafZoom())
     }
+
+    @Test
+    fun `the zoom is never set until the pages first fit their view, and the share of the view before is not read`() {
+        // The zoom of before request 73 of stage 3, a share of the view's width
+        val stored = PropertiesSettings(Properties()).apply { putFloat("daf_zoom", 1.5f) }
+        val before = AppSettings(stored)
+        assertFalse(before.hasDafZoom())
+        assertEquals(AppSettings.DEFAULT_DAF_ZOOM, before.getDafZoom())
+
+        before.setDafZoom(1.3f)
+        assertTrue(AppSettings(stored).hasDafZoom())
+        assertEquals(1.3f, AppSettings(stored).getDafZoom())
+    }
 }

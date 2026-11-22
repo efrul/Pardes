@@ -109,7 +109,7 @@ private fun FavoritesPopupContent(onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    // Pardes: up and down mark a favorite, Enter opens it (request 69 of stage 3)
+    // Pardes: up and down, or the pointer, mark a favorite, Enter opens it (requests 69 and 74 of stage 3)
     val keys = rememberPopupKeys(query)
     val shown = rootEntries + folders.flatMap { folder -> entries.filter { it.folderId == folder.id } }
     keys.rows =
@@ -140,7 +140,7 @@ private fun FavoritesPopupContent(onDismiss: () -> Unit) {
             focusRequester = focusRequester,
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = 380.dp), state = keys.listState) {
+        LazyColumn(modifier = Modifier.heightIn(max = 380.dp).markOnPointer(keys), state = keys.listState) {
             items(rootEntries, key = { "fav-" + it.key }) { entry ->
                 PopupRow(
                     label = entry.title,

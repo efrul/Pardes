@@ -1230,7 +1230,8 @@
     <string name="page_spreads_tooltip">שני עמודים זה לצד זה, כספר פתוח: עמוד ב מימין ועמוד א משמאל</string>
     <!-- Pardes: a whole page in the view (request 63 of stage 3, PageFit.kt) -->
     <string name="page_fit">עמוד שלם</string>
-    <string name="page_fit_tooltip">עמוד שלם בגובה החלונית, ולא רק ברוחב שלה</string>
+    <string name="page_fit_tooltip">עמוד שלם בגובה החלונית</string>
+    <string name="page_fit_width_tooltip">הדפים ברוחב החלונית</string>
     <!-- Pardes: a copy of a tab, from its menu (request 59 of stage 3, PardesTabAction.kt) -->
     <string name="tab_duplicate">שכפל לשונית</string>
     <!-- Pardes: two tabs side by side, from a tab's menu (request 59 of stage 3, TabSplitView.kt) -->

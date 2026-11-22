@@ -48,9 +48,12 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import io.github.kdroidfilter.seforimapp.core.presentation.components.ChevronIcon
+import io.github.kdroidfilter.seforimapp.core.presentation.components.PopupMarking
 import io.github.kdroidfilter.seforimapp.core.presentation.components.PopupSearchField
 import io.github.kdroidfilter.seforimapp.core.presentation.components.PopupShape
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
+import io.github.kdroidfilter.seforimapp.core.presentation.components.markOnPointer
+import io.github.kdroidfilter.seforimapp.core.presentation.components.markedRowBackground
+import io.github.kdroidfilter.seforimapp.core.presentation.components.reveal
 import io.github.kdroidfilter.seforimapp.icons.Book_2
 import io.github.kdroidfilter.seforimapp.icons.JournalText
 import org.jetbrains.compose.resources.stringResource
@@ -104,11 +107,13 @@ private fun BreadcrumbPopupContent(
         }
     // Keep the selection when it survives the filter, otherwise fall back to the first match
     val selectedIndex = filtered.indexOfFirst { it.key == selectedKey }.takeIf { it >= 0 } ?: 0
+    // Pardes: one row marked, the keys' or the pointer's, as every popup of the app (request 74 of stage 3)
+    val marking = remember(model) { PopupMarking() }
 
     val listState = rememberLazyListState()
     LaunchedEffect(model) { listState.scrollToItem((model.initialSelectedIndex - VISIBLE_CONTEXT_ROWS).coerceAtLeast(0)) }
     LaunchedEffect(selectedIndex, filtered) {
-        if (listState.layoutInfo.visibleItemsInfo.isNotEmpty()) listState.revealItem(selectedIndex)
+        marking.reveal(listState, selectedIndex)
     }
 
     val focusRequester = remember { FocusRequester() }
@@ -127,10 +132,12 @@ private fun BreadcrumbPopupContent(
                     when (event.key) {
                         // Pardes: round from the last row to the first and back, as every popup of the app (2026-11-20)
                         Key.DirectionDown -> {
+                            marking.keysMoved()
                             filtered.getOrNull((selectedIndex + 1).mod(filtered.size.coerceAtLeast(1)))?.let { selectedKey = it.key }
                             true
                         }
                         Key.DirectionUp -> {
+                            marking.keysMoved()
                             filtered.getOrNull((selectedIndex - 1).mod(filtered.size.coerceAtLeast(1)))?.let { selectedKey = it.key }
                             true
                         }
@@ -165,7 +172,10 @@ private fun BreadcrumbPopupContent(
             modifier = Modifier.heightIn(max = 380.dp),
         ) {
             // Room for the scrollbar, so that it never covers the rows
-            LazyColumn(state = listState, modifier = Modifier.padding(end = 11.dp)) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.padding(end = 11.dp).markOnPointer(marking, listState, filtered) { selectedKey = it.key },
+            ) {
                 itemsIndexed(filtered, key = { _, node -> node.key }) { index, node ->
                     BreadcrumbPopupRow(
                         node = node,
@@ -185,7 +195,8 @@ private fun BreadcrumbPopupRow(
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val background = highlightBackground(interactionSource, isSelected)
+    // Pardes: the row marked, by the keys or the pointer, alone tinted (request 74 of stage 3)
+    val background = markedRowBackground(isSelected)
     val tint = JewelTheme.globalColors.text.normal
 
     Row(

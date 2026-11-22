@@ -11,8 +11,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -118,20 +116,14 @@ fun DropdownButton(
                 val keys = remember { FocusRequester() }
                 LaunchedEffect(Unit) { keys.requestFocus() }
                 // One row marked at a time, by the keys or the pointer, as in a menu, the arrows round its ends (2026-11-20)
-                val marking = remember { DropdownMarking() }
+                val marking = remember { PopupMarking() }
                 var frameFocused by remember { mutableStateOf(false) }
                 Box(
                     Modifier
                         .dropdownKeys(focusManager, marking, { frameFocused }) { popupOpen = false }
                         .onFocusChanged { frameFocused = it.isFocused }
-                        .pointerInput(marking) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    if (event.type == PointerEventType.Move) marking.pointerAt(event.changes.first().position)
-                                }
-                            }
-                        }.focusRequester(keys)
+                        .notePointer(marking)
+                        .focusRequester(keys)
                         .focusable()
                         .then(if (popupWidthMatchButton) Modifier.width(widthDp) else Modifier)
                         .requiredHeightIn(min = minPopupHeight, max = maxPopupHeight)
@@ -152,7 +144,7 @@ fun DropdownButton(
                             .revealAtOnce(scrollState, marking),
                     ) {
                         // Pardes: the rows' marking (request 69 of stage 3)
-                        CompositionLocalProvider(LocalDropdownMarking provides marking) { popupContent { popupOpen = false } }
+                        CompositionLocalProvider(LocalPopupMarking provides marking) { popupContent { popupOpen = false } }
                     }
                     if (showScrollbar) {
                         VerticalScrollbar(

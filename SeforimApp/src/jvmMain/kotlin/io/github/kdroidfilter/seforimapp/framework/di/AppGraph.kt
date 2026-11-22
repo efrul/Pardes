@@ -81,6 +81,9 @@ abstract class AppGraph : ViewModelGraph {
 
     // Pardes: the book tree or contents just opened takes the keyboard's focus (request 47 of stage 3)
     abstract val paneFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneFocusRequests
+
+    // Pardes: the zooms that fit each tab's pages in their view, for the end bar's button (request 73 of stage 3)
+    abstract val pageFits: io.github.kdroidfilter.seforimapp.features.pdf.PageFits
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync

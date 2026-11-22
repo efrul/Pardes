@@ -184,7 +184,7 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
         onDismiss()
     }
 
-    // Pardes: up and down mark a row, Enter opens it (request 69 of stage 3)
+    // Pardes: up and down, or the pointer, mark a row, Enter opens it (requests 69 and 74 of stage 3)
     val keys = rememberPopupKeys(query)
     keys.rows =
         buildList {
@@ -211,7 +211,7 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
             focusRequester = focusRequester,
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = 380.dp), state = keys.listState) {
+        LazyColumn(modifier = Modifier.heightIn(max = 380.dp).markOnPointer(keys), state = keys.listState) {
             if (filteredTabs.isNotEmpty()) {
                 item(key = "header-tabs") { PopupSectionHeader(stringResource(Res.string.open_tabs)) }
                 itemsIndexed(filteredTabs, key = { _, it -> "tab-" + it.tab.destination.tabId }) { i, row ->
@@ -346,18 +346,13 @@ internal fun PopupRow(
     tabType: TabType?,
     onClick: () -> Unit,
     onClose: (() -> Unit)?,
-    // Pardes: the row the keys mark, as the breadcrumb's popup marks its own (request 69 of stage 3)
+    // Pardes: the row marked, by the keys or the pointer, alone tinted as a menu's (requests 69 and 74 of stage 3)
     selected: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
     val accent = JewelTheme.globalColors.outlines.focused
-    val background =
-        when {
-            selected -> accent.copy(alpha = 0.16f)
-            isHovered -> accent.copy(alpha = 0.08f)
-            else -> Color.Transparent
-        }
+    val background = markedRowBackground(selected)
 
     Row(
         modifier =
