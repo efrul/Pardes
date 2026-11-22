@@ -187,7 +187,9 @@ jobs:
     name: ${{ matrix.asset }}
     needs: prepare
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 180
+    # The Apple Silicon Mac's native image is the slow one (its runner's memory): 2 h 06 for 1.0.7, 2 h 54 for 1.0.9,
+    # and CI's from 3 h 06 to 3 h 25 for main of 2026-11-18; the others take under 45 minutes. Hosted jobs stop at 6 h
+    timeout-minutes: 300
     strategy:
       fail-fast: true
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
