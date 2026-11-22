@@ -3,16 +3,18 @@ package io.github.kdroidfilter.seforimapp.core.presentation.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -23,21 +25,23 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.icons.MaterialSymbolsMagicButton
+import io.github.kdroidfilter.seforimapp.icons.TableOfContents
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.Orientation
-import org.jetbrains.jewel.ui.component.Divider
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.IconActionButton
 import org.jetbrains.jewel.ui.component.Text
@@ -49,6 +53,7 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.find_close
 import seforimapp.seforimapp.generated.resources.find_next_match
 import seforimapp.seforimapp.generated.resources.find_previous_match
+import seforimapp.seforimapp.generated.resources.find_results_toggle
 import seforimapp.seforimapp.generated.resources.find_smart_mode
 import seforimapp.seforimapp.generated.resources.search_in_page
 
@@ -77,6 +82,9 @@ fun FindInPageBar(
     // Meaning-based find; null hides its toggle where it isn't available
     smartModeEnabled: Boolean = false,
     onToggleSmartMode: (() -> Unit)? = null,
+    // Pardes: every match in a pane beside the text (request 55 of stage 3), shown or not; null hides its toggle
+    listShown: Boolean? = null,
+    onToggleList: () -> Unit = {},
 ) {
     val shape = RoundedCornerShape(8.dp)
     val focusRequester = remember { FocusRequester() }
@@ -90,16 +98,8 @@ fun FindInPageBar(
         }
     }
 
-    Row(
-        modifier =
-            modifier
-                .shadow(6.dp, shape)
-                .background(JewelTheme.globalColors.panelBackground, shape)
-                .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
-                .height(36.dp)
-                .padding(start = 10.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    // Pardes: the field, its counter and the actions in one row, or the actions in a second in a narrow view (FindBarRows)
+    val field: @Composable RowScope.() -> Unit = {
         Icon(
             key = AllIconsKeys.Actions.Find,
             contentDescription = null,
@@ -111,6 +111,9 @@ fun FindInPageBar(
             undecorated = true,
             modifier =
                 Modifier
+                    // Pardes: narrower in a narrow view (a tab beside another), so the counter and the actions keep
+                    // their places; measured after them, as a weighted child is
+                    .weight(1f, fill = false)
                     .width(200.dp)
                     .focusRequester(focusRequester)
                     .onPreviewKeyEvent { ev ->
@@ -119,6 +122,8 @@ fun FindInPageBar(
                         when (ev.key) {
                             Key.Enter, Key.NumPadEnter -> {
                                 when {
+                                    // Pardes: Alt+Enter shows or hides every match in its pane (request 55 of stage 3)
+                                    ev.isAltPressed && listShown != null -> onToggleList()
                                     ev.isCtrlPressed -> onActivate()
                                     ev.isShiftPressed -> onEnterPrev()
                                     else -> onEnterNext()
@@ -149,14 +154,23 @@ fun FindInPageBar(
                 fontSize = 12.sp,
                 textAlign = TextAlign.End,
                 maxLines = 1,
-                modifier = Modifier.widthIn(min = COUNTER_MIN_WIDTH),
+                modifier =
+                    Modifier
+                        .widthIn(min = COUNTER_MIN_WIDTH)
+                        // Pardes: its blank beside the field is the field's, a click there putting the caret at the
+                        // query's end (request 68 of stage 3: "נגיעה בשמאל יותר לא משפיעה")
+                        .pointerHoverIcon(PointerIcon.Text)
+                        .clickable(interactionSource = null, indication = null) {
+                            focusRequester.requestFocus()
+                            state.edit { placeCursorAtEnd() }
+                        },
             )
         }
-        Divider(
-            orientation = Orientation.Vertical,
-            modifier = Modifier.padding(horizontal = 8.dp).height(20.dp),
-        )
+    }
+    val actions: @Composable RowScope.() -> Unit = {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Pardes: every match in a pane beside the text (request 55 of stage 3)
+            if (listShown != null) FindListToggle(listShown, onToggleList)
             if (onToggleSmartMode != null) {
                 val smartLabel = stringResource(Res.string.find_smart_mode)
                 ShortcutTooltip(smartLabel) {
@@ -203,6 +217,17 @@ fun FindInPageBar(
             )
         }
     }
+    FindBarRows(
+        modifier = modifier,
+        frameModifier =
+            Modifier
+                .shadow(6.dp, shape)
+                .background(JewelTheme.globalColors.panelBackground, shape)
+                .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
+                .padding(start = 10.dp, end = 4.dp),
+        field = field,
+        actions = actions,
+    )
 }
 
 // Fits "999/9999" at 12sp; larger counts still widen the slot
@@ -255,5 +280,24 @@ fun syncFindField(
     field.edit {
         replace(0, length, persisted)
         selection = TextRange(0, length)
+    }
+}
+
+// Pardes (request 55 of stage 3): the toggle of the pane that lists every match, beside the bar's other actions
+@Composable
+private fun FindListToggle(
+    shown: Boolean,
+    onToggle: () -> Unit,
+) {
+    val label = stringResource(Res.string.find_results_toggle)
+    ShortcutTooltip(label, "Alt+Enter") {
+        ToggleableIconButton(value = shown, onValueChange = { onToggle() }, focusable = false) {
+            Icon(
+                imageVector = TableOfContents,
+                contentDescription = label,
+                modifier = Modifier.size(16.dp),
+                tint = if (shown) JewelTheme.globalColors.outlines.focused else JewelTheme.globalColors.text.info,
+            )
+        }
     }
 }

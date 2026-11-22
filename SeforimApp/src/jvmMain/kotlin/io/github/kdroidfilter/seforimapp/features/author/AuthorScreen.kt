@@ -291,7 +291,9 @@ private fun BooksPane(
     VerticallyScrollableContainer(scrollState = scroll as ScrollableState, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxWidth().verticalScroll(scroll).padding(horizontal = 10.dp, vertical = 6.dp)) {
             val groups = page.details.books.groupBy { it.categoryId }
-            val openByDefault = groups.size <= 2
+            // Pardes: every book shown under its folder, however many folders (request 66 of stage 3: "מציג תיקיות ולא את
+            // כל ספריו")
+            val openByDefault = true
             groups.forEach { (categoryId, books) ->
                 CategoryBooks(page.categories[categoryId].orEmpty(), books, openByDefault, onBook)
             }

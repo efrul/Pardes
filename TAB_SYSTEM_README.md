@@ -1,5 +1,13 @@
 # Tabs with State Restore
 
+> **Pardes (2026-11-19):** parts of this file describe an older tab system. Today every tab of a window stays composed
+> and only the selected one is measured and placed (`TabsContent`: no LRU of retained compositions); a tab's saved
+> state is its `TabPersistedState` in `TabPersistedStateStore` (no `TabStateManager`); and tabs move between windows
+> through Nucleus's `TabWorkspace` (`DesktopManager.linkWorkspaces`, no `TabDockManager`). `CLAUDE.md` › Memory-Efficient
+> Tab System has the current points.
+> A split view (`TabSplits`, Pardes's own) measures and places two tabs side by side: the one beside the selected tab
+> is on screen (`LocalTabShown`) but not selected (`LocalTabSelected`).
+
 This app uses a custom tab system rendered by `TabsContent` **without Compose
 Navigation**. Each open tab owns a `SimpleTabViewModelOwner` (its own
 `ViewModelStoreOwner` + `SavedStateRegistryOwner`) that stays alive while the tab

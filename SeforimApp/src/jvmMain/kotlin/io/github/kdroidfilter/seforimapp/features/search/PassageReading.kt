@@ -39,6 +39,8 @@ import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
@@ -101,6 +103,9 @@ internal class PassageReading(
     // The line a selection's press began on, and the line a right click was on (the book opened there)
     internal var pressedLineId: Long? = null
     internal var menuLineId: Long? = null
+
+    // Whether the press being followed opened a link of the passage: its line then opens nothing (request 46)
+    internal var linkOpened = false
 
     // The height of the lines just added before those read, until the scroll takes it: drawn above the view meanwhile
     internal var heldBack by mutableIntStateOf(0)
@@ -259,7 +264,18 @@ internal fun PassageText(
             }
         }
     }
-    CompositionLocalProvider(LocalTextContextMenu provides menu) {
+    // A link's own click is the link's alone: its line is told, and opens nothing (request 46)
+    val uriHandler = LocalUriHandler.current
+    val linkHandler =
+        remember(uriHandler, passage) {
+            object : UriHandler {
+                override fun openUri(uri: String) {
+                    passage.linkOpened = true
+                    uriHandler.openUri(uri)
+                }
+            }
+        }
+    CompositionLocalProvider(LocalTextContextMenu provides menu, LocalUriHandler provides linkHandler) {
         SelectionContainer {
             Box(
                 modifier.offset { IntOffset(0, -passage.heldBack) }.onSizeChanged { passage.laidOut(it.height) },
@@ -288,11 +304,13 @@ internal fun Modifier.passageLine(
             if (currentEvent.buttons.isSecondaryPressed) passage.menuLineId = lineId
             if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
             passage.pressedLineId = lineId
+            passage.linkOpened = false
             val wait = viewConfiguration.doubleTapTimeoutMillis
             val selecting = passage.selectedText.isNotEmpty() || down.uptimeMillis - released < wait
             val (up, still) = release(down) ?: return@awaitEachGesture
             released = up.uptimeMillis
-            if (selecting || !still) return@awaitEachGesture
+            // A link, which opened itself at the release, the passage's lines see last
+            if (selecting || !still || passage.linkOpened) return@awaitEachGesture
             // A second click selects its word: the book opens when none comes
             val again = withTimeoutOrNull(wait) { awaitFirstDown(requireUnconsumed = false) }
             if (again == null) open() else release(again)?.let { released = it.first.uptimeMillis }

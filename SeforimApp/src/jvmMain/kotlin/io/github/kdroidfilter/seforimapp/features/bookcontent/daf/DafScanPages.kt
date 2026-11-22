@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,7 @@ import org.jetbrains.skia.Data
 import org.jetbrains.skia.ImageInfo
 import java.io.File
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 // Pardes (request 56 of docs/DESKTOP_STAGE2.md): request 42 asked again on 2026-11-14, "שהמעבר בין טקסט לדף יהיה
 // בשבריר שניה", and the recommendations of docs/scan-speed taken on 2026-11-15 ("מה עם ההמלצות של הצגה מהירה").
@@ -101,6 +103,11 @@ class DafScanPages(
     @StructuredScope private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var cutting: Pair<String, Job>? = null
 
+    // A decoding failed, asked again once the moment has passed (request 48 of stage 3); the pages whose cut failed once
+    // and were cut again, at most once a start
+    private var retrying: Job? = null
+    private val failedOnce = HashSet<String>()
+
     private val _revision = MutableStateFlow(0L)
 
     /** Goes up as each page is cut, for the views that wait for one: [image] answers them again. */
@@ -123,6 +130,20 @@ class DafScanPages(
         return cut
     }
 
+    /**
+     * The cut of [scan] as kept beside its pages, when every page is cut; null otherwise. Nothing is begun or cut: with
+     * scans not cut by the user's word, a cut kept whole still shows (request 51 of docs/DESKTOP_STAGE3_PLAN.md).
+     */
+    internal suspend fun whole(scan: File): ScanCut? {
+        val key = scan.absolutePath
+        val kept =
+            withContext(Dispatchers.IO) {
+                synchronized(this@DafScanPages) { cuts[key] }?.takeIf { it.isOf(scan) }
+                    ?: folders.read(scan)
+            }
+        return kept?.takeIf { cut -> cut.heights.all { it > 0 } }?.also { synchronized(this) { cuts[key] = it } }
+    }
+
     /** The page [page] of [scan] as kept in memory, at once; null when it is not. */
     internal fun shownImage(
         scan: File,
@@ -138,7 +159,8 @@ class DafScanPages(
         val file = folders.page(scan, page)
         val image = withContext(Dispatchers.IO) { file.takeIf { it.isFile }?.let { decode(it) } }
         if (image == null) {
-            want(scan, page)
+            // A page cut whose decoding failed (memory, mostly, while pages fly by) is asked again soon, not left blank
+            if (file.isFile) retrySoon() else want(scan, page)
             return null
         }
         synchronized(this) { shown[keyOf(scan, page)] = image }
@@ -184,10 +206,27 @@ class DafScanPages(
     ) {
         synchronized(this) {
             val queue = wanted.getOrPut(scan.absolutePath) { ArrayDeque() }
-            queue.remove(page)
-            queue.addFirst(page)
+            // A page asked again while it waits keeps its place: the pages shown are not shuffled at each page cut
+            if (page !in queue) queue.addFirst(page)
+            // A page whose cut failed is cut once more when it is shown again
+            val cut = cuts[scan.absolutePath]
+            if (cut != null && cut.heights.getOrNull(page) == FAILED && failedOnce.add(keyOf(scan, page))) {
+                cuts[scan.absolutePath] = cut.copy(heights = cut.heights.toMutableList().also { it[page] = 0 })
+            }
         }
         startCutting(scan)
+    }
+
+    // The views that wait for a page told to ask again, once the moment a decoding failed in has passed
+    private fun retrySoon() {
+        synchronized(this) {
+            if (retrying?.isActive == true) return
+            retrying =
+                scope.launch {
+                    delay(RETRY_DELAY)
+                    _revision.update { it + 1 }
+                }
+        }
     }
 
     // The scan's pages cut one after the other, those asked for first: one scan at a time, the one shown last
@@ -298,18 +337,28 @@ class DafScanPages(
 
         private const val FAILED = -1
         private const val WRITE_EVERY = 8
-        private const val KEPT = 12
-        private const val LOAD_FACTOR = 0.75f
 
-        // A PNG decoded into gray, a byte a pixel (6 MB at 2,000 by 3,000), as Skia draws it
+        // The pages kept decoded: two pages side by side at a small zoom show a dozen, and the rows ahead come with them
+        private const val KEPT = 24
+        private const val LOAD_FACTOR = 0.75f
+        private val RETRY_DELAY = 400.milliseconds
+
+        // A PNG decoded into gray, a byte a pixel (6 MB at 2,000 by 3,000), as Skia draws it; its codec and data freed
+        // at once, not by the collector (request 48 of stage 3); null when it cannot be read or its pixels allotted
         internal fun decode(file: File): ImageBitmap? =
             runCatching {
-                val codec = Codec.makeFromData(Data.makeFromBytes(file.readBytes()))
-                val bitmap = Bitmap()
-                bitmap.allocPixels(ImageInfo(codec.width, codec.height, ColorType.GRAY_8, ColorAlphaType.OPAQUE))
-                codec.readPixels(bitmap)
-                bitmap.setImmutable()
-                bitmap.asComposeImageBitmap()
+                Data.makeFromBytes(file.readBytes()).use { data ->
+                    Codec.makeFromData(data).use { codec ->
+                        val bitmap = Bitmap()
+                        if (!bitmap.allocPixels(ImageInfo(codec.width, codec.height, ColorType.GRAY_8, ColorAlphaType.OPAQUE))) {
+                            bitmap.close()
+                            return@runCatching null
+                        }
+                        codec.readPixels(bitmap)
+                        bitmap.setImmutable()
+                        bitmap.asComposeImageBitmap()
+                    }
+                }
             }.getOrNull()
     }
 }

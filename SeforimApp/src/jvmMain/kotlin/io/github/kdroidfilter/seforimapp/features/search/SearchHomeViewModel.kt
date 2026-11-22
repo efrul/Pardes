@@ -15,6 +15,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItems
+import io.github.kdroidfilter.seforimapp.features.search.domain.booksOfAuthorNamed
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceResolver
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.RepositoryReferenceSource
@@ -102,6 +103,8 @@ data class BookSuggestionDto(
     val path: List<String>,
     // Typed as one of its acronyms, whole
     val exactAcronym: Boolean = false,
+    // Pardes: a book of the author the text names, listed after the folders of their name (request 41 of stage 3)
+    val ofAuthor: Boolean = false,
 )
 
 @Immutable
@@ -335,9 +338,11 @@ class SearchHomeViewModel(
                                         async(Dispatchers.IO) {
                                             categoriesNamed(q, limit = MAX_CATEGORY_SUGGESTIONS)
                                         }
+                                    // Pardes: the books of the author the text names, all of them (request 41 of stage 3)
+                                    val authorBooksDeferred = async(Dispatchers.IO) { booksOfAuthorTyped(q) }
 
                                     Suggestions(
-                                        booksDeferred.await(),
+                                        authorBooksDeferred.await().withOthers(booksDeferred.await()),
                                         jumpsDeferred.await(),
                                         authorsDeferred.await(),
                                         categoriesDeferred.await(),
@@ -426,8 +431,22 @@ class SearchHomeViewModel(
                     .take(MAX_ADD_BOOK_SUGGESTIONS)
                     .map { found -> BookSuggestionDto(found, buildCategoryPathTitlesCached(found.categoryId) + found.title) }
             val categories = categoriesNamed(q, limit = MAX_ADD_CATEGORY_SUGGESTIONS)
-            books to categories
+            // Pardes: and the books of the author the text names, all of them (request 41 of stage 3)
+            booksOfAuthorTyped(q).filter { it.book.id != book.id }.withOthers(books) to categories
         }
+
+    // Pardes (request 41 of stage 3): the books of the author [q] names exactly, all of them, base books first
+    private suspend fun booksOfAuthorTyped(q: String): List<BookSuggestionDto> =
+        runSuspendCatching {
+            booksOfAuthorNamed(q, { lookup.suggestAuthors(it, limit = AUTHOR_NAMED_CANDIDATES) }, repository::getAuthorDetails)
+                .map { BookSuggestionDto(it, buildCategoryPathTitlesCached(it.categoryId) + it.title, ofAuthor = true) }
+        }.getOrDefault(emptyList())
+
+    // These books, then [others] not among them
+    private fun List<BookSuggestionDto>.withOthers(others: List<BookSuggestionDto>): List<BookSuggestionDto> {
+        val ids = mapTo(HashSet()) { it.book.id }
+        return this + others.filter { it.book.id !in ids }
+    }
 
     // The TOC entries containing [q], best matches first
     private fun tocMatching(
@@ -472,6 +491,10 @@ class SearchHomeViewModel(
 
     /** Searches in the books of [author], listed to pick one of them instead. */
     fun onPickAuthor(author: AuthorHit) {
+        // Pardes: the name typed is gone from the bar, which skips telling it: the author's books are listed whole, not
+        // those whose titles have it (the user's word, 2026-11-20: "למה פה אין את כל ספריו?"), as applyScopeItems does
+        referenceQuery.value = ""
+        authorBooks = emptyList()
         showAuthor(author, showSuggestions = true)
         viewModelScope.launch {
             val books =
@@ -1052,6 +1075,9 @@ private const val MAX_CATEGORY_SUGGESTIONS = 4
 
 // In a book, the other books and categories offered to add to its search
 private const val MAX_ADD_BOOK_SUGGESTIONS = 5
+
+// Pardes: the authors a text may name exactly, whose books are listed (request 41 of stage 3)
+private const val AUTHOR_NAMED_CANDIDATES = 3
 private const val MAX_ADD_CATEGORY_SUGGESTIONS = 3
 
 // Typed text against a title, both without nikud or quotes (שו"ת / שו״ת)

@@ -1,5 +1,6 @@
 package io.github.kdroidfilter.seforimapp.features.pdf
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,11 +48,14 @@ import dev.nucleusframework.pdfium.PdfReaderState
 import dev.nucleusframework.pdfium.RenderQuality
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Text
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 // Pardes (requests 28 and 41 to 47 of docs/DESKTOP_STAGE2.md): the pages of a PDF one under the other, or two side by
 // side, as a PDF book of the user's and a tractate's scan show them. Its speed is learnt from Otzaria and Zayita
@@ -63,11 +68,21 @@ private const val MOST_DRAWN_PX = 1600
 /** The rows after the first in view whose pages are drawn ahead, at the width they are shown at. */
 internal const val ROWS_AHEAD = 2
 
+/**
+ * The memory the binding keeps drawn pages in, for a PDF book and a scan: a page drawn [MOST_DRAWN_PX] wide takes some
+ * 15 MB, and the binding's own 64 MB let two pages side by side push those in view out while the next were drawn
+ * (request 48 of docs/DESKTOP_STAGE3_PLAN.md).
+ */
+internal const val PAGES_CACHE_BYTES = 160L * 1024 * 1024
+
+/** How long the pages rest before those ahead are drawn: the binding cannot call a drawing back once asked. */
+private val PREFETCH_REST = 150.milliseconds
+
 /** The space between two pages, one under the other or side by side. */
-private val PAGE_GAP = 8.dp
+internal val PAGE_GAP = 8.dp
 
 /** The height of a page's title above it, as the daf's amudim have theirs. */
-private val PAGE_TITLE_HEIGHT = 36.dp
+internal val PAGE_TITLE_HEIGHT = 36.dp
 
 /**
  * The rows of [pages] pages: a page each, or with [spreads] two side by side as a book read right to left opens, the
@@ -98,8 +113,10 @@ internal fun spreadPageWidth(room: Dp): Dp = (room - PAGE_GAP) / 2
  * [reader]'s pages in rows ([PageRows]), each page [pageWidth] wide, each under its [title] when one is given; their
  * text selectable when [selectableText]. A page wider than [MOST_DRAWN_PX] pixels is drawn at that width and scaled up,
  * and the pages of the [ROWS_AHEAD] rows after the first in view are drawn ahead of time, at their width, so that a
- * page scrolled to is mostly drawn already.
+ * page scrolled to is mostly drawn already. The pages are [count] from the page [first] (a tractate's in a file of
+ * several, request 52 of docs/DESKTOP_STAGE3_PLAN.md); the rows and titles count from it.
  */
+@OptIn(FlowPreview::class)
 @Composable
 internal fun PdfPageList(
     reader: PdfReaderState,
@@ -109,28 +126,49 @@ internal fun PdfPageList(
     spreads: Boolean = false,
     selectableText: Boolean = true,
     title: ((page: Int) -> String)? = null,
+    first: Int = 0,
+    count: Int = reader.pageCount,
+    marks: Map<Int, List<PageMark>> = emptyMap(),
 ) {
-    val pages = reader.pageCount
+    val pages = count
     val rows = rowCount(pages, spreads)
     val drawnPx = with(LocalDensity.current) { pageWidth.roundToPx() }.coerceAtMost(MOST_DRAWN_PX)
-    LaunchedEffect(reader, drawnPx, spreads) {
+    // Once the pages rest, the rows ahead in the way they moved (one with two pages a row): a scroll that flies by
+    // asked for every row it passed, and the binding drew them all before the pages in view (request 48)
+    LaunchedEffect(reader, drawnPx, spreads, first, count) {
+        var last = listState.firstVisibleItemIndex
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
+            .debounce(PREFETCH_REST)
             .collect { first ->
-                for (row in first + 1..minOf(first + ROWS_AHEAD, rows - 1)) {
-                    pagesOf(row, pages, spreads).forEach { page -> reader.prefetch(page, drawnPx, RenderQuality.FULL) }
+                val ahead = if (spreads) 1 else ROWS_AHEAD
+                val rowsAhead = if (first >= last) first + 1..first + ahead else first - 1 downTo first - ahead
+                last = first
+                for (row in rowsAhead.filter { it in 0 until rows }) {
+                    pagesOf(row, pages, spreads).forEach { page -> reader.prefetch(first + page, drawnPx, RenderQuality.FULL) }
                 }
             }
     }
+    // In the dark theme, its text on its panel (request 42 of docs/DESKTOP_STAGE3_PLAN.md)
+    val colors = rememberPageColors()
     PageRows(pages, listState, pageWidth, modifier, spreads, title) { page, width ->
-        PdfPage(reader, page, Modifier.width(width).drawnAtMost(MOST_DRAWN_PX), selectableText = selectableText)
+        // The find's marks over the page, outside its colours (request 48 of stage 3)
+        Box(Modifier.width(width).findMarks(marks[first + page])) {
+            PdfPage(
+                reader,
+                first + page,
+                Modifier.width(width).pageColors(colors).drawnAtMost(MOST_DRAWN_PX),
+                selectableText = selectableText,
+            )
+        }
     }
 }
 
 /**
  * [pages] pages in rows ([rowCount], the items of [listState]), each [pageWidth] wide and drawn by [page], centered in
  * a list as wide as the view (wider rows scroll sideways), each under its [title] when one is given: a PDF's pages
- * drawn by its reader ([PdfPageList]), or a tractate's scan from its pages cut into images.
+ * drawn by its reader ([PdfPageList]), or a tractate's scan from its pages cut into images. While the pointer zooms
+ * them, the point under it stays where it is ([ZoomPivot], request 44 of docs/DESKTOP_STAGE3_PLAN.md).
  */
 @Composable
 internal fun PageRows(
@@ -144,11 +182,28 @@ internal fun PageRows(
 ) {
     val rows = rowCount(pages, spreads)
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    val density = LocalDensity.current
+    val pivot = remember { ZoomPivot() }
+    val anchor = remember { ZoomAnchor() }
+    BoxWithConstraints(modifier.fillMaxSize().zoomPivot(pivot)) {
         // Narrower than the view, the pages are centered in a list as wide as it, which the wheel scrolls anywhere
         val rowWidth = if (spreads) pageWidth * 2 + PAGE_GAP else pageWidth
         val listWidth = max(maxWidth, rowWidth)
-        Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
+        val widthPx = with(density) { pageWidth.toPx() }
+        // Kept as the pages zoom, at the point under the pointer while it zooms them
+        val sideways =
+            remember(widthPx, spreads) {
+                val view = constraints.maxWidth.toFloat()
+                val pointer = pivot.now()?.let { if (rtl) view - it.x else it.x }
+                val gap = with(density) { PAGE_GAP.toPx() }
+                ScrollState(anchor.keepSideways(anchor.sideways, widthPx, view, pointer) { rowParts(it, gap, spreads) })
+            }
+        val titlePx = if (title != null) with(density) { PAGE_TITLE_HEIGHT.toPx() } else 0f
+        SideEffect {
+            anchor.sideways = sideways
+            anchor.keepDown(listState, widthPx, titlePx, pivot.now())
+        }
+        Box(Modifier.fillMaxSize().horizontalScroll(sideways)) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.width(listWidth).fillMaxHeight(),
@@ -172,6 +227,22 @@ internal fun PageRows(
         }
     }
 }
+
+// A row's parts across the view: a page [width] pixels wide, or two with a [gap] between them
+private fun rowParts(
+    width: Float,
+    gap: Float,
+    spreads: Boolean,
+): List<RowPart> =
+    if (spreads) {
+        listOf(
+            RowPart(width, scales = true),
+            RowPart(gap, scales = false),
+            RowPart(width, scales = true),
+        )
+    } else {
+        listOf(RowPart(width, scales = true))
+    }
 
 /** The pages of [row] ([rowCount]). */
 internal fun pagesOf(
@@ -233,8 +304,8 @@ internal fun Modifier.drawnAtMost(px: Int): Modifier =
     }
 
 /**
- * A key over the [rows] of pages: Page Up and Down move most of a view, Ctrl + Home and End go to the first and last
- * row.
+ * A key over the [rows] of pages: Page Up and Down move most of a view, the arrows up and down a little of it (request
+ * 45 of docs/DESKTOP_STAGE3_PLAN.md), Ctrl + Home and End go to the first and last row.
  */
 internal fun pageListKey(
     event: KeyEvent,
@@ -247,6 +318,8 @@ internal fun pageListKey(
     when {
         event.key == Key.PageDown -> scope.launch { listState.turnPage(forward = true) }
         event.key == Key.PageUp -> scope.launch { listState.turnPage(forward = false) }
+        event.key == Key.DirectionDown -> scope.launch { listState.step(forward = true) }
+        event.key == Key.DirectionUp -> scope.launch { listState.step(forward = false) }
         ctrl && event.key == Key.MoveHome -> scope.launch { listState.scrollToItem(0) }
         ctrl && event.key == Key.MoveEnd -> scope.launch { listState.scrollToItem((rows - 1).coerceAtLeast(0)) }
         else -> return false
@@ -259,5 +332,13 @@ internal suspend fun LazyListState.turnPage(forward: Boolean) {
     animateScrollBy((if (forward) 1 else -1) * layoutInfo.viewportSize.height * PAGE_STEP)
 }
 
+/** Scrolls a little of a view down ([forward]) or up, as an arrow does. */
+private suspend fun LazyListState.step(forward: Boolean) {
+    animateScrollBy((if (forward) 1 else -1) * layoutInfo.viewportSize.height * ARROW_STEP)
+}
+
 /** A page key moves this much of the view, as the text's. */
 private const val PAGE_STEP = 0.9f
+
+/** An arrow moves this much of the view. */
+private const val ARROW_STEP = 0.15f

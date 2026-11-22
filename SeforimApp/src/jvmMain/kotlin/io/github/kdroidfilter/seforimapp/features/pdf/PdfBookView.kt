@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -93,7 +94,7 @@ internal fun PdfBookView(
 ) {
     val appSettings = LocalAppGraph.current.appSettings
     val store = LocalAppGraph.current.pdfBookStore
-    val reader = rememberPdfReaderState()
+    val reader = rememberPdfReaderState(cacheBytes = PAGES_CACHE_BYTES)
     var failure by remember(file) { mutableStateOf<String?>(null) }
     var opened by remember(file) { mutableStateOf(false) }
     LaunchedEffect(file) {
@@ -140,7 +141,7 @@ internal fun PdfBookView(
             spreads = spreads,
             goTo = inTab,
             zoom = zoom.takeIf { inTab },
-            onZoom = appSettings::zoomDaf,
+            onZoom = appSettings::setDafZoom,
             actions = actions,
         )
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -148,7 +149,12 @@ internal fun PdfBookView(
                 !file.isFile -> Text(stringResource(Res.string.pdf_book_missing, file.path), Modifier.padding(16.dp))
                 error != null -> Text(stringResource(Res.string.pdf_book_failed, error), Modifier.padding(16.dp))
                 !opened -> CircularProgressIndicator()
-                else -> PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::zoomDaf)
+                else -> {
+                    // Its find, Ctrl/Cmd+F as a book's (request 48 of docs/DESKTOP_STAGE3_PLAN.md)
+                    val find = remember(reader) { PdfFind() }
+                    PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::setDafZoom, marks = find.marks)
+                    PdfFindBar(find, reader, tabId, listState, spreads, Modifier.align(Alignment.TopEnd))
+                }
             }
         }
     }
@@ -166,6 +172,7 @@ private fun PdfPages(
     spreads: Boolean,
     zoom: Float,
     onZoom: (Float) -> Unit,
+    marks: Map<Int, List<PageMark>> = emptyMap(),
 ) {
     val keys = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -179,6 +186,11 @@ private fun PdfPages(
             animate = LocalTabSelected.current,
         )
     val rows = rowCount(reader.pageCount, spreads)
+    // A page's height over its width, for a whole page in the view (request 63 of stage 3)
+    val aspect by produceState<Float?>(null, reader) {
+        value = runSuspendCatching { reader.pageSize(0)?.let { it.heightPoints / it.widthPoints } }.getOrNull()
+    }
+    val whole = rememberWholePage()
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -187,8 +199,9 @@ private fun PdfPages(
             .onPreviewKeyEvent { event -> pageListKey(event, listState, scope, rows) }
             .focusable(),
     ) {
-        val base = if (spreads) spreadPageWidth(maxWidth) else maxWidth
-        PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads)
+        val share = if (spreads) spreadPageWidth(maxWidth) else maxWidth
+        val base = fittedPageWidth(share.value, maxHeight.value, aspect, whole, around = (PAGE_GAP * 2).value).dp
+        PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads, marks = marks)
     }
     LaunchedEffect(Unit) { keys.requestFocus() }
 }

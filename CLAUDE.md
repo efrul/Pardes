@@ -108,8 +108,8 @@ The app is multi-window (Chrome-style tabs + drag & drop between windows). A vir
 desktop = a user-curated set of tabs in 1..n windows; several desktops can be open at
 once, each in its own window(s). `DesktopManager` owns desktops/windows; each
 `OpenWindow` carries a window-scoped `TabsViewModel` + `SearchHomeViewModel` and its
-`WindowState` (geometry persisted & restored). `TabDockManager` handles cross-window
-tab drag & drop. See `TAB_SYSTEM_README.md`.
+`WindowState` (geometry persisted & restored). Nucleus's `TabWorkspace` handles cross-window
+tab drag & drop (`DesktopManager.linkWorkspaces`). See `TAB_SYSTEM_README.md`.
 
 ### Open Core: the Smart Siddur
 The smart siddur (סידור חכם) is proprietary, in the official builds only. Its logic and texts are the private
@@ -139,10 +139,10 @@ Pardes builds only the community edition: the siddur, semantic search and quote 
 ### Memory-Efficient Tab System
 See `TAB_SYSTEM_README.md` for complete details. Key points:
 - Each tab owns its own `SimpleTabViewModelOwner` (ViewModel lifecycle), which stays alive while the tab exists
-- `TabStateManager` persists lightweight state for cold-boot restoration
+- `TabPersistedStateStore` holds each tab's saved state (`TabPersistedState`) for cold-boot restoration
 - `TabsViewModel` manages tab lifecycle (create/select/close/replace)
-- Use `TabAwareViewModel` base class for screens needing state persistence
-- `TabsContent` renders without Compose Navigation and keeps an LRU of up to `MAX_RETAINED_TAB_COMPOSITIONS` (3) tab compositions; others are torn down and rebuilt from saved state on switch
+- Screens restore from their tab's `TabPersistedState` (book, search, siddur), which their ViewModels keep up to date
+- `TabsContent` renders without Compose Navigation; every tab of the window stays composed (its ViewModels hot), and only the selected one is measured and placed
 
 ### Dependency Injection (Metro)
 - App-wide graph: `AppGraph` created with `createGraph<AppGraph>()`
@@ -171,23 +171,23 @@ See `TAB_SYSTEM_README.md` for complete details. Key points:
 ## Key Technologies & Dependencies
 
 ### Frontend Stack
-- **Compose Multiplatform**: UI framework (v1.9.2)
-- **Jewel**: JetBrains desktop UI theme (v0.31.0-252.27409)
-- **Lifecycle**: AndroidX Lifecycle ViewModel + Runtime (v2.9.5)
-- **Navigation**: AndroidX Navigation Compose (v2.9.1)
-- **Paging**: AndroidX Paging 3 for large datasets (v3.3.6)
+- **Compose Multiplatform**: UI framework (v1.12.1)
+- **Jewel**: JetBrains desktop UI theme (v0.41.0-262.10968.63)
+- **Lifecycle**: AndroidX Lifecycle ViewModel + Runtime (v2.10.0)
+- **Navigation**: AndroidX Navigation Compose (v2.9.2)
+- **Paging**: AndroidX Paging 3 for large datasets (v3.5.1)
 
 ### Backend & Data
-- **SQLDelight**: Type-safe SQL code generation (v2.1.0)
-- **Ktor**: HTTP client for network requests (v3.3.1)
-- **Lucene**: Full-text search indexing (v10.3.1)
-- **JSoup**: HTML parsing for content processing (v1.21.2)
+- **SQLDelight**: Type-safe SQL code generation (v2.3.2)
+- **Ktor**: HTTP client for network requests (v3.6.0)
+- **Lucene**: Full-text search indexing (v10.5.2)
+- **JSoup**: HTML parsing for content processing (v1.23.2)
 
 ### Development & Tooling
-- **Kotlin**: v2.2.21 with multiplatform support
-- **Metro**: Dependency injection framework (v0.7.2)
-- **Hot Reload**: Fast development iteration (v1.0.0-rc02)
-- **BuildConfig**: Build-time configuration (v5.7.0)
+- **Kotlin**: v2.4.20 with multiplatform support
+- **Metro**: Dependency injection framework (v1.4.5)
+- **Hot Reload**: Fast development iteration (v1.2.0)
+- **BuildConfig**: Build-time configuration (v6.1.2)
 - **ktlint**: Code style checking and formatting
 - **detekt**: Static code analysis
 
@@ -210,9 +210,9 @@ See `TAB_SYSTEM_README.md` for complete details. Key points:
 - **Example**: `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/SampleTest.kt`
 
 ### State Management
-- **Tab State**: Use `TabAwareViewModel` + `saveState()`/`getState()` for restoration
+- **Tab State**: Keep it in the tab's `TabPersistedState` (`TabPersistedStateStore.update`), restored at cold boot
 - **Global State**: Avoid; prefer dependency injection and proper component lifecycle
-- **RAM Optimization**: Built-in; only the selected tab plus an LRU of `MAX_RETAINED_TAB_COMPOSITIONS` (3) compositions are kept active (`TabsContent`)
+- **RAM**: Every tab of a window stays composed, its ViewModels hot; only the selected tab is measured and placed (`TabsContent`), so the cost grows with the number of open tabs
 
 ### Security & Configuration
 - **Secrets**: Never commit to repository; use `local.properties` for machine-specific settings
@@ -255,23 +255,21 @@ val viewModel = remember(appGraph, destination) {
 ```kotlin
 class MyViewModel(
     savedStateHandle: SavedStateHandle,
-    stateManager: TabStateManager
-) : TabAwareViewModel(
-    tabId = savedStateHandle.get<String>("tabId") ?: "",
-    stateManager = stateManager
-) {
-    private val _myState = MutableStateFlow(getState<String>("myState") ?: "")
-    
+    private val tabPersistedStateStore: TabPersistedStateStore,
+) : ViewModel() {
+    private val tabId = savedStateHandle.get<String>("tabId") ?: ""
+    private val _myState = MutableStateFlow(tabPersistedStateStore.get(tabId)?.search?.query.orEmpty())
+
     fun updateState(newValue: String) {
         _myState.value = newValue
-        saveState("myState", newValue)
+        tabPersistedStateStore.update(tabId) { it.copy(search = (it.search ?: SearchPersistedState()).copy(query = newValue)) }
     }
 }
 ```
 
 ### Performance
 - **Hot Reload**: Use `hotRunJvm` + `reload` for fast iteration
-- **Memory**: Bounded by design — at most the selected tab + 3 retained compositions stay active regardless of open tab count
+- **Memory**: Every open tab stays composed; only the selected one is laid out and drawn, so switching back is instant
 - **Large Datasets**: Leverage Paging 3 for efficient data loading
 
 ## File Locations Reference

@@ -72,6 +72,8 @@ internal fun normalizeQueryForHebrew(raw: String): String {
     s = s.replace("[\u05B0\u05B1\u05B2\u05B3\u05B4\u05B5\u05B6\u05B7\u05B8\u05B9\u05BB\u05BC\u05BD\u05C1\u05C2\u05C7]".toRegex(), "")
     // Replace maqaf with space and remove gershayim/geresh
     s = s.replace('\u05BE', ' ')
+    // Pardes: a paseq parts words as a maqaf does, and a run of spaces is one, as in the text (wordBreaksAsSpaces)
+    s = s.replace('\u05C0', ' ').replace(WORD_BREAKS, " ")
     s = s.replace("\u05F4", "").replace("\u05F3", "")
     // Normalize Hebrew final letters (sofit) to base forms
     s = replaceFinalsWithBase(s)
@@ -144,7 +146,8 @@ internal fun findAllMatchesNormalized(
 ): List<IntRange> {
     if (q.length < 2) return emptyList()
 
-    val (plain, map) = stripDiacriticsWithMap(text)
+    // Pardes: the text's maqaf and paseq as the query's space (request 55 of stage 3)
+    val (plain, map) = wordBreaksAsSpaces(stripDiacriticsWithMap(text))
     val plainSearch = replaceFinalsWithBase(plain).lowercase()
 
     val out = mutableListOf<IntRange>()
@@ -159,3 +162,37 @@ internal fun findAllMatchesNormalized(
     }
     return out
 }
+
+// Pardes (request 55 of docs/DESKTOP_STAGE3_PLAN.md): the find missed half the "כה אמר" of Isaiah, written כֹּה־אָמַר and
+// כֹּה&thinsp;׀ אָמַר, as the query's maqaf is a space and the text's was not.
+
+/**
+ * [stripped] (a text and its index map, as [stripDiacriticsWithMap] gives them) with each run of what parts two words,
+ * spaces of any width, a maqaf or a paseq, as one space mapped to the run's first character: the query's are one
+ * space too ([normalizeQueryForHebrew]), so כה אמר finds כֹּה־אָמַר and כֹּה ׀ אָמַר, highlighted on their own letters.
+ */
+private fun wordBreaksAsSpaces(stripped: Pair<String, IntArray>): Pair<String, IntArray> {
+    val (plain, map) = stripped
+    val out = StringBuilder(plain.length)
+    val outMap = IntArray(plain.length)
+    var count = 0
+    var changed = false
+    for (i in plain.indices) {
+        val ch = plain[i]
+        val breaks = ch.isWhitespace() || ch == MAQAF || ch == PASEQ
+        if (breaks && count > 0 && out[count - 1] == ' ') {
+            changed = true
+            continue
+        }
+        if (breaks && ch != ' ') changed = true
+        out.append(if (breaks) ' ' else ch)
+        outMap[count++] = map[i]
+    }
+    return if (changed) out.toString() to outMap.copyOf(count) else stripped
+}
+
+private const val MAQAF = '\u05BE'
+private const val PASEQ = '\u05C0'
+
+// A run of spaces of any width, in a query
+private val WORD_BREAKS = Regex("\\s+")

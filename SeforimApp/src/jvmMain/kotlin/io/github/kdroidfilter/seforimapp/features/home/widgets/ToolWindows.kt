@@ -108,6 +108,10 @@ internal fun DefaultToolWindow(
     val reopened = LocalAppGraph.current.toolWindows.reopened[tool.id] ?: 0
     val title = stringResource(tool.title)
     val windowState = rememberWindowState(position = WindowPosition(Alignment.Center), size = tool.toolWindowSize!!)
+    // A minimized window draws no frame, so the effect inside it waits: brought back from here, it draws again
+    LaunchedEffect(reopened) {
+        if (reopened > 0) windowState.isMinimized = false
+    }
     with(LocalNucleusApplicationScope.current) {
         JewelDecoratedWindow(
             onCloseRequest = onClose,

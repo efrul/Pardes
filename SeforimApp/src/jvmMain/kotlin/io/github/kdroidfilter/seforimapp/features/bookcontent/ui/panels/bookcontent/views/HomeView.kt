@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,12 +92,14 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.decodeLayout
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
 import io.github.kdroidfilter.seforimapp.features.pdf.myPdfBookSuggestions
 import io.github.kdroidfilter.seforimapp.features.pdf.pdfIdOf
+import io.github.kdroidfilter.seforimapp.features.search.NextSearchModeSwitch
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ResolvedReference
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoSettings
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
@@ -141,6 +144,8 @@ internal data class BookSuggestion(
     val book: BookModel,
     val path: List<String>,
     val exactAcronym: Boolean = false,
+    // Pardes: a book of the author the text names (request 41 of stage 3)
+    val ofAuthor: Boolean = false,
 )
 
 /** A row of the book-stage list; see [catBookRows] for their order. */
@@ -178,6 +183,8 @@ internal sealed interface CatBookRow {
  * before the categories and the acronyms named so too (`רשי`, `מהרשא`): Tab on the name typed lists the author's books.
  * The base books whose titles the text begins come right after the text search (`שמואל`: שמואל א, שמואל ב), before
  * the other authors and categories, when they are few ([MAX_BEGUN_BOOKS]): a text that begins many names none of them.
+ * Pardes: the books of the author named as typed ([BookSuggestion.ofAuthor]), all of them, come right after the
+ * categories named so (`רמבן`: his folders, then his books; request 41 of docs/DESKTOP_STAGE3_PLAN.md).
  */
 internal fun catBookRows(
     query: String,
@@ -190,12 +197,13 @@ internal fun catBookRows(
     textSearchFirst: Boolean = false,
 ): ImmutableList<CatBookRow> {
     val key = query.searchKey()
+    val (authorBooks, listedBooks) = books.partition { it.ofAuthor }
     val (exactCategories, otherCategories) = categories.partition { it.title.searchKey() == key }
     val (exactAuthors, otherAuthors) =
         authors.partition { author ->
             listOfNotNull(author.name, AuthorNames.display(author.name), author.alias).any { it.searchKey() == key }
         }
-    val (namedBooks, otherBooks) = books.partition { it.exactAcronym || it.book.title.searchKey() == key }
+    val (namedBooks, otherBooks) = listedBooks.partition { it.exactAcronym || it.book.title.searchKey() == key }
     val (titledBooks, acronymBooks) = namedBooks.partition { it.book.title.searchKey() == key }
     val typedTitle =
         otherBooks.firstOrNull()?.takeIf { book ->
@@ -215,6 +223,7 @@ internal fun catBookRows(
         typedTitle?.let { add(CatBookRow.Book(it)) }
         (exactAuthors + bookAuthors).mapTo(this) { CatBookRow.Author(it) }
         exactCategories.mapTo(this) { CatBookRow.Category(it) }
+        authorBooks.mapTo(this) { CatBookRow.Book(it) }
         acronymBooks.mapTo(this) { CatBookRow.Book(it) }
         if (textSearch && !textSearchFirst) add(CatBookRow.TextSearch)
         begunBooks.mapTo(this) { CatBookRow.Book(it) }
@@ -232,7 +241,8 @@ private const val MAX_BEGUN_BOOKS = 5
 
 /**
  * In a book, the other books and categories [query] names, to add to its search: the categories named exactly as typed
- * first (`משנה תורה`: the category, before the books whose titles begin so), then the books, then the other categories.
+ * first (`משנה תורה`: the category, before the books whose titles begin so), then the books (the author's named so
+ * first, request 41 of stage 3), then the other categories.
  */
 internal fun tocAddRows(
     query: String,
@@ -426,8 +436,14 @@ private fun HomeBody(
         remember(userLocation, community, appSettings) {
             HomeWidgetsState(userLocation, community, HomeWidgetsLayout(appSettings))
         }
+    // Pardes: the big name above the search bar, shown or hidden (request 67 of stage 3)
+    val logoShown by appSettings.flow(HomeLogoSettings.shown).collectAsState()
     val tabs = LocalOpenWindow.current.tabsViewModel
-    SideEffect { widgetsState.openTab = tabs::openTab }
+    // Pardes: a card's book opens in place of the Home while it is the tab selected, as the page's tree, search and
+    // catalog open theirs (request 72 of stage 3: "פתיחת ספר ממסך הבית משאירה את כרטיסיית הבית פתוחה"); from a card's own
+    // window over another tab, in a new tab
+    val homeSelected by rememberUpdatedState(LocalTabSelected.current)
+    SideEffect { widgetsState.openTab = { if (homeSelected) tabs.replaceCurrentTabWithNewTabId(it) else tabs.openTab(it) } }
     if (E2e.enabled && LocalTabSelected.current) SideEffect { E2e.homeWidgets = widgetsState }
     // Composed here, outside the page, so a card's window doesn't depend on the page's composition
     val widgetsLayoutRaw by appSettings.homeWidgetsLayoutFlow.collectAsState()
@@ -460,14 +476,17 @@ private fun HomeBody(
                     ) {
                         // Scrolls with the page instead of floating over the widgets
                         FullWidthSection(gapAfter = 4.dp) { CatalogRow(onEvent = onEvent) }
-                        FullWidthSection(gapAfter = 4.dp) {
-                            BoxWithConstraints(
-                                Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                // Scale logo width proportionally; height follows the image aspect ratio
-                                val logoWidth = (maxWidth * 0.50f).coerceIn(320.dp, 450.dp)
-                                LogoImage(modifier = Modifier.width(logoWidth))
+                        // Pardes: the big name hidden by the setting of Settings › תצוגה (request 67 of stage 3)
+                        if (logoShown) {
+                            FullWidthSection(gapAfter = 4.dp) {
+                                BoxWithConstraints(
+                                    Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    // Scale logo width proportionally; height follows the image aspect ratio
+                                    val logoWidth = (maxWidth * 0.50f).coerceIn(320.dp, 450.dp)
+                                    LogoImage(modifier = Modifier.width(logoWidth))
+                                }
                             }
                         }
                         FullWidthSection(gapAfter = 4.dp) {
@@ -476,7 +495,12 @@ private fun HomeBody(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Box(homeContentModifier) {
-                                    UnifiedSearchBar(searchUi = searchUi, searchCallbacks = searchCallbacks)
+                                    UnifiedSearchBar(
+                                        searchUi = searchUi,
+                                        searchCallbacks = searchCallbacks,
+                                        // Pardes: the next searches by meaning or not, at the bar's end (request 54 of stage 3)
+                                        trailing = { NextSearchModeSwitch() },
+                                    )
                                 }
                             }
                         }
@@ -511,6 +535,8 @@ internal fun UnifiedSearchBar(
     onTextChange: (String) -> Unit = {},
     // Pardes: the main field's focus, for the results page to come back to it once a tab is picked
     focusRequester: FocusRequester? = null,
+    // Pardes: at the field's end, after its clear button: the search by meaning's toggle (request 54 of stage 3)
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     // Keep state outside the sections so it persists across their recompositions
     val scope = rememberCoroutineScope()
@@ -603,7 +629,7 @@ internal fun UnifiedSearchBar(
     val mappedBookSuggestionsForBar =
         searchUi.bookSuggestions
             .map { bs ->
-                BookSuggestion(bs.book, bs.path, bs.exactAcronym)
+                BookSuggestion(bs.book, bs.path, bs.exactAcronym, bs.ofAuthor)
             }.toImmutableList()
     // Pardes: the user's PDF books the text names, before the library's other books (request 54)
     val barBookSuggestions = (myPdfBookSuggestions(referenceSearchState.text) + mappedBookSuggestionsForBar).toImmutableList()
@@ -691,6 +717,7 @@ internal fun UnifiedSearchBar(
         onGlobalExtendedChange = { searchCallbacks.onGlobalExtendedChange(it) },
         isBookLoading = searchUi.isReferenceLoading && !isTocInTopBar,
         isTocLoading = searchUi.isTocLoading && isTocInTopBar,
+        trailing = trailing,
         // Tab on a book: the bar's book if it is the first, else one more searched with the others
         onPickBook = { picked ->
             // Pardes: a PDF book of the user's has no text to search in, and Tab opens it (request 54)
@@ -862,6 +889,9 @@ private fun SuggestionsPanel(
                     // Scroll up when at first visible
                     val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
                     if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
+                } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
+                    // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
+                    listState.scrollToItem(focusedIndex)
                 }
             }
         }
@@ -1037,6 +1067,9 @@ private fun TocSuggestionsPanel(
             } else if (firstVisible != null && focusedIndex == firstVisible) {
                 val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
                 if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
+            } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
+                // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
+                listState.scrollToItem(focusedIndex)
             }
         }
     }
@@ -1162,9 +1195,10 @@ private fun textSearchLabel(
         else -> stringResource(Res.string.search_text_row, query)
     }
 
-// A category's suggestion in its base books alone says so, beside the same category whole
+// A category's suggestion in its base books alone says so, beside the same category whole. Pardes: internal, as
+// [SuggestionRow], for a study plan's field (request 64 of stage 3).
 @Composable
-private fun baseBooksDetail(hit: CategoryHit): String? =
+internal fun baseBooksDetail(hit: CategoryHit): String? =
     if (hit.baseBooksOnly) stringResource(Res.string.category_base_books_only) else null
 
 /** A book's or category's name on its chip; a category in its base books alone is marked (`תלמוד (ספרי יסוד)`). */
@@ -1176,8 +1210,9 @@ private fun ScopeItem.chipLabel(): String =
  * Collapses adjacent breadcrumb segments when the next segment strictly extends
  * the previous by a common separator (comma/space/colon/dash). This keeps
  * suggestions concise while preserving the most specific path.
+ * Pardes: internal, as [SuggestionRow], for a study plan's field (request 64 of stage 3).
  */
-private fun dedupAdjacent(parts: List<String>): List<String> {
+internal fun dedupAdjacent(parts: List<String>): List<String> {
     if (parts.isEmpty()) return parts
 
     fun extends(
@@ -1267,7 +1302,7 @@ private fun String.withBold(part: String?): AnnotatedString {
 }
 
 /** What a suggestion row leads to, shown by its icon. */
-private enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK, CATEGORY }
+internal enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK, CATEGORY }
 
 // A chip of a book or category picked in the bar: several fit beside the text
 private val SCOPE_CHIP_MAX_WIDTH = 160.dp
@@ -1288,8 +1323,9 @@ private fun SuggestionIcon(kind: SuggestionKind) {
     }
 }
 
+// Pardes: internal, shared with a study plan's field of books and categories (request 64 of stage 3)
 @Composable
-private fun SuggestionRow(
+internal fun SuggestionRow(
     parts: List<String>,
     onClick: () -> Unit,
     kind: SuggestionKind,
@@ -1457,6 +1493,8 @@ private fun SearchBar(
     // Loading flags for predictive lists
     isBookLoading: Boolean = false,
     isTocLoading: Boolean = false,
+    // Pardes: at the field's end, after its clear button (request 54 of stage 3)
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     // Suggestion state is shared across all tabs via the single SearchHomeViewModel, but every
     // open tab stays composed. A Popup renders in its own window and escapes the layout(0,0) trick
@@ -1820,7 +1858,9 @@ private fun SearchBar(
                                 if (ev.type == KeyEventType.KeyDown) {
                                     val total = if (isTocMode) totalTocRows else totalCatBook
                                     val step = if (ev.key == Key.DirectionDown) 1 else -1
-                                    if (total > 0) focusedIndex = (focusedIndex + step).coerceIn(0, total - 1)
+                                    // Pardes: round from the last row to the first and back, as every popup of the app,
+                                    // up from none the last (2026-11-20)
+                                    if (total > 0) focusedIndex = (focusedIndex.coerceAtLeast(if (step > 0) -1 else 0) + step).mod(total)
                                 }
                                 true
                             }
@@ -1906,16 +1946,20 @@ private fun SearchBar(
             },
             // Clears the typed text, keeping the picked book
             trailingIcon = {
-                if (state.text.isNotEmpty()) {
-                    Icon(
-                        AllIconsKeys.Actions.Close,
-                        stringResource(Res.string.search_clear),
-                        Modifier
-                            .clickable {
-                                state.clearText()
-                                effectiveFocusRequester.requestFocus()
-                            }.pointerHoverIcon(PointerIcon.Hand),
-                    )
+                // Pardes: the caller's own after the clear button, in a row with it (request 54 of stage 3)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (state.text.isNotEmpty()) {
+                        Icon(
+                            AllIconsKeys.Actions.Close,
+                            stringResource(Res.string.search_clear),
+                            Modifier
+                                .clickable {
+                                    state.clearText()
+                                    effectiveFocusRequester.requestFocus()
+                                }.pointerHoverIcon(PointerIcon.Hand),
+                        )
+                    }
+                    trailing?.invoke()
                 }
             },
             leadingIcon = {
@@ -2067,9 +2111,9 @@ private fun SearchBar(
     }
 }
 
-/** One thing a suggestion row does: its keys (`↵`, `Tab`) and what they do. */
+/** One thing a suggestion row does: its keys (`↵`, `Tab`) and what they do. Pardes: internal, as [SuggestionRow]. */
 @Immutable
-private class RowAction(
+internal class RowAction(
     val keys: String,
     val label: String,
     val onClick: () -> Unit,

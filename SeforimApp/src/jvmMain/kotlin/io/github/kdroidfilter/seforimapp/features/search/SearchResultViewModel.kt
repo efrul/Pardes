@@ -35,11 +35,15 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.ResultsIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.ResultsIndexingUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntityFinder
+import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
+import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchStatePersistenceUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchTocUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocLineIndex
 import io.github.kdroidfilter.seforimapp.features.search.domain.TocTree
+import io.github.kdroidfilter.seforimapp.features.search.domain.defaultSearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.fartherLinesOf
+import io.github.kdroidfilter.seforimapp.features.search.domain.takeSearchMode
 import io.github.kdroidfilter.seforimapp.features.search.semantic.MeaningFacets
 import io.github.kdroidfilter.seforimapp.features.search.semantic.SessionViews
 import io.github.kdroidfilter.seforimapp.features.search.semantic.otherTabCategories
@@ -114,6 +118,8 @@ data class SearchUiState(
     val catalogOrder: Boolean = false,
     // In that order: how many lines found by meaning alone, less close, the list leaves out
     val fartherLines: Int = 0,
+    // Pardes: how the text is searched (request 54 of stage 3)
+    val searchMode: SearchMode = SearchMode.HYBRID,
     val baseBooksHadNoResults: Boolean = false,
     val isLoading: Boolean = false,
     val results: List<SearchResult> = emptyList(),
@@ -164,8 +170,15 @@ class SearchResultViewModel(
 
     private fun persistedSearchState(): SearchPersistedState = persistedStore.get(tabId)?.search ?: SearchPersistedState()
 
-    // The engine, its sessions in the library's order while the tab asks for it
-    private val lucene: SearchEngine = CatalogOrderEngine(engine, libraryCategories::bookOrder) { persistedSearchState().catalogOrder }
+    // Pardes: the search by meaning installed, which hybrid needs (request 54 of stage 3)
+    private val meaningInstalled by lazy { InstalledPack.read(LibraryLocation.currentDir(appSettings)) is InstalledPack.InUse }
+
+    // Pardes: the tab's search mode, else the one a new search takes (request 54 of stage 3)
+    private fun searchMode(): SearchMode = persistedSearchState().searchMode ?: appSettings.defaultSearchMode(meaningInstalled)
+
+    // The engine, in the tab's search mode, its sessions in the library's order while the tab asks for it
+    private val lucene: SearchEngine =
+        CatalogOrderEngine(SearchModeEngine(engine, ::searchMode), libraryCategories::bookOrder) { persistedSearchState().catalogOrder }
 
     private fun updatePersistedSearch(transform: (SearchPersistedState) -> SearchPersistedState) {
         persistedStore.update(tabId) { current ->
@@ -287,6 +300,11 @@ class SearchResultViewModel(
             val catalogOrder: Boolean,
         ) : SearchResultEvents()
 
+        // Pardes: the text searched exact, general or hybrid (request 54 of stage 3)
+        data class SetSearchMode(
+            val mode: SearchMode,
+        ) : SearchResultEvents()
+
         // Pardes: feedback mode, a grade given to a result (again: taken back)
         data class Grade(
             val result: SearchResult,
@@ -369,6 +387,13 @@ class SearchResultViewModel(
             is SearchResultEvents.SetCatalogOrder -> {
                 _uiState.value = _uiState.value.copy(catalogOrder = event.catalogOrder)
                 updatePersistedSearch { it.copy(catalogOrder = event.catalogOrder) }
+                executeSearch()
+            }
+
+            // Pardes: the tab's mode (request 54 of stage 3)
+            is SearchResultEvents.SetSearchMode -> {
+                _uiState.value = _uiState.value.copy(searchMode = event.mode)
+                updatePersistedSearch { it.copy(searchMode = event.mode) }
                 executeSearch()
             }
 
@@ -1012,6 +1037,7 @@ class SearchResultViewModel(
                 globalExtended = persisted.globalExtended,
                 catalogOrder = persisted.catalogOrder,
                 fartherLines = persisted.fartherLines,
+                searchMode = searchMode(),
                 scrollIndex = persisted.scrollIndex,
                 scrollOffset = persisted.scrollOffset,
                 anchorId = persisted.anchorId,
@@ -1214,9 +1240,13 @@ class SearchResultViewModel(
         // New search: clear any previous streaming job and reset scroll/anchor state
         currentJob?.cancel()
         _breadcrumbs.value = persistentMapOf()
-        // Reset persisted scroll/anchor so restoration targets the top for fresh results.
+        // Reset persisted scroll/anchor so restoration targets the top for fresh results. Pardes: the mode searched in
+        // kept with the tab, a new one's taken from the home page's choice or the default (request 54 of stage 3)
+        val mode = persistedSearchState().searchMode ?: appSettings.takeSearchMode(meaningInstalled)
+        _uiState.value = _uiState.value.copy(searchMode = mode)
         updatePersistedSearch {
             it.copy(
+                searchMode = mode,
                 query = q,
                 scrollIndex = 0,
                 scrollOffset = 0,

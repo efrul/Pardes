@@ -9,9 +9,10 @@ tools and the code did when it was written.
 ## Building and checking
 
 - **Only the Change map check runs on a push to a branch.** Lint and tests run in CI on a pull request to `main`.
-  So run them here before every push: `.claude/skills/pardes-desktop-run/scripts/gradle.sh :SeforimApp:jvmTest
-  ktlintCheck detekt` (the wrapper sets the locale and keeps Zayit's private packages out). A cold build gets through
-  Maven Central's 429 with the mirror that `pardes-desktop-run`'s `setup.sh` installs.
+  So run them here before every push: `.claude/skills/pardes-desktop-run/scripts/gradle.sh --continue
+  :SeforimApp:jvmTest ktlintCheck :SeforimApp:detektJvmMainSourceSet :SeforimApp:detektJvmTestSourceSet` (the wrapper
+  sets the locale and keeps Zayit's private packages out; detekt below). A cold build gets through Maven Central's 429
+  with the mirror that `pardes-desktop-run`'s `setup.sh` installs.
 - **The check needs the base commit.** In a shallow clone it fails with `git diff … exit 128`:
   `git fetch --depth=1 origin <the base's sha>` first.
 - **ktlint:**
@@ -33,7 +34,12 @@ tools and the code did when it was written.
 - **`detekt` checks nothing of SeforimApp.** Its `detekt` task is NO-SOURCE (a multiplatform module); its source
   sets' tasks are `:SeforimApp:detektJvmMainSourceSet` and `:SeforimApp:detektJvmTestSourceSet`, which report the
   issues beyond `SeforimApp/detekt-baseline-jvmMainSourceSet.xml` (308 on 2026-11-13, most of them old). Run them on a
-  change and look at its own files' lines; `LongParameterList` is not reported on composables. Its
+  change and look at its own files' lines; `LongParameterList` is not reported on composables. They always fail on the
+  old issues, so give Gradle `--continue` (or the tests stop with them) and count what is new against the base's own
+  run, in a worktree of `main` (`git worktree add --detach <dir> origin/main`, its submodules by `git submodule update
+  --init --reference .git/modules/<name>`): an issue is new when its file, rule and message, numbers aside, are not in
+  the base's list. Stage 3 ran only `detekt`, and its 32 issues (main 299, the branch 331, none in the tests) came to
+  light only at the public release, 2026-11-22. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
   `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
   plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class
@@ -113,8 +119,49 @@ tools and the code did when it was written.
 - **A top-level value that Zayit's code reads in composition** (an add-on's `installed…`) can follow a setting: a
   getter over a snapshot state that `AppSettings` mirrors its preference into (`OpenSiddurSwitch`). A plain
   `StateFlow.value` there would not recompose the menus that read it.
+- **The tab strip's first tab is at its left end, from the right as from the left.** A window's tabs (`group.ids`,
+  `TabsState.tabs`) start beside the new tab's button: in RTL the strip reverses the list and lays it out from the
+  right, so index 0 lands on the left. The split view first drew its halves the other way round from the strip
+  (2026-11-19); `TabKeys` reads the order the same way.
+- **A click on a row in a pane takes the keyboard's focus**, whether the row asked for it or not: after a click in the
+  contents, the arrows go to the contents and not to the text. The tree's keys build on that (`TreeKeys`): Escape and
+  Enter on a leaf give the focus back with `BookContentEvent.FocusText`.
+- **The structured-coroutines plugin refuses a `launch` on a scope field** unless it is marked `@StructuredScope`
+  (`TreeKeys`, `PassageReading`), at compile time (`SCOPE_003`).
+- **The tab beside the selected one is shown, not selected.** In a split (`TabSplits`) the other half is measured and
+  drawn, but `LocalTabSelected` is false there: the PDF book and the Gemara scan, which draw their pages only in the
+  selected tab, left that half blank (2026-11-19). Ask `LocalTabShown` for what is on screen, and `LocalTabSelected`
+  for what has the keys and the panes.
+- **A composable that many screens use reads `LocalAppGraph` only where it needs it.** A UI test composes it without
+  a graph and fails with "No AppGraph provided" (`BookTocViewAutoCenterUiTest`, when `rememberTreeKeys` read it in
+  every tree): it reads it only inside a pane that asks for the focus (`LocalPaneFocusKey`, 2026-11-19).
+- **A book opened in a tab of the home page gets no Ctrl/Cmd+F** when its destination stays the home page's: Zayit's
+  window keys ask for a find only in a tab whose destination is a book's (`hasFindInPage`). A book opened from the
+  home page's search bar becomes a book's tab and has it (2026-11-18, the PDF find).
+- **Rows moved by the focus scroll in with the scroll's animation; the app's lists jump to theirs.** In the home's
+  dropdowns, a held arrow made the list glide behind the keys and the hover tint (animated for the pointer) left a
+  fading trail: "מרגישה אחרת בגלילה רציפה משאר האפליקציה" (2026-11-20). `revealAtOnce` answers the rows' bring-into-view
+  requests in a `BringIntoViewModifierNode` inside the scroll, and the row the keys mark is tinted at once
+  (`keyMarkedBackground`). Compose 1.12 deprecates both `BringIntoViewSpec.scrollAnimationSpec` ("no longer supported")
+  and `onFocusedBoundsChanged`: the node is the way left.
+- **A popup takes the keys only through a node in focus.** The home's dropdowns (`DropdownButton`) answered no arrow
+  until their popup's box was `focusable()` with a `FocusRequester` asked for in a `LaunchedEffect` (request 69 of
+  stage 3, 2026-11-19); Jewel's `PopupMenu` does it by itself, which is why a tab's menu became one.
+- **A piece of Zayit's file opened for Pardes takes its types along.** `SuggestionRow` made `internal` for the study
+  plan's field failed with `EXPOSED_PARAMETER_TYPE`: its `actions` are a `List<RowAction>`, a private class, which had
+  to be opened too (2026-11-19). Count each word changed in the map's entry.
+- **A UI test launches through the composition too:** `SCOPE_003` refuses a `scope.launch` on a scope taken out of
+  `setContent`; drive the change with a state the test sets and a `LaunchedEffect` inside `setContent` (request 60 of
+  stage 3).
+- **A PDF's page size is nullable** (`PdfDocument.pageSize(i)`, a page that cannot be read): `?.let` it, as the daf's
+  whole-page fit does (request 63 of stage 3).
 
 ## Data and settings
+
+- **The user DB has no migrations** (`Schema.create`, every table `CREATE TABLE IF NOT EXISTS`): what a released
+  table lacks goes in a table of its own, keyed by the first's id, which a user DB of before simply gets
+  (`study_plan_more`, request 64 of stage 3). A column added to such a table before its release still meets the
+  container's own user DB made by an earlier run: `ALTER TABLE` it there (or drop the table) before trying the app.
 
 - `UserSettingsDb.Schema.create` runs at every start with `CREATE TABLE IF NOT EXISTS`: a new table in a `.sq` file
   needs no migration.
@@ -146,7 +193,11 @@ tools and the code did when it was written.
 - **Several commits from one working tree:** each commit carries its own entries and must pass
   `check_change_map.py --committed`. Make the earlier state of a file by undoing the later change in a script (exact
   replacements that assert they were found), commit it with its entry, then put the final file back and write the
-  final entry. `git stash push -- <paths>` sets whole files aside.
+  final entry. `git stash push -- <paths>` sets whole files aside. A hunk of the map staged alone
+  (`git diff -U0 | git apply --cached --unidiff-zero`) lands at the working tree's line number: an entry added after
+  hunks left unstaged went into the middle of another section's paragraph (2026-11-19, put back by the next commit),
+  and `git stash pop` after it wrote the entry twice. The check counts entries, not where they sit: read
+  `git diff --cached` of the map before the commit.
 - The documents that list the hooks move with them: `branding/README.md`, the Pardes paragraph of `CLAUDE.md`, the
   licences list (`branding/pardes/assetsExtra/common/licenses/README.md`).
 
@@ -237,7 +288,10 @@ A build for the user to try, from a branch, before anything reaches `main`:
    `android-site.yml` publishes the changelog from `main`, and the section belongs to the public release. `git revert`
    writes its commit as the container's own identity: run it with `-c user.name=efrul -c user.email=…`, or amend it
    with `--reset-author` (a plain `--amend` keeps the author), and check `git log -1 --format='%an | %cn'` before the
-   push (2026-11-13: one went out as Claude, and was amended and pushed again).
+   push (2026-11-13: one went out as Claude, and was amended and pushed again). `git revert` takes no `-q`: given it,
+   it prints its usage and makes no commit, and an `--amend` after it renames the commit before, the changelog's own
+   (2026-11-19: the push was refused, and the branch went back to the pushed commit). Read the revert's line in
+   `git log -1` before amending it.
 
 A session cannot delete a release. Tell the user which pre-releases can go once tried: Pardes for Android 0.3.0 to
 0.4.1 reads only the 30 newest releases.
@@ -259,6 +313,47 @@ Each of these was built, shown, and sent back. They say what the user expects:
   siddur's days of Iyar are ordinary weekdays until a custom is picked.
 - **Zayit's own rendering is the reference.** A wrong link in a Gemara line was settled by the user's screenshot of
   the same page in Zayit: compare with Zayit before defending a result.
+- **A new control is drawn as the ones it stands beside** (stage 3, 2026-11-18). The search modes, first Jewel's grey
+  segmented control, were redone as one pill as high as the search bar, the mode chosen marked as the category tabs
+  mark theirs ("תדייק עיצובית"); the tree's keyboard row, first a gold ring, is shown as the contents' search shows
+  its match ("הפוקוס יראה כמו במקומות שהוא קיים, כמו בתוכן העניינים לאחר חיפוש בו"). Look for the control's look in
+  the app before drawing a new one. Then the pill went too: the search by meaning became the in-book find's own
+  toggle of its smart find, at the search bar's end, and the exact search was dropped ("תוריד את מדויק, והעיצוב
+  יתבסס על המצבים הקיימים בחיפוש בתוך ספר", 2026-11-19), on by default ("ברירית מחדל תהיה עם סמנטי"). A control
+  the app has already beats a new one, and fewer choices beat a finer one.
+- **What opens is ready for the keys.** The book tree and the contents, opened by their button or shortcut, took the
+  keys only once clicked ("לאחר פתחיחת העץ אין עדין פוקוס עליו עד שלוחצים עליו", 2026-11-19): a pane opened to be
+  used takes the focus.
+- **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
+  to the text's right beside the contents ("יהיה בימין").
+- **One row marked, never two alike.** The home's dropdowns tinted the keys' row and the pointer's alike ("עכשיו שתי
+  שורות מסומנות באותו צבע. מה התקן?", 2026-11-20). The standard, as in the OS's menus and IntelliJ's popups: the
+  pointer's move marks the row under it, the arrows go on from the row marked, and a still pointer's row is not
+  marked again until it moves (`DropdownMarking`). Zayit's breadcrumb popup takes the other accepted way, two tints
+  (the keys' 0.16, the pointer's 0.08). Jewel 0.41's `PopupMenu` (the Tools menu, a tab's) moves its focus to the row
+  hovered, yet keeps the hover tint, in the same colour, on the row under a still pointer after an arrow: its
+  `FocusableComponentState.chooseValue` puts hovered before focused. Jewel's Swing compatibility mode drops the hover
+  and pressed tints, so that only focus marks; `LocalSwingCompatMode` is internal, so `SingleMarkPopupMenu` enters the
+  app's theme again with `IntUiTheme(…, swingCompatMode = true)`, as Zayit's dialogs enter it.
+- **A list's arrows round its ends in every popup alike** ("היא קיימת בחלקם המעגלים, תוודא שבכולם", 2026-11-20).
+  Jewel's menus rounded theirs, the home's dropdowns rounded with a blank step (Compose's focus search gives the
+  popup's frame the focus between the last row and the first: `frameFocused`, and move again), and the others stopped
+  at the ends; the bar's list also stepped its scroll only at the rows in view, which a jump to the other end missed.
+  Jewel's combo boxes stay as they are: their arrows change the value as they go, and IntelliJ's combo boxes do not
+  round either.
+- **IntelliJ's own code is at hand when its standard is asked for.** Its sources come as `-sources.jar` from
+  `www.jetbrains.com/intellij-repository/releases` (`com/jetbrains/intellij/platform/ui-tree`, `util-ui`, `core-ui`),
+  and single files from `raw.githubusercontent.com/JetBrains/intellij-community` (github.com itself answers 403 here).
+  Read there on 2026-11-20: `TreeAction` (in on a leaf or an open folder goes to the next row; out from the top level
+  goes to the nearest open folder above, else the first row; a page is the view less four rows) and
+  `ListPopupImpl.isMouseMoved` (a popup notes the pointer's first place only, and a move is a new place).
+- **A thing is named as the user names it.** The setting that hides the Home's big lettering was titled "הצג את השם
+  הגדול בדף הבית"; the user asked to fix the wording ("תתקן נוסח", 2026-11-20), and it says their own words of the
+  request now, "הכיתוב הגדול של פרדס".
+- **What the app can tell by itself, it does not ask.** The study plan's editor had a "ספר | קטגוריה" choice over two
+  fields; the user asked for one field that tells a book from a category as the search's bar does, with the bar's
+  code ("זה יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף", 2026-11-19). It now finds both
+  with the bar's lookup and draws them with its rows, a category in its base books alone too.
 
 Show a screenshot of a choice of design before building on it, and ask of each new control: does it behave as the
 one beside it does?

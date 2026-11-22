@@ -27,7 +27,10 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookCon
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.placesLines
+import io.github.kdroidfilter.seforimapp.features.pdf.PageColorsButton
+import io.github.kdroidfilter.seforimapp.features.pdf.PageFitButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
+import io.github.kdroidfilter.seforimapp.features.pdf.showsPages
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.icons.*
@@ -141,16 +144,18 @@ fun EndVerticalBar(
         position = VerticalLateralBarPosition.End,
         topContent = {
             ZoomButtons(tabId = uiState.tabId)
-            // Pardes: two pages side by side, while pages are shown (request 47)
+            // Pardes: two pages side by side, while pages are shown (request 47), and a whole page in the view (63)
             PageSpreadsButton(uiState)
+            PageFitButton(uiState)
 
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
                 val bookHasDiacritics = selectedBook.hasNekudot || selectedBook.hasTeamim
-                // A daf shown has no diacritics to hide: the button of its marks stands in their place
+                // A daf shown has no diacritics to hide: the button of its marks stands in their place; nor have
+                // pages (Pardes, request 49)
                 if (uiState.content.dafView && selectedBook.isBavli) {
                     DafMarksButton()
-                } else if (bookHasDiacritics) {
+                } else if (bookHasDiacritics && !showsPages(uiState)) {
                     DiacriticsButton(
                         diacritics = diacritics,
                         hasTeamim = selectedBook.hasTeamim,
@@ -158,6 +163,8 @@ fun EndVerticalBar(
                         shortcutHint = if (PlatformInfo.isMacOS) "J+⌘" else "J+Ctrl",
                     )
                 }
+                // Pardes: the pages' original colours in the dark theme, on a scan or a PDF book (request 42)
+                PageColorsButton(uiState)
                 // Shnayim mikra: in the Chumash, each verse twice and then its targum
                 if (selectedBook.isChumash) {
                     SelectableIconButtonWithToolip(
@@ -335,8 +342,8 @@ private data class LineResourceAvailability(
 )
 
 /**
- * The zoom in and out shared by the reading screens' end bars: of the text, and of the daf with it when the reading view
- * of [tabId] shows one (a button stays on while either can still be zoomed).
+ * The zoom in and out shared by the reading screens' end bars: of the text, or of the daf alone when the reading view of
+ * [tabId] shows one (Pardes, request 63 of stage 3), each button on while that can still be zoomed.
  */
 @Composable
 fun ZoomButtons(tabId: String = "") {
@@ -345,8 +352,8 @@ fun ZoomButtons(tabId: String = "") {
     val dafZoom by appSettings.dafZoomFlow.collectAsState()
     val dafViews by appSettings.dafViewsFlow.collectAsState()
     val daf = tabId in dafViews
-    val canZoomIn = (daf && dafZoom < AppSettings.MAX_DAF_ZOOM) || rawTextSize < AppSettings.MAX_TEXT_SIZE
-    val canZoomOut = (daf && dafZoom > AppSettings.MIN_DAF_ZOOM) || rawTextSize > AppSettings.MIN_TEXT_SIZE
+    val canZoomIn = if (daf) dafZoom < AppSettings.MAX_DAF_ZOOM else rawTextSize < AppSettings.MAX_TEXT_SIZE
+    val canZoomOut = if (daf) dafZoom > AppSettings.MIN_DAF_ZOOM else rawTextSize > AppSettings.MIN_TEXT_SIZE
     val maxHint = if (daf) "${(AppSettings.MAX_DAF_ZOOM * 100).roundToInt()}% max" else "${AppSettings.MAX_TEXT_SIZE.toInt()}sp max"
     val minHint = if (daf) "${(AppSettings.MIN_DAF_ZOOM * 100).roundToInt()}% min" else "${AppSettings.MIN_TEXT_SIZE.toInt()}sp min"
     SelectableIconButtonWithToolip(

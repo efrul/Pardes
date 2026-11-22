@@ -94,6 +94,9 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFind
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanReader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafView
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafFound
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindListing
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.AnchorTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentAnchorIndex
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentSegment
@@ -207,15 +210,15 @@ fun BookContentView(
     // Ctrl/Cmd + wheel, a trackpad pinch or two fingers zoom the text
     val zoom = rememberAppTextZoom(onPointerZoomInProgressChange)
     val textSize = zoom.textSize
-    // The daf's own zoom, by the same gestures, in percent, the text following it; the zoom keys, buttons and menu zoom
-    // it while it is shown
+    // The daf's own zoom, by the same gestures, in percent; the zoom keys, buttons and menu zoom it while it is shown.
+    // Pardes: the daf's alone, the text's size as it was (request 63 of stage 3)
     val dafZoomValue by appSettings.dafZoomFlow.collectAsState()
     val dafZoom =
         rememberTextZoom(
             textSize = dafZoomValue * PERCENT,
             minTextSize = AppSettings.MIN_DAF_ZOOM * PERCENT,
             maxTextSize = AppSettings.MAX_DAF_ZOOM * PERCENT,
-            onTextSize = { appSettings.zoomDaf(it / PERCENT) },
+            onTextSize = { appSettings.setDafZoom(it / PERCENT) },
             animate = isTabSelected,
             onZoomingChange = onPointerZoomInProgressChange,
         )
@@ -634,7 +637,8 @@ fun BookContentView(
 
     // Matches across the whole book, not only its loaded pages (#451): Lucene candidates
     // confirmed off-main; smart mode wraps its semantic lines. Navigation and count read from it.
-    val findResults by androidx.compose.runtime.produceState(
+    // Pardes: the Gemara's, with the daf's comments below (stage 3)
+    val textFindResults by androidx.compose.runtime.produceState(
         FindResults.None,
         showFind,
         smartModeEnabled,
@@ -679,6 +683,24 @@ fun BookContentView(
             .onFailure { e -> debugln { "find-in-book failed: $e" } }
     }
 
+    // Pardes: on the daf, the comments of Rashi and Tosafot printed on it found too, in the daf's order (stage 3)
+    val dafFound by rememberDafFound(
+        textFindResults.matches,
+        textFindResults.query,
+        textFindResults.smart,
+        dafControl.printed.takeIf { daf != null },
+        appGraph.repository,
+        appGraph.searchEngine,
+    )
+    val findResults by remember {
+        derivedStateOf {
+            val text = textFindResults
+            dafFound?.takeIf { it.gemara === text.matches }?.let { FindResults(text.query, text.smart, text.bookId, it.matches) } ?: text
+        }
+    }
+    // Pardes: the comments found by meaning, marked whole on the daf as the Gemara's lines found so are
+    val dafComments = dafFound?.takeIf { it.gemara === textFindResults.matches }?.comments.orEmpty()
+
     var currentMatch by remember(bookId) { mutableStateOf<BookFindMatches.Match?>(null) }
     // The current match while it belongs to the results shown: one kept from older results isn't
     val liveMatch = currentMatch?.takeIf { it in findResults.matches }
@@ -687,6 +709,24 @@ fun BookContentView(
     // A new query or mode starts over from the viewport, and so does a session reopened
     LaunchedEffect(persistedFindQuery, smartModeEnabled) { currentMatch = null }
     LaunchedEffect(showFind) { if (!showFind) currentMatch = null }
+    // Pardes: the find told to its results pane while the bar shows it (request 55 of stage 3)
+    val shownFind =
+        findResults.takeIf {
+            showFind &&
+                persistedFindQuery.length >= 2 &&
+                it.query == persistedFindQuery &&
+                it.smart == smartModeEnabled &&
+                it.bookId == bookId
+        }
+    LaunchedEffect(shownFind, liveMatch) {
+        val books =
+            dafControl.printed
+                ?.takeIf { daf != null }
+                ?.books
+                .orEmpty()
+        appGraph.bookFindHub.publish(tabId, shownFind?.let { FindListing(bookId, it.query, it.smart, it.matches, liveMatch, books) })
+    }
+    DisposableEffect(tabId) { onDispose { appGraph.bookFindHub.publish(tabId, null) } }
 
     // Theme-derived inputs to the HTML annotation, hoisted here so the off-screen prefetcher
     // can build keys/annotations identical to those produced inside LineItem.
@@ -868,6 +908,14 @@ fun BookContentView(
     val navigateToMatchLatest by rememberUpdatedState<(Boolean) -> Unit> { navigateToMatch(it, scope) }
     LaunchedEffect(tabId) {
         appSettings.findStepRequests(tabId).collect { forward -> navigateToMatchLatest(forward) }
+    }
+    // Pardes: a line of the results pane gone to, at its first match: the next from the match before it (request 55)
+    LaunchedEffect(tabId) {
+        appGraph.bookFindHub.goTo.filter { it.first == tabId }.collect { (_, lineIndex) ->
+            val matches = findResults.matches
+            currentMatch = matches.nextAfterLine(lineIndex - 1, forward = true)?.let { matches.next(it, forward = false) }
+            navigateToMatchLatest(true)
+        }
     }
 
     // Ctrl+Home / Ctrl+End: first or last line of the whole book, loaded or not. The line count
@@ -1113,7 +1161,7 @@ fun BookContentView(
                     DafFind(
                         query = persistedFindQuery.takeIf { showFind && !smartModeEnabled && it.length >= 2 },
                         current = liveMatch?.let { it.lineId to it.ordinal },
-                        lines = if (showFind && smartModeEnabled) semanticFindIds else emptySet(),
+                        lines = if (showFind && smartModeEnabled) semanticFindIds + dafComments else emptySet(),
                     ),
             )
         } else {
@@ -1386,6 +1434,7 @@ fun BookContentView(
 
         // Find-in-page bar overlay, top end as in browsers
         if (showFind) {
+            val findListShown by appSettings.flow(FindResultsSettings.shown).collectAsState()
             // Counter only once the results are those of the query as typed (none while computing)
             val results =
                 findResults.takeIf {
@@ -1413,6 +1462,9 @@ fun BookContentView(
                     // Also while on without the addon (set by opening a search result), so it can be turned off
                     onToggleSmartMode =
                         { appSettings.toggleFindSmartMode(tabId) }.takeIf { installedSemanticSearch != null || smartModeEnabled },
+                    // Pardes: every match in a pane beside the text (request 55 of stage 3)
+                    listShown = findListShown,
+                    onToggleList = { appSettings[FindResultsSettings.shown] = !findListShown },
                 )
                 LaunchedEffect(findState.text, showFind) {
                     val q = findState.text.toString()

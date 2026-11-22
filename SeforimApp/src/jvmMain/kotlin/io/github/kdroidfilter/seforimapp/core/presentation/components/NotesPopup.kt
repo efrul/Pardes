@@ -83,13 +83,33 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
+    // Pardes: up and down mark a note, Enter opens it (request 69 of stage 3)
+    val keys = rememberPopupKeys(query)
+    val notes = remember(byBook) { byBook.flatMap { it.second } }
+    keys.rows =
+        buildList {
+            var item = 0
+            byBook.forEach { (_, bookNotes) ->
+                item++
+                bookNotes.forEach { bookNote ->
+                    add(
+                        PopupKeyRow(item++) {
+                            tabsViewModel.openTab(noteDestination(bookNote))
+                            onDismiss()
+                        },
+                    )
+                }
+            }
+        }
+
     Column(
         modifier =
             Modifier
                 .width(340.dp)
                 .background(JewelTheme.globalColors.panelBackground, PopupShape)
                 .border(1.dp, JewelTheme.globalColors.borders.normal, PopupShape)
-                .padding(8.dp),
+                .padding(8.dp)
+                .popupKeys(keys, onEscape = onDismiss),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         PopupSearchField(
@@ -99,7 +119,7 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
             focusRequester = focusRequester,
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = 380.dp)) {
+        LazyColumn(modifier = Modifier.heightIn(max = 380.dp), state = keys.listState) {
             byBook.forEach { (bookId, bookNotes) ->
                 item(key = "book-$bookId") { PopupSectionHeader(userNotes.bookTitles[bookId].orEmpty()) }
                 items(bookNotes, key = { "note-" + it.note.id }) { bookNote ->
@@ -111,6 +131,7 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
                             onDismiss()
                         },
                         onClose = null,
+                        selected = keys.marks(notes.indexOf(bookNote)),
                     )
                 }
             }
