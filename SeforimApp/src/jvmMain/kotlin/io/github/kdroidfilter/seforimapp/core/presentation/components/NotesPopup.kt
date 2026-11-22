@@ -83,7 +83,7 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    // Pardes: up and down mark a note, Enter opens it (request 69 of stage 3)
+    // Pardes: up and down, or the pointer, mark a note, Enter opens it (requests 69 and 74 of stage 3)
     val keys = rememberPopupKeys(query)
     val notes = remember(byBook) { byBook.flatMap { it.second } }
     keys.rows =
@@ -119,7 +119,7 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
             focusRequester = focusRequester,
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = 380.dp), state = keys.listState) {
+        LazyColumn(modifier = Modifier.heightIn(max = 380.dp).markOnPointer(keys), state = keys.listState) {
             byBook.forEach { (bookId, bookNotes) ->
                 item(key = "book-$bookId") { PopupSectionHeader(userNotes.bookTitles[bookId].orEmpty()) }
                 items(bookNotes, key = { "note-" + it.note.id }) { bookNote ->

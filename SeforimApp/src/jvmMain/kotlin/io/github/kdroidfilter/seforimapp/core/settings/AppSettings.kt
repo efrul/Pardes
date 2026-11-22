@@ -246,6 +246,9 @@ class AppSettings(
 
     fun getDafZoom(): Float = settings[KEY_DAF_ZOOM, DEFAULT_DAF_ZOOM].coerceIn(MIN_DAF_ZOOM, MAX_DAF_ZOOM)
 
+    // Never set: the pages shown first fit their view's width (request 73 of stage 3)
+    fun hasDafZoom(): Boolean = settings.hasKey(KEY_DAF_ZOOM)
+
     fun setDafZoom(zoom: Float) {
         val value = zoom.coerceIn(MIN_DAF_ZOOM, MAX_DAF_ZOOM)
         settings[KEY_DAF_ZOOM] = value
@@ -906,7 +909,7 @@ class AppSettings(
         const val MAX_TEXT_SIZE = 50f
         const val TEXT_SIZE_INCREMENT = 2f
 
-        // The daf's zoom: 1 is as wide as the view (at most the page's widest), the levels a browser's
+        // The daf's zoom, a size: 1 is a row of pages 1000 dp wide (PageFit.kt), the levels a browser's
         const val DEFAULT_DAF_ZOOM = 1f
         const val MIN_DAF_ZOOM = 0.3f
         const val MAX_DAF_ZOOM = 4f
@@ -952,7 +955,9 @@ class AppSettings(
         private val WHITESPACE = Regex("\\s+")
 
         private const val KEY_TEXT_SIZE = "text_size"
-        private const val KEY_DAF_ZOOM = "daf_zoom"
+
+        // A size since request 73 of stage 3; "daf_zoom" was a share of the view's width, and is not read
+        private const val KEY_DAF_ZOOM = "daf_page_zoom"
         private const val KEY_DAF_MARKS = "daf_marks"
         private const val KEY_PAGE_SPREADS = "page_spreads"
 

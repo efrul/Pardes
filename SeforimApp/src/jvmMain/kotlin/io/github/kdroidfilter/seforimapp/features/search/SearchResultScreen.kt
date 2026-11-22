@@ -74,6 +74,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.Enha
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.asStable
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.listMove
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.pageRows
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.BookContentPanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.ContentAwareScrollbarShell
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
@@ -380,7 +381,8 @@ private fun SearchResultContentMvi(
                 else -> listMove(items.size, index, event.key, listState.pageRows()) ?: return false
             }
         actions.onSelectResult(items[next].hit.lineId)
-        scope.launch { listState.animateScrollToItem(next) }
+        // Pardes: in view by the least scroll, at once, as the book tree's rows (request 77 of stage 3)
+        scope.launch { listState.revealItem(next) }
         return true
     }
 

@@ -37,10 +37,11 @@ import io.github.kdroidfilter.seforimapp.features.pdf.PAGES_CACHE_BYTES
 import io.github.kdroidfilter.seforimapp.features.pdf.PAGE_GAP
 import io.github.kdroidfilter.seforimapp.features.pdf.PAGE_TITLE_HEIGHT
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfPageList
+import io.github.kdroidfilter.seforimapp.features.pdf.TellPageFit
 import io.github.kdroidfilter.seforimapp.features.pdf.firstPageOf
-import io.github.kdroidfilter.seforimapp.features.pdf.fittedPageWidth
+import io.github.kdroidfilter.seforimapp.features.pdf.pageFit
+import io.github.kdroidfilter.seforimapp.features.pdf.pageWidthAt
 import io.github.kdroidfilter.seforimapp.features.pdf.rememberPdfiumLoaded
-import io.github.kdroidfilter.seforimapp.features.pdf.rememberWholePage
 import io.github.kdroidfilter.seforimapp.features.pdf.rowCount
 import io.github.kdroidfilter.seforimapp.features.pdf.rowOf
 import io.github.kdroidfilter.seforimapp.features.pdf.spreadPageWidth
@@ -108,7 +109,8 @@ private sealed interface ScanLoad {
 
 /**
  * Where the scan is, for what the reader asks of it ([DafControl]): the first line of the amud read at its top (the
- * tab's place, where the text and the daf open), the page read there, and its list of rows while it is shown.
+ * tab's place, where the text and the daf open), the page read there, and its list of rows while it is shown; its
+ * pages' fit in the view told for the tab [tabId] (request 73 of stage 3).
  * Pardes (request 60 of the list after the third testers' build, docs/DESKTOP_STAGE3_PLAN.md): kept as long as the tab,
  * as the daf keeps its list (BookContentView's dafListState), its list ([listFor]), the first line of each amud
  * ([amudLines], read once a tractate) and the tab's line it followed last ([follow]): the tab shown again shows the scan
@@ -117,6 +119,7 @@ private sealed interface ScanLoad {
 internal class ScanPlace(
     var topLineId: Long?,
     private var followed: Pair<Long?, Long>? = null,
+    val tabId: String = "",
 ) {
     var page = 0
     var list: LazyListState? = null
@@ -181,7 +184,7 @@ internal fun DafScanReader(
     val scans = graph.dafScans
     val repository = graph.repository
     val scope = rememberCoroutineScope()
-    val place = remember(book.id) { ScanPlace(openAt ?: lineId, followed = lineId to scrollToLineTimestamp) }
+    val place = remember(book.id) { ScanPlace(openAt ?: lineId, followed = lineId to scrollToLineTimestamp, tabId = control.tabId) }
     LaunchedEffect(place) {
         place.amudLines = runSuspendCatching { firstLines(repository.getTocEntriesForBook(book.id)) }.getOrDefault(emptyMap())
     }
@@ -481,13 +484,14 @@ private fun ScanList(
     DisposableEffect(place) { onDispose { place.list = null } }
     FollowTheTab(listState, place, lineId, scrollToLineTimestamp)
     TellThePlace(listState, spreads, place, onScroll)
-    val whole = rememberWholePage()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val room = maxWidth - PAGE_PADDING * 2
-        // As wide as the view (Pardes, request 63 of stage 3: no widest), and no wider than a whole page in it when asked
+        // As wide as the daf's zoom says, a size which no pane opened beside them changes, and the zooms that fit the
+        // view (Pardes, request 73 of stage 3)
         val share = if (spreads) spreadPageWidth(room) else room
-        val base = fittedPageWidth(share.value, maxHeight.value, aspect, whole, around = (PAGE_TITLE_HEIGHT + PAGE_GAP * 2).value).dp
-        pagesList(listState, base * zoom, spreads) { page -> "${book.title} ${amudTitle(amudOfScanPage(page))}" }
+        val columns = if (spreads) 2 else 1
+        TellPageFit(place.tabId, pageFit(share.value, maxHeight.value, aspect, columns, around = (PAGE_TITLE_HEIGHT + PAGE_GAP * 2).value))
+        pagesList(listState, pageWidthAt(zoom, columns).dp, spreads) { page -> "${book.title} ${amudTitle(amudOfScanPage(page))}" }
     }
 }
 

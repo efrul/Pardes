@@ -92,10 +92,12 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedP
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocalLocatedSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LocatedSelection
 import io.github.kdroidfilter.seforimapp.features.pdf.RowPart
+import io.github.kdroidfilter.seforimapp.features.pdf.TellPageFit
+import io.github.kdroidfilter.seforimapp.features.pdf.ZOOM_ONE_WIDTH
 import io.github.kdroidfilter.seforimapp.features.pdf.ZoomAnchor
 import io.github.kdroidfilter.seforimapp.features.pdf.ZoomPivot
-import io.github.kdroidfilter.seforimapp.features.pdf.fittedPageWidth
-import io.github.kdroidfilter.seforimapp.features.pdf.rememberWholePage
+import io.github.kdroidfilter.seforimapp.features.pdf.pageFit
+import io.github.kdroidfilter.seforimapp.features.pdf.pageWidthAt
 import io.github.kdroidfilter.seforimapp.features.pdf.zoomPivot
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Amud
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ReferenceParser
@@ -193,10 +195,12 @@ class DafMode(
 /**
  * What the reader's keys and its find bar ask of the daf: a page up or down, the tractate's first or last amud, a
  * line of the library brought into view, a step to the next comment of the commentary a comment is selected in. Set by
- * [DafView] while it is shown.
+ * [DafView] while it is shown. Its pages' fit in their view is told for the tab [tabId] (PageFits).
  */
 @Stable
-class DafControl {
+class DafControl(
+    val tabId: String,
+) {
     internal var page: suspend (forward: Boolean) -> Unit = {}
     internal var edge: suspend (end: Boolean) -> Unit = {}
     internal var toLine: suspend (lineId: Long) -> Unit = {}
@@ -272,9 +276,9 @@ private val PagePadding = 24.dp
  * A Talmud tractate as printed in the Vilna Shas, inside the text view's own frame (its zoom, keys, selection and
  * menu): every amud of the tractate's layout (its file in the library's pardes-daf folder) one below the other, each
  * at its own height as printed, with its name above it; with no layout for the tractate, a word on it and a button to
- * import one. The pages are as wide as the view at a [zoom] of 1 (Pardes, request 63 of stage 3: no widest, and no wider
- * than leaves a whole amud in the view when asked, `PageFitSettings`): the daf's own zoom, from 0.3 (more of the pages
- * in view) to 4 (wider than the view, a sideways scroll showing the rest).
+ * import one. The pages are as wide as the daf's own [zoom] says, a size whatever the view's width (Pardes, request 73 of
+ * stage 3: a pane opened beside them leaves them as they are; `ZOOM_ONE_WIDTH` at 1, the view's width and a whole amud in
+ * it being zooms the end bar sets), from 0.3 to 4: wider than the view, a sideways scroll shows the rest.
  *
  * The page answers as the text does, its panes the text's: a click on a Gemara word selects its segment
  * ([onSelectLine]; with Ctrl or Cmd, adds it), or, inside words a comment's dibbur quotes, that passage
@@ -430,7 +434,7 @@ private fun DafPages(
                 .sorted()
                 .let { it[it.size / 2] }
         }
-    // Pardes: and its usual height, an amud whole in the view when asked (request 63 of stage 3)
+    // Pardes: and its usual height, for an amud whole in the view (request 63 of stage 3)
     val blockAspect =
         remember(file, blockWidth) {
             file.amudim
@@ -438,7 +442,6 @@ private fun DafPages(
                 .sorted()
                 .let { it[it.size / 2] / blockWidth }
         }
-    val whole = rememberWholePage()
     // And one size of letters: a scan's boxes are taller on one amud than on another, the print's letters are not
     val layouts = remember(file, gemara, rashi, density) { LayoutCache(KEPT_LAYOUTS, DafSizes.of(blockWidth)) }
     val measurer = remember(resolver, density) { TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0) }
@@ -508,18 +511,21 @@ private fun DafPages(
         val columns = if (rows != null) 2 else 1
         val titleHeight = with(density) { TitleHeight.toPx() }
         val viewportHeight = constraints.maxHeight.toFloat()
-        val base =
-            fittedPageWidth(viewport / columns - 2 * padding, viewportHeight, blockAspect, whole, around = titleHeight + padding)
-                .coerceAtLeast(1f)
-        val pageWidth = base * zoom
+        // Pardes: the zoom a size, which no pane opened beside the daf changes, and the zooms that fit the view (request 73)
+        val one = with(density) { ZOOM_ONE_WIDTH.toPx() }
+        TellPageFit(
+            control.tabId,
+            pageFit(viewport / columns - 2 * padding, viewportHeight, blockAspect, columns, titleHeight + padding, one),
+        )
+        val pageWidth = pageWidthAt(zoom, columns, one).coerceAtLeast(1f)
         val perPoint = pageWidth / blockWidth
         // As wide as the view, or as the page once the zoom makes it wider (a wider amud takes some of its margin)
         val contentWidth = maxOf(viewport, (pageWidth + 2 * padding) * columns)
         val currentPlaces by rememberUpdatedState(places)
         val currentPerPoint by rememberUpdatedState(perPoint)
-        // The same place of the page at the view's top when its scale changes (the zoom, the view's width, also while
-        // the text was shown): the list keeps its pixels, which are another place then. While the pointer zooms, the
-        // place under it (request 44 of docs/DESKTOP_STAGE3_PLAN.md)
+        // The same place of the page at the view's top when its scale changes (the zoom, also while the text was
+        // shown): the list keeps its pixels, which are another place then. While the pointer zooms, the place under it
+        // (request 44 of docs/DESKTOP_STAGE3_PLAN.md)
         SideEffect {
             val shown = control.scale
             val from = shown.perPoint

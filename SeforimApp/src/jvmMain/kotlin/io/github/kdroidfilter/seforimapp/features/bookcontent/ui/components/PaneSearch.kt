@@ -154,15 +154,30 @@ fun <T : PaneSearchResult> PaneSearchLayout(
     }
 }
 
-/** Scrolls the least needed to show item [index] whole; not at all when it already is. */
+/**
+ * Scrolls the least needed to show item [index] whole (its top, when it is taller than the view); not at all when it
+ * already is. Pardes: an item below the view comes in at the view's bottom, as one partly in view does, not at its top,
+ * which made a step down from a row at the bottom a page's jump, and a step up a row's (request 75 of the list after
+ * the public release, docs/DESKTOP_STAGE3_PLAN.md: "למעלה אחד אחד ולמטה מחליף הרבה בבת אחת"); a fix for both brands.
+ */
 suspend fun LazyListState.revealItem(index: Int) {
     val info = layoutInfo
     val item = info.visibleItemsInfo.firstOrNull { it.index == index }
     when {
+        item == null && index > (info.visibleItemsInfo.lastOrNull()?.index ?: Int.MAX_VALUE) -> scrollInFromBelow(index)
         item == null || item.offset < info.viewportStartOffset -> scrollToItem(index)
         item.offset + item.size > info.viewportEndOffset ->
-            scrollBy((item.offset + item.size - info.viewportEndOffset).toFloat())
+            scrollBy(minOf(item.offset + item.size - info.viewportEndOffset, item.offset - info.viewportStartOffset).toFloat())
     }
+}
+
+// Pardes: item [index], below the view, at the view's bottom (its top, when it is taller than the view)
+private suspend fun LazyListState.scrollInFromBelow(index: Int) {
+    scrollToItem(index)
+    val info = layoutInfo
+    val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    val room = info.viewportEndOffset - (item.offset + item.size)
+    if (room > 0) scrollBy(-room.toFloat())
 }
 
 @OptIn(FlowPreview::class)

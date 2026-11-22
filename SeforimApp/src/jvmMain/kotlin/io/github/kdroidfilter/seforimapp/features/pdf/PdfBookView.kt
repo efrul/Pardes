@@ -152,7 +152,7 @@ internal fun PdfBookView(
                 else -> {
                     // Its find, Ctrl/Cmd+F as a book's (request 48 of docs/DESKTOP_STAGE3_PLAN.md)
                     val find = remember(reader) { PdfFind() }
-                    PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::setDafZoom, marks = find.marks)
+                    PdfPages(reader, listState, spreads, zoom, tabId, onZoom = appSettings::setDafZoom, marks = find.marks)
                     PdfFindBar(find, reader, tabId, listState, spreads, Modifier.align(Alignment.TopEnd))
                 }
             }
@@ -161,9 +161,10 @@ internal fun PdfBookView(
 }
 
 /**
- * The pages one under the other, or two side by side with [spreads], [zoom] times the view's width (two, half of it
- * each), centered and scrolled sideways past it. The daf's gestures zoom them, and the keys turn them as the text's:
- * Page Up and Down, Ctrl + Home and End; the zoom keys are the window's, which zoom the daf of the tab.
+ * The pages one under the other, or two side by side with [spreads], as wide as the daf's [zoom] says (two, half of it
+ * each; a size, whatever the view's width: request 73 of docs/DESKTOP_STAGE3_PLAN.md), centered and scrolled sideways
+ * past it, their fit told for the tab [tabId]. The daf's gestures zoom them, and the keys turn them as the text's: Page
+ * Up and Down, Ctrl + Home and End; the zoom keys are the window's, which zoom the daf of the tab.
  */
 @Composable
 private fun PdfPages(
@@ -171,6 +172,7 @@ private fun PdfPages(
     listState: LazyListState,
     spreads: Boolean,
     zoom: Float,
+    tabId: String,
     onZoom: (Float) -> Unit,
     marks: Map<Int, List<PageMark>> = emptyMap(),
 ) {
@@ -190,7 +192,6 @@ private fun PdfPages(
     val aspect by produceState<Float?>(null, reader) {
         value = runSuspendCatching { reader.pageSize(0)?.let { it.heightPoints / it.widthPoints } }.getOrNull()
     }
-    val whole = rememberWholePage()
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -200,8 +201,10 @@ private fun PdfPages(
             .focusable(),
     ) {
         val share = if (spreads) spreadPageWidth(maxWidth) else maxWidth
-        val base = fittedPageWidth(share.value, maxHeight.value, aspect, whole, around = (PAGE_GAP * 2).value).dp
-        PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads, marks = marks)
+        val columns = if (spreads) 2 else 1
+        TellPageFit(tabId, pageFit(share.value, maxHeight.value, aspect, columns, around = (PAGE_GAP * 2).value))
+        val pageWidth = pageWidthAt(pinch.textSize / PERCENT, columns).dp
+        PdfPageList(reader, listState, pageWidth = pageWidth, spreads = spreads, marks = marks)
     }
     LaunchedEffect(Unit) { keys.requestFocus() }
 }

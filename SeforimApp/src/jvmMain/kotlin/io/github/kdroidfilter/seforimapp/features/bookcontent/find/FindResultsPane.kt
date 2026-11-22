@@ -40,6 +40,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.Pane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearchTarget
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.listMove
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.pageRows
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlineEntry
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlines
@@ -173,10 +174,11 @@ private fun BookFindResults(
         goTo(lines[findListMove(event.key, lines.size, at, listState.pageRows()) ?: return false])
         return true
     }
-    // The current match's line kept in view, as the text goes from match to match
+    // The current match's line kept in view by the least scroll, as the text goes from match to match: a step down as
+    // a step up, not a page's jump (request 77 of stage 3)
     LaunchedEffect(current, rows) {
         val index = rows.indexOfFirst { it is FindRow.Found && it.line.lineIndex == current }
-        if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
+        if (index >= 0) listState.revealItem(index)
     }
     FindRowsSearchLayout(
         search = search,
@@ -465,7 +467,7 @@ private fun PdfFindResults(
     val current = asked ?: pdf.current
     LaunchedEffect(current, rows) {
         val index = rows.indexOfFirst { it is FindRow.InPage && it.index == current }
-        if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
+        if (index >= 0) listState.revealItem(index)
     }
 
     fun goTo(index: Int) {
