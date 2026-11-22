@@ -402,6 +402,29 @@ class DesktopManager(
         return true
     }
 
+    /**
+     * Pardes (request 59 of docs/DESKTOP_STAGE3_PLAN.md): a copy of the tab [tabId] of the window [windowId], with its
+     * reading state, beside it on the + side of the strip as a tab opened from it, selected and pinned as it is, as
+     * Chrome's "Duplicate" ([duplicateDestination]).
+     */
+    fun duplicateTab(
+        tabId: String,
+        windowId: String,
+    ) {
+        val window = _windows.value.firstOrNull { it.id == windowId } ?: return
+        val item = window.session.item(tabId) ?: return
+        val state = tabPersistedStateStore.get(tabId) ?: TabPersistedState()
+        val index =
+            window.session
+                .group(window.groupId)
+                ?.ids
+                .orEmpty()
+                .indexOf(tabId)
+                .coerceAtLeast(0)
+        val copy = item.copy(destination = duplicateDestination(item.destination, state))
+        addMovedTab(copy, UUID.randomUUID().toString(), state, window, index, select = true)
+    }
+
     private fun addMovedTab(
         item: TabItem,
         newId: String,

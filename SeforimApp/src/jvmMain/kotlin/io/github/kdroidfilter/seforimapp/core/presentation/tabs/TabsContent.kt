@@ -170,20 +170,24 @@ fun TabsContent() {
         tabIds.forEach { tabId ->
             val tabItem = session.item(tabId) ?: return@forEach
             val isSelected = tabId == currentTabId
+            // Pardes: two tabs side by side (request 59 of stage 3), each in its half
+            val half = openWindow.splitHalfOf(tabId)
             val saveableKey = saveableKeyFor(tabItem.destination)
             key(saveableKey) {
                 saveableStateHolder.SaveableStateProvider(saveableKey) {
                     val tabOwner = session.ownerOf(tabId)
-                    CompositionLocalProvider(LocalTabSelected provides isSelected) {
+                    // Pardes: the tab beside the selected one is on screen too (request 59 of stage 3)
+                    CompositionLocalProvider(LocalTabSelected provides isSelected, LocalTabShown provides (isSelected || half != null)) {
                         Box(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
+                                    .splitHalf(half) { openWindow.selectTab(tabId) }
                                     .layout { measurable, constraints ->
                                         // Selected: measure + place normally. Hidden: skip both so
                                         // the subtree stays composed (alive) but incurs no layout
                                         // or draw cost.
-                                        if (isSelected) {
+                                        if (isSelected || half != null) {
                                             val placeable = measurable.measure(constraints)
                                             layout(placeable.width, placeable.height) {
                                                 placeable.place(0, 0)
@@ -255,6 +259,8 @@ fun TabsContent() {
                 }
             }
         }
+        // Pardes: the grip between the halves of a split (request 59 of stage 3)
+        TabSplitGrip(openWindow)
     }
 }
 
@@ -490,6 +496,8 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
             onCatalogOrderChange = { catalogOrder ->
                 viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetCatalogOrder(catalogOrder))
             },
+            // Pardes: exact, general or hybrid (request 54 of stage 3)
+            onSearchModeChange = { mode -> viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetSearchMode(mode)) },
             onScroll = { anchorId, anchorIndex, index, offset ->
                 viewModel.onEvent(
                     SearchResultViewModel.SearchResultEvents.OnScroll(anchorId, anchorIndex, index, offset),

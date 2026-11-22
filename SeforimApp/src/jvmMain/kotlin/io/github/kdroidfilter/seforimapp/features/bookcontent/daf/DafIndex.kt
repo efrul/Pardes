@@ -65,6 +65,9 @@ internal class DafIndex(
         return below?.value?.first()?.second
     }
 
+    /** Each commentary column's comments (R Rashi, T Tosafot) in the order they are read: the daf's find searches them. */
+    val comments: Map<String, List<Long>> get() = columns
+
     /** The top of the Gemara's first printed line of the amud at [amud] in the order (points, from its block's top). */
     fun gemaraTop(amud: Int): Float? = gemara[amud]?.firstOrNull()?.first
 

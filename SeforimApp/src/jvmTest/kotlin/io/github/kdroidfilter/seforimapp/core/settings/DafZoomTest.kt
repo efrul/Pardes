@@ -9,8 +9,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The daf's own settings: its zoom (the zoom keys, buttons and menu zoom the text, and a tab's daf with it while it
- * shows one; a pinch over the daf zooms both by its ratio), and whether it shows its marks.
+ * The daf's own settings: its zoom (the zoom keys, buttons and menu zoom the text, or a tab's daf alone while it shows
+ * one, the commentaries beside it in the text's size as it was: request 63 of the list after the third testers' build),
+ * and whether it shows its marks.
  */
 class DafZoomTest {
     private val settings = testAppSettings()
@@ -25,35 +26,26 @@ class DafZoomTest {
     }
 
     @Test
-    fun `a tab showing its daf zooms the daf, level by level, and the text beside it`() {
+    fun `a tab showing its daf zooms the daf alone, level by level`() {
         settings.dafShown(tab)
         settings.zoomIn(tab)
         settings.zoomIn(tab)
 
         assertEquals(1.25f, settings.getDafZoom())
-        // The commentaries beside the daf are drawn in the text's size
-        assertEquals(AppSettings.DEFAULT_TEXT_SIZE + 2 * AppSettings.TEXT_SIZE_INCREMENT, settings.getTextSize())
+        // The commentaries beside the daf, drawn in the text's size, keep it
+        assertEquals(AppSettings.DEFAULT_TEXT_SIZE, settings.getTextSize())
         settings.zoomOut(tab)
         assertEquals(1.1f, settings.dafZoomFlow.value)
-        assertEquals(AppSettings.DEFAULT_TEXT_SIZE + AppSettings.TEXT_SIZE_INCREMENT, settings.textSizeFlow.value)
+        assertEquals(AppSettings.DEFAULT_TEXT_SIZE, settings.textSizeFlow.value)
     }
 
     @Test
-    fun `a pinch over the daf zooms the text by the same ratio, and back`() {
+    fun `a pinch over the daf zooms it alone`() {
         settings.dafShown(tab)
-        settings.zoomDaf(1.5f)
+        settings.setDafZoom(1.5f)
 
         assertEquals(1.5f, settings.getDafZoom())
-        assertEquals(AppSettings.DEFAULT_TEXT_SIZE * 1.5f, settings.getTextSize())
-        // Out past the text's smallest size and back: the text is the size it was, not the smallest size zoomed in
-        settings.zoomDaf(0.5f)
-        assertEquals(AppSettings.MIN_TEXT_SIZE, settings.getTextSize())
-        settings.zoomDaf(1f)
         assertEquals(AppSettings.DEFAULT_TEXT_SIZE, settings.getTextSize())
-        // The text's size changed some other way meanwhile: the next pinch goes on from it
-        settings.setTextSize(20f)
-        settings.zoomDaf(2f)
-        assertEquals(40f, settings.getTextSize())
     }
 
     @Test

@@ -19,6 +19,7 @@ import io.github.kdroidfilter.seforimapp.core.history.HistoryStore
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.pinnedTabLabel
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentStateManager
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.DetachedCommentators
@@ -655,10 +656,14 @@ class BookContentViewModel(
                 BookContentEvent.ToggleBookDetails ->
                     appSettings.setBookDetailsPaneVisible(!appSettings.isBookDetailsPaneVisible())
 
+                // Pardes: the find results' pane, one setting for every tab (request 55 of stage 3)
+                BookContentEvent.ToggleFindResults ->
+                    appSettings[FindResultsSettings.shown] = !appSettings[FindResultsSettings.shown]
+
                 BookContentEvent.CycleDiacritics ->
                     cycleDiacriticsForCurrentCategory()
 
-                is BookContentEvent.ContentScrolled ->
+                is BookContentEvent.ContentScrolled -> {
                     contentUseCase.updateContentScrollPosition(
                         event.bookId,
                         event.anchorId,
@@ -666,6 +671,9 @@ class BookContentViewModel(
                         event.scrollIndex,
                         event.scrollOffset,
                     )
+                    // Pardes: a scan's table of contents follows its pages, which select no line (request 45)
+                    if (stateManager.state.value.content.scanView) contentUseCase.showInToc(event.anchorId)
+                }
 
                 is BookContentEvent.ContentScrollToLineIndex ->
                     scrollToLineIndex(event.lineIndex)

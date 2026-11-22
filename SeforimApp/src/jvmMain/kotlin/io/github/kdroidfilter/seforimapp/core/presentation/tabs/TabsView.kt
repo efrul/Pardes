@@ -91,6 +91,7 @@ import io.github.kdroidfilter.seforimapp.core.deeplink.toShareLink
 import io.github.kdroidfilter.seforimapp.core.presentation.components.ActionIcon
 import io.github.kdroidfilter.seforimapp.core.presentation.components.BelowAnchorEndPositionProvider
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SharedIcon
+import io.github.kdroidfilter.seforimapp.core.presentation.components.SingleMarkPopupMenu
 import io.github.kdroidfilter.seforimapp.core.presentation.components.TitleBarActionButton
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.core.presentation.window.TabDragGhostCard
@@ -114,7 +115,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.jewel.foundation.InternalJewelApi
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.foundation.theme.LocalContentColor
 import org.jetbrains.jewel.ui.Orientation
@@ -714,6 +714,7 @@ private fun TabStripScope.RtlAwareTabStripContent(
                                                 ) + fadeOut(animationSpec = tween(exitDurationMs, easing = LinearEasing)),
                                         ) {
                                             RtlAwareTab(
+                                                tabId = tabEntry.key,
                                                 isActive = isActive,
                                                 tabData = tabEntry.data,
                                                 tabStyle = style,
@@ -843,6 +844,7 @@ private fun TabStripScope.RtlAwareTabStripContent(
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun RtlAwareTab(
+    tabId: String,
     isActive: Boolean,
     tabData: TabData,
     tabStyle: TabStyle,
@@ -906,6 +908,9 @@ private fun RtlAwareTab(
             tabState.isHovered -> accent.copy(alpha = 0.10f)
             else -> Color.Transparent
         }
+    // Pardes: a tab of a split joined to its partner (request 59 of stage 3)
+    val joint = LocalOpenWindow.current.splitJoint(tabId)
+    val shape = splitShape(joint, 8.dp)
     val resolvedContentColor =
         tabStyle.colors
             .contentFor(tabState)
@@ -953,9 +958,9 @@ private fun RtlAwareTab(
                 modifier
                     .height(tabStyle.metrics.tabHeight)
                     .width(widthForThisTab)
-                    .padding(horizontal = TabOuterHorizontalPadding, vertical = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(backgroundColor)
+                    .splitPadding(joint, horizontal = TabOuterHorizontalPadding, vertical = 4.dp)
+                    .clip(shape)
+                    .splitFrame(joint, backgroundColor, accent, shape)
                     .alpha(dragAlpha)
                     .onGloballyPositioned { coords ->
                         val pos = coords.positionInWindow()
@@ -1135,6 +1140,7 @@ private fun RtlAwareTab(
 
         if (contextMenuOpen) {
             TabActionsMenu(
+                tabId = tabId,
                 anchorOffset = anchorOffset,
                 contextClickOffset = contextClickOffset,
                 tabIndex = tabIndex,
@@ -1404,6 +1410,7 @@ private fun TabOverflowMenuItem(
         )
         if (contextMenuOpen) {
             TabActionsMenu(
+                tabId = tab.key,
                 anchorOffset = null,
                 contextClickOffset = contextClickOffset,
                 tabIndex = tab.stripIndex,
@@ -1454,6 +1461,7 @@ private val NewTabShortcutHint = if (PlatformInfo.isMacOS) "⌘+T" else "Ctrl+T"
 /** A tab's right-click menu, on the strip or in the overflow menu. [anchorOffset] `null`: the anchor's own corner. */
 @Composable
 private fun TabActionsMenu(
+    tabId: String,
     anchorOffset: IntOffset?,
     contextClickOffset: IntOffset,
     tabIndex: Int,
@@ -1483,6 +1491,8 @@ private fun TabActionsMenu(
     val otherDesktops = desktops.filter { it.id != currentDesktopId }
     val moveToDesktopLabels =
         otherDesktops.associate { it.id to stringResource(Res.string.tab_move_to_desktop, it.name) }
+    // Pardes: its own items, resolved here as the labels are (request 59)
+    val pardesActions = pardesTabActions(tabId)
 
     TabContextMenu(
         anchorOffset = anchorOffset,
@@ -1527,6 +1537,16 @@ private fun TabActionsMenu(
                 onClick = {
                     onDismiss()
                     onCopyLink()
+                },
+            )
+        }
+        pardesActions.forEach { action ->
+            tabContextMenuItem(
+                label = action.label,
+                icon = action.icon,
+                onClick = {
+                    onDismiss()
+                    action.onClick()
                 },
             )
         }
@@ -1903,7 +1923,6 @@ private fun Modifier.fadeCutEnd(
     }
 
 // Tab context menu using native Jewel styling
-@OptIn(InternalJewelApi::class)
 @Composable
 private fun TabContextMenu(
     anchorOffset: IntOffset?,
@@ -1912,14 +1931,6 @@ private fun TabContextMenu(
     style: MenuStyle = JewelTheme.menuStyle,
     content: MenuScope.() -> Unit,
 ) {
-    val menuController =
-        remember(onDismissRequest) {
-            DefaultMenuController(onDismissRequest = {
-                onDismissRequest()
-                true
-            })
-        }
-
     val positionProvider =
         remember(anchorOffset, contextClickOffset) {
             object : PopupPositionProvider {
@@ -1944,16 +1955,17 @@ private fun TabContextMenu(
             }
         }
 
-    Popup(
+    // Pardes: Jewel's own popup menu, which answers the keys (up, down, Enter, Escape) as the Tools menu does (request 69
+    // of stage 3), one item marked at a time as in IntelliJ's menus
+    SingleMarkPopupMenu(
+        onDismissRequest = {
+            onDismissRequest()
+            true
+        },
         popupPositionProvider = positionProvider,
-        onDismissRequest = onDismissRequest,
-        properties = PopupProperties(focusable = true),
-        cornerSize = style.metrics.cornerSize,
-    ) {
-        CompositionLocalProvider(LocalMenuController provides menuController) {
-            MenuContent(content = content)
-        }
-    }
+        style = style,
+        content = content,
+    )
 }
 
 private fun MenuScope.tabContextMenuItem(

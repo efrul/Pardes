@@ -31,7 +31,12 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.CountBadge
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SelectableRow
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SharedIcon
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TreeKeyRow
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TreeNode
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.rememberTreeKeys
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.treeKeys
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.treeSelectedKey
 import io.github.kdroidfilter.seforimapp.features.search.SearchResultViewModel
 import io.github.kdroidfilter.seforimapp.icons.Book_2
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -49,6 +54,10 @@ private data class TreeItem(
     val id: String,
     val level: Int,
     val content: @Composable () -> Unit,
+    // Pardes: what the tree's keys need of the row (request 47 of stage 3)
+    val folder: Boolean = false,
+    val open: Boolean = false,
+    val click: () -> Unit = {},
 )
 
 @OptIn(FlowPreview::class)
@@ -67,6 +76,8 @@ fun CategoryBookTreeView(
     showCounts: Boolean = false,
     booksForCategoryOverride: Map<Long, List<Book>> = emptyMap(),
     onCategoryRevealComplete: () -> Unit = {},
+    // Pardes: Escape, and Enter on a book, give the focus back to the text (request 47 of stage 3)
+    onLeave: (() -> Unit)? = null,
 ) {
     /* ---------------------------------------------------------------------
      * Build the flat hierarchical list to display.
@@ -74,6 +85,10 @@ fun CategoryBookTreeView(
 
     // Indexed once per catalog: each expanded category used to scan every book of the library
     val booksByCategory = remember(navigationState.booksInCategory) { navigationState.booksInCategory.groupBy { it.categoryId } }
+    // Pardes: the tree's keys, as code editors have them, their row shown as selected while it has the focus (request 47
+    // of stage 3)
+    val keys = rememberTreeKeys(navigationState.treeSelectedKey(selectedBookIdOverride, selectedCategoryIdOverride))
+    val focusedId = keys.shown as? String
     val treeItems =
         remember(
             navigationState.rootCategories,
@@ -89,6 +104,7 @@ fun CategoryBookTreeView(
             selectedCategoryIdOverride,
             selectedBookIdOverride,
             booksForCategoryOverride,
+            focusedId,
         ) {
             buildTreeItems(
                 rootCategories = navigationState.rootCategories,
@@ -105,6 +121,7 @@ fun CategoryBookTreeView(
                 selectedBookIdOverride = selectedBookIdOverride,
                 showCounts = showCounts,
                 booksForCategoryOverride = booksForCategoryOverride,
+                focusedId = focusedId,
             )
         }
 
@@ -153,10 +170,20 @@ fun CategoryBookTreeView(
         currentOnCategoryRevealComplete()
     }
 
+    // Pardes: the open book's row brought into view as the tree opens, and as another book opens, as the contents keeps
+    // its entry in view (request 61 of stage 3); a row in view stays where it is (a book clicked in the tree)
+    val openBookId = navigationState.selectedBook?.id?.takeIf { selectedBookIdOverride == null }
+    val openBookRow = openBookId?.let { id -> treeItems.indexOfFirst { it.id == "book_$id" } } ?: -1
+    LaunchedEffect(openBookId, openBookRow >= 0, hasRestored) {
+        if (hasRestored && openBookRow >= 0) listState.revealItem(openBookRow)
+    }
+
     /* ---------------------------------------------------------------------
      * UI.
      * -------------------------------------------------------------------- */
-    Box(modifier = modifier.fillMaxSize().padding(bottom = 8.dp)) {
+
+    val keyRows = remember(treeItems) { treeItems.map { TreeKeyRow(it.id, TreeNode(it.level, it.folder, it.open), it.click) } }
+    Box(modifier = modifier.fillMaxSize().padding(bottom = 8.dp).treeKeys(keys, listState, keyRows, onLeave)) {
         VerticallyScrollableContainer(
             scrollState = listState as ScrollableState,
         ) {
@@ -348,6 +375,8 @@ private fun buildTreeItems(
     selectedBookIdOverride: Long?,
     showCounts: Boolean,
     booksForCategoryOverride: Map<Long, List<Book>>,
+    // Pardes: the keys' row, shown as selected in place of the selection (request 47 of stage 3)
+    focusedId: String? = null,
 ): List<TreeItem> =
     buildList {
         fun addCategory(
@@ -378,8 +407,12 @@ private fun buildTreeItems(
                             onClick = { onCategoryClick(category) },
                             count = categoryCounts[category.id] ?: 0,
                             showCount = showCounts,
+                            isFocused = focusedId == "category_${category.id}",
                         )
                     },
+                    folder = true,
+                    open = expandedCategories.contains(category.id),
+                    click = { onCategoryClick(category) },
                 ),
             )
 
@@ -404,13 +437,15 @@ private fun buildTreeItems(
                                     BookItem(
                                         book = book,
                                         isSelected =
-                                            selectedBookIdOverride?.let { it == book.id }
+                                            focusedId?.let { it == "book_${book.id}" }
+                                                ?: selectedBookIdOverride?.let { it == book.id }
                                                 ?: (selectedBook?.id == book.id),
                                         onClick = { onBookClick(book) },
                                         count = bookCounts[book.id] ?: 0,
                                         showCount = showCounts,
                                     )
                                 },
+                                click = { onBookClick(book) },
                             ),
                         )
                     }
@@ -437,6 +472,8 @@ private fun CategoryItem(
     showCount: Boolean,
     checkboxChecked: Boolean? = null,
     onCheckboxToggle: ((Boolean) -> Unit)? = null,
+    // Pardes: the keys' row, highlighted as a category selected in search mode (request 47 of stage 3)
+    isFocused: Boolean = false,
 ) {
     Row(
         modifier =
@@ -448,7 +485,7 @@ private fun CategoryItem(
                     indication = null,
                     onClick = onClick,
                 ).background(
-                    if (showCount && isSelected) {
+                    if (showCount && isSelected || isFocused) {
                         // highlight only in search mode (showCount signifies search mode here)
                         JewelTheme.iconButtonStyle.colors.backgroundFocused
                     } else {

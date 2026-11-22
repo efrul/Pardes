@@ -126,7 +126,8 @@ fun buildCopyWithSourcePayload(
         } else {
             book.heRef?.takeIf { it.isNotBlank() } ?: book.title
         }
-    return "$selectedText\n\n($reference)"
+    // Pardes: the text cut of the spaces at its ends, which a selection begun at a word's gap takes (request 56)
+    return "${selectedText.trim()}\n\n($reference)"
 }
 
 /**

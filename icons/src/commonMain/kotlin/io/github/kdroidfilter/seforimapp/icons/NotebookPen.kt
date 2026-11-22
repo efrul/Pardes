@@ -20,6 +20,7 @@ val NotebookPen: ImageVector
                     defaultHeight = 24.dp,
                     viewportWidth = 24f,
                     viewportHeight = 24f,
+                    autoMirror = true,
                 ).apply {
                     path(
                         stroke = SolidColor(Color.Black),

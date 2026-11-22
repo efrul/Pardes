@@ -725,6 +725,9 @@
     <string name="settings_error_reporting_description">כאשר אפשרות זו מופעלת, נשלח דיווח טכני אנונימי במקרה של שגיאה או קריסה: פרטי השגיאה, גרסת האפליקציה ומערכת ההפעלה. הדיווח אינו כולל כתובת IP, שם מחשב או שם משתמש, ולא את תוכן הלימוד, החיפושים או ההערות שלכם.</string>
     <string name="settings_show_home_wallpaper">הצג תמונת רקע בדף הבית</string>
     <string name="settings_show_home_wallpaper_description">כאשר אפשרות זו מופעלת, יוצג נוף של כרם זיתים כרקע דקורטיבי בדף הבית.</string>
+    <!-- Pardes: the Home's big name shown or hidden (request 67 of stage 3) -->
+    <string name="settings_show_home_logo">הצג את הכיתוב הגדול של פרדס בדף הבית</string>
+    <string name="settings_show_home_logo_description">כאשר אפשרות זו מופעלת, הכיתוב הגדול של פרדס מוצג מעל שורת החיפוש בדף הבית. כשהיא כבויה, שורת החיפוש עולה למעלה.</string>
     <string name="settings_compact_mode">מצב קומפקטי לסרגל הצדדי</string>
     <string name="settings_compact_mode_description">כאשר אפשרות זו מופעלת, הסרגלים הצדדיים יוצגו בצורה צפופה יותר: האייקונים יהיו קטנים יותר והטקסט שמתחת לאייקונים לא יוצג.</string>
     <string name="settings_max_commentators_per_page">מספר מרבי של מפרשים בעמוד</string>
@@ -1205,10 +1208,48 @@
     <string name="daf_scans_otzaria">הסריקות של אוצריא שנמצאו במחשב</string>
     <string name="daf_scans_no_otzaria">לא נמצאו במחשב סריקות של אוצריא.</string>
     <string name="daf_scans_cut">עמודי הסריקות</string>
-    <string name="daf_scans_cut_description">כדי שהסריקה תוצג מיד, פרדס שומר כל עמוד שלה כתמונה, בתיקייה pardes-scans שליד הספרייה, בפעם הראשונה שהיא נפתחת. העמודים תופסים עכשיו %1$s.</string>
+    <string name="daf_scans_cut_description">כשההכנה מופעלת, פרדס שומר כל עמוד של סריקה כתמונה, בתיקייה pardes-scans שליד הספרייה, בפעם הראשונה שהיא נפתחת, כדי שתוצג מיד. העמודים תופסים עכשיו %1$s.</string>
     <string name="daf_scans_cut_remove">מחיקת העמודים</string>
+    <!-- Pardes: the scans cut into images by the user's word only, asked when a scan first opens (request 51 of stage 3) -->
+    <string name="daf_scans_cut_enabled">הכנת הסריקות לתצוגה מהירה</string>
+    <string name="daf_scan_cut_question">להכין את הסריקות לתצוגה מהירה?</string>
+    <string name="daf_scan_cut_question_hint">פרדס יכול לשמור כל עמוד של סריקה כתמונה, בפעם הראשונה שמסכת נפתחת, ואז העמודים מוצגים מיד. התמונות תופסות בין 20 ל־60MB למסכת, בתיקייה pardes-scans שליד הספרייה. בלי ההכנה הסריקה מוצגת מהקובץ עצמו, לאט יותר. אפשר לשנות את הבחירה, ולמחוק את התמונות, בהגדרות › צורת הדף.</string>
+    <string name="daf_scan_cut_yes">כן, להכין</string>
+    <string name="daf_scan_cut_no">לא, להציג מהקובץ</string>
+    <!-- Pardes: a tractate's daf ב. in a file of the user's folder, set above its scan and in the card (request 52 of stage 3, ScanFirstPageBar) -->
+    <string name="daf_scan_first_reset">חזרה לניחוש</string>
+    <string name="daf_scans_first_pages">דף ב. בקבצים שלך</string>
+    <string name="daf_scans_first_pages_description">לכל מסכת שבתיקייה שלך, העמוד בקובץ שבו נמצא דף ב. שלה, כמו שתוכנת PDF מונה את העמודים. פרדס מנחש אותו לפי הסימניות של הקובץ, ובקובץ של כמה מסכתות לפי המסכתות שלפניה. אפשר לתקן: לכתוב את העמוד ליד המסכת, או לסמן כמה מסכתות ולקבוע לכולן אותו עמוד. בקובץ של כמה מסכתות, המסכתות שאחרי מסכת שנקבעה זזות איתה.</string>
+    <string name="daf_scans_first_pages_none">אין מסכתות בתיקייה שלך.</string>
+    <string name="daf_scans_first_page_row">%1$s, בקובץ «%2$s»: דף ב. בעמוד</string>
+    <string name="daf_scans_first_guessed">לפי ניחוש</string>
+    <string name="daf_scans_first_pages_checked">למסכתות המסומנות: דף ב. בעמוד</string>
+    <string name="daf_scans_first_pages_set">קביעה</string>
     <!-- Pardes: pages two side by side (request 47, PageSpreadsButton) -->
     <string name="page_spreads">שני עמודים</string>
     <string name="page_spreads_tooltip">שני עמודים זה לצד זה, כספר פתוח: עמוד ב מימין ועמוד א משמאל</string>
+    <!-- Pardes: a whole page in the view (request 63 of stage 3, PageFit.kt) -->
+    <string name="page_fit">עמוד שלם</string>
+    <string name="page_fit_tooltip">עמוד שלם בגובה החלונית, ולא רק ברוחב שלה</string>
+    <!-- Pardes: a copy of a tab, from its menu (request 59 of stage 3, PardesTabAction.kt) -->
+    <string name="tab_duplicate">שכפל לשונית</string>
+    <!-- Pardes: two tabs side by side, from a tab's menu (request 59 of stage 3, TabSplitView.kt) -->
+    <string name="tab_split_beside">הצגה לצד הלשונית הנוכחית</string>
+    <string name="tab_split_new">פיצול עם לשונית חדשה</string>
+    <string name="tab_split_end">סיום התצוגה המפוצלת</string>
+    <!-- Pardes: the pages drawn as images in the dark theme's colours, and the button of their own (request 42 of stage 3, PageColors) -->
+    <string name="page_colors_original">צבעים מקוריים</string>
+    <string name="page_colors_original_tooltip">העמודים של הסריקה ושל ספרי PDF בצבעים המקוריים שלהם, במקום הצבעים של המצב הכהה</string>
+    <!-- Pardes: the search by meaning turned on or off at the search bar's end (request 54 of stage 3, SearchModeSwitch) -->
+    <string name="search_mode_hybrid_missing">החיפוש לפי משמעות לא מותקן. אפשר להוריד אותו בהגדרות › ניהול נתונים</string>
+    <!-- Pardes: every match of a book's find in a pane beside the text (request 55 of stage 3, FindResultsPane) -->
+    <string name="find_results_pane">תוצאות החיפוש בספר</string>
+    <string name="find_results_toggle">כל התוצאות בחלונית</string>
+    <string name="find_results_none">חיפוש בספר (Ctrl+F) יציג כאן את כל התוצאות, לפי תוכן העניינים.</string>
+    <string name="find_results_count">%1$d תוצאות ב־%2$d שורות</string>
+    <string name="find_results_pages_count">%1$d תוצאות ב־%2$d עמודים</string>
+    <string name="find_results_by_meaning">%1$d שורות קרובות במשמעות</string>
+    <!-- Pardes: a find in a PDF book (request 48 of stage 3, PdfFind) -->
+    <string name="pdf_find_no_text">אין טקסט בקובץ: זו סריקה בלי שכבת טקסט, ואין בה מה לחפש</string>
 
 </resources>

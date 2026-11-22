@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -21,7 +22,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +62,7 @@ fun PaneHeader(
     onHide: () -> Unit,
     interactionSource: MutableInteractionSource? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
+    onLabelClick: (() -> Unit)? = null,
 ) {
     val headerHoverSource = interactionSource ?: remember { MutableInteractionSource() }
     val isHovered by headerHoverSource.collectIsHoveredAsState()
@@ -85,10 +90,15 @@ fun PaneHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Pardes: a title that opens what the pane shows, as a commentator's title does (request 50)
+                val labelHoverSource = remember { MutableInteractionSource() }
+                val isLabelHovered by labelHoverSource.collectIsHoveredAsState()
                 Text(
                     text = label,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
+                    textDecoration = if (onLabelClick != null && isLabelHovered) TextDecoration.Underline else null,
+                    modifier = Modifier.openingLabel(onLabelClick, labelHoverSource),
                 )
             }
 
@@ -115,6 +125,19 @@ fun PaneHeader(
         HorizontalDivider()
     }
 }
+
+/** A pane's title that opens what the pane shows: a hand, an underline on hover, and [onClick]; nothing without it. */
+private fun Modifier.openingLabel(
+    onClick: (() -> Unit)?,
+    hoverSource: MutableInteractionSource,
+): Modifier =
+    if (onClick == null) {
+        this
+    } else {
+        pointerHoverIcon(PointerIcon.Hand)
+            .hoverable(hoverSource)
+            .clickable(interactionSource = hoverSource, indication = null, onClick = onClick)
+    }
 
 /** Anchors [DockToWindowIcon]'s resource lookup to this module's class loader. */
 private object PaneHeaderIconAnchor

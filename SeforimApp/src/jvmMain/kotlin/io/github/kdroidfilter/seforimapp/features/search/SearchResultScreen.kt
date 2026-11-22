@@ -72,6 +72,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookTabUi
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.EnhancedHorizontalSplitPane
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.asStable
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.listMove
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.pageRows
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.BookContentPanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.ContentAwareScrollbarShell
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
@@ -80,6 +82,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookdetails.BookDetails
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
+import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
+import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
@@ -114,6 +118,8 @@ data class SearchShellActions(
     val onGlobalExtendedChange: (Boolean) -> Unit,
     // The results in the library's order, or by relevance
     val onCatalogOrderChange: (Boolean) -> Unit = {},
+    // Pardes: the text searched exact, general or hybrid (request 54 of stage 3)
+    val onSearchModeChange: (SearchMode) -> Unit = {},
     // In a category holding base books and others: its base books alone (the texts without their commentaries), or all
     val onScopeBaseBooksChange: (Boolean) -> Unit = {},
     val onScroll: (anchorId: Long, anchorIndex: Int, index: Int, offset: Int) -> Unit,
@@ -370,7 +376,8 @@ private fun SearchResultContentMvi(
                     preview?.let { openResult(it.hit) }
                     return true
                 }
-                else -> return false
+                // Pardes: Home and End, a page up and down, as the book tree's keys (request 47 of stage 3)
+                else -> listMove(items.size, index, event.key, listState.pageRows()) ?: return false
             }
         actions.onSelectResult(items[next].hit.lineId)
         scope.launch { listState.animateScrollToItem(next) }
@@ -413,6 +420,8 @@ private fun SearchResultContentMvi(
                                     autoFocus = false,
                                     onTextChange = actions.onQueryChange,
                                     focusRequester = barFocus,
+                                    // Pardes: the search by meaning or not, at the bar's end (request 54 of stage 3)
+                                    trailing = { SearchModeSwitch(state.searchMode, actions.onSearchModeChange) },
                                 )
                             }
 
@@ -643,6 +652,8 @@ private fun SearchResultContentMvi(
                             preview = shown,
                             pieces = breadcrumbs[shown.hit.lineId],
                             query = state.executedQuery,
+                            // Pardes: its words marked as the search read them (request 54 of stage 3)
+                            mode = state.searchMode,
                             bookFontCode = bookFontCode,
                             // The passage follows the zoom, as the books
                             textSize = mainTextSize,
@@ -892,6 +903,7 @@ private fun PassagePreview(
     preview: SearchResultViewModel.PassagePreview,
     pieces: List<String>?,
     query: String,
+    mode: SearchMode,
     bookFontCode: String,
     textSize: Float,
     onOpen: () -> Unit,
@@ -907,7 +919,9 @@ private fun PassagePreview(
     val passage = rememberPassageReading(preview)
     val lines = passage.lines
     val fontFamily = FontCatalog.familyFor(bookFontCode)
-    val searchEngine = LocalAppGraph.current.searchEngine
+    // Pardes: in the search's mode, exact marking its phrase alone and none by meaning (request 54 of stage 3)
+    val appEngine = LocalAppGraph.current.searchEngine
+    val searchEngine = remember(appEngine, mode) { SearchModeEngine(appEngine) { mode } }
     val highlight = accent.copy(alpha = 0.22f)
     val scroll = rememberScrollState()
     // The found line in view, once laid out

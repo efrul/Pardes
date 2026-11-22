@@ -66,4 +66,38 @@ class StudyPlanStoreTest {
         assertEquals(days, weekdaysOf(days.toMask()))
         assertEquals(DayOfWeek.entries.toSet(), weekdaysOf(DayOfWeek.entries.toSet().toMask()))
     }
+
+    @Test
+    fun `a category's plan keeps its category, its base books alone, unit and days, and a book's plain plan keeps none`() =
+        runBlocking {
+            val mishnah =
+                tehillim.copy(
+                    bookId = 0,
+                    bookTitle = "סדר מועד",
+                    categoryPath = listOf("משנה", "סדר מועד"),
+                    start = listOf("שבת", "פרק א"),
+                    category = 77,
+                    baseBooksOnly = true,
+                    unitName = "פרק",
+                    periodDays = 7,
+                )
+            val id = store.save(mishnah)
+            val plain = store.save(tehillim)
+            assertEquals(listOf(mishnah.copy(id = id), tehillim.copy(id = plain)), store.plans())
+            val plainAgain = mishnah.copy(id = id, category = 0, baseBooksOnly = false, unitName = "", periodDays = 1)
+            store.save(plainAgain)
+            assertEquals(plainAgain, store.plans().first())
+        }
+
+    @Test
+    fun `a part for several days is marked on its first day`() =
+        runBlocking {
+            val id = store.save(tehillim.copy(periodDays = 7))
+            val sunday = LocalDate.of(2026, 11, 22)
+            store.setDone(id, sunday, true)
+            assertEquals(true, store.isDone(id, sunday))
+            assertEquals(false, store.isDone(id, sunday.plusDays(1)))
+            store.delete(id)
+            assertEquals(false, store.isDone(id, sunday))
+        }
 }

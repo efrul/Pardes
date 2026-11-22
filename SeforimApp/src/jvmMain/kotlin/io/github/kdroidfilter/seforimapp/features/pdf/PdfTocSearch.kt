@@ -11,12 +11,12 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.pdf_book_toc_page
 
 // Pardes (request 53 of docs/DESKTOP_STAGE2.md): a PDF book's contents searched as a book's are, "למה אין חיפוש בתוכן
-// עניינים?": its bookmarks, or its pages when it has none.
+// עניינים?": its bookmarks and its pages, both shown (request 48 of docs/DESKTOP_STAGE3_PLAN.md).
 
 /**
  * The search of the contents pane in the PDF book open in a reader, run as Zayit's `TocUseCase` runs a book's
  * ([buildTocFilter] over the whole contents, [PaneSearchRunner] for the field): the book's bookmarks as the pane draws
- * them ([pdfOutlineToc]), or its pages ("12" finds "עמוד 12"). The field itself is Zayit's, opened and closed by the
+ * them ([pdfOutlineToc]), and its pages after them ("12" finds "עמוד 12"). The field itself is Zayit's, opened and closed by the
  * reader's events as for any book; a match chosen closes it and goes to its page.
  */
 internal class PdfTocSearch(
@@ -61,17 +61,14 @@ internal class PdfTocSearch(
             ?.id
             ?.takeIf { pdfIdOf(it) != null }
 
-    // The bookmarks as the pane draws them, else the pages the tab's reader shows; kept once found
+    // The bookmarks as the pane draws them, then the pages the tab's reader shows; kept once the pages are known
     private suspend fun contentsOf(bookId: Long): PdfOutlineToc? {
         contents?.takeIf { it.first == bookId }?.let { return it.second }
         val book = pdfIdOf(bookId)?.let { pdfBooks.book(it) } ?: return null
         val label = getString(Res.string.pdf_book_toc_page)
-        val outline =
-            PdfOutlines.read(book.file).ifEmpty {
-                val pages = pdfBooks.shown.value[stateManager.state.value.tabId]?.count ?: 0
-                List(pages) { page -> PdfOutlineEntry(pageLabel(label, page), page) }
-            }
+        val pages = pdfBooks.shown.value[stateManager.state.value.tabId]?.count ?: 0
+        val outline = PdfOutlines.read(book.file) + List(pages) { page -> PdfOutlineEntry(pageLabel(label, page), page) }
         return pdfOutlineToc(bookId, outline) { page -> pageLabel(label, page) }
-            .also { if (it.entries.isNotEmpty()) contents = bookId to it }
+            .also { if (pages > 0) contents = bookId to it }
     }
 }

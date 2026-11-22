@@ -28,6 +28,7 @@ import dev.nucleusframework.window.tao.DockSide
 import dev.nucleusframework.window.tao.SatellitePlacement
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.TabsContent
+import io.github.kdroidfilter.seforimapp.core.presentation.tabs.shownBeside
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabBookViewModel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.handleBookShortcut
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.EndVerticalBar
@@ -116,7 +117,10 @@ fun WindowBody(openWindow: OpenWindow) {
                     panel = { panel -> DockedPaneCard(bottomOpen) { panel() } },
                 ) {
                     // A book's text first lays out once its panes are in place, as with the split panes.
-                    CompositionLocalProvider(LocalBookTextReady provides { tabId -> openWindow.panesReadyFor == tabId }) {
+                    // Pardes: the tab beside the one selected as well, which has no panes of its own (request 59 of stage 3)
+                    CompositionLocalProvider(
+                        LocalBookTextReady provides { tabId -> openWindow.panesReadyFor == tabId || openWindow.shownBeside(tabId) },
+                    ) {
                         TabsContent()
                     }
                 }

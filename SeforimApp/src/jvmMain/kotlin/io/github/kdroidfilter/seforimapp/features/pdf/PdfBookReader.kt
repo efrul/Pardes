@@ -14,7 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
+import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabShown
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.launch
@@ -61,7 +61,7 @@ internal fun PdfBookReader(
     }
     val current = book
     when {
-        !read || !LocalTabSelected.current -> Box(modifier.fillMaxSize())
+        !read || !LocalTabShown.current -> Box(modifier.fillMaxSize())
         current == null ->
             Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(stringResource(Res.string.pdf_book_removed), Modifier.padding(16.dp))

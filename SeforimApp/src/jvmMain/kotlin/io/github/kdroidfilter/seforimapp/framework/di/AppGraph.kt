@@ -72,6 +72,15 @@ abstract class AppGraph : ViewModelGraph {
     abstract val pdfBookStore: io.github.kdroidfilter.seforimapp.features.pdf.PdfBookStore
     abstract val dafScans: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScans
     abstract val dafScanPages: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanPages
+
+    // Pardes: a book's find, told by its text to the results pane (request 55 of stage 3)
+    abstract val bookFindHub: io.github.kdroidfilter.seforimapp.features.bookcontent.find.BookFindHub
+
+    // Pardes: the books the search suggests as they are typed, for a study plan's field too (request 64 of stage 3)
+    abstract val lookupSearch: io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
+
+    // Pardes: the book tree or contents just opened takes the keyboard's focus (request 47 of stage 3)
+    abstract val paneFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneFocusRequests
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync

@@ -211,4 +211,31 @@ class CatBookRowsTest {
             tocAddRows("משנה תורה", books, categories),
         )
     }
+
+    @Test
+    fun `the books of the author named as typed come right after the folders of the name`() {
+        val ramban = AuthorHit(21L, "רמב\"ן", 40, matchedByName = true)
+        val folder = CategoryHit(70L, listOf("תנ\"ך", "ראשונים", "רמב\"ן"))
+        val his = book(5L, "רמב\"ן על בראשית").copy(ofAuthor = true)
+        val other = book(6L, "חידושי הרמב\"ן על רש\"י")
+        val rows =
+            catBookRows(
+                "רמב\"ן",
+                emptyList(),
+                textSearch = true,
+                authors = listOf(ramban),
+                books = listOf(his, other),
+                categories = listOf(folder),
+            )
+        assertEquals(
+            listOf(
+                CatBookRow.Author(ramban),
+                CatBookRow.Category(folder),
+                CatBookRow.Book(his),
+                CatBookRow.TextSearch,
+                CatBookRow.Book(other),
+            ),
+            rows,
+        )
+    }
 }

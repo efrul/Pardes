@@ -8,6 +8,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.features.bookcontent.find.FindResultsSettings
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedStateStore
 import io.github.kdroidfilter.seforimapp.logger.debugln
@@ -84,6 +85,13 @@ fun processKeyShortcuts(
         return true
     }
 
+    // Pardes: Alt+Enter shows or hides the find's results pane from anywhere in the tab, as from the find field, while
+    // the find bar is open (request 71 of stage 3)
+    if (findAvailable && keyEvent.isAltPressed && keyEvent.key in ENTER_KEYS && appSettings.findBarOpenFlow(tabId).value) {
+        appSettings[FindResultsSettings.shown] = !appSettings[FindResultsSettings.shown]
+        return true
+    }
+
     // Process Alt key shortcuts for navigation
     if (keyEvent.isAltPressed) {
         return when (keyEvent.key) {
@@ -108,3 +116,6 @@ fun processKeyShortcuts(
 
     return false
 }
+
+// Pardes: Enter, of the main keys or the numpad's
+private val ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)

@@ -9,6 +9,7 @@ import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.IntUiThemes
 import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoSettings
 import io.github.kdroidfilter.seforimapp.features.siddur.OpenSiddurSwitch
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
@@ -280,35 +281,19 @@ class AppSettings(
 
     fun showsDaf(tabId: String): Boolean = tabId in _dafViewsFlow.value
 
-    // The text's size as the daf's own zoom last left it, before the size's limits: zoomed out and back, the text is as it was
-    private var dafText: Pair<Float, Float>? = null
-
     /**
-     * Zooms the daf to [zoom], as a pinch or Ctrl + wheel over it does, and the text with it by the same ratio: the
-     * panes beside a daf (the commentaries, the references) are drawn in the text's size, and the same gestures over the
-     * text zoom them too.
-     */
-    fun zoomDaf(zoom: Float) {
-        val before = getDafZoom()
-        setDafZoom(zoom)
-        val after = getDafZoom()
-        if (after == before) return
-        val kept = dafText?.takeIf { (at, size) -> at == before && size.coerceIn(MIN_TEXT_SIZE, MAX_TEXT_SIZE) == getTextSize() }
-        val text = (kept?.second ?: getTextSize()) * after / before
-        dafText = after to text
-        setTextSize(text.coerceIn(MIN_TEXT_SIZE, MAX_TEXT_SIZE))
-    }
-
-    /**
-     * Zooms in the reading view of [tabId]: the text, and its daf to the next of [DAF_ZOOM_LEVELS] when it shows one. The
-     * panes beside a daf are drawn in the text's size (the commentaries, the references), and follow its zoom so.
+     * Zooms in the reading view of [tabId]: its daf alone to the next of [DAF_ZOOM_LEVELS] when it shows one (its pages:
+     * a daf, a scan, a PDF book), else the text. The panes beside a daf (the commentaries, the references) keep the
+     * text's size, which the daf's zoom does not touch (request 63 of the list after the third testers' build of
+     * docs/DESKTOP_STAGE3_PLAN.md: "שגודל המפרשים/ אחרים לא יהיה מושפע מגודל צורת הדף").
      */
     fun zoomIn(tabId: String) {
         if (showsDaf(tabId)) {
             val zoom = getDafZoom()
             setDafZoom(DAF_ZOOM_LEVELS.firstOrNull { it > zoom + ZOOM_LEVEL_SLACK } ?: MAX_DAF_ZOOM)
+        } else {
+            increaseTextSize()
         }
-        increaseTextSize()
     }
 
     /** Zooms out the reading view of [tabId], as [zoomIn]. */
@@ -316,8 +301,9 @@ class AppSettings(
         if (showsDaf(tabId)) {
             val zoom = getDafZoom()
             setDafZoom(DAF_ZOOM_LEVELS.lastOrNull { it < zoom - ZOOM_LEVEL_SLACK } ?: MIN_DAF_ZOOM)
+        } else {
+            decreaseTextSize()
         }
-        decreaseTextSize()
     }
 
     // Max commentators per commentaries page (0 = automatic). Stored value is clamped to the
@@ -891,6 +877,8 @@ class AppSettings(
                 KEY_ACCENT_COLOR,
                 KEY_HOME_WIDGETS_LAYOUT,
                 KEY_SHOW_HOME_WALLPAPER,
+                // Pardes: the Home's big name, as its wallpaper (request 67 of stage 3)
+                HomeLogoSettings.shown.key,
                 KEY_COMPACT_MODE,
             )
 

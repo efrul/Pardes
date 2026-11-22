@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -72,6 +74,9 @@ fun TocJumpDropdown(
             render.forEach { quick ->
                 val hoverSource = remember { MutableInteractionSource() }
                 val isHovered by hoverSource.collectIsHoveredAsState()
+                // Pardes: one row marked at a time, by the keys or the pointer, at once (request 69 of stage 3)
+                val isFocused by hoverSource.collectIsFocusedAsState()
+                val focusOnHover = rememberHoverFocus(hoverSource)
                 val backgroundColor by animateColorAsState(
                     targetValue =
                         if (isHovered) {
@@ -86,7 +91,8 @@ fun TocJumpDropdown(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(6.dp))
-                        .background(backgroundColor)
+                        .background(keyMarkedBackground(isFocused, backgroundColor))
+                        .focusRequester(focusOnHover)
                         .clickable(
                             indication = null,
                             interactionSource = hoverSource,
