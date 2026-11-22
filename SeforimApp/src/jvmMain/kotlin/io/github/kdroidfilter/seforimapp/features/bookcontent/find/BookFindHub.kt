@@ -1,8 +1,13 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.find
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.key
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.core.settings.SettingsGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookFindMatches
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
@@ -64,6 +69,22 @@ data class FoundLine(
     val lineId: Long,
     val count: Int,
 )
+
+/**
+ * Pardes (request 71 of docs/DESKTOP_STAGE3_PLAN.md): Alt+Enter shows or hides the find's results pane from anywhere
+ * in the tab [tabId], as from the find field, while its find bar is open; whether [keyEvent] did.
+ */
+internal fun AppSettings.toggleFindResults(
+    keyEvent: KeyEvent,
+    tabId: String,
+): Boolean {
+    if (!keyEvent.isAltPressed || keyEvent.key !in ENTER_KEYS || !findBarOpenFlow(tabId).value) return false
+    this[FindResultsSettings.shown] = !this[FindResultsSettings.shown]
+    return true
+}
+
+// Enter, of the main keys or the numpad's
+private val ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)
 
 /** The lines of these matches, in reading order, each once with its count. */
 fun BookFindMatches.foundLines(): List<FoundLine> {

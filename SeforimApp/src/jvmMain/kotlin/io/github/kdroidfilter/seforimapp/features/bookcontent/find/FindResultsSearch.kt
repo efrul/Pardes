@@ -98,22 +98,25 @@ internal fun filterFindRows(
     var best: Long? = null
     var bestWords = -1
     for (row in rows) {
-        if (row is FindRow.Entry) {
-            entry = matchTocText(row.title, tokens)
-            entry?.let {
-                highlights[kept.size] = it.ranges
+        val match = entry
+        val id = row.matchId
+        when {
+            row is FindRow.Entry ->
+                entry =
+                    matchTocText(row.title, tokens)?.also {
+                        highlights[kept.size] = it.ranges
+                        kept += row
+                    }
+            // A row under an entry that matches
+            match != null && id != null -> {
+                if (match.exactWords > bestWords) {
+                    best = id
+                    bestWords = match.exactWords
+                }
                 kept += row
+                ids += id
             }
-            continue
         }
-        val match = entry ?: continue
-        val id = row.matchId ?: continue
-        if (match.exactWords > bestWords) {
-            best = id
-            bestWords = match.exactWords
-        }
-        kept += row
-        ids += id
     }
     return FindFilterResult(kept, highlights, ids, best)
 }

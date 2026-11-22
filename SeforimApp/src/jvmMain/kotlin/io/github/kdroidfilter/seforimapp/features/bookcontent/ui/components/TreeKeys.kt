@@ -127,31 +127,47 @@ internal fun treeMove(
     if (nodes.isEmpty()) return null
     val last = nodes.lastIndex
     if (focused !in nodes.indices) return TreeMove.Focus(if (key == TreeKey.END) last else 0)
+    return rowMove(focused, last, key, page)?.let { TreeMove.Focus(it) } ?: rowAction(nodes, focused, key)
+}
+
+// Where the keys that only move along the rows go from the row [focused], [last] the last row: a row up or down, the
+// first or the last, a page; null for the keys that act on the row
+private fun rowMove(
+    focused: Int,
+    last: Int,
+    key: TreeKey,
+    page: Int,
+): Int? =
+    when (key) {
+        TreeKey.UP -> (focused - 1).coerceAtLeast(0)
+        TreeKey.DOWN -> (focused + 1).coerceAtMost(last)
+        TreeKey.HOME -> 0
+        TreeKey.END -> last
+        TreeKey.PAGE_UP -> (focused - page).coerceAtLeast(0)
+        TreeKey.PAGE_DOWN -> (focused + page).coerceAtMost(last)
+        else -> null
+    }
+
+// What the keys that act on the row [focused] do: Enter clicks it; in, out, the keypad's plus and minus open or close
+// its folder, or go on to the row they lead to; null when there is nothing further, and for the keys that only move
+private fun rowAction(
+    nodes: List<TreeNode>,
+    focused: Int,
+    key: TreeKey,
+): TreeMove? {
     val node = nodes[focused]
+    val closed = node.folder && !node.open
+    val open = node.folder && node.open
     return when (key) {
-        TreeKey.UP -> TreeMove.Focus((focused - 1).coerceAtLeast(0))
-        TreeKey.DOWN -> TreeMove.Focus((focused + 1).coerceAtMost(last))
-        TreeKey.HOME -> TreeMove.Focus(0)
-        TreeKey.END -> TreeMove.Focus(last)
-        TreeKey.PAGE_UP -> TreeMove.Focus((focused - page).coerceAtLeast(0))
-        TreeKey.PAGE_DOWN -> TreeMove.Focus((focused + page).coerceAtMost(last))
         TreeKey.ENTER -> TreeMove.Click(focused)
         // IntelliJ's (TreeAction.selectChild): a closed folder opens, an open one or a leaf goes on to the next row
-        TreeKey.IN ->
-            when {
-                node.folder && !node.open -> TreeMove.Click(focused)
-                focused < last -> TreeMove.Focus(focused + 1)
-                else -> null
-            }
+        TreeKey.IN -> if (closed) TreeMove.Click(focused) else TreeMove.Focus(focused + 1).takeIf { focused < nodes.lastIndex }
         // IntelliJ's (TreeAction.selectParent): an open folder closes, a row goes up to its parent, and a row at the top
         // level, which has none, to the nearest open folder above it, else to the first row
-        TreeKey.OUT ->
-            when {
-                node.folder && node.open -> TreeMove.Click(focused)
-                else -> outOf(nodes, focused)?.let { TreeMove.Focus(it) }
-            }
-        TreeKey.EXPAND -> TreeMove.Click(focused).takeIf { node.folder && !node.open }
-        TreeKey.COLLAPSE -> TreeMove.Click(focused).takeIf { node.folder && node.open }
+        TreeKey.OUT -> if (open) TreeMove.Click(focused) else outOf(nodes, focused)?.let { TreeMove.Focus(it) }
+        TreeKey.EXPAND -> TreeMove.Click(focused).takeIf { closed }
+        TreeKey.COLLAPSE -> TreeMove.Click(focused).takeIf { open }
+        else -> null
     }
 }
 

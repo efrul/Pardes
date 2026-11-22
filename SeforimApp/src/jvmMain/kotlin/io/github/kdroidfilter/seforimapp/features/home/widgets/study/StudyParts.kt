@@ -2,7 +2,6 @@ package io.github.kdroidfilter.seforimapp.features.home.widgets.study
 
 import androidx.compose.runtime.Immutable
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishCalendar
-import io.github.kdroidfilter.seforimapp.core.study.StudyPlan
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.DayOfWeek
@@ -40,6 +39,14 @@ internal data class StudyLevel(
     val level: Int,
     val name: UnitName,
     val count: Int,
+)
+
+/** A book of a plan by a category (request 64 of stage 3) with its table of contents: its id, its title and its [entries]. */
+@Immutable
+internal data class PlanBook(
+    val id: Long,
+    val title: String,
+    val entries: List<TocEntry>,
 )
 
 /** [entries] in reading order: each heading before the ones under it, siblings in the order the library made them. */
@@ -266,152 +273,3 @@ internal fun weekdaysLabel(weekdays: Set<DayOfWeek>): String? {
     val days = weekdays.sortedBy { it.value % 7 }.joinToString(", ") { weekdayLetter(it) }
     return if (DayOfWeek.SATURDAY in weekdays) "בימים $days" else "בימים $days, חוץ מיום טוב"
 }
-
-// Pardes (request 64 of the list after the third testers' build, docs/DESKTOP_STAGE3_PLAN.md: "צריך תמיכה גם לימוד
-// קטגוריה, קצב לפי כמה סוגי הרמות חלוקה והספק שלא תלוי רק ביום אחד אלא בכמה ימים/ שבוע וכדומה"): a whole category
-// studied book after book, a unit by its name in each book (a daf of two amudim, a book), and a part for several days.
-
-/** A book of a plan with its table of contents: its id, its title and its [entries]. */
-@Immutable
-internal data class PlanBook(
-    val id: Long,
-    val title: String,
-    val entries: List<TocEntry>,
-)
-
-/** [amuds] (the Bavli's contents, "דף ב." and "דף ב:") two by two, as a daf is learnt: "דף ב", from its first amud. */
-internal fun dafUnits(amuds: List<StudyUnit>): List<StudyUnit> =
-    amuds
-        .fold(mutableListOf<MutableList<StudyUnit>>()) { dafs, amud ->
-            val daf = amud.headings.lastOrNull()?.dafOf()
-            val last = dafs.lastOrNull()
-            if (last != null &&
-                last
-                    .first()
-                    .headings
-                    .lastOrNull()
-                    ?.dafOf() == daf
-            ) {
-                last += amud
-            } else {
-                dafs += mutableListOf(amud)
-            }
-            dafs
-        }.map { pair ->
-            val first = pair.first()
-            first.copy(headings = first.headings.dropLast(1) + first.headings.last().dafOf(), nextLineId = pair.last().nextLineId)
-        }
-
-// "דף ב." and "דף ב:" are "דף ב"
-private fun String.dafOf(): String = trimEnd().trimEnd('.', ':').trimEnd()
-
-/**
- * The units of a book's [entries] by [unitName]: the depth [level] (none), its depth so named, or its amuds two by two
- * ([StudyPlan.DAF_UNIT]); the depth [level] when it has none so named.
- */
-internal fun bookUnits(
-    entries: List<TocEntry>,
-    level: Int,
-    unitName: String,
-): List<StudyUnit> {
-    val levels = studyLevels(entries)
-    return when {
-        unitName.isEmpty() -> studyUnits(entries, level)
-        unitName == DAF -> levels.firstOrNull { it.name.one == AMUD }?.let { dafUnits(studyUnits(entries, it.level)) }.orEmpty()
-        else -> levels.firstOrNull { it.name.one == unitName }?.let { studyUnits(entries, it.level) } ?: studyUnits(entries, level)
-    }
-}
-
-/**
- * A category's units, its [books] one after the other: each book a unit ([StudyPlan.BOOK_UNIT]), or its units by
- * [unitName] ([bookUnits]), its title first among their headings; a book with none so named, one unit.
- */
-internal fun categoryUnits(
-    books: List<PlanBook>,
-    unitName: String,
-): List<StudyUnit> =
-    books.flatMap { book ->
-        val whole = listOf(StudyUnit(tocId = 0, level = 0, headings = listOf(book.title), lineId = null, bookId = book.id))
-        if (unitName == BOOK) return@flatMap whole
-        val levels = studyLevels(book.entries)
-        val named = unitName == DAF && levels.any { it.name.one == AMUD } || levels.any { it.name.one == unitName }
-        if (!named) return@flatMap whole
-        bookUnits(book.entries, level = -1, unitName).map { it.copy(headings = listOf(book.title) + it.headings, bookId = book.id) }
-    }
-
-/**
- * The units a category's [books] can be learnt by: the names of their depths, the most common first, a daf where they
- * go by amud, and a book.
- */
-internal fun categoryUnitNames(books: List<PlanBook>): List<UnitName> {
-    val names = books.flatMap { book -> studyLevels(book.entries).map { it.name } }
-    val byCount =
-        names
-            .groupingBy { it.one }
-            .eachCount()
-            .entries
-            .sortedByDescending { it.value }
-            .mapNotNull { (one, _) -> names.firstOrNull { it.one == one } }
-    val daf = UnitName(DAF, "דפים").takeIf { byCount.any { it.one == AMUD } }
-    return byCount + listOfNotNull(daf) + UnitName(BOOK, "ספרים")
-}
-
-/** A book's units' names to learn by, its depths' and a daf where it goes by amud. */
-internal fun bookUnitNames(levels: List<StudyLevel>): List<UnitName> =
-    levels.map { it.name } + listOfNotNull(UnitName(DAF, "דפים").takeIf { levels.any { it.name.one == AMUD } })
-
-/** The days a part can be for, as the editor offers them: a day, two, three, a week, two weeks. */
-internal val PERIOD_DAYS = listOf(1, 2, 3, 7, 14)
-
-/** "ביום", "ביומיים", "בשלושה ימים", "בשבוע", "בשבועיים". */
-internal fun periodLabel(days: Int): String =
-    when (days) {
-        1 -> "ביום"
-        2 -> "ביומיים"
-        3 -> "בשלושה ימים"
-        7 -> "בשבוע"
-        14 -> "בשבועיים"
-        else -> "ב־$days ימים"
-    }
-
-/** "פרק ביום", "6 סעיפים ביום", "10 פרקים בשבוע". */
-internal fun perPeriodLabel(
-    perDay: Int,
-    name: UnitName,
-    periodDays: Int,
-): String = if (perDay == 1) "${name.one} ${periodLabel(periodDays)}" else "$perDay ${name.many} ${periodLabel(periodDays)}"
-
-/**
- * The part of [day] belongs to, from 0, in a plan from [startDay] of a part for [periodDays] days: a week or two from
- * Sunday, as a week is learnt, else from [startDay].
- */
-internal fun periodIndex(
-    startDay: LocalDate,
-    day: LocalDate,
-    periodDays: Int,
-): Int {
-    val from = periodAnchor(startDay, periodDays)
-    return ((day.toEpochDay() - from.toEpochDay()).coerceAtLeast(0) / periodDays.coerceAtLeast(1)).toInt()
-}
-
-/** The first day of the part [day] belongs to ([periodIndex]): where it is marked done. */
-internal fun periodStart(
-    startDay: LocalDate,
-    day: LocalDate,
-    periodDays: Int,
-): LocalDate =
-    if (periodDays <= 1) {
-        day
-    } else {
-        periodAnchor(startDay, periodDays).plusDays(periodIndex(startDay, day, periodDays).toLong() * periodDays)
-    }
-
-// Where a plan's parts are counted from: the Sunday of its first week for a week or two, else its first day
-private fun periodAnchor(
-    startDay: LocalDate,
-    periodDays: Int,
-): LocalDate = if (periodDays % 7 == 0) startDay.minusDays((startDay.dayOfWeek.value % 7).toLong()) else startDay
-
-private const val DAF = StudyPlan.DAF_UNIT
-private const val BOOK = StudyPlan.BOOK_UNIT
-private const val AMUD = "עמוד"
