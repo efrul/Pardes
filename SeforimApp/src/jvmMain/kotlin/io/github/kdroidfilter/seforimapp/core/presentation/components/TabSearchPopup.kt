@@ -186,13 +186,7 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
 
     // Pardes: up and down mark a row, Enter opens it (request 69 of stage 3)
     val keys = rememberPopupKeys(query)
-    keys.rows =
-        buildList {
-            var item = if (filteredTabs.isNotEmpty()) 1 else 0
-            filteredTabs.forEach { row -> add(PopupKeyRow(item++) { selectTab(row) }) }
-            if (historyEntries.isNotEmpty()) item++
-            historyEntries.forEach { entry -> add(PopupKeyRow(item++) { openEntry(entry) }) }
-        }
+    keys.rows = sectionKeyRows(listOf(filteredTabs.map { row -> { selectTab(row) } }, historyEntries.map { entry -> { openEntry(entry) } }))
 
     Column(
         modifier =
@@ -214,7 +208,7 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
         LazyColumn(modifier = Modifier.heightIn(max = 380.dp), state = keys.listState) {
             if (filteredTabs.isNotEmpty()) {
                 item(key = "header-tabs") { PopupSectionHeader(stringResource(Res.string.open_tabs)) }
-                itemsIndexed(filteredTabs, key = { _, it -> "tab-" + it.tab.destination.tabId }) { i, row ->
+                itemsIndexed(filteredTabs, key = { _, row -> "tab-" + row.tab.destination.tabId }) { i, row ->
                     val label = row.tab.title.ifBlank { homeLabel }
                     PopupRow(
                         label = label,
@@ -232,7 +226,7 @@ private fun TabSearchPopupContent(onDismiss: () -> Unit) {
             }
             if (historyEntries.isNotEmpty()) {
                 item(key = "header-history") { PopupSectionHeader(stringResource(Res.string.history_title)) }
-                itemsIndexed(historyEntries, key = { _, it -> "hist-" + it.key }) { i, entry ->
+                itemsIndexed(historyEntries, key = { _, entry -> "hist-" + entry.key }) { i, entry ->
                     PopupRow(
                         label = entry.title,
                         tabType = if (entry.kind == VisitKind.BOOK) TabType.BOOK else TabType.SEARCH,

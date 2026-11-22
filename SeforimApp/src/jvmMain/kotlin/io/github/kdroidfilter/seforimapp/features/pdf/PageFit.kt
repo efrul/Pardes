@@ -5,7 +5,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SelectableIconButtonWithToolip
-import io.github.kdroidfilter.seforimapp.core.settings.SettingsGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.PageFit
@@ -17,11 +16,6 @@ import seforimapp.seforimapp.generated.resources.page_fit_tooltip
 // Pardes (request 63 of the list after the third testers' build, docs/DESKTOP_STAGE3_PLAN.md): "בהצגת צורת הדף - צריך
 // שגודל החלון יתאים לגודל הדף המוצג, אין טעם ברווח גדול בשוליים של החלון": the pages as wide as the view at the zoom's
 // 1, with no widest, and a whole page in the view when asked, as a PDF reader fits a page.
-
-/** Whether a whole page is fitted in the view ("עמוד שלם"), for every tab: a daf, a tractate's scan, a PDF book. */
-object PageFitSettings : SettingsGroup("page_fit") {
-    val whole by boolean(false)
-}
 
 /**
  * The width of a page at the zoom's 1 in a view [room] wide (a page's share of it) and [height] tall: [room], and with

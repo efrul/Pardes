@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import io.github.kdroidfilter.seforim.tabs.TabType
+import io.github.kdroidfilter.seforimapp.core.annotations.BookNote
 import io.github.kdroidfilter.seforimapp.features.notes.noteDestination
 import io.github.kdroidfilter.seforimapp.features.notes.openNotesTab
 import io.github.kdroidfilter.seforimapp.features.notes.rememberUserNotes
@@ -83,24 +84,15 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
+    fun openNote(bookNote: BookNote) {
+        tabsViewModel.openTab(noteDestination(bookNote))
+        onDismiss()
+    }
+
     // Pardes: up and down mark a note, Enter opens it (request 69 of stage 3)
     val keys = rememberPopupKeys(query)
     val notes = remember(byBook) { byBook.flatMap { it.second } }
-    keys.rows =
-        buildList {
-            var item = 0
-            byBook.forEach { (_, bookNotes) ->
-                item++
-                bookNotes.forEach { bookNote ->
-                    add(
-                        PopupKeyRow(item++) {
-                            tabsViewModel.openTab(noteDestination(bookNote))
-                            onDismiss()
-                        },
-                    )
-                }
-            }
-        }
+    keys.rows = sectionKeyRows(byBook.map { (_, bookNotes) -> bookNotes.map { bookNote -> { openNote(bookNote) } } })
 
     Column(
         modifier =
@@ -126,25 +118,14 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
                     PopupRow(
                         label = bookNote.note.note,
                         tabType = TabType.NOTES,
-                        onClick = {
-                            tabsViewModel.openTab(noteDestination(bookNote))
-                            onDismiss()
-                        },
+                        onClick = { openNote(bookNote) },
                         onClose = null,
                         selected = keys.marks(notes.indexOf(bookNote)),
                     )
                 }
             }
             if (byBook.isEmpty()) {
-                item(key = "empty") {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = stringResource(Res.string.notes_empty),
-                            fontSize = 12.sp,
-                            color = JewelTheme.globalColors.text.info,
-                        )
-                    }
-                }
+                item(key = "empty") { NoNotes() }
             }
         }
 
@@ -156,6 +137,19 @@ private fun NotesPopupContent(onDismiss: () -> Unit) {
                 openNotesTab(tabsViewModel)
                 onDismiss()
             },
+        )
+    }
+}
+
+// Pardes: the list's line when no note matches, Zayit's, in a function of its own for the 60 lines of detekt.yml that
+// the keys' hook passed (request 69 of stage 3)
+@Composable
+private fun NoNotes() {
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+        Text(
+            text = stringResource(Res.string.notes_empty),
+            fontSize = 12.sp,
+            color = JewelTheme.globalColors.text.info,
         )
     }
 }

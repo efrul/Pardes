@@ -187,7 +187,9 @@ internal class ZoomAnchor {
     ): Int {
         val scroll = last?.value ?: 0
         val from = this.width
-        if (last == null || pointer == null || from <= 0f || from == width) return scroll
+        // Nothing to keep before a first width, or while the width stays
+        val sameWidth = from <= 0f || from == width
+        if (last == null || pointer == null || sameWidth) return scroll
         val before = parts(from)
         // Under the same pointer and not scrolled since, the place it zooms around, which a narrow row or the list's
         // end may have kept from it

@@ -39,7 +39,11 @@ tools and the code did when it was written.
   run, in a worktree of `main` (`git worktree add --detach <dir> origin/main`, its submodules by `git submodule update
   --init --reference .git/modules/<name>`): an issue is new when its file, rule and message, numbers aside, are not in
   the base's list. Stage 3 ran only `detekt`, and its 32 issues (main 299, the branch 331, none in the tests) came to
-  light only at the public release, 2026-11-22. Its
+  light only at the public release, 2026-11-22. Some of Zayit's functions stand at `detekt.yml`'s limits exactly
+  (`NotesPopupContent`, `addCategory`: 60 lines; `desiredPanes`: 15): a hook in them goes in a Pardes function, the
+  rest of Zayit's code moved into one of his file's own when even one line is too many. detekt's baseline matches a
+  finding by its function's signature: a Zayit function made internal for Pardes shows again (`SuggestionRow`), and its
+  id in the baseline takes the new visibility. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
   `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
   plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class
