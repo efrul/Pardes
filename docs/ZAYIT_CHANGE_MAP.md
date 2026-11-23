@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (147 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (148 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (352 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (354 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 58 |
+| Pardes feature hook | 59 |
 | Pardes feature in Zayit's file | 36 |
 | Fix of Zayit's code | 26 |
 | Branding hook | 4 |
@@ -490,8 +490,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +28 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
-  A copy cut of its spaces, Tab shortcuts.
+- **Change:** modified, +32 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
+  A copy cut of its spaces, Tab shortcuts, A search from anywhere.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
@@ -510,7 +510,7 @@ The entries of this section by kind:
   has the focus; Zayit 0.6.13 fixes their direction itself, and its merge gives Ctrl+Tab back to them.
 - **What, a copy cut of its spaces:** the window's content gets `LocalClipboard provides rememberEdgeTrimmedClipboard()`
   among its locals, with a comment marked "Pardes:" and two imports: every copy in the window, Compose's own (Ctrl+C,
-  the menu's "העתקה") and the app's, is cut of the spaces at its ends (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`).
+  the menu's "העתקה") and the app's, is cut of the spaces at its ends (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`). A search from anywhere (request 85 of stage 3): the window's own key handler, the one that gets the keys when nothing in the window has them, opens and closes the bar on Ctrl/Cmd+L (`openWindow.searchAnywhereKey`, a branch before `readerShortcuts`, with a comment marked "Pardes:"); with a focus in the window the key comes through Pardes's `rememberTabKeys`.
 - **Why:** the reading time counts only while the user is at the window, and stops after five minutes without mouse or
   keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`. Typing over a pane: as for
   `TypeToSearch.kt` (request 24). The copy with source: as for `CommentarySource.kt` (request 40).
@@ -765,8 +765,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +55 −4 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link, The user's PDF books, Search modes, Two tabs side by side.
+- **Change:** modified, +60 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -791,7 +791,7 @@ The entries of this section by kind:
     selects it), Zayit's layout measuring a tab shown beside the one selected too (`isSelected || half != null`), and
     the grip between the halves after the tabs (`TabSplitGrip`); and the tab beside the selected one counts as on
     screen (`LocalTabShown`, provided with Zayit's `LocalTabSelected`), so that a PDF book's pages and a tractate's
-    scan draw there too, while its focus and popups stay the selected tab's.
+    scan draw there too, while its focus and popups stay the selected tab's. A search from anywhere (request 85 of stage 3): `rememberHomeSearchCallbacks` is internal, its KDoc saying so, for the bar of `SearchAnywhere.kt`, whose callbacks act in a tab of their own.
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
@@ -945,6 +945,22 @@ The entries of this section by kind:
 - **Tests:** `PopupKeysUiTest`; tried in the app (Ctrl+Shift+A, the arrow down twice on משנה ברורה's tab, Enter selecting
   it; request 74: the pointer moved over ברכות's tab marking it alone, the arrow down going on to the history's
   entry, the row under the still pointer not marked).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TitleBarActionsButtonsView.kt`
+
+- **Change:** modified, +4 −0 lines. Feature: A search from anywhere (request 85 of stage 3).
+- **What:** `SearchAnywhereButton()`, Pardes's, after the find's button and before the block of the menus' buttons
+  (outside its `if (!PlatformInfo.isMacOS)`, since the composable also holds the bar's popup, which macOS opens by its
+  key), with a comment marked "Pardes:" and its import.
+- **Why:** request 85 ("לתכנן אפשרות לפתיחה של חיפוש מכל מקום באפליקציה. תיבת חיפוש בעיצוב תיבת החיפוש הכללית בתוך
+  המסכים הקיימים", 2026-11-23): the home's search bar was reached from a book only through a new tab. The bar opens
+  over any screen by Ctrl/Cmd+L, the user's choice of that day, and by this button.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call between two of Zayit's buttons.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app (the button beside the find's, with its own icon).
+
+
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/NotesPopup.kt`
 
@@ -2346,7 +2362,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +434 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +436 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 399 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -4286,14 +4302,14 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/TabKeys.kt`
 
-- **Feature:** Tab shortcuts.
-- **Size:** 109 lines.
+- **Feature:** Tab shortcuts, A search from anywhere.
+- **Size:** 114 lines.
 - **What:** `tabKeyAction(key, shift, current, count, rtl)`, what a tab shortcut does (`TabKeyAction.Select` or
   `Move`, an index), in the strip's order as read (from the right when right to left, where the tabs' index 0 is the
   strip's left end): Ctrl/Cmd with 1 to 8 the tab at that place and 9 the last one; Tab or Page Down the next tab and
   Shift+Tab or Page Up the one before, round the strip (`selectedPlace`); Shift+Page Down or Up the tab moved one place, not round (`movedPlace`). And
   `rememberTabKeys(tabsViewModel)`, the window's handler of them in its layout direction, which selects or reorders
-  through `TabsEvents`. Split on 2026-11-22 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3.
+  through `TabsEvents`. Split on 2026-11-22 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3. Since 2026-11-23 the handler first gives the key to the search from anywhere (`openWindow.searchAnywhereKey`, Ctrl/Cmd+L, request 85 of stage 3), of the window it is in (`LocalOpenWindow`).
 - **Reached from:** `MainAppWindow.kt` (the preview key handler).
 - **Follows:** Pardes's `rememberCommentaryCopyShortcut` (a handler the window calls first); Chrome's shortcuts, and in
   Hebrew its order from the right.
@@ -4398,6 +4414,28 @@ Request 83 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 80 in the user's messag
 - **Feature:** The tabs under load (request 83 of stage 3).
 - **Size:** 59 lines.
 - **What:** nothing typed; a part of the title, in order; nikud and quote marks; the short name a narrow tab shows; letter case; no tab left.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### A search from anywhere
+
+Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's message): the home's search bar opened from anywhere in the app. Ctrl/Cmd+L, the user's choice, or a button in the title bar beside the find's opens the bar under the title bar, over a book, a results page or any other screen, with its suggestions as on the home; what is picked opens in a new tab, and the tab under the bar stays as it was. Escape, the key again or a press beside the bar closes it. Not built yet: the selected text into the bar, recent books in the empty bar, a row for a search in the open book. Hooks: `TitleBarActionsButtonsView.kt`, `MainAppWindow.kt`, `TabsContent.kt`, Pardes's `TabKeys.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhere.kt`
+
+- **Feature:** A search from anywhere (request 85 of stage 3).
+- **Size:** 229 lines.
+- **What:** the home's search bar opened over any screen of the window. `OpenWindow.searchAnywhereVisible`, kept beside the window in a weak map (as `tabSearchVisible` is in it); `isSearchAnywhereKey` (Ctrl/Cmd+L alone) and `searchAnywhereKey`, which opens or closes it; `SearchAnywhereButton`, the title bar's button (none on macOS) and the popup: a layer the size of the window, whose press beside the bar closes it, with `UnifiedSearchBar` under the title bar, 60% of the window up to 640 dp, on a bar state of its own (`newSearchBarViewModel`, cancelled with the bar) and the search-by-meaning switch; Escape or the key closes it. What the bar opens goes to a new tab (`newTabDestination`: the results, a book or a reference at its line, a link, an author's page), a desktop's link through `rememberDesktopOpener`.
+- **Reached from:** `TitleBarActionsButtonsView.kt` (the button), `TabKeys.kt` and `MainAppWindow.kt` (the key).
+- **Follows:** Zayit's `TabSearchButton` (a title-bar button holding its popup) and the results page's own bar (`TabsContent.kt`); a browser's Ctrl+L, and IntelliJ's Search Everywhere, a popup over the editor.
+- **Tests:** `SearchAnywhereTest` (the tabs opened); tried in the app (over a book: a reference opened in a new tab, a text search's results in a new tab, Escape, a press beside the bar).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhereTest.kt`
+
+- **Feature:** A search from anywhere (request 85 of stage 3).
+- **Size:** 35 lines.
+- **What:** a text search's results, a book and a reference at its line, a link or an author's page as it is, each in the new tab; a desktop's link is not a tab.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
