@@ -1,15 +1,13 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.find
 
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,12 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,7 +31,6 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.normalizeQueryFo
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneHeader
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneSearchButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearchTarget
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.listMove
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.pageRows
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.type
 import io.github.kdroidfilter.seforimapp.features.pdf.PdfOutlineEntry
@@ -138,7 +130,6 @@ private fun BookFindResults(
     onLeave: () -> Unit = {},
 ) {
     val graph = LocalAppGraph.current
-    val info = JewelTheme.globalColors.text.info
     val lines = remember(listing.matches) { listing.matches.foundLines() }
     // The book's entries, and those of the other books its matches hold lines of (the daf's commentaries)
     val titles by produceState(emptyMap<Long, String>(), bookId, listing.books) {
@@ -164,20 +155,11 @@ private fun BookFindResults(
 
     // Up and down from line to line, as the search's results; Enter and Escape back to the text, as the book tree's
     fun onKey(event: KeyEvent): Boolean {
-        if (event.type != KeyEventType.KeyDown || lines.isEmpty()) return false
         val at = (asked ?: current)?.let { lineIndex -> lines.indexOfFirst { it.lineIndex == lineIndex } } ?: -1
-        if (event.key in LEAVE_KEYS) {
-            onLeave()
-            return true
-        }
-        goTo(lines[findListMove(event.key, lines.size, at, listState.pageRows()) ?: return false])
-        return true
+        return findListKey(event, lines.size, at, listState.pageRows(), onLeave) { goTo(lines[it]) }
     }
     // The current match's line kept in view, as the text goes from match to match
-    LaunchedEffect(current, rows) {
-        val index = rows.indexOfFirst { it is FindRow.Found && it.line.lineIndex == current }
-        if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
-    }
+    LaunchedEffect(current, rows) { listState.keepInView(rows.indexOfFirst { it is FindRow.Found && it.line.lineIndex == current }) }
     FindRowsSearchLayout(
         search = search,
         rows = rows,
@@ -187,40 +169,23 @@ private fun BookFindResults(
         },
         modifier = modifier,
         regular = {
-            Column {
-                val count =
-                    if (listing.smart) {
-                        stringResource(Res.string.find_results_by_meaning, lines.size)
-                    } else {
-                        stringResource(Res.string.find_results_count, listing.matches.occurrences, lines.size)
-                    }
-                Text(count, Modifier.padding(horizontal = 8.dp, vertical = 8.dp), color = info, fontSize = 12.sp)
-                LaunchedEffect(refocus) {
-                    if (refocus) runCatching { focus.requestFocus() }
-                    refocus = false
+            val count =
+                if (listing.smart) {
+                    stringResource(Res.string.find_results_by_meaning, lines.size)
+                } else {
+                    stringResource(Res.string.find_results_count, listing.matches.occurrences, lines.size)
                 }
-                LazyColumn(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .focusRequester(focus)
-                        .onPreviewKeyEvent(::onKey)
-                        .focusable(),
-                    state = listState,
-                ) {
-                    items(rows.size) { index ->
-                        when (val row = rows[index]) {
-                            is FindRow.Entry -> EntryTitle(row.title)
-                            is FindRow.Found ->
-                                FoundLineRow(row.line, listing, selected = row.line.lineIndex == (asked ?: current)) {
-                                    goTo(row.line)
-                                    // The keys go on from the line clicked
-                                    runCatching { focus.requestFocus() }
-                                }
-                            // A PDF book's, listed by PdfFindResults
-                            is FindRow.InPage -> Unit
+            FoundList(count, rows, FoundListFocus(listState, focus, refocus) { refocus = false }, ::onKey) { row ->
+                when (row) {
+                    is FindRow.Entry -> EntryTitle(row.title)
+                    is FindRow.Found ->
+                        FoundLineRow(row.line, listing, selected = row.line.lineIndex == (asked ?: current)) {
+                            goTo(row.line)
+                            // The keys go on from the line clicked
+                            runCatching { focus.requestFocus() }
                         }
-                    }
+                    // A PDF book's, listed by PdfFindResults
+                    is FindRow.InPage -> Unit
                 }
             }
         },
@@ -265,6 +230,17 @@ private fun FoundLineRow(
         }
     }
 }
+
+/**
+ * The list's state and focus, and whether a row chosen in the results' search asks the focus back ([refocus], cleared
+ * by [onRefocused] once the list is back): [FoundList]'s, its keys going on from that row.
+ */
+internal class FoundListFocus(
+    val listState: LazyListState,
+    val requester: FocusRequester,
+    val refocus: Boolean,
+    val onRefocused: () -> Unit,
+)
 
 /** A row of the results pane: an entry of the table of contents, or a line found under it. */
 internal sealed interface FindRow {
@@ -463,25 +439,14 @@ private fun PdfFindResults(
     var asked by remember(pdf.query) { mutableStateOf<Int?>(null) }
     LaunchedEffect(pdf.current) { if (pdf.current == asked) asked = null }
     val current = asked ?: pdf.current
-    LaunchedEffect(current, rows) {
-        val index = rows.indexOfFirst { it is FindRow.InPage && it.index == current }
-        if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
-    }
+    LaunchedEffect(current, rows) { listState.keepInView(rows.indexOfFirst { it is FindRow.InPage && it.index == current }) }
 
     fun goTo(index: Int) {
         asked = index
         graph.bookFindHub.goToPdfMatch(tabId, index)
     }
 
-    fun onKey(event: KeyEvent): Boolean {
-        if (event.type != KeyEventType.KeyDown || pdf.matches.isEmpty()) return false
-        if (event.key in LEAVE_KEYS) {
-            onLeave()
-            return true
-        }
-        goTo(findListMove(event.key, pdf.matches.size, current, listState.pageRows()) ?: return false)
-        return true
-    }
+    fun onKey(event: KeyEvent): Boolean = findListKey(event, pdf.matches.size, current, listState.pageRows(), onLeave, ::goTo)
     val bookFontCode by graph.appSettings.bookFontCodeFlow.collectAsState()
     // A match chosen in the results' search: the keys go on from it once the list is back
     var refocus by remember { mutableStateOf(false) }
@@ -494,39 +459,18 @@ private fun PdfFindResults(
         },
         modifier = modifier,
         regular = {
-            Column {
-                val pages = remember(pdf.matches) { pdf.matches.distinctBy { it.page }.size }
-                Text(
-                    stringResource(Res.string.find_results_pages_count, pdf.matches.size, pages),
-                    Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                    color = info,
-                    fontSize = 12.sp,
-                )
-                LaunchedEffect(refocus) {
-                    if (refocus) runCatching { focus.requestFocus() }
-                    refocus = false
-                }
-                LazyColumn(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .focusRequester(focus)
-                        .onPreviewKeyEvent(::onKey)
-                        .focusable(),
-                    state = listState,
-                ) {
-                    items(rows.size) { index ->
-                        when (val row = rows[index]) {
-                            is FindRow.Entry -> EntryTitle(row.title)
-                            is FindRow.InPage ->
-                                ResultRow(selected = row.index == current, onClick = {
-                                    goTo(row.index)
-                                    runCatching { focus.requestFocus() }
-                                }) { SnippetText(row.found.piece, pdf.query, bookFontCode) }
-                            // A book's, listed by BookFindResults
-                            is FindRow.Found -> Unit
-                        }
-                    }
+            val pages = remember(pdf.matches) { pdf.matches.distinctBy { it.page }.size }
+            val count = stringResource(Res.string.find_results_pages_count, pdf.matches.size, pages)
+            FoundList(count, rows, FoundListFocus(listState, focus, refocus) { refocus = false }, ::onKey) { row ->
+                when (row) {
+                    is FindRow.Entry -> EntryTitle(row.title)
+                    is FindRow.InPage ->
+                        ResultRow(selected = row.index == current, onClick = {
+                            goTo(row.index)
+                            runCatching { focus.requestFocus() }
+                        }) { SnippetText(row.found.piece, pdf.query, bookFontCode) }
+                    // A book's, listed by BookFindResults
+                    is FindRow.Found -> Unit
                 }
             }
         },
@@ -569,19 +513,3 @@ private fun List<PdfOutlineEntry>.flattenInto(out: MutableList<Pair<Int, String>
         entry.children.flattenInto(out)
     }
 }
-
-/** Where up, down, Home, End and a page up and down go in a list of [count] from [at] (-1 for none); null for another key. */
-internal fun findListMove(
-    key: Key,
-    count: Int,
-    at: Int,
-    page: Int,
-): Int? =
-    when (key) {
-        Key.DirectionDown -> (at + 1).coerceAtMost(count - 1)
-        Key.DirectionUp -> (at - 1).coerceAtLeast(0)
-        else -> listMove(count, at.coerceAtLeast(0), key, page)
-    }
-
-// The keys that give the focus back to the text, as the book tree's
-private val LEAVE_KEYS = setOf(Key.Enter, Key.NumPadEnter, Key.Escape)

@@ -288,23 +288,7 @@ fun DetachedCommentatorView(
             isManualMultiSelection -> LineSelection.Multi(selectedLineIds)
             else -> LineSelection.Single(selectedLine.id)
         }
-    val groups =
-        when {
-            providers == null -> emptyList()
-            selection is LineSelection.Multi -> {
-                val multiGroups by produceState<List<CommentatorGroup>>(emptyList(), selectedLineIds) {
-                    value = providers.getCommentatorGroupsForLines(selectedLineIds)
-                }
-                multiGroups
-            }
-            selection is LineSelection.Single ->
-                rememberCommentarySelectionData(
-                    lineId = selection.lineId,
-                    getCommentatorGroupsForLine = providers.getCommentatorGroupsForLine,
-                    prefetchedGroups = lineConnections[selection.lineId]?.commentatorGroups,
-                ).groups
-            else -> emptyList()
-        }
+    val groups = rememberSelectionGroups(selection, providers, lineConnections)
     val commentatorId = remember(groups, commentator) { bookIdOf(commentator, groups) }
 
     Column(modifier = Modifier.fillMaxSize().hoverable(paneInteractionSource)) {
@@ -343,6 +327,32 @@ fun DetachedCommentatorView(
         }
     }
 }
+
+// Pardes (request 50 of stage 3): the commentators' groups of [selection], read before the detached pane's header:
+// those of a manual selection's lines, read for them, or a line's as the commentaries pane has them; none without
+// [providers] or a line selected
+@Composable
+private fun rememberSelectionGroups(
+    selection: LineSelection?,
+    providers: Providers?,
+    lineConnections: Map<Long, LineConnectionsSnapshot>,
+): List<CommentatorGroup> =
+    when {
+        providers == null -> emptyList()
+        selection is LineSelection.Multi -> {
+            val multiGroups by produceState<List<CommentatorGroup>>(emptyList(), selection.lineIds) {
+                value = providers.getCommentatorGroupsForLines(selection.lineIds)
+            }
+            multiGroups
+        }
+        selection is LineSelection.Single ->
+            rememberCommentarySelectionData(
+                lineId = selection.lineId,
+                getCommentatorGroupsForLine = providers.getCommentatorGroupsForLine,
+                prefetchedGroups = lineConnections[selection.lineId]?.commentatorGroups,
+            ).groups
+        else -> emptyList()
+    }
 
 /** The book of [commentator] among [groups], the commentators of the selected line(s); null when it has none there. */
 private fun bookIdOf(
