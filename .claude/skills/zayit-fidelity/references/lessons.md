@@ -139,6 +139,16 @@ tools and the code did when it was written.
   item whose content was just set (a part laid out in place of its placeholder) runs on, before then, through the
   items after it: the book daf's experiment landed four chapters on. Wait until `layoutInfo.visibleItemsInfo` gives
   the item its new size (2026-11-13).
+- **A lazy list's item is composed whole.** The list is lazy by item, not inside one: the book daf's item held all a
+  unit's pages, and a chapter with many commentators is hundreds of them, each some hundred and fifty `BasicText`s.
+  Composed and measured together on the main thread they made the testers' build stop answering ("לא מגיב", the
+  user's screenshot of 2026-11-23), and with all the commentators checked the process grew to 6 GB here until the
+  system ended it. An item whose content grows with the data composes the part in view alone (`UnitRows`: an item
+  as tall as all its rows, those near the view placed where the others would leave them), and lays a page out when
+  it comes, off the UI thread. Try a new view with the most the user can ask of it (every commentator checked, the
+  longest chapter), not only with the example's three.
+- **`runSuspendCatching { … }.getOrNull()` hides the failure it catches.** A unit that could not be laid out stayed a
+  spinner, or the pages before it, with nothing said: give the failure to `warnln` before dropping it.
 - Text lines are whole pixels high. A long run of lines at a fractional pitch drifts by half a pixel a line: give each
   line the whole pixels that keep it on the pitch (`fix(daf): a long run's lines no longer drift`).
 - A menu that closes before the coroutine it launched has ended cancels it: do the work, then dismiss

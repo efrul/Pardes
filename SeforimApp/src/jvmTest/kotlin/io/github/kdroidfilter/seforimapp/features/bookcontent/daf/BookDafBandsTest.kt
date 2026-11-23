@@ -158,6 +158,19 @@ class BookDafBandsTest {
     }
 
     @Test
+    fun `a chapter's commentators all at once are set to the last word, a page at a time`() {
+        val text = text(20, 15, 30, 10)
+        val commentaries = (1L..60L).map { commentary(it, 100L to 2_000, 102L to 500) }
+        var asked = 0
+        val pages = DafBandsSetter(widths, text, commentaries, null, measures()).pages { asked++ }
+        assertEquals(pages.size, asked, "asked before each page, for a setting no longer wanted to be let go of")
+        for (c in commentaries) {
+            val all = text.flatMap { line -> c.comments[line.lineId].orEmpty().flatMap { it.words } }
+            assertEquals(all, pages.flatMap { it.band(c.name).words() }, c.name)
+        }
+    }
+
+    @Test
     fun `the first commentator takes its room first, the next what is left`() {
         val measures = measures()
         val pages = pages(text(20), listOf(commentary(1, 100L to 200), commentary(2, 100L to 3000)), measures = measures)
