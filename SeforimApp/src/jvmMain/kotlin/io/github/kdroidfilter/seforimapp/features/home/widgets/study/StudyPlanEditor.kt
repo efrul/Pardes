@@ -112,14 +112,7 @@ internal fun StudyPlanEditor(
     val scope = rememberCoroutineScope()
     val inIsrael = state.inIsrael
     val fields = remember { PlanFields(plan) }
-    LaunchedEffect(plan.id) {
-        if (plan.id != 0L && plan.category != 0L) {
-            fields.category = runSuspendCatching { repository.categoryOf(plan) }.getOrNull()
-        } else if (plan.id != 0L) {
-            fields.book = runSuspendCatching { repository.bookOf(plan) }.getOrNull()
-        }
-        fields.bookLoaded = true
-    }
+    LaunchedEffect(plan.id) { fields.load(plan, repository) }
     LaunchedEffect(fields) { fields.readPerDay() }
     val entries by produceState<List<TocEntry>>(emptyList(), fields.book) {
         value = fields.book?.let { runSuspendCatching { repository.getTocEntriesForBook(it.id) }.getOrNull() }.orEmpty()
@@ -131,15 +124,11 @@ internal fun StudyPlanEditor(
     val levels = remember(entries) { studyLevels(entries) }
     // A book whose depths do not have the one chosen: its first
     val shownLevel = levels.firstOrNull { it.level == fields.level } ?: levels.firstOrNull()
-    val names = remember(books, levels, fields.byCategory) { if (fields.byCategory) categoryUnitNames(books) else bookUnitNames(levels) }
-    // A category's unit: the one chosen while its books have it, else their first
-    val shownName = if (fields.byCategory) names.firstOrNull { it.one == fields.unitName } ?: names.firstOrNull() else null
+    val names = remember(books, levels, fields.byCategory) { fields.unitNames(books, levels) }
+    val shownName = fields.shownName(names)
     val units =
         remember(entries, books, shownLevel, shownName, fields.unitName, fields.byCategory) {
-            when {
-                fields.byCategory -> shownName?.let { categoryUnits(books, it.one) }.orEmpty()
-                else -> shownLevel?.let { bookUnits(entries, it.level, fields.unitName) }.orEmpty()
-            }
+            fields.units(books, shownName, entries, shownLevel)
         }
     val startIndex = remember(units, fields.start) { startIndexOf(units, fields.start) }
     val preview = rememberPreview(fields, units, startIndex, inIsrael)
@@ -181,7 +170,7 @@ internal fun StudyPlanEditor(
             }
         }
         EditorButtons(
-            canSave = (if (fields.byCategory) fields.category != null else fields.book != null) && units.isNotEmpty(),
+            canSave = fields.canSave(units),
             onSave = ::save,
             onClose = onClose,
             onDelete = delete.takeIf { plan.id != 0L },
@@ -248,6 +237,45 @@ private class PlanFields(
         val next = if (day in weekdays) weekdays - day else weekdays + day
         if (next.isNotEmpty()) weekdays = next
     }
+
+    /** Reads [plan]'s category or book from the library, the editor's fields set to them. */
+    suspend fun load(
+        plan: StudyPlan,
+        repository: SeforimRepository,
+    ) {
+        if (plan.id != 0L && plan.category != 0L) {
+            category = runSuspendCatching { repository.categoryOf(plan) }.getOrNull()
+        } else if (plan.id != 0L) {
+            book = runSuspendCatching { repository.bookOf(plan) }.getOrNull()
+        }
+        bookLoaded = true
+    }
+
+    /** The units' names a plan can be studied by: a category's [books]' ones, or a book's depths ([levels]) and a daf. */
+    fun unitNames(
+        books: List<PlanBook>,
+        levels: List<StudyLevel>,
+    ): List<UnitName> = if (byCategory) categoryUnitNames(books) else bookUnitNames(levels)
+
+    /** A category's unit among [names]: the one chosen while its books have it, else their first; none for a book. */
+    fun shownName(names: List<UnitName>): UnitName? =
+        if (byCategory) names.firstOrNull { it.one == unitName } ?: names.firstOrNull() else null
+
+    /** The units studied: a category's [books] by [shownName], or a book's [entries] by [shownLevel] or its unit's name. */
+    fun units(
+        books: List<PlanBook>,
+        shownName: UnitName?,
+        entries: List<TocEntry>,
+        shownLevel: StudyLevel?,
+    ): List<StudyUnit> =
+        if (byCategory) {
+            shownName?.let { categoryUnits(books, it.one) }.orEmpty()
+        } else {
+            shownLevel?.let { bookUnits(entries, it.level, unitName) }.orEmpty()
+        }
+
+    /** Whether the plan can be saved: its category or its book chosen, with [units] to study. */
+    fun canSave(units: List<StudyUnit>): Boolean = (if (byCategory) category != null else book != null) && units.isNotEmpty()
 
     /** Follows the field of how many a day: a whole number from 1 to 999 is taken, anything else keeps the last. */
     suspend fun readPerDay() {
@@ -401,6 +429,43 @@ private fun BookRows(
         val chosen = if (fields.byCategory) category else fields.book?.title
         if (fields.bookLoaded) SourceField(chosen, onPickBook = fields::pickBook, onPickCategory = fields::pickCategory)
     }
+    UnitRows(fields, levels, shownLevel, names, shownName)
+    if (units.isNotEmpty()) {
+        FormRow("מתחילים מ־") {
+            ListComboBox(
+                items = units.map { it.headings.joinToString(", ") },
+                selectedIndex = startIndex,
+                onSelectedItemChange = { index -> units.getOrNull(index)?.let { fields.start = it.headings } },
+                modifier = Modifier.fillMaxWidth().testTag("study-start"),
+            )
+        }
+        // How much for how many days: a part a day, or for a few days or a week (request 64 of stage 3)
+        val name = shownName ?: names.firstOrNull { it.one == fields.unitName } ?: shownLevel?.name
+        FormRow("הספק") {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(fields.perDayField, Modifier.width(72.dp).testTag("study-per-day"))
+                Text(if (fields.perDay == 1) name?.one.orEmpty() else name?.many.orEmpty())
+                ListComboBox(
+                    items = PERIOD_DAYS.map(::periodLabel),
+                    selectedIndex = PERIOD_DAYS.indexOf(fields.periodDays).coerceAtLeast(0),
+                    onSelectedItemChange = { index -> fields.periodDays = PERIOD_DAYS[index] },
+                    modifier = Modifier.width(140.dp).testTag("study-period"),
+                )
+            }
+        }
+    }
+}
+
+// The unit studied by: a category's units by their names (request 64 of stage 3), or a book's depths, and a daf where
+// it goes by amud
+@Composable
+private fun UnitRows(
+    fields: PlanFields,
+    levels: List<StudyLevel>,
+    shownLevel: StudyLevel?,
+    names: List<UnitName>,
+    shownName: UnitName?,
+) {
     if (fields.byCategory && names.size > 1) {
         FormRow("לומדים לפי") {
             Column {
@@ -429,30 +494,6 @@ private fun BookRows(
                     }
                 }
                 Hint("הרמות שבתוכן העניינים של הספר")
-            }
-        }
-    }
-    if (units.isNotEmpty()) {
-        FormRow("מתחילים מ־") {
-            ListComboBox(
-                items = units.map { it.headings.joinToString(", ") },
-                selectedIndex = startIndex,
-                onSelectedItemChange = { index -> units.getOrNull(index)?.let { fields.start = it.headings } },
-                modifier = Modifier.fillMaxWidth().testTag("study-start"),
-            )
-        }
-        // How much for how many days: a part a day, or for a few days or a week (request 64 of stage 3)
-        val name = shownName ?: names.firstOrNull { it.one == fields.unitName } ?: shownLevel?.name
-        FormRow("הספק") {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextField(fields.perDayField, Modifier.width(72.dp).testTag("study-per-day"))
-                Text(if (fields.perDay == 1) name?.one.orEmpty() else name?.many.orEmpty())
-                ListComboBox(
-                    items = PERIOD_DAYS.map(::periodLabel),
-                    selectedIndex = PERIOD_DAYS.indexOf(fields.periodDays).coerceAtLeast(0),
-                    onSelectedItemChange = { index -> fields.periodDays = PERIOD_DAYS[index] },
-                    modifier = Modifier.width(140.dp).testTag("study-period"),
-                )
             }
         }
     }

@@ -67,6 +67,19 @@ internal class PopupKeys(
     }
 }
 
+/**
+ * The [rows][PopupKeys.rows] of a popup's list in sections, as the tab search and the notes lay theirs: a section's
+ * header row, when it has items, then its items, each opening as its action in [sections] says, in their order.
+ */
+internal fun sectionKeyRows(sections: List<List<() -> Unit>>): List<PopupKeyRow> =
+    buildList {
+        var item = 0
+        for (actions in sections.filter { it.isNotEmpty() }) {
+            item++
+            actions.forEach { add(PopupKeyRow(item++, it)) }
+        }
+    }
+
 /** A popup's keys, on the first row again when [inputs] change (what is typed in its field). */
 @Composable
 internal fun rememberPopupKeys(vararg inputs: Any?): PopupKeys {

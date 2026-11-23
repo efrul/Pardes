@@ -94,7 +94,7 @@
     <ID>LongMethod:HomeView.kt:@Composable /** * Renders the TOC suggestion list for the currently selected book, stripping the * duplicated book prefix from breadcrumb paths for compact display. * Uses native Jewel menu styling for consistent look and feel. */ private fun TocSuggestionsPanel</ID>
     <ID>LongMethod:HomeView.kt:@Composable /** * Renders the suggestion list for categories and books, keeping the currently * focused row in view as the user navigates with the keyboard. * Uses native Jewel menu styling for consistent look and feel. */ private fun SuggestionsPanel</ID>
     <ID>LongMethod:HomeView.kt:@Composable private fun SearchBar</ID>
-    <ID>LongMethod:HomeView.kt:@Composable private fun SuggestionRow</ID>
+    <ID>LongMethod:HomeView.kt:@Composable internal fun SuggestionRow</ID>
     <ID>LongMethod:HomeView.kt:@OptIn(ExperimentalJewelApi::class, ExperimentalLayoutApi::class) @Composable private fun HomeBody</ID>
     <ID>LongMethod:LicenceScreen.kt:@Composable private fun LicenceView</ID>
     <ID>LongMethod:LineCommentsView.kt:@Composable private fun CommentariesDisplay</ID>

@@ -246,19 +246,39 @@ internal class PdfFind {
         val found = ArrayList<PdfMatch>()
         var letters = 0
         for (page in 0 until reader.pageCount) {
-            val (text, chars) =
-                texts[page] ?: (runSuspendCatching { reader.pageTextLayout(page) }.getOrNull()?.let { pageText(it.chars()) } ?: continue)
-                    .also { texts[page] = it }
+            val (text, chars) = textOf(reader, page) ?: continue
             letters += text.length
-            val ranges = withContext(Dispatchers.Default) { textMatches(text, q) }
-            if (ranges.isEmpty()) continue
-            // The boxes, from the page's layout again: only a page with matches keeps them
-            val layout = runSuspendCatching { reader.pageTextLayout(page) }.getOrNull()?.chars() ?: continue
-            ranges.mapTo(found) { match -> PdfMatch(page, boxesOf(layout, match.range.mapNotNull { chars.getOrNull(it) }), match.piece) }
-            matches = found.toList()
+            val inPage = matchesIn(reader, page, text to chars, q)
+            if (inPage.isNotEmpty()) {
+                found += inPage
+                matches = found.toList()
+            }
         }
         noText = letters == 0
         done = true
+    }
+
+    // The page's text and the character of each of its letters, read once; null when it cannot be read
+    private suspend fun textOf(
+        reader: PdfReaderState,
+        page: Int,
+    ): Pair<String, IntArray>? =
+        texts[page]
+            ?: runSuspendCatching { reader.pageTextLayout(page) }.getOrNull()?.let { pageText(it.chars()) }?.also { texts[page] = it }
+
+    // The matches of the normalized query [q] in the page [page], of the [text] read ([pageText]); the boxes from the
+    // page's layout again, as only a page with matches keeps them; none when it cannot be read
+    private suspend fun matchesIn(
+        reader: PdfReaderState,
+        page: Int,
+        text: Pair<String, IntArray>,
+        q: String,
+    ): List<PdfMatch> {
+        val (content, chars) = text
+        val ranges = withContext(Dispatchers.Default) { textMatches(content, q) }
+        if (ranges.isEmpty()) return emptyList()
+        val layout = runSuspendCatching { reader.pageTextLayout(page) }.getOrNull()?.chars() ?: return emptyList()
+        return ranges.map { match -> PdfMatch(page, boxesOf(layout, match.range.mapNotNull { chars.getOrNull(it) }), match.piece) }
     }
 
     /** The match after the current one, or before it ([forward] false), round the book; null with none. */

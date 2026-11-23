@@ -323,11 +323,6 @@ class DafScanPages(
         return cut
     }
 
-    private fun keyOf(
-        scan: File,
-        page: Int,
-    ) = "${scan.absolutePath}#$page"
-
     companion object {
         /** The folder of the cut scans, beside the library. */
         const val DIR_NAME = "pardes-scans"
@@ -362,3 +357,9 @@ class DafScanPages(
             }.getOrNull()
     }
 }
+
+// A page's key among the images kept in memory and the cuts failed once
+private fun keyOf(
+    scan: File,
+    page: Int,
+) = "${scan.absolutePath}#$page"

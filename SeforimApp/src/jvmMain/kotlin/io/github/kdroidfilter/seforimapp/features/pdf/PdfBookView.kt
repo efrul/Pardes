@@ -126,15 +126,7 @@ internal fun PdfBookView(
         },
         onPlace = onPlace,
     )
-    // The contents pane lists the pages once they are known, and sends the page clicked there
-    DisposableEffect(tabId) { onDispose { store.showPages(tabId, null) } }
-    LaunchedEffect(tabId, pages) { if (pages > 0) store.showPages(tabId, PdfPagesShown(pages, top.page.coerceIn(0, pages - 1))) }
-    LaunchedEffect(tabId, listState, pages) {
-        if (pages == 0) return@LaunchedEffect
-        store.pageRequests
-            .filter { (tab, _) -> tab == tabId }
-            .collect { (_, page) -> listState.scrollToItem(rowOf(page.coerceIn(0, pages - 1), spreads)) }
-    }
+    PagesInContents(tabId, pages, top, listState, spreads)
     val error = failure ?: reader.error?.message
     Column(modifier.fillMaxSize()) {
         PdfBar(
@@ -159,6 +151,27 @@ internal fun PdfBookView(
                 }
             }
         }
+    }
+}
+
+// The tab [tabId]'s contents pane lists the [pages] once they are known, the page read at the [top] marked, and sends
+// the page clicked there, which the list [listState] of [spreads] goes to
+@Composable
+private fun PagesInContents(
+    tabId: String,
+    pages: Int,
+    top: Top,
+    listState: LazyListState,
+    spreads: Boolean,
+) {
+    val store = LocalAppGraph.current.pdfBookStore
+    DisposableEffect(tabId) { onDispose { store.showPages(tabId, null) } }
+    LaunchedEffect(tabId, pages) { if (pages > 0) store.showPages(tabId, PdfPagesShown(pages, top.page.coerceIn(0, pages - 1))) }
+    LaunchedEffect(tabId, listState, pages) {
+        if (pages == 0) return@LaunchedEffect
+        store.pageRequests
+            .filter { (tab, _) -> tab == tabId }
+            .collect { (_, page) -> listState.scrollToItem(rowOf(page.coerceIn(0, pages - 1), spreads)) }
     }
 }
 

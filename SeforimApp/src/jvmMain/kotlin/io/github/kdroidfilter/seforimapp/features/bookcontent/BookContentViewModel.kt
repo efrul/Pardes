@@ -29,6 +29,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.Providers
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.StateKeys
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.commentatorSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.needsLineSelectionFor
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.showInToc
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookContentUseCaseFactory
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.altTocIdOfSearchMatch
 import io.github.kdroidfilter.seforimapp.features.search.domain.BookDetailsLoader
@@ -672,7 +673,7 @@ class BookContentViewModel(
                         event.scrollOffset,
                     )
                     // Pardes: a scan's table of contents follows its pages, which select no line (request 45)
-                    if (stateManager.state.value.content.scanView) contentUseCase.showInToc(event.anchorId)
+                    if (stateManager.state.value.content.scanView) stateManager.showInToc(repository, event.anchorId)
                 }
 
                 is BookContentEvent.ContentScrollToLineIndex ->
