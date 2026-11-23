@@ -19,7 +19,8 @@ Models trained from run 3 on also learn from pairs made from:
 
 Models trained from 2026-11-19 on also learn from the searches Pardes's users graded in the app and sent, with their
 consent, to improve its search: the results they marked relevant and not relevant, sent without anything that
-identifies them.
+identifies them. Models trained from 2026-11-23 on also learn from searches those users sent without grading: the
+results of these were graded for the project by a language model (Claude, by Anthropic), on the users' scale.
 
 Dicta does not endorse Pardes or this conversion. The model is provided as is, without warranties.
 
