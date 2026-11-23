@@ -77,6 +77,21 @@ internal class DafIndex(
         return below?.value?.first()?.second
     }
 
+    /**
+     * The first line [of] takes printed at or below [top] points down the amud at [amud] in the order (from its block's
+     * top), or on a later amud, by where each is printed first, of two on one line the library's first: a commentary's
+     * tab's place at a view's top (request 82).
+     */
+    fun firstOf(
+        amud: Int,
+        top: Float,
+        of: (Long) -> Boolean,
+    ): Long? =
+        places.entries
+            .filter { (id, at) -> of(id) && (at.first > amud || at.first == amud && at.second >= top) }
+            .minWithOrNull(compareBy({ it.value.first }, { it.value.second }, { it.key }))
+            ?.key
+
     /** Each commentary column's comments (R Rashi, T Tosafot) in the order they are read: the daf's find searches them. */
     val comments: Map<String, List<Long>> get() = columns
 

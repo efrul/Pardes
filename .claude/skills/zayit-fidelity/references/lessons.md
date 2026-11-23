@@ -173,6 +173,11 @@ tools and the code did when it was written.
   2026-11-23). The pages are shown at the size, no wider than the view, unless the size was set wider than the view
   it was set in (`daf_page_zoom_wide`, decided where the zoom is set, by the tab's view, never by a view that merely
   narrowed); and every step, key, button, pinch, starts from the size shown, or a step beside a pane jumps past it.
+- **An icon is what is customary first.** Asked for a new icon of the pages' fits, a design of Pardes's own came
+  first, and the user asked "לגבי האייקנים - תבדוק מה מקובל" (request 81, 2026-11-23). The icons module is mostly
+  Material Symbols (composables.com's Kotlin of them, the 960 viewport): take the icon from there when it has one
+  (`fit_page_height`, `fit_page_width`), with the Apache License's notice, look at Fluent and the PDF readers beside it,
+  and draw only what none has (two thirds of a page) after the one it is nearest to.
 - **A jump to a row and back starts the rows between again.** `scrollToItem` disposes the rows it leaves, and a row
   that reads its text once on screen (the find pane's, `produceState`) reads it again, empty first, and grows: after a
   page down the rows above the row revealed grew and pushed it below the view, round after round (request 78,
