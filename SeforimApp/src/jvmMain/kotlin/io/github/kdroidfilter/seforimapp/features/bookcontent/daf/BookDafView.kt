@@ -23,7 +23,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -45,12 +47,15 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,12 +67,15 @@ import io.github.kdroidfilter.seforimapp.features.pdf.ZOOM_ONE_WIDTH
 import io.github.kdroidfilter.seforimapp.features.pdf.pageFit
 import io.github.kdroidfilter.seforimapp.features.pdf.pageWidthAt
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -79,6 +87,7 @@ import seforimapp.seforimapp.generated.resources.book_daf_continued
 import seforimapp.seforimapp.generated.resources.book_daf_no_commentators
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 // Pardes (request 21 of docs/DESKTOP_STAGE2.md): a book's own daf, in the text view's frame as a tractate's is (its
 // zoom, keys, find bar, selection and menu): the book's units one below the other (BookDafSource), each laid out in
@@ -205,7 +214,10 @@ private suspend fun layUnits(
     val near = (first - 1)..(last + 1)
     laid.keys.filter { it !in near && laid[it]?.setter !== setter }.forEach { laid.remove(it) }
     for (i in ((first..last) + (last + 1) + (first - 1)).filter { it in units.indices && laid[it]?.setter !== setter }) {
-        val unit = runSuspendCatching { setter.lay(units[i]) }.getOrNull() ?: continue
+        val unit =
+            runSuspendCatching { setter.lay(units[i]) }
+                .onFailure { warnln { "[BookDaf] the unit at the line ${units[i].first} could not be laid out: $it" } }
+                .getOrNull() ?: continue
         laid[i] = unit
         // The farthest from it let go of, beyond the units kept
         if (laid.size > KEPT_UNITS) laid.keys.maxByOrNull { abs(it - i) }?.let { laid.remove(it) }
@@ -384,14 +396,70 @@ private fun UnitsList(
                         CircularProgressIndicator()
                     }
                 } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        for (row in unit.rows(scale.columns)) {
-                            Row { for (laidPage in row) page(laidPage) }
-                        }
-                    }
+                    UnitRows(index, unit, places, scale.columns, page)
                 }
             }
         }
+    }
+}
+
+/** How far beyond the view a unit's rows of pages are composed, on each side: a part of the view's height. */
+private const val ROWS_AHEAD = 0.5f
+
+/**
+ * A unit laid out, in its item [index] of the list ([places]): an item as tall as all its rows of pages (of [columns]),
+ * of which those in the view or near it alone are composed, each where the rows above it leave it. A chapter with many
+ * commentators is hundreds of pages: composed and measured together they held the window, and the memory until the app
+ * was let go of (the testers' build of 2026-11-23, Bereshit 1 with all its commentators checked).
+ */
+@Composable
+private fun UnitRows(
+    index: Int,
+    unit: LaidUnit,
+    places: BookDafList,
+    columns: Int,
+    page: @Composable (LaidPage) -> Unit,
+) {
+    val frame = places.frame
+    val rows = remember(unit, columns) { unit.rows(columns) }
+    val tops = remember(unit, places.perPoint, frame.head, frame.gap, columns) { unit.rowTops(places.perPoint, frame) }
+    val listState = places.listState
+    val view = places.viewportHeight
+    val shown by remember(index, tops, listState, view) {
+        derivedStateOf {
+            val top = listState.topIn(index, tops.last() - view)
+            rowsIn(tops, top - view * ROWS_AHEAD, top + view * (1 + ROWS_AHEAD))
+        }
+    }
+    Layout(
+        content = {
+            for (row in shown) {
+                key(row) { Row(Modifier.layoutId(row)) { for (laidPage in rows[row]) page(laidPage) } }
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val placeables = measurables.map { (it.layoutId as Int) to it.measure(Constraints()) }
+        layout(constraints.maxWidth, tops.last().roundToInt()) {
+            for ((row, placeable) in placeables) {
+                placeable.placeRelative((constraints.maxWidth - placeable.width) / 2, tops[row].roundToInt())
+            }
+        }
+    }
+}
+
+// The pixels down the list's item [index] at the view's top: where the list has it, or is about to (a jump into it);
+// an item not in view yet as it comes into it, from its top below the view, from its end ([last]) above it
+private fun LazyListState.topIn(
+    index: Int,
+    last: Float,
+): Float {
+    if (index == firstVisibleItemIndex) return firstVisibleItemScrollOffset.toFloat()
+    val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+    return when {
+        item != null -> -item.offset.toFloat()
+        index < firstVisibleItemIndex -> last
+        else -> 0f
     }
 }
 
@@ -410,6 +478,10 @@ private fun BookDafPage(
     modifier: Modifier = Modifier,
 ) {
     val rule = JewelTheme.globalColors.borders.normal
+    // Laid out as it comes near the view, off the UI thread, as a tractate's amud is: its place meanwhile is its size
+    val layout by produceState(page.layoutIfLaid, page) {
+        value = page.layoutIfLaid ?: withContext(Dispatchers.Default) { page.layout() }
+    }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.height(HeadHeight), contentAlignment = Alignment.BottomCenter) {
             Text(
@@ -423,7 +495,8 @@ private fun BookDafPage(
         LinkedAmud(
             book = book,
             amud = page.amud,
-            layout = page.layout,
+            // (the page's own: a unit set otherwise gives this place another page before its layout comes)
+            layout = layout?.takeIf { it.amud === page.amud },
             look = look,
             marks = marks,
             selection = selection,

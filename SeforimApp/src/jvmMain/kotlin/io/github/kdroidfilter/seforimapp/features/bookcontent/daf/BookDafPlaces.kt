@@ -17,19 +17,21 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 // Pardes (request 21 of docs/DESKTOP_STAGE2.md): a book's daf's units laid out (BookDafLayout) and where its lines are on
 // them, for its list (BookDafView): a line brought into view, the line read at the view's top, the place kept at a zoom.
 
 /**
- * A page of a book's daf as shown: its amud and its [layout], its running [head] (the references it holds; those of the
- * page before it when it has commentaries alone, [isContinued]), the [rules] drawn between its parts, the passages
- * Zayit's anchors mark on it, where each library line is printed first ([tops], points down the page), and the text's
- * printed lines top down ([textTops]: each one's top and the first line of the text that begins on it).
+ * A page of a book's daf as shown: its amud, laid out when it comes near the view ([laying]), its running [head] (the
+ * references it holds; those of the page before it when it has commentaries alone, [isContinued]), the [rules] drawn
+ * between its parts, the passages Zayit's anchors mark on it, where each library line is printed first ([tops], points
+ * down the page), and the text's printed lines top down ([textTops]: each one's top and the first line of the text that
+ * begins on it).
  */
 internal class LaidPage(
     val amud: DafAmud,
-    val layout: AmudLayout,
+    private val laying: Lazy<AmudLayout>,
     val head: String,
     val passages: Map<Long, List<Pair<IntRange, Set<Long>>>>,
     val tops: Map<Long, Float>,
@@ -39,8 +41,14 @@ internal class LaidPage(
 ) {
     val height: Float get() = amud.block[3] - amud.block[1]
 
+    /** The page's layout once it was laid out; null before. */
+    val layoutIfLaid: AmudLayout? get() = if (laying.isInitialized()) laying.value else null
+
+    /** The page laid out: its lines measured the first time it is asked for, off the UI thread. */
+    fun layout(): AmudLayout = laying.value
+
     /** The page under the head of the page before it, whose text its commentaries go on from. */
-    fun continuing(head: String) = LaidPage(amud, layout, head, passages, tops, textTops, rules, isContinued = true)
+    fun continuing(head: String) = LaidPage(amud, laying, head, passages, tops, textTops, rules, isContinued = true)
 }
 
 /** The tab's line, selection and place, as a book's daf takes them from the text view (DafView's). */
@@ -95,6 +103,17 @@ internal class LaidUnit(
             .take(row.coerceAtLeast(0))
             .sumOf { pages -> (frame.head + pages.maxOf { it.height } * perPoint + frame.gap).toDouble() }
             .toFloat()
+
+    /** The pixels down the unit's item to the top of each of its rows, and to its end last: the rows' places in it. */
+    fun rowTops(
+        perPoint: Float,
+        frame: PageFrame,
+    ): FloatArray {
+        val rows = rows(frame.columns)
+        val tops = FloatArray(rows.size + 1)
+        rows.forEachIndexed { i, pages -> tops[i + 1] = tops[i] + frame.head + pages.maxOf { it.height } * perPoint + frame.gap }
+        return tops
+    }
 
     /** The pixels down the unit's item to [points] down its page [page], [perPoint] pixels a point. */
     fun offset(
@@ -183,57 +202,86 @@ internal class LaidUnit(
     fun hasComment(commentId: Long): Boolean = comments.any { list -> list.any { it.id == commentId } }
 }
 
+/**
+ * The rows of an item in view or near it, of those at [tops] (each one's top, and the item's end last): the ones any of
+ * which is between [from] and [until] pixels down the item, one at least (the nearest) while it has rows.
+ */
+internal fun rowsIn(
+    tops: FloatArray,
+    from: Float,
+    until: Float,
+): IntRange {
+    val rows = tops.size - 1
+    if (rows <= 0) return IntRange.EMPTY
+    var first = 0
+    while (first < rows - 1 && tops[first + 1] <= from) first++
+    var last = first
+    while (last < rows - 1 && tops[last + 1] < until) last++
+    return first..last
+}
+
+/** The size words are measured at, to be scaled to the page's letters. */
+private const val MEASURE_SIZE = 100f
+
+/** The most words' widths kept: beyond them they are measured again. */
+private const val MOST_WIDTHS = 400_000
+
 /** The daf's letters: the text's and the names' square ones, the commentaries' Rashi script, measured with [measurer]. */
 internal class DafLetters(
     val measurer: TextMeasurer,
     val density: Density,
     val gemara: FontFamily,
     val rashi: FontFamily,
-)
+) {
+    // Each word's width, measured once however the book's pages are set: a check in the commentaries pane sets them
+    // again, and a chapter with all its commentators has some eighty thousand words of its own
+    private val widths = ConcurrentHashMap<Triple<String, Boolean, Boolean>, Float>()
 
-/** The size words are measured at, to be scaled to the page's letters. */
-private const val MEASURE_SIZE = 100f
-
-/**
- * Words measured in [letters] at a book's daf's [sizes] (its lines' boxes), each once: as the daf's setting sets their
- * lines' letters.
- */
-private fun measuredWidths(
-    letters: DafLetters,
-    sizes: DafSizes,
-): WordWidths {
-    val one = Density(1f)
-    val cache = HashMap<Triple<String, Boolean, Boolean>, Float>()
-
-    fun at100(
+    /**
+     * The width of [text] at [MEASURE_SIZE], in the text's letters ([square]) or the commentaries'. One measure at a
+     * time: the units are laid out and their pages measured from threads of their own.
+     */
+    fun widthOf(
         text: String,
         square: Boolean,
         bold: Boolean,
     ): Float {
+        val key = Triple(text, square, bold)
+        widths[key]?.let { return it }
+        if (widths.size >= MOST_WIDTHS) widths.clear()
         val style =
             TextStyle(
-                fontFamily = if (square) letters.gemara else letters.rashi,
+                fontFamily = if (square) gemara else rashi,
                 fontSize = MEASURE_SIZE.sp,
                 fontWeight = if (bold) FontWeight.Bold else null,
             )
-        return letters.measurer
-            .measure(AnnotatedString(text), style, density = one)
-            .size.width
-            .toFloat()
+        val width =
+            synchronized(this) {
+                measurer
+                    .measure(AnnotatedString(text), style, density = Density(1f))
+                    .size.width
+                    .toFloat()
+            }
+        widths[key] = width
+        return width
     }
+}
 
+/** Words measured in [letters] at a book's daf's [sizes] (its lines' boxes): as the daf's setting sets their lines' letters. */
+private fun measuredWidths(
+    letters: DafLetters,
+    sizes: DafSizes,
+): WordWidths {
     fun size(square: Boolean) = if (square) sizes.gemara * GEMARA_SIZE else sizes.commentary * RASHI_SIZE
     return object : WordWidths {
         override fun of(
             word: String,
             square: Boolean,
             bold: Boolean,
-        ): Float = cache.getOrPut(Triple(word, square, bold)) { at100(word, square, bold) / MEASURE_SIZE * size(square) }
+        ): Float = letters.widthOf(word, square, bold) / MEASURE_SIZE * size(square)
 
         override fun space(square: Boolean): Float =
-            cache.getOrPut(Triple(" ", square, false)) {
-                (at100("א א", square, false) - 2 * at100("א", square, false)) / MEASURE_SIZE * size(square)
-            }
+            (letters.widthOf("א א", square, false) - 2 * letters.widthOf("א", square, false)) / MEASURE_SIZE * size(square)
     }
 }
 
@@ -262,13 +310,16 @@ internal class UnitSetter(
     /** A page's usual height to its width, for a whole page fitted in the view. */
     val aspect: Float = (bands?.height ?: BOOK_DAF_HEIGHT) / BOOK_DAF_WIDTH
 
-    /** The unit [unit] laid out, its pages named after it. */
+    /**
+     * The unit [unit] laid out, its pages named after it: read and set in pages off the UI thread (a chapter with many
+     * commentators is thousands of comments), each page's lines measured when the page comes near the view (LaidPage).
+     */
     suspend fun lay(unit: DafUnit): LaidUnit =
         mutex.withLock {
-            val text = loadDafUnit(repository, book.id, unit, commentators.selection, commentators.connections, look)
             withContext(Dispatchers.Default) {
+                val text = loadDafUnit(repository, book.id, unit, commentators.selection, commentators.connections, look)
                 val pages =
-                    bands?.let { DafBandsSetter(widths, text.text, text.commentaries, text.targum, it).pages() }
+                    bands?.let { DafBandsSetter(widths, text.text, text.commentaries, text.targum, it).pages { ensureActive() } }
                         ?: dafPagesAround(text.text, text.commentaries, widths)
                 val laid = ArrayList<LaidPage>()
                 pages.forEachIndexed { i, page ->
@@ -294,7 +345,13 @@ internal class UnitSetter(
     ): LaidPage {
         val amud = page.amud(name)
         val openings = page.openings.takeIf { it.isNotEmpty() }?.let { DafOpenings(it, DIBBUR_SIZE) }
-        val layout = layoutAmud(amud, LAYOUT_SCALE, letters.measurer, letters.density, letters.gemara, letters.rashi, sizes, openings)
+        // One page at a time: the pages near the view ask together, each from a thread of its own
+        val layout =
+            lazy {
+                synchronized(letters) {
+                    layoutAmud(amud, LAYOUT_SCALE, letters.measurer, letters.density, letters.gemara, letters.rashi, sizes, openings)
+                }
+            }
         val tops = HashMap<Long, Float>()
         val textTops = ArrayList<Pair<Float, Long>>()
         for (line in amud.lines) {

@@ -46,9 +46,6 @@ private const val FILL = 0.15f
 /** Rule 9: the lines of commentary left free at a page's bottom. */
 private const val SAFETY_LINES = 1
 
-/** No unit is set in more pages than these: a guard against a page that takes nothing in. */
-private const val MOST_PAGES = 2_000
-
 /** A line of the text that ends with this closes its paragraph (a parashah petuchah), where the text runs on. */
 internal const val PETUCHAH = "{פ}"
 
@@ -152,6 +149,21 @@ private class WordRun(
         return lines
     }
 
+    /** How many lines the words [from] until [until] are, counted no further than [most]. */
+    fun lineCount(
+        from: Int,
+        until: Int,
+        most: Int,
+    ): Int {
+        var count = 0
+        var at = from
+        while (at < until && count < most) {
+            at = lineEnd(at, until)
+            count++
+        }
+        return count
+    }
+
     /** Where [count] lines from the word [from] end, no further than [until]. */
     fun endOf(
         from: Int,
@@ -241,13 +253,17 @@ internal class DafBandsSetter(
         line: Int,
     ) = if (line < 0) 0 else ends[commentary][line]
 
-    /** The unit's pages, in order. */
-    fun pages(): List<SetPage> {
+    /**
+     * The unit's pages, in order; [beforeEachPage] is called before each is set (a chapter with all its commentators is
+     * thousands of pages, let go of when the pages are set otherwise meanwhile).
+     */
+    fun pages(beforeEachPage: () -> Unit = {}): List<SetPage> {
         val pages = ArrayList<SetPage>()
         val at = IntArray(runs.size)
         var next = 0
         while (next < text.size || at.indices.any { at[it] < runs[it].words.size }) {
-            check(pages.size < MOST_PAGES) { "a page of bands took nothing in" }
+            beforeEachPage()
+            val set = next + at.sum()
             val last = lastLine(next, at)
             val page = BandsPage()
             if (last >= next) setText(next, last, page)
@@ -255,6 +271,8 @@ internal class DafBandsSetter(
             // Nothing new on the page (its room too small for a band's least): the first band waiting is set all the same
             if (last < next && !taken) force(at, page)
             next = maxOf(next, last + 1)
+            // A line or a word at least on each page: the unit ends
+            check(next + at.sum() > set) { "a page of bands took nothing in" }
             val isLast = next >= text.size && at.indices.all { at[it] >= runs[it].words.size }
             // Pages of one size (a line taller than a page makes its own longer); a unit's last ends where its lines do
             pages += SetPage(page.lines, if (isLast) page.y else maxOf(measures.height, page.y), page.rules, page.openings)
@@ -264,6 +282,10 @@ internal class DafBandsSetter(
 
     // A page's room: its height less the lines left free at its bottom (rule 9)
     private val room = measures.height - measures.commentary.pitch * SAFETY_LINES
+
+    // A band of this many lines is taller than a page's room: none is counted further (a commentator's comments waiting
+    // may be a chapter's)
+    private val mostLines = (floor(room / measures.commentary.pitch).toInt() + 2) * measures.columns
 
     /**
      * The last line of the text a page that begins at the line [first] takes, with each commentator's run at [at]: line
@@ -280,7 +302,15 @@ internal class DafBandsSetter(
 
         fun textHeight(last: Int) = if (last < first) 0f else heights.getOrPut(last) { BandsPage().also { setText(first, last, it) }.y }
 
-        fun used(last: Int) = textHeight(last) + runs.indices.sumOf { bandHeight(it, at[it], endAt(it, last)).toDouble() }.toFloat()
+        // The bands counted while they fit: with many commentators waiting, the first few are more than the page's room
+        fun used(last: Int): Float {
+            var height = textHeight(last)
+            for (c in runs.indices) {
+                if (height > room) break
+                height += bandHeight(c, at[c], endAt(c, last))
+            }
+            return height
+        }
         var last = first - 1
         while (last < text.lastIndex && used(last + 1) <= room) last++
         if (last < first) last = first
@@ -314,7 +344,7 @@ internal class DafBandsSetter(
         until: Int,
     ): Float {
         if (until <= from) return 0f
-        val lines = runs[commentary].lines(from, until).size
+        val lines = runs[commentary].lineCount(from, until, mostLines)
         return measures.bandHead + ceil(lines / measures.columns.toFloat()) * measures.commentary.pitch
     }
 
