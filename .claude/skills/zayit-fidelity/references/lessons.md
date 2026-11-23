@@ -59,6 +59,13 @@ tools and the code did when it was written.
     `when`s (`TabsContent`'s two, `TabsViewModel.withTabId`, `DesktopSession.tabTypeFor`, `ZayitDeepLink.toShareLink`,
     `SessionManager.computeTabTitles`) and a fixed `@SerialName`, as the session keeps it by name. An older Pardes
     cannot read a session that holds it, and starts on a new one.
+- **Maven Central can stop serving a version.** On 2026-11-23 it answered 404 (`x-amz-error-code: NoSuchKey`) for
+  `io.github.kdroidfilter:kosherkotlin` 3.0.3 to 3.0.5, its index still listing them, the day after 4.0.0 came out;
+  Zayit 0.6.12 is built with 3.0.5, so every clean build failed in its first minutes ("Could not find …"), a testers'
+  build among them, while the container, whose init script takes Maven Central from Google's mirror, built on.
+  `desktop-release.yml` has that mirror as a fallback since (`.github/gradle/central-mirror-fallback.init.gradle.kts`);
+  `ci.yaml` has none. Ask the repository itself before blaming the change: `curl -sI` on the artifact's `.pom`, and a
+  scratch project with a clean Gradle home (`-g`).
 - **Building on Windows from a folder whose name has Hebrew letters** (the user's computer, 2026-11-15): the Android
   Gradle plugin refuses the path (`-Pandroid.overridePathCheck=true`), and Kover's agent cannot find its file, its
   path turned to question marks: build from a `subst` drive. Gradle itself needs Java 21 or later (a JBR from
