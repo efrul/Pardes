@@ -103,7 +103,8 @@ internal const val LAYOUT_SCALE = 2f
  * (its links, read once, with the passages Zayit's anchors mark in a book's lines, [passages]): the tab's [marks] on
  * its words, the user's highlights and notes, the find in page's matches; its words' [clicks] as the text's, a drag
  * selecting them ([selection]) for the text's own menu (copy, copy with source, search, find in page…), and a
- * tractate's [review] when it has one.
+ * tractate's [review] when it has one. In the tab of a commentary printed on the daf ([commentaryId], request 82 of
+ * stage 3), the lines are the commentary's: a click selects its comment, the notes and the find are its own.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -118,15 +119,18 @@ internal fun LinkedAmud(
     modifier: Modifier = Modifier,
     passages: Map<Long, List<Pair<IntRange, Set<Long>>>> = emptyMap(),
     review: AmudReview? = null,
+    commentaryId: Long? = null,
 ) {
     val graph = LocalAppGraph.current
     val density = LocalDensity.current
+    // The tab's book: the page's, or the commentary's in its tab, whose notes the page shows
+    val tabBook = commentaryId ?: book.id
     // The page's comments and the lines they are on, read once for the page
     val links by produceState<DafAmudLinks?>(null, book.id, amud, passages) {
         value = loadLinks(graph.repository, book.id, amud, passages)
     }
-    val words = linkedWords(book.id, links, marks, review, look.color)
-    val located = rememberLocated(amud, book.id, selection.range, links)
+    val words = linkedWords(tabBook, links, marks, review, look.color, commentaryId)
+    val located = rememberLocated(amud, tabBook, selection.range, links, commentaryId)
     val copyToClipboard = rememberCopyToClipboard()
     val menuState = remember { ContextMenuState() }
     // The word a right-click was on, for the review's actions
@@ -156,16 +160,11 @@ internal fun LinkedAmud(
                             selectionColor = LocalTextSelectionColors.current.backgroundColor,
                             onRange = selection.onRange,
                             onWordClick = { word, withModifier ->
-                                links?.let { l ->
-                                    clickOn(l, word, withModifier, clicks.onSelectLine, clicks.onSelectPassage)
-                                    clicks.onFocusComment(l.lineIdOf(word)?.takeUnless { l.isGemara(word) })
-                                    // The word itself in the text, where it is in its line
-                                    l.anchors[word]?.takeIf { it.bookId == book.id }?.let(clicks.onWordInText)
-                                }
+                                links?.let { clicks.onWord(it, word, withModifier, tabBook, commentaryId) }
                             },
                             onContextWord = { word ->
                                 contextWord = word
-                                links?.segmentOf(word)?.let(clicks.onContextLine)
+                                links?.tabLineAt(word, commentaryId)?.let(clicks.onContextLine)
                             },
                             onMenu = { at -> menuState.status = ContextMenuState.Status.Open(Rect(at, Size.Zero)) },
                             // A press anywhere forgets the word of the last right-click: one off a word has none
@@ -184,21 +183,46 @@ internal fun LinkedAmud(
     }
 }
 
-/** The selection [range] of [amud] located in the library, for the text's menu: its highlights, its note and its link. */
+/**
+ * A click on [word] of a page of the tab's book ([tabBook]): as the text's lines' ([clickOn]), a comment clicked itself
+ * focused for the arrows; in a commentary's tab ([commentaryId], request 82 of stage 3), the commentary's comment the
+ * word stands for. The word itself is selected in the text, where it is in its line.
+ */
+private fun DafClicks.onWord(
+    links: DafAmudLinks,
+    word: DafWord,
+    withModifier: Boolean,
+    tabBook: Long,
+    commentaryId: Long?,
+) {
+    if (commentaryId == null) {
+        clickOn(links, word, withModifier, onSelectLine, onSelectPassage)
+        onFocusComment(links.lineIdOf(word)?.takeUnless { links.isGemara(word) })
+    } else {
+        links.commentaryLineAt(word, commentaryId)?.let { onSelectLine(it, false) }
+    }
+    links.anchors[word]?.takeIf { it.bookId == tabBook }?.let(onWordInText)
+}
+
+/**
+ * The selection [range] of [amud] located in the library, for the text's menu: its highlights, its note and its link,
+ * which goes to the segment, or in a commentary's tab ([commentaryId]) to its comment.
+ */
 @Composable
 private fun rememberLocated(
     amud: DafAmud,
     bookId: Long,
     range: DafRange?,
     links: DafAmudLinks?,
+    commentaryId: Long?,
 ): () -> LocatedSelection? {
     val currentRange by rememberUpdatedState(range)
     val currentLinks by rememberUpdatedState(links)
-    return remember(amud, bookId) {
+    return remember(amud, bookId, commentaryId) {
         {
             val r = currentRange
             val l = currentLinks
-            if (r == null || l == null) null else locate(amud, r, l.anchors, bookId) { w -> l.segmentOf(w) }
+            if (r == null || l == null) null else locate(amud, r, l.anchors, bookId) { w -> l.tabLineAt(w, commentaryId) }
         }
     }
 }
@@ -213,7 +237,8 @@ private class LinkedWords(
  * The marks on an amud's words: the find in page's matches strongest, then the tab's selection (in [color]), the
  * user's highlights and the [review]'s tints; and the words the main book's ([bookId]) notes are on. The highlights and
  * notes are kept in the library's text, and found on the words they are on (DafAnchors.kt): the highlights of the
- * page's books, the notes of the main book (the text's notes are its own).
+ * page's books, the notes of the main book (the text's notes are its own). In a commentary's tab ([commentaryId]) the
+ * find's matches are the commentary's own, which its find counts.
  */
 @Composable
 private fun linkedWords(
@@ -222,6 +247,7 @@ private fun linkedWords(
     marks: DafMarks,
     review: AmudReview?,
     color: Color,
+    commentaryId: Long?,
 ): LinkedWords {
     val graph = LocalAppGraph.current
     val highlightStore = graph.highlightStore
@@ -245,11 +271,12 @@ private fun linkedWords(
     // The find in page's matches, as the text view finds them in the library's lines, the current one strongest
     val find = marks.find
     val found =
-        remember(links, find) {
+        remember(links, find, commentaryId) {
             val l = links
+            val texts = if (commentaryId == null) l?.texts else l?.texts?.filterKeys { l.bookOf[it] == commentaryId }
             when {
-                l == null -> emptyMap()
-                find.query != null -> foundWords(l.anchors, l.texts, find.query, find.current, SearchHighlightColor, CurrentFindMatchColor)
+                l == null || texts == null -> emptyMap()
+                find.query != null -> foundWords(l.anchors, texts, find.query, find.current, SearchHighlightColor, CurrentFindMatchColor)
                 else -> wordsOfLines(l.anchors, find.lines, SearchHighlightColor)
             }
         }

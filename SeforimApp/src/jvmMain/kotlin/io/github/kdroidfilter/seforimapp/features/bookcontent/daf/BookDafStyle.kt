@@ -93,14 +93,15 @@ internal val Book.isTanakh: Boolean
 
 /**
  * Whether [book], no tractate, is offered pages of its own (BookDafView): the experiment is on, and it has commentaries
- * to set under its text.
+ * to set under its text. Not a commentary printed on a tractate's daf, which shows that daf (request 82 of stage 3).
  */
 @Composable
 internal fun hasBookDaf(book: Book): Boolean {
     val enabled by LocalAppGraph.current.appSettings
         .flow(BookDafSettings.enabled)
         .collectAsState()
-    return enabled && !book.isBavli && book.hasCommentaryConnection
+    val printed = rememberDafTractate(book) != null
+    return enabled && !printed && book.hasCommentaryConnection
 }
 
 /** Whether the tab of [uiState] shows a book's own pages. */

@@ -24,6 +24,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMarksButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasBookDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafTractate
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookConnections
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
@@ -152,9 +153,11 @@ fun EndVerticalBar(
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
                 val bookHasDiacritics = selectedBook.hasNekudot || selectedBook.hasTeamim
+                // Pardes: the tractate whose daf the book shows, itself or the one a commentary of it is printed on (82)
+                val dafTractate = rememberDafTractate(selectedBook)
                 // A daf shown has no diacritics to hide: the button of its marks stands in their place; nor have
                 // pages (Pardes, request 49)
-                if (uiState.content.dafView && selectedBook.isBavli) {
+                if (uiState.content.dafView && dafTractate != null) {
                     DafMarksButton()
                 } else if (bookHasDiacritics && !showsPrintedPages(uiState)) {
                     DiacriticsButton(
@@ -177,13 +180,14 @@ fun EndVerticalBar(
                         label = stringResource(Res.string.shnayim_mikra_mode),
                     )
                 }
-                // The daf (צורת הדף), in place of the text: a Talmud tractate as printed in the Vilna Shas, another book
-                // as pages of its own with its commentators (BookDafView)
-                if (selectedBook.isBavli || hasBookDaf(selectedBook)) {
+                // The daf (צורת הדף), in place of the text: a Talmud tractate as printed in the Vilna Shas, and a
+                // commentary printed on it too, Rashi's, Tosafot's, the Rashbam's (request 82), not its scan; another
+                // book as pages of its own with its commentators (BookDafView)
+                if (dafTractate != null || hasBookDaf(selectedBook)) {
                     SelectableIconButtonWithToolip(
                         toolTipText =
                             stringResource(
-                                if (selectedBook.isBavli) Res.string.daf_view_tooltip else Res.string.book_daf_tooltip,
+                                if (dafTractate != null) Res.string.daf_view_tooltip else Res.string.book_daf_tooltip,
                             ),
                         onClick = { onEvent(BookContentEvent.ToggleDafView) },
                         isSelected = uiState.content.dafView,

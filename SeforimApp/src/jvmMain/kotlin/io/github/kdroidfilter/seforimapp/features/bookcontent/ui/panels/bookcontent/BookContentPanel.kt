@@ -30,6 +30,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafCommentator
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasBookDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafTractate
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePlaces
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
@@ -251,14 +252,19 @@ private fun BookContentPanelContent(
                     val repository = LocalAppGraph.current.repository
                     val scope = rememberCoroutineScope()
                     val content by rememberUpdatedState(uiState.content)
-                    // A Talmud tractate as its Vilna page: the same view, its items amudim; or as its scan (request 46).
+                    // A Talmud tractate as its Vilna page: the same view, its items amudim; or as its scan (request 46). And a
+                    // commentary printed on a tractate's daf, Rashi's, Tosafot's, the Rashbam's, on that daf (request 82).
                     // Another book as pages of its own, with the commentators the commentaries pane shows (BookDafView)
-                    val tractate = (uiState.content.dafView || uiState.content.scanView) && selectedBook.isBavli
+                    val dafTractate = rememberDafTractate(selectedBook)
+                    val tractateDaf = (uiState.content.dafView || uiState.content.scanView) && selectedBook.isBavli
+                    val commentaryDaf = dafTractate != null && !selectedBook.isBavli && uiState.content.dafView
+                    val bookDaf = hasBookDaf(selectedBook) && uiState.content.dafView
                     val daf =
-                        if (tractate || (uiState.content.dafView && hasBookDaf(selectedBook))) {
+                        if (tractateDaf || commentaryDaf || bookDaf) {
                             DafMode(
-                                book = selectedBook,
-                                scan = tractate && uiState.content.scanView,
+                                book = dafTractate ?: selectedBook,
+                                scan = uiState.content.scanView && selectedBook.isBavli,
+                                commentaryId = selectedBook.id.takeIf { commentaryDaf },
                                 onSelectLine = { lineId, withModifier ->
                                     scope.launch {
                                         runSuspendCatching { repository.getLine(lineId) }.getOrNull()?.let {

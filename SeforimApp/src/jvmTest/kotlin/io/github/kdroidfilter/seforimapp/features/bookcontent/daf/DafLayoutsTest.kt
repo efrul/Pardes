@@ -82,6 +82,27 @@ class DafLayoutsTest {
     }
 
     @Test
+    fun aCommentaryPrintedOnADafIsFoundWithItsTractate() {
+        fixture.copyTo(File(dir, "Berakhot.json"))
+        // Bava Batra's: Rashi's column holds the Rashbam's comments after Rashi's, the Ran's are Nedarim's
+        File(dir, "Bava Batra.json").writeText(
+            """{"format":2,"tractate":"Bava Batra","tractateHe":"בבא בתרא","amudim":[],""" +
+                """"library":{"release":"1","books":{"G":[124],"R":[1293,1172],"T":[1429]}}}""",
+        )
+        val layouts = DafLayouts(dir)
+        assertEquals(103L, layouts.tractateOf(1280), "Rashi on Berakhot")
+        assertEquals(103L, layouts.tractateOf(1413), "Tosafot on Berakhot")
+        assertEquals(124L, layouts.tractateOf(1172), "the Rashbam in Rashi's column")
+        assertEquals(124L, layouts.tractateOf(1429))
+        assertNull(layouts.tractateOf(103), "a tractate's own Gemara is no commentary of it")
+        assertNull(layouts.tractateOf(999), "nor a book no daf prints")
+        // Looked at again when a file is taken out
+        File(dir, "Bava Batra.json").delete()
+        dir.setLastModified(dir.lastModified() + 1_000)
+        assertNull(layouts.tractateOf(1172))
+    }
+
+    @Test
     fun aFormatOneFileStillOpens() {
         File(dir, "old.json").writeText(
             """{"format":1,"tractate":"Berakhot","tractateHe":"ברכות","amudim":[{"amud":"2a","page":[600,850],""" +
