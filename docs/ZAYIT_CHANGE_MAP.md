@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (317 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (327 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 59 |
+| Pardes feature hook | 58 |
 | Pardes feature in Zayit's file | 36 |
 | Fix of Zayit's code | 23 |
 | Branding hook | 4 |
@@ -66,7 +66,7 @@ The entries of this section by kind:
 | Licence removal | 4 |
 | Documentation | 3 |
 | Renamed Zayit file | 2 |
-| Build or CI | 1 |
+| Build or CI | 2 |
 
 ### Repository, build and CI
 
@@ -287,6 +287,20 @@ The entries of this section by kind:
   `FeedbackTestDoubles.kt` (Ktor's `MockEngine`), and `DbDeltaLuceneSinkTest`.
 - **Notes:** two dependencies are written as literal coordinates, not as `libs.` aliases from the version catalog:
   a departure from Zayit's way.
+
+#### `SeforimApp/detekt-baseline-jvmMainSourceSet.xml`
+
+- **Change:** modified, +1 −1 lines. Feature: Daily study plans (request 64 of stage 3).
+- **What:** the id of `SuggestionRow`'s `LongMethod` says `@Composable internal fun SuggestionRow` where Zayit's says
+  `private fun`.
+- **Why:** `SuggestionRow`, in Zayit's `HomeView.kt` and 98 lines long there, is in Zayit's baseline; since stage 3 it
+  is internal, for the study plan's field that finds a book or a category as the search's bar does (request 64: "אפשר
+  קוד משותף"). detekt matches a baseline's id by the function's signature, so its visibility alone made detekt report
+  Zayit's function as new (found 2026-11-22, with stage 3's own findings).
+- **Kind:** build or CI.
+- **Merge risk:** small; one line.
+- **Smaller:** already minimal.
+- **Tests:** `:SeforimApp:detektJvmMainSourceSet`.
 
 #### `SeforimApp/src/graalvm/reachability-metadata.json`
 
@@ -528,18 +542,18 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/utils/WindowUtils.kt`
 
-- **Change:** modified, +17 −6 lines. Feature: Daf view, Find results pane.
+- **Change:** modified, +11 −6 lines. Feature: Daf view, Find results pane.
 - **What:** in `processKeyShortcuts`, Ctrl with Plus, Equals or Minus calls `appSettings.zoomIn(tabId)` /
   `zoomOut(tabId)` instead of `increaseTextSize()` / `decreaseTextSize()`; the debug messages say "zooming". And Alt+Enter,
-  where the tab has a find and its bar is open, shows or hides the find's results pane (`FindResultsSettings.shown`)
-  from anywhere in the tab, before Zayit's Alt shortcuts; `ENTER_KEYS` at the file's end, a comment marked "Pardes:" and
-  an import.
+  where the tab has a find and its bar is open, shows or hides the find's results pane from anywhere in the tab, before
+  Zayit's Alt shortcuts: one line, `appSettings.toggleFindResults(keyEvent, tabId)` (`BookFindHub.kt`), a comment marked
+  "Pardes:" and an import.
 - **Why:** when the selected tab shows the daf, the zoom keys zoom the daf (30% to 400%), not the text (`8d3825e7`; the
   daf alone again since request 63 of the list after the third testers' build, `AppSettings.zoomIn`). The pane's
   Alt+Enter worked only in the find field (request 71 of stage 3, 2026-11-19: "יוכל להסגר ולהיפתח על ידי קיצור
   המקשים גם כשהפוקוס לא על שורת החיפוש").
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small; three branches of one `when`.
+- **Merge risk:** small; three branches of one `when`, and a line before the Alt shortcuts.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`.
 
@@ -894,12 +908,13 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TabSearchPopup.kt`
 
-- **Change:** modified, +46 −21 lines. Feature: The keys in the popups.
+- **Change:** modified, +40 −21 lines. Feature: The keys in the popups.
 - **What:** in `TabSearchPopupContent`, a tab's row and a history entry's open through two local functions
   (`selectTab`, `openEntry`, the rows' own code moved there unchanged), and with comments marked "Pardes:" the
-  popup's keys (`rememberPopupKeys(query)`, `PopupKeyRow`s for the open tabs and the history in their order, the
-  headers counted, `Modifier.popupKeys` on the popup's frame, the list's state `keys.listState`): up and down mark a
-  row, Enter opens it, Escape closes the popup; `itemsIndexed` for the two lists, each row `selected = keys.marks(…)`.
+  popup's keys (`rememberPopupKeys(query)`, its rows `sectionKeyRows` of the open tabs and the history in their order,
+  the headers counted, `Modifier.popupKeys` on the popup's frame, the list's state `keys.listState`): up and down mark a
+  row, Enter opens it, Escape closes the popup; `itemsIndexed` for the two lists (their keys' lambdas naming the row and the entry, not `it`), each row
+  `selected = keys.marks(…)`.
   `PopupRow` takes `selected` (last, `false` by default) and draws it as the breadcrumb's popup draws its own (16% of
   the accent; hovered, 8%, as before); its import.
 - **Why:** request 69 of the list after the third testers' build: "צריך תמיכה מלאה במקשים, כל תיבה שנפתחת תתמך
@@ -913,13 +928,16 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/NotesPopup.kt`
 
-- **Change:** modified, +23 −2 lines. Feature: The keys in the popups.
-- **What:** with a comment marked "Pardes:", the popup's keys (`rememberPopupKeys(query)`, a `PopupKeyRow` for each
-  note in the books' order, each book's header counted, each opening its note as its row does), `Modifier.popupKeys`
-  on its frame, `keys.listState` on its list, and each note's row `selected` by its place among the notes.
+- **Change:** modified, +30 −15 lines. Feature: The keys in the popups.
+- **What:** a note's row opens through a local function (`openNote`, the row's own code moved there unchanged), and
+  with a comment marked "Pardes:" the popup's keys (`rememberPopupKeys(query)`, its rows `sectionKeyRows` of the books'
+  notes in their order, each book's header counted, each opening its note), `Modifier.popupKeys` on its frame,
+  `keys.listState` on its list, and each note's row `selected` by its place among the notes. The list's line when no
+  note matches, Zayit's, is in a function of its own (`NoNotes`, at the file's end, a comment marked "Pardes:"):
+  Zayit's `NotesPopupContent` was 60 lines, `detekt.yml`'s most, and the hook took it past them (2026-11-22).
 - **Why:** as for `TabSearchPopup.kt`, request 69 ("היסטוריה והערות מהשורה למעלה").
 - **Kind:** Fix of Zayit's code.
-- **Merge risk:** small.
+- **Merge risk:** small: the note row's click code moved into `openNote`, the empty line into `NoNotes`.
 - **Smaller:** already minimal.
 - **Tests:** `PopupKeysUiTest` (the keys).
 
@@ -1190,7 +1208,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +78 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
+- **Change:** modified, +79 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
   Reader's default commentators, Find results pane.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
@@ -1212,8 +1230,9 @@ The entries of this section by kind:
   - The commentaries' prefetch reads the book's `commentatorSelection`: with whole groups checked, each line prefetches
     its own commentators of those groups (`shownOn`), not only those remembered by name.
   - `ContentScrolled` is a block: in a tab that shows a tractate's scan (`scanView`), the scan's top line also selects
-    its entry in the table of contents (`contentUseCase.showInToc`), a comment marked "Pardes:": the scan selects no
-    line, so its contents did not follow its pages (request 45 of `docs/DESKTOP_STAGE3_PLAN.md`).
+    its entry in the table of contents (`stateManager.showInToc(repository, …)`, `TocOfScan.kt`, and its import), a
+    comment marked "Pardes:": the scan selects no line, so its contents did not follow its pages (request 45 of
+    `docs/DESKTOP_STAGE3_PLAN.md`).
   - `ToggleFindResults` turns `FindResultsSettings.shown` (request 55 of stage 3), with a comment marked "Pardes:" and
     its import.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
@@ -1253,19 +1272,6 @@ The entries of this section by kind:
 - **Smaller:** the keys' rows repeat the row's own click (four lines), which stays as Zayit wrote it.
 - **Tests:** `TreeKeysTest`; tried in the app: the scan's contents follow its pages after a click on the entry
   selected; Shabbat's contents gone through with the arrows, the keys' row as the search's match.
-
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/usecases/ContentUseCase.kt`
-
-- **Change:** modified, +16 −0 lines. Feature: The contents following the pages (request 45 of stage 3).
-- **What:** `showInToc(lineId)`, a function of its own before `updateContentScrollPosition`, with a KDoc marked
-  "Pardes:": the table of contents' entry of a line selected (`selectedEntryId`, `breadcrumbPath`), as `selectLine`
-  selects it, the line itself not; nothing when the entry is selected already.
-- **Why:** a tractate's scan selects no line, so its contents stayed on the entry chosen last while its pages moved
-  (request 45 of `docs/DESKTOP_STAGE3_PLAN.md`); `BookContentViewModel` calls it as the scan tells its place.
-- **Kind:** Pardes feature hook.
-- **Merge risk:** small; a function apart from Zayit's.
-- **Smaller:** the eight lines repeat `selectLine`'s end, which stays as Zayit wrote it.
-- **Tests:** tried in the app: the scan's contents follow its top amud.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/state/BookContentState.kt`
 
@@ -1434,7 +1440,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +263 −40 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+- **Change:** modified, +265 −40 lines. Feature: Commentators in their own panes, A pane at the window's edge,
   Pane layout kept, Find results pane, Keys in the book tree and the contents.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
@@ -1461,8 +1467,9 @@ The entries of this section by kind:
     (`DesktopSession.savedPlacement`, on one of its `sides` or floating if it may), its sides read once into `sides`.
   - The find results pane (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`): `ReaderPane.FindResults` ("find-results",
     docked on the text's right beside the contents, as the user asked, 320 dp, sized by the dock, toggled by
-    `BookContentEvent.ToggleFindResults`), among the `standard` panes; `desiredPanes` takes `findResults` and adds it
-    while the book's text is shown; `selectedTabDemand` reads it with `rememberFindResultsShown` (the setting
+    `BookContentEvent.ToggleFindResults`), among the `standard` panes; `selectedTabDemand` adds it to `desiredPanes`' own while the book's
+    text is shown (`findResultsPane`, a function of its own: the panes are a set, their order not used), reading it with
+    `rememberFindResultsShown` (the setting
     `FindResultsSettings.shown`, and the tab's find bar open on a query of two letters at least); `BookPaneBody` draws
     it with `FindResultsPane`, whose Enter and Escape give the focus back to the text (`BookContentEvent.FocusText`)
     and whose header's minimize hides it as the find bar's button does (`onHide`, `BookContentEvent.ToggleFindResults`,
@@ -1715,14 +1722,15 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LineCommentsView.kt`
 
-- **Change:** modified, +383 −51 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default
+- **Change:** modified, +393 −51 lines. Feature: Commentators in their own panes, Commentator selection kept, Commentator kept, Reader's default
   commentators, Copy with a commentary's source.
 - **What:**
   - `LineCommentsView` reads the book's `CommentatorSelection` (`bookCommentators`) instead of the line's
     `selectedCommentatorIds`, and the split-off commentators, and passes both to the single- and multi-line contents.
   - New `DetachedCommentatorView` (a split-off commentator's pane: a header with a "back to the commentaries" button,
     then its column on the selected line or lines) with `DetachedCommentatorColumn` and `ReattachCommentatorButton`.
-    It reads the selection and its commentator groups before the header, so that the header's title opens the
+    It reads the selection and its commentator groups (`rememberSelectionGroups`, a function of its own, marked
+    "Pardes:") before the header, so that the header's title opens the
     commentator's book in a new tab at the lines that cite it (`PaneHeader(onLabelClick)`,
     `OpenBookByIdInNewTab(id, baseLineIds())`), as a commentator's title does in the commentaries pane (request 50 of
     `docs/DESKTOP_STAGE3_PLAN.md`); `bookIdOf(commentator, groups)` and `LineSelection.baseLineIds()` serve both.
@@ -1852,7 +1860,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryBookTreeView.kt`
 
-- **Change:** modified, +40 −3 lines. Feature: Keys in the book tree and the contents (request 47 of stage 3), The open book in
+- **Change:** modified, +77 −31 lines. Feature: Keys in the book tree and the contents (request 47 of stage 3), The open book in
   the book tree.
 - **What:**
   - `TreeItem` gains, after its content and under a comment marked "Pardes:", what the keys need of a row: `folder`,
@@ -1869,6 +1877,9 @@ The entries of this section by kind:
     `LaunchedEffect` on the open book (`navigationState.selectedBook`, none in the search's filter, which passes
     `selectedBookIdOverride`) calls `revealItem` on its row, which scrolls only when the row is out of view, so a book
     clicked in the tree leaves the list where it is.
+  - An open category's books are added by a local function of their own (`addBooks`, Zayit's code moved there with
+    the hooks above), under a comment marked "Pardes:": Zayit's `addCategory` was 60 lines, `detekt.yml`'s most, and
+    the hooks took it past them (2026-11-22).
   - Each with a comment marked "Pardes:", and their imports.
 - **Why:** request 47 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מקשים בעץ הספרים, איך מקובל בעורכי קוד": the tree had
   no keys at all, only its pane's search. Code editors' trees (IntelliJ's project view, VS Code's explorer) move a row
@@ -1877,7 +1888,8 @@ The entries of this section by kind:
   בתוכן העניינים לאחר חיפוש בו".
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: `buildTreeItems` builds every row, and Zayit edits the tree from time to time; the hooks are
-  three fields with defaults, three arguments in each row's construction, a parameter, and three lines before the box.
+  three fields with defaults, three arguments in each row's construction, a parameter, and three lines before the box;
+  the books' loop moved into `addBooks`.
 - **Smaller:** the rows' clicks could be found from the ids and the navigation's categories and books, without fields,
   at the cost of a lookup of Pardes's own.
 - **Tests:** `TreeKeysTest`; tried in the app: a folder clicked, the arrows down, out to the parent and closed, in and
@@ -3786,18 +3798,28 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/TabKeys.kt`
 
 - **Feature:** Tab shortcuts.
-- **Size:** 93 lines.
+- **Size:** 109 lines.
 - **What:** `tabKeyAction(key, shift, current, count, rtl)`, what a tab shortcut does (`TabKeyAction.Select` or
   `Move`, an index), in the strip's order as read (from the right when right to left, where the tabs' index 0 is the
   strip's left end): Ctrl/Cmd with 1 to 8 the tab at that place and 9 the last one; Tab or Page Down the next tab and
-  Shift+Tab or Page Up the one before, round the strip; Shift+Page Down or Up the tab moved one place, not round. And
+  Shift+Tab or Page Up the one before, round the strip (`selectedPlace`); Shift+Page Down or Up the tab moved one place, not round (`movedPlace`). And
   `rememberTabKeys(tabsViewModel)`, the window's handler of them in its layout direction, which selects or reorders
-  through `TabsEvents`.
+  through `TabsEvents`. Split on 2026-11-22 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3.
 - **Reached from:** `MainAppWindow.kt` (the preview key handler).
 - **Follows:** Pardes's `rememberCommentaryCopyShortcut` (a handler the window calls first); Chrome's shortcuts, and in
   Hebrew its order from the right.
 - **Tests:** `TabKeysTest`; tried in the app (Ctrl+1, Ctrl+9, Ctrl+Page Down round the strip, Ctrl+Tab to the left,
   Ctrl+Shift+Page Down).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/TabKeyAction.kt`
+
+- **Feature:** Tab shortcuts.
+- **Size:** 14 lines.
+- **What:** `TabKeyAction`, what a tab shortcut does (`tabKeyAction`): `Select` the tab at its index, or `Move` the selected
+  tab there; in a file named after it, as `detekt.yml` asks of a file with one class (2026-11-22).
+- **Reached from:** `TabKeys.kt`, `TabKeysTest`.
+- **Follows:** Zayit's events as data classes of a sealed interface (`TabsEvents`).
+- **Tests:** `TabKeysTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabDuplicate.kt`
 
@@ -3904,15 +3926,23 @@ and an outline round them. The split is shown while one of the two is selected a
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/HomeLogoCard.kt`
 
 - **Feature:** The Home's big name shown or hidden.
-- **Size:** 31 lines.
-- **What:** `HomeLogoSettings` ("home_logo": `shown`, on by default), and `HomeLogoCard()`, Settings › תצוגה's card for
-  it ("הצג את הכיתוב הגדול של פרדס בדף הבית", in the user's words since 2026-11-20: "תתקן נוסח"), a `SettingCard` as
+- **Size:** 25 lines.
+- **What:** `HomeLogoCard()`, Settings › תצוגה's card for `HomeLogoSettings` (`HomeLogoSettings.kt`) ("הצג את הכיתוב הגדול של פרדס בדף הבית", in the user's words since 2026-11-20: "תתקן נוסח"), a `SettingCard` as
   the wallpaper's. The user asked on 2026-11-19 (request 67): "אפשרות בהגדרות תצוגה להסתיר את הכיתוב הגדול של פרדס בדף
   הבית".
 - **Reached from:** `DisplaySettingsScreen.kt` (the card), `HomeView.kt` (`HomeBody`'s logo), `AppSettings.kt` (the
   backup's keys).
 - **Follows:** Zayit's typed settings (`SettingsGroup`) and its `SettingCard`, as Pardes's `OpenSiddurCard`.
 - **Tests:** tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/HomeLogoSettings.kt`
+
+- **Feature:** The Home's big name shown or hidden.
+- **Size:** 10 lines.
+- **What:** `HomeLogoSettings` ("home_logo": `shown`, on by default), whether the Home shows the app's big name above its search bar. The setting of `HomeLogoCard.kt`, in a file named after it, as `detekt.yml` asks of a file with one object (2026-11-22).
+- **Reached from:** `HomeLogoCard.kt`, `HomeView.kt` (`HomeBody`'s logo), `AppSettings.kt` (the backup's keys).
+- **Follows:** Zayit's typed settings (`SettingsGroup`), in a file of their own as Zayit's `WidgetSettings.kt`.
+- **Tests:** none of its own.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/TabSplitsTest.kt`
 
@@ -3941,24 +3971,27 @@ list takes Home, End and the page keys too (the plan's "where else" 1). Hooks: `
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/TreeKeys.kt`
 
 - **Feature:** Keys in the book tree and the contents.
-- **Size:** 351 lines.
+- **Size:** 367 lines.
 - **What:** the pure part: `TreeNode` (a row's depth, folder and open), `TreeKey` and `treeKeyOf` (a key of the tree's,
   the arrow left going in from the right; the numeric keypad's plus and minus, `EXPAND` and `COLLAPSE`, as IntelliJ's
   trees have them, request 69 of the list after the third testers' build: "המקשים בעץ - תבדוק שזה באמת תומך כמו
   בג'טבריינס"), `TreeMove` and `treeMove` (what a key does from the row the keys are on: a row, the ends, a page, in,
   out, a click; plus a closed folder opened, minus an open one closed), the arrows as IntelliJ's own code has them
   (`TreeAction`, read on 2026-11-20 at the user's word: "IntelliJ לפי התקן שלהם תעמיק בו ותיישם"): in opens a closed
-  folder, or from an open one or a leaf goes on to the next row; out closes an open folder, or goes up to the parent,
-  or from the top level, which has none, to the nearest open folder above it, else to the first row (`outOf`);
-  `listMove` (Home, End and the page keys of a list whose arrows are its own) and `pageRows` (the rows in view but
-  four, as IntelliJ's trees page, `PAGE_KEPT_ROWS`). `TreeKeyRow` (a row's key in the list, node and click); `NavigationState.treeSelectedKey` (the
-  book tree's key of its row selected, an override first). `TreeKeys`, the keys' row (`focused`), whether the tree has
-  the focus, and `shown` (the row shown as selected then); `rememberTreeKeys(selected)`, on the row selected whenever
-  it changes; `Modifier.treeKeys(keys, listState, rows, onLeave)`, the focus requester, the keys in the preview pass
-  (Ctrl/Cmd, Alt and Shift with them left to the window, but Ctrl/Cmd+Enter), the row revealed (`revealItem`) and a
-  press on a folder's row giving the tree the focus on that row. `PaneFocusRequests` (`@Inject @SingleIn(AppScope)`, in
-  `AppGraph`): the panes just opened, by `LocalPaneFocusKey`, whose tree takes the keyboard's focus once drawn
-  (`rememberTreeKeys` waits for its pane's request, then a frame), as a code editor's tree does as it opens.
+  folder, or from an open one or a leaf goes on to the next row; out closes an open folder, or goes up to the parent, or
+  from the top level, which has none, to the nearest open folder above it, else to the first row (`outOf`); `listMove`
+  (Home, End and the page keys of a list whose arrows are its own) and `pageRows` (the rows in view but four, as
+  IntelliJ's trees page, `PAGE_KEPT_ROWS`). `TreeKeyRow` (a row's key in the list, node and click);
+  `NavigationState.treeSelectedKey` (the book tree's key of its row selected, an override first). `TreeKeys`, the keys'
+  row (`focused`), whether the tree has the focus, and `shown` (the row shown as selected then);
+  `rememberTreeKeys(selected)`, on the row selected whenever it changes; `Modifier.treeKeys(keys, listState, rows,
+  onLeave)`, the focus requester, the keys in the preview pass (Ctrl/Cmd, Alt and Shift with them left to the window,
+  but Ctrl/Cmd+Enter), the row revealed (`revealItem`) and a press on a folder's row giving the tree the focus on that
+  row. `PaneFocusRequests` (`@Inject @SingleIn(AppScope)`, in `AppGraph`): the panes just opened, by
+  `LocalPaneFocusKey`, whose tree takes the keyboard's focus once drawn (`rememberTreeKeys` waits for its pane's
+  request, then a frame), as a code editor's tree does as it opens. `treeMove` in three parts since 2026-11-22, for
+  `detekt.yml`'s complexity: `rowMove`, the keys that only move along the rows, and `rowAction`, those that act on the
+  row.
 - **Reached from:** `CategoryBookTreeView.kt`, `BookTocView.kt`, `SearchResultScreen.kt`, `ReaderPanes.kt`
   (`PaneFocusRequests`, `LocalPaneFocusKey`), `AppGraph.kt`.
 - **Follows:** the search results' keys (`onPreviewKeyEvent` before `focusable`), `PaneSearch`'s `revealItem`, the
@@ -3997,8 +4030,8 @@ keys in Pardes's `TreeKeys.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/PopupKeys.kt`
 
 - **Feature:** The keys in the popups.
-- **Size:** 274 lines.
-- **What:** `PopupKeyRow` (a row's place among the list's items, headers counted, and what it opens); `PopupKeys`
+- **Size:** 287 lines.
+- **What:** `sectionKeyRows(sections)`, the rows of a popup's list in sections, a header row each before its items (the tab search and its history, the notes; 2026-11-22, so that their popups' hooks stay short). `PopupKeyRow` (a row's place among the list's items, headers counted, and what it opens); `PopupKeys`
   (`@Stable`: the row marked, `index`, among the `rows` that open something, the first at first; `marks(row)`; the
   list's `listState`), `rememberPopupKeys(vararg inputs)` (on the first row again as the field's text changes, the row
   marked kept in view with `revealItem`), and `Modifier.popupKeys(keys, onEscape)` (in the preview pass, before the
@@ -4394,21 +4427,23 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 334 lines.
-- **What:** `PdfBookView(file, place, onPlace, tabId, modifier, inTab, actions)`: the file read whole into the
-  binding off the UI thread (`runSuspendCatching`, a missing native library caught too), a missing file or a failure
-  said, and its pages in `PdfPageList`, their text selectable, one under the other or two side by side
-  (`pageSpreadsFlow`), as wide as the view at a zoom of 1 (two, half of it each), and with "עמוד שלם" no wider than
-  leaves a page whole in the view (request 63 of the list after the third testers' build: the first page's size,
-  `pageSize`, `fittedPageWidth`). The zoom is the daf's, global (`dafZoomFlow`, `setDafZoom`), and the view counts as the tab's daf (`dafShown`/`dafHidden`), so the end bar's buttons,
-  the window's zoom keys and the menu zoom it; `rememberTextZoom` for Ctrl + wheel and pinches. Its pages are told to the tab's
-  contents pane (`PdfBookStore.showPages`, the page at the top as it changes) and it goes to a page clicked there
-  (`pageRequests`), request 49. A bar: "עמוד N מתוך M" (the first page read in the row at the top), and with `inTab`
-  (build 45's tab of its own, which has no contents pane nor end bar) a field that goes to the page typed (Enter, then
-  it is emptied) and the zoom's buttons (their levels, `zoomStep`), and the caller's actions. The keys: `pageListKey`. It opens at its place, and a new list at the page read at the top when the rows
-  change (`Top`), and tells its place 400 ms after a move ends, and as it leaves when it moved since. The binding
-  keeps `PAGES_CACHE_BYTES` of drawn pages (request 48 of stage 3). A find in its text (request 48 of stage 3): a
-  `PdfFind` for the binding, its marks given to the pages, and `PdfFindBar` over them, top end.
+- **Size:** 347 lines.
+- **What:** `PdfBookView(file, place, onPlace, tabId, modifier, inTab, actions)`: the file read whole into the binding
+  off the UI thread (`runSuspendCatching`, a missing native library caught too), a missing file or a failure said, and
+  its pages in `PdfPageList`, their text selectable, one under the other or two side by side (`pageSpreadsFlow`), as
+  wide as the view at a zoom of 1 (two, half of it each), and with "עמוד שלם" no wider than leaves a page whole in the
+  view (request 63 of the list after the third testers' build: the first page's size, `pageSize`, `fittedPageWidth`).
+  The zoom is the daf's, global (`dafZoomFlow`, `setDafZoom`), and the view counts as the tab's daf
+  (`dafShown`/`dafHidden`), so the end bar's buttons, the window's zoom keys and the menu zoom it; `rememberTextZoom`
+  for Ctrl + wheel and pinches. Its pages are told to the tab's contents pane (`PdfBookStore.showPages`, the page at the
+  top as it changes) and it goes to a page clicked there (`pageRequests`), request 49. A bar: "עמוד N מתוך M" (the first
+  page read in the row at the top), and with `inTab` (build 45's tab of its own, which has no contents pane nor end bar)
+  a field that goes to the page typed (Enter, then it is emptied) and the zoom's buttons (their levels, `zoomStep`), and
+  the caller's actions. The keys: `pageListKey`. It opens at its place, and a new list at the page read at the top when
+  the rows change (`Top`), and tells its place 400 ms after a move ends, and as it leaves when it moved since. The
+  binding keeps `PAGES_CACHE_BYTES` of drawn pages (request 48 of stage 3). A find in its text (request 48 of stage 3):
+  a `PdfFind` for the binding, its marks given to the pages, and `PdfFindBar` over them, top end. The contents pane's
+  pages and their requests in `PagesInContents`, out of `PdfBookView`, which `detekt.yml` holds to 60 lines, 2026-11-22.
 - **Reached from:** `PdfBookReader.kt`.
 - **Follows:** Pardes's experiment (`PdfReaderTool.kt`) for the binding; Zayit's `BookContentView` for the page keys
   and its `TextZoom` for the pointer's zoom; Pardes's daf for the zoom it shares.
@@ -4738,54 +4773,53 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanView.kt`
 
 - **Feature:** The scan of the page in the daf view.
-- **Size:** 588 lines.
-- **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book,
-  control, zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the
-  daf's place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
+- **Size:** 522 lines.
+- **What:** `scanPageOf` and `amudOfScanPage` (a scan's page i is the amud i from 2a), and `DafScanReader(book, control,
+  zoom, lineId, scrollToLineTimestamp, modifier, openAt, onScroll)`: the tractate's scan (`DafScans.of`) in the daf's
+  place, which works without the daf's layout. Its pages in `PdfPageList`, a page a row or two as printed
   (`pageSpreadsFlow`), each under its amud's name as the daf's, as wide as the daf's pages at the daf's zoom (two, half
   the view each). It takes what the reader asks of the daf (`DafControl`: Page Up and Down, the first and last pages, a
-  line brought into view, no step through comments) and says where it is (`DafControl.where`, the first line of the
-  amud read at its top, `ScanPlace`), for the text to open there. It opens at the amud of the tab's place (`openAt`,
-  else the tab's line, by the table of contents or the line's reference), follows the tab's line when it is chosen
+  line brought into view, no step through comments) and says where it is (`DafControl.where`, the first line of the amud
+  read at its top, `ScanPlace`), for the text to open there. It opens at the amud of the tab's place (`openAt`, else the
+  tab's line, by the table of contents or the line's reference), follows the tab's line when it is chosen
   (`FollowTheTab`: the table of contents, a search, the arrows; not the line it told itself), and tells the first line
   of the amud read at its top (`TellThePlace`, `firstLines`) once the pages rest there after any move (`PLACE_DEBOUNCE`,
   400 ms) and as the view leaves when they moved since (`ToldLine`), as a PDF book tells its place: the table of
-  contents' jump is not a scroll in progress, and was not told, so a tab left and come back to went back to the amud read
-  before it (request 60 of `docs/DESKTOP_STAGE3_PLAN.md`). The page read at the top is kept
-  (`ScanPlace.page`), so the rows changing reopen the list there. The user found the place lost again after the third
-  testers' build (request 60 of the next list): the scan was the only reading view whose list did not live as long as
-  its tab, and a line chosen in the contents while the first line of each amud was still read again (the tab just
-  shown) was taken for the amud the scan opened at, and never told. Now `ScanPlace` (internal, for its test) keeps, as
-  the daf keeps its list, the list itself (`listFor`, by what its rows are made of: the file, the tractate's first page
-  in it, its pages, two a row or one; `ScanList`'s `madeOf`), so the tab shown again shows the scan at the row and
-  offset it was left at, `rememberPlaced` not looking for its page then (`keepsList`); the first line of each amud
-  (`amudLines`, a snapshot state read once a tractate by `DafScanReader`); and the tab's line it followed last
-  (`follow`, from the line and time it opened at): `FollowTheTab` follows each line once, not again when the tab is
-  shown again, brings its page to the top (`bringToTop`, as the contents open an amud, where `reveal` left a page in
-  view where it was) and makes it the scan's place at once. It looks for the scan again when the folder of scans
-  changes. Without a scan, a word on where it is looked for and a button that chooses the folder of scans
-  (`pickScansFolder`, FileKit's directory picker off the event loop, `DafScans.setFolder`), as the settings do; the line
-  over a scan's foot that changed its file is gone, moved to Settings › צורת הדף as a folder (request 48). Only the tab
-  in view composes the pages and holds the file (`LocalTabShown`, the one beside the selected tab in a split too), as a
-  PDF book. Since request 56 the pages are
-  drawn from the scan cut into images (`ScanPages`: `rememberPdfiumLoaded`, then `DafScanPages.open` and
-  `ScanPageList`), with nothing drawn for the moment the cut is read; where PDFium cannot be called by Pardes, by the
-  binding's reader as before (`BindingScan`, the file read whole, `PAGES_CACHE_BYTES` of its pages kept: request
-  48 of stage 3). Since request 51 of stage 3 the scans are cut by the user's word only (`DafScans.cut`): the first
-  time a scan opens, a question in its place (`CutQuestion`: what the cut gives, the room it takes and where, "כן,
-  להכין" or "לא, להציג מהקובץ", which the settings change); not cut, a scan is drawn by the binding's reader, unless
-  its cut was kept whole (`DafScanPages.whole`). Since requests 43 and 52 of stage 3 a scan is a `ScanSource`: the
-  tractate's pages are those of its file from its daf ב. (`ScanSource.first`, `pagesIn`), placed by the file's bookmarks
-  once PDFium is loaded (`DafScans.byBookmarks`, carried by `CutLoad`), looked for again when a first page is set
-  (`DafScans.firstPages`), the list alone opened again at its page (`key`, the binding's reader kept). The line above
-  the pages that set it went with request 65 of the list after the third testers' build ("תהיה דרך ההגדרות ולא מתצוגת
-  המסכת"): it is set in Settings › צורת הדף. `ScanList(pages, madeOf, …, pagesList)` takes the pages' count and the
-  list that draws them; `rememberPlaced` finds the amud of the tab's place;
-  `amudOfLine` is shared with `DafScanButton`.
-  As wide as the view at the zoom's 1, with no widest, since request 63 of the list after the third testers' build
-  (`MOST_PAGE_WIDTH`, 1100 dp, gone), and with "עמוד שלם" no wider than leaves a page whole in the view (`ScanList`'s
-  `aspect`: the cut's first page's height over its width, or the binding's first page's size, `pageSize`;
-  `fittedPageWidth`, its title and gaps aside: `PAGE_TITLE_HEIGHT`, `PAGE_GAP`).
+  contents' jump is not a scroll in progress, and was not told, so a tab left and come back to went back to the amud
+  read before it (request 60 of `docs/DESKTOP_STAGE3_PLAN.md`). The page read at the top is kept (`ScanPlace.page`), so
+  the rows changing reopen the list there. The user found the place lost again after the third testers' build (request
+  60 of the next list): the scan was the only reading view whose list did not live as long as its tab, and a line chosen
+  in the contents while the first line of each amud was still read again (the tab just shown) was taken for the amud the
+  scan opened at, and never told. Now `ScanPlace` (internal, for its test) keeps, as the daf keeps its list, the list
+  itself (`listFor`, by what its rows are made of: the file, the tractate's first page in it, its pages, two a row or
+  one; `ScanList`'s `madeOf`), so the tab shown again shows the scan at the row and offset it was left at,
+  `rememberPlaced` not looking for its page then (`keepsList`); the first line of each amud (`amudLines`, a snapshot
+  state read once a tractate by `DafScanReader`); and the tab's line it followed last (`follow`, from the line and time
+  it opened at): `FollowTheTab` follows each line once, not again when the tab is shown again, brings its page to the
+  top (`bringToTop`, as the contents open an amud, where `reveal` left a page in view where it was) and makes it the
+  scan's place at once. It looks for the scan again when the folder of scans changes. Without a scan, a word on where it
+  is looked for and a button that chooses the folder of scans (`pickScansFolder`, FileKit's directory picker off the
+  event loop, `DafScans.setFolder`), as the settings do; the line over a scan's foot that changed its file is gone,
+  moved to Settings › צורת הדף as a folder (request 48). Only the tab in view composes the pages and holds the file
+  (`LocalTabShown`, the one beside the selected tab in a split too), as a PDF book. Since request 56 the pages are drawn
+  from the scan cut into images (`ScanPages`: `rememberPdfiumLoaded`, then `DafScanPages.open` and `ScanPageList`), with
+  nothing drawn for the moment the cut is read; where PDFium cannot be called by Pardes, by the binding's reader as
+  before (`BindingScan`, the file read whole, `PAGES_CACHE_BYTES` of its pages kept: request 48 of stage 3). Since
+  request 51 of stage 3 the scans are cut by the user's word only (`DafScans.cut`): the first time a scan opens, a
+  question in its place (`CutQuestion`: what the cut gives, the room it takes and where, "כן, להכין" or "לא, להציג
+  מהקובץ", which the settings change); not cut, a scan is drawn by the binding's reader, unless its cut was kept whole
+  (`DafScanPages.whole`). Since requests 43 and 52 of stage 3 a scan is a `ScanSource`: the tractate's pages are those
+  of its file from its daf ב. (`ScanSource.first`, `pagesIn`), placed by the file's bookmarks once PDFium is loaded
+  (`DafScans.byBookmarks`, carried by `CutLoad`), looked for again when a first page is set (`DafScans.firstPages`), the
+  list alone opened again at its page (`key`, the binding's reader kept). The line above the pages that set it went with
+  request 65 of the list after the third testers' build ("תהיה דרך ההגדרות ולא מתצוגת המסכת"): it is set in Settings ›
+  צורת הדף. `ScanList(pages, madeOf, …, pagesList)` takes the pages' count and the list that draws them;
+  `rememberPlaced` finds the amud of the tab's place; `amudOfLine` is shared with `DafScanButton`. As wide as the view
+  at the zoom's 1, with no widest, since request 63 of the list after the third testers' build (`MOST_PAGE_WIDTH`, 1100
+  dp, gone), and with "עמוד שלם" no wider than leaves a page whole in the view (`ScanList`'s `aspect`: the cut's first
+  page's height over its width, or the binding's first page's size, `pageSize`; `fittedPageWidth`, its title and gaps
+  aside: `PAGE_TITLE_HEIGHT`, `PAGE_GAP`). Its two messages in the pages' place, `NoScan` and `CutQuestion`, in
+  `DafScanMessages.kt` since 2026-11-22, `detekt.yml` holding a file to 15 functions.
 - **Reached from:** `BookContentView.kt` (a `DafMode` of the scan, request 46).
 - **Follows:** `DafView`'s seams with the text view (`DafControl`, `openAt`, `onScroll`) and its titles and widths, and
   Pardes's `PdfPageList` and `ScanPageList` for the pages.
@@ -4801,35 +4835,58 @@ bookmarks or the tractates before it, and sets it (request 52, also in the setti
   until the page titled ג., its daf ב., was set as such, הוריות then at its daf ב. by the page set, and set again from
   a page of its own after going back to the guess, the contents at דף ב.).
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanMessages.kt`
+
+- **Feature:** Scan view.
+- **Size:** 79 lines.
+- **What:** what a tractate's scan view (`DafScanView.kt`) shows in its pages' place before there are pages: `NoScan` (no scan of
+  the tractate: where it is looked for, and a button that chooses the folder of scans) and `CutQuestion` (whether to cut
+  the scans into images, asked the first time one opens: what it gives, the room it takes and where, and the two answers,
+  request 51 of stage 3). Moved out of `DafScanView.kt` on 2026-11-22, which `detekt.yml` holds to 15 functions.
+- **Reached from:** `DafScanView.kt` (`DafScanReader`, `ScanPages`).
+- **Follows:** Zayit's empty states (a column of a bold line, a hint and a `DefaultButton`), as `DafScanView.kt` had them.
+- **Tests:** `DafScansCardUiTest` (the cutting's settings); tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/state/TocOfScan.kt`
+
+- **Feature:** The contents following the pages (request 45 of stage 3).
+- **Size:** 26 lines.
+- **What:** `BookContentStateManager.showInToc(repository, lineId)`: the table of contents' entry of a line selected
+  (`selectedEntryId`, `breadcrumbPath`, as `ContentUseCase.selectLine` reads them: `getTocEntryIdForLine`,
+  `getAncestorPath`), the line itself not; nothing when the entry is selected already. A tractate's scan selects no
+  line, so its contents stayed on the entry chosen last while its pages moved. In Zayit's `ContentUseCase` until
+  2026-11-22, which it took past `detekt.yml`'s 15 functions; Zayit's class is as he wrote it again.
+- **Reached from:** `BookContentViewModel.kt` (as the scan tells its place, `ContentScrolled`).
+- **Follows:** Zayit's `ContentUseCase.selectLine` (the entry and its path read, `updateToc`).
+- **Tests:** tried in the app: the scan's contents follow its top amud.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafScanPages.kt`
 
 - **Feature:** Scan view.
-- **Size:** 364 lines.
+- **Size:** 365 lines.
 - **What:** `DafScanPages`, a Talmud tractate's scans cut into an image a page (request 56, request 42 asked again on
-  2026-11-14 and the recommendations of docs/scan-speed taken on 2026-11-15, "מה עם ההמלצות של הצגה מהירה"):
-  - `open(scan)`: the cut as kept beside its pages (`ScanCut`: the scan's path, length and time, its pages, their width
-    and the first one's height, each page's height once cut), read from its `cut.json`, or begun (PDFium's page count
-    and first page's size, no page drawn); a scan changed, or a page's file gone, is cut again; its cutting started
-    when a page is missing. Null when PDFium cannot read it.
-  - The cut, in the background (`@StructuredScope`), one scan at a time, the one shown last: each page drawn by PDFium
-    2,000 pixels wide (`CUT_WIDTH`) in gray (`PdfiumDocument.render`), written as a PNG of one bit a pixel
-    (`BitonalPng`, written beside and renamed), the pages asked for first (the last asked first), then the others
-    from the one cut last, around to the start; the index written every eight pages and when the cut ends
-    (`finish`, through `invokeOnCompletion`: the document closed on PDFium's thread).
-  - `image(scan, page)`: the page decoded off the UI thread into gray (Skia's `Codec` into a `GRAY_8` bitmap, 6 MB at
-    2,000 by 3,000), the last 24 (`KEPT`: two pages side by side at a small zoom show a dozen) kept in memory (`shownImage`); null while it is not cut, and it is then asked for
-    first. `revision` goes up as each page is cut, for the views that wait for one. `prepare(scan, pages)` decodes
-    the pages cut into memory (the page read while the text is shown).
-  - Since request 48 of stage 3 (fast paging left pages blank): a page's data and codec freed at once (`use`), not by
-    the collector, and a bitmap whose pixels cannot be allotted no image; a page cut whose decoding failed tells the
-    views waiting for it to ask again 400 ms later (`retrySoon`, `RETRY_DELAY`), rather than being left blank; a page
-    asked for again while it waits keeps its place in the queue, and one whose cut failed is cut once more when it is
-    shown again, once a start (`failedOnce`).
-  - `whole(scan)`: the cut kept beside the pages when every page is cut, nothing begun or cut, for the scans not cut by
-    the user's word (request 51 of stage 3): a cut kept whole still shows.
-  - `bytes()` and `clear()`, for the settings' card.
-  - Each scan's folder in `pardes-scans` beside the library (`DIR_NAME`, `databasePathProvider`, else
-    `LibraryLocation.currentDir`), through `ScanCutFolder`.
+  2026-11-14 and the recommendations of docs/scan-speed taken on 2026-11-15, "מה עם ההמלצות של הצגה מהירה"): -
+  `open(scan)`: the cut as kept beside its pages (`ScanCut`: the scan's path, length and time, its pages, their width
+  and the first one's height, each page's height once cut), read from its `cut.json`, or begun (PDFium's page count and
+  first page's size, no page drawn); a scan changed, or a page's file gone, is cut again; its cutting started when a
+  page is missing. Null when PDFium cannot read it. - The cut, in the background (`@StructuredScope`), one scan at a
+  time, the one shown last: each page drawn by PDFium 2,000 pixels wide (`CUT_WIDTH`) in gray (`PdfiumDocument.render`),
+  written as a PNG of one bit a pixel (`BitonalPng`, written beside and renamed), the pages asked for first (the last
+  asked first), then the others from the one cut last, around to the start; the index written every eight pages and when
+  the cut ends (`finish`, through `invokeOnCompletion`: the document closed on PDFium's thread). - `image(scan, page)`:
+  the page decoded off the UI thread into gray (Skia's `Codec` into a `GRAY_8` bitmap, 6 MB at 2,000 by 3,000), the last
+  24 (`KEPT`: two pages side by side at a small zoom show a dozen) kept in memory (`shownImage`); null while it is not
+  cut, and it is then asked for first. `revision` goes up as each page is cut, for the views that wait for one.
+  `prepare(scan, pages)` decodes the pages cut into memory (the page read while the text is shown). - Since request 48
+  of stage 3 (fast paging left pages blank): a page's data and codec freed at once (`use`), not by the collector, and a
+  bitmap whose pixels cannot be allotted no image; a page cut whose decoding failed tells the views waiting for it to
+  ask again 400 ms later (`retrySoon`, `RETRY_DELAY`), rather than being left blank; a page asked for again while it
+  waits keeps its place in the queue, and one whose cut failed is cut once more when it is shown again, once a start
+  (`failedOnce`). - `whole(scan)`: the cut kept beside the pages when every page is cut, nothing begun or cut, for the
+  scans not cut by the user's word (request 51 of stage 3): a cut kept whole still shows. - `bytes()` and `clear()`, for
+  the settings' card. - Each scan's folder in `pardes-scans` beside the library (`DIR_NAME`, `databasePathProvider`,
+  else `LibraryLocation.currentDir`), through `ScanCutFolder`. `keyOf`, a page's key among those kept, out of the class
+  at the file's end, which `detekt.yml` holds to 15 functions, 2026-11-22.
 - **Reached from:** `AppGraph.kt` (`dafScanPages`), `DafScanView.kt`, `ScanPageList.kt`, `DafScanButton.kt`,
   `DafScansCard.kt`.
 - **Follows:** Zayit's `@Inject @SingleIn(AppScope::class)` classes and Pardes's `PdfBookStore` (a scope of its own,
@@ -5004,10 +5061,10 @@ size, and the panes beside them, as they were. Hooks: `VerticalBars.kt` (the but
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFit.kt`
 
 - **Feature:** A whole page in the view.
-- **Size:** 69 lines.
+- **Size:** 63 lines.
 - **What:** request 63 of the list after the third testers' build ("בהצגת צורת הדף - צריך שגודל החלון יתאים לגודל
-  הדף המוצג, אין טעם ברווח גדול בשוליים של החלון", the user's choice "רוחב החלונית, זום נפרד"): `PageFitSettings`
-  ("page_fit": `whole`, off at first, portable as a typed setting of Zayit's kind), `fittedPageWidth(room, height,
+  הדף המוצג, אין טעם ברווח גדול בשוליים של החלון", the user's choice "רוחב החלונית, זום נפרד"): the setting
+  `PageFitSettings` (`PageFitSettings.kt`), `fittedPageWidth(room, height,
   aspect, whole, around)` (a page's width at the zoom's 1: the view's, and with `whole` no wider than leaves a page of
   that shape whole in it, the room around it aside; the view's while its shape is not known), `rememberWholePage()`, and
   `PageFitButton(uiState, modifier)`, the end bar's "עמוד שלם" (the `PageFit` icon, its tooltip) under two pages', shown
@@ -5017,6 +5074,15 @@ size, and the panes beside them, as they were. Hooks: `VerticalBars.kt` (the but
   typed settings (`SettingsGroup`, `AppSettings.flow`).
 - **Tests:** `PageFitTest`; tried in the app (Berakhot 18a's scan and daf whole in the view, the daf as wide as the view
   with the side panes closed, the commentaries' size kept as the daf was zoomed in twice).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFitSettings.kt`
+
+- **Feature:** A whole page in the view.
+- **Size:** 11 lines.
+- **What:** `PageFitSettings` ("page_fit": `whole`, off at first, portable as a typed setting of Zayit's kind), whether a whole page is fitted in the view, in every tab. The setting of `PageFit.kt`, in a file named after it, as `detekt.yml` asks of a file with one object (2026-11-22).
+- **Reached from:** `PageFit.kt`, and `DafView.kt`'s KDoc.
+- **Follows:** Zayit's typed settings (`SettingsGroup`), in a file of their own as Zayit's `WidgetSettings.kt`.
+- **Tests:** none of its own.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFitTest.kt`
 
@@ -5049,9 +5115,8 @@ text as their ink and its panel as their paper, as the daf Pardes draws is in th
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageColors.kt`
 
 - **Feature:** Pages in the dark theme's colours.
-- **Size:** 110 lines.
-- **What:** `PageColorSettings` ("page_colors", a `SettingsGroup` of Zayit's kind): `original`, whether pages keep
-  their original colours in the dark theme (false by default; every tab). `inkOnPaper(ink, paper)`: the colour matrix
+- **Size:** 103 lines.
+- **What:** the colours of `PageColorSettings` (`PageColorSettings.kt`). `inkOnPaper(ink, paper)`: the colour matrix
   that draws black as the ink and white as the paper, each gray between them in proportion, a channel each, the alpha
   as it is (from the identity: each channel scaled by the paper's less the ink's, offset by the ink's).
   `rememberPageColors()`: in the dark theme its text on its panel (`JewelTheme.globalColors`), unless the original
@@ -5065,6 +5130,15 @@ text as their ink and its panel as their paper, as the daf Pardes draws is in th
   settings); Zayit's typed settings (`SettingsGroup`, `AppSettings.flow`).
 - **Tests:** `PageColorsTest`; tried in the app (Berakhot's scan in the dark theme, and its original colours by the
   button).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageColorSettings.kt`
+
+- **Feature:** Pages in the dark theme's colours.
+- **Size:** 11 lines.
+- **What:** `PageColorSettings` ("page_colors", a `SettingsGroup` of Zayit's kind): `original`, whether pages keep their original colours in the dark theme (false by default; every tab). The setting of `PageColors.kt`, in a file named after it, as `detekt.yml` asks of a file with one object (2026-11-22).
+- **Reached from:** `PageColors.kt`.
+- **Follows:** Zayit's typed settings (`SettingsGroup`), in a file of their own as Zayit's `WidgetSettings.kt`.
+- **Tests:** none of its own.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageColorsTest.kt`
 
@@ -5087,7 +5161,7 @@ pointer zooms themselves. Hooks: none in Zayit's files; in Pardes's `PdfPageList
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/ZoomPivot.kt`
 
 - **Feature:** Pages zoomed at the pointer.
-- **Size:** 238 lines.
+- **Size:** 240 lines.
 - **What:** `ZoomPivot` (where the pointer zoomed last, in the pixels of the view it watches, and `now()`: that place
   while a zoom's events go on, 400 ms at most since the last, else null) and `Modifier.zoomPivot` (it watches Ctrl/Cmd
   with the wheel or a trackpad's swipe, a trackpad's pinch (`ScaleChange`) and the centre of two fingers, in the
@@ -5096,7 +5170,8 @@ pointer zooms themselves. Hooks: none in Zayit's files; in Pardes's `PdfPageList
   a row, centered in a list as wide as the view or as the row, back under the pointer once its pages are wider, and
   that place exact, which a narrow row or the list's end may keep from it), `ListItem` and `downAnchored` (the item and
   offset of `LazyListState.requestScrollToItem` that keep a point where it is once the items' heights past a page's
-  title grow). `ZoomAnchor`, what a list of zoomed rows keeps between frames: the width last laid out, the sideways
+  title grow). `ZoomAnchor` (its `keepSideways` naming its first test `sameWidth`, three
+  conditions at most as `detekt.yml` asks, 2026-11-22), what a list of zoomed rows keeps between frames: the width last laid out, the sideways
   state, and the exact places last asked down and sideways (`keepDown`, `keepSideways`), so that a gesture's frames do
   not add up their rounding, as the daf's own `DafScale` does.
 - **Reached from:** `PdfPageList.kt` (`PageRows`), `DafView.kt`.
@@ -5203,7 +5278,7 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/BookFindHub.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 147 lines.
+- **Size:** 168 lines.
 - **What:** `FindResultsSettings` ("find_results": `shown`, the pane asked for); `FindListing` (a tab's find: its
   book, query, mode, matches and current match, and the other books its matches hold lines of: on the daf, Rashi's and
   Tosafot's); `PdfFindListing` and `PdfFound` (a tab's find in its PDF book: its
@@ -5211,9 +5286,11 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
   each with their counts, read through Zayit's public `nextAfterLine` and `next`, its class untouched); and
   `BookFindHub`, `@Inject @SingleIn(AppScope::class)`: `found` (each tab's find, `publish`) and `goTo` (the lines the
   pane asks a tab to go to), and for a PDF book `pdfFound` (`publishPdf`) and `pdfGoTo` (`goToPdfMatch`, the match by
-  its place in the find's matches).
+  its place in the find's matches). And `AppSettings.toggleFindResults(keyEvent, tabId)`: Alt+Enter shows or hides the
+  pane from anywhere in the tab while its find bar is open (request 71 of stage 3), which Zayit's `processKeyShortcuts`
+  calls in one line.
 - **Reached from:** `AppGraph.kt` (`bookFindHub`), `BookContentView.kt`, `PdfFind.kt`, `FindResultsPane.kt`,
-  `ReaderPanes.kt` and `BookContentViewModel.kt` (the setting).
+  `ReaderPanes.kt` and `BookContentViewModel.kt` (the setting), `WindowUtils.kt` (Alt+Enter).
 - **Follows:** Pardes's `PdfBookStore` (`shown` and `pageRequests`, a reader and its pane talking through flows);
   Zayit's typed settings (`SettingsGroup`).
 - **Tests:** `FindResultsTest`.
@@ -5221,7 +5298,7 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsPane.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 587 lines.
+- **Size:** 515 lines.
 - **What:** `FindResultsPane(tabId, bookId, modifier, onHide, onLeave)`: under a header as the other panes' (request 62:
   Zayit's `PaneHeader`, the pane's grip and its dock button, "תוצאות החיפוש בספר", its minimize hiding the pane,
   `onHide`, and while the tab has a find, Zayit's `PaneSearchButton`, "חיפוש כותרת", and a letter typed over the pane
@@ -5248,7 +5325,10 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
   read as the contents pane reads them, `PdfOutlines`, at any depth) or under its page, with its piece of the page
   (`FindRow.InPage`), the find's words marked, the current one marked and kept in view, a match clicked or reached by
   the same keys gone to on its page (`BookFindHub.goToPdfMatch`), under the same results' search; "אין טקסט בקובץ" for a
-  scan. The keys of both lists move by `findListMove`; `pieceAround`, a piece of a text around a range, is the found
+  scan. Both lists lay their count over their rows with `FoundList` (`FindResultsList.kt`), its focus held in
+  `FoundListFocus`, keep the current match in view with `keepInView` and take the keys through `findListKey`
+  (their shared parts there since 2026-11-22, split to meet `detekt.yml`, whose
+  `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3, and which holds a file to 15 functions); `pieceAround`, a piece of a text around a range, is the found
   line's and the PDF page's; `FindRow.matchId`, a row's line index or PDF match's place, is what the results' search
   goes to, and a row chosen there gives the list back the keyboard's focus. The body inset 8 dp, as the contents'.
 - **Reached from:** `ReaderPanes.kt` (`BookPaneBody`).
@@ -5260,6 +5340,20 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
   אברהם in Rashi on Genesis under "פרק יב, פסוק ב", "יב" typed in the pane's search keeping chapter 12's and the verses
   יב, Enter on the third going to it, 7/136, and closing the search; אבימלך in Genesis, "(יז) …ויתפלל"; the minimize
   hiding the pane and the find bar's button showing it again).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsList.kt`
+
+- **Feature:** Find results pane.
+- **Size:** 101 lines.
+- **What:** the results pane's list as a book's find and a PDF book's lay it (`FindResultsPane.kt`), and its keys: `FoundList`
+  (the results' count over their rows in a `LazyColumn` that takes the keys and the focus, a row chosen in the results'
+  search giving it the focus back through `FoundListFocus`), `keepInView` (a row brought into view when it is out of
+  it), `findListKey` (Enter and Escape give the focus back to the text, as the book tree's; the moves of `findListMove`
+  go to the row they reach), and `findListMove` (up, down, Home, End and a page up and down in a list, the last four as
+  the book tree's, `listMove`). Split on 2026-11-22 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3.
+- **Reached from:** `FindResultsPane.kt` (`BookFindResults`, `PdfFindResults`).
+- **Follows:** Pardes's `TreeKeys.kt` (the keys' moves), Zayit's lazy lists (`revealItem`).
+- **Tests:** `FindResultsTest` (`findListMove`).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsTest.kt`
 
@@ -5279,7 +5373,7 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsSearch.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 194 lines.
+- **Size:** 197 lines.
 - **What:** the results pane searched as the contents and the book tree are (request 62: "יוכלו למזער ולחפש בו כמו
   בתוכן העניינים וספרים"). `FindResultsSearch` (`@Stable`, `rememberFindResultsSearch(tabId)`): its bar shown, the
   query typed (`queryChanged`, ignored once hidden, as the contents' search ignores a query flushed after Escape),
@@ -5287,7 +5381,8 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
   `filterFindRows(rows, query)`: the rows under the entries whose title matches as the contents' search matches theirs
   (Zayit's `tocQueryTokens` and `matchTocText`: each word of the query the start of a word of the title, nikud, quotes
   and final letters aside), the ranges of each title it matched, its matches the rows' `FindRow.matchId`, and the best
-  the first under the entry with the most whole words, as the contents' search's. `FindRowsSearchLayout`: Zayit's
+  the first under the entry with the most whole words, as the contents' search's (its loop with no jumps, as
+  `detekt.yml` asks, 2026-11-22). `FindRowsSearchLayout`: Zayit's
   `PaneSearchLayout` with "חיפוש כותרת" and "לא נמצאו כותרות" (the contents' strings), the pane's list while nothing is
   typed, else the rows kept, the active one marked and kept in view (`revealItem`); a row chosen by a click or Enter is
   gone to and the bar hidden, as the contents' search opens its entry and hides. `EntryTitle`: an entry over its lines,
@@ -5336,22 +5431,23 @@ and `strings.xml`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfFind.kt`
 
 - **Feature:** A find in a PDF book.
-- **Size:** 382 lines.
+- **Size:** 402 lines.
 - **What:** `PdfMatch` (a match: its page, and its boxes there, a box a line, as fractions of the page from its top
-  left, and its `piece`, the page's text around it on one line, `pieceAround`, turned round for a page kept
-  backwards); `PageChars` (a page's characters and their boxes in points, as the binding's `PageTextLayout` reads them,
-  `chars()`, or as a test writes them); `pageMatches`, `pageText` (the characters as a text, with the character of each
-  letter) and `boxesOf` (a match's characters' boxes joined a box a line, those with no box left aside); `PageMark` and
-  `PdfFind`, the find as it goes: its query, the matches found so far page by page (the pages' text read once a book,
-  their boxes only for a page with matches), the current one, done, and no text at all; `step` round the book,
-  `select` (a match the results pane asks for) and `listing` (the find as the pane lists it).
-  `PdfFindBar(find, reader, tabId, listState, spreads, modifier)`: Zayit's `FindInPageBar` while the tab's find bar is
-  open (`findBarOpenFlow`, `findQueryFlow`, `findFocusRequestFlow`, `findStepRequests`, `setFindQuery`,
-  `closeFindBar`, as a book's text uses them), its counter the matches, a match revealed in its page's row a third of
-  the view down, and "אין טקסט בקובץ" under it for a scan; the results pane's button and Alt+Enter as a book's bar has
-  them (`FindResultsSettings.shown`), the find told to the pane while the bar is open (`BookFindHub.publishPdf`) and
-  the match it asks for gone to (`pdfGoTo`): the user showed the pane empty over a PDF book after the second testers'
-  build. `Modifier.findMarks`, the marks drawn over a page.
+  left, and its `piece`, the page's text around it on one line, `pieceAround`, turned round for a page kept backwards);
+  `PageChars` (a page's characters and their boxes in points, as the binding's `PageTextLayout` reads them, `chars()`,
+  or as a test writes them); `pageMatches`, `pageText` (the characters as a text, with the character of each letter) and
+  `boxesOf` (a match's characters' boxes joined a box a line, those with no box left aside); `PageMark` and `PdfFind`,
+  the find as it goes: its query, the matches found so far page by page (the pages' text read once a book, their boxes
+  only for a page with matches), the current one, done, and no text at all; `step` round the book, `select` (a match the
+  results pane asks for) and `listing` (the find as the pane lists it). `PdfFindBar(find, reader, tabId, listState,
+  spreads, modifier)`: Zayit's `FindInPageBar` while the tab's find bar is open (`findBarOpenFlow`, `findQueryFlow`,
+  `findFocusRequestFlow`, `findStepRequests`, `setFindQuery`, `closeFindBar`, as a book's text uses them), its counter
+  the matches, a match revealed in its page's row a third of the view down, and "אין טקסט בקובץ" under it for a scan;
+  the results pane's button and Alt+Enter as a book's bar has them (`FindResultsSettings.shown`), the find told to the
+  pane while the bar is open (`BookFindHub.publishPdf`) and the match it asks for gone to (`pdfGoTo`): the user showed
+  the pane empty over a PDF book after the second testers' build. `Modifier.findMarks`, the marks drawn over a page. Its
+  pages read and searched one at a time, `textOf` and `matchesIn`, so that its loop has one jump, as `detekt.yml` asks,
+  2026-11-22.
 - **Reached from:** `PdfBookView.kt` (the bar and the marks), `PdfPageList.kt` (`findMarks`).
 - **Follows:** Zayit's find in a book's text (`FindInPageBar`, `findAllMatchesNormalized`, `normalizeQueryForHebrew`,
   the find's settings and keys) and Pardes's PDF reader's use of the binding (`PdfReaderState`, never PDFium called
@@ -7873,7 +7969,7 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyParts.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 417 lines.
+- **Size:** 275 lines.
 - **What:** the units of a plan and the day's part, plain functions: a table of contents in reading order
   (`readingOrder`), the depths worth studying by (`studyLevels`, more than one entry each), a depth's units with their
   headings and the line the next one starts on (`studyUnits`), where a plan starts by headings (`startIndexOf`), what a
@@ -7881,16 +7977,40 @@ its book or category is found in one field as the search's bar finds them, with 
   (`isStudyDay`: one of its weekdays, and not Yom Tov while Shabbat is not one of them, KosherKotlin's
   `isYomTovAssurBemelacha`, in Israel or abroad), the days learnt between two dates, the day's part (`dayPart`: on from
   the days before, past the end from the start again or done), and the texts (`partLabel` "פרקים כג–כז",
-  `perPeriodLabel` "10 פרקים בשבוע", `weekdaysLabel`). Since request 64 of stage 3: a unit's book (`StudyUnit.bookId`),
-  a category's books with their contents (`PlanBook`), a daf of two amudim (`dafUnits`), a book's units by a unit's
-  name (`bookUnits`), a category's book after book, a book without the unit as one (`categoryUnits`), the names a
-  category or a book can be learnt by (`categoryUnitNames`, the commonest first, a daf, a book; `bookUnitNames`), and
-  the parts of several days (`PERIOD_DAYS`, `periodLabel`, `periodIndex` and `periodStart`: a week or two from Sunday,
-  two or three days from the plan's first).
+  `perPeriodLabel` "10 פרקים בשבוע", `weekdaysLabel`). Since request 64 of stage 3: a unit's book (`StudyUnit.bookId`)
+  and a category's books with their contents (`PlanBook`); a category's units are `StudyBooks.kt`'s and the parts of
+  several days `StudyPeriods.kt`'s, moved there on 2026-11-22, `detekt.yml` holding a file to 15 functions.
 - **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
 - **Follows:** the luach widgets' day reckoning (`LuachData.kt`: `JewishCalendar` by date and region).
 - **Tests:** `StudyPartsTest`.
 - **Notes:** the Hebrew texts are literals in Kotlin, as in Pardes's other widgets, not `strings.xml` keys.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyBooks.kt`
+
+- **Feature:** Daily study plans (request 64 of stage 3).
+- **Size:** 94 lines.
+- **What:** a whole category studied book after book: a daf of two amudim (`dafUnits`), a book's units by a unit's name
+  (`bookUnits`: the depth so named, or its amuds two by two for a daf), a category's books one after the other
+  (`categoryUnits`: each a unit, or its units by the name, its title first among their headings; a book without the
+  unit as one), and the names a category or a book can be learnt by (`categoryUnitNames`, the commonest first, a daf, a
+  book; `bookUnitNames`). Moved out of `StudyParts.kt` on 2026-11-22, `detekt.yml` holding a file to 15 functions.
+- **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
+- **Follows:** Pardes's `StudyParts.kt` (`studyLevels`, `studyUnits`).
+- **Tests:** `StudyPartsTest`.
+- **Notes:** the Hebrew texts are literals in Kotlin, as in Pardes's other widgets.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPeriods.kt`
+
+- **Feature:** Daily study plans (request 64 of stage 3).
+- **Size:** 58 lines.
+- **What:** a plan's part for several days: the days a part can be for (`PERIOD_DAYS`: a day, two, three, a week, two weeks),
+  their texts (`periodLabel` "בשבוע", `perPeriodLabel` "10 פרקים בשבוע"), the part a day belongs to (`periodIndex`) and
+  its first day, where it is marked done (`periodStart`): a week or two from Sunday, as a week is learnt, else from the
+  plan's first day. Moved out of `StudyParts.kt` on 2026-11-22, `detekt.yml` holding a file to 15 functions.
+- **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
+- **Follows:** Pardes's `StudyParts.kt` (the day's part by date).
+- **Tests:** `StudyPartsTest`.
+- **Notes:** the Hebrew texts are literals in Kotlin.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyWidget.kt`
 
@@ -7923,29 +8043,45 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 757 lines.
+- **Size:** 660 lines.
 - **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
   the book or the category studied ("לומדים", request 64 of stage 3), found in one field as the search's bar finds them
-  (`SourceField`; `sourcesNamed`: the bar's lookup's books, acronyms too, and the library's categories, a category in
-  its base books alone too, in `catBookRows`' order, drawn by the bar's `SuggestionRow`; up and down mark one, Enter or
-  a click picks it, Escape puts the title picked back; the arrows round the list's ends); the depths of a book's table of contents as buttons, a daf where
+  (`SourceField`, `StudySourceField.kt`); the depths of a book's table of contents as buttons, a daf where
   it goes by amud, or a category's units by name (`categoryUnitNames`); where to start (`ListComboBox` of the units);
   how many ("הספק") for how many days (`PERIOD_DAYS`, a `ListComboBox`); the first day (the luach's
   `LuachDateButton`, its label the Hebrew date); the days of the week as round toggles (Sunday first; one at least), for
   a part a day only; to start again at the end; the part beneath ("היום", "השבוע"), as the card will show it; "שמור",
   "ביטול", and for a plan saved, "מחק תוכנית", which deletes on a second click within four seconds. The book's
   categories' titles are saved with it (a category's own path for a category's plan). Its parts: `PlanFields` (the
-  fields as the user sets them: `pickBook`, `pickCategory`, `pickLevel` and `pickUnit` take the start back to the first
-  unit, `toggle` keeps one day at least, `readPerDay` follows the field, `planFrom` and `planOf` make the plan saved, a
-  book's or a category's), `rememberPreview`, `EditorWindow`, `BookRows`, `ScheduleRows` and `EditorButtons` (split on
-  2026-11-13 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on it), and
-  `SourceField`.
+  fields as the user sets them: `load` reads the plan's book or category, `pickBook`, `pickCategory`, `pickLevel` and
+  `pickUnit` take the start back to the first unit, `unitNames`, `shownName` and `units` the units studied, `canSave`,
+  `toggle` keeps one day at least, `readPerDay` follows the field, `planFrom` and `planOf` make the plan saved, a book's
+  or a category's), `rememberPreview`, `EditorWindow`, `BookRows` with `UnitRows` (the unit studied by), `ScheduleRows`
+  and `EditorButtons` (split on 2026-11-13, and again on 2026-11-22, to meet `detekt.yml`, whose
+  `:SeforimApp:detektJvmMainSourceSet` had not been run on it); `pathOf`, internal, serves `StudySourceField.kt` too.
 - **Reached from:** `StudyWidget.kt` (`Detached`).
 - **Follows:** Zayit's `WidgetOptionsDialog` (the window, its title bar and bottom bar) and its settings' fields.
 - **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז";
   request 64: מועד typed, משנה › סדר מועד picked by the arrows and Enter, by פרק; שוע typed, שולחן ערוך whole and in
   its base books alone, the latter picked, three סימנים a week; a saved plan reopened with its fields, תהילים picked by
   a click, Escape back to the title picked).
+- **Notes:** the Hebrew texts are literals in Kotlin.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudySourceField.kt`
+
+- **Feature:** Daily study plans (request 64 of stage 3).
+- **Size:** 199 lines.
+- **What:** the editor's field that finds a book or a category as the search's bar does (the user: "זה יהיה אוטומטי כמו
+  בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף"): `SourceField(chosen, onPickBook, onPickCategory)`, the title
+  picked or a field; `sourcesNamed` (the bar's lookup's books, acronyms too, and the library's categories, a category
+  in its base books alone too, in `catBookRows`' order, a few of each); `SourceRows`, each found in a row of the bar
+  (`SuggestionRow`: its icon, its path, a category in its base books alone so marked); up and down mark one, round the
+  list's ends, Enter or a click picks it (`pickedTitle`, `pickSource`: the book or the category read from the library),
+  Escape lets them go and puts the title picked back. Moved out of `StudyPlanEditor.kt` on 2026-11-22, which
+  `detekt.yml` holds to 15 functions, and split for its complexity.
+- **Reached from:** `StudyPlanEditor.kt` (`BookRows`).
+- **Follows:** Zayit's search bar (`HomeView.kt`: `catBookRows`, `SuggestionRow`, `baseBooksDetail`).
+- **Tests:** none of the field itself; tried in the app (מועד typed, משנה › סדר מועד picked by the arrows and Enter; שוע typed, שולחן ערוך in its base books alone picked; Escape back to the title picked).
 - **Notes:** the Hebrew texts are literals in Kotlin.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPartsTest.kt`

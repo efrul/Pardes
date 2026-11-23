@@ -557,12 +557,8 @@ private fun selectedTabDemand(
                 val findResults = rememberFindResultsShown(tabId)
                 PaneDemand(
                     tabId,
-                    desiredPanes(
-                        uiState,
-                        isSearch = destination is TabsDestination.Search,
-                        bookDetails = bookDetails,
-                        findResults = findResults,
-                    ),
+                    desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails) +
+                        findResultsPane(uiState, findResults && destination !is TabsDestination.Search),
                     viewModel::onEvent,
                     uiState.layout,
                 )
@@ -730,7 +726,6 @@ private fun desiredPanes(
     uiState: BookContentState,
     isSearch: Boolean,
     bookDetails: Boolean,
-    findResults: Boolean = false,
 ): Set<ReaderPane> =
     buildSet {
         // A book's details, or a search's selected result's: one setting for every tab
@@ -745,8 +740,6 @@ private fun desiredPanes(
             if (uiState.content.showCommentaries) add(ReaderPane.Comments)
             if (uiState.content.showSources) add(ReaderPane.Sources)
             if (uiState.content.showReferences) add(ReaderPane.References)
-            // The book's find results, while its find bar searches and the pane is asked for
-            if (findResults && !isSearch) add(ReaderPane.FindResults)
             // Each split-off commentator in his pane, whether the commentaries pane is open or not
             DetachedCommentators.names(uiState.content.detachedCommentators).forEach { add(ReaderPane.Commentator(it)) }
         }
@@ -991,6 +984,15 @@ private fun SatelliteWorkspace.bottomPaneOutside(docked: SatellitePlacement.Dock
 }
 
 private const val GRIP_DP = 5
+
+/**
+ * Pardes (request 55 of stage 3): the book's find results pane, while its find bar searches and the pane is asked for
+ * ([shown]), as the line panes beside the text, only while a book is on screen.
+ */
+private fun findResultsPane(
+    uiState: BookContentState,
+    shown: Boolean,
+): Set<ReaderPane> = if (shown && isBookTextShown(uiState)) setOf(ReaderPane.FindResults) else emptySet()
 
 /** Whether the tab [tabId] shows its find's results in their pane: asked for, and its find bar open on a query. */
 @Composable
