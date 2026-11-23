@@ -63,6 +63,16 @@ tools and the code did when it was written.
   Gradle plugin refuses the path (`-Pandroid.overridePathCheck=true`), and Kover's agent cannot find its file, its
   path turned to question marks: build from a `subst` drive. Gradle itself needs Java 21 or later (a JBR from
   `~/.jdks`). A test measured again with nothing changed needs `--rerun`, or Gradle skips it.
+- **Other sessions' branches may be ahead of `main`.** Before starting, list the branches ahead of it
+  (`git fetch origin '+refs/heads/*:refs/remotes/origin/*'`, then `git rev-list --count origin/main..<branch>`) and the
+  open pull requests: on 2026-11-23 the newest desktop work (requests 73 to 77, the pages' zoom made a size) was on a
+  branch with no pull request yet, and the user asked that it be heeded ("שים לב לכל תיקונים בענפים אחרים שהתקדמו").
+  Work that builds on a branch starts from it (a fast-forward), and says so; two branches that conflict with each
+  other are not merged together in a third.
+- **An experiment kept on a branch is taken up by its commit, not by its branch.** `git cherry-pick -n` of the book
+  daf's one commit onto the newest code met five small conflicts where a merge of the branch would have met ten days of
+  `main`; code the experiment had moved to a new file had not changed since, which `git diff -U0 <its base> HEAD --
+  <file> | grep '^@@'` showed before trusting the move (2026-11-23).
 - **Scratch tests and benches** (`Tmp*`) are deleted before the commit. A benchmark runs alone: mockk in the same JVM
   slows the real repository's calls.
 
@@ -92,6 +102,11 @@ tools and the code did when it was written.
   the pages would flip what inside them reads the direction. A list whose items become rows of two keeps its places
   by the pages' own order, and turns them into rows only where it scrolls (`itemOfAmud`, `rowOf`); turned on or off,
   it reopens at what was at its top (2026-11-13).
+- **A control of one view goes in that view, not in the end bar.** The bar of a Chumash's pages (the zoom's two, two
+  pages, a whole page, the diacritics, shnayim mikra, the daf, then the panes' five) is full at a window 900 pixels
+  tall: one more button pushed the commentaries' button out of the window, with no sign of it (2026-11-23, the book
+  daf's style, which became a button at the pages' corner). Count the bar's buttons in the fullest state before adding
+  one, and look at the bar's bottom in the screenshot.
 - **A binding's internal API, for a bench only, by reflection.** The PDFium binding keeps its reader's constructor and
   its drawing of a page internal (`internal` holds across modules, and Kotlin 2 does not let it be suppressed): a
   test reaches them by their JVM names, a suspend one through `suspendCoroutineUninterceptedOrReturn`

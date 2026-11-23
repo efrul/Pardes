@@ -28,13 +28,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (321 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (334 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (797 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (798 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -1307,18 +1307,22 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +64 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
-  side, Pages in the dark theme's colours, A whole page in the view.
+- **Change:** modified, +71 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+  side, Pages in the dark theme's colours, A whole page in the view, A book's own pages.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
-    (`selectedBook.isBavli`), sending `ToggleDafView`.
+    (`selectedBook.isBavli`), sending `ToggleDafView`; and for another book offered pages of its own
+    (`|| hasBookDaf(selectedBook)`: the experiment turned on, a book with commentaries), its tooltip then
+    `book_daf_tooltip`.
   - With a daf shown (`uiState.content.dafView` of a Bavli tractate), `DafMarksButton()` stands in the diacritics
     button's place: the printed page has no nikud to hide, and the daf's marks are shown or hidden there. Under the
-    "צורת הדף" toggle, for every Bavli tractate, `DafScanButton(selected = scanView, onClick = ToggleScanView, book,
+    "צורת הדף" toggle, for every Bavli tractate (an `if (selectedBook.isBavli)` of its own, since the toggle's is wider),
+    `DafScanButton(selected = scanView, onClick = ToggleScanView, book,
     lineId)`, with a comment marked "Pardes:": the tractate's scan in place of its text or its daf (requests 41 and 46),
     and the page of the line read (`primarySelectedLineId`, else `anchorId`) made ready ahead (request 56). Nor is the
-    diacritics button shown while the tab shows pages (`!showsPages(uiState)`, with its import): a tractate's scan or a
-    PDF book has no nikud to hide (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`). After the diacritics' branch,
+    diacritics button shown while the tab shows printed pages (`!showsPrintedPages(uiState)`, with its import): a
+    tractate's scan or a PDF book has no nikud to hide (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`); a book's own
+    pages keep it, their words being the text's. After the diacritics' branch,
     `PageColorsButton(uiState)`, with a comment marked "Pardes:" and its import: the pages' original colours in the dark
     theme, on a scan or a PDF book (request 42 of stage 3), in the place the diacritics button leaves there.
   - Under `ZoomButtons`, `PageSpreadsButton(uiState)`, with a comment marked "Pardes:" and its import: two pages side
@@ -1344,7 +1348,7 @@ The entries of this section by kind:
   a button after it, `ZoomButtons`' body, the references' availability and the two `…Enabled` lines.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`); the scan's, two pages' and the pages'
-  colours' buttons were checked in the app.
+  colours' buttons were checked in the app, and the toggle on Bereshit, Mishnah Berakhot and Orach Chaim.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LineReferences.kt`
 
@@ -1533,15 +1537,18 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/BookContentPanel.kt`
 
-- **Change:** modified, +198 −54 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept.
+- **Change:** modified, +207 −54 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept, A book's
+  own pages.
 - **What:**
   - `detachedCommentatorIds`: the split-off commentators' book ids, from the names and the loaded line connections;
     their passages answer in the text as those of the commentaries pane's page do (`passageCommentatorIds`).
   - The hover prefetch of commentaries follows the book's `commentatorSelection`: with whole groups checked, each line
     prefetches its own commentators of those groups.
   - The call to `BookContentView` is wrapped in a `run { … }` that builds a `DafMode` for a Bavli tractate in daf view
-    or in scan view (`scan = scanView`, request 46; its line clicks select the line, its passage clicks call
-    `selectDafPassage`) and passes it as `daf`. A PDF book of the user's (`pdfIdOf(selectedBook.id)`) is read in the
+    or in scan view (`tractate`; `scan = tractate && scanView`, request 46; its line clicks select the line, its
+    passage clicks call `selectDafPassage`) and passes it as `daf`; and for another book in daf view that is offered
+    pages of its own (`hasBookDaf(selectedBook)`), with the commentators the commentaries pane shows
+    (`DafCommentators(commentatorSelection(selectedBook.id), providers.loadLineConnections)`). A PDF book of the user's (`pdfIdOf(selectedBook.id)`) is read in the
     text's place instead, `PdfBookReader(tabId, pdfId, paneCardModifier)`, before the call returns from the `run`
     (request 45), with its imports.
   - `onShowCommentaries` passed to `BookContentView`: opens the commentaries pane when it is closed and says whether
@@ -1552,7 +1559,8 @@ The entries of this section by kind:
   - New `DetachedCommentatorPane(uiState, onEvent, name, lineConnections, diacritics)`, which `ReaderPanes` draws in a
     commentator's own pane.
 - **Why:** the daf is drawn in the text view's frame and answers clicks as the text does, with the text's panes
-  following (`4efa3e3c`, `b5ebdafd`, `e00754a4`, `8d3825e7`), and the scan in the daf's place; a PDF book opens in the
+  following (`4efa3e3c`, `b5ebdafd`, `e00754a4`, `8d3825e7`), and the scan in the daf's place; another book's own
+  pages are a daf too, set with the commentators checked in the pane, "דינמי, כך שאפשר להתאים את המפרשים" (2026-11-13); a PDF book opens in the
   reading screen as the library's books do, "הצגת ספר סרוק אמור להיות באותו מסך כמו הטקסט"; the commentators' panes (`d85afee7`) and the selection kept
   (`3c6bae9b`, `49b456d4`).
 - **Kind:** Pardes feature in Zayit's file.
@@ -1560,17 +1568,19 @@ The entries of this section by kind:
   change to any of its arguments conflicts. Without whitespace the change is about 140 lines.
 - **Smaller:** build `daf` before the call, without the `run` block, and pass it as one more argument: the call's 50
   lines would stay as Zayit wrote them.
-- **Tests:** `DafViewStateTest`, `DafAnchorsTest`, `CommentatorSelectionTest`.
+- **Tests:** `DafViewStateTest`, `DafAnchorsTest`, `CommentatorSelectionTest`; a book's own pages tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +453 −233 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
+- **Change:** modified, +456 −233 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
   in the view.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
     `DafView` in place of the lines' `LazyColumn`, or, for a `DafMode` of the scan, `DafScanReader` (request 46, a
     comment marked "Pardes:" and its import), given the daf's control, zoom, the tab's line, anchor and request to
     scroll, and the daf's `onScroll`: the scan has the daf's keys, zoom and place, and the text opens where it was.
+    `DafView` is also given the mode's `commentators` and the text's `diacritics` (three lines): for another book
+    than a tractate it draws the book's own pages (`BookDafView`), in the text's diacritics.
   - The daf's own `LazyListState` and `DafControl` (made with the tab's id, for the pages' fit, request 73 of the
     list after the public release); its own zoom by the same gestures (`rememberTextZoom` over
     `dafZoomFlow`, in percent, `PERCENT = 100f`, given to `AppSettings.setDafZoom`: the daf's alone, since request 63
@@ -2304,8 +2314,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +401 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 364 Hebrew strings added in twenty-one blocks,
+- **Change:** modified, +431 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 393 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2318,6 +2328,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `daf_view_tooltip`, `daf_marks` and `daf_marks_tooltip` (the marks' button), `daf_missing`, `daf_missing_hint`,
     `daf_amud_missing` and
     `settings_font_daf_gemara_label` / `…_commentary_label`;
+  - a book's own pages, under a comment after `daf_view_tooltip`: `book_daf_tooltip`, `book_daf_no_commentators`,
+    `book_daf_continued` (a page of commentaries alone, under the head of the page before it), `book_daf_adjust` and
+    its tooltip, `book_daf_own_style`, the settings' `settings_book_daf` and its description, and the style's fields
+    and their choices, `book_daf_style_*` (21);
   - the existing Zayit library: `onboarding_existing_library_*` (5); and under a comment, after Zayit's
     `onboarding_choose_files`, the offline install's folder that holds a library: `onboarding_library_folder_*` (8:
     the question, its link, the note, and why a folder is not used);
@@ -2383,7 +2397,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); eighteen insertion points (the onboarding's two blocks stand together), each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); nineteen insertion points (the onboarding's two blocks stand together), each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -2982,12 +2996,14 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
-- **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot, A whole page in the view.
-- **Size:** 1470 lines.
+- **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot, A whole page in the view,
+  A book's own pages.
+- **Size:** 1246 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
-  selects) and `DafControl` (what the keys and the find bar ask: page up or down, first or last amud, a line brought into
+  selects, and for another book than a tractate the `commentators` its pages are set with, `DafCommentators`: the
+  commentaries pane's selection and the lines' connections) and `DafControl` (what the keys and the find bar ask: page up or down, first or last amud, a line brought into
   view, a step to the next comment) are its two seams with the text view. A comment selected by a click on its own words
   is the one the arrows step from (`focused`): `stepComment` selects the comment read after it or before it in its
   commentary (`DafIndex.next`), on its Gemara line (`baseOf`), brings it into view, and waits for the tab's selection to
@@ -3001,11 +3017,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   `DafControl.place` says where it is (`DafPlace`: that segment, whether the tab's selected line is in view, whether a
   comment is selected by a click on itself), for the text to open in the same state. Also the amud helpers (`isBavli`, `amudOf`, `amudIndex`, `amudTitle`,
   `firstLines`), `DafControl.printed` (the tractate's comments and places, and the commentaries' books, set while the daf
-  is shown, for the find to search them too: `DafFindComments.kt`), the page's marks (`dafHighlight`: passage, segments,
-  their comments), clicks
-  (`clickOn`, `segmentOf`), the links read for a page (`loadLinks`), the layouts folder (`rememberDafLayouts`), a missing
+  is shown, for the find to search them too: `DafFindComments.kt`), the layouts folder (`rememberDafLayouts`), a missing
   layout's page with its download (`MissingLayout`, `DownloadLayout`), the review's menu items and tints, `DafFind`, and a
-  sideways pan as the commentaries' pages turn. The review is read with the tractate and its items are always in the menu (`reviewItems`), while its marks are
+  sideways pan as the commentaries' pages turn (`sidewaysPan`, a book's pages' too). An amud's words tied to the
+  library (their marks, clicks, selection and menu) are drawn by `LinkedAmud` (`DafLinkedAmud.kt`), which a book's
+  own pages share: `AmudItem` lays the amud out, keeps it, and gives `LinkedAmud` the tractate's review (`AmudReview`:
+  the tints, the menu's items, the unsure lines). For another book than a tractate with commentators given, `DafView`
+  shows `BookDafView` in its place, with the tab's line and selection (`DafTab`) and its clicks (`DafClicks`). The review is read with the tractate and its items are always in the menu (`reviewItems`), while its marks are
   tinted and its moves made only when the daf's marks are shown (`asShown`, `AppSettings.dafMarksFlow`, which also
   draws the unsure lines lighter); a reason said shows them. The items are
   three checkboxes, "הקטע מעומד לא נכון", "יש טעות במילים" and "הקטע תקין" (`ContextMenuCheck`; while the menu stays open they share what is said, so "הקטע תקין" unchecks the two faults and
@@ -3028,15 +3046,17 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   `blockWidth`, its title and margin aside) for the end bar's "עמוד שלם". `DafControl` is made with its tab's id
   (`tabId`).
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
-  (`DafMode`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`).
+  (`DafMode`, `DafCommentators`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`), and the book's
+  pages' files (`DafControl`, `DafPlace`, `DafScale`, `dafFamily`, `awaitPassage`, `sidewaysPan`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`,
   `ZoomPivotTest`; the composables have no UI test; request 44 tried in the app (Berakhot 2a zoomed in with Ctrl and
   the wheel over a word of the Mishnah: the word stays where it was).
-- **Notes:** at 1,374 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
-  (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
-  parts (pages, review, missing layout, marks).
+- **Notes:** at some 1,250 lines, with 18 top-level functions, it is beyond `detekt.yml`'s limits (15 functions for a
+  file, 60 lines for `DafPages`), as some of Zayit's largest files are; its amud's drawing went to `DafLinkedAmud.kt`
+  on 2026-11-23 (`AmudItem`'s two findings with it), and it could be split further by its parts (pages, review, missing
+  layout).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayout.kt`
 
@@ -3056,8 +3076,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafSetting.kt`
 
-- **Feature:** Daf view.
-- **Size:** 690 lines.
+- **Feature:** Daf view, A book's own pages.
+- **Size:** 716 lines.
 - **What:** typesetting an amud: `layoutAmud` sets every line in runs (a column's lines one below the other at its
   pitch), one size of letters per column, made smaller for a line only as far as its words need, its spaces widened to
   fill its box, a big word's neighbours set beside it, an overfull line given its empty neighbour's room. `DafSizes`
@@ -3069,12 +3089,18 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   `docs/experiments/2026-11-10-tosafot-dibbur-size`): a word of a dibbur (`d`) after a word of none, but where the
   dibbur goes on from the line above or after a big first word (`firsts`, `Marks`); a big first word of Tosafot is
   such a word too, set that size and no longer by its box's height (the box is two lines high, the word is not).
-  Rashi's dibbur stays bold in its own script. The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`,
+  Rashi's dibbur stays bold in its own script. A book's own pages add three columns (`LEFT_COLUMN`, the commentaries
+  left of the text, as Rashi's; `NAME_COLUMN` and `TARGUM_COLUMN`, the commentators' names and the targum beside the
+  text, in square letters as tall as their own lines' boxes), and `DafOpenings`: the words that open a comment, named
+  by the page (by their line's index), set in the text's square letters, a share of their line's (`opening`, the
+  `leads` of a column, in place of `firsts`). `GEMARA_SIZE` and `RASHI_SIZE` are internal, for those pages to measure
+  their words as they will be set. The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`,
   `Marks`) and the constants of the printed page's proportions.
-- **Reached from:** `DafView.kt` (`layoutAmud`, `DafSizes`).
+- **Reached from:** `DafView.kt` (`layoutAmud`, `DafSizes`), `BookDafPlaces.kt` (with `DafOpenings`), `BookDafBands.kt` and
+  `DafAroundSetter.kt` (the sizes).
 - **Follows:** Pardes's own.
 - **Tests:** `DafPageTest` (evenly spaced runs, words in order, one size of letters with a tractate's sizes, the
-  first word of each dibbur of Tosafot and its size).
+  first word of each dibbur of Tosafot and its size); the book's pages' columns and openings, seen in the app.
 - **Notes:** with some 32 functions it passes `detekt.yml`'s 15 per file.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPage.kt`
@@ -3193,12 +3219,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAmudLinks.kt`
 
-- **Feature:** Daf view.
-- **Size:** 100 lines.
+- **Feature:** Daf view, A book's own pages.
+- **Size:** 114 lines.
 - **What:** one amud's words tied to the library for its clicks and marks: `DafAmudLinks` (each word's library line, each
   comment's Gemara line through the library's COMMENTARY links, read once a page, and which Gemara words each dibbur
-  quotes) and `passageAt` (what a click or the pointer on a word stands for).
-- **Reached from:** `DafView.kt`; `BookContentView.kt` (`passageAt`).
+  quotes, or, in a book's own pages, which words Zayit's anchors put a comment on: `passages`, each line's words and
+  the comments on them, which are then not matched by their dibbur) and `passageAt` (what a click or the pointer on a word stands for).
+- **Reached from:** `DafLinkedAmud.kt` (`loadLinks`), `DafView.kt`; `BookContentView.kt` (`passageAt`).
 - **Follows:** the text view's passages (`SelectedPassage`) and the library's links.
 - **Tests:** `DafLinksTest`.
 
@@ -3304,16 +3331,16 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/DafSettingsScreen.kt`
 
-- **Feature:** Daf view.
-- **Size:** 28 lines.
-- **What:** `DafSettingsScreen`, Settings › צורת הדף: the layouts' card (`DafLayoutsCard`) and the scans' card
-  (`DafScansCard`, request 48). The page had the switches of
+- **Feature:** Daf view, A book's own pages.
+- **Size:** 30 lines.
+- **What:** `DafSettingsScreen`, Settings › צורת הדף: the layouts' card (`DafLayoutsCard`), the scans' card
+  (`DafScansCard`, request 48), and the card of the other books' own pages, an experiment (`BookDafCard`). The page had the switches of
   the unsure lines and of the review mode until 2026-11-12, when the review went into the menu for good and the
   marks to the button beside the daf, and under the card the link to the folder of the reader's reviews, which is in
   Settings › משוב since that day; the daf's two fonts stay among the fonts (the user's word of 2026-11-11).
 - **Reached from:** `SettingsNavHost.kt` (`SettingsDestination.Daf`), from `SettingsSidebar.kt`'s item.
 - **Follows:** Zayit's settings screens (a scrolling column of cards with the same paddings).
-- **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its first card; the second, tried in the app.
+- **Tests:** none of the screen; `DafLayoutsCardUiTest` covers its first card; the second and the third, tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/LocatedSelection.kt`
 
@@ -3504,6 +3531,250 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Reached from:** `DafPageTest`.
 - **Follows:** Pardes's own data.
 - **Tests:** it is a fixture.
+
+### A book's own pages (צורת דף לכל הספרים, an experiment)
+
+Request 21 of `docs/DESKTOP_STAGE2.md`, "צורת דף לספרים נוספים": any book with commentaries as pages of its own, set
+by the app. First tried on 2026-11-13 and stopped the same day (the branch `experiment/book-daf`, `ef6f4b3`), it was
+taken up again on 2026-11-23, when the user gave the rules of a page of text and commentaries
+(`docs/BOOK_DAF_RULES.md`, with a page of Bereshit 1 set by them) and asked for a trial of them for every book, each
+to be fitted: "נסה ליצור אפשרות ליצור צורת הדף לעוד ספרים בהתאמה אישית לכלל הספרים. צור גרסת ניסיון". The pages are
+the experiment's (the units of a book laid out as they come into view, drawn and clicked by the tractate's daf's own
+code, the commentators those checked in the commentaries pane), set by the rules: pages of one size, the text at the
+top with its targum beside it, each commentator in a band under it that goes on from page to page. It is off until
+turned on in Settings › צורת הדף (`BookDafSettings.enabled`), and its style is the reader's, for every book or for
+one. The hooks in Zayit's files are in `VerticalBars.kt` (the toggle for such a book),
+`BookContentPanel.kt` (the `DafMode` of such a book) and `BookContentView.kt` (the commentators and the diacritics
+given to `DafView`), with `strings.xml`; in Pardes's own files, `DafView.kt` (`BookDafView` in its place, the amud's
+drawing shared), `DafSetting.kt` (the pages' columns and openings), `DafAmudLinks.kt` (the anchors' passages),
+`PageSpreadsButton.kt` (`showsPages`) and `DafSettingsScreen.kt` (the card).
+
+Not done yet, of the rules: a verse's number small and grey (it is the library's "(א)"), a reference in parentheses
+smaller and grey, the running head's page number and rule (the head is the page's references, as a tractate's amud's
+name), a setumah as a gap (the library's mark is printed), a page for print. Of the experiment: the style is not
+carried by a backup (a `SettingsGroup`'s keys are not portable).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafStyle.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 120 lines.
+- **What:** the reader's style and the experiment's switch. `DafStyle` (`Bands`, the rules' own; `Around`, the text in
+  the middle as the Vilna Shas sets the Gemara), `BookDafStyle` (the layout, the letters of the text and of the
+  commentaries, a commentator's columns, the targum's share of the width, the page's height to its width, whether the
+  text's lines run on, whether the commentaries are in square letters; the rules' numbers its defaults, in the rules'
+  unit, a block of text 616 wide; `sane` keeps each inside what a page can be set with), `BookDafSettings` (a
+  `SettingsGroup`, `book_daf.*`: `enabled`, off by default; `style`, every book's; `books`, a book's own by its
+  id), `Book.isTanakh`, and the composables that read them:
+  `hasBookDaf` (the experiment on, no tractate, a book with commentaries), `showsBookDaf` (the tab shows such
+  pages) and `rememberBookDafStyle` (a book's own style, else every book's).
+- **Reached from:** `VerticalBars.kt` and `BookContentPanel.kt` (`hasBookDaf`), `PageSpreadsButton.kt`
+  (`showsBookDaf`), `BookDafView.kt`, `BookDafPlaces.kt`, `BookDafBands.kt`, `BookDafAdjust.kt`, `BookDafCard.kt`.
+- **Follows:** Pardes's `PageFitSettings` and `HomeLogoSettings` (a `SettingsGroup` read through
+  `AppSettings.flow`), and the open siddur's switch for an experiment that is off until turned on.
+- **Tests:** `BookDafBandsTest` (the style's measures); the switch and the fields, tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafBands.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 496 lines.
+- **What:** the rules' setting, a pure function of the words' widths. `BandsMeasures` turns a `BookDafStyle` into a
+  page's measures in points (the page `BOOK_DAF_WIDTH` wide: each column's `Letters`, their size, box and pitch; the
+  gaps, a band's head, the targum's column), and `DafBandsSetter.pages()` sets a unit: for each page, the last line
+  of the text it takes (`lastLine`: line after line while the text, its targum and every comment waiting up to it
+  fit, rule 2; one at least, rule 3; one more when over 15% of the page would be empty, rule 8, `fills`; never ending
+  on a heading, `offHeading`), the text at its top (`setText`: headings in the middle, the others in paragraphs with
+  their targum beside them at the left and a rule between, `setPart`; a line a paragraph, or where the text runs on,
+  as verses, the lines up to a petuchah, the last line short from the right, a paragraph left open ending in the
+  middle, `paragraphs`), then each commentator's band in turn (`setBands`, rule 5: as many of its words waiting as
+  the room left holds, none when that is under two lines a column, rule 7; `setBand`: a rule, the name, the lines in
+  balanced columns from the right, set across but the last where a comment ends). A commentator's comments are one
+  `WordRun` that goes on from page to page (rule 4), never past the lines of the text already set (`ends`, rule 1);
+  a line of commentary is left free at the bottom (rule 9); pages are one size, a line of the text taller than a page
+  making its own longer and a unit's last ending where its lines do; a page that could take nothing in takes a
+  band's least all the same (`force`), so no word is lost (rule 10). Lines are broken here, by measured widths, so
+  the rules' search for the most words that fit is one walk down the lines (`WordRun.endOf`). The words that open a
+  comment (its first bold words) are named for the text's square letters (`SetWord.lead`, `BandsPage.openings`,
+  `DIBBUR_SIZE`), where the commentaries are in Rashi script. `PageRule` is a rule drawn on a page.
+- **Reached from:** `BookDafPlaces.kt` (`UnitSetter`).
+- **Follows:** the user's rules (`docs/BOOK_DAF_RULES.md`), whose numbers its constants are; the page's lines as
+  `BookDafLayout.kt` gives them to the daf's own setting.
+- **Tests:** `BookDafBandsTest`; Bereshit 1 with Onkelos, Rashi and the Ramban seen in the app beside the rules'
+  own page.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafLayout.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 202 lines.
+- **What:** what both styles set with: a library line as set (`DafSegment`), a commentator and its comments by the
+  line each is set with (`DafCommentary`), the targum (`DafTargum`), the words' widths (`WordWidths`), the columns'
+  names (`TEXT_COLUMN`, `RIGHT_COLUMN`, `LEFT_COLUMN`, `NAME_COLUMN`, `TARGUM_COLUMN`), the page's width in points
+  (`BOOK_DAF_WIDTH`, the Talmud's block's), a set page (`SetPage`: its lines, height, rules and openings, made a
+  `DafAmud` by `amud`), a set word (`SetWord`), and the helpers `setWords`, `nameWords`, `fit`, `lineSpan` (a line
+  across, in the middle, or short from the right) and `dafLine` (a printed line with its bold words and each library
+  line's words among them). `dafPagesAround` sets a unit around its text: as many lines a page as keep it no taller
+  than `BOOK_DAF_HEIGHT`, a heading never last.
+- **Reached from:** `BookDafBands.kt`, `DafAroundSetter.kt`, `BookDafSource.kt`, `BookDafPlaces.kt`, `DafSetting.kt`
+  (the columns' names).
+- **Follows:** the layout files' model (`DafAmud`, `DafLine`), which the pages are set as, so that the daf's own code
+  draws and ties them.
+- **Tests:** `BookDafLayoutTest`, `BookDafBandsTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafAroundSetter.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 164 lines.
+- **What:** `DafAroundSetter`, a page set around its text (`DafStyle.Around`), as the Vilna page sets the Gemara with
+  Rashi and Tosafot: the text in the middle, the commentators on both sides of it, beside it while it runs, then
+  under it, each side on its half; a side that ends first leaves its place to the text, and the other takes the whole
+  width once both the text and it are alone. In the letters of the Talmud's block.
+- **Reached from:** `BookDafLayout.kt` (`dafPagesAround`).
+- **Follows:** the experiment of 2026-11-13, as it was; the user's word of that day, "שולחן ערוך עם קצות החושן
+  סביבו".
+- **Tests:** `BookDafLayoutTest`; Orach Chaim 1 seen in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafSource.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 295 lines.
+- **What:** what a book's pages set, read from the library. `dafUnits` parts a book by its table of contents (from
+  each entry to the next, a longer one in pieces of 40 lines, a heading alone with the next); `loadDafUnit` reads a
+  unit's lines, the comments on each of the commentators the commentaries pane shows for it (`CommentatorSelection`
+  over the line's connections), each comment with the first of the unit's lines it is on, the commentators in the
+  order they are met (`DafUnitLook.ranks`: their bands' order, or their sides), the passages Zayit's anchors mark
+  (`passagesOf`), and, in bands, the targum beside the text (`targumOf`: Onkelos where it is, else the one on most
+  lines); `dafWords` gives a line's words as the text shows them, without the diacritics it hides, bold where most
+  of their letters are; `isHeading` tells a heading by its tag.
+- **Reached from:** `BookDafPlaces.kt` (`UnitSetter`, `unitsOf`).
+- **Follows:** Zayit's `buildAnnotatedFromHtml` and comment anchors (`CommentAnchorIndex`), and the repository's
+  `getCommentariesForLineRange`.
+- **Tests:** `BookDafSourceTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafPlaces.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 345 lines.
+- **What:** a book's units laid out, and where its lines are on them. `UnitSetter.lay` reads a unit, sets it in the
+  reader's style (`DafBandsSetter`, or `dafPagesAround`), lays each page out with the daf's own setting
+  (`layoutAmud`, with the page's `DafOpenings`), and gives a page of commentaries alone the head of the page before
+  it (`LaidPage.continuing`); its words are measured as they will be set (`measuredWidths`, at the style's sizes).
+  `LaidPage` (the amud, its layout, its head from its lines' references, `refRange`; its rules; where each library
+  line is printed first), `LaidUnit` (its pages, in rows of one or two, `rows`; the pixels down its item to a line,
+  `offsetOf`; the page and point at an offset, `placeAt`; the text line read there, `textAt`; a comment's neighbour
+  in its commentary, `next`), `PageFrame` (a page's head and gap, and the pages a row), `DafTab` (the tab's line,
+  selection and place), `DafLetters`, `DafComment`, and `unitsOf`.
+- **Reached from:** `BookDafView.kt`, `DafView.kt` (`DafTab`).
+- **Follows:** the tractate's daf's places (`DafIndex`, `DafControl`), for a list whose items hold several pages.
+- **Tests:** `BookDafLayoutTest`, `BookDafBandsTest` (the pages); the places, tried in the app (a line brought into
+  view from the contents, the place kept at a zoom, with two pages a row, and over a restart).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafView.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 689 lines.
+- **What:** `BookDafView`, the book's pages inside the text view's frame as a tractate's are (its zoom, keys, find
+  bar, selection and menu): the units in a list, each laid out when it comes into view and one on each side
+  (`layUnits`, kept as they were while they are set again), its pages in rows of one or two as the end bar's "שני
+  עמודים" says, the right one first (`UnitsList`), each with its running head and the rules between its parts
+  (`BookDafPage`, over `LinkedAmud`). The pages' size is the daf's zoom, a size whatever the view's width, and they
+  tell the tab their fit for "עמוד שלם" (`pagesScale`, `TellPageFit`, request 73 of stage 3); the place at the top is
+  kept at a zoom (`KeepPlaceAtZoom`), the keys and the find bar are answered through `DafControl`
+  (`BookDafControl`: a page up or down, the book's ends, a line brought into view, a step through a commentary), the
+  tab's line is brought into view and the place told back (`RevealTabLine`), Ctrl or Cmd + C copies the words
+  selected (`selectionKeys`). A new `UnitSetter` (a check in the pane, the diacritics, the fonts, the style) sets the
+  pages again (`rememberUnitSetter`, `rememberDafLetters`). With no commentator checked, a banner says how to add
+  them; at the pages' corner, a button shows the style's fields over them (`BookDafAdjust`).
+- **Reached from:** `DafView.kt`.
+- **Follows:** `DafView`'s pages (its list, its control, its place and zoom), for units laid out as they come.
+- **Tests:** none of the composables; tried in the app on Bereshit 1 (Onkelos, Rashi, the Ramban, as the rules' own
+  page; Rashi and Radak), Mishnah Berakhot 1 (Bartenura) and Orach Chaim 1 (Magen Avraham, Mishnah Berurah), in both
+  styles, with two pages a row and a whole page in the view.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafAdjust.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 101 lines.
+- **What:** `BookDafAdjust`, a button at the corner of a book's pages (Jewel's settings icon, "התאמת העמוד" its
+  tooltip) that shows the style's fields over them, or hides them (`AdjustFields`): a checkbox that gives the book a
+  style of its own ("סגנון משלו לספר"), and the fields (`BookDafStyleFields`), which change the book's own when it
+  has one, else every book's; each change sets the pages again. At the pages' corner and not in the end bar: the bar
+  of a Chumash's pages is full at a window 900 pixels tall, and one more button pushed the commentaries' out of it.
+- **Reached from:** `BookDafView.kt`.
+- **Follows:** `PdfBookReader`'s action (a `Tooltip` over an `IconActionButton`); a settings card's look for the
+  fields.
+- **Tests:** tried in the app (Bereshit given its own style: larger letters, square commentaries; back to every
+  book's).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLinkedAmud.kt`
+
+- **Feature:** Daf view, A book's own pages.
+- **Size:** 395 lines.
+- **What:** an amud's text tied to the library, as both dafs show it: `LinkedAmud` draws a laid-out amud
+  (`DafAmudText`) with the tab's marks on its words, the user's highlights and notes, the find's matches
+  (`linkedWords`), its clicks as the text's (`clickOn`, `segmentOf`), a drag selecting its words for the text's own
+  menu (`dafTextManager`, `rememberLocated`), and a tractate's review when it has one (`AmudReview`). Its parameters
+  are small classes (`DafLook`, `DafMarks`, `DafClicks`, `AmudSelection`); `loadLinks` reads a page's links once,
+  with the passages a book's anchors mark; `dafHighlight` is the page's marks (passage, segments, their comments);
+  `LAYOUT_SCALE`.
+- **Reached from:** `DafView.kt` (`AmudItem`), `BookDafView.kt` (`BookDafPage`), `BookDafPlaces.kt` (`LAYOUT_SCALE`).
+- **Follows:** it is `DafView.kt`'s own code, moved here whole on 2026-11-13 (the experiment) so that a book's pages
+  answer as a tractate's do: "כמו בצורת הדף של הגמרא ובקוד משותף איתה".
+- **Tests:** `DafLinksTest`, `DafViewStateTest`, `DafAnchorsTest`, `DafPageTest`; Berakhot 2a seen in the app after
+  the move (a click on the Gemara, on Rashi).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/BookDafCard.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 233 lines.
+- **What:** `BookDafCard`, Settings › צורת הדף: the experiment's switch ("צורת דף לכל הספרים (ניסיוני)") with what
+  it does, and, once on, every book's style. `BookDafStyleFields` are the style's fields, each a list
+  (`Choice`, a `ListComboBox`): the layout, and in bands (`BandsFields`) the text's letters and the commentaries',
+  a commentator's columns, the targum beside the text (none, narrow, the rules', wide), the page's shape, the text's
+  lines run on (the Tanakh's alone, every book's, none); the commentaries in square letters; and a button back to
+  the rules' numbers when the style is not theirs.
+- **Reached from:** `DafSettingsScreen.kt` (the card), `BookDafAdjust.kt` (the fields).
+- **Follows:** Zayit's settings cards (`DisplaySettingsScreen.kt`'s list rows, the same frame and paddings).
+- **Tests:** tried in the app (the switch; three columns, which set the pages again at once).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafBandsTest.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 313 lines.
+- **What:** the rules' own checks ("בדיקות לפני מסירה"), on words of a known width: every word of the text and of
+  each commentator set once and in order; no comment on a page before its line's; pages of one size, none
+  overflowing, the last ending where its lines do; a line free at every page's bottom; no two lines overlapping; a
+  page taking lines while they and their comments fit; a new line of the text on every page while a long commentary
+  lags; the first commentator taking its room first; a band with room for under two lines a column waiting; a band's
+  columns balanced, in two or three; its last line short only where a comment ends; the words that open a comment
+  named; a petuchah closing a paragraph and an open one ending in the middle; every line a paragraph where the text
+  does not run on; the targum beside its lines, or none; a heading in the middle and never last; a line taller than
+  a page losing no word; larger letters making more pages.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafLayoutTest.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 155 lines.
+- **What:** a page set around its text: the text in the middle and each side's commentary beside it; a side that
+  ends first leaving its place to the text; the commentaries under the text on their halves; a side alone taking
+  the whole width; the text alone taking it; no two lines overlapping; every word set once, in order, tied to its
+  line; a commentator's name over its column; pages holding as many lines as fit, a heading never last.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafSourceTest.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 66 lines.
+- **What:** a book's units from its table of contents (each entry to the next, a heading alone with the unit after
+  it, a long part in pieces, a book without contents from its start), and a line's words (joined where tags part no
+  word, bold where most of their letters are, without the diacritics the text hides, an anchor beginning a passage
+  that runs to the next, a heading told by its tag).
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 ### Commentators in their own panes, and the commentator selection kept
 
@@ -5062,12 +5333,14 @@ Pardes's `DafView.kt`, `PdfPageList.kt`, `PdfBookView.kt` and `DafScanView.kt`, 
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageSpreadsButton.kt`
 
-- **Feature:** Two pages side by side.
-- **Size:** 48 lines.
+- **Feature:** Two pages side by side, A book's own pages.
+- **Size:** 56 lines.
 - **What:** `PageSpreadsButton(uiState, modifier)`, the end bar's "שני עמודים" (the `PageSpread` icon, its tooltip),
-  shown while the tab shows pages: it turns `AppSettings.pageSpreadsFlow` on and off, in every tab. `showsPages(uiState)`
-  says whether the tab shows pages rather than lines (a tractate's daf or scan, a PDF book); the bar also hides the
-  diacritics button by it (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`).
+  shown while the tab shows pages: it turns `AppSettings.pageSpreadsFlow` on and off, in every tab. `showsPages(uiState)`,
+  a composable since it reads the experiment's setting, says whether the tab shows pages rather than lines: printed
+  ones (`showsPrintedPages`: a tractate's daf or scan, a PDF book), or another book's own (`showsBookDaf`); the bar
+  hides the diacritics button by the printed ones alone (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`), a book's own
+  pages being set in the text's diacritics.
 - **Reached from:** `VerticalBars.kt`, under the zoom's buttons (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס
   ומינוס"), and at the diacritics button.
 - **Follows:** Pardes's `DafMarksButton` (`SelectableIconButtonWithToolip` over a flow of the settings).
@@ -8203,7 +8476,7 @@ Pardes's own files, `FindResultsPane.kt` and `PopupKeys.kt`.
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (797 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (798 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -8261,7 +8534,7 @@ the description where something needs saying.
 | `.claude/skills/zayit-android/scripts/temple-picture.py` | zayit-android script that builds the Temple countdown widget's picture from a public-domain 1850 painting ("The Siege and Destruction of Jerusalem"): Android's still JPG, three desktop JPGs, and Android's animated WebP whose fires flicker. *Note:* Stale for desktop: it writes SeforimApp/.../drawable/temple_jerusalem_in_fire_{small,medium,large}.jpg, which Zayit deleted (0c8e6c3c) and nothing reads; desktop's files/temple_jerusalem_in_fire.webp is a hand copy of the Android WebP (docs/PARDES_PLAN.md › Phase 1). | Pardes's own; its picture replaced the Shutterstock one inherited from Zayit |
 | `.claude/skills/zayit-fidelity/SKILL.md` | Claude Code skill, mandatory for every change: Pardes stays as identical to Zayit as it can be. The smallest change (nothing, a branding value, a new file behind a one-line hook, then an edit), written as Elie Gambache writes Zayit, committed as he commits, every file that differs from Zayit described in docs/ZAYIT_CHANGE_MAP.md in the same commit with check_change_map.py passing, and main reached only through the Change map check (main's ruleset: a pull request, or a fast-forward to a checked commit); merging a Zayit release (its licence first); why GitHub does not show Pardes as a fork. It points to its lessons (references/lessons.md), to the Gradle wrapper of pardes-desktop-run and to scripts/mapedit.py. | Pardes's own |
 | `.claude/skills/zayit-fidelity/references/eli-style.md` | The zayit-fidelity skill's reference on writing as Zayit's author writes it: his guidelines (AGENTS.md, CONTRIBUTING.md, CLAUDE.md, .editorconfig, detekt.yml, SeforimLibrary/AGENTS.md, CI), what his code shows (structure, state and events, Metro, settings, errors, logging, Compose, comments, KDoc, tests), how he works (Conventional Commits with their counts, one topic a branch, docs and tests with the change), and Pardes in his style. | Pardes's own; measured on Zayit v0.6.12 and its history |
-| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-22): building and checking (what CI runs where, ktlint's and detekt's findings, detekt counted against main's, escapes turned into characters), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build and the public release with the Apple Silicon Mac's slow native image, and what the user asked to be done again. | Pardes's own |
+| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-23): building and checking (what CI runs where, ktlint's and detekt's findings, detekt counted against main's, escapes turned into characters), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build and the public release with the Apple Silicon Mac's slow native image, and what the user asked to be done again. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/check_change_map.py` | The change map's check: every file that differs from the map's Zayit base has its entry (a heading with Change, What, Why, Kind, Merge risk and Tests for a Zayit file changed; Feature, Size, What, Reached from, Follows and Tests for a file added in Zayit's modules; at least a row for the others), the line counts of detailed entries match the files, no entry is left for a file back to Zayit's, and the base is the last merged release. Compares the working tree (untracked files included), or HEAD with --committed (CI); --stats prints the counts. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/mapedit.py` | A small Python class for scripts that edit the change map by entry: a file's line counts or size set to what they are now, a text replaced inside one entry or one row, a block put before a heading, each asserting it found its text once; run alone it prints each section's count of entries. *Note:* Written after a global sed hit two entries at once. | Pardes's own |
 
@@ -8366,8 +8639,9 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
+| `docs/BOOK_DAF_RULES.md` | The user's rules for setting a page of a text with its commentaries, in Hebrew (2026-11-23, "מסמך הוראות וכללים לעימוד מקראות גדולות"): the page's structure and its default measures, the ten rules that decide what a page takes, the typography, the algorithm, what went wrong in the first setting and the rule each fault gave, the checks before a page goes out, and what is still open. Written with a page of Bereshit 1 (Onkelos, Rashi, the Ramban) set in a browser; `BookDafBands.kt` follows it, and its comments name its rules by number. *Note:* Kept as the user gave it. Its sources of text (Sefaria through a browser) are that page's own: Pardes sets the library's texts. | The user's own |
 | `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
-| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it; for 31 what was measured, the rule first chosen (a fixed 10) and the one by each line's score that replaced it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
+| `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it; for 31 what was measured, the rule first chosen (a fixed 10) and the one by each line's score that replaced it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out; and under request 21, that it was taken up again on 2026-11-23 as a trial, by the user's rules (docs/BOOK_DAF_RULES.md): what was built, how it is turned on, what was seen in the app, and what of the rules is not done yet. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
 | `docs/DESKTOP_STAGE3_PLAN.md` | Hebrew plan (2026-11-18) for stage 3 of Pardes for desktop: the user's twenty requests of 2026-11-18 in his numbers (41 to 60, which repeat stage 2's 41 to 56: an author's books among the bar's suggestions, PDF pages in the dark theme, lenient names of a scans folder and the page of daf ב in a joined file, zoom at the pointer, the contents following a PDF's paging, a link in the search preview opening only itself, keys in the book tree and elsewhere, search in PDFs with bookmarks and pages together and the fast-paging stall, no nikud button for PDFs, a torn-off commentator's title opening its book, cutting scans only by consent, what Zayita's personal books teach, exact, broad and hybrid search, an in-book find's results in a side pane, the leading space of a copy, the settings window back from minimized, the notes icon mirrored, duplicating a tab and a split view), and the sync with Zayit that was asked with them; what is new in Zayit after 0.6.12 and why its Zayit Public License clashes with the open siddur's AGPL and Amud's GPL; the user's decisions of that day (Zayit 0.6.13 merged on a branch of its own, into main only once Ariel Daniely and Amud's authors allow it in writing; Chrome's split view; inverted PDF pages with a button for the original colours; exact as quotes, broad as words without the model, hybrid as today; everything built together, with one testers' build), every request's steps with its files and checks, the merge's steps, the checks, what is left out, and the permission requests (the one sent in efrul/Pardes#27, and the text for Amud's repository). *Note:* Written in Hebrew. Like stage 2's plan, it keeps a status line of what is done, with the commits. | Pardes's own |
 | `docs/INTELLIJ_LESSONS.md` | Hebrew research report (2026-11-20) on what Pardes can learn and take from JetBrains' IntelliJ IDEA: what Pardes already took from it (the navigation bar, the find bar, the settings window, the Drive backup), the cost of each idea under the change map's rules (configuration, a Pardes file with a one-line hook, an edit in Zayit's code, Nucleus), navigation and reading (back and forward inside a tab, recent places with a line of text, a teaching mode, sticky headings, rich-text copy), Jewel (what 0.41 already offers, the upgrade path, RTL and accessibility), infrastructure (a rolling log file, freeze capture, a diagnostics ZIP, a screen-reader audit), the title search (Hebrew typed on an English layout, a visit-frequency tie-breaker), eleven first steps, what not to take, and the licensing of Apache-2.0 code and JetBrains' trademarks. *Note:* Written in Hebrew. It read intellij-community at b2ba8bcb, Pardes at b2c284a and Nucleus at 65ccd12; claims that rest only on search summaries are marked (לא מאומת). | Pardes's own |
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |

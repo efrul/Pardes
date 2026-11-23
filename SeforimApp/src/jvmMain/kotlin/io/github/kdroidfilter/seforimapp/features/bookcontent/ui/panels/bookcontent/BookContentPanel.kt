@@ -26,7 +26,9 @@ import io.github.kdroidfilter.seforim.htmlparser.CommentAnchor
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafCommentators
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMode
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasBookDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.LinePlaces
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
@@ -249,12 +251,14 @@ private fun BookContentPanelContent(
                     val repository = LocalAppGraph.current.repository
                     val scope = rememberCoroutineScope()
                     val content by rememberUpdatedState(uiState.content)
-                    // A Talmud tractate as its Vilna page: the same view, its items amudim; or as its scan (request 46)
+                    // A Talmud tractate as its Vilna page: the same view, its items amudim; or as its scan (request 46).
+                    // Another book as pages of its own, with the commentators the commentaries pane shows (BookDafView)
+                    val tractate = (uiState.content.dafView || uiState.content.scanView) && selectedBook.isBavli
                     val daf =
-                        if ((uiState.content.dafView || uiState.content.scanView) && selectedBook.isBavli) {
+                        if (tractate || (uiState.content.dafView && hasBookDaf(selectedBook))) {
                             DafMode(
                                 book = selectedBook,
-                                scan = uiState.content.scanView,
+                                scan = tractate && uiState.content.scanView,
                                 onSelectLine = { lineId, withModifier ->
                                     scope.launch {
                                         runSuspendCatching { repository.getLine(lineId) }.getOrNull()?.let {
@@ -276,6 +280,11 @@ private fun BookContentPanelContent(
                                         )
                                     }
                                 },
+                                commentators =
+                                    DafCommentators(
+                                        uiState.content.commentatorSelection(selectedBook.id),
+                                        providers.loadLineConnections,
+                                    ),
                             )
                         } else {
                             null
