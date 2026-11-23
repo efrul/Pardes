@@ -184,6 +184,20 @@ tools and the code did when it was written.
 - **A zoom kept as a share of the view changes with every pane.** The daf's zoom times the view's width shrank the
   pages as a side pane or the commentaries opened (request 73, 2026-11-22): a zoom is a size (`ZOOM_ONE_WIDTH`), and a
   fit ("עמוד שלם", the view's width) a zoom set once, from the fit the view tells (`PageFits`, by the tab's id).
+  A size alone is not the answer either: a pane then cut the page ("הגודל כן יקטן אבל רק כמה שצריך", request 79,
+  2026-11-23). The pages are shown at the size, no wider than the view, unless the size was set wider than the view
+  it was set in (`daf_page_zoom_wide`, decided where the zoom is set, by the tab's view, never by a view that merely
+  narrowed); and every step, key, button, pinch, starts from the size shown, or a step beside a pane jumps past it.
+- **A jump to a row and back starts the rows between again.** `scrollToItem` disposes the rows it leaves, and a row
+  that reads its text once on screen (the find pane's, `produceState`) reads it again, empty first, and grows: after a
+  page down the rows above the row revealed grew and pushed it below the view, round after round (request 78,
+  2026-11-23). A row a few rows below is scrolled to through them (`scrollInFromBelow`), and the row revealed is kept
+  in view while the rows change, until the reader scrolls (`revealSettled`). The reader's scroll is told by the list
+  no longer being where the reveal left it, not by `isScrollInProgress`: a scroll that suspends nowhere (a trackpad's
+  `dispatchRawDelta`, the scrollbar, the reveal's own) sets it and clears it before any `snapshotFlow` looks.
+- **A UI test of rows that change later must let the time pass.** `waitForIdle` runs no `delay` in an effect: the
+  first test of request 78 passed without the fix, the rows never growing. `mainClock.advanceTimeBy` lets them; and a
+  new test is run once against the code it fixes, to see it fail (2026-11-23).
 - **One marking for every popup** (`PopupMarking.kt`, request 74): a popup whose field keeps the focus marks by index,
   its list told the pointer by `markOnPointer` (a `PointerInputModifierNode` on the `LazyColumn`, the positions the
   list's own offsets); a popup with no field marks by focus (`rememberHoverFocus`); Jewel's menus mark one item inside

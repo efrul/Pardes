@@ -39,9 +39,12 @@ class AppSettings(
     private val _textSizeFlow = MutableStateFlow(getTextSize())
     val textSizeFlow: StateFlow<Float> = _textSizeFlow.asStateFlow()
 
-    // The daf's own zoom: its pages' width, over the view's at 1
+    // The daf's own zoom, a size (1: a row of pages 1000 dp wide, PageFit.kt), and whether it was set wider than the
+    // view it was set in, to be kept so in a narrower one (request 79 of stage 3)
     private val _dafZoomFlow = MutableStateFlow(getDafZoom())
     val dafZoomFlow: StateFlow<Float> = _dafZoomFlow.asStateFlow()
+    private val _dafZoomWideFlow = MutableStateFlow(isDafZoomWide())
+    val dafZoomWideFlow: StateFlow<Boolean> = _dafZoomWideFlow.asStateFlow()
 
     // Whether the daf shows its marks: the lines its alignment is not sure of drawn lighter, and the lines the
     // reader's review named tinted, its moves made (the end bar's button; off, as printed)
@@ -56,6 +59,11 @@ class AppSettings(
     // composed there before it leaves this one): the zoom keys, buttons and menu zoom their daf, not the text
     private val _dafViewsFlow = MutableStateFlow(emptyMap<String, Int>())
     val dafViewsFlow: StateFlow<Map<String, Int>> = _dafViewsFlow.asStateFlow()
+
+    // Pardes: each tab's pages' view while they are shown, as the zoom that makes them as wide as it (PageFit.kt): they
+    // are no wider than it unless the zoom was set wider (request 79 of stage 3)
+    private val _pageWidthsFlow = MutableStateFlow(emptyMap<String, Float>())
+    val pageWidthsFlow: StateFlow<Map<String, Float>> = _pageWidthsFlow.asStateFlow()
 
     // StateFlow to observe line height changes
     private val _lineHeightFlow = MutableStateFlow(getLineHeight())
@@ -249,11 +257,41 @@ class AppSettings(
     // Never set: the pages shown first fit their view's width (request 73 of stage 3)
     fun hasDafZoom(): Boolean = settings.hasKey(KEY_DAF_ZOOM)
 
-    fun setDafZoom(zoom: Float) {
+    fun isDafZoomWide(): Boolean = settings[KEY_DAF_ZOOM_WIDE, false]
+
+    fun setDafZoom(
+        zoom: Float,
+        wide: Boolean = false,
+    ) {
         val value = zoom.coerceIn(MIN_DAF_ZOOM, MAX_DAF_ZOOM)
         settings[KEY_DAF_ZOOM] = value
+        settings[KEY_DAF_ZOOM_WIDE] = wide
         _dafZoomFlow.value = value
+        _dafZoomWideFlow.value = wide
     }
+
+    /** Sets the daf's zoom from the pages of [tabId]: wider than their view, it is kept so in a narrower one. */
+    fun setDafZoomFrom(
+        tabId: String,
+        zoom: Float,
+    ) = setDafZoom(zoom, wide = _pageWidthsFlow.value[tabId]?.let { zoom > it + ZOOM_LEVEL_SLACK } ?: false)
+
+    /** The pages of [tabId] are shown in a view as wide as the zoom [width] makes them, or no longer shown ([width] null). */
+    fun showPageWidth(
+        tabId: String,
+        width: Float?,
+    ) {
+        _pageWidthsFlow.update { widths ->
+            when {
+                width == null -> widths - tabId
+                widths[tabId] == width -> widths
+                else -> widths + (tabId to width)
+            }
+        }
+    }
+
+    /** The zoom the pages of [tabId] are shown at ([shownDafZoom]). */
+    fun shownDafZoom(tabId: String): Float = shownDafZoom(getDafZoom(), isDafZoomWide(), _pageWidthsFlow.value[tabId])
 
     // Until the button is first pressed: on for whoever had turned on one of the two settings it replaced
     fun isDafMarksShown(): Boolean = settings[KEY_DAF_MARKS, settings[KEY_DAF_MARK_UNSURE, false] || settings[KEY_DAF_REVIEW, false]]
@@ -286,14 +324,14 @@ class AppSettings(
 
     /**
      * Zooms in the reading view of [tabId]: its daf alone to the next of [DAF_ZOOM_LEVELS] when it shows one (its pages:
-     * a daf, a scan, a PDF book), else the text. The panes beside a daf (the commentaries, the references) keep the
-     * text's size, which the daf's zoom does not touch (request 63 of the list after the third testers' build of
-     * docs/DESKTOP_STAGE3_PLAN.md: "שגודל המפרשים/ אחרים לא יהיה מושפע מגודל צורת הדף").
+     * a daf, a scan, a PDF book), from the zoom they are shown at, else the text. The panes beside a daf (the
+     * commentaries, the references) keep the text's size, which the daf's zoom does not touch (request 63 of the list
+     * after the third testers' build of docs/DESKTOP_STAGE3_PLAN.md: "שגודל המפרשים/ אחרים לא יהיה מושפע מגודל צורת הדף").
      */
     fun zoomIn(tabId: String) {
         if (showsDaf(tabId)) {
-            val zoom = getDafZoom()
-            setDafZoom(DAF_ZOOM_LEVELS.firstOrNull { it > zoom + ZOOM_LEVEL_SLACK } ?: MAX_DAF_ZOOM)
+            val zoom = shownDafZoom(tabId)
+            setDafZoomFrom(tabId, DAF_ZOOM_LEVELS.firstOrNull { it > zoom + ZOOM_LEVEL_SLACK } ?: MAX_DAF_ZOOM)
         } else {
             increaseTextSize()
         }
@@ -302,8 +340,8 @@ class AppSettings(
     /** Zooms out the reading view of [tabId], as [zoomIn]. */
     fun zoomOut(tabId: String) {
         if (showsDaf(tabId)) {
-            val zoom = getDafZoom()
-            setDafZoom(DAF_ZOOM_LEVELS.lastOrNull { it < zoom - ZOOM_LEVEL_SLACK } ?: MIN_DAF_ZOOM)
+            val zoom = shownDafZoom(tabId)
+            setDafZoomFrom(tabId, DAF_ZOOM_LEVELS.lastOrNull { it < zoom - ZOOM_LEVEL_SLACK } ?: MIN_DAF_ZOOM)
         } else {
             decreaseTextSize()
         }
@@ -811,6 +849,7 @@ class AppSettings(
         settings.clear()
         _textSizeFlow.value = DEFAULT_TEXT_SIZE
         _dafZoomFlow.value = DEFAULT_DAF_ZOOM
+        _dafZoomWideFlow.value = false
         _dafMarksFlow.value = false
         _pageSpreadsFlow.value = false
         _lineHeightFlow.value = DEFAULT_LINE_HEIGHT
@@ -849,6 +888,7 @@ class AppSettings(
             setOf(
                 KEY_TEXT_SIZE,
                 KEY_DAF_ZOOM,
+                KEY_DAF_ZOOM_WIDE,
                 KEY_DAF_MARKS,
                 KEY_PAGE_SPREADS,
                 KEY_DAF_MARK_UNSURE,
@@ -919,6 +959,18 @@ class AppSettings(
         // A zoom a pinch left this close to a level is at that level
         private const val ZOOM_LEVEL_SLACK = 0.005f
 
+        /**
+         * The zoom pages are shown at in a view as wide as the zoom [width] makes them (null: not known): the daf's [zoom],
+         * no wider than the view unless it was set wider ([wide]), so that a pane opened beside them narrows them only as
+         * much as it must, and closed gives them their size back (request 79 of docs/DESKTOP_STAGE3_PLAN.md: "בפתיחת
+         * דברים בצד הגודל כן יקטן אבל רק כמה שצריך וידע להתאים את עצמו").
+         */
+        fun shownDafZoom(
+            zoom: Float,
+            wide: Boolean,
+            width: Float?,
+        ): Float = if (wide || width == null) zoom else minOf(zoom, width.coerceAtLeast(MIN_DAF_ZOOM))
+
         // Line height constants
         const val DEFAULT_LINE_HEIGHT = 1.5f
         const val MIN_LINE_HEIGHT = 1.0f
@@ -958,6 +1010,7 @@ class AppSettings(
 
         // A size since request 73 of stage 3; "daf_zoom" was a share of the view's width, and is not read
         private const val KEY_DAF_ZOOM = "daf_page_zoom"
+        private const val KEY_DAF_ZOOM_WIDE = "daf_page_zoom_wide"
         private const val KEY_DAF_MARKS = "daf_marks"
         private const val KEY_PAGE_SPREADS = "page_spreads"
 

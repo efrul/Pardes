@@ -111,6 +111,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.No
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookFindMatches
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.findInBook
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.queryNarrows
+import io.github.kdroidfilter.seforimapp.features.pdf.shownPageZoom
 import io.github.kdroidfilter.seforimapp.features.pdf.turnPage
 import io.github.kdroidfilter.seforimapp.features.search.semantic.installedSemanticSearch
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -213,14 +214,15 @@ fun BookContentView(
     val zoom = rememberAppTextZoom(onPointerZoomInProgressChange)
     val textSize = zoom.textSize
     // The daf's own zoom, by the same gestures, in percent; the zoom keys, buttons and menu zoom it while it is shown.
-    // Pardes: the daf's alone, the text's size as it was (request 63 of stage 3)
-    val dafZoomValue by appSettings.dafZoomFlow.collectAsState()
+    // Pardes: the daf's alone, the text's size as it was (request 63 of stage 3), and as wide as the view at most,
+    // unless zoomed wider (request 79)
+    val dafZoomValue = shownPageZoom(tabId)
     val dafZoom =
         rememberTextZoom(
             textSize = dafZoomValue * PERCENT,
             minTextSize = AppSettings.MIN_DAF_ZOOM * PERCENT,
             maxTextSize = AppSettings.MAX_DAF_ZOOM * PERCENT,
-            onTextSize = { appSettings.setDafZoom(it / PERCENT) },
+            onTextSize = { appSettings.setDafZoomFrom(tabId, it / PERCENT) },
             animate = isTabSelected,
             onZoomingChange = onPointerZoomInProgressChange,
         )

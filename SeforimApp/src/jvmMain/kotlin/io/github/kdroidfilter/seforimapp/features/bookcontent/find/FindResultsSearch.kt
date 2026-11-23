@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.find
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -12,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -27,6 +29,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.reve
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.TocTextMatch
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.matchTocText
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.tocQueryTokens
+import kotlinx.coroutines.flow.takeWhile
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
@@ -153,7 +156,7 @@ internal fun FindRowsSearchLayout(
         val listState = rememberLazyListState()
         LaunchedEffect(result, activeId) {
             val index = result.rows.indexOfFirst { it.matchId == activeId }
-            if (index >= 0) listState.revealItem(index)
+            if (index >= 0) listState.revealSettled(index)
         }
         LazyColumn(Modifier.fillMaxSize(), state = listState) {
             items(result.rows.size) { index ->
@@ -164,6 +167,26 @@ internal fun FindRowsSearchLayout(
             }
         }
     }
+}
+
+/**
+ * Brings row [index] of the results into view by the least scroll ([revealItem]), and keeps it there as the rows change,
+ * until the reader scrolls the list (it is no longer where the reveal left it: a wheel, a trackpad, the scrollbar): a
+ * line's row reads its text once it is on screen (FoundLineRow) and grows then, as do the rows above it, which pushed
+ * it below the view after a page down (request 78 of the list after the public release, docs/DESKTOP_STAGE3_PLAN.md:
+ * "בדפדוף בפאנל הצד הפוקוס נעלם למטה").
+ */
+internal suspend fun LazyListState.revealSettled(index: Int) {
+    revealItem(index)
+    var left = firstVisibleItemIndex to firstVisibleItemScrollOffset
+    snapshotFlow {
+        val row = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+        (firstVisibleItemIndex to firstVisibleItemScrollOffset) to listOf(row?.offset, row?.size, layoutInfo.viewportEndOffset)
+    }.takeWhile { (place, _) -> place == left }
+        .collect {
+            revealItem(index)
+            left = firstVisibleItemIndex to firstVisibleItemScrollOffset
+        }
 }
 
 /**
