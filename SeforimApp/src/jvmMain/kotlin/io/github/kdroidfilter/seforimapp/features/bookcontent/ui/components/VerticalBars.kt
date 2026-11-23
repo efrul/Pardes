@@ -22,6 +22,7 @@ import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMarksButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanButton
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasBookDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookConnections
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
@@ -30,7 +31,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.pdf.PageColorsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageFitButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
-import io.github.kdroidfilter.seforimapp.features.pdf.showsPages
+import io.github.kdroidfilter.seforimapp.features.pdf.showsPrintedPages
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.icons.*
@@ -155,7 +156,7 @@ fun EndVerticalBar(
                 // pages (Pardes, request 49)
                 if (uiState.content.dafView && selectedBook.isBavli) {
                     DafMarksButton()
-                } else if (bookHasDiacritics && !showsPages(uiState)) {
+                } else if (bookHasDiacritics && !showsPrintedPages(uiState)) {
                     DiacriticsButton(
                         diacritics = diacritics,
                         hasTeamim = selectedBook.hasTeamim,
@@ -176,16 +177,22 @@ fun EndVerticalBar(
                         label = stringResource(Res.string.shnayim_mikra_mode),
                     )
                 }
-                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text
-                if (selectedBook.isBavli) {
+                // The daf (צורת הדף), in place of the text: a Talmud tractate as printed in the Vilna Shas, another book
+                // as pages of its own with its commentators (BookDafView)
+                if (selectedBook.isBavli || hasBookDaf(selectedBook)) {
                     SelectableIconButtonWithToolip(
-                        toolTipText = stringResource(Res.string.daf_view_tooltip),
+                        toolTipText =
+                            stringResource(
+                                if (selectedBook.isBavli) Res.string.daf_view_tooltip else Res.string.book_daf_tooltip,
+                            ),
                         onClick = { onEvent(BookContentEvent.ToggleDafView) },
                         isSelected = uiState.content.dafView,
                         icon = GemaraPage,
                         iconDescription = stringResource(Res.string.daf_view),
                         label = stringResource(Res.string.daf_view),
                     )
+                }
+                if (selectedBook.isBavli) {
                     // Pardes: the tractate's scan in place of its text or its daf (requests 41 and 46), its page ready (56)
                     DafScanButton(
                         selected = uiState.content.scanView,
