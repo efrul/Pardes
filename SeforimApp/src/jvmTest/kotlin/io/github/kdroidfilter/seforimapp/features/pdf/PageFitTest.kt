@@ -3,12 +3,11 @@ package io.github.kdroidfilter.seforimapp.features.pdf
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertNull
 
 /**
- * The pages' zoom a size, which no pane opened beside them changes, and the view's width and a whole page zooms it is set
- * to (requests 63 and 73 of stage 3).
+ * The pages' zoom a size, which no pane opened beside them changes, and the view's width, a whole page and two thirds of
+ * it zooms it is set to, in turn (requests 63, 73 and 81 of stage 3).
  */
 class PageFitTest {
     @Test
@@ -35,17 +34,48 @@ class PageFitTest {
     }
 
     @Test
-    fun `a page whose shape is not known yet fits as wide as the view`() {
-        assertEquals(PageFit(0.8f, 0.8f), pageFit(800f, 600f, aspect = null, columns = 1))
-        assertEquals(PageFit(0.8f, 0.8f), pageFit(800f, 600f, aspect = 0f, columns = 1))
+    fun `two thirds of a page are the zoom that leaves them in the view's height, and no wider than the view`() {
+        // The page 560 wide whole in the view, half again as large: 840 wide, two thirds of its 1260 in the view's 840
+        assertEquals(0.84f, pageFit(2400f, 900f, aspect = 1.5f, columns = 1, around = 60f).twoThirds, 1e-6f)
+        assertEquals(0.7f, pageFit(700f, 900f, aspect = 1.5f, columns = 1, around = 60f).twoThirds, "a narrow view: its width")
     }
 
     @Test
-    fun `a zoom is a whole page as near as the zoom's ends let it be`() {
-        assertTrue(isWhole(0.56f, PageFit(2.4f, 0.56f)))
-        assertFalse(isWhole(0.6f, PageFit(2.4f, 0.56f)))
-        // A view so short that a whole page is below the zoom's least
-        assertTrue(isWhole(AppSettings.MIN_DAF_ZOOM, PageFit(0.5f, 0.1f)))
+    fun `a page whose shape is not known yet fits as wide as the view`() {
+        assertEquals(PageFit(0.8f, 0.8f, 0.8f), pageFit(800f, 600f, aspect = null, columns = 1))
+        assertEquals(PageFit(0.8f, 0.8f, 0.8f), pageFit(800f, 600f, aspect = 0f, columns = 1))
+    }
+
+    @Test
+    fun `the button goes from a whole page to two thirds of it, to the view's width, and back`() {
+        val fit = PageFit(width = 2.4f, whole = 0.56f, twoThirds = 0.84f)
+        assertEquals(PageFitMode.WHOLE, fit.nextMode(1.3f), "from another zoom, a whole page")
+        assertEquals(PageFitMode.TWO_THIRDS, fit.nextMode(0.56f))
+        assertEquals(PageFitMode.WIDTH, fit.nextMode(0.84f))
+        assertEquals(PageFitMode.WHOLE, fit.nextMode(2.4f))
+        assertEquals(PageFitMode.TWO_THIRDS, fit.modeAt(0.84f))
+        assertNull(fit.modeAt(0.6f))
+    }
+
+    @Test
+    fun `a fit no other zoom than another one's is passed over`() {
+        // Two thirds no wider than the view: its width
+        val narrow = PageFit(width = 0.7f, whole = 0.56f, twoThirds = 0.7f)
+        assertEquals(listOf(PageFitMode.WHOLE, PageFitMode.WIDTH), narrow.modes())
+        assertEquals(PageFitMode.WIDTH, narrow.modeAt(0.7f))
+        assertEquals(PageFitMode.WIDTH, narrow.nextMode(0.56f))
+        // A whole page as wide as the view: one fit
+        assertEquals(listOf(PageFitMode.WHOLE), PageFit(0.4f, 0.4f, 0.4f).modes())
+        assertEquals(PageFitMode.WHOLE, PageFit(0.4f, 0.4f, 0.4f).nextMode(0.4f))
+    }
+
+    @Test
+    fun `a zoom is at a fit as near as the zoom's ends let it be`() {
+        assertEquals(PageFitMode.WHOLE, PageFit(2.4f, 0.56f, 0.84f).modeAt(0.56f))
+        // A view so short that a whole page is below the zoom's least, and two thirds of it too: those are one fit
+        val short = PageFit(0.5f, 0.1f, 0.15f)
+        assertEquals(PageFitMode.WHOLE, short.modeAt(AppSettings.MIN_DAF_ZOOM))
+        assertEquals(PageFitMode.WIDTH, short.nextMode(AppSettings.MIN_DAF_ZOOM))
     }
 
     @Test

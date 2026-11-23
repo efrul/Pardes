@@ -4,6 +4,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.reference.Refere
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
@@ -87,6 +88,9 @@ class DafLayouts(
     private val json = Json { ignoreUnknownKeys = true }
     private var scannedAt = Long.MIN_VALUE
     private var files: Map<String, List<File>> = emptyMap()
+
+    // Each commentary printed on a tractate's daf, by its book's id, and the tractate's: read again with the folder
+    private var commentaries: Map<Long, Long>? = null
     private val read =
         object : LinkedHashMap<File, Pair<Long, DafLayoutFile>>(KEPT + 1, LOAD_FACTOR, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<File, Pair<Long, DafLayoutFile>>?) = size > KEPT
@@ -101,6 +105,18 @@ class DafLayouts(
 
     /** Whether the folder has a layout file at all (its JSON files, not read). */
     fun hasAny(): Boolean = dir.listFiles { f -> f.isFile && f.extension == "json" }.orEmpty().isNotEmpty()
+
+    /**
+     * The book of the tractate (its Gemara's, `DafLibrary.books`) whose daf prints the book [bookId] in a column of its
+     * comments: Rashi's or Tosafot's, and those printed in their place (the Rashbam in Bava Batra, the Ran in Nedarim);
+     * read from the end of each file, where its library is. Null for a book no daf prints so (request 82 of stage 3).
+     */
+    @Synchronized
+    fun tractateOf(bookId: Long): Long? {
+        filesFor("")
+        val known = commentaries ?: printedCommentaries().also { commentaries = it }
+        return known[bookId]
+    }
 
     /** The file [tractate] reads the tractate named [name] from first, or null when none is for it. */
     @Synchronized
@@ -158,6 +174,7 @@ class DafLayouts(
         if (modified != scannedAt) {
             scannedAt = modified
             files = scan()
+            commentaries = null
         }
         return files[key(name)].orEmpty()
     }
@@ -171,6 +188,40 @@ class DafLayouts(
             for (k in names.map { key(it) }.distinct()) found.getOrPut(k) { mutableListOf() }.add(file)
         }
         return found
+    }
+
+    // The commentaries of every tractate's file, each of them with its tractate's book
+    private fun printedCommentaries(): Map<Long, Long> {
+        val found = HashMap<Long, Long>()
+        val printed =
+            files.values
+                .flatten()
+                .distinct()
+                .mapNotNull(::booksOf)
+        for (books in printed) {
+            val tractate = books[GEMARA_COLUMN]?.firstOrNull() ?: continue
+            for ((column, ids) in books) if (column != GEMARA_COLUMN) ids.forEach { found.putIfAbsent(it, tractate) }
+        }
+        return found
+    }
+
+    // A file's books by column, from its end: a format-1 file has none
+    private fun booksOf(file: File): Map<String, List<Long>>? {
+        val tail =
+            runCatching {
+                RandomAccessFile(file, "r").use { input ->
+                    val size = minOf(input.length(), TAIL_BYTES)
+                    input.seek(input.length() - size)
+                    ByteArray(size.toInt()).also(input::readFully).toString(Charsets.UTF_8)
+                }
+            }.getOrNull() ?: return null
+        val books =
+            BOOKS
+                .findAll(tail)
+                .lastOrNull()
+                ?.groupValues
+                ?.get(1) ?: return null
+        return runCatching { json.decodeFromString<Map<String, List<Long>>>(books) }.getOrNull()
     }
 
     private fun headOf(file: File): String? =
@@ -198,6 +249,8 @@ class DafLayouts(
         private const val KEPT = 3
         private const val LOAD_FACTOR = 0.75f
         private const val HEAD_BYTES = 4096
+        private const val TAIL_BYTES = 4096L
+        private val BOOKS = Regex("\"books\"\\s*:\\s*(\\{[^{}]*\\})")
         private val TRACTATE = Regex("\"tractate\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
         private val TRACTATE_HE = Regex("\"tractateHe\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
         private val VERSION = Regex("\"version\"\\s*:\\s*(\\d+)")

@@ -1157,6 +1157,7 @@ fun BookContentView(
                 onWordInText = selectWordInText,
                 openAt = anchorId.takeIf { it > 0 },
                 onScroll = { id -> wordScope.launch { runSuspendCatching { repository.getLine(id) }.getOrNull()?.let(::dafAt) } },
+                commentaryId = daf.commentaryId,
                 // The find in page's matches drawn on the daf too, the current one strongest
                 find =
                     DafFind(
