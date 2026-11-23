@@ -17,6 +17,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentS
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.PageFit
+import io.github.kdroidfilter.seforimapp.icons.PageFitTwoThirds
+import io.github.kdroidfilter.seforimapp.icons.PageFitWidth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +27,9 @@ import org.jetbrains.compose.resources.stringResource
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.page_fit
 import seforimapp.seforimapp.generated.resources.page_fit_tooltip
+import seforimapp.seforimapp.generated.resources.page_fit_two_thirds
+import seforimapp.seforimapp.generated.resources.page_fit_two_thirds_tooltip
+import seforimapp.seforimapp.generated.resources.page_fit_width
 import seforimapp.seforimapp.generated.resources.page_fit_width_tooltip
 import kotlin.math.abs
 
@@ -46,17 +51,22 @@ internal fun pageWidthAt(
     one: Float = ZOOM_ONE_WIDTH.value,
 ): Float = zoom * one / columns
 
-/** The zooms that fit pages in their view: as wide as it ([width]), and a whole page in it ([whole], no wider). */
+/**
+ * The zooms that fit pages in their view: as wide as it ([width]), a whole page in it ([whole]), and two thirds of a
+ * page in its height ([twoThirds], request 81), none wider than the view.
+ */
 @Immutable
 internal data class PageFit(
     val width: Float,
     val whole: Float,
+    val twoThirds: Float = whole,
 )
 
 /**
  * The [PageFit] of [columns] pages a row, each [share] wide at the view's width (its share of it), in a view [height]
- * tall: a page of [aspect] (its height over its width) whole in it, the room [around] it (its title, the gaps) left
- * aside, and no wider than the view; as wide as the view while the page's [aspect] is not known. In [one]'s unit.
+ * tall: a page of [aspect] (its height over its width) whole in it, and two thirds of it, the room [around] it (its
+ * title, the gaps) left aside, and no wider than the view; as wide as the view while the page's [aspect] is not known.
+ * In [one]'s unit.
  */
 internal fun pageFit(
     share: Float,
@@ -67,8 +77,52 @@ internal fun pageFit(
     one: Float = ZOOM_ONE_WIDTH.value,
 ): PageFit {
     val width = share * columns / one
-    if (aspect == null || aspect <= 0f) return PageFit(width, width)
-    return PageFit(width, minOf(width, (height - around).coerceAtLeast(1f) / aspect * columns / one))
+    if (aspect == null || aspect <= 0f) return PageFit(width, width, width)
+    val tall = (height - around).coerceAtLeast(1f) / aspect * columns / one
+    return PageFit(width, minOf(width, tall), minOf(width, tall * TWO_THIRDS_TALL))
+}
+
+/**
+ * The fits the end bar's button goes through, one a press (request 81 of docs/DESKTOP_STAGE3_PLAN.md: "להוסיף לגודל צורת
+ * הדף מצב של שתי שליש מהעמוד נראה בגובה"): a whole page, two thirds of it, the view's width.
+ */
+internal enum class PageFitMode { WHOLE, TWO_THIRDS, WIDTH }
+
+/** The zoom of [mode]. */
+internal fun PageFit.zoomOf(mode: PageFitMode): Float =
+    when (mode) {
+        PageFitMode.WHOLE -> whole
+        PageFitMode.TWO_THIRDS -> twoThirds
+        PageFitMode.WIDTH -> width
+    }
+
+/**
+ * The fits the button goes through, in their order, each zoom once, as near as the zoom's ends let them be: two thirds
+ * of a page only between a whole page and the view's width (no wider than the view, it is its width), the width only
+ * when wider than a whole page.
+ */
+internal fun PageFit.modes(): List<PageFitMode> {
+    val whole = shown(PageFitMode.WHOLE)
+    val twoThirds = shown(PageFitMode.TWO_THIRDS)
+    val width = shown(PageFitMode.WIDTH)
+    return buildList {
+        add(PageFitMode.WHOLE)
+        if (twoThirds - whole >= FIT_SLACK && width - twoThirds >= FIT_SLACK) add(PageFitMode.TWO_THIRDS)
+        if (width - whole >= FIT_SLACK) add(PageFitMode.WIDTH)
+    }
+}
+
+/** The fit pages at [zoom] are at, as near as the zoom's ends let them be; null at another zoom. */
+internal fun PageFit.modeAt(zoom: Float): PageFitMode? = modes().firstOrNull { abs(zoom - shown(it)) < FIT_SLACK }
+
+// The zoom of [mode] the pages can be shown at, within the zoom's ends
+private fun PageFit.shown(mode: PageFitMode): Float = zoomOf(mode).coerceIn(AppSettings.MIN_DAF_ZOOM, AppSettings.MAX_DAF_ZOOM)
+
+/** The fit a press of the button goes to from [zoom]: the one after the fit it is at, a whole page from none. */
+internal fun PageFit.nextMode(zoom: Float): PageFitMode {
+    val modes = modes()
+    val at = modeAt(zoom)?.let(modes::indexOf) ?: -1
+    return modes[(at + 1) % modes.size]
 }
 
 /** The fit of each tab's pages in their view, by the tab's id, as their view lays them out: a daf, a scan, a PDF book. */
@@ -131,8 +185,10 @@ internal fun shownPageZoom(tabId: String): Float {
 }
 
 /**
- * The end bar's button under two pages', while the tab of [uiState] shows pages ([showsPages]): a whole page in the
- * view, and pressed again, pages as wide as the view, as a PDF reader's fit; on while a whole page is in view.
+ * The end bar's button under two pages', while the tab of [uiState] shows pages ([showsPages]): a press fits them in
+ * the view, a whole page, then two thirds of it in the view's height, then the view's width, and again, as a PDF
+ * reader's fit (request 81). On, its icon and its name those of the fit they are at; off at another zoom, a whole
+ * page's, which a press gives; its tooltip says where a press goes.
  */
 @Composable
 fun PageFitButton(
@@ -144,24 +200,40 @@ fun PageFitButton(
     val fits by graph.pageFits.fits.collectAsState()
     val zoom = shownPageZoom(uiState.tabId)
     val fit = fits[uiState.tabId]
-    val whole = fit != null && isWhole(zoom, fit)
+    val at = fit?.modeAt(zoom)
+    val shown = at ?: PageFitMode.WHOLE
+    val next = fit?.nextMode(zoom) ?: PageFitMode.WHOLE
+    val name =
+        when (shown) {
+            PageFitMode.WHOLE -> Res.string.page_fit
+            PageFitMode.TWO_THIRDS -> Res.string.page_fit_two_thirds
+            PageFitMode.WIDTH -> Res.string.page_fit_width
+        }
+    val tooltip =
+        when (next) {
+            PageFitMode.WHOLE -> Res.string.page_fit_tooltip
+            PageFitMode.TWO_THIRDS -> Res.string.page_fit_two_thirds_tooltip
+            PageFitMode.WIDTH -> Res.string.page_fit_width_tooltip
+        }
     SelectableIconButtonWithToolip(
-        toolTipText = stringResource(if (whole) Res.string.page_fit_width_tooltip else Res.string.page_fit_tooltip),
-        onClick = { fit?.let { graph.appSettings.setDafZoom(if (whole) it.width else it.whole) } },
-        isSelected = whole,
-        icon = PageFit,
-        label = stringResource(Res.string.page_fit),
+        toolTipText = stringResource(tooltip),
+        onClick = { fit?.let { graph.appSettings.setDafZoom(it.zoomOf(next)) } },
+        isSelected = at != null,
+        icon =
+            when (shown) {
+                PageFitMode.WHOLE -> PageFit
+                PageFitMode.TWO_THIRDS -> PageFitTwoThirds
+                PageFitMode.WIDTH -> PageFitWidth
+            },
+        label = stringResource(name),
         modifier = modifier,
         enabled = fit != null,
-        iconDescription = stringResource(Res.string.page_fit),
+        iconDescription = stringResource(name),
     )
 }
 
-/** Whether pages at [zoom] are a whole page in their view ([fit]), as near as the zoom's ends let them be. */
-internal fun isWhole(
-    zoom: Float,
-    fit: PageFit,
-): Boolean = abs(zoom - fit.whole.coerceIn(AppSettings.MIN_DAF_ZOOM, AppSettings.MAX_DAF_ZOOM)) < FIT_SLACK
-
 // A zoom this close to a fit is at it
 private const val FIT_SLACK = 0.005f
+
+// Two thirds of a page in the view: the page half again as tall as the view
+private const val TWO_THIRDS_TALL = 1.5f

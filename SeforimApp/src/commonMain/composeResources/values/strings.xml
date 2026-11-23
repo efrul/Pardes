@@ -1232,6 +1232,9 @@
     <string name="page_fit">עמוד שלם</string>
     <string name="page_fit_tooltip">עמוד שלם בגובה החלונית</string>
     <string name="page_fit_width_tooltip">הדפים ברוחב החלונית</string>
+    <string name="page_fit_two_thirds">שני שלישים</string>
+    <string name="page_fit_two_thirds_tooltip">שני שלישים מהעמוד בגובה החלונית</string>
+    <string name="page_fit_width">רוחב החלונית</string>
     <!-- Pardes: a copy of a tab, from its menu (request 59 of stage 3, PardesTabAction.kt) -->
     <string name="tab_duplicate">שכפל לשונית</string>
     <!-- Pardes: two tabs side by side, from a tab's menu (request 59 of stage 3, TabSplitView.kt) -->

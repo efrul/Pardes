@@ -57,6 +57,17 @@ class DafLinksTest {
     }
 
     @Test
+    fun inACommentarysTabAWordStandsForTheCommentarysComment() {
+        // Its comment's own words, and the Gemara's words its dibbur quotes or its segment's
+        assertEquals(second, links.commentaryLineAt(DafWord(1, 6), rashi))
+        assertEquals(second, links.commentaryLineAt(DafWord(0, 3), rashi))
+        assertEquals(first, links.commentaryLineAt(DafWord(0, 0), rashi))
+        // Another commentary's tab: none
+        assertNull(links.commentaryLineAt(DafWord(1, 6), 8L))
+        assertNull(links.commentaryLineAt(DafWord(0, 0), 8L))
+    }
+
+    @Test
     fun thePassageIsMarkedStrongestThenTheSegmentThenItsComments() {
         val color = Color.Blue
         val highlight = dafHighlight(links, setOf(gemara), setOf(second), color)
