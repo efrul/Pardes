@@ -2,7 +2,6 @@ package io.github.kdroidfilter.seforimapp.features.home.widgets.study
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -16,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -36,6 +36,7 @@ import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
+import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -110,45 +111,38 @@ internal fun SourceField(
     val baseBooksLabel = stringResource(Res.string.scope_base_books_label)
 
     fun pick(row: CatBookRow) {
-        val title =
-            when (row) {
-                is CatBookRow.Book -> row.suggestion.book.title
-                is CatBookRow.Category -> if (row.hit.baseBooksOnly) baseBooksLabel.format(row.hit.title) else row.hit.title
-                else -> return
-            }
+        val title = row.pickedTitle(baseBooksLabel) ?: return
         rows = emptyList()
         picked = title
         field.edit { replace(0, length, title) }
-        scope.launch {
-            when (row) {
-                is CatBookRow.Book ->
-                    onPickBook(runSuspendCatching { repository.getBookCore(row.suggestion.book.id) }.getOrNull() ?: row.suggestion.book)
-                is CatBookRow.Category ->
-                    runSuspendCatching { repository.getCategory(row.hit.id) }.getOrNull()?.let { onPickCategory(it, row.hit.baseBooksOnly) }
-                else -> Unit
+        scope.launch { pickSource(row, repository, onPickBook, onPickCategory) }
+    }
+
+    // The arrows' step: round from the last row to the first and back, as every popup of the app, the mark the keys' now
+    fun step(by: Int) {
+        marking.keysMoved()
+        marked = (marked + by).mod(rows.size)
+    }
+
+    fun onKey(event: KeyEvent): Boolean {
+        if (event.type != KeyEventType.KeyDown || rows.isEmpty()) return false
+        when (event.key) {
+            Key.DirectionDown -> step(1)
+            Key.DirectionUp -> step(-1)
+            Key.Enter, Key.NumPadEnter -> pick(rows[marked])
+            // The text typed goes, the title picked comes back
+            Key.Escape -> {
+                rows = emptyList()
+                if (picked.isNotEmpty()) field.edit { replace(0, length, picked) }
             }
+            else -> return false
         }
+        return true
     }
     Column(Modifier.fillMaxWidth().notePointer(marking)) {
         TextField(
             field,
-            Modifier.fillMaxWidth().testTag("study-source").onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown || rows.isEmpty()) return@onPreviewKeyEvent false
-                if (event.key == Key.DirectionDown || event.key == Key.DirectionUp) marking.keysMoved()
-                when (event.key) {
-                    // Round from the last row to the first and back, as every popup of the app
-                    Key.DirectionDown -> marked = (marked + 1).mod(rows.size)
-                    Key.DirectionUp -> marked = (marked - 1).mod(rows.size)
-                    Key.Enter, Key.NumPadEnter -> pick(rows[marked])
-                    // The text typed goes, the title picked comes back
-                    Key.Escape -> {
-                        rows = emptyList()
-                        if (picked.isNotEmpty()) field.edit { replace(0, length, picked) }
-                    }
-                    else -> return@onPreviewKeyEvent false
-                }
-                true
-            },
+            Modifier.fillMaxWidth().testTag("study-source").onPreviewKeyEvent(::onKey),
             placeholder = { Text("שם של ספר או של קטגוריה") },
         )
         SourceRows(rows, marked, marking, onMark = { marked = it }, onPick = ::pick)
@@ -156,8 +150,9 @@ internal fun SourceField(
 }
 
 /**
- * The books and categories a [SourceField] found, each in a row of the search bar's, the row [marked] marked, by the
- * keys or the pointer ([marking], [onMark]): one row at a time, as every popup's (request 74 of stage 3).
+ * The books and categories a [SourceField] found, each in a row of the search bar's (its icon, its path, and a category
+ * in its base books alone so marked), the row [marked] marked, by the keys or the pointer ([marking], [onMark]): one row
+ * at a time, as every popup's (request 74 of stage 3).
  */
 @Composable
 private fun SourceRows(
@@ -168,28 +163,57 @@ private fun SourceRows(
     onPick: (CatBookRow) -> Unit,
 ) {
     CompositionLocalProvider(LocalPopupMarking provides marking) {
-        rows.forEachIndexed { index, row ->
-            when (row) {
-                is CatBookRow.Book ->
-                    SuggestionRow(
-                        parts = dedupAdjacent(row.suggestion.path),
-                        onClick = { onPick(row) },
-                        kind = SuggestionKind.BOOK,
-                        highlighted = index == marked,
-                        onMark = { onMark(index) },
-                    )
-                is CatBookRow.Category ->
-                    SuggestionRow(
-                        parts = row.hit.path,
-                        onClick = { onPick(row) },
-                        kind = SuggestionKind.CATEGORY,
-                        highlighted = index == marked,
-                        detail = baseBooksDetail(row.hit),
-                        onMark = { onMark(index) },
-                    )
-                else -> Unit
+        Column(Modifier.fillMaxWidth()) {
+            rows.forEachIndexed { index, row ->
+                when (row) {
+                    is CatBookRow.Book ->
+                        SuggestionRow(
+                            parts = dedupAdjacent(row.suggestion.path),
+                            onClick = { onPick(row) },
+                            kind = SuggestionKind.BOOK,
+                            highlighted = index == marked,
+                            onMark = { onMark(index) },
+                        )
+                    is CatBookRow.Category ->
+                        SuggestionRow(
+                            parts = row.hit.path,
+                            onClick = { onPick(row) },
+                            kind = SuggestionKind.CATEGORY,
+                            highlighted = index == marked,
+                            detail = baseBooksDetail(row.hit),
+                            onMark = { onMark(index) },
+                        )
+                    else -> Unit
+                }
             }
         }
+    }
+}
+
+// The title a row picked puts in the field: a book's, or a category's, in its base books alone as the bar's chip names
+// it ([baseBooksLabel]); null for a row that is neither
+private fun CatBookRow.pickedTitle(baseBooksLabel: String): String? =
+    when (this) {
+        is CatBookRow.Book -> suggestion.book.title
+        is CatBookRow.Category -> if (hit.baseBooksOnly) baseBooksLabel.format(hit.title) else hit.title
+        else -> null
+    }
+
+// The book or the category a row picked, read from the library, given to [onPickBook] or [onPickCategory]
+private suspend fun pickSource(
+    row: CatBookRow,
+    repository: SeforimRepository,
+    onPickBook: (Book) -> Unit,
+    onPickCategory: (Category, Boolean) -> Unit,
+) {
+    when (row) {
+        is CatBookRow.Book ->
+            onPickBook(
+                runSuspendCatching { repository.getBookCore(row.suggestion.book.id) }.getOrNull() ?: row.suggestion.book,
+            )
+        is CatBookRow.Category ->
+            runSuspendCatching { repository.getCategory(row.hit.id) }.getOrNull()?.let { onPickCategory(it, row.hit.baseBooksOnly) }
+        else -> Unit
     }
 }
 

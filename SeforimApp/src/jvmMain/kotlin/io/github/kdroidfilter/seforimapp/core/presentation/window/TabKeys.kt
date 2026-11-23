@@ -16,19 +16,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import io.github.kdroidfilter.seforim.tabs.TabsEvents
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
 
-/** What a tab shortcut does: select the tab at [index], or move the selected tab there. */
-internal sealed interface TabKeyAction {
-    val index: Int
-
-    data class Select(
-        override val index: Int,
-    ) : TabKeyAction
-
-    data class Move(
-        override val index: Int,
-    ) : TabKeyAction
-}
-
 /**
  * Pardes (stage 3, the tab shortcuts of request 47): what a tab shortcut does in a strip of [count] tabs, [current]
  * selected, in the strip's order as it is read, from the right when [rtl] (the tabs' index 0 is the strip's left end).
@@ -48,19 +35,48 @@ internal fun tabKeyAction(
     fun indexOf(place: Int) = if (rtl) count - 1 - place else place
 
     val place = indexOf(current.coerceIn(0, count - 1))
+    selectedPlace(key, shift, place, count)?.let { return TabKeyAction.Select(indexOf(it)) }
+    return movedPlace(key, shift, place, count)?.let { TabKeyAction.Move(indexOf(it)) }
+}
+
+// The place, as read, of the tab a shortcut selects from the one at [place] in a strip of [count]: 1 to 8 the tab at
+// that place (none past the strip's end), 9 the last one; Tab or Page Down the next tab, Shift+Tab or Page Up the one
+// before, round the strip. Null for a key that selects none.
+private fun selectedPlace(
+    key: Key,
+    shift: Boolean,
+    place: Int,
+    count: Int,
+): Int? {
     val digit = DIGITS.indexOf(key)
-    return when {
-        digit >= 0 && !shift -> {
-            val target = if (digit == DIGITS.lastIndex) count - 1 else digit
-            if (target < count) TabKeyAction.Select(indexOf(target)) else null
+    val step =
+        when (key) {
+            Key.Tab -> if (shift) -1 else 1
+            Key.PageDown -> 1.takeIf { !shift }
+            Key.PageUp -> (-1).takeIf { !shift }
+            else -> null
         }
-        (key == Key.Tab && !shift) || (key == Key.PageDown && !shift) -> TabKeyAction.Select(indexOf((place + 1) % count))
-        (key == Key.Tab && shift) || (key == Key.PageUp && !shift) -> TabKeyAction.Select(indexOf((place - 1 + count) % count))
-        key == Key.PageDown && shift -> (place + 1).takeIf { it < count }?.let { TabKeyAction.Move(indexOf(it)) }
-        key == Key.PageUp && shift -> (place - 1).takeIf { it >= 0 }?.let { TabKeyAction.Move(indexOf(it)) }
+    return when {
+        digit >= 0 -> (if (digit == DIGITS.lastIndex) count - 1 else digit).takeIf { !shift && it < count }
+        step != null -> (place + step + count) % count
         else -> null
     }
 }
+
+// The place, as read, the selected tab at [place] moves to: Shift+Page Down one on, Shift+Page Up one back, none past
+// the strip's ends. Null for another key.
+private fun movedPlace(
+    key: Key,
+    shift: Boolean,
+    place: Int,
+    count: Int,
+): Int? =
+    when {
+        !shift -> null
+        key == Key.PageDown -> (place + 1).takeIf { it < count }
+        key == Key.PageUp -> (place - 1).takeIf { it >= 0 }
+        else -> null
+    }
 
 private val DIGITS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight, Key.Nine)
 
