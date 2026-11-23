@@ -554,7 +554,9 @@ private fun DafPages(
 
         fun amudOfItem(item: Int): Int = rows?.rows?.getOrNull(item)?.first ?: item
 
-        // Brings the line of the library [id] into view, a little below the view's top, unless it is in view
+        // Brings the line of the library [id] into view by the least scroll, a little inside the view (revealSpan): from
+        // below, its end at the view's bottom, not its top at the view's top (request 80, docs/DESKTOP_STAGE3_PLAN.md);
+        // [always], its top a little below the view's top
         suspend fun reveal(
             id: Long,
             always: Boolean,
@@ -562,9 +564,19 @@ private fun DafPages(
             val (amud, top) = currentPlaces[id] ?: return
             val index = itemOfAmud(amud)
             val y = titleHeight + top * currentPerPoint
-            val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
-            val shown = item != null && item.offset + y >= 0 && item.offset + y + titleHeight <= listState.layoutInfo.viewportEndOffset
-            if (always || !shown) listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
+            if (always) {
+                listState.scrollToItem(index, (y - titleHeight).toInt().coerceAtLeast(0))
+                return
+            }
+            val (lastAmud, bottom) = currentIndex?.ends?.get(id) ?: (amud to top)
+            // Two amudim a row, a segment going on from the right one to the left one's top: to the row's end
+            val end =
+                if (lastAmud != amud && itemOfAmud(lastAmud) == index) {
+                    index to Float.MAX_VALUE
+                } else {
+                    itemOfAmud(lastAmud) to titleHeight + bottom * currentPerPoint
+                }
+            listState.revealSpan(index to y, end, margin = titleHeight)
         }
 
         // Opens at the Gemara's segment [id]: the line it begins on at the view's very top (an amud's first line: the
@@ -807,6 +819,41 @@ private fun DafPages(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Scrolls the least needed to show a span of the list whole, [margin] inside the view: from [start] (an item and the
+ * pixels down it) to [end] (a later item's, or lower down the same one, as far as the item goes); its start at the
+ * view's top when it is above the view, or when it is taller than the view, its end at the view's bottom when it is
+ * below; not at all when it is in view. As a list's row (revealItem): the next segment or comment the arrows step to
+ * comes in at the view's bottom, not at its top (request 80 of docs/DESKTOP_STAGE3_PLAN.md: "הקטע הבא עדיין נכנס בראש
+ * התצוגה. המפה של צורת הדף יודעת איפה קטע מתחיל, אבל לא איפה הוא נגמר").
+ */
+internal suspend fun LazyListState.revealSpan(
+    start: Pair<Int, Float>,
+    end: Pair<Int, Float>,
+    margin: Float,
+) {
+    fun at(place: Pair<Int, Float>): Float? =
+        layoutInfo.visibleItemsInfo
+            .firstOrNull { it.index == place.first }
+            ?.let { it.offset + minOf(place.second, it.size.toFloat()) }
+
+    val top = at(start)
+    val bottom = at(end)
+    val viewTop = layoutInfo.viewportStartOffset + margin
+    val viewBottom = layoutInfo.viewportEndOffset - margin
+    val above = if (top == null) start.first < firstVisibleItemIndex else top < viewTop
+    when {
+        above -> scrollToItem(start.first, (start.second - margin).toInt().coerceAtLeast(0))
+        top != null && bottom != null -> if (bottom > viewBottom) scrollBy(minOf(bottom - viewBottom, top - viewTop))
+        else -> {
+            // Below the view, or its end is: its start at the view's top, then back as far as its end leaves room
+            scrollToItem(start.first, (start.second - margin).toInt().coerceAtLeast(0))
+            val room = layoutInfo.viewportEndOffset - margin - (at(end) ?: return)
+            if (room > 0) scrollBy(-room)
         }
     }
 }

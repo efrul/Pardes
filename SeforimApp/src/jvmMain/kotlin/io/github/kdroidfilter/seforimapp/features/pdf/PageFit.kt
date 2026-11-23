@@ -31,8 +31,10 @@ import kotlin.math.abs
 // Pardes (request 63 of the list after the third testers' build, docs/DESKTOP_STAGE3_PLAN.md: "צריך שגודל החלון יתאים
 // לגודל הדף המוצג"; request 73 of the list after the public release: "כאשר סרגל צד נפתח למשל או מוסיפים מפרשים היחס של
 // הדף משתנה... גם הגדרת רוחב וגובה נקבעת כיום לפי יחס המצב הנוכחי ולא אבסלוטית"): the pages' zoom is a size, as the
-// text's is, which no pane opened or closed beside them changes; the view's width and a whole page are zooms it is set
-// to, once, as a PDF reader fits a page. The pages shown first fit their view's width.
+// text's is; the view's width and a whole page are zooms it is set to, once, as a PDF reader fits a page. The pages
+// shown first fit their view's width. A pane opened beside them narrows them only as much as it must, and closed gives
+// them their size back, unless they were zoomed wider than their view (request 79: "בפתיחת דברים בצד הגודל כן יקטן אבל
+// רק כמה שצריך וידע להתאים את עצמו").
 
 /** The width of a row of pages (a page, or two side by side) at the zoom's 1: the zoom is a size, not a share of the view. */
 internal val ZOOM_ONE_WIDTH = 1000.dp
@@ -93,8 +95,8 @@ class PageFits {
 }
 
 /**
- * The pages of [tabId] fit their view so ([fit]) while they are shown, for the end bar's button; the zoom never set yet,
- * it is set to their view's width.
+ * The pages of [tabId] fit their view so ([fit]) while they are shown, for the end bar's button and for the zoom they
+ * are shown at ([shownPageZoom]); the zoom never set yet, it is set to their view's width.
  */
 @Composable
 internal fun TellPageFit(
@@ -102,9 +104,30 @@ internal fun TellPageFit(
     fit: PageFit,
 ) {
     val graph = LocalAppGraph.current
-    SideEffect { graph.pageFits.show(tabId, fit) }
-    DisposableEffect(tabId) { onDispose { graph.pageFits.show(tabId, null) } }
+    SideEffect {
+        graph.pageFits.show(tabId, fit)
+        graph.appSettings.showPageWidth(tabId, fit.width)
+    }
+    DisposableEffect(tabId) {
+        onDispose {
+            graph.pageFits.show(tabId, null)
+            graph.appSettings.showPageWidth(tabId, null)
+        }
+    }
     LaunchedEffect(Unit) { if (!graph.appSettings.hasDafZoom()) graph.appSettings.setDafZoom(fit.width) }
+}
+
+/**
+ * The zoom the pages of [tabId] are shown at: the daf's, no wider than their view unless it was set wider
+ * ([AppSettings.shownDafZoom]), from the width their view tells ([TellPageFit]); the daf's while it tells none.
+ */
+@Composable
+internal fun shownPageZoom(tabId: String): Float {
+    val settings = LocalAppGraph.current.appSettings
+    val zoom by settings.dafZoomFlow.collectAsState()
+    val wide by settings.dafZoomWideFlow.collectAsState()
+    val widths by settings.pageWidthsFlow.collectAsState()
+    return AppSettings.shownDafZoom(zoom, wide, widths[tabId])
 }
 
 /**
@@ -119,7 +142,7 @@ fun PageFitButton(
     if (!showsPages(uiState)) return
     val graph = LocalAppGraph.current
     val fits by graph.pageFits.fits.collectAsState()
-    val zoom by graph.appSettings.dafZoomFlow.collectAsState()
+    val zoom = shownPageZoom(uiState.tabId)
     val fit = fits[uiState.tabId]
     val whole = fit != null && isWhole(zoom, fit)
     SelectableIconButtonWithToolip(
