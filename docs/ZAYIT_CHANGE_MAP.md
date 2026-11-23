@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (346 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (352 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -867,8 +867,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsView.kt`
 
-- **Change:** modified, +34 −22 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
-  keys in the popups.
+- **Change:** modified, +59 −34 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
+  keys in the popups, The tabs under load (request 83 of stage 3).
 - **What:** `TabActionsMenu` takes the tab's id (`tabId`, first) and draws Pardes's items (`pardesTabActions(tabId)`,
   resolved before the menu as the labels are, with a comment marked "Pardes:") after "העתק קישור", through Zayit's
   `tabContextMenuItem` in a loop; `RtlAwareTab` takes the tab's id to pass it on (`tabEntry.key`), and so does the
@@ -880,16 +880,16 @@ The entries of this section by kind:
   under a `DefaultMenuController` of its own (and its `@OptIn(InternalJewelApi::class)`): the same items drawn the same
   way, now answering the keys, up and down, Enter and Escape, as the Tools menu (`ToolsMenuButton`, Jewel's
   `PopupMenu`) does; since 2026-11-20 Pardes's `SingleMarkPopupMenu`, which marks one item at a time as IntelliJ's
-  menus do, its comment saying so.
+  menus do, its comment saying so. The tabs under load (request 83 of stage 3), each with a comment marked "Pardes:": a book tab's title in the strip is `tabItem.stripTitle()` in place of `tabItem.title`, in the two places a tab's content is drawn (the tooltip and the hidden tabs' list keep the whole title); `RtlAwareTab` draws its content in Pardes's `TabContentBox` in place of a `Box`, which tells the content its room, and shows a tab's close button, when the tab is not the selected one, only from 140 dp or under the pointer (`closeFits`, a value before `showCloseIcon`: `roomForCloseButton` and Pardes's `closeShown`); the strip's run of tabs is Pardes's `ScrolledTabWindow` in place of `TabWindow`, followed by the tabs' keys (the selected tab is then told from a tab's key, not from its row), recomputed on `tabWindow.steps`, and the strip's row takes `tabStripWheel`; `TabOverflowMenu` filters its tabs by what is typed (`rememberHiddenTabsFilter`, `matching` on a tab's title and pinned label) and draws `HiddenTabsFilterField` above them, Enter going to the first; its popup closes on Escape (`hiddenTabsEscape`, an `onPreviewKeyEvent` on Zayit's `Popup`), which the field would keep from it; and the list's width, `TabOverflowMenuWidth`, is Pardes's `HiddenTabsListWidth` (280 dp) in place of a tab's width (180).
 - **Why:** a copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`,
   2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there. The menu's
   keys: request 69 of the list after the third testers' build ("צריך תמיכה מלאה במקשים... מקש ימני על כרטיסיה... (כלים
-  כן עובד...)"): the popup had no key handling, which Jewel's `PopupMenu` gives; a fix Zayit can take as it is.
+  כן עובד...)"): the popup had no key handling, which Jewel's `PopupMenu` gives; a fix Zayit can take as it is. Request 83 ("לשדרג את תצורת הכרטיסיות... והאופן שבו הם מוצגים גם כאשר יש עומס כרטיסיות. תלמד מג'טבריינס", 2026-11-23): with the strip full, a tab is 112 dp wide and its title, the book's name then its place, was cut before the place, so the tabs of one book read alike, in the strip and in the hidden tabs' list; and the tabs out of the strip were reached only through that list. IntelliJ's strip scrolls by the wheel and its list of hidden tabs narrows by typing; the choices are in `docs/DESKTOP_STAGE3_PLAN.md`.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: a parameter on two of Zayit's composables and their three calls, and a loop in the
   menu; Zayit changes the menu now and then.
 - **Smaller:** already minimal: the menu's items are private to this file.
-- **Tests:** tried in the app (the menu's "שכפל לשונית" on the strip; request 69: the menu drawn as before, the arrow
+- **Tests:** `NarrowTabTitleTest`, `ScrolledTabWindowTest`, `HiddenTabsFilterTest`; request 83 tried in the app (nine tabs in a 1440 px window: "או"ח רנג" and "או"ח שח" told apart, no close button but the selected tab's, three notches of the wheel moving the run by three, the list 280 dp wide filtered by "או"ח", Enter and Escape in its field); and tried in the app (the menu's "שכפל לשונית" on the strip; request 69: the menu drawn as before, the arrow
   down three times on "העתק קישור", Escape closing it).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManager.kt`
@@ -4342,6 +4342,64 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
   a search tab's copy has no scope of its own; another tab is copied as it is.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `DesktopManagerTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The tabs under load
+
+Request 83 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 80 in the user's message): the tabs and the way they show when the strip is full, learned from JetBrains. Of the plan's choices, three are built: a book tab whose title does not fit shows the book's acronym then its place ("או"ח רנג"), and a narrow tab that is not the selected one keeps its close button for the pointer; the wheel over the strip moves the tabs on show, the selected one staying selected, as IntelliJ's strip scrolls; and the list of the hidden tabs narrows by what is typed, by a title or by a short name, and is wide enough for a book's name with its place. The switcher by last use, the side tabs and the preview tab stay in the plan. Hooks: `TabsView.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/NarrowTabTitle.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 94 lines.
+- **What:** a book tab's short title. `narrowTabTitle(title, shortTitle)`: the book's acronym (a pinned tab's label) then its place, what follows the title's last " - ", without the unit's word before a number of up to four letters ("או"ח רנג" for "שולחן ערוך, אורח חיים - סימן רנג", "ברכות ב."; "פרק שלישי" and "הקדמה" stay whole); null for a tab without a short title. `TabItem.stripTitle()`, the title a tab shows: its own while it fits the tab's room (measured with the tab's text style, beside its icon), else the short one. `TabContentBox`, a tab's box for its content, which gives the content its room (`LocalTabContentRoom`). And `closeShown(width, hovered)`: a tab that is not the selected one shows its close button from 140 dp, or under the pointer.
+- **Reached from:** `TabsView.kt` (a tab's content, twice, and `RtlAwareTab`).
+- **Follows:** Zayit's `pinnedTabLabel` (the acronym) and `SingleLineTabContent` (the title's cut); Chrome's narrow tabs, which keep the close button for the selected one; IntelliJ's tabs, which add what tells two files of one name apart.
+- **Tests:** `NarrowTabTitleTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/ScrolledTabWindow.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 118 lines.
+- **What:** the strip scrolled by the wheel. `ScrolledTabWindow`, Zayit's `TabWindow` that the wheel moves too: the run of tabs on show keeps to the selected tab until `scroll(by)` moves it, then stays where the wheel left it until another tab is selected, never past the strip's ends; `steps` counts the wheel's steps, a state the strip reads. `Modifier.tabStripWheel(window, enabled, rtl)`: while some tabs are hidden, a notch of the wheel is a tab, down for on; a sideways turn follows the strip's direction; a touchpad's fine scroll or pan (Windows) a tab for each 60 dp.
+- **Reached from:** `TabsView.kt` (the strip's run and its row).
+- **Follows:** Zayit's `TabWindow` (`TabStripLayout.kt`), kept as it is; IntelliJ's `ScrollableSingleRowLayout`, whose strip the wheel scrolls; the pan's handling as in `CommentatorsGrid.kt`.
+- **Tests:** `ScrolledTabWindowTest`; tried in the app. The touchpad's pan was not tried on a device.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/HiddenTabsFilter.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 102 lines.
+- **What:** the hidden tabs' list narrowed by what is typed. `HiddenTabsFilter` (the text and the field's focus), `matching(tabs, names)` and `matchingTabs(tabs, labels, query)`: the tabs one of whose names, the title or the short one a narrow tab shows, holds the text, nikud, quote marks and case aside (`searchKey`). `HiddenTabsFilterField`, Zayit's `PopupSearchField` focused when the list opens, Enter for the first tab left; `hiddenTabsEscape` (Escape closes the list); and `HiddenTabsListWidth`, 280 dp.
+- **Reached from:** `TabsView.kt` (`TabOverflowChip`'s popup, `TabOverflowMenu`, `TabOverflowMenuWidth`).
+- **Follows:** Zayit's `PopupSearchField` and its "חיפוש…" (`tab_search_placeholder`), as the tab search's popup; IntelliJ's list of hidden tabs, which narrows by typing.
+- **Tests:** `HiddenTabsFilterTest`; tried in the app.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/NarrowTabTitleTest.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 103 lines.
+- **What:** the acronym then the place; a book without an acronym; two tabs of one book; headings in words kept whole; a book at its opening; the last joint; a title that fits its tab stays and one that does not gives way, back and forth (UI); a search's tab keeps its title; the close button of a narrow tab; a tab that is not a book's.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
+- **Tests:** it is one (unit and Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/ScrolledTabWindowTest.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 112 lines.
+- **What:** the run as Zayit's `TabWindow` without the wheel; moved by the wheel with the selected tab out of it; stopped at the strip's ends; brought back by another tab selected; inside the strip after a tab is closed; and, in a composition, a notch for a tab, a sideways turn by the strip's direction, two halves of a notch, nothing while every tab is on show.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
+- **Tests:** it is one (unit and Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/HiddenTabsFilterTest.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 59 lines.
+- **What:** nothing typed; a part of the title, in order; nikud and quote marks; the short name a narrow tab shows; letter case; no tab left.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### Two tabs side by side

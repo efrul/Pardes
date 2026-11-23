@@ -274,7 +274,8 @@ private fun TabStripScope.DefaultTabShowcase(
                                     val label =
                                         when {
                                             tabItem.title.isEmpty() -> stringResource(Res.string.home_tab_with_app, appTitle)
-                                            else -> tabItem.title
+                                            // Pardes: a book's acronym and its place when its title does not fit the tab (request 83)
+                                            else -> tabItem.stripTitle()
                                         }
 
                                     SingleLineTabContent(
@@ -366,7 +367,8 @@ private fun TabStripScope.DefaultTabShowcase(
                                     val label =
                                         when {
                                             tabItem.title.isEmpty() -> stringResource(Res.string.home_tab_with_app, appTitle)
-                                            else -> tabItem.title
+                                            // Pardes: a book's acronym and its place when its title does not fit the tab (request 83)
+                                            else -> tabItem.stripTitle()
                                         }
 
                                     SingleLineTabContent(
@@ -581,9 +583,10 @@ private fun TabStripScope.RtlAwareTabStripContent(
         val noTabFits = layout.currentTabAsIcon
         val showOverflowMenu = layout.overflowing
         val visibleCount = layout.visibleCount
-        val tabWindow = remember { TabWindow() }
+        // Pardes: the wheel moves the tabs on show too (request 83)
+        val tabWindow = remember { ScrolledTabWindow() }
         val visibleKeys =
-            remember(tabs, pinnedWidths, visibleCount, showOverflowMenu) {
+            remember(tabs, pinnedWidths, visibleCount, showOverflowMenu, tabWindow.steps) {
                 if (!showOverflowMenu) {
                     null
                 } else if (visibleCount == 0) {
@@ -593,7 +596,7 @@ private fun TabStripScope.RtlAwareTabStripContent(
                     // In reading order, as the strip shows them.
                     val unpinned = tabs.filter { it.key !in pinnedWidths }
                     pinnedWidths.keys +
-                        tabWindow.follow(unpinned, visibleCount, unpinned.indexOfFirst { it.data.selected }).map { it.key }.toSet()
+                        tabWindow.follow(unpinned.map { it.key }, visibleCount, unpinned.indexOfFirst { it.data.selected }).toSet()
                 }
             }
         // The only tab on show has nowhere to go along the strip: dragging it moves the window, as the title bar
@@ -615,7 +618,7 @@ private fun TabStripScope.RtlAwareTabStripContent(
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().tabStripWheel(tabWindow, showOverflowMenu, isRtl),
         ) {
             // Use hysteresis around the threshold to avoid flicker/glitch when toggling modes
             var shrinkToFitActive by remember { mutableStateOf(false) }
@@ -996,12 +999,14 @@ private fun RtlAwareTab(
             ) {
                 val isCompact = tabWidth < CompactTabWidthThreshold
                 val isSelected = tabData.selected
+                // Pardes: a narrow tab keeps its room for its title, its close button under the pointer only (request 83)
+                val closeFits = roomForCloseButton && closeShown(tabWidth, tabState.isHovered)
                 // Hide close for non-selected tabs when space is tight, always show for selected
                 // Shrunk to its icon, the current tab trades it for its close button under the pointer.
                 val showCloseIcon =
                     tabData.closable &&
                         !pinned &&
-                        if (iconOnly) tabState.isHovered else isSelected || roomForCloseButton
+                        if (iconOnly) tabState.isHovered else isSelected || closeFits
 
                 val closeIconComposable: @Composable () -> Unit = {
                     if (showCloseIcon) {
@@ -1068,7 +1073,8 @@ private fun RtlAwareTab(
                 } else {
                     val showIconOnly = isCompact || asIcon
                     // A tab shrunk to its icon shows it centred.
-                    Box(Modifier.weight(1f), contentAlignment = if (asIcon) Alignment.Center else Alignment.TopStart) {
+                    // Pardes: the box tells its content its room, for a title that does not fit it (request 83)
+                    TabContentBox(Modifier.weight(1f), contentAlignment = if (asIcon) Alignment.Center else Alignment.TopStart) {
                         CompositionLocalProvider(LocalCompactIconOnly provides showIconOnly) {
                             tabData.content(TabContentScopeContainer(), tabState)
                         }
@@ -1251,6 +1257,8 @@ private fun TabOverflowChip(
                 onDismissRequest = { visible = false },
                 popupPositionProvider = BelowAnchorEndPositionProvider,
                 properties = PopupProperties(focusable = true),
+                // Pardes: Escape closes the list while its field has the keys (request 83)
+                onPreviewKeyEvent = hiddenTabsEscape { visible = false },
             ) {
                 TabOverflowMenu(
                     tabs = hiddenTabs,
@@ -1284,11 +1292,14 @@ private fun TabOverflowMenu(
     onAdd: (() -> Unit)?,
 ) {
     val shape = RoundedCornerShape(6.dp)
-    val tabsByKey = remember(tabs) { tabs.associateBy { it.key } }
+    // Pardes: what is typed narrows the list, and Enter goes to its first tab (request 83)
+    val filter = rememberHiddenTabsFilter()
+    val shown = filter.matching(tabs) { listOfNotNull(it.labelProvider(), it.pinnedLabel) }
+    val tabsByKey = remember(shown) { shown.associateBy { it.key } }
     // Pinned tabs and the others reorder apart, as on the strip: a pinned one never moves among the rest.
     val runs =
-        remember(tabs) {
-            tabs
+        remember(shown) {
+            shown
                 .partition { it.pinned }
                 .toList()
                 .filter { it.isNotEmpty() }
@@ -1301,6 +1312,7 @@ private fun TabOverflowMenu(
             .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
             .padding(4.dp),
     ) {
+        HiddenTabsFilterField(filter, onEnter = { shown.firstOrNull()?.let(onSelect) })
         Column(Modifier.heightIn(max = TabOverflowMenuMaxHeight).verticalScroll(rememberScrollState())) {
             TabOverflowMenuRuns(runs, tabsByKey, tabCount, onSelect, onMove)
         }
@@ -1453,7 +1465,8 @@ private fun rememberTabOverflowChipWidth(count: Int): Dp {
 private val TabOverflowChipChrome = 44.dp
 
 // As wide as a tab of the strip at its full width.
-private val TabOverflowMenuWidth = AppSettings.TAB_FIXED_WIDTH_DP.dp
+// Pardes: wide enough for a book's name with its place, which a tab's own width cut (request 83)
+private val TabOverflowMenuWidth = HiddenTabsListWidth
 private val TabOverflowMenuMaxHeight = 480.dp
 
 private val NewTabShortcutHint = if (PlatformInfo.isMacOS) "⌘+T" else "Ctrl+T"
