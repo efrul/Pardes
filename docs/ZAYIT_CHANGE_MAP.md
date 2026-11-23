@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (321 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (323 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -690,13 +690,20 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +277 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
+- **Change:** modified, +330 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
   smart siddur, The Home's big name shown or hidden.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_page_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`;
     a size since request 73 of the list after the public release, 1 a row of pages 1000 dp wide, `PageFit.kt`, under
     a key of its own, the former `daf_zoom`, a share of the view's width, not read; `hasDafZoom`, never set, for the
-    pages shown first to fit their view's width),
+    pages shown first to fit their view's width; whether it was set wider than the view it was set in,
+    `daf_page_zoom_wide`, `isDafZoomWide`, `dafZoomWideFlow`, `setDafZoom(zoom, wide)`, false unless said, and
+    `setDafZoomFrom(tabId, zoom)`, wide when wider than the tab's view; each tab's pages' view as the zoom that makes
+    them as wide as it, while they are shown, `pageWidthsFlow`, `showPageWidth`, told by `TellPageFit`; and the zoom
+    the pages are shown at, `shownDafZoom`, the zoom no wider than their view unless it was set wider, so that a pane
+    opened beside them narrows them only as much as it must and closed gives them their size back: request 79 of
+    stage 3, "בפתיחת דברים בצד הגודל כן יקטן אבל רק כמה שצריך וידע להתאים את עצמו"; the flow's comment says the
+    zoom is a size, where it said a share of the view's width),
     its marks shown or hidden (`daf_marks`, `dafMarksFlow`: the unsure lines drawn lighter and the review's marks, the end
     bar's button; until it is first pressed, on for whoever had turned on `daf_mark_unsure` or `daf_review`, the two
     settings it replaced, whose keys are still read for that) and its two fonts (`font_daf_gemara`, default Frank Ruehl
@@ -705,7 +712,9 @@ The entries of this section by kind:
     button: the daf, a tractate's scan, a PDF book; off at first; portable, reset by `clearAll()`).
   - **Zoom of the selected tab:** `dafShown`/`dafHidden`/`showsDaf` count the views that show a daf per tab
     (`dafViewsFlow`), and `zoomIn`/`zoomOut(tabId)` zoom the daf alone to its next level when the tab shows one (its
-    pages: a daf, a scan, a PDF book), else the text as before. The user asked on 2026-11-10 and 11 that the panes
+    pages: a daf, a scan, a PDF book), from the zoom they are shown at (`shownDafZoom(tabId)`, `setDafZoomFrom`:
+    request 79 of stage 3; from the zoom set, a step in beside a pane jumped past the view's width), else the text as
+    before. The user asked on 2026-11-10 and 11 that the panes
     beside a daf (the commentaries, the references, drawn in the text's size) follow the daf's zoom, and the zoom and a
     pinch over the daf zoomed the text too (`zoomDaf`, `dafText`); after the third testers' build, request 63: "שגודל
     המפרשים/ אחרים לא יהיה מושפע מגודל צורת הדף", with the user's choice "רוחב החלונית, זום נפרד": the daf's zoom is its
@@ -1564,7 +1573,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +453 −233 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
+- **Change:** modified, +455 −233 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
   in the view.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
@@ -1572,9 +1581,10 @@ The entries of this section by kind:
     comment marked "Pardes:" and its import), given the daf's control, zoom, the tab's line, anchor and request to
     scroll, and the daf's `onScroll`: the scan has the daf's keys, zoom and place, and the text opens where it was.
   - The daf's own `LazyListState` and `DafControl` (made with the tab's id, for the pages' fit, request 73 of the
-    list after the public release); its own zoom by the same gestures (`rememberTextZoom` over
-    `dafZoomFlow`, in percent, `PERCENT = 100f`, given to `AppSettings.setDafZoom`: the daf's alone, since request 63
-    of the list after the third testers' build, with a comment marked "Pardes:");
+    list after the public release); its own zoom by the same gestures (`rememberTextZoom` over the zoom the pages are
+    shown at, `shownPageZoom(tabId)`, no wider than their view unless zoomed wider, request 79 of stage 3, and its
+    import; in percent, `PERCENT = 100f`, given to `AppSettings.setDafZoomFrom(tabId, …)`: the daf's alone, since
+    request 63 of the list after the third testers' build, with a comment marked "Pardes:");
     `dafShown`/`dafHidden` while it is shown, so the zoom keys know.
   - The content is not hidden for initial positioning on the daf (its lines' list is not laid out there).
   - Find in page, Ctrl+Home/End and Page Up/Down act on the daf through `dafControl` (`scrollToLine`, `scrollToEdge`,
@@ -1844,24 +1854,29 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/PaneSearch.kt`
 
-- **Change:** modified, +25 −2 lines. Feature: Typing over a pane, Scrolling alike.
+- **Change:** modified, +40 −2 lines. Feature: Typing over a pane, Scrolling alike.
 - **What:** `PaneSearchFocus.typed`, text typed over the pane before its field had the focus, with a comment marked
   "Pardes:"; as the field takes the focus it appends it to its text and hands the query over at once (past the
   debounce, so that the text flow's first value, dropped, is not the typed one). And Zayit's `revealItem`, a row
   brought into view by the least scroll, which the trees, the contents, the popups and now the reader and the
-  search's lists use: a row below the view comes in at the view's bottom (`scrollInFromBelow`: `scrollToItem`, then
-  back by the room left under it), not at its top, and a row partly below the view and taller than it keeps its top
-  in view (`minOf`); its KDoc says so with a "Pardes:".
+  search's lists use: a row below the view comes in at the view's bottom (`scrollInFromBelow`), not at its top, and
+  a row partly below the view and taller than it keeps its top in view (`minOf`); its KDoc says so with a "Pardes:".
+  `scrollInFromBelow` scrolls down through the rows between, the last row whole and the next one's top in view at a
+  time, while the row is at most `ROWS_SCROLLED_THROUGH` (60) rows below the last one in view, which keeps the rows in
+  view as they were; farther, `scrollToItem` and back by the room left under it, as at first (request 78 of stage 3:
+  the find pane's rows read their text once on screen, and a jump to the row and back made the rows above it read it
+  again, grow again and push it below the view, round after round).
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
   contents and get straight to a daf, without the search button first, and without hurting anything else. The
   reveal: a step down from the row at the bottom scrolled the next row to the top, a page's jump, while a step up
   moved a row (request 75 of the list after the public release: "למה יש הבדל בין דפדוף למעלה ללמטה במקשים, למעלה
-  אחד אחד ולמטה מחליף הרבה בבת אחת?"); a fix for both brands, to drop once upstream has one.
+  אחד אחד ולמטה מחליף הרבה בבת אחת?"); a fix for both brands, to drop once upstream has one. The rows scrolled
+  through: request 78, "בדפדוף בפאנל הצד הפוקוס נעלם למטה", after the testers' build `desktop-1.0.11-61`.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small: a field of Zayit's focus holder and four lines in its field's focus effect; one branch of
-  `revealItem` and a private function after it.
+  `revealItem`, and a private function and constant after it.
 - **Smaller:** already minimal.
-- **Tests:** `TypeToSearchTest`, `RevealItemUiTest`; tried in the app (the reveal: the breadcrumb's popup and the
+- **Tests:** `TypeToSearchTest`, `RevealItemUiTest`, `RevealSettledUiTest`; tried in the app (the reveal: the breadcrumb's popup and the
   search bar's suggestions stepped down a row at a time, the row marked whole at the bottom).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocPanel.kt`
@@ -2983,7 +2998,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafView.kt`
 
 - **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot, A whole page in the view.
-- **Size:** 1470 lines.
+- **Size:** 1517 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
@@ -3026,13 +3041,19 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   1100 dp, left a wide view's margins), and they tell the tab their fit in the view (`TellPageFit`, `pageFit`: the
   view's width, and an amud of the tractate's usual height whole in it, `blockAspect`, the median amud's height over
   `blockWidth`, its title and margin aside) for the end bar's "עמוד שלם". `DafControl` is made with its tab's id
-  (`tabId`).
+  (`tabId`). A line the arrows or the find step to comes into view by the least scroll (`reveal`, `revealSpan`: from
+  its first printed line to its last, `DafIndex.ends`, from below its end at the view's bottom, from above its top at
+  the view's top, a title's height inside the view, its top when it is taller than the view; two amudim a row, a
+  segment going on from the right one to the left one's top, as far as the row's end): it came in at the view's top,
+  which the user saw after the testers' build `desktop-1.0.11-61` (request 80 of stage 3: "החצים בצורת הדף: הקטע הבא
+  עדיין נכנס בראש התצוגה").
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
   (`DafMode`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`,
-  `ZoomPivotTest`; the composables have no UI test; request 44 tried in the app (Berakhot 2a zoomed in with Ctrl and
+  `ZoomPivotTest`, `RevealSpanUiTest`, `DafIndexTest`; request 80 tried in the app (Berakhot 2a, a segment selected and
+  the arrow down three times: each next segment whole at the view's bottom, the page a few lines on); the composables have no UI test; request 44 tried in the app (Berakhot 2a zoomed in with Ctrl and
   the wheel over a word of the Mishnah: the word stays where it was).
 - **Notes:** at 1,374 lines, with some 28 top-level and member functions, it is far beyond `detekt.yml`'s limits
   (600 lines for a class, 15 functions for a file), as some of Zayit's largest files are; it could be split by its
@@ -3101,9 +3122,11 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafIndex.kt`
 
 - **Feature:** Daf view.
-- **Size:** 105 lines.
+- **Size:** 117 lines.
 - **What:** `DafIndex`, a tractate's printed lines of the library, the Gemara's and the commentaries': where each is
-  printed first (`places`, what `DafView` scrolls to), and each commentary column's comments in the order they are read
+  printed first (`places`, what `DafView` scrolls to) and last (`ends`: its last amud and the bottom of its last line
+  there, for the arrows to bring a segment or a comment in whole, request 80 of stage 3, "המפה של צורת הדף יודעת איפה
+  קטע מתחיל, אבל לא איפה הוא נגמר"), and each commentary column's comments in the order they are read
   (`next`, and `comments`, what the daf's find searches): amud by amud, each book's comments by the library's numbers (the lines list a comment a line early or late in
   a third of the amudim), a column's second book where it is printed (the Rashbam after Rashi, Bava Batra 29a). Also
   the Gemara's segment read at the top of a view scrolled to a place (`gemaraAt`): that of the first line printed there
@@ -3330,11 +3353,14 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/settings/DafZoomTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 124 lines.
+- **Size:** 187 lines.
 - **What:** the daf's own settings: the zoom keys, buttons and menu zoom the text, or a tab's daf alone while it shows
   one, level by level, the text's size as it was (request 63 of the list after the third testers' build); the daf's
   own zoom (a pinch) zooms it alone, and goes on from the next level; the views' count; the daf's marks hidden until asked and reset, and shown at first for whoever had one of the two former settings on; the zoom kept and reset; the zoom never set until the pages first fit
-  their view, the share of the view kept before request 73 of the list after the public release (`daf_zoom`) not read.
+  their view, the share of the view kept before request 73 of the list after the public release (`daf_zoom`) not read;
+  the pages shown no wider than their view unless the zoom was set wider, a pane opened beside them narrowing them as
+  much as it must and closed giving their size back, the zoom keys going on from the zoom shown and set wider than
+  the view staying so, also after a restart (request 79).
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's settings tests (`testAppSettings()`).
 - **Tests:** it is one (unit, `AppSettings`).
@@ -3444,12 +3470,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafIndexTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 109 lines.
+- **Size:** 120 lines.
 - **What:** over three amudim made for it: a column's comments read in the library's order, each once, though a line
   lists one early; a second book of the column read where it is printed; a column ending where its comments do, the
   Gemara's lines no comments; the Gemara's segment read at a place (the first that begins on the line there, or the
   one going on through it; past an amud's last line, the next amud's first), and a view scrolled to a segment's place
-  reading that segment again; every line with the place it is printed at first.
+  reading that segment again; every line with the place it is printed at first, and at last (its last line's bottom,
+  on a later amud when it goes on: request 80 of stage 3).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, backtick names.
 - **Tests:** it is one (unit).
@@ -4493,13 +4520,14 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PdfBookView.kt`
 
 - **Feature:** The user's PDF books.
-- **Size:** 337 lines.
+- **Size:** 339 lines.
 - **What:** `PdfBookView(file, place, onPlace, tabId, modifier, inTab, actions)`: the file read whole into the
   binding off the UI thread (`runSuspendCatching`, a missing native library caught too), a missing file or a failure
   said, and its pages in `PdfPageList`, their text selectable, one under the other or two side by side
   (`pageSpreadsFlow`), as wide as the daf's zoom says, a size whatever the view's width (`pageWidthAt`, two a row
   sharing the row: request 73 of the list after the public release), their fit in the view told for the tab
-  (`PdfPages`' `tabId`, `TellPageFit`, `pageFit`, the first page's size for a whole page, `pageSize`). The zoom is the daf's, global (`dafZoomFlow`, `setDafZoom`), and the view counts as the tab's daf (`dafShown`/`dafHidden`), so the end bar's buttons,
+  (`PdfPages`' `tabId`, `TellPageFit`, `pageFit`, the first page's size for a whole page, `pageSize`). The zoom is the daf's, global, shown no wider than the view unless zoomed wider (`shownPageZoom`, set by
+  `setDafZoomFrom(tabId, …)`: request 79 of stage 3), and the view counts as the tab's daf (`dafShown`/`dafHidden`), so the end bar's buttons,
   the window's zoom keys and the menu zoom it; `rememberTextZoom` for Ctrl + wheel and pinches. Its pages are told to the tab's
   contents pane (`PdfBookStore.showPages`, the page at the top as it changes) and it goes to a page clicked there
   (`pageRequests`), request 49. A bar: "עמוד N מתוך M" (the first page read in the row at the top), and with `inTab`
@@ -5110,7 +5138,7 @@ own files, `DafView.kt`, `DafScanView.kt`, `PdfBookView.kt` and `PdfPageList.kt`
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFit.kt`
 
 - **Feature:** A whole page in the view.
-- **Size:** 144 lines.
+- **Size:** 167 lines.
 - **What:** the pages' zoom a size (request 73 of the list after the public release: "כאשר סרגל צד נפתח למשל או
   מוסיפים מפרשים היחס של הדף משתנה לפי אחוז הגודל שלו ביחס למסך הקודם... גם הגדרת רוחב וגובה נקבעת כיום לפי יחס
   המצב הנוכחי ולא אבסלוטית"), which no pane opened or closed beside them changes: `ZOOM_ONE_WIDTH` (1000 dp, a row of
@@ -5119,21 +5147,27 @@ own files, `DafView.kt`, `DafScanView.kt`, `PdfBookView.kt` and `PdfPageList.kt`
   aspect, columns, around, one)` (as wide as the view, and a page of that shape whole in it, no wider, the room around
   it aside; as wide as the view while its shape is not known); `PageFits` (`@Inject`, `@SingleIn(AppScope::class)`:
   each tab's fit by its id, `show`), and `TellPageFit(tabId, fit)`, which the views call as they lay their pages out:
-  it tells the fit while they are shown, and, the zoom never set yet (`AppSettings.hasDafZoom`), sets it to their
-  view's width, as the pages were before; `PageFitButton(uiState, modifier)`, the end bar's "עמוד שלם" under two
+  it tells the fit while they are shown, its width to the settings too (`AppSettings.showPageWidth`), and, the zoom
+  never set yet (`AppSettings.hasDafZoom`), sets it to their view's width, as the pages were before;
+  `shownPageZoom(tabId)`, the zoom the pages are shown at (`AppSettings.shownDafZoom`): no wider than their view
+  unless the zoom was set wider, so that a pane opened beside them narrows them only as much as it must, and closed
+  gives them their size back (request 79 of stage 3: "בפתיחת דברים בצד הגודל כן יקטן אבל רק כמה שצריך וידע להתאים את
+  עצמו"; until then the zoom was kept whatever the view, and a pane cut the page); `PageFitButton(uiState, modifier)`, the end bar's "עמוד שלם" under two
   pages', shown while the tab shows pages (`showsPages`): a whole page in the view, and pressed again, the view's
-  width, as Chrome's PDF viewer fits (`isWhole`, `FIT_SLACK`: on while the zoom is the whole page's, as near as the
+  width, as Chrome's PDF viewer fits (`isWhole`, `FIT_SLACK`: on while the zoom shown is the whole page's, as near as the
   zoom's ends let it be; its tooltip says what a press does; off until the tab's pages have told their fit). Before,
   the pages were as wide as the view times the zoom (request 63 of the list after the third testers' build: "רוחב
   החלונית, זום נפרד"), so that a pane opened beside them shrank them, and "עמוד שלם" was a setting kept for every tab
   (`PageFitSettings`, "page_fit", now not read) times the zoom.
 - **Reached from:** `VerticalBars.kt` (the button), `DafView.kt`, `DafScanView.kt` and `PdfBookView.kt` (the width and
-  the fit), `AppGraph.kt` (`pageFits`).
+  the fit), `BookContentView.kt` and `PdfBookView.kt` (`shownPageZoom`), `AppGraph.kt` (`pageFits`).
 - **Follows:** `PageSpreadsButton.kt` beside it (`SelectableIconButtonWithToolip`, `showsPages`); Pardes's
   `BookFindHub` and `PdfBookStore.showPages` (what a tab's view tells the panes and bars, by its id).
 - **Tests:** `PageFitTest`, `DafZoomTest`; tried in the app (Berakhot's daf: fitted to its view's width when first
   shown; the book tree closed, the page kept its size, centred; "עמוד שלם" a whole amud in the view's height, then
-  pressed again the view's width; the commentaries opened below, the page as it was).
+  pressed again the view's width; the commentaries opened below, the page as it was; request 79: the page as wide as
+  the view with the contents pane closed, the pane opened, the page as wide as the narrower view, closed, as wide as
+  before; zoomed in beside the pane, a level past the width shown, not past the zoom set).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFitTest.kt`
 
@@ -5357,8 +5391,9 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
   of several. By meaning, as the search's results show a line found so (the user, 2026-11-19: "אין הדגשות
   במצב סמנטי"): `meaningSnippet`, a piece around the passage closest in meaning (`SearchEngine.highlights` on
   `SnippetSources.clean` of the line, then `rangeSnippet`, its own number kept), bold, or `findSnippet` when nothing is highlighted; the current match's line marked and kept in view by the least
-  scroll, a step down as a step up (`revealItem`; it came in at the list's top, a page's jump down and a row's up:
-  request 77 of the list after the public release); a line clicked asks the
+  scroll, a step down as a step up (it came in at the list's top, a page's jump down and a row's up: request 77 of
+  the list after the public release), and kept there as the rows read their text and grow, until the reader scrolls
+  (`revealSettled`, request 78: "בדפדוף בפאנל הצד הפוקוס נעלם למטה"); a line clicked asks the
   text to go to it, and gives the list the keyboard's focus. With it, as the search's results (the user, 2026-11-19:
   "כאשר הפוקוס על חלונית הצד - כמו בתוצאות חיפוש חץ למעלה למטה יעבור בין התוצאות כאשר התוצאה מסומנת"): up and down go
   from line to line, the text with them, the line asked marked ahead of the text's answer (`asked`, so that keys
@@ -5380,7 +5415,8 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
   the app (בר found in Berakhot, the pane by its pages, a line clicked gone to at its match, 11/2889; request 62:
   אברהם in Rashi on Genesis under "פרק יב, פסוק ב", "יב" typed in the pane's search keeping chapter 12's and the verses
   יב, Enter on the third going to it, 7/136, and closing the search; אבימלך in Genesis, "(יז) …ויתפלל"; the minimize
-  hiding the pane and the find bar's button showing it again).
+  hiding the pane and the find bar's button showing it again; request 78: אמר found in Berakhot, the pane paged down
+  five times and up three, the line marked whole at the pane's bottom, and at its top).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsTest.kt`
 
@@ -5400,7 +5436,7 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsSearch.kt`
 
 - **Feature:** Find results pane.
-- **Size:** 194 lines.
+- **Size:** 217 lines.
 - **What:** the results pane searched as the contents and the book tree are (request 62: "יוכלו למזער ולחפש בו כמו
   בתוכן העניינים וספרים"). `FindResultsSearch` (`@Stable`, `rememberFindResultsSearch(tabId)`): its bar shown, the
   query typed (`queryChanged`, ignored once hidden, as the contents' search ignores a query flushed after Escape),
@@ -5410,13 +5446,20 @@ keeps it ("(יז) …"). Hooks: `BookContentView.kt`, `FindInPageBar.kt`, `BookC
   and final letters aside), the ranges of each title it matched, its matches the rows' `FindRow.matchId`, and the best
   the first under the entry with the most whole words, as the contents' search's. `FindRowsSearchLayout`: Zayit's
   `PaneSearchLayout` with "חיפוש כותרת" and "לא נמצאו כותרות" (the contents' strings), the pane's list while nothing is
-  typed, else the rows kept, the active one marked and kept in view (`revealItem`); a row chosen by a click or Enter is
+  typed, else the rows kept, the active one marked and kept in view (`revealSettled`); a row chosen by a click or Enter is
   gone to and the bar hidden, as the contents' search opens its entry and hides. `EntryTitle`: an entry over its lines,
   13 sp semibold, its matched words marked with `SearchHighlightColor` as the contents' search marks a title's.
+  `revealSettled(index)` (`LazyListState`), the pane's and its search's: a row brought into view by the least scroll
+  (Zayit's `revealItem`) and kept there as the layout changes (`snapshotFlow` of the row's place and size and the
+  view's end), until the reader scrolls the list: the list no longer where the reveal left it (`takeWhile` on its
+  first row and offset), which a wheel, a trackpad's scroll and the scrollbar all do, while a trackpad's and the
+  scrollbar's set no `isScrollInProgress` that a flow would see: a found line's row reads its text once on screen
+  and grows then, as do the rows above it, which pushed the row below the view after a page down (request 78 of
+  stage 3, "בדפדוף בפאנל הצד הפוקוס נעלם למטה").
 - **Reached from:** `FindResultsPane.kt` (`BookFindResults`, `PdfFindResults`).
 - **Follows:** Zayit's `BookTocPanel` (`PaneSearchLayout`, `TocSearchResults`), `TocSearch.kt` and `BookTocView`'s
   highlighted titles.
-- **Tests:** `FindResultsSearchTest`; tried in the app (see `FindResultsPane.kt`).
+- **Tests:** `FindResultsSearchTest`, `RevealSettledUiTest`; tried in the app (see `FindResultsPane.kt`).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/FindResultsSearchTest.kt`
 
@@ -8176,9 +8219,15 @@ Requests 75 to 77 of the list after the public release of `docs/DESKTOP_STAGE3_P
 מתמשך". The row the keys move to comes into view by the least scroll in every list (Zayit's `revealItem`, fixed for a
 row below the view, and used by the reader's lines, the search's results, the find pane and the bar's lists in place
 of their own ways), and a page key turns most of a view, the same up and down, in the text as in the daf, a scan, a
-PDF book and the siddur. The map of every scrolling place is in the plan. Hooks: `PaneSearch.kt` (`revealItem`),
-`BookContentView.kt`, `SelectionBarLogic.kt`, `SearchResultScreen.kt`, `HomeView.kt`, `BreadcrumbPopup.kt`; in
-Pardes's own files, `FindResultsPane.kt` and `PopupKeys.kt`.
+PDF book and the siddur. The map of every scrolling place is in the plan. After the testers' build
+`desktop-1.0.11-61` (2026-11-23), "בדפדוף בפאנל הצד הפוקוס נעלם למטה" (request 78): the find pane's current row is
+kept in view as the rows read their text (`revealSettled`), and a row a few rows below comes in through them, not by
+a jump that made them read it again; and "החצים בצורת הדף: הקטע הבא עדיין נכנס בראש התצוגה. המפה של צורת הדף יודעת
+איפה קטע מתחיל, אבל לא איפה הוא נגמר" (request 80): the daf's segment or comment comes in by the least scroll, from
+its first line to its last (`revealSpan`, `DafIndex.ends`). Hooks: `PaneSearch.kt` (`revealItem`,
+`scrollInFromBelow`), `BookContentView.kt`, `SelectionBarLogic.kt`, `SearchResultScreen.kt`, `HomeView.kt`,
+`BreadcrumbPopup.kt`; in Pardes's own files, `FindResultsPane.kt`, `FindResultsSearch.kt`, `DafView.kt`, `DafIndex.kt`
+and `PopupKeys.kt`.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/RevealItemUiTest.kt`
 
@@ -8199,6 +8248,34 @@ Pardes's own files, `FindResultsPane.kt` and `PopupKeys.kt`.
   each through it, and two page ups come back to its top (`turnPage`).
 - **Reached from:** the JVM tests.
 - **Follows:** `RevealItemUiTest` beside the reveal's, and Zayit's `BookContentKeyboardUiTest`.
+- **Tests:** it is one (Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/RevealSpanUiTest.kt`
+
+- **Feature:** Scrolling alike.
+- **Size:** 95 lines.
+- **What:** amudim 500 high in a view 200 high (`revealSpan`, driven by a state the test sets and a
+  `LaunchedEffect`): a span in view is not scrolled to; partly below, its end comes in at the view's bottom, the list
+  a little on; far below, its end at the view's bottom too, its start in view; one taller than the view, its start
+  at the view's top; one above, at the view's top; one going on into the next item, its end there at the view's
+  bottom; one to its item's end, the item's bottom there (request 80 of stage 3).
+- **Reached from:** the JVM tests.
+- **Follows:** `RevealItemUiTest` (a row's reveal), beside the daf's.
+- **Tests:** it is one (Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/find/RevealSettledUiTest.kt`
+
+- **Feature:** Scrolling alike.
+- **Size:** 116 lines.
+- **What:** rows 20 high until they read their text, 100 ms after they are on screen, then 60, in a view 200 high:
+  each row asked (30, 60, 90) comes in from below and stays whole in view as it and the rows above it grow, and the
+  rows in view all settle, none reading its text again after each reveal (`revealSettled` over `revealItem`; time
+  advanced by the test's clock; with a jump to the row and back the rows in view never settled, and with the reveal
+  alone the row ended below the view: request 78 of stage 3); and once the list is scrolled away as a trackpad
+  scrolls it (`dispatchRawDelta`, no animation), the rows that come in grow and the row is not brought back (with a
+  stop on `isScrollInProgress` it was, to row 30).
+- **Reached from:** the JVM tests.
+- **Follows:** `RevealItemUiTest`.
 - **Tests:** it is one (Compose UI).
 
 ## 3. Pardes's own trees

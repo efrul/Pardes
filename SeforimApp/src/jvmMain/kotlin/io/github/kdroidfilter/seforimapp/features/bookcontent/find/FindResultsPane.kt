@@ -175,10 +175,10 @@ private fun BookFindResults(
         return true
     }
     // The current match's line kept in view by the least scroll, as the text goes from match to match: a step down as
-    // a step up, not a page's jump (request 77 of stage 3)
+    // a step up, not a page's jump (request 77 of stage 3), and in view as the rows read their text (request 78)
     LaunchedEffect(current, rows) {
         val index = rows.indexOfFirst { it is FindRow.Found && it.line.lineIndex == current }
-        if (index >= 0) listState.revealItem(index)
+        if (index >= 0) listState.revealSettled(index)
     }
     FindRowsSearchLayout(
         search = search,

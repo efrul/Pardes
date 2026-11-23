@@ -171,14 +171,29 @@ suspend fun LazyListState.revealItem(index: Int) {
     }
 }
 
-// Pardes: item [index], below the view, at the view's bottom (its top, when it is taller than the view)
+// Pardes: item [index], below the view, at the view's bottom (its top, when it is taller than the view). A few rows
+// below, the list scrolls down through them, which keeps the rows in view as they were, as a jump to the item and back
+// did not: a row that reads its text once on screen read it again, grew again and pushed the item below the view
+// (request 78 of stage 3); far below, it goes to the item and back.
 private suspend fun LazyListState.scrollInFromBelow(index: Int) {
-    scrollToItem(index)
+    // Down through the rows between while it is a few away: the last row whole, and the next one's top in view
+    var through = true
+    while (through && layoutInfo.visibleItemsInfo.none { it.index == index }) {
+        val info = layoutInfo
+        val last = info.visibleItemsInfo.lastOrNull()
+        val step = last?.let { it.offset + it.size - info.viewportEndOffset + 1 } ?: 0
+        through = last != null && index - last.index <= ROWS_SCROLLED_THROUGH && step > 0 && scrollBy(step.toFloat()) > 0f
+    }
+    if (!through) scrollToItem(index)
     val info = layoutInfo
     val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
-    val room = info.viewportEndOffset - (item.offset + item.size)
-    if (room > 0) scrollBy(-room.toFloat())
+    // Its bottom at the view's bottom, or its top at the view's top when it is taller than the view
+    val shift = minOf(item.offset + item.size - info.viewportEndOffset, item.offset - info.viewportStartOffset)
+    if (shift != 0) scrollBy(shift.toFloat())
 }
+
+// Pardes: the rows a reveal scrolls down through at most, a few views of them; past them it goes to the row
+private const val ROWS_SCROLLED_THROUGH = 60
 
 @OptIn(FlowPreview::class)
 @Composable
