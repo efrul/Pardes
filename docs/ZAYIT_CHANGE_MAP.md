@@ -4582,7 +4582,8 @@ id opened), `VerticalBars.kt` (two pages), `AppGraph.kt`, `DataSettingsScreen.kt
   `PAGE_GAP` and `PAGE_TITLE_HEIGHT` are internal, for a whole page's room in the scan and a PDF book (request 63 of
   the list after the third testers' build).
 - **Reached from:** `PdfBookView.kt` (with its find's marks), `DafScanView.kt` (the binding's way), `ScanPageList.kt`
-  (`PageRows`).
+  (`PageRows`); `BookContentView.kt` (`turnPage`, the reader's Page Up and Down since request 75 of the list after the
+  public release).
 - **Follows:** Pardes's PDF book view, from which it was taken; Otzaria's 2,000 pixels on a page's long side and its
   pages drawn ahead, and Zayita's prefetch (ideas only: neither's code is used).
 - **Tests:** `PdfPageListTest` (the rows); tried in the app (a PDF book and a scan, a page a row and two; request
