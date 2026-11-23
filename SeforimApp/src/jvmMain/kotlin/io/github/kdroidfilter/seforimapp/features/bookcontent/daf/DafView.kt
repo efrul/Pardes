@@ -171,9 +171,7 @@ internal fun firstLines(toc: List<TocEntry>): Map<String, Long> {
  * A tab's book shown as its daf in the text view ([book]): a tractate its Vilna page, or its scan in the page's place
  * ([scan], DafScanReader); another book its own pages, with the [commentators] the commentaries pane shows. What a click
  * on a word of the page selects: a segment ([onSelectLine], with whether Ctrl or Cmd was held), or a passage
- * ([onSelectPassage]: the segment, the comments, their books). In the tab of a commentary printed on the daf
- * ([commentaryId], Rashi's, Tosafot's, the Rashbam's: request 82), the tractate's daf, the commentary's comments what a
- * click selects ([onSelectLine]).
+ * ([onSelectPassage]: the segment, the comments, their books).
  */
 class DafMode(
     val book: Book,
@@ -181,7 +179,6 @@ class DafMode(
     val onSelectPassage: (lineId: Long, commentIds: Set<Long>, commentBookIds: Set<Long>) -> Unit,
     val scan: Boolean = false,
     val commentators: DafCommentators? = null,
-    val commentaryId: Long? = null,
 )
 
 /**
@@ -286,9 +283,7 @@ private val PagePadding = 24.dp
  * opens on its line ([onContextLine]). The tab's selection ([selectedLineIds], [selectedPassage]) is marked on the
  * page, with the comments on the selected segments; not a table of contents' entry selected whole
  * ([isTocEntrySelection]), which would mark a whole page. The tab's line ([lineId]) is brought into view whenever it
- * changes or the tab asks ([scrollToLineTimestamp]), as the text does. In the tab of a commentary printed on the daf
- * ([commentaryId], Pardes, request 82), the tab's lines are the commentary's: a click on one of its comments selects
- * it, on a Gemara word the commentary's comment there, and the daf's place is the commentary's comment at its top.
+ * changes or the tab asks ([scrollToLineTimestamp]), as the text does.
  */
 @Suppress("ComposeUnstableCollections") // the tab's selection, as the text view takes it
 @Composable
@@ -312,7 +307,6 @@ fun DafView(
     onScroll: (lineId: Long) -> Unit = {},
     commentators: DafCommentators? = null,
     diacritics: DiacriticsMode = DiacriticsMode.All,
-    commentaryId: Long? = null,
 ) {
     // Another book than a tractate: its own pages, with the commentators shown with its text
     if (!book.isBavli && commentators != null) {
@@ -360,7 +354,6 @@ fun DafView(
                     find = find,
                     openAt = openAt,
                     onScroll = onScroll,
-                    commentaryId = commentaryId,
                 )
         }
         // A newer version of the tractate's layout among the released ones, when its file is an older one
@@ -400,7 +393,6 @@ private fun DafPages(
     find: DafFind,
     openAt: Long?,
     onScroll: (Long) -> Unit,
-    commentaryId: Long?,
 ) {
     val graph = LocalAppGraph.current
     val density = LocalDensity.current
@@ -421,12 +413,8 @@ private fun DafPages(
     val byName = remember(file) { file.amudim.associateBy { it.amud } }
     val index by produceState<DafIndex?>(null, file, order) { value = withContext(Dispatchers.Default) { DafIndex(file, order) } }
     val places = index?.places.orEmpty()
-    // Pardes: the commentary's lines in its tab, its place among them (request 82)
-    val commentaryLines = rememberCommentaryLines(commentaryId)
-    // Pardes: the comments printed, for the find to search them too while the daf is shown (stage 3); in a commentary's
-    // tab, the find is the commentary's
-    DisposableEffect(index, control, commentaryId) {
-        if (commentaryId != null) return@DisposableEffect onDispose {}
+    // Pardes: the comments printed, for the find to search them too while the daf is shown (stage 3)
+    DisposableEffect(index, control) {
         val books =
             file.library
                 ?.books
@@ -651,21 +639,13 @@ private fun DafPages(
         var rowsShown by remember { mutableStateOf(spreads) }
         val before = remember(spreads) { if (rowsShown != spreads) control.where()?.topLineId else null }
 
-        // Where the daf is: the Gemara's segment read at the view's top (Pardes: in a commentary's tab, the commentary's
-        // comment there, request 82), and whether the tab's line is in view
+        // Where the daf is: the Gemara's segment read at the view's top, and whether the tab's line is in view
         val currentLine by rememberUpdatedState(lineId)
-        val currentCommentaryLines by rememberUpdatedState(commentaryLines)
         control.where = where@{
             val comments = currentIndex ?: return@where null
             val first = amudOfItem(listState.firstVisibleItemIndex)
             val top = (listState.firstVisibleItemScrollOffset - titleHeight) / currentPerPoint
-            val ours = currentCommentaryLines
-            val topLine =
-                when {
-                    commentaryId == null -> comments.gemaraAt(first, top)
-                    ours != null -> comments.firstOf(first, top) { it in ours }
-                    else -> null
-                } ?: return@where null
+            val topLine = comments.gemaraAt(first, top) ?: return@where null
             val shown =
                 currentLine?.let(comments.places::get)?.let { (index, y) ->
                     val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == itemOfAmud(index) }
@@ -724,6 +704,19 @@ private fun DafPages(
                 reveal(id, always = !revealed)
             }
             revealed = true
+        }
+
+        // Pardes: the comment a commentary's tab opened the daf at, once the tab's line is in view, selected as a click on
+        // it selects it: on its segment, the arrows going on through its commentary (request 83)
+        LaunchedEffect(places) {
+            if (places.isEmpty()) return@LaunchedEffect
+            val commentId = graph.dafFocusRequests.take(control.tabId, book.id)?.takeIf { it in places } ?: return@LaunchedEffect
+            snapshotFlow { revealed }.first { it }
+            val base =
+                baseOf(graph.repository, book.id, commentId) { places[it]?.first == places[commentId]?.first } ?: return@LaunchedEffect
+            focused = commentId
+            selectPassage(base.first, setOf(commentId), setOf(base.second))
+            reveal(commentId, always = false)
         }
 
         // Its place told once it rests there, for the tab to come back to it
@@ -794,7 +787,6 @@ private fun DafPages(
                         onMark = { mark -> onReview { it.mark(file, mark) } },
                         onWordInText = onWordInText,
                         find = find,
-                        commentaryId = commentaryId,
                         modifier = Modifier.padding(horizontal = PagePadding).padding(bottom = 12.dp),
                     )
                 }
@@ -903,7 +895,7 @@ internal suspend fun awaitPassage(
  * The Gemara line of [bookId] that the comment [commentId] is on, the one [preferred] when it is on several, with the
  * comment's book; null for a comment on no line of it.
  */
-private suspend fun baseOf(
+internal suspend fun baseOf(
     repository: SeforimRepository,
     bookId: Long,
     commentId: Long,
@@ -944,7 +936,6 @@ private fun AmudItem(
     onMark: (DafMark) -> Unit,
     onWordInText: (DafAnchor) -> Unit,
     find: DafFind,
-    commentaryId: Long?,
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
@@ -987,7 +978,6 @@ private fun AmudItem(
         clicks = DafClicks(onSelectLine, onSelectPassage, onFocusComment, onContextLine, onWordInText),
         modifier = modifier,
         review = AmudReview(reviewed, items, marksShown),
-        commentaryId = commentaryId,
     )
 }
 

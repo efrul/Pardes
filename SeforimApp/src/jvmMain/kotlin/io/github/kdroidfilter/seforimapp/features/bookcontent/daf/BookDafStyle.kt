@@ -93,7 +93,8 @@ internal val Book.isTanakh: Boolean
 
 /**
  * Whether [book], no tractate, is offered pages of its own (BookDafView): the experiment is on, and it has commentaries
- * to set under its text. Not a commentary printed on a tractate's daf, which shows that daf (request 82 of stage 3).
+ * to set under its text. Not a commentary printed on a tractate's daf, whose button opens that daf (requests 82 and 83
+ * of stage 3).
  */
 @Composable
 internal fun hasBookDaf(book: Book): Boolean {

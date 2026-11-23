@@ -973,9 +973,11 @@ fun BookContentView(
         if (currentDaf == null) onEvent(step) else scope.launch { if (!dafControl.stepComment(forward)) onEvent(step) }
     }
 
-    // Global preview handler: handle basic navigation keys regardless of inner focus
+    // Global preview handler: handle basic navigation keys regardless of inner focus. Pardes: made again with the daf's
+    // control, the book's, which a book opened in the tab replaces (request 83 of stage 3: the arrows went to the former
+    // book's, and stepped through the text's lines on the daf)
     val previewKeyHandler =
-        remember(onEvent) {
+        remember(onEvent, dafControl) {
             { keyEvent: KeyEvent ->
                 // Ctrl/Cmd+F handled globally at window level; do not intercept here
                 if (keyEvent.type == KeyEventType.KeyDown) {
@@ -1157,7 +1159,6 @@ fun BookContentView(
                 onWordInText = selectWordInText,
                 openAt = anchorId.takeIf { it > 0 },
                 onScroll = { id -> wordScope.launch { runSuspendCatching { repository.getLine(id) }.getOrNull()?.let(::dafAt) } },
-                commentaryId = daf.commentaryId,
                 // The find in page's matches drawn on the daf too, the current one strongest
                 find =
                     DafFind(

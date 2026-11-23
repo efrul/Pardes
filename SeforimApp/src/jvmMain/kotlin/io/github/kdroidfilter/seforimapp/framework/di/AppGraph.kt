@@ -84,6 +84,9 @@ abstract class AppGraph : ViewModelGraph {
 
     // Pardes: the zooms that fit each tab's pages in their view, for the end bar's button (request 73 of stage 3)
     abstract val pageFits: io.github.kdroidfilter.seforimapp.features.pdf.PageFits
+
+    // Pardes: the comment a commentary's tab opens its tractate's daf at (request 83 of stage 3)
+    abstract val dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync
