@@ -108,7 +108,9 @@ internal fun PdfBookView(
         appSettings.dafShown(tabId)
         onDispose { appSettings.dafHidden(tabId) }
     }
-    val zoom by appSettings.dafZoomFlow.collectAsState()
+    // As wide as the view at most, unless zoomed wider (request 79 of stage 3)
+    val zoom = shownPageZoom(tabId)
+    val onZoom = { to: Float -> appSettings.setDafZoomFrom(tabId, to) }
     val spreads by appSettings.pageSpreadsFlow.collectAsState()
     // At the page read at the top, kept as it scrolls: the rows changed (a page each, or two), a new list opens there
     val top = remember(file) { Top(place.page, place.offset) }
@@ -141,7 +143,7 @@ internal fun PdfBookView(
             spreads = spreads,
             goTo = inTab,
             zoom = zoom.takeIf { inTab },
-            onZoom = appSettings::setDafZoom,
+            onZoom = onZoom,
             actions = actions,
         )
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -152,7 +154,7 @@ internal fun PdfBookView(
                 else -> {
                     // Its find, Ctrl/Cmd+F as a book's (request 48 of docs/DESKTOP_STAGE3_PLAN.md)
                     val find = remember(reader) { PdfFind() }
-                    PdfPages(reader, listState, spreads, zoom, tabId, onZoom = appSettings::setDafZoom, marks = find.marks)
+                    PdfPages(reader, listState, spreads, zoom, tabId, onZoom = onZoom, marks = find.marks)
                     PdfFindBar(find, reader, tabId, listState, spreads, Modifier.align(Alignment.TopEnd))
                 }
             }
