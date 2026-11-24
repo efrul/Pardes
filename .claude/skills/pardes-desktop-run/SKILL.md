@@ -169,6 +169,16 @@ its stale report (`rm -f SeforimApp/build/reports/ktlint/*/*.txt`) if ktlint the
   batch): run it again alone before looking for a cause.
 - Foreground `sleep` loops are refused by the harness: wait with `timeout N bash -c 'until …; do sleep 5; done'`
   or a background command. A background task has a time limit too: give a long run `timeout: 7200000`.
+- **A printed key reaches the app as its character alone:** `xdotool key space` came to a key handler as one event
+  of type `Unknown` and key `Unknown`, its character in `utf16CodePoint`, with no key press and no release
+  (2026-11-24, the Tao window on Linux; an arrow comes as a press and a release). A handler of `Key.Spacebar` alone
+  never sees it here: `TreeKeys.isSpace` takes both. Check such a key in a Compose UI test, whose `pressKey` gives the
+  press, and build the character's event by hand (`TreeKeysCheckUiTest`).
+- **A chord is surer key by key:** `xdotool keydown Control_L; xdotool key f; xdotool keyup Control_L` opened the find
+  bar where `xdotool key ctrl+f` had not (2026-11-24).
+- **The keys go where the last click was:** the first click after a start, at 300, 400, may land in a pane beside the
+  text (a commentator's pane kept from the last session), and Page Down then does nothing in the pages. Click a word
+  of the text first, and read a temporary `println` in the app's log (`LOG=… start.sh`) when a key seems lost.
 - **A drag's ghost is black without a compositor:** the card that follows the pointer while a pane or a tab is dragged
   is a translucent window of its own, and Xvfb alone draws its transparent pixels black over the screenshot. Run one
   first: `apt-get install -y xcompmgr`, then `DISPLAY=:99 xcompmgr -n &`. Drive the drag with
