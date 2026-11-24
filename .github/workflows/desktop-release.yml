@@ -217,13 +217,6 @@ jobs:
           graalvm: ${{ matrix.graalvm }}
           graalvm-distribution: oracle
 
-      # Google's mirror of Maven Central after it, for an artifact it no longer serves: on 2026-11-23 it answered 404 for
-      # kosherkotlin 3.0.5, and no clean build resolved it (.github/gradle/central-mirror-fallback.init.gradle.kts).
-      - name: Maven Central's mirror, after it
-        run: |
-          mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
-          cp .github/gradle/central-mirror-fallback.init.gradle.kts "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/"
-
       # Gradle properties only: Nucleus reads no environment for signing. Skipped (unsigned packages, updates that ask
       # for a password) without the key. The passphrase goes to Gradle on its command line (next step): written into
       # gradle.properties, a backslash or a non-Latin-1 character in it would come out changed.
