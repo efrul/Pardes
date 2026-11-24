@@ -6,6 +6,9 @@ import io.github.kdroidfilter.seforimapp.framework.session.WindowSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TestTimeSource
 
 /** What the search from anywhere finds opens as a tab, in the place of the one it was opened over (request 85 of stage 3). */
 class SearchAnywhereTest {
@@ -32,6 +35,34 @@ class SearchAnywhereTest {
     @Test
     fun `a desktop's link is not a tab`() {
         assertNull(tabDestination(SearchHomeNavigationEvent.OpenDesktop(name = "לימוד", tabs = WindowSnapshot())))
+    }
+
+    @Test
+    fun `the keys held say where what was chosen opens, as a browser's address bar`() {
+        assertEquals(OpensIn.Place, opensIn(ctrl = false, alt = false, shift = false, byEnter = true))
+        assertEquals(OpensIn.NewTab, opensIn(ctrl = false, alt = true, shift = false, byEnter = true), "Alt+Enter")
+        assertEquals(OpensIn.NewTab, opensIn(ctrl = true, alt = false, shift = false, byEnter = false), "Ctrl+click")
+        assertEquals(OpensIn.Place, opensIn(ctrl = true, alt = false, shift = false, byEnter = true), "Ctrl+Enter is the bar's own")
+        assertEquals(OpensIn.NewWindow, opensIn(ctrl = false, alt = false, shift = true, byEnter = false), "Shift+click")
+        assertEquals(OpensIn.NewWindow, opensIn(ctrl = true, alt = false, shift = true, byEnter = true))
+    }
+
+    @Test
+    fun `a key let go a moment before what was chosen opens still counts`() {
+        val time = TestTimeSource()
+        val held = HeldKeys(time::markNow)
+        assertEquals(OpensIn.Place, held.opensIn())
+        held.note(HeldKeys.Keys(alt = true))
+        held.noteEnter()
+        held.note(HeldKeys.Keys())
+        time += 300.milliseconds
+        assertEquals(OpensIn.NewTab, held.opensIn(), "Alt+Enter, Alt let go since")
+        time += 2.seconds
+        assertEquals(OpensIn.Place, held.opensIn(), "long ago")
+        held.note(HeldKeys.Keys(ctrl = true))
+        assertEquals(OpensIn.NewTab, held.opensIn(), "Ctrl held at a click")
+        held.noteEnter()
+        assertEquals(OpensIn.Place, held.opensIn(), "Ctrl+Enter")
     }
 
     @Test

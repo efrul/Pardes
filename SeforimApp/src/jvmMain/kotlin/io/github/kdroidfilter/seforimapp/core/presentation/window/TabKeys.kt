@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.kdroidfilter.seforim.tabs.TabsEvents
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
+import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabSwitcherKey
 import io.github.kdroidfilter.seforimapp.features.search.searchAnywhereKey
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 
@@ -94,6 +95,8 @@ internal fun rememberTabKeys(tabsViewModel: TabsViewModel): (KeyEvent) -> Boolea
     val openWindow = LocalOpenWindow.current
     return remember(tabsViewModel, rtl, openWindow) {
         keys@{ event ->
+            // The tabs are listed while Ctrl stays down after Ctrl+Tab (request 95)
+            openWindow.tabSwitcherKey(event)
             if (openWindow.searchAnywhereKey(event)) return@keys true
             val ctrl = event.isCtrlPressed || event.isMetaPressed
             val state = tabsViewModel.state.value

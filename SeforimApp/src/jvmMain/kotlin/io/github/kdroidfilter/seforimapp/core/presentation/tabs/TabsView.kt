@@ -799,6 +799,8 @@ private fun TabStripScope.RtlAwareTabStripContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 tabsOnly()
+                // Pardes: the tabs listed while Ctrl stays down after Ctrl+Tab (request 95 of stage 3)
+                TabSwitcher(tabs.map { TabSwitcherRow(it.key, it.data) })
                 // A window's only tab, with no room left for it, just isn't shown: a menu of one tab would be noise.
                 if (showOverflowMenu && tabs.size > 1) {
                     TabOverflowChip(

@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (366 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (368 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -497,10 +497,12 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +32 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
+- **Change:** modified, +35 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
   A copy cut of its spaces, Tab shortcuts, A search from anywhere.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
+  Since 2026-11-24 the window's `onKeyEvent` first notes the key for the tabs' list of Ctrl+Tab
+  (`openWindow.tabSwitcherKey`, request 95 of stage 3), for when nothing in the window has the keys.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
   its comment and its import: the settings are a window of their own, composed once in `main.kt`.
 - **What, typing over a pane:** the key handler's last branch, for a key event that is not a key's press (a typed
@@ -877,7 +879,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsView.kt`
 
-- **Change:** modified, +80 −41 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
+- **Change:** modified, +82 −41 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
   keys in the popups, The tabs under load (request 83 of stage 3).
 - **What:** `TabActionsMenu` takes the tab's id (`tabId`, first) and draws Pardes's items (`pardesTabActions(tabId)`,
   resolved before the menu as the labels are, with a comment marked "Pardes:") after "העתק קישור", through Zayit's
@@ -891,6 +893,8 @@ The entries of this section by kind:
   way, now answering the keys, up and down, Enter and Escape, as the Tools menu (`ToolsMenuButton`, Jewel's
   `PopupMenu`) does; since 2026-11-20 Pardes's `SingleMarkPopupMenu`, which marks one item at a time as IntelliJ's
   menus do, its comment saying so. The tabs under load (request 83 of stage 3), each with a comment marked "Pardes:": a book tab's title in the strip is `tabItem.stripTitle()` in place of `tabItem.title`, in the two places a tab's content is drawn (the tooltip and the hidden tabs' list keep the whole title); `RtlAwareTab` draws its content in Pardes's `TabContentBox` in place of a `Box`, which tells the content its room, and shows a tab's close button, when the tab is not the selected one, only from 140 dp or under the pointer (`closeFits`, a value before `showCloseIcon`: `roomForCloseButton` and Pardes's `closeShown`); the strip's run of tabs is Pardes's `ScrolledTabWindow` in place of `TabWindow`, followed by the tabs' keys (the selected tab is then told from a tab's key, not from its row), recomputed when its first tab changes or it comes between two tabs (`tabWindow.first`, `tabWindow.between`); the strip's row takes `tabStripWheel`, with the tab's width, the scroll's unit; on a scroll's way the tab coming in is drawn too (`tabWindow.arrives`, beside `visibleKeys`, which it is not in, so that the chip still counts it), the tabs' row cuts it at its end (`scrolledTabRun` on `rowModifier`), and a tab is drawn where the scroll has it (`scrolledTab`, after `slideToNewPlace` on the row a tab is drawn in, whose modifiers stand a line each for it); `TabOverflowMenu` filters its tabs by what is typed (`rememberHiddenTabsFilter`, `matching` on a tab's title and pinned label) and draws `HiddenTabsFilterField` above them; the list answers the keys (`filter.keys`, on Zayit's `rememberScrollState()`, which the column of the rows then scrolls by, `keys.scroll`): its column is Pardes's `HiddenTabsColumn` in place of a `Column`, and a row's `hovered`, in `TabOverflowMenuItem` and `NewTabMenuRow`, is Pardes's `hiddenTabMarked`, the one row the keys or the pointer marked, in place of the pointer's hover; its popup closes on Escape (`hiddenTabsEscape`, an `onPreviewKeyEvent` on Zayit's `Popup`), which the field would keep from it; and the list's width, `TabOverflowMenuWidth`, is Pardes's `HiddenTabsListWidth` (280 dp) in place of a tab's width (180).
+  Since 2026-11-24 the strip's row composes `TabSwitcher(tabs.map { TabSwitcherRow(it.key, it.data) })`, the tabs
+  listed while Ctrl stays down after Ctrl+Tab (`TabSwitcher.kt`, request 95 of stage 3).
 - **Why:** a copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`,
   2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there. The menu's
   keys: request 69 of the list after the third testers' build ("צריך תמיכה מלאה במקשים... מקש ימני על כרטיסיה... (כלים
@@ -2402,8 +2406,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +450 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 415 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +452 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 416 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2487,6 +2491,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     under a comment after them, a find
     in a PDF book (request 48 of stage 3): `pdf_find_no_text` (a scan with no text layer has nothing to find). After
     Zayit's wallpaper strings, under a comment: `settings_show_home_logo` and its description (request 67 of stage 3).
+  - the search from anywhere's keys, under a comment before the search by meaning's: `search_anywhere_keys` (where
+    what it finds opens, request 96 of stage 3);
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -4660,13 +4666,15 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/TabKeys.kt`
 
 - **Feature:** Tab shortcuts, A search from anywhere.
-- **Size:** 114 lines.
+- **Size:** 117 lines.
 - **What:** `tabKeyAction(key, shift, current, count, rtl)`, what a tab shortcut does (`TabKeyAction.Select` or
   `Move`, an index), in the strip's order as read (from the right when right to left, where the tabs' index 0 is the
   strip's left end): Ctrl/Cmd with 1 to 8 the tab at that place and 9 the last one; Tab or Page Down the next tab and
   Shift+Tab or Page Up the one before, round the strip (`selectedPlace`); Shift+Page Down or Up the tab moved one place, not round (`movedPlace`). And
   `rememberTabKeys(tabsViewModel)`, the window's handler of them in its layout direction, which selects or reorders
   through `TabsEvents`. Split on 2026-11-22 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3. Since 2026-11-23 the handler first gives the key to the search from anywhere (`openWindow.searchAnywhereKey`, Ctrl/Cmd+L, request 85 of stage 3), of the window it is in (`LocalOpenWindow`).
+  Since 2026-11-24 the handler first notes the key for the tabs' list of Ctrl+Tab (`openWindow.tabSwitcherKey`,
+  request 95 of stage 3), which does not take it.
 - **Reached from:** `MainAppWindow.kt` (the preview key handler).
 - **Follows:** Pardes's `rememberCommentaryCopyShortcut` (a handler the window calls first); Chrome's shortcuts, and in
   Hebrew its order from the right.
@@ -4748,6 +4756,30 @@ Request 83 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 80 in the user's messag
 - **Follows:** Zayit's `PopupSearchField` and its "חיפוש…" (`tab_search_placeholder`), as the tab search's popup; Pardes's `PopupKeys.kt` and `PopupMarking.kt`, the one code of the app's popup lists (requests 69 and 74 of stage 3); IntelliJ's list of hidden tabs, which narrows by typing.
 - **Tests:** `HiddenTabsFilterTest`; tried in the app (the arrows round the rows, Enter on the marked one, the pointer marking its row and the arrows going on from it, the text narrowing the list, Escape).
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabSwitcher.kt`
+
+- **Feature:** Tab shortcuts (request 95 of stage 3).
+- **Size:** 168 lines.
+- **What:** the window's tabs listed while Ctrl stays down after Ctrl+Tab ("בקונטרול טאב כאשר הקונטרול נשאר לחוץ יוצגו
+  הלשוניות כמו בלחיצה על ה"עוד...""). `OpenWindow.tabSwitcherShown`, kept beside the window in a weak map;
+  `tabSwitcherShown(shown, held, tabPressed)`: listed while Ctrl or Cmd is held, from a press of Tab on, and no longer
+  at a key with neither held (the Ctrl let go, or whatever comes after one that was missed);
+  `OpenWindow.tabSwitcherKey(event)` notes a key of the window, without taking it. `TabSwitcher(rows)`, composed in
+  the strip: after 180 ms (Ctrl+Tab let go at once shows no list), a popup that takes no focus, under the strip in the
+  middle of the window (`UnderStripMiddle`), 280 dp wide as the hidden tabs' menu and up to 480 dp tall: each tab as
+  the strip draws it (`TabSwitcherRow`: its key and `TabData`), in the order they are read, the selected one marked
+  and kept in view; a click on a row selects its tab; a window that lost the keys hides it.
+- **Why:** Ctrl+Tab went to the next tab with nothing to say where it was among them, the hidden ones least of all.
+  The list takes no focus so that the window's own keys go on stepping through the tabs: each Tab selects the next as
+  before, and the list only shows it.
+- **Reached from:** `TabsView.kt` (the strip), `TabKeys.kt` and `MainAppWindow.kt` (the window's keys).
+- **Follows:** `SearchAnywhere.kt` for a state kept beside the window; the hidden tabs' menu of `TabsView.kt` for the
+  list's look; an editor's switcher (IntelliJ's, VS Code's Ctrl+Tab) for the keys.
+- **Tests:** `TabSwitcherTest`; tried in the app on 2026-11-24 with three tabs: Ctrl held and Tab pressed twice listed
+  them with the selected one marked each time, and Ctrl let go took the list away.
+- **Notes:** the hidden tabs' menu ("עוד") lists the hidden tabs only, as before: every tab is listed here, and in
+  Zayit's tab search (Ctrl+Shift+A).
+
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/NarrowTabTitleTest.kt`
 
 - **Feature:** The tabs under load (request 83 of stage 3).
@@ -4775,15 +4807,33 @@ Request 83 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 80 in the user's messag
 - **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabSwitcherTest.kt`
+
+- **Feature:** Tab shortcuts (request 95 of stage 3).
+- **Size:** 23 lines.
+- **What:** two tests of when the tabs are listed: from Ctrl+Tab until Ctrl is let go, Tab again or let go between;
+  not at another key with Ctrl, not at Tab alone, and no longer at a key without Ctrl after a let go that was missed.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
 ### A search from anywhere
 
 Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's message): the home's search bar opened from anywhere in the app. Ctrl/Cmd+L, the user's choice, opens the bar under the title bar, over a book, a results page or any other screen, with its suggestions as on the home; what is picked opens in the tab the bar was opened over, in its place. Escape, the key again or a press beside the bar closes it. The testers' build desktop-1.0.11-66 had a button for it in the title bar and opened a new tab; both went on 2026-11-24, at the user's word. Not built yet: the selected text into the bar, recent books in the empty bar, a row for a search in the open book. Hooks: `TitleBarActionsButtonsView.kt`, `MainAppWindow.kt`, `TabsContent.kt`, Pardes's `TabKeys.kt`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhere.kt`
 
-- **Feature:** A search from anywhere (request 85 of stage 3).
-- **Size:** 227 lines.
+- **Feature:** A search from anywhere (requests 85 and 96 of stage 3).
+- **Size:** 371 lines.
 - **What:** the home's search bar opened over any screen of the window. `OpenWindow.searchAnywhereVisible`, kept beside the window in a weak map (as `tabSearchVisible` is in it); `isSearchAnywhereKey` (Ctrl/Cmd+L alone) and `searchAnywhereKey`, which opens or closes it; `SearchAnywhere`, composed in the title bar, where it takes no room and reads the bar's bottom: the popup, a layer the size of the window whose press beside the bar closes it, with `UnifiedSearchBar` under the title bar, 60% of the window up to 640 dp, on a bar state of its own (`newSearchBarViewModel`, cancelled with the bar) and the search-by-meaning switch; Escape or the key closes it. What the bar opens (`tabDestination`: the results, a book or a reference at its line, a link, an author's page) takes the selected tab's place (`openInPlace`): a fresh tab there under the id the bar kept its search's state by, as the Home button's fresh tab is, with the pin of the tab it replaces and its half of a split (`TabSplit.with`); a desktop's link goes through `rememberDesktopOpener`. No button of its own: the testers' build's one went on 2026-11-24 ("בלי אייקון חדש לחיפוש המלא"), with the new tab what it found opened in ("פתיחת תוצאה מהחיפוש החדש תהיה באותה כרטיסיה").
+  Since request 96 of stage 3 ("כיום השורה נפתחת ורק שניה אחרי זה מודגשת ברקע המוזהב, שיהיה מיד. שיוכלו לבחור האם יפתח
+  באותו חלון או חדש, בדומה ללחיצה עם קונטרול וכדומה"): the bar's field has the keys a frame after it opens (its own
+  `FocusRequester`, `autoFocus = false`: the home's bar waits 200 ms); and what it finds opens where the keys held say
+  (`opensIn`, `OpensIn`), as a browser's address bar reads them: Shift a new window (`detachTabToNewWindow`), Alt a
+  new tab, and so Ctrl or Cmd with a click (with Enter they stay the bar's own key, its search in every book), else
+  the tab the bar was opened over (`OpenWindow.open`). `HeldKeys` remembers each key 700 ms after it is let go, and
+  Enter (noted by the bar's key handler): what a row opens comes a moment after it is chosen. A line under the field
+  says the keys (`search_anywhere_keys`).
 - **Reached from:** `TitleBarActionsButtonsView.kt` (where it is composed), `TabKeys.kt` and `MainAppWindow.kt` (the key).
 - **Follows:** Zayit's `TabSearchButton` (a title-bar composable holding its popup), the results page's own bar (`TabsContent.kt`) and `TabsViewModel.replaceCurrentTabWithNewTabId`, the Home button's fresh tab in place; a browser's Ctrl+L, whose address bar opens in the tab it is in, and IntelliJ's Search Everywhere, a popup over the editor.
 - **Tests:** `SearchAnywhereTest` (what opens, and a split's pair kept); tried in the app (over a results page, a reference opened in that tab, the tabs as many as before; in a split, a reference opened in the selected half, the pair kept; Escape; no button in the title bar).
@@ -4791,8 +4841,10 @@ Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's messag
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhereTest.kt`
 
 - **Feature:** A search from anywhere (request 85 of stage 3).
-- **Size:** 43 lines.
+- **Size:** 74 lines.
 - **What:** a text search's results, a book and a reference at its line, a link or an author's page as it is, each under the bar's tab id; a desktop's link is not a tab; the tab that takes a split tab's place keeps its half and the split's share.
+  Since request 96: where what was chosen opens by the keys held (Alt+Enter and Ctrl+click a new tab, Ctrl+Enter the
+  bar's own, Shift a new window), and a key let go a moment before still counts (`HeldKeys`, on a `TestTimeSource`).
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).

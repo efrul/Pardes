@@ -48,6 +48,7 @@ import io.github.kdroidfilter.seforimapp.core.e2e.E2e
 import io.github.kdroidfilter.seforimapp.core.e2e.e2eCapture
 import io.github.kdroidfilter.seforimapp.core.presentation.components.MainTitleBar
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.ClosePinnedTabHint
+import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabSwitcherKey
 import io.github.kdroidfilter.seforimapp.core.presentation.text.rememberRefLinkUriHandler
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalIsTouchMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
@@ -169,6 +170,8 @@ fun NucleusApplicationScope.MainAppWindow(
         state = windowState,
         minimumSize = DpSize(600.dp, 300.dp),
         onKeyEvent = { keyEvent ->
+            // Pardes: the tabs' list of Ctrl+Tab, here too for when nothing in the window has the keys (request 95)
+            openWindow.tabSwitcherKey(keyEvent)
             if (keyEvent.type == KeyEventType.KeyDown) {
                 // Read fresh state to avoid stale captures in cached lambda
                 val currentState = tabsVm.state.value

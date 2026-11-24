@@ -3,7 +3,9 @@ package io.github.kdroidfilter.seforimapp.features.search
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,9 +20,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -31,6 +36,10 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.isAltPressed
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -41,6 +50,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
@@ -49,21 +59,34 @@ import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberDesktopOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.rememberHomeSearchCallbacks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.UnifiedSearchBar
+import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
 import io.github.kdroidfilter.seforimapp.framework.desktop.TabSplit
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.Text
+import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.search_anywhere_keys
 import java.util.UUID
 import java.util.WeakHashMap
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 // Pardes (request 85 of docs/DESKTOP_STAGE3_PLAN.md, a search from anywhere): the home's search bar opened over any
 // screen of the window by Ctrl/Cmd+L, as a browser's address bar is, with no button of its own in the title bar (the
 // user's word, 2026-11-24: "בלי אייקון חדש לחיפוש המלא"). What it finds opens in the tab it was opened over, as the
 // address bar's does ("פתיחת תוצאה מהחיפוש החדש תהיה באותה כרטיסיה").
+//
+// Since request 96 ("כיום השורה נפתחת ורק שניה אחרי זה מודגשת ברקע המוזהב, שיהיה מיד. שיוכלו לבחור האם יפתח באותו חלון
+// או חדש, בדומה ללחיצה עם קונטרול וכדומה") the bar has the keys as it opens, and the keys held as a row is chosen say
+// where it opens, as a browser's address bar reads them ([opensIn]).
 
 private val visibleByWindow = WeakHashMap<OpenWindow, MutableStateFlow<Boolean>>()
 
@@ -84,6 +107,72 @@ internal fun OpenWindow.searchAnywhereKey(event: KeyEvent): Boolean {
     if (!isSearchAnywhereKey(event)) return false
     searchAnywhereVisible.value = !searchAnywhereVisible.value
     return true
+}
+
+/** Where what the bar found opens: the tab it was opened over, a new tab, or a new window. */
+internal enum class OpensIn { Place, NewTab, NewWindow }
+
+/**
+ * Where what the bar found opens, by the keys held as it was chosen, as a browser's address bar reads them: [shift], a
+ * new window; [alt], a new tab, and so Ctrl or Cmd ([ctrl]) with a click (with Enter they are the bar's own key, its
+ * search in every book: [byEnter]); else the tab the bar was opened over.
+ */
+internal fun opensIn(
+    ctrl: Boolean,
+    alt: Boolean,
+    shift: Boolean,
+    byEnter: Boolean,
+): OpensIn =
+    when {
+        shift -> OpensIn.NewWindow
+        alt || (ctrl && !byEnter) -> OpensIn.NewTab
+        else -> OpensIn.Place
+    }
+
+/**
+ * The keys held as a row of the bar is chosen. What the row opens comes a moment after (a book is read, a reference
+ * resolved), so a key let go since still counts: each is remembered [HELD] long, and so is Enter, by which a row was
+ * chosen rather than by a click.
+ */
+internal class HeldKeys(
+    private val now: () -> TimeMark = TimeSource.Monotonic::markNow,
+) {
+    private var ctrl: TimeMark? = null
+    private var alt: TimeMark? = null
+    private var shift: TimeMark? = null
+    private var enter: TimeMark? = null
+    private var last = Keys()
+
+    /** The modifier keys as they are now ([keys]): those held, or just let go, are noted. */
+    fun note(keys: Keys) {
+        val at = now()
+        if (keys.ctrl || last.ctrl) ctrl = at
+        if (keys.alt || last.alt) alt = at
+        if (keys.shift || last.shift) shift = at
+        last = keys
+    }
+
+    /** Enter was pressed in the bar. */
+    fun noteEnter() {
+        enter = now()
+    }
+
+    /** Where what was just chosen opens. */
+    fun opensIn(): OpensIn =
+        opensIn(ctrl.isRecent() || last.ctrl, alt.isRecent() || last.alt, shift.isRecent() || last.shift, enter.isRecent())
+
+    private fun TimeMark?.isRecent() = this != null && elapsedNow() < HELD
+
+    /** The modifier keys held: Ctrl or Cmd, Alt, Shift. */
+    data class Keys(
+        val ctrl: Boolean = false,
+        val alt: Boolean = false,
+        val shift: Boolean = false,
+    )
+
+    private companion object {
+        val HELD = 700.milliseconds
+    }
 }
 
 /** What a search bar's [event] opens, in the tab the bar acts in; null for a desktop's link, which is no tab. */
@@ -175,29 +264,84 @@ private fun SearchAnywhereBar(
     val callbacks = rememberHomeSearchCallbacks(bar) { tabId }
     val openDesktop = rememberDesktopOpener()
     val currentOnDismiss by rememberUpdatedState(onDismiss)
+    // The keys held as a row is chosen: where it opens (request 96)
+    val held = rememberHeldKeys()
     LaunchedEffect(bar, openWindow) {
         bar.navigationEvents.collect { event ->
-            if (event is SearchHomeNavigationEvent.OpenDesktop) openDesktop(event) else tabDestination(event)?.let(openWindow::openInPlace)
+            if (event is SearchHomeNavigationEvent.OpenDesktop) {
+                openDesktop(event)
+            } else {
+                tabDestination(event)?.let { openWindow.open(it, held.opensIn(), graph.desktopManager) }
+            }
             currentOnDismiss()
         }
     }
-    Box(
+    // The field has the keys as the bar opens, with no wait for the home's own bar's (request 96)
+    val barFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { barFocus.requestFocus() }
+    }
+    Column(
         modifier
             .shadow(16.dp, BarShape)
             .background(JewelTheme.globalColors.panelBackground, BarShape)
             .border(1.dp, JewelTheme.globalColors.borders.normal, BarShape)
             // A press on the bar's own frame is not one beside it.
             .pointerInput(Unit) { detectTapGestures { } }
-            .onPreviewKeyEvent { event -> closesSearchAnywhere(event).also { if (it) onDismiss() } }
-            .padding(12.dp),
+            .onPreviewKeyEvent { event ->
+                if (event.key == Key.Enter || event.key == Key.NumPadEnter) held.noteEnter()
+                closesSearchAnywhere(event).also { if (it) onDismiss() }
+            }.padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        UnifiedSearchBar(searchUi = searchUi, searchCallbacks = callbacks, trailing = { NextSearchModeSwitch() })
+        UnifiedSearchBar(
+            searchUi = searchUi,
+            searchCallbacks = callbacks,
+            autoFocus = false,
+            focusRequester = barFocus,
+            trailing = { NextSearchModeSwitch() },
+        )
+        Text(
+            stringResource(
+                Res.string.search_anywhere_keys,
+                if (PlatformInfo.isMacOS) "⌥" else "Alt",
+                if (PlatformInfo.isMacOS) "⌘" else "Ctrl",
+            ),
+            color = JewelTheme.globalColors.text.disabled,
+            fontSize = 12.sp,
+            maxLines = 1,
+        )
     }
+}
+
+/** The keys held in the window while the bar is open, for where a row chosen opens ([HeldKeys]). */
+@Composable
+private fun rememberHeldKeys(): HeldKeys {
+    val held = remember { HeldKeys() }
+    val windowInfo = LocalWindowInfo.current
+    LaunchedEffect(held, windowInfo) {
+        snapshotFlow { windowInfo.keyboardModifiers }.collect { keys ->
+            held.note(HeldKeys.Keys(keys.isCtrlPressed || keys.isMetaPressed, keys.isAltPressed, keys.isShiftPressed))
+        }
+    }
+    return held
 }
 
 // Escape, or the key that opened the bar: the window's own handler does not get the keys while the bar has them.
 private fun closesSearchAnywhere(event: KeyEvent): Boolean =
     isSearchAnywhereKey(event) || (event.type == KeyEventType.KeyDown && event.key == Key.Escape)
+
+/** [destination] opened [where] the keys held say: in the selected tab's place, in a new tab, or in a new window. */
+private fun OpenWindow.open(
+    destination: TabsDestination,
+    where: OpensIn,
+    desktopManager: DesktopManager,
+) {
+    if (where == OpensIn.Place) return openInPlace(destination)
+    tabsViewModel.openTab(destination)
+    if (where == OpensIn.NewWindow) desktopManager.detachTabToNewWindow(destination.tabId, id)
+}
 
 /**
  * [destination] opened in the selected tab's place: a fresh tab there, as the Home button's is (the tab's ViewModels
