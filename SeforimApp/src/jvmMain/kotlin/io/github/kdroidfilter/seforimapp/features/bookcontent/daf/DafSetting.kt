@@ -134,7 +134,6 @@ internal fun layoutAmud(
             setter.column(LEFT_COLUMN, rashi, isGemara = false, commentary),
             setter.column(NAME_COLUMN, gemara, isGemara = true),
             setter.column(TARGUM_COLUMN, gemara, isGemara = true),
-            setter.column(SIDE_RASHI_COLUMN, rashi, isGemara = false),
         ) + bandColumns(amud, setter, scale, gemara to rashi, openings)
     // Drawn last, on top of the runs whose lines they stand beside
     val bigRuns = columns.flatMap { it.bigRuns(gemara) }

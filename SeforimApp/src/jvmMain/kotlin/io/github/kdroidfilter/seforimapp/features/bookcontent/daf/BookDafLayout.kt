@@ -62,9 +62,6 @@ internal const val LEFT_COLUMN = "L"
 internal const val NAME_COLUMN = "H"
 internal const val TARGUM_COLUMN = "O"
 
-/** The column beside the text in Rashi script: a commentator's, put in the targum's place. */
-internal const val SIDE_RASHI_COLUMN = "Q"
-
 /**
  * A commentator's band on a page of bands, a column of its own (its letters may be its own): named by its place among
  * the commentators, and marked when it is in the text's square letters.
@@ -126,13 +123,19 @@ internal fun dafPagesAround(
     return pages
 }
 
-/** A commentator's name on a page of bands: its book, and the name's line across the page (points), left to right. */
+/**
+ * A commentator's name on a page of bands: its book, the name's line across its band (points, left to right), the
+ * name itself in it ([left] to [right]), and whether it stands beside the text rather than over a band ([isBeside]).
+ */
 internal class BandHead(
     val bookId: Long,
     val x0: Float,
     val y0: Float,
     val x1: Float,
     val y1: Float,
+    val left: Float = x0,
+    val right: Float = x1,
+    val isBeside: Boolean = false,
 )
 
 /** A page as set: its lines, in the order they are read, its height, and the rules drawn between its parts. */

@@ -116,7 +116,7 @@ internal fun BookDafStyleFields(
 ) {
     val bands = style.layout == DafStyle.Bands
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_layout),
             options =
                 listOf(
@@ -146,20 +146,20 @@ private fun BandsFields(
     onStyleChange: (BookDafStyle) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_text_size),
             options = TEXT_SIZES.map(::sizeLabel),
             selected = nearest(TEXT_SIZES, style.textSize),
             onSelect = { onStyleChange(style.copy(textSize = TEXT_SIZES[it])) },
         )
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_commentary_size),
             options = COMMENTARY_SIZES.map(::sizeLabel),
             selected = nearest(COMMENTARY_SIZES, style.commentarySize),
             onSelect = { onStyleChange(style.copy(commentarySize = COMMENTARY_SIZES[it])) },
         )
         ColumnsFields(style, onStyleChange)
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_side),
             options =
                 listOf(
@@ -171,7 +171,7 @@ private fun BandsFields(
             selected = nearest(SIDE_SHARES, style.sideShare),
             onSelect = { onStyleChange(style.copy(sideShare = SIDE_SHARES[it])) },
         )
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_aspect),
             options =
                 listOf(
@@ -182,7 +182,7 @@ private fun BandsFields(
             selected = nearest(ASPECTS, style.aspect),
             onSelect = { onStyleChange(style.copy(aspect = ASPECTS[it])) },
         )
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_run_on),
             options =
                 listOf(
@@ -207,13 +207,13 @@ private fun ColumnsFields(
     onStyleChange: (BookDafStyle) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_columns),
             options = BookDafStyle.COLUMNS.map { it.toString() },
             selected = style.columns - BookDafStyle.COLUMNS.first,
             onSelect = { onStyleChange(style.copy(columns = BookDafStyle.COLUMNS.first + it)) },
         )
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_wide_columns),
             options = BookDafStyle.BAND_COLUMNS.map { it.toString() },
             selected = style.wideColumns - BookDafStyle.BAND_COLUMNS.first,
@@ -244,7 +244,7 @@ private fun TogetherField(
 
 /** A field of the style: its [label], and its [options] in a list that shows the one [selected]. */
 @Composable
-private fun Choice(
+internal fun StyleChoice(
     label: String,
     options: List<String>,
     selected: Int,
@@ -274,4 +274,4 @@ private fun nearest(
 ): Int = values.indices.minBy { abs(values[it] - value) }
 
 /** A letters' size as shown: whole when it is. */
-private fun sizeLabel(size: Float): String = if (size % 1f == 0f) size.toInt().toString() else size.toString()
+internal fun sizeLabel(size: Float): String = if (size % 1f == 0f) size.toInt().toString() else size.toString()

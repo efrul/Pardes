@@ -102,7 +102,7 @@
     <ID>LongMethod:LineCommentsView.kt:@OptIn(ExperimentalSplitPaneApi::class) @Composable private fun CommentariesContent</ID>
     <ID>LongMethod:LineCommentsView.kt:@OptIn(ExperimentalSplitPaneApi::class) @Composable private fun MultiLineCommentariesContent</ID>
     <ID>LongMethod:LineCommentsView.kt:@OptIn(FlowPreview::class) @Composable private fun CommentaryListView</ID>
-    <ID>LongMethod:LineCommentsView.kt:@OptIn(FlowPreview::class) @Composable private fun CommentatorsList</ID>
+    <ID>LongMethod:LineCommentsView.kt:@OptIn(FlowPreview::class) @Composable internal fun CommentatorsList</ID>
     <ID>LongMethod:LineTargumView.kt:@Composable private fun MultiLineTargumView</ID>
     <ID>LongMethod:LineTargumView.kt:@OptIn(ExperimentalSplitPaneApi::class) @Composable private fun SingleLineTargumView</ID>
     <ID>LongMethod:LineTargumView.kt:@Stable @Composable fun LineTargumView</ID>

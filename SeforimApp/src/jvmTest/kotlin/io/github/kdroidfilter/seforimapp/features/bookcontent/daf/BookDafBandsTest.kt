@@ -248,23 +248,54 @@ class BookDafBandsTest {
         )
     }
 
+    // A commentator put beside the text, with a comment of [counts] words on each line of the text in turn
+    private fun beside(vararg counts: Int) =
+        DafTargum(
+            "מפרש 7",
+            counts.withIndex().associate { (i, count) -> 100L + i to listOf(DafSegment(7100L + i, words(7100L + i, count))) },
+            bookId = 7,
+        )
+
     @Test
     fun `a commentator put beside the text stands in the targum's place`() {
-        val beside =
-            DafTargum(
-                "מפרש 7",
-                mapOf(
-                    100L to listOf(DafSegment(7100, words(7100, 30))),
-                    101L to listOf(DafSegment(7101, words(7101, 20))),
-                ),
-                bookId = 7,
-            )
         val measures = measures()
-        val page = pages(text(40, 30), listOf(commentary(1, 100L to 100)), beside, measures).single()
-        val side = page.of(SIDE_RASHI_COLUMN)
-        assertEquals(words(7100, 30) + words(7101, 20), side.words(), "its comments beside their lines, in Rashi script")
+        val page = pages(text(40, 30), listOf(commentary(1, 100L to 100)), beside(12, 8), measures).single()
+        val side = page.of(bandColumn(1, square = false))
+        assertEquals(words(7100, 12) + words(7101, 8), side.words(), "its comments beside their lines, in its band's letters")
         assertTrue(side.all { it.b[2] <= measures.sideWidth + 0.01f })
-        assertEquals(listOf(1L), page.heads.map { it.bookId }, "and it has no band")
+        assertTrue(page.of(TEXT_COLUMN).all { it.b[0] >= measures.sideWidth + measures.gap - 0.01f })
+        assertEquals(listOf(1L), page.heads.filter { !it.isBeside }.map { it.bookId }, "and it has no band")
+        val name = page.heads.single { it.isBeside }
+        assertEquals(7L, name.bookId, "its name over its column, for a drag back among the bands")
+        assertTrue(name.x1 <= measures.sideWidth + 0.01f && side.all { it.b[1] >= name.y1 - 0.01f })
+    }
+
+    @Test
+    fun `a commentator beside the text longer than it goes on under the text`() {
+        val measures = measures()
+        val page = pages(text(30), listOf(commentary(1, 100L to 60)), beside(200), measures).single()
+        val side = page.of(bandColumn(1, square = false))
+        assertEquals(words(7100, 200), side.words(), "all its words, in order")
+        val text = page.of(TEXT_COLUMN)
+        val (next, under) = side.partition { it.b[2] <= measures.sideWidth + 0.01f }
+        assertTrue(next.isNotEmpty() && under.isNotEmpty())
+        assertTrue(next.maxOf { it.b[3] } <= text.maxOf { it.b[3] } + measures.text.pitch, "beside the text as far as it is tall")
+        assertTrue(under.all { line -> line.b[1] >= text.maxOf { it.b[3] } }, "the rest under the text")
+        assertEquals(width, under.maxOf { it.b[2] }, "across the page")
+        assertEquals(1, page.heads.count { it.bookId == 7L }, "under no name again")
+        val other = page.heads.single { it.bookId == 1L }
+        assertTrue(under.all { it.b[3] <= other.y0 + 0.01f }, "before the other commentators")
+    }
+
+    @Test
+    fun `a commentator beside the text longer than a page goes on as a band on the next`() {
+        val pages = pages(text(30, 30), commentaries = emptyList(), targum = beside(3000, 10))
+        assertTrue(pages.size > 1)
+        assertEquals(words(7100, 3000) + words(7101, 10), pages.flatMap { it.of(bandColumn(0, square = false)).words() })
+        assertEquals(listOf(0), pages.pagesOf(100L).distinct())
+        assertTrue(pages.pagesOf(101L).all { it == pages.lastIndex }, "the next line waits for it")
+        assertTrue(pages.drop(1).dropLast(1).all { page -> page.heads.single().let { it.bookId == 7L && it.isBeside } })
+        assertTrue(pages.all { it.height <= measures().height + 0.01f }, "no page longer than the others")
     }
 
     @Test

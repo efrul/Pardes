@@ -205,6 +205,28 @@ internal suspend fun loadDafUnit(
     )
 }
 
+/**
+ * The commentators the commentaries pane shows ([selection]) on the lines of the unit [unit] of book [bookId], in the
+ * order it lists them: what a book's pages take the first time they are shown, theirs from then on (request 92).
+ */
+internal suspend fun paneCommentators(
+    repository: SeforimRepository,
+    bookId: Long,
+    unit: DafUnit,
+    selection: CommentatorSelection,
+    connections: suspend (List<Long>) -> Map<Long, LineConnectionsSnapshot>,
+): List<Long> {
+    val ids = repository.getLines(bookId, unit.first, unit.end - 1).map { it.id }
+    val listed = connections(ids)
+    val shown = LinkedHashSet<Long>()
+    for (id in ids) {
+        val groups = listed[id]?.commentatorGroups.orEmpty()
+        val on = selection.shownOf(groups.listedCommentators())
+        for (group in groups) for (item in group.commentators) if (item.bookId in on) shown += item.bookId
+    }
+    return shown.toList()
+}
+
 /** The commentators of a unit's lines, each line's [groups] as the commentaries pane lists them, as one list. */
 internal fun groupsOf(groups: List<List<CommentatorGroup>>): List<CommentatorGroup> {
     val byLabel = LinkedHashMap<String, LinkedHashMap<Long, CommentatorItem>>()

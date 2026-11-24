@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -60,6 +61,8 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsListAndTexts
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsSidebarToggleButton
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -127,39 +130,59 @@ internal fun BookDafView(
     }
     val style = rememberBookDafStyle(book)
     val letters = rememberDafLetters(style)
+    // The book's commentators on its pages: the reader's own, the commentaries pane's the first time (request 92)
+    val own = rememberBookDafCommentators(book, commentators, units, tab.openAt ?: tab.lineId)
+    val chooser by graph.appSettings.flow(BookDafSettings.chooser).collectAsState()
     // The units laid out, by their place in the list: those in view, and one on each side of them
     val laid = remember(book.id) { mutableStateMapOf<Int, LaidUnit>() }
     Box(modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            // Nothing checked in the commentaries pane: the text alone, and how to set commentators with it
-            if (commentators.selection.isEmpty) {
-                InlineInformationBanner(
-                    text = stringResource(Res.string.book_daf_no_commentators),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
-            BoxWithConstraints(Modifier.fillMaxSize()) {
-                val view = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
-                // Where the pages follow the view's width, its size is theirs, and they are set again for it
-                val look = BookDafLook(style, rememberWidePage(view, zoom, style))
-                val setter = rememberUnitSetter(book, commentators, diacritics, letters, look)
-                LaunchedEffect(setter, units) {
-                    if (units.isNotEmpty()) {
-                        snapshotFlow {
-                            listState.layoutInfo.visibleItemsInfo.map { it.index }
-                        }.collectLatest { layUnits(it, units, setter, laid) }
+        if (own == null) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
+        } else {
+            // The list of the pages' commentators beside them, as the commentaries pane's stands beside its texts
+            CommentatorsListAndTexts(
+                isListVisible = chooser,
+                compact = false,
+                list = { BookDafChooser(book, own, laid) },
+                texts = {
+                    Column(Modifier.fillMaxSize()) {
+                        // No commentator chosen for the pages: the text alone, and where to choose them
+                        if (own.shown.isNullOrEmpty()) {
+                            InlineInformationBanner(
+                                text = stringResource(Res.string.book_daf_no_commentators),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                            )
+                        }
+                        BoxWithConstraints(Modifier.fillMaxSize()) {
+                            val view = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
+                            // Where the pages follow the view's width, its size is theirs, and they are set again for it
+                            val look = BookDafLook(style, rememberWidePage(view, zoom, style), own)
+                            val setter = rememberUnitSetter(book, commentators, diacritics, letters, look)
+                            LaunchedEffect(setter, units) {
+                                if (units.isNotEmpty()) {
+                                    snapshotFlow {
+                                        listState.layoutInfo.visibleItemsInfo.map { it.index }
+                                    }.collectLatest { layUnits(it, units, setter, laid) }
+                                }
+                            }
+                            val shown = BookDafShown(book, units, laid, rememberUpdatedState(setter), letters, view, own, commentators)
+                            BookDafPages(shown, listState, control, zoom, tab, clicks, find, onScroll)
+                        }
                     }
-                }
-                val shown = BookDafShown(book, units, laid, rememberUpdatedState(setter), letters, view)
-                BookDafPages(shown, listState, control, zoom, tab, clicks, find, onScroll)
-            }
+                },
+            )
         }
-        // The pages' style, behind a button at their corner
-        BookDafAdjust(book, Modifier.align(Alignment.TopEnd))
+        // The pages' style and the list of their commentators, behind two buttons at their corner
+        BookDafAdjust(book, Modifier.align(Alignment.TopEnd)) {
+            CommentatorsSidebarToggleButton(isVisible = chooser, onToggle = { graph.appSettings[BookDafSettings.chooser] = !chooser })
+        }
     }
 }
 
-/** What a book's pages show: its [units], those [laid] out (by the daf's [setter]), in [letters], in a [view]. */
+/**
+ * What a book's pages show: its [units], those [laid] out (by the daf's [setter]), in [letters], in a [view]; the
+ * reader's commentators for them ([own]), and what a commentator's name asks of the tab ([commentators]).
+ */
 private class BookDafShown(
     val book: Book,
     val units: List<DafUnit>,
@@ -167,6 +190,8 @@ private class BookDafShown(
     val setter: State<UnitSetter>,
     val letters: DafLetters,
     val view: Size,
+    val own: BookDafCommentators,
+    val commentators: DafCommentators,
 )
 
 /**
@@ -221,6 +246,7 @@ private fun BookDafPages(
     var clicked by remember { mutableStateOf<Long?>(null) }
     var focused by remember(setter.value) { mutableStateOf<Long?>(null) }
     val pageClicks = clicks.noting(onClick = { clicked = it }, onFocus = { focused = it })
+    val heads = rememberHeads(shown)
     val copy: () -> Unit = {
         selection?.let { (name, range) ->
             laid.values
@@ -262,9 +288,38 @@ private fun BookDafPages(
                     onRange = { range -> selection = range?.let { name to it } },
                     onPress = { keys.requestFocus() },
                 )
-            BookDafPage(book, page, look, marks, pageSelection, pageClicks)
+            BookDafPage(book, page, look, marks, pageSelection, pageClicks, heads)
         }
     }
+}
+
+/**
+ * What the commentators' names on the pages of [shown] do (BookDafHeads): a change of the book's commentators is saved,
+ * and sets the pages again; a click opens the commentator's book at its comment on the page's lines; a commentator
+ * taken out leaves the pages for a pane of its own.
+ */
+@Composable
+private fun rememberHeads(shown: BookDafShown): BookDafHeadsState {
+    val settings = LocalAppGraph.current.appSettings
+    // The name whose letters are being set: kept over the pages, which every change sets again
+    var setting by remember(shown.book.id) { mutableStateOf<Pair<Long, String>?>(null) }
+    val bookId = shown.book.id
+    return BookDafHeadsState(
+        own = shown.own,
+        hasSide = shown.setter.value.hasSide,
+        settings = setting,
+        onSettings = { setting = it },
+        onOpen = { id, page -> shown.commentators.onOpen(id, page.lines) },
+        onDetach = { id ->
+            val names =
+                shown.laid.values
+                    .flatMap { it.groups }
+                    .flatMap { it.commentators }
+            names.firstOrNull { it.bookId == id }?.let { shown.commentators.onDetach(it.name) }
+            settings.setBookDafCommentators(bookId, shown.own.checked(listOf(id), checked = false))
+        },
+        onChange = { settings.setBookDafCommentators(bookId, it) },
+    )
 }
 
 /** These clicks with the line each selects told first ([onClick]), and the comment one focuses ([onFocus]). */
@@ -412,6 +467,7 @@ private fun BookDafPage(
     marks: DafMarks,
     selection: AmudSelection,
     clicks: DafClicks,
+    heads: BookDafHeadsState,
     modifier: Modifier = Modifier,
 ) {
     val rule = JewelTheme.globalColors.borders.normal
@@ -429,24 +485,28 @@ private fun BookDafPage(
                 color = JewelTheme.globalColors.text.info,
             )
         }
-        LinkedAmud(
-            book = book,
-            amud = page.amud,
-            // (the page's own: a unit set otherwise gives this place another page before its layout comes)
-            layout = layout?.takeIf { it.amud === page.amud },
-            look = look,
-            marks = marks,
-            selection = selection,
-            clicks = clicks,
-            modifier =
-                Modifier.padding(horizontal = BookDafPadding).padding(bottom = BookDafGap).drawBehind {
-                    // The page's own coordinates, left to right, whatever the view's direction
-                    for (r in page.rules) {
-                        drawLine(rule, Offset(r.x0, r.y0) * look.perPoint, Offset(r.x1, r.y1) * look.perPoint, strokeWidth = density)
-                    }
-                },
-            passages = page.passages,
-        )
+        Box(Modifier.padding(horizontal = BookDafPadding).padding(bottom = BookDafGap)) {
+            LinkedAmud(
+                book = book,
+                amud = page.amud,
+                // (the page's own: a unit set otherwise gives this place another page before its layout comes)
+                layout = layout?.takeIf { it.amud === page.amud },
+                look = look,
+                marks = marks,
+                selection = selection,
+                clicks = clicks,
+                modifier =
+                    Modifier.drawBehind {
+                        // The page's own coordinates, left to right, whatever the view's direction
+                        for (r in page.rules) {
+                            drawLine(rule, Offset(r.x0, r.y0) * look.perPoint, Offset(r.x1, r.y1) * look.perPoint, strokeWidth = density)
+                        }
+                    },
+                passages = page.passages,
+            )
+            // Its commentators' names, each over where it is printed: a click, two buttons, a drag (requests 91 and 93)
+            BookDafHeads(page, look.perPoint, heads, Modifier.matchParentSize())
+        }
     }
 }
 

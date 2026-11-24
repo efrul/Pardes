@@ -58,8 +58,8 @@ internal fun rememberDafLetters(style: BookDafStyle): DafLetters {
 }
 
 /**
- * What lays out [book]'s units: a new one when the pages are to be set otherwise (a check of a commentator, the text's
- * [diacritics], the fonts, the [look]: the style, the page's size, the commentators' order and letters).
+ * What lays out [book]'s units: a new one when the pages are to be set otherwise (the text's [diacritics], the fonts,
+ * the [look]: the style, the page's size, the reader's commentators for the pages, their order and letters).
  */
 @Composable
 internal fun rememberUnitSetter(
@@ -72,7 +72,7 @@ internal fun rememberUnitSetter(
     val repository = LocalAppGraph.current.repository
     // Each commentator's place, kept while the book is shown: a check moves none of the others
     val ranks = remember(book.id) { ConcurrentHashMap<Long, Int>() }
-    return remember(book.id, commentators.selection, diacritics, letters, look) {
+    return remember(book.id, diacritics, letters, look) {
         UnitSetter(repository, book, commentators, diacritics, ranks, letters, look)
     }
 }

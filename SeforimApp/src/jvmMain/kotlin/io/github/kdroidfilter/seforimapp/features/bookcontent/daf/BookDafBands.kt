@@ -15,6 +15,10 @@ import kotlin.math.floor
 // that page, so a comment begins on the page of its text, and where they are longer than a page the next pages are
 // theirs alone. The rules' third ("פסוק חדש אחד לפחות בכל עמוד"), which let a long commentary lag pages behind, is the
 // other way to set them, kept in the style.
+//
+// A commentator the reader put beside the text (request 93) is a band as the others, the first of them: on a page its
+// first lines stand beside the text, as many as the text is tall, and the rest go on under the text across the page, as
+// Rashi does under the Gemara; on a page of commentaries alone it is a band under its name.
 
 /** Rule 7: a band of fewer lines a column than this waits for the next page. */
 private const val MIN_ROWS = 2
@@ -49,27 +53,41 @@ internal class DafBandsSetter(
     private val bands: List<Band>
 
     init {
-        val side = targum?.takeIf { measures.sideWidth > 0f }?.verses.orEmpty()
+        val beside = targum?.takeIf { measures.sideWidth > 0f }
+        val side = beside?.verses.orEmpty()
         val narrow = text.any { side[it.lineId].orEmpty().isNotEmpty() }
-        val sideLetters = targum?.takeIf { narrow }?.let { measures.beside(it.style, isTargum = it.bookId == null) }
         val anchored = text.filter { line -> (commentaries.map { it.comments } + side).any { it.anchors(line, anchors) } }
         // A paragraph's printed lines are those of the text's column, which what stands beside it narrows
         val rows = { words: List<SetWord> -> measures.textRows(words, widths, narrow) }
         val all = TextPieces(text, anchors, anchored.mapTo(HashSet()) { it.lineId }, rows.takeIf { cuts })
         pieces = all.list
-        val beside = all.placed(text, side, atEnd = false).groupBy({ it.first }) { setWords(it.second) }
-        printer = BandsPrinter(widths, measures, pieces, beside.mapValues { it.value.flatten() }, sideLetters, cuts)
+        val placed = all.placed(text, side, atEnd = false).sortedBy { it.first }
+        // The commentator beside the text: a band after the others' in name, the first of them in turn
+        val sideBand =
+            beside?.bookId?.takeIf { narrow }?.let { bookId ->
+                band(
+                    commentaries.size,
+                    DafCommentary(bookId, beside.name, onRight = true, emptyMap(), beside.style),
+                    placed,
+                    isBeside = true,
+                )
+            }
+        val targumWords = placed.takeIf { sideBand == null }.orEmpty().groupBy({ it.first }) { setWords(it.second) }
+        printer = BandsPrinter(widths, measures, pieces, targumWords.mapValues { it.value.flatten() }, cuts, sideBand)
         bands =
+            listOfNotNull(sideBand) +
             commentaries.mapIndexed { index, commentary ->
                 band(index, commentary, all.placed(text, commentary.comments, atEnd = true).sortedBy { it.first })
             }
     }
 
-    // A commentator's band: its comments, each with the piece of the text it is set with, as one run of words
+    // A commentator's band: its comments, each with the piece of the text it is set with ([placed]), as one run of
+    // words; [isBeside]: with its run in the lines of the column beside the text too
     private fun band(
         index: Int,
         commentary: DafCommentary,
         placed: List<Pair<Int, DafSegment>>,
+        isBeside: Boolean = false,
     ): Band {
         val letters = measures.band(commentary.style)
         val size = letters.letters.size
@@ -79,16 +97,12 @@ internal class DafBandsSetter(
         var count = 0
         val ends = IntArray(pieces.size) { i -> (count + counts[i]).also { count = it } }
         val scale = size / if (letters.square) measures.text.size else measures.commentary.size
-        val run =
-            WordRun(
-                words.flatten(),
-                widths,
-                letters.square,
-                scale,
-                letters.columnWidth * LINE_FILL,
-                size * DIBBUR_SIZE / measures.text.size,
-            )
-        return Band(index, commentary.bookId, commentary.name, letters, run, ends)
+        val all = words.flatten()
+        val run = { width: Float ->
+            WordRun(all, widths, letters.square, scale, width * LINE_FILL, size * DIBBUR_SIZE / measures.text.size)
+        }
+        val beside = if (isBeside) run(measures.sideWidth) else null
+        return Band(index, commentary.bookId, commentary.name, letters, run(letters.columnWidth), ends, beside)
     }
 
     // A comment's words: its first bold ones open it, in the text's letters where its band is in Rashi script
@@ -126,8 +140,8 @@ internal class DafBandsSetter(
             val set = next + at.sum()
             val last = lastPiece(next, at)
             val page = BandsPage()
-            if (last >= next) printer.text(next, last, page)
-            val taken = setBands(at, maxOf(last, next - 1), page)
+            val wraps = last >= next && setText(next, last, page, at)
+            val taken = setBands(at, maxOf(last, next - 1), page, wraps)
             // Nothing new on the page (its room too small for a band's least): the first band waiting is set all the same
             if (last < next && !taken) force(at, page)
             // The line of the text that goes on from the page before, by the first of its words here
@@ -146,6 +160,30 @@ internal class DafBandsSetter(
     // A page's room: its height less the lines left free at its bottom (rule 9)
     private val room = measures.height - measures.commentary.pitch * SAFETY_LINES
 
+    // The band of the commentator beside the text, the first where there is one
+    private val side = bands.firstOrNull()?.takeIf { it.beside != null }
+
+    // The text's pieces [first] to [last] at the top of [page], with the side commentator's lines beside them, its run
+    // going on in [at]. Whether it has lines there: the rest of its words then go on under the text with no name.
+    private fun setText(
+        first: Int,
+        last: Int,
+        page: BandsPage,
+        at: IntArray,
+    ): Boolean {
+        val end = printer.text(first, last, page, if (side == null) 0 else at[0])
+        if (side == null || end == at[0]) return false
+        at[0] = end
+        return true
+    }
+
+    // What a band takes above its lines: its rule and its name, or, the side commentator's going on from beside the
+    // text ([wraps]), a gap alone
+    private fun head(
+        band: Band,
+        wraps: Boolean,
+    ) = if (wraps && band === side) measures.bandGap else measures.bandHead
+
     /**
      * The last piece of the text a page that begins at the piece [first] takes, with each band's run at [at]: piece after
      * piece while the text, what stands beside it and all the comments waiting up to it fit (rule 2); one more when much
@@ -158,33 +196,38 @@ internal class DafBandsSetter(
         at: IntArray,
     ): Int {
         if (first >= pieces.size) return first - 1
-        val heights = HashMap<Int, Float>()
+        val tops = HashMap<Int, PageTop>()
 
         // The text of the pieces up to [last] at the page's top, set once for each
-        fun textHeight(last: Int): Float {
-            if (last < first) return 0f
-            return heights.getOrPut(last) { BandsPage().also { printer.text(first, last, it) }.y }
+        fun top(last: Int): PageTop {
+            if (last < first) return PageTop(0f, at, wraps = false)
+            return tops.getOrPut(last) {
+                val after = at.copyOf()
+                val page = BandsPage()
+                val wraps = setText(first, last, page, after)
+                PageTop(page.y, after, wraps)
+            }
         }
 
-        fun used(last: Int) = textHeight(last).let { it + waiting(at, last, room - it) }
+        fun used(last: Int) = top(last).let { it.height + waiting(it, last, room - it.height) }
         var last = first - 1
         while (last < pieces.lastIndex && used(last + 1) <= room) last++
         if (last < first && (!measures.together || used(first - 1) == 0f)) last = first
-        if (last < pieces.lastIndex && fills(last, room - used(last), textHeight(last + 1) - textHeight(last), at)) last++
+        if (last < pieces.lastIndex && fills(last, room - used(last), top(last + 1).height - top(last).height, top(last).at)) last++
         return offHeading(first, last)
     }
 
-    // The height of the bands of the comments waiting up to the piece [last], counted while they fit in [spare]: with
-    // many commentators waiting, the first few are more than a page's room
+    // The height of the bands of the comments waiting up to the piece [last] under a page's [top], counted while they
+    // fit in [spare]: with many commentators waiting, the first few are more than a page's room
     private fun waiting(
-        at: IntArray,
+        top: PageTop,
         last: Int,
         spare: Float,
     ): Float {
         var height = 0f
         for (c in bands.indices) {
             if (height > spare) break
-            height += bandHeight(bands[c], at[c], endAt(bands[c], last))
+            height += bandHeight(bands[c], top.at[c], endAt(bands[c], last), head(bands[c], top.wraps))
         }
         return height
     }
@@ -220,37 +263,42 @@ internal class DafBandsSetter(
         return end
     }
 
-    // The height of a band of the words [from] until [until]; none with no words. A band taller than a page's room is
-    // counted no further (a commentator's comments waiting may be a chapter's)
+    // The height of a band of the words [from] until [until] under its [head]; none with no words. A band taller than
+    // a page's room is counted no further (a commentator's comments waiting may be a chapter's)
     private fun bandHeight(
         band: Band,
         from: Int,
         until: Int,
+        head: Float,
     ): Float {
         if (until <= from) return 0f
         val pitch = band.letters.letters.pitch
         val most = (floor(room / pitch).toInt() + 2) * band.letters.columns
         val lines = band.run.lineCount(from, until, most)
-        return measures.bandHead + ceil(lines / band.letters.columns.toFloat()) * pitch
+        return head + ceil(lines / band.letters.columns.toFloat()) * pitch
     }
 
     /**
      * The bands of a page whose text ends at the piece [last]: each commentator in turn takes as many of its words
      * waiting as the room left holds (rule 5), none when that is fewer lines a column than a band's least (rule 7).
-     * Whether any took words.
+     * [wraps]: the side commentator has lines beside the text of this page, and goes on under it. Whether any took
+     * words.
      */
     private fun setBands(
         at: IntArray,
         last: Int,
         page: BandsPage,
+        wraps: Boolean,
     ): Boolean {
         var taken = false
         for ((c, band) in bands.withIndex()) {
             val most = endAt(band, last)
-            val rows = floor((room - page.y - measures.bandHead) / band.letters.letters.pitch).toInt()
-            if (most <= at[c] || rows < MIN_ROWS) continue
+            val goesOn = wraps && band === side
+            val rows = floor((room - page.y - head(band, wraps)) / band.letters.letters.pitch).toInt()
+            // Going on from beside the text, a line is no band's beginning: the least is one
+            if (most <= at[c] || rows < if (goesOn) 1 else MIN_ROWS) continue
             val until = band.run.endOf(at[c], most, rows * band.letters.columns)
-            printer.band(band, at[c], until, page)
+            printer.band(band, at[c], until, page, named = !goesOn)
             at[c] = until
             taken = true
         }
@@ -269,6 +317,13 @@ internal class DafBandsSetter(
         at[c] = until
     }
 }
+
+/** A page's top as set: the text's [height], each band's run after it ([at]), and whether the side commentator [wraps]. */
+private class PageTop(
+    val height: Float,
+    val at: IntArray,
+    val wraps: Boolean,
+)
 
 // Each of [comments] on the lines of [text], with the piece of the text it is set with (TextPieces.of)
 private fun TextPieces.placed(

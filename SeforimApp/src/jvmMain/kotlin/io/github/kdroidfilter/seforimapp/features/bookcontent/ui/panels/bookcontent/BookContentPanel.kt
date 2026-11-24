@@ -284,6 +284,8 @@ private fun BookContentPanelContent(
                                     DafCommentators(
                                         uiState.content.commentatorSelection(selectedBook.id),
                                         providers.loadLineConnections,
+                                        onOpen = { id, lines -> onEvent(BookContentEvent.OpenBookByIdInNewTab(id, lines)) },
+                                        onDetach = { name -> onEvent(BookContentEvent.DetachCommentator(name)) },
                                     ),
                             )
                         } else {

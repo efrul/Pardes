@@ -107,7 +107,49 @@ data class BookDafCommentators(
     val shown: List<Long>? = null,
     val beside: Long? = null,
     val bands: Map<Long, BandStyle> = emptyMap(),
-)
+) {
+    /** With [ids] checked or unchecked: one checked comes after those shown; one unchecked leaves the text's side too. */
+    fun checked(
+        ids: Collection<Long>,
+        checked: Boolean,
+    ): BookDafCommentators {
+        val now = shown.orEmpty()
+        return if (checked) {
+            copy(shown = now + ids.filter { it !in now })
+        } else {
+            copy(
+                shown = now - ids.toSet(),
+                beside =
+                    beside.takeUnless {
+                        it in
+                            ids
+                    },
+            )
+        }
+    }
+
+    /** With [id] in a band before [before]'s, after them all with none: no longer beside the text. */
+    fun moved(
+        id: Long,
+        before: Long?,
+    ): BookDafCommentators {
+        val rest = shown.orEmpty() - id
+        val at = before?.let(rest::indexOf)?.takeIf { it >= 0 } ?: rest.size
+        return copy(shown = rest.subList(0, at) + id + rest.subList(at, rest.size), beside = beside.takeUnless { it == id })
+    }
+
+    /** With [id] beside the text, in its targum's place ([on]), or back in its band. */
+    fun besideText(
+        id: Long,
+        on: Boolean,
+    ): BookDafCommentators = copy(beside = if (on) id else beside.takeUnless { it == id })
+
+    /** With [id]'s own letters [style]; the style's own again when it sets nothing apart. */
+    fun styled(
+        id: Long,
+        style: BandStyle,
+    ): BookDafCommentators = copy(bands = if (style == BandStyle()) bands - id else bands + (id to style))
+}
 
 /**
  * A book's daf's settings (Settings › צורת הדף): whether a book that is no tractate is offered pages of its own, an
@@ -125,6 +167,9 @@ object BookDafSettings : SettingsGroup("book_daf") {
     val commentators by json<Map<Long, BookDafCommentators>>(emptyMap())
 
     val wide by boolean(false)
+
+    /** Whether the list of a book's commentators is open beside its pages (BookDafChooser). */
+    val chooser by boolean(false)
 }
 
 /** Whether [this] is a book of the Tanakh, whose verses run on in one paragraph. */

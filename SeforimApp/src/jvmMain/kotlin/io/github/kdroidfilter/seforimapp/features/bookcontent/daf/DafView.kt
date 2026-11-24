@@ -183,11 +183,16 @@ class DafMode(
 
 /**
  * The commentators a book's daf sets around its text: on each line, those of [selection] (the commentaries pane's
- * checkboxes) among the ones its [connections] list, as the pane shows them.
+ * checkboxes) among the ones its [connections] list, as the pane shows them; these until the reader has chosen the
+ * pages' own (BookDafChooser, request 92 of docs/DESKTOP_STAGE3_PLAN.md). What a commentator's name on a page asks of
+ * the tab (requests 91 and 93): its book opened in a tab at its comment on the lines [onOpen] is given, and the
+ * commentator taken out to a pane of its own ([onDetach], by its name), as the commentaries pane's header does both.
  */
 class DafCommentators(
     val selection: CommentatorSelection,
     val connections: suspend (List<Long>) -> Map<Long, LineConnectionsSnapshot>,
+    val onOpen: (bookId: Long, baseLineIds: List<Long>) -> Unit = { _, _ -> },
+    val onDetach: (name: String) -> Unit = {},
 )
 
 /**

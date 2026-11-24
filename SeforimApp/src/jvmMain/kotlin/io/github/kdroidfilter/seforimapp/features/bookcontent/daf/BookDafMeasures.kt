@@ -103,20 +103,6 @@ internal class BandsMeasures(
     }
 
     /**
-     * The letters of what stands beside the text: the targum's ([isTargum]), square and smaller than the text's; or
-     * those of a commentator put in its place, a band's ([own] where the reader set them apart).
-     */
-    fun beside(
-        own: BandStyle? = null,
-        isTargum: Boolean = true,
-    ): BandLetters {
-        if (isTargum) return BandLetters(side, 1, sideWidth, square = true)
-        val square = own?.square ?: style.squareCommentary
-        val size = (own?.size ?: style.commentarySize) * unit
-        return BandLetters(Letters(size, if (square) GEMARA_SIZE else RASHI_SIZE, COMMENTARY_PITCH), 1, sideWidth, square)
-    }
-
-    /**
      * The printed lines a paragraph's [words] break into in the text's column ([narrow]: beside what stands at its
      * left), as a page sets them.
      */

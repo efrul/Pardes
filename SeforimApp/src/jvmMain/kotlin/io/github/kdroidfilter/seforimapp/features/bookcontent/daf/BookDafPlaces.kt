@@ -41,6 +41,8 @@ internal class LaidPage(
     val isContinued: Boolean = false,
     /** The commentators' names on the page, for what a click or a drag on one does (BookDafHeads). */
     val heads: List<BandHead> = emptyList(),
+    /** The lines of the text on the page; on a page of commentaries alone, those of the page before it. */
+    val lines: List<Long> = emptyList(),
 ) {
     val height: Float get() = amud.block[3] - amud.block[1]
     val width: Float get() = amud.block[2] - amud.block[0]
@@ -52,7 +54,8 @@ internal class LaidPage(
     fun layout(): AmudLayout = laying.value
 
     /** The page under the head of the page before it, whose text its commentaries go on from. */
-    fun continuing(head: String) = LaidPage(amud, laying, head, passages, tops, textTops, rules, isContinued = true, heads)
+    fun continuing(before: LaidPage) =
+        LaidPage(amud, laying, before.head, passages, tops, textTops, rules, isContinued = true, heads, before.lines)
 }
 
 /** The tab's line, selection and place, as a book's daf takes them from the text view (DafView's). */
@@ -330,6 +333,9 @@ internal class UnitSetter(
     val width: Float = bands?.width ?: BOOK_DAF_WIDTH
     val followsView: Boolean = bands != null && look.page != null
 
+    /** Whether a page has a column beside its text, for the targum or a commentator put there. */
+    val hasSide: Boolean = bands != null && bands.sideWidth > 0f
+
     /** The height to its width of a page of the rules' size, for a whole page fitted in the view. */
     val tallAspect: Float = if (bands != null) look.style.aspect else BOOK_DAF_HEIGHT / BOOK_DAF_WIDTH
 
@@ -358,7 +364,7 @@ internal class UnitSetter(
                     ensureActive()
                     val set = laidPage(page, "${book.id}/${unit.first}/$i", text)
                     // A page of commentaries alone goes on from the text of the page before it
-                    laid += if (set.head.isEmpty() && laid.isNotEmpty()) set.continuing(laid.last().head) else set
+                    laid += if (set.head.isEmpty() && laid.isNotEmpty()) set.continuing(laid.last()) else set
                 }
                 val comments =
                     text.commentaries.map { c ->
@@ -415,7 +421,17 @@ internal class UnitSetter(
             }
         // A line that goes on from the page before has its passages by its words here
         val passages = text.passages.filterKeys { it in ids }.mapValues { (id, marked) -> page.starts[id]?.let(marked::from) ?: marked }
-        return LaidPage(amud, layout, head, passages, tops, textTops.sortedBy { it.first }, page.rules, heads = page.heads)
+        return LaidPage(
+            amud,
+            layout,
+            head,
+            passages,
+            tops,
+            textTops.sortedBy { it.first },
+            page.rules,
+            heads = page.heads,
+            lines = ids.toList(),
+        )
     }
 }
 
