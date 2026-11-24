@@ -14,8 +14,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsDefault
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsList
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.rememberCommentatorsDefault
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -88,8 +89,8 @@ internal fun BookDafChooser(
     val groups = groupsOf(laid.entries.sortedBy { it.key }.map { it.value.groups })
     val items = groups.flatMap { it.commentators }
     val shown = own.shown.orEmpty()
-    // The pane's pin of a default is not the pages': theirs is saved as it is checked
-    val default = remember { CommentatorsDefault() }
+    // The pane's own pin: what is checked here kept as the reader's default for the book and the books beside it
+    val default = rememberCommentatorsDefault(book.id, remember(shown) { CommentatorSelection(remembered = shown.toSet()) })
     Column(modifier.fillMaxSize()) {
         Text(
             text = stringResource(Res.string.book_daf_chooser),

@@ -30,6 +30,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -69,10 +70,14 @@ data class TreeNode(
     val open: Boolean = false,
 )
 
-/** A row of a tree for its keys: its key in the tree's list, its [node], and its [click] (a folder's opens or closes it). */
+/**
+ * A row of a tree for its keys: its key in the tree's list, its [node], and its [click] (a folder's opens or closes it).
+ * [check]: the row's checkbox, where it has one (a search's tree of books), turned by Space as a checkbox tree's is.
+ */
 class TreeKeyRow(
     val key: Any,
     val node: TreeNode,
+    val check: (() -> Unit)? = null,
     val click: () -> Unit,
 )
 
@@ -246,6 +251,7 @@ class TreeKeys internal constructor(
 
     internal var hasFocus by mutableStateOf(false)
     internal var rtl = true
+    private var spaceDown = false
     internal var rows: List<TreeKeyRow> = emptyList()
 
     /**
@@ -260,6 +266,7 @@ class TreeKeys internal constructor(
         listState: LazyListState,
         onLeave: (() -> Unit)?,
     ): Boolean {
+        if (isSpace(event)) return check()
         if (event.type != KeyEventType.KeyDown || event.isAltPressed || event.isShiftPressed) return false
         if (event.key == Key.Escape) {
             onLeave?.invoke() ?: return false
@@ -268,9 +275,18 @@ class TreeKeys internal constructor(
         val key = treeKeyOf(event.key, rtl) ?: return false
         // Ctrl/Cmd with Enter opens in a new tab, as with a click; with the other keys, they are the window's
         if ((event.isCtrlPressed || event.isMetaPressed) && key != TreeKey.ENTER) return false
+        move(key, listState, onLeave)
+        return true
+    }
+
+    // The move of [key] from the keys' row: the row it goes to revealed, or the row it acts on clicked
+    private fun move(
+        key: TreeKey,
+        listState: LazyListState,
+        onLeave: (() -> Unit)?,
+    ) {
         val rows = rows
-        val move = treeMove(rows.map { it.node }, rows.indexOfFirst { it.key == focused }, key, listState.pageRows())
-        when (move) {
+        when (val move = treeMove(rows.map { it.node }, rows.indexOfFirst { it.key == focused }, key, listState.pageRows())) {
             is TreeMove.Focus -> {
                 focused = rows[move.index].key
                 scope.launch { listState.revealItem(move.index) }
@@ -282,7 +298,20 @@ class TreeKeys internal constructor(
             }
             null -> Unit
         }
+    }
+
+    // The keys' row's checkbox turned, where it has one
+    private fun check(): Boolean {
+        rows.firstOrNull { it.key == focused }?.check?.invoke() ?: return false
         return true
+    }
+
+    // Space, alone, which checks the keys' row: its key pressed, or its character alone where the window gives a
+    // printed key so, with no key press (the window on Linux; the character after its own key press is the same Space)
+    private fun isSpace(event: KeyEvent): Boolean {
+        if (event.key == Key.Spacebar) spaceDown = event.type == KeyEventType.KeyDown
+        val typed = event.type == KeyEventType.Unknown && event.utf16CodePoint == ' '.code
+        return !event.hasModifier && ((event.key == Key.Spacebar && spaceDown) || (typed && !spaceDown))
     }
 
     // A press at [y] pixels down the list: on a folder's row, the tree takes the keyboard's focus and the keys that row
@@ -384,3 +413,6 @@ fun Modifier.treeKeys(
             }
         }
 }
+
+// Whether a key comes with Alt, Shift, Ctrl or Cmd held
+private val KeyEvent.hasModifier: Boolean get() = isAltPressed || isShiftPressed || isCtrlPressed || isMetaPressed

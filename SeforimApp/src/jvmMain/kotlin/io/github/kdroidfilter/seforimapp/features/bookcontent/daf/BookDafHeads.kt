@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,11 +27,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import io.github.kdroidfilter.seforimapp.core.presentation.components.PopupShape
+import io.github.kdroidfilter.seforimapp.core.presentation.window.TabDragGhostCard
 import io.github.kdroidfilter.seforimapp.features.settings.daf.StyleChoice
 import io.github.kdroidfilter.seforimapp.features.settings.daf.sizeLabel
 import org.jetbrains.compose.resources.stringResource
@@ -71,16 +72,28 @@ import kotlin.math.roundToInt
 // "כמו שבמפרשים כשעכבר על הכותרת מוצגות אפשרות להוצאה החוצה כך יהיה גם בכותרת מפרש בספר ויהיה בנוסף גם הגדרות - של
 // גופן וגודל עמודות וכדומה. ויהיה ניתן בגרירה מהכותרת לשנות את מיקום המפרש ביחס לשאר. יהיה ניתן להזיז לליד הטקסט
 // הראשי כמו תרגום"): what a commentator's name on a book's page does, laid over the page where the name is printed. A
-// click opens the commentator, as its header in the commentaries pane; the pointer over its line shows two buttons, out
-// to a pane of its own and its own letters on the pages; a drag of the name moves it among the bands, or beside the text.
+// click opens the commentator, as its header in the commentaries pane; the pointer over its line underlines the name,
+// as that header's is, and shows two buttons, out to a pane of its own and its own letters on the pages; a drag of the
+// name moves it among the bands, or beside the text. The drag looks as a pane's does (the user's word on the testers'
+// build: "הגרירה של המיקום של המפרשים נראית שונה משינוי החלוניות הרגיל. למה לא אותו קוד?"): the app's own card of a
+// drag (TabDragGhostCard, a dragged tab's) under the pointer, and in the place the commentator would take, as a tab's
+// is in the slot it would drop into. A pane's drag itself is the docking library's, between a window's sides, and its
+// card is internal to it: a band is text set on a page, which that drag cannot move.
 
 /** A commentator dropped this far above the first band's name goes beside the text, not first among the bands (points). */
 private const val BESIDE_ABOVE = 16f
 
-/** How much of the page's width the mark of a drop beside the text covers, how strong it is, and a drop line's width. */
+/** How much of the page's width the place of a drop beside the text covers, and how tall a band's place is (points). */
 private const val SIDE_MARK = 0.38f
-private const val DROP_ALPHA = 0.18f
-private const val DROP_STROKE = 2f
+private const val SLOT_HEIGHT = 22f
+
+/** The card under the pointer while a commentator is dragged, and how see-through the one in its place is. */
+private val GhostWidth = 200.dp
+private val GhostHeight = 34.dp
+private const val SLOT_ALPHA = 0.85f
+
+/** Where a name's underline is drawn, down its line, as the pointer is over it. */
+private const val UNDERLINE_AT = 0.9f
 
 /** The width of the fields of a commentator's letters. */
 private val FieldsWidth = 340.dp
@@ -144,6 +157,14 @@ internal class BookDafHeadsState(
     val onOpen: (bookId: Long, page: LaidPage) -> Unit,
     val onDetach: (bookId: Long) -> Unit,
     val onChange: (BookDafCommentators) -> Unit,
+    /** A commentator's name, for the card of its drag. */
+    val nameOf: (bookId: Long) -> String = { "" },
+)
+
+/** A commentator dragged by its name on a page: where the pointer is on the page (points). */
+private class DraggedHead(
+    val bookId: Long,
+    val at: Offset,
 )
 
 /** The names of [page]'s commentators, each over where it is printed ([perPoint] pixels a point), as [state] has them act. */
@@ -156,17 +177,11 @@ internal fun BookDafHeads(
 ) {
     if (page.heads.isEmpty()) return
     val direction = LocalLayoutDirection.current
-    val accent = JewelTheme.globalColors.outlines.focused
-    // The commentator dragged by its name, and how far down the page the pointer is (points)
-    var drag by remember(page) { mutableStateOf<Pair<Long, Float>?>(null) }
+    // The commentator dragged by its name, and where on the page the pointer is
+    var drag by remember(page) { mutableStateOf<DraggedHead?>(null) }
     // The page's own coordinates, left to right, whatever the view's direction
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Box(
-            modifier.drawWithContent {
-                drawContent()
-                drag?.let { (_, y) -> drawDrop(page, headDrop(page.heads, y, state.hasSide), perPoint, accent) }
-            },
-        ) {
+        Box(modifier) {
             for (head in page.heads) {
                 key(head.bookId) {
                     HeadStrip(
@@ -175,44 +190,79 @@ internal fun BookDafHeads(
                         perPoint = perPoint,
                         direction = direction,
                         state = state,
-                        onDrag = { y -> drag = y?.let { head.bookId to it } },
+                        onDrag = { at -> drag = at?.let { DraggedHead(head.bookId, it) } },
                         onDrop = {
-                            drag?.let { (id, y) ->
-                                state.onChange(state.own.dropped(id, headDrop(page.heads, y, state.hasSide), page.heads))
+                            drag?.let {
+                                state.onChange(state.own.dropped(it.bookId, headDrop(page.heads, it.at.y, state.hasSide), page.heads))
                             }
                             drag = null
                         },
                     )
                 }
             }
+            drag?.let { DragGhosts(it, page, perPoint, direction, state) }
         }
     }
 }
 
-// Where a commentator dragged would go: a line over the band it would stand before, or the text's side marked
-private fun DrawScope.drawDrop(
+/** A commentator dragged: the app's card of a drag, in the place it would take on the page and under the pointer. */
+@Composable
+private fun DragGhosts(
+    drag: DraggedHead,
+    page: LaidPage,
+    perPoint: Float,
+    direction: LayoutDirection,
+    state: BookDafHeadsState,
+) {
+    val density = LocalDensity.current
+    val name = state.nameOf(drag.bookId)
+    val slot = dropSlot(page, headDrop(page.heads, drag.at.y, state.hasSide))
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .offset { IntOffset((slot.left * perPoint).roundToInt(), (slot.top * perPoint).roundToInt()) }
+                .size(with(density) { (slot.width * perPoint).toDp() }, with(density) { (slot.height * perPoint).toDp() })
+                .alpha(SLOT_ALPHA),
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides direction) { TabDragGhostCard(name) }
+        }
+        Box(
+            Modifier
+                .offset {
+                    IntOffset(
+                        (drag.at.x * perPoint - GhostWidth.toPx() / 2).roundToInt(),
+                        (drag.at.y * perPoint - GhostHeight.toPx() / 2).roundToInt(),
+                    )
+                }.size(GhostWidth, GhostHeight),
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides direction) { TabDragGhostCard(name) }
+        }
+    }
+}
+
+/**
+ * The place on [page] a commentator dropped at [drop] would take (points): the text's side down to the first band, or a
+ * strip across the page where its band would begin, over the band it would stand before or at the page's end.
+ */
+internal fun dropSlot(
     page: LaidPage,
     drop: HeadDrop,
-    perPoint: Float,
-    color: Color,
-) {
+): Rect {
     val bands = page.heads.filter { !it.isBeside }.sortedBy { it.y0 }
-    when (drop) {
-        HeadDrop.Beside -> {
-            val bottom = (bands.firstOrNull()?.y0 ?: page.height) * perPoint
-            drawRect(color.copy(alpha = DROP_ALPHA), Offset.Zero, Size(page.width * SIDE_MARK * perPoint, bottom))
-        }
+    return when (drop) {
+        HeadDrop.Beside -> Rect(0f, 0f, page.width * SIDE_MARK, bands.firstOrNull()?.y0 ?: page.height)
         is HeadDrop.Before -> {
-            val y = (bands.firstOrNull { it.bookId == drop.bookId }?.y0 ?: page.height) * perPoint
-            drawLine(color, Offset(0f, y), Offset(page.width * perPoint, y), strokeWidth = DROP_STROKE * density)
+            val y = bands.firstOrNull { it.bookId == drop.bookId }?.y0 ?: page.height
+            val top = (y - SLOT_HEIGHT / 2).coerceIn(0f, (page.height - SLOT_HEIGHT).coerceAtLeast(0f))
+            Rect(0f, top, page.width, top + SLOT_HEIGHT)
         }
     }
 }
 
 /**
  * A commentator's name's line on a page: the name itself opens the commentator on a click and moves it on a drag
- * ([onDrag]: how far down the page the pointer is, in points; [onDrop]); the pointer over the line shows its buttons, at
- * the line's end as the view reads ([direction]).
+ * ([onDrag]: where on the page the pointer is, in points; [onDrop]); the pointer over the line underlines the name and
+ * shows its buttons, at the line's end as the view reads ([direction]).
  */
 @Composable
 private fun HeadStrip(
@@ -221,12 +271,13 @@ private fun HeadStrip(
     perPoint: Float,
     direction: LayoutDirection,
     state: BookDafHeadsState,
-    onDrag: (Float?) -> Unit,
+    onDrag: (Offset?) -> Unit,
     onDrop: () -> Unit,
 ) {
     val density = LocalDensity.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
+    val ink = JewelTheme.globalColors.text.normal
     val currentOnDrag by rememberUpdatedState(onDrag)
     val currentOnDrop by rememberUpdatedState(onDrop)
     val height = with(density) { ((head.y1 - head.y0) * perPoint).toDp() }
@@ -242,10 +293,17 @@ private fun HeadStrip(
                 .offset { IntOffset(((head.left - head.x0) * perPoint).roundToInt(), 0) }
                 .size(with(density) { ((head.right - head.left) * perPoint).toDp() }, height)
                 .pointerHoverIcon(PointerIcon.Hand)
-                .pointerInput(head, perPoint) {
+                // The line under the name while the pointer is on its line, as the commentaries pane's header has it
+                .drawBehind {
+                    if (hovered) {
+                        val y = size.height * UNDERLINE_AT
+                        drawLine(ink, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
+                    }
+                }.pointerInput(head, perPoint) {
+                    val pageAt = { at: Offset -> Offset(head.left + at.x / perPoint, head.y0 + at.y / perPoint) }
                     detectDragGestures(
-                        onDragStart = { at -> currentOnDrag(head.y0 + at.y / perPoint) },
-                        onDrag = { change, _ -> currentOnDrag(head.y0 + change.position.y / perPoint) },
+                        onDragStart = { at -> currentOnDrag(pageAt(at)) },
+                        onDrag = { change, _ -> currentOnDrag(pageAt(change.position)) },
                         onDragEnd = { currentOnDrop() },
                         onDragCancel = { currentOnDrag(null) },
                     )

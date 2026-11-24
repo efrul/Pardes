@@ -1,5 +1,8 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,19 +54,24 @@ private val AdjustWidth = 400.dp
 internal fun BookDafAdjust(
     book: Book,
     modifier: Modifier = Modifier,
+    // Whether the buttons show: while the pointer is at the pages' head, as a pane's header shows its own; and while
+    // the fields are open
+    shown: Boolean = true,
     beside: @Composable () -> Unit = {},
 ) {
     var open by remember(book.id) { mutableStateOf(false) }
     Column(modifier.padding(8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // The pages' other button: the list of their commentators (request 92 of stage 3)
-            beside()
-            Tooltip({ Text(stringResource(Res.string.book_daf_adjust_tooltip)) }) {
-                IconActionButton(
-                    key = AllIconsKeys.General.Settings,
-                    onClick = { open = !open },
-                    contentDescription = stringResource(Res.string.book_daf_adjust),
-                )
+        AnimatedVisibility(visible = shown || open, enter = fadeIn(), exit = fadeOut()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The pages' other button: the list of their commentators (request 92 of stage 3)
+                beside()
+                Tooltip({ Text(stringResource(Res.string.book_daf_adjust_tooltip)) }) {
+                    IconActionButton(
+                        key = AllIconsKeys.General.Settings,
+                        onClick = { open = !open },
+                        contentDescription = stringResource(Res.string.book_daf_adjust),
+                    )
+                }
             }
         }
         if (open) AdjustFields(book)

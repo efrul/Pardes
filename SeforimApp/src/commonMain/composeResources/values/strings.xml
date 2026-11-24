@@ -423,6 +423,13 @@
     <string name="book_daf_adjust">התאמת העמוד</string>
     <string name="book_daf_adjust_tooltip">התאמת העמוד: סגנון העמוד, גודל האותיות, הטורים, התרגום וצורת העמוד, לכל הספרים או לספר הזה</string>
     <string name="book_daf_own_style">סגנון משלו לספר „%1$s”</string>
+    <string name="daf_selection_title">סימון הבחירה בדף</string>
+    <string name="daf_selection_description">איך הדף מסמן את מה שנבחר, בצורת הדף של הגמרא ובעמודים של שאר הספרים: בהדגשה מאחורי המילים, או בפס בצד השורות כמו בתצוגת הטקסט. המילים שמפרש מצטט מודגשות תמיד.</string>
+    <string name="daf_selection_selected">הקטע הנבחר</string>
+    <string name="daf_selection_comments">המפרשים על הקטע הנבחר</string>
+    <string name="daf_selection_highlight">הדגשה</string>
+    <string name="daf_selection_stripe">פס בצד</string>
+    <string name="daf_selection_none">בלי סימון</string>
     <string name="settings_book_daf">צורת דף לכל הספרים (ניסיוני)</string>
     <string name="settings_book_daf_description">ספר שיש לו מפרשים מוצג בעמודים, כספר מודפס: הטקסט בראש העמוד, התרגום לצדו, וכל מפרש שנבחר ברשימת המפרשים של העמודים ברצועה משלו תחתיו. הכפתור „צורת הדף” שלצד הטקסט מופיע אז בכל ספר כזה. התכונה בניסוי, ועוד תשתנה.</string>
     <string name="book_daf_style_layout">סגנון העמוד</string>
@@ -782,6 +789,9 @@
     <string name="settings_antialiasing_off">כבוי (ברירת מחדל)</string>
     <string name="settings_max_commentators_per_page_description">קובע כמה מפרשים יוצגו לכל היותר בעמוד אחד. כאשר נבחר "אוטומטי", המספר מותאם לגודל המסך. הגבלה למספר מסוים תיצור עמודים נוספים כשיש יותר מפרשים, אך כאשר יש מקום לפחות מכך יוצגו רק מה שנכנס.</string>
     <string name="settings_max_commentators_per_page_auto">אוטומטי</string>
+    <!-- Pardes: the commentaries pane at the window's side has its own number (request 99 of stage 3, CommentariesPaneSettings) -->
+    <string name="settings_max_commentators_per_page_tall">מספר מרבי של מפרשים בעמוד, כשחלונית המפרשים לגובה</string>
+    <string name="settings_max_commentators_per_page_tall_description">חלונית מפרשים שעומדת בצד החלון, לגובה, מקבלת מספר משלה. ההגדרה שמעל היא לחלונית שבתחתית החלון, לרוחב.</string>
     <!-- Theme style selector -->
     <!-- Accent color selector -->
     <string name="settings_accent_color_label">צבע מבטא</string>
@@ -1292,6 +1302,9 @@
     <string name="page_colors_original_tooltip">העמודים של הסריקה ושל ספרי PDF בצבעים המקוריים שלהם, במקום הצבעים של המצב הכהה</string>
     <!-- Pardes: where what the search from anywhere finds opens, by the keys held (request 96 of stage 3, SearchAnywhere) -->
     <string name="search_anywhere_keys">Enter: בלשונית הזו  ·  %1$s+Enter או %2$s+לחיצה: בלשונית חדשה  ·  Shift: בחלון חדש</string>
+    <string name="search_anywhere_keys_hide">אל תציג עוד</string>
+    <string name="settings_search_anywhere_keys">הצג את מקשי הפתיחה מתחת לשורת החיפוש</string>
+    <string name="settings_search_anywhere_keys_description">מתחת לשורת החיפוש שנפתחת ב־Ctrl+L כתוב באילו מקשים נפתח מה שנמצא: בלשונית הזו, בלשונית חדשה או בחלון חדש. מי שכבר מכיר את המקשים יכול להסתיר את השורה, מכאן או בלחיצה על "אל תציג עוד" שבסופה.</string>
     <!-- Pardes: the search by meaning turned on or off at the search bar's end (request 54 of stage 3, SearchModeSwitch) -->
     <string name="search_mode_hybrid_missing">החיפוש לפי משמעות לא מותקן. אפשר להוריד אותו בהגדרות › ניהול נתונים</string>
     <!-- Pardes: every match of a book's find in a pane beside the text (request 55 of stage 3, FindResultsPane) -->

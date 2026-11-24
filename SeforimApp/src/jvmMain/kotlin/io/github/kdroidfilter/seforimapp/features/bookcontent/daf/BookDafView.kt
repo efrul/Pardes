@@ -2,7 +2,6 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -60,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalIsTouchMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsListAndTexts
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsSidebarToggleButton
@@ -100,7 +100,7 @@ private val LoadingHeight = 240.dp
 /** How long a line brought into view waits for its unit to be laid out. */
 private const val LAY_WAIT_MS = 10_000L
 
-/** A page up or down moves this much of the view, as a tractate's. */
+/** A page up or down moves this much of the view, as a tractate's, while the unit at the view's top is not laid out. */
 private const val PAGE_STEP = 0.9f
 
 /**
@@ -135,7 +135,10 @@ internal fun BookDafView(
     val chooser by graph.appSettings.flow(BookDafSettings.chooser).collectAsState()
     // The units laid out, by their place in the list: those in view, and one on each side of them
     val laid = remember(book.id) { mutableStateMapOf<Int, LaidUnit>() }
-    Box(modifier.fillMaxSize()) {
+    // The pages' two buttons show while the pointer is at the view's head, as a pane's header shows its own (the
+    // user's word on the testers' build: "הסמלים למעלה לא אמורים להופיע אלא כשהעכבר בכותרת - כמו בתצוגת מפרשים")
+    var atHead by remember { mutableStateOf(false) }
+    Box(modifier.fillMaxSize().pointerAtHead { atHead = it }) {
         if (own == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
         } else {
@@ -173,7 +176,7 @@ internal fun BookDafView(
             )
         }
         // The pages' style and the list of their commentators, behind two buttons at their corner
-        BookDafAdjust(book, Modifier.align(Alignment.TopEnd)) {
+        BookDafAdjust(book, Modifier.align(Alignment.TopEnd), shown = atHead || LocalIsTouchMode.current) {
             CommentatorsSidebarToggleButton(isVisible = chooser, onToggle = { graph.appSettings[BookDafSettings.chooser] = !chooser })
         }
     }
@@ -269,6 +272,7 @@ private fun BookDafPages(
                 runSuspendCatching { textIndexOf(graph.repository, book.id, id) }.getOrNull()
             }
         val current by rememberUpdatedState(places)
+        places.latest = { current }
         KeepPlaceAtZoom(control, places)
         BookDafControl(control, current, tab, focused, pageClicks) { focused = it }
         FindInCommentators(control, book.id, shown.own)
@@ -305,6 +309,12 @@ private fun rememberHeads(shown: BookDafShown): BookDafHeadsState {
     // The name whose letters are being set: kept over the pages, which every change sets again
     var setting by remember(shown.book.id) { mutableStateOf<Pair<Long, String>?>(null) }
     val bookId = shown.book.id
+    val nameOf = { id: Long ->
+        shown.laid.values
+            .firstNotNullOfOrNull { unit ->
+                unit.groups.firstNotNullOfOrNull { group -> group.commentators.firstOrNull { it.bookId == id } }
+            }?.name
+    }
     return BookDafHeadsState(
         own = shown.own,
         hasSide = shown.setter.value.hasSide,
@@ -312,14 +322,11 @@ private fun rememberHeads(shown: BookDafShown): BookDafHeadsState {
         onSettings = { setting = it },
         onOpen = { id, page -> shown.commentators.onOpen(id, page.lines) },
         onDetach = { id ->
-            val names =
-                shown.laid.values
-                    .flatMap { it.groups }
-                    .flatMap { it.commentators }
-            names.firstOrNull { it.bookId == id }?.let { shown.commentators.onDetach(it.name) }
+            nameOf(id)?.let(shown.commentators.onDetach)
             settings.setBookDafCommentators(bookId, shown.own.checked(listOf(id), checked = false))
         },
         onChange = { settings.setBookDafCommentators(bookId, it) },
+        nameOf = { nameOf(it).orEmpty() },
     )
 }
 
@@ -527,6 +534,9 @@ private class BookDafList(
     val viewportHeight: Float,
     val indexOf: suspend (Long) -> Int?,
 ) {
+    /** The list of the pages as they are shown now: this one until its composable makes another. */
+    var latest: () -> BookDafList = { this }
+
     /** The unit a library line is on: a line of the book's by its index, a comment's among the units laid out. */
     suspend fun unitOf(id: Long): Int? {
         laid.entries.firstOrNull { (_, unit) -> unit.pages.any { id in it.tops } }?.let { return it.key }
@@ -534,46 +544,114 @@ private class BookDafList(
         return units.indexOfFirst { index >= it.first && index < it.end }.takeIf { it >= 0 }
     }
 
+    // The unit [index] laid out as the pages are set now (the map of those laid out is the one the list keeps, filled as
+    // the unit is laid out): not in view, brought there to be laid out; in view, as it was until laid out again
+    private suspend fun laidAt(index: Int): LaidUnit? =
+        laid[index]?.takeIf { it.setter === setter.value } ?: run {
+            if (index !in laid) listState.scrollToItem(index)
+            withTimeoutOrNull(LAY_WAIT_MS) {
+                snapshotFlow { laid[index]?.takeIf { it.setter === setter.value } }.filterNotNull().first()
+            }
+        }
+
     /**
-     * The pixels down the item of the unit [index] to where the library line [id] is printed first, once laid out (the
-     * map of those laid out is the one the list keeps, filled as the unit is laid out).
+     * Brings the library line [id] into view, a page at a time (request 101 of stage 3: "בתצוגת ספר המעבר על ידי המקשים
+     * יהיה עמוד - עמוד... כאשר הקטע הבא בעמוד הבא יהיה מעבר שלם"): on another row of pages than the one at the view's
+     * top, or out of view, the view goes to where it rests down the line's row with the line in it (its top, with its
+     * head; down a row taller than the view, a view at a time: [restsOf]). In view on the row at the view's top, the view
+     * stays where it is, unless [always]. On the pages as they are once it is there: set again or at another scale
+     * meanwhile, the line is brought there again on those ([latest]).
      */
-    suspend fun offsetOf(
-        index: Int,
+    suspend fun bring(
         id: Long,
-    ): Float? {
-        val unit =
-            laid[index]?.takeIf { it.setter === setter.value } ?: run {
-                // Not in view: brought there to be laid out; in view, as it was until laid out again
-                if (index !in laid) listState.scrollToItem(index)
-                withTimeoutOrNull(LAY_WAIT_MS) {
-                    snapshotFlow { laid[index]?.takeIf { it.setter === setter.value } }.filterNotNull().first()
-                }
-            } ?: return null
-        return unit.offsetOf(id, perPoint, frame)
+        always: Boolean,
+    ) {
+        var list = this
+        var force = always
+        while (!list.reveal(id, force)) {
+            list = latest()
+            force = true
+        }
+    }
+
+    // The line [id] brought into view on this list's pages ([bring]); false when they are no longer the pages shown
+    private suspend fun reveal(
+        id: Long,
+        always: Boolean,
+    ): Boolean {
+        val index = unitOf(id) ?: return true
+        val unit = laidAt(index) ?: return true
+        if (!isCurrent(unit)) return false
+        val y = unit.offsetOf(id, perPoint, frame) ?: return true
+        val row = unit.rowAt(y, perPoint, frame)
+        if (!always && isShown(index, y) && rowAtTop() == index to row) return true
+        return goTo(index, unit, restFor(unit.rests(row, viewportHeight, perPoint, frame), y, viewportHeight, frame.head))
     }
 
     /**
-     * Brings the library line [id] into view, a page's head below the view's top ([atTop]: at the very top), unless it is
-     * in view; a line in a page's first lines, the page from its own top, with its head.
+     * A page down ([forward]) or up, a page at a time: to where the view rests next down the row of pages at its top, or
+     * before; from the last of them the top of the row after it, and from its top the end of the row before it. Down a
+     * row it slides, as the text's page keys; to another row it is there at once, a page turned.
      */
-    suspend fun reveal(
-        id: Long,
-        always: Boolean,
-        atTop: Boolean = false,
-    ) {
-        val index = unitOf(id) ?: return
-        val y = offsetOf(index, id) ?: return
-        if (!always && isShown(index, y)) return
-        val unit = laid[index] ?: return
-        val at = unit.pageOpenedBy(id, perPoint, frame) ?: if (atTop) y else y - frame.head
-        // The list measures a unit just laid out in a frame to come: an offset into it before then would run on through
-        // the places of the units after it
+    suspend fun turn(forward: Boolean) {
+        val at = rowAtTop()
+        val unit = at?.let { laid[it.first] }
+        if (at == null || unit == null) {
+            listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP)
+            return
+        }
+        val (index, row) = at
+        val offset = listState.firstVisibleItemScrollOffset.toFloat()
+        val rests = unit.rests(row, viewportHeight, perPoint, frame)
+        val within = if (forward) rests.firstOrNull { it > offset + 1f } else rests.lastOrNull { it < offset - 1f }
+        val lastRow = (unit.pages.size - 1) / frame.columns
+        when {
+            within != null -> listState.animateScrollBy(within - offset)
+            forward && row < lastRow -> goTo(index, unit, unit.rests(row + 1, viewportHeight, perPoint, frame).first())
+            forward -> if (index < units.lastIndex) listState.scrollToItem(index + 1)
+            row > 0 -> goTo(index, unit, unit.rests(row - 1, viewportHeight, perPoint, frame).last())
+            index > 0 -> toEnd(index - 1)
+        }
+    }
+
+    /** The view at the end of the unit [index]: where it rests last down its last row of pages. */
+    suspend fun toEnd(index: Int) {
+        val unit = laidAt(index) ?: return
+        if (!isCurrent(unit)) return latest().toEnd(index)
+        goTo(index, unit, unit.rests((unit.pages.size - 1) / frame.columns, viewportHeight, perPoint, frame).last())
+    }
+
+    // The unit at the view's top and its row of pages there; none while that unit is not laid out
+    private fun rowAtTop(): Pair<Int, Int>? {
+        val index = listState.firstVisibleItemIndex
+        val unit = laid[index] ?: return null
+        return index to unit.rowAt(listState.firstVisibleItemScrollOffset.toFloat(), perPoint, frame)
+    }
+
+    // Whether [unit]'s pages are the ones shown, as this list has them: not set again since, nor at another scale or in
+    // another view. A list is made anew with each of these; what goes on over frames (a wait for a unit to be laid out)
+    // may be at an old one, whose places are no places of the pages shown
+    private fun isCurrent(unit: LaidUnit): Boolean {
+        val now = latest()
+        val asShown = now.perPoint == perPoint && now.frame.columns == frame.columns && now.viewportHeight == viewportHeight
+        return asShown && setter.value === unit.setter
+    }
+
+    // The view [at] pixels down the item of the unit [index], once the list has measured it as [unit] laid out: in a
+    // frame to come for a unit just laid out, and an offset into it before then would run on through the places of the
+    // units after it. False, the view where it was, when the pages are no longer as this list has them
+    private suspend fun goTo(
+        index: Int,
+        unit: LaidUnit,
+        at: Float,
+    ): Boolean {
         if (!isMeasured(index, unit)) {
             listState.scrollToItem(index)
-            withTimeoutOrNull(LAY_WAIT_MS) { snapshotFlow { isMeasured(index, unit) }.first { it } }
+            withTimeoutOrNull(LAY_WAIT_MS) { snapshotFlow { isMeasured(index, unit) || !isCurrent(unit) }.first { it } }
         }
+        if (!isCurrent(unit)) return false
         listState.scrollToItem(index, at.toInt().coerceAtLeast(0))
+        return true
     }
 
     /** Whether the list has measured the item of the unit [index] as [unit] laid out: its height, give or take a pixel a page. */
@@ -650,7 +728,8 @@ private fun KeepPlaceAtZoom(
 /**
  * What the reader's keys and find bar ask of a book's daf ([control]): a page up or down, the book's first or last
  * page, a line brought into view, a step through the commentary of the comment [focused] (selected by a click on
- * itself; [onFocus] given the one stepped to), and where the daf is.
+ * itself; [onFocus] given the one stepped to), and where the daf is. Each moves the view a page at a time, to a page's
+ * top and never to between two pages (request 101 of stage 3).
  */
 @Composable
 private fun BookDafControl(
@@ -666,16 +745,10 @@ private fun BookDafControl(
     val currentFocused by rememberUpdatedState(focused)
     val stepping = remember { Mutex() }
     val listState = places.listState
-    control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * places.viewportHeight * PAGE_STEP) }
-    control.edge = { end ->
-        if (end) {
-            listState.scrollToItem((places.units.size - 1).coerceAtLeast(0))
-            listState.scrollBy(1_000_000f)
-        } else {
-            listState.scrollToItem(0)
-        }
-    }
-    control.toLine = { id -> places.reveal(id, always = false) }
+    // A page at a time (request 101 of stage 3)
+    control.page = { forward -> places.turn(forward) }
+    control.edge = { end -> if (end) places.toEnd((places.units.size - 1).coerceAtLeast(0)) else listState.scrollToItem(0) }
+    control.toLine = { id -> places.bring(id, always = false) }
     control.step = step@{ forward ->
         val from = currentFocused ?: return@step false
         // One step at a time: a key held down waits for the selection it asked for
@@ -689,7 +762,7 @@ private fun BookDafControl(
             val next = places.unitWithComment(from)?.next(from, forward) ?: return@step true
             onFocus(next.id)
             clicks.onSelectPassage(next.lineId, setOf(next.id), setOf(next.bookId))
-            places.reveal(next.id, always = false)
+            places.bring(next.id, always = false)
             awaitPassage(next.id) { currentPassage }
             true
         } finally {
@@ -707,8 +780,9 @@ private fun BookDafControl(
  * The tab's line in view: once the units are known, then whenever it changes or the tab asks. At first the place the
  * tab was at (the text's top line, or the daf's own when it was last shown), the selection where it is; not a line the
  * page selected itself by a click ([clicked], let go of with [onRelease]). When the pages are set again ([setter]: a
- * check in the commentaries pane, the book's default commentators as it opens), the line read at the top stays there.
- * Once there, the daf's place is told to [onScroll] whenever it rests, for the tab to come back to it.
+ * check in the commentaries pane, the book's default commentators as it opens), the line read at the top stays in view.
+ * Each time on its page from the page's top, a page at a time (BookDafList's bring). Once there, the daf's place is
+ * told to [onScroll] whenever it rests, for the tab to come back to it.
  */
 @Suppress("ComposeUnstableCollections") // as BookDafPages
 @Composable
@@ -736,14 +810,14 @@ private fun RevealTabLine(
         when {
             id == null -> Unit
             id == currentClicked && revealed -> currentOnRelease()
-            else -> current.reveal(id, always = !revealed, atTop = opening != null)
+            else -> current.bring(id, always = !revealed)
         }
         revealed = true
         top[0] = current.topLine() ?: id
     }
     LaunchedEffect(setter) {
         val at = top[0]
-        if (at != null && revealed) current.reveal(at, always = true, atTop = true)
+        if (at != null && revealed) current.bring(at, always = true)
     }
     // Not before: a place told while the daf still goes to the tab's would become the tab's
     val currentOnScroll by rememberUpdatedState(onScroll)

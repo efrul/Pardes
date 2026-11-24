@@ -58,7 +58,20 @@ private data class TreeItem(
     val folder: Boolean = false,
     val open: Boolean = false,
     val click: () -> Unit = {},
-)
+    // Pardes: the row's checkbox, in a search's tree, for the keys' Space (request 97 of stage 3)
+    val check: (() -> Unit)? = null,
+) {
+    // Pardes: the row as the tree's keys take it
+    val keyRow: TreeKeyRow get() = TreeKeyRow(id, TreeNode(level, folder, open), check, click)
+}
+
+// Pardes: whether a row of a search's tree is shown as selected: the keys' row while the tree has the keys ([focusedId]),
+// else the rows checked (request 97 of stage 3)
+private fun shownSelected(
+    focusedId: String?,
+    id: String,
+    checked: Boolean,
+): Boolean = if (focusedId != null) focusedId == id else checked
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -182,7 +195,7 @@ fun CategoryBookTreeView(
      * UI.
      * -------------------------------------------------------------------- */
 
-    val keyRows = remember(treeItems) { treeItems.map { TreeKeyRow(it.id, TreeNode(it.level, it.folder, it.open), it.click) } }
+    val keyRows = remember(treeItems) { treeItems.map(TreeItem::keyRow) }
     Box(modifier = modifier.fillMaxSize().padding(bottom = 8.dp).treeKeys(keys, listState, keyRows, onLeave)) {
         VerticallyScrollableContainer(
             scrollState = listState as ScrollableState,
@@ -229,11 +242,15 @@ fun SearchResultCategoryTreeView(
         )
     var hasRestored by remember { mutableStateOf(false) }
     val currentOnPersistScroll by rememberUpdatedState(onPersistScroll)
+    // Pardes: the book tree's keys here too, their row shown as selected while the tree has the focus, and Space for
+    // the row's checkbox (request 97 of stage 3: "הפוקוס לא עובד בעץ הספרים בחיפוש כמו תמיד")
+    val keys = rememberTreeKeys(null)
+    val focusedId = keys.shown as? String
 
     // Flatten the search tree with current expansion state
     val expanded = expandedCategoryIds
     val items =
-        remember(searchTree, expanded, selectedCategoryIds, selectedBookIds) {
+        remember(searchTree, expanded, selectedCategoryIds, selectedBookIds, focusedId) {
             buildList {
                 fun addNode(
                     node: SearchResultViewModel.SearchTreeCategory,
@@ -251,7 +268,7 @@ fun SearchResultCategoryTreeView(
                                     category = node.category,
                                     isExpanded = expanded.contains(node.category.id),
                                     // In search mode, highlight remains aligned with checkbox selection
-                                    isSelected = isThisSelected,
+                                    isSelected = shownSelected(focusedId, "category_${node.category.id}", isThisSelected),
                                     onClick = { onCategoryRowClick(node.category) },
                                     count = node.count,
                                     showCount = true,
@@ -262,16 +279,27 @@ fun SearchResultCategoryTreeView(
                                     },
                                 )
                             },
+                            folder = true,
+                            open = expanded.contains(node.category.id),
+                            click = { onCategoryRowClick(node.category) },
+                            check = { onCategoryCheckedChange(node.category.id, !isThisSelected) },
                         ),
                     )
 
                     if (expanded.contains(node.category.id)) {
                         // Books under this category (only those with results)
                         node.books.forEach { sb ->
+                            // Pardes: the checkbox's own toggle, Zayit's, named for Space on the keys' row to turn it too
+                            val toggle = { checked: Boolean ->
+                                onBookCheckedChange(sb.book.id, checked)
+                                // Ensure TOC panel appears for this book
+                                if (checked) onEnsureScopeBookForToc(sb.book.id)
+                            }
                             add(
                                 TreeItem(
                                     id = "book_${sb.book.id}",
                                     level = level + 1,
+                                    check = { toggle(!(selectedBookIds.contains(sb.book.id) || cascadedSelected)) },
                                     content = {
                                         val checkedByBook = selectedBookIds.contains(sb.book.id)
                                         val checkedByCategory = cascadedSelected
@@ -279,7 +307,7 @@ fun SearchResultCategoryTreeView(
                                         BookItem(
                                             book = sb.book,
                                             // Align highlight with effective checkbox (book OR cascaded category)
-                                            isSelected = isChecked,
+                                            isSelected = shownSelected(focusedId, "book_${sb.book.id}", isChecked),
                                             onClick = {
                                                 // Do not toggle selection when clicking the row in search mode
                                                 // Intentionally no-op to avoid checking the checkbox
@@ -287,13 +315,7 @@ fun SearchResultCategoryTreeView(
                                             count = sb.count,
                                             showCount = true,
                                             checkboxChecked = isChecked,
-                                            onCheckboxToggle = { checked ->
-                                                onBookCheckedChange(sb.book.id, checked)
-                                                if (checked) {
-                                                    // Ensure TOC panel appears for this book
-                                                    onEnsureScopeBookForToc(sb.book.id)
-                                                }
-                                            },
+                                            onCheckboxToggle = toggle,
                                         )
                                     },
                                 ),
@@ -326,10 +348,10 @@ fun SearchResultCategoryTreeView(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().treeKeys(keys, listState, remember(items) { items.map(TreeItem::keyRow) })) {
         VerticallyScrollableContainer(scrollState = listState as ScrollableState) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                items(items) { node ->
+                items(items, key = { it.id }) { node ->
                     Box(modifier = Modifier.fillMaxWidth().padding(start = (node.level * 12).dp)) {
                         node.content()
                     }

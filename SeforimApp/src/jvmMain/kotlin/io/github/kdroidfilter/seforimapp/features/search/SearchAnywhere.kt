@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
@@ -64,14 +63,9 @@ import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
 import io.github.kdroidfilter.seforimapp.framework.desktop.TabSplit
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
-import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.component.Text
-import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.search_anywhere_keys
 import java.util.UUID
 import java.util.WeakHashMap
 import kotlin.math.roundToInt
@@ -187,7 +181,7 @@ internal fun tabDestination(event: SearchHomeNavigationEvent): TabsDestination? 
 
 /**
  * This window's search from anywhere, over the window while it is open. In the title bar, which it takes no room in:
- * the bar opens right under it.
+ * the bar opens under it, in the window's upper third.
  */
 @Composable
 fun SearchAnywhere() {
@@ -224,7 +218,11 @@ private val BarShape = RoundedCornerShape(12.dp)
 private val BarMaxWidth = 640.dp
 private val BarGap = 6.dp
 
-/** The search bar under the title bar ([top], in pixels), in the middle; a press anywhere beside it closes it. */
+/**
+ * The search bar in the middle of the window's upper third, a share of the window's height down it and never over the
+ * title bar (its bottom at [top], in pixels): right under the title bar it was too far up (the user's word on the
+ * testers' build: "ועדיף שיהיה בשליש העליון ולא ממש למעלה"). A press anywhere beside it closes it.
+ */
 @Composable
 private fun SearchAnywhereLayer(
     top: Int,
@@ -241,8 +239,9 @@ private fun SearchAnywhereLayer(
         contentAlignment = Alignment.TopCenter,
     ) {
         val width = with(density) { window.width.toDp() } * BAR_WIDTH_SHARE
+        val barTop = with(density) { maxOf(top.toDp() + BarGap, window.height.toDp() * BAR_TOP_SHARE) }
         SearchAnywhereBar(
-            modifier = Modifier.padding(top = with(density) { top.toDp() } + BarGap).width(width.coerceAtMost(BarMaxWidth)),
+            modifier = Modifier.padding(top = barTop).width(width.coerceAtMost(BarMaxWidth)),
             onDismiss = onDismiss,
         )
     }
@@ -302,16 +301,8 @@ private fun SearchAnywhereBar(
             focusRequester = barFocus,
             trailing = { NextSearchModeSwitch() },
         )
-        Text(
-            stringResource(
-                Res.string.search_anywhere_keys,
-                if (PlatformInfo.isMacOS) "⌥" else "Alt",
-                if (PlatformInfo.isMacOS) "⌘" else "Ctrl",
-            ),
-            color = JewelTheme.globalColors.text.disabled,
-            fontSize = 12.sp,
-            maxLines = 1,
-        )
+        // The field has the keys again once the line, and what hid it, are gone
+        SearchAnywhereKeysLine(onHide = { runCatching { barFocus.requestFocus() } })
     }
 }
 
@@ -369,3 +360,6 @@ internal fun TabSplit.with(
 ): TabSplit = if (first == inPlaceOf) copy(first = tabId) else copy(second = tabId)
 
 private const val BAR_WIDTH_SHARE = 0.6f
+
+/** How far down the window the bar's top is, of the window's height: the bar in the window's upper third. */
+private const val BAR_TOP_SHARE = 0.2f

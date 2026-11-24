@@ -103,7 +103,8 @@ internal const val LAYOUT_SCALE = 2f
 /**
  * The amud [amud] of [book] laid out ([layout]; null while it is being laid out), [look]'s size, tied to the library
  * (its links, read once, with the passages Zayit's anchors mark in a book's lines, [passages]): the tab's [marks] on
- * its words, the user's highlights and notes, the find in page's matches; its words' [clicks] as the text's, a drag
+ * its words (behind them or at their lines' side, as the reader set it: DafSelectionMarks), the user's highlights and
+ * notes, the find in page's matches; its words' [clicks] as the text's, a drag
  * selecting them ([selection]) for the text's own menu (copy, copy with source, search, find in page…), and a
  * tractate's [review] when it has one.
  */
@@ -154,6 +155,7 @@ internal fun LinkedAmud(
                             rashi = look.rashi,
                             ink = look.ink,
                             highlight = words.highlight,
+                            stripe = words.stripe,
                             range = selection.range,
                             selectionColor = LocalTextSelectionColors.current.backgroundColor,
                             onRange = selection.onRange,
@@ -198,10 +200,11 @@ private fun rememberLocated(
     }
 }
 
-/** An amud's words as marked: their colors behind them, and those a note is on. */
+/** An amud's words as marked: their colors behind them, those a note is on, and the bars at their lines' side. */
 private class LinkedWords(
     val highlight: DafHighlight,
     val noted: Set<DafWord>,
+    val stripe: DafHighlight,
 )
 
 /**
@@ -249,16 +252,19 @@ private fun linkedWords(
             }
         }
     val tints = review?.tints.orEmpty()
+    // The selection's marks as the reader set them: a highlight, or a bar at the lines' side (request 102 of stage 3)
+    val how by graph.appSettings.flow(DafSelectionSettings.marks).collectAsState()
+    val stripe = remember(links, marks.marked, marks.passage, color, how) { dafStripe(links, marks.marked, marks.passage, color, how) }
     val highlight =
-        remember(links, marks.marked, marks.passage, color, tints, userColors, found) {
-            val selected = dafHighlight(links, marks.marked, marks.passage, color)
+        remember(links, marks.marked, marks.passage, color, tints, userColors, found, how) {
+            val selected = dafHighlight(links, marks.marked, marks.passage, color, how)
             if (tints.isEmpty() && userColors.isEmpty() && found.isEmpty()) {
                 selected
             } else {
                 DafHighlight { word -> found[word] ?: selected.colorOf(word) ?: userColors[word] ?: tints[word.line] }
             }
         }
-    return LinkedWords(highlight, noted)
+    return LinkedWords(highlight, noted, stripe)
 }
 
 /** What the text's menu takes of an amud's selection: its words, copied as they are. */
@@ -331,25 +337,37 @@ private const val RELATED_ALPHA = 0.08f
 /**
  * The page's marks: the selected passage (its comments and the Gemara words they quote) strongest, then the selected
  * segments, then the comments on the selected segments, lightest. Nothing follows the pointer: the page reads as
- * the text does, where only a selection is marked.
+ * the text does, where only a selection is marked. Each as the reader has it marked ([how], request 102 of stage 3):
+ * what has a bar at its side instead ([dafStripe]), or no mark, has no color here; the words a comment quotes always
+ * have theirs, a bar being a whole line's.
  */
 internal fun dafHighlight(
     links: DafAmudLinks?,
     selected: Set<Long>,
     passage: Set<Long>,
     color: Color,
+    how: DafSelectionMarks = DafSelectionMarks(),
 ): DafHighlight {
     if (links == null || (selected.isEmpty() && passage.isEmpty())) return DafHighlight.NONE
-    val related = selected.flatMapTo(HashSet()) { links.commentsOn[it].orEmpty() }
+    val related =
+        if (how.comments ==
+            SelectionMark.Highlight
+        ) {
+            selected.flatMapTo(HashSet()) { links.commentsOn[it].orEmpty() }
+        } else {
+            emptySet()
+        }
     val quotedWords = passage.flatMapTo(HashSet()) { links.quoted[it].orEmpty() }
+    val ofSelection = how.selection == SelectionMark.Highlight
     val strong = color.copy(alpha = PASSAGE_ALPHA)
     val selectedColor = color.copy(alpha = SELECTED_ALPHA)
     val relatedColor = color.copy(alpha = RELATED_ALPHA)
     return DafHighlight { word ->
         val id = links.lineIdOf(word) ?: return@DafHighlight null
         when {
-            id in passage || word in quotedWords -> strong
-            id in selected -> selectedColor
+            word in quotedWords -> strong
+            id in passage -> strong.takeIf { ofSelection }
+            id in selected -> selectedColor.takeIf { ofSelection }
             id in related -> relatedColor
             else -> null
         }

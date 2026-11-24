@@ -7,7 +7,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.TextMeasurer
@@ -40,6 +44,52 @@ private const val LEAST_PAGE_HEIGHT = 280f
 
 /** How long the view's size rests before the pages are set again for it: a pane dragged, the zoom's steps. */
 private const val PAGE_SIZE_REST_MS = 150L
+
+/** The least a point of a page that follows the view is, in pixels, however narrow its view. */
+private const val LEAST_PER_POINT = 0.1f
+
+/** How pages that follow their view's width share it: [columns] a row, at [perPoint] pixels a point. */
+internal class WideFit(
+    val columns: Int,
+    val perPoint: Float,
+)
+
+/**
+ * How pages that follow their view's width share a view [width] pixels wide, each with [padding] on its sides, at the
+ * zoom's letters ([perPoint] pixels a point): two a row ([spreads]) only where each is as wide as the least page, else
+ * one; and smaller letters where the view is narrower than the least page, as little smaller as it must. So the pages
+ * are never cut by their view (the user's word on the testers' build, of two pages a pane opened beside them had cut:
+ * "למה ככה הוא לא מתאים את עצמו?"): they kept the least page's width, half the view being narrower.
+ */
+internal fun wideFit(
+    width: Float,
+    perPoint: Float,
+    spreads: Boolean,
+    padding: Float,
+): WideFit {
+    fun room(columns: Int) = width / columns - 2 * padding
+    val columns = if (spreads && room(2) >= LEAST_PAGE_WIDTH * perPoint) 2 else 1
+    return WideFit(columns, minOf(perPoint, room(columns) / LEAST_PAGE_WIDTH).coerceAtLeast(LEAST_PER_POINT))
+}
+
+/** How far down a book's pages' view its head is, where the pointer shows the view's buttons. */
+private val HeadHover = 48.dp
+
+/** Tells [onChange] whether the pointer is at the head of what this is on, without taking its events. */
+internal fun Modifier.pointerAtHead(onChange: (Boolean) -> Unit): Modifier =
+    pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val y =
+                    event.changes
+                        .firstOrNull()
+                        ?.position
+                        ?.y
+                onChange(event.type != PointerEventType.Exit && y != null && y < HeadHover.toPx())
+            }
+        }
+    }
 
 /** The daf's letters: the text's square ones, and the commentaries' ([style]: as one script around the text). */
 @Composable
@@ -79,10 +129,11 @@ internal fun rememberUnitSetter(
 
 /**
  * The page's size where the pages follow the view's width (the end bar's fit at "רוחב החלונית", BookDafSettings.wide):
- * as wide as the [view] (half of it with two pages side by side) and as tall, in points at the [zoom]'s letters, which
- * are a page's of [BOOK_DAF_WIDTH] at that zoom. So the fit sets the pages again for the view, more words in a line
- * and the wide page's columns, where it only made a page of the rules' size larger. Null where the pages are the
- * rules' own size; around the text they always are. The size is taken once the view has rested at it.
+ * as wide as the [view] (half of it with two pages side by side, where two have the room: [wideFit]) and as tall, in
+ * points at the [zoom]'s letters, which are a page's of [BOOK_DAF_WIDTH] at that zoom. So the fit sets the pages again
+ * for the view, more words in a line and the wide page's columns, where it only made a page of the rules' size larger.
+ * Null where the pages are the rules' own size; around the text they always are. The size is taken once the view has
+ * rested at it.
  */
 @Composable
 internal fun rememberWidePage(
@@ -95,12 +146,12 @@ internal fun rememberWidePage(
     val spreads by settings.pageSpreadsFlow.collectAsState()
     val density = LocalDensity.current
     if (!wide || style.layout != DafStyle.Bands) return null
-    val perPoint = with(density) { ZOOM_ONE_WIDTH.toPx() } * zoom / BOOK_DAF_WIDTH
     val around = with(density) { Size(2 * BookDafPadding.toPx(), (BookDafHead + BookDafGap).toPx()) }
+    val fit = wideFit(view.width, with(density) { ZOOM_ONE_WIDTH.toPx() } * zoom / BOOK_DAF_WIDTH, spreads, around.width / 2)
     val target =
         DafPageSize(
-            width = floor((view.width / (if (spreads) 2 else 1) - around.width) / perPoint).coerceAtLeast(LEAST_PAGE_WIDTH),
-            height = floor((view.height - around.height) / perPoint).coerceAtLeast(LEAST_PAGE_HEIGHT),
+            width = floor((view.width / fit.columns - around.width) / fit.perPoint).coerceAtLeast(LEAST_PAGE_WIDTH),
+            height = floor((view.height - around.height) / fit.perPoint).coerceAtLeast(LEAST_PAGE_HEIGHT),
         )
     var page by remember { mutableStateOf(target) }
     LaunchedEffect(target) {
@@ -121,8 +172,9 @@ internal class PagesScale(
 /**
  * The scale of the pages of [setter] in the [view], at the daf's [zoom]: a size, which no pane opened beside the pages
  * changes (request 73 of stage 3), two pages side by side sharing the view as a book open (the end bar's button, as a
- * tractate's amudim); where the pages follow the view's width, the zoom is their letters' size alone. The zooms that
- * fit a page of the rules' size in the view are told for the tab of [control].
+ * tractate's amudim); where the pages follow the view's width, the zoom is their letters' size alone, and they share
+ * the view as [wideFit] has it. The zooms that fit a page of the rules' size in the view are told for the tab of
+ * [control].
  */
 @Composable
 internal fun pagesScale(
@@ -134,12 +186,14 @@ internal fun pagesScale(
     val density = LocalDensity.current
     val spreads by LocalAppGraph.current.appSettings.pageSpreadsFlow
         .collectAsState()
-    val columns = if (spreads) 2 else 1
     val padding = with(density) { BookDafPadding.toPx() }
-    val frame = PageFrame(with(density) { BookDafHead.toPx() }, with(density) { BookDafGap.toPx() }, columns)
     val one = with(density) { ZOOM_ONE_WIDTH.toPx() }
+    // Pages that follow the view share it as they were set for it: two a row only where two have the room
+    val wide = if (setter.followsView) wideFit(view.width, zoom * one / BOOK_DAF_WIDTH, spreads, padding) else null
+    val columns = wide?.columns ?: if (spreads) 2 else 1
+    val frame = PageFrame(with(density) { BookDafHead.toPx() }, with(density) { BookDafGap.toPx() }, columns)
     val fit = pageFit(view.width / columns - 2 * padding, view.height, setter.tallAspect, columns, frame.head + frame.gap, one)
     TellPageFit(control.tabId, fit, capped = !setter.followsView)
-    val perPoint = (if (setter.followsView) zoom * one else pageWidthAt(zoom, columns, one)).coerceAtLeast(1f) / BOOK_DAF_WIDTH
+    val perPoint = wide?.perPoint ?: (pageWidthAt(zoom, columns, one).coerceAtLeast(1f) / BOOK_DAF_WIDTH)
     return PagesScale(perPoint, columns, maxOf(view.width, (setter.width * perPoint + 2 * padding) * columns), frame)
 }

@@ -68,8 +68,11 @@ internal class DafTab(
     val openAt: Long?,
 )
 
-/** A line this near a page's top (points: two of the text's lines) opens it: brought into view, the page is, with its head. */
-private const val OPENING = 26f
+/** Down a row of pages taller than the view, a page key moves this much of the view, as the text's. */
+private const val REST_STEP = 0.9f
+
+/** A row this little taller than the view (pixels) is read whole from its top: no step for what a pixel's rounding adds. */
+private const val REST_SLACK = 2f
 
 /**
  * What frames each page of a unit, in pixels: its running head above it, the room below it; and how many pages stand
@@ -125,13 +128,19 @@ internal class LaidUnit(
         return tops
     }
 
-    /** The pixels down the unit's item to [points] down its page [page], [perPoint] pixels a point. */
+    /**
+     * The pixels down the unit's item to [points] down its page [page], [perPoint] pixels a point; below 0, that many
+     * pixels above the page, in its head ([placeAt]).
+     */
     fun offset(
         page: Int,
         points: Float,
         perPoint: Float,
         frame: PageFrame,
-    ): Float = rowTop(page.coerceIn(0, pages.size) / frame.columns, perPoint, frame) + frame.head + points * perPoint
+    ): Float {
+        val down = if (points < 0f) points.coerceAtLeast(-frame.head) else points * perPoint
+        return rowTop(page.coerceIn(0, pages.size) / frame.columns, perPoint, frame) + frame.head + down
+    }
 
     /** The unit's item's height in pixels, [perPoint] pixels a point: its rows, each with its head and the room below it. */
     fun height(
@@ -151,8 +160,10 @@ internal class LaidUnit(
     }
 
     /**
-     * The page at [offset] pixels down the unit's item (of a row of pages, the one read first), and the points down it
-     * (none above it, in its head).
+     * The page at [offset] pixels down the unit's item (of a row of pages, the one read first), and the points down it.
+     * Above it, in its head, the pixels to it, below 0: the head is as tall at any scale, and a view at a page's top
+     * stays there with it when the pages' scale changes (a zoom put the view's top under the head, which went out of
+     * view: seen on 2026-11-24).
      */
     fun placeAt(
         offset: Float,
@@ -163,7 +174,10 @@ internal class LaidUnit(
         var y = 0f
         rows.forEachIndexed { i, row ->
             val bottom = y + frame.head + row.maxOf { it.height } * perPoint + frame.gap
-            if (offset < bottom || i == rows.lastIndex) return i * frame.columns to ((offset - y - frame.head) / perPoint).coerceAtLeast(0f)
+            if (offset < bottom || i == rows.lastIndex) {
+                val down = offset - y - frame.head
+                return i * frame.columns to if (down < 0f) down.coerceAtLeast(-frame.head) else down / perPoint
+            }
             y = bottom
         }
         return 0 to 0f
@@ -194,23 +208,78 @@ internal class LaidUnit(
         return null
     }
 
-    /**
-     * The pixels down the unit's item to the top of the page the library line [lineId] begins, with its head, when the
-     * line is printed in the page's first lines ([OPENING]); null for a line further down its page, or on none.
-     */
-    fun pageOpenedBy(
-        lineId: Long,
+    /** The row of pages [offset] pixels down the unit's item is in ([rowAt]). */
+    fun rowAt(
+        offset: Float,
         perPoint: Float,
         frame: PageFrame,
-    ): Float? {
-        val page = pages.indexOfFirst { lineId in it.tops }
-        if (page < 0 || pages[page].tops.getValue(lineId) > OPENING) return null
-        return offset(page, 0f, perPoint, frame) - frame.head
+    ): Int = rowAt(rowTops(perPoint, frame), frame.gap, offset)
+
+    /** Where a view [view] pixels tall rests down the unit's row [row] of pages ([restsOf]), in pixels down its item. */
+    fun rests(
+        row: Int,
+        view: Float,
+        perPoint: Float,
+        frame: PageFrame,
+    ): List<Float> {
+        val tops = rowTops(perPoint, frame)
+        if (tops.size < 2) return listOf(0f)
+        val at = row.coerceIn(0, tops.size - 2)
+        return restsOf(tops[at], tops[at + 1] - frame.gap, view)
     }
 
     /** Whether [commentId] is one of the unit's comments. */
     fun hasComment(commentId: Long): Boolean = comments.any { list -> list.any { it.id == commentId } }
 }
+
+/**
+ * The row of pages [offset] pixels down an item is in, of those at [tops] (each one's top, and the item's end last):
+ * the room below a row's pages ([gap]) is the next row's, whose head comes right after it.
+ */
+internal fun rowAt(
+    tops: FloatArray,
+    gap: Float,
+    offset: Float,
+): Int {
+    var row = 0
+    while (row < tops.size - 2 && offset >= tops[row + 1] - gap) row++
+    return row
+}
+
+/**
+ * Where a view [view] pixels tall rests down a row of pages, from its [top] to its [bottom] (its head and its pages, in
+ * pixels down its unit's item): at its top; and, the row taller than the view, a step of the view further at a time,
+ * the last with the row's bottom at the view's. The keys of a book's pages move the view from one of these to the next,
+ * a page at a time, never to between two pages (request 101 of docs/DESKTOP_STAGE3_PLAN.md: "בתצוגת ספר המעבר על ידי
+ * המקשים יהיה עמוד - עמוד ולא יהיה מצב כזה").
+ */
+internal fun restsOf(
+    top: Float,
+    bottom: Float,
+    view: Float,
+): List<Float> {
+    val last = bottom - view
+    if (view <= 0f || last <= top + REST_SLACK) return listOf(top)
+    val rests = arrayListOf(top)
+    var at = top + view * REST_STEP
+    while (at < last - REST_SLACK) {
+        rests += at
+        at += view * REST_STEP
+    }
+    rests += last
+    return rests
+}
+
+/**
+ * Of a row's [rests], the one a line [y] pixels down the item is read at: the first whose view has it, with [room] under
+ * its top; the last for a line at the row's very end.
+ */
+internal fun restFor(
+    rests: List<Float>,
+    y: Float,
+    view: Float,
+    room: Float,
+): Float = rests.firstOrNull { y + room <= it + view } ?: rests.last()
 
 /**
  * The rows of an item in view or near it, of those at [tops] (each one's top, and the item's end last): the ones any of

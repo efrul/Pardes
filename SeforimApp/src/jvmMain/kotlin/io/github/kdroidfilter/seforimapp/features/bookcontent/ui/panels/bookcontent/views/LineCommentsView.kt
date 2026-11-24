@@ -1652,7 +1652,8 @@ private fun rememberCommentariesLayoutConfig(
     val windowInfo = LocalWindowInfo.current
     val commentaryFontCode by appSettings.commentaryFontCodeFlow.collectAsState()
     val commentaryFontFamily = FontCatalog.familyFor(commentaryFontCode)
-    val maxCommentatorsPerPage by appSettings.maxCommentatorsPerPageFlow.collectAsState()
+    // Pardes: a pane at the window's side has its own number (request 99 of stage 3)
+    val maxCommentatorsPerPage = rememberMaxCommentatorsPerPage()
     val boldScaleForPlatform = FontCatalog.boldScaleFor(commentaryFontCode)
     val tearOffs = LocalCommentatorTearOffs.current
 
