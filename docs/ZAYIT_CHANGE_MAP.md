@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (346 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (352 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2346,12 +2346,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +434 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 399 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +435 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 400 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
-  - semantic packs: `semantic_pack_*` (36), `semantic_problem_*` (6);
+  - semantic packs: `semantic_pack_*` (36), `semantic_problem_*` (6), and `semantic_reranker_installed`, the card's line for a
+    library with a reranker;
   - feedback: `feedback_send_*` (41), `feedback_consent_*` (20), `search_feedback_*` (5): among them the other apps'
     rows and the publication's, with what each means, and what the settings' feedback page says of what waits; the
     page's name in the sidebar, `settings_category_feedback`, after Zayit's `settings_category_data`; and under a comment, after `onboarding_library_folder_*`, the
@@ -6522,10 +6523,10 @@ which comes first and needs no free space for it. Hooks: `main.kt`,
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/database/LibraryLocation.kt`
 
 - **Feature:** Library location.
-- **Size:** 532 lines.
+- **Size:** 533 lines.
 - **What:** `LibraryLocation`, where the library is and where it goes: `installDir` (the app's databases folder unless
   the user chose another), `chooseInstallDir` with its `Problem`s, `move` (a rename on one drive, a checked copy across
-  drives, the semantic pack's folders carried along, `NAMES` (with `pardes-daf` and, since request 56, the
+  drives, the semantic pack's folders and the reranker's carried along, `NAMES` (with `pardes-daf` and, since request 56, the
   scans' pages cut into images, `pardes-scans`), `LEFTOVERS`), the copies kept (`copies`, `isKeptCopy`,
   `deleteCopy`, switching back), a move killed half way undone or finished, `freeBytes`/`totalBytes`, `currentDir`.
 - **Reached from:** `main.kt` (through `PendingLibraryMove`), the onboarding's `DownloadUseCase`, `ExtractUseCase`,
@@ -6680,7 +6681,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/HybridSearchEngine.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 821 lines.
+- **Size:** 851 lines.
 - **What:** `HybridSearchEngine`, a `SearchEngine` that fuses the words' search (Zayit's `LuceneSearchEngine`, through
   `LongQuerySearchEngine`) with the dense search (`IndependentSemanticSearch`): `fusedScores` is Reciprocal Rank Fusion
   with three weights measured in docs/fusion-compare (a lexical hit holding a query of three words or more word for word
@@ -6695,7 +6696,10 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   past what it holds (the words alone, past their candidates). Some of the meaning's own lines are read alone on
   request (`meaningHits`). It is a `WordsEngine`: its words' search (`words`) can
   be asked apart, for a list of every line they find in the library's order (`CatalogOrderSession`). A dense side whose walk came back short is searched again from the words'
-  first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines and their ordering. The
+  first 64 hits (`DENSE_SEEDS`), and a debug line times the two sides, the candidates' lines, their ordering and the
+  reranker. A results page's first lines are put in the reranker's order when the library has one beside it
+  (`PageReranker`, from `fuse` with `rerank`, a trial of 2026-11-24; the find in a book is not reranked), and the
+  warm-up loads it. The
   passages closest in meaning (`passagesByMeaning`) are worked out one request at a time (`passageWork`, the default
   dispatcher's threads left to the searches), and stop between the model's runs when cancelled; a session's pages'
   passages stop when it closes (`Refining`), each view of it with its own.
@@ -6703,7 +6707,8 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 - **Follows:** Zayit's `SemanticSearchFeature` interface and its private `HybridSearchEngine`, of the same name and role
   (not its code, which Pardes has not).
 - **Tests:** `HybridSearchEngineDenseTest`, `HybridSearchEngineFallbackTest`, `HybridSearchEngineFusionTest`,
-  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`, `DenseTrapTest`, `RefiningTest`;
+  `HybridSearchEngineKeepLeadersTest`, `LevelPrecedenceTest`, `MeaningFacetsTest`, `DenseTrapTest`, `RefiningTest`,
+  `RerankerTest`;
   measured by `ScopeFlowBench` (docs/scope-search-speed).
 - **Notes:** its KDoc opens with "Independent Hybrid Search Engine for Pardes Desktop:", a title rather than Zayit's
   plain sentence; with some 17 functions it passes `detekt.yml`'s 15. The fusion's measurements, before and after:
@@ -6885,6 +6890,38 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 - **Follows:** the format SeforimLibrary's generator reads for Zayit's own vectors.
 - **Tests:** `VectorIndexBuilderTest`.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/Reranker.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 256 lines.
+- **What:** the reranker of a results page's first lines, a trial (2026-11-24): `Reranker`, a small cross-encoder
+  (ONNX, int8) that reads the query and a line together and scores how well the line answers (`scores`, a pair a run),
+  and `order`, a page with its first lines in that order, the page's own first line kept unless another passes it by the
+  manifest's margin; `RerankerSpec`, the manifest `pardes-reranker.json` (the files, how many first lines, from how
+  many words of a query, a pair's tokens, the margin); `RerankText`, a query and a line as the reranker reads them
+  (cleaned as the index holds a line, without its number, points and accents); `PageReranker`, which loads the
+  reranker when a page first asks and gives the page reordered. Optional: without the folder `pardes-reranker/` beside
+  the library the page is the fused order.
+- **Reached from:** `HybridSearchEngine.kt` (`fuse`, `warmUp`, `close`), `SemanticPackViewModel.kt` (`isInstalled`).
+- **Follows:** `OnnxEmbeddingProvider` for the ONNX session and `OpenModelSpec` for the manifest; the measurements are
+  efrul/pardes-semantic's `eval-pool/results-why.md` and the model its `reranker/` (Horizon Labs'
+  multilingual-reranker-small, Apache-2.0). Zayit has no reranker.
+- **Tests:** `RerankerTest`; `BpeTokenizerParityTest` (`RerankText`). Measured with the app's engine on the judged
+  searches: a good first line in 291 of 451 pages where the fused order has 278.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/BpeTokenizer.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 277 lines.
+- **What:** `BpeTokenizer`, the reranker's `tokenizer.json` read and applied in Kotlin, with no native library: a
+  byte-pair-encoding model after a Metaspace pre-tokenizer (the merges in their rank's order, a character out of the
+  vocabulary as the tokens of its bytes) and the template of a pair, `<bos> query <eos> line <eos>`, the line cut
+  first to fit. A component it does not know makes `fromFile` throw.
+- **Reached from:** `Reranker.kt`.
+- **Follows:** HuggingFace's `tokenizers` library, matched case for case, as `HfTokenizer` does for the embedding
+  model's WordPiece.
+- **Tests:** `BpeTokenizerParityTest` (ids equal to the `tokenizers` library's, from `reranker-parity.jsonl.gz`).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPack.kt`
 
 - **Feature:** Semantic search packs.
@@ -6953,10 +6990,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCard.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 419 lines.
+- **Size:** 424 lines.
 - **What:** Settings › ניהול נתונים's card for the semantic search: the pack in use or offered, its download or import,
   the work's progress and problems, a pack that waits for the restart named by its version while the one above it is
   said to be in use until then (the user took the old pack's line for the import's result, 2026-11-11), and how to install one with or without internet; the card comes into view when the settings were opened for it.
+  Under a pack in use it says when the library also has a reranker beside it (`semantic_reranker_installed`).
   A start that could not put the pack in place is told with its reason: tried again at the next start while the pack
   still waits (`semantic_pack_start_retry`), else dropped after `MAX_ATTEMPTS` starts (`semantic_pack_start_failed`).
   Feedback mode's switch stood in it until 2026-11-12 (it is a row of Settings › משוב), with the number of results
@@ -6968,8 +7006,9 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackViewModel.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 197 lines.
-- **What:** `SemanticPackViewModel`: the pack beside the library, the newest release for it, and installing one,
+- **Size:** 200 lines.
+- **What:** `SemanticPackViewModel`: the pack beside the library, whether a reranker is beside it too (`State.reranker`),
+  the newest release for it, and installing one,
   downloaded or imported, with its progress; a pack that waits for the next start is known by its number (`Work.Ready`,
   from what was staged, also when the settings are opened again before the restart); a pack in use with no number is
   given the newest release's when it is that pack (`InstalledPack.named`), and so is not offered again as an update.
@@ -7148,6 +7187,28 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, fixtures).
 
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/BpeTokenizerParityTest.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 61 lines.
+- **What:** the reranker's reading of a query and a line (`RerankText`) and its tokenizer (`BpeTokenizer`) against the
+  Python ones it was measured with, on the cases pardes-semantic's `reranker/make_fixtures.py` writes
+  (`reranker-parity.jsonl.gz`, `reranker-tokenizer.json.gz`): the two texts, and a pair's ids.
+- **Reached from:** the JVM tests.
+- **Follows:** `HfTokenizerParityTest`.
+- **Tests:** it is one (unit, fixtures).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/RerankerTest.kt`
+
+- **Feature:** Semantic search.
+- **Size:** 80 lines.
+- **What:** the reranker's order of a page (`Reranker.order`: the first lines by their scores, the rest as they were,
+  the page's first line kept within the margin, a line it could not read after those it read), its manifest
+  (`RerankerSpec.read`), a library without a reranker (`PageReranker`: the page as it is), and a query's count of words.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test.
+- **Tests:** it is one (unit).
+
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/VectorIndexBuilderTest.kt`
 
 - **Feature:** Semantic search.
@@ -7261,6 +7322,28 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 - **What:** the open model's `tokenizer.json` (940 KB gzipped), Dicta's, CC BY 4.0, for the parity test.
 - **Reached from:** `HfTokenizerParityTest`.
 - **Follows:** Dicta's model files.
+- **Tests:** a fixture.
+
+#### `SeforimApp/src/jvmTest/resources/semantic/reranker-parity.jsonl.gz`
+
+- **Feature:** Semantic search.
+- **Size:** binary.
+- **What:** the reranker's parity cases (525 KB gzipped): queries and lines (the samples, edge cases, and lines of the
+  base books), their texts as `query_text` and `line_text` read them, and each pair's ids by the `tokenizers` library,
+  written by pardes-semantic's `reranker/make_fixtures.py`.
+- **Reached from:** `BpeTokenizerParityTest`.
+- **Follows:** `parity.jsonl.gz`.
+- **Tests:** a fixture.
+
+#### `SeforimApp/src/jvmTest/resources/semantic/reranker-tokenizer.json.gz`
+
+- **Feature:** Semantic search.
+- **Size:** binary.
+- **What:** the reranker's `tokenizer.json` (710 KB gzipped): Horizon Labs' multilingual-reranker-small's (Apache-2.0,
+  on mmBERT-small, MIT), cut by pardes-semantic's `reranker/build_reranker.py` to the 39,883 tokens the library can use,
+  for the parity test.
+- **Reached from:** `BpeTokenizerParityTest`.
+- **Follows:** the reranker's model files.
 - **Tests:** a fixture.
 
 ### Books and authors found by name
@@ -8789,7 +8872,7 @@ the description where something needs saying.
 | File | What it is | Where it comes from |
 |---|---|---|
 | `README.md` | The repository's front page, in Hebrew with one English line: what Pardes is (based on Zayit by Elie (Elyahou) Gambache and not on his behalf), the downloads, what the app has, installing on Android with the three ways to bring the library, where the code is, and licence and credits (the §7b line, Dicta's model). *Note:* The English line says desktop is Windows and Linux; macOS is built since desktop 1.0.2, as the Hebrew text says. Its list of Pardes's additions lacks feedback-service/, nucleus-fork/, scripts/kleikodesh_dictionary.py and the daf layouts' release. | Pardes's own; takes the place of Zayit's README.MD, which Pardes renamed README-zayit-desktop.md (README_HE.md likewise) |
-| `SEMANTIC_SEARCH.md` | Hebrew guide to Pardes for desktop's own semantic search on the app side: Dicta's open model fine-tuned on the library's links, ONNX Runtime and a Lucene HNSW vector index fused with BM25 by RRF, with the fusion's three weights (word for word, short lines out, the window); the files beside the library, the code of features/search/semantic/ file by file, installing packs, meaning highlights, warm-up, three correctness checks, known limits, the switch to the legacy model for comparison, and licensing. *Note:* Written in Hebrew, while Zayit's developer docs (TAB_SYSTEM_README.md, LINE_SELECTION_README.md, AGENTS.md) are in English. Zayit's semantic search is a private package with no doc here. | Pardes's own |
+| `SEMANTIC_SEARCH.md` | Hebrew guide to Pardes for desktop's own semantic search on the app side: Dicta's open model fine-tuned on the library's links, ONNX Runtime and a Lucene HNSW vector index fused with BM25 by RRF, with the fusion's three weights (word for word, short lines out, the window); the files beside the library, the code of features/search/semantic/ file by file, installing packs, meaning highlights, the reranker of a page's first lines (a trial, optional, in a folder of its own), warm-up, three correctness checks, known limits, the switch to the legacy model for comparison, and licensing. *Note:* Written in Hebrew, while Zayit's developer docs (TAB_SYSTEM_README.md, LINE_SELECTION_README.md, AGENTS.md) are in English. Zayit's semantic search is a private package with no doc here. | Pardes's own |
 
 #### Claude Code: settings and skills
 
@@ -9179,7 +9262,7 @@ one test added; `siddur-open/README.md`).
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `semantic-model/NOTICE.md` | The credit of the semantic search's model: Dicta's neodictabert-bilingual-embed under CC BY 4.0, what Pardes changed (fine-tuned and distilled when `pardes-model.json` says derived, converted to ONNX with pooling and L2 in the graph, int8), that the vector index was computed with it, and what the models learn from besides the library's texts: Klei Kodesh's index and Torat Emet's dictionary from run 3 on, and from 2026-11-19 the searches users graded in the app and sent with their consent, with, from 2026-11-23, searches they sent without grading, whose results a language model graded. A copy of efrul/pardes-semantic's `NOTICE.md`, which travels with every model. Pardes for Android shows it in Settings › רישיונות. | Pardes's own; Dicta's attribution terms |
+| `semantic-model/NOTICE.md` | The credit of the semantic search's model: Dicta's neodictabert-bilingual-embed under CC BY 4.0, what Pardes changed (fine-tuned and distilled when `pardes-model.json` says derived, converted to ONNX with pooling and L2 in the graph, int8), that the vector index was computed with it, and what the models learn from besides the library's texts: Klei Kodesh's index and Torat Emet's dictionary from run 3 on, and from 2026-11-19 the searches users graded in the app and sent with their consent, with, from 2026-11-23, searches they sent without grading, whose results a language model graded; and the reranker's credit, Horizon Labs' multilingual-reranker-small under Apache-2.0, on mmBERT-small (MIT), with what Pardes changed in it (int8, its vocabulary cut). A copy of efrul/pardes-semantic's `NOTICE.md`, which travels with every model. Pardes for Android shows it in Settings › רישיונות. | Pardes's own; Dicta's attribution terms |
 | `semantic-model/README.md` | Hebrew note that the model moved on 2026-11-05 to its own repository, efrul/pardes-semantic (its pipeline, tests, results and the models as releases), and what stays here: NOTICE.md and release_notes.py. | Pardes's own |
 | `semantic-model/release_notes.py` | The title and notes of a semantic pack's release, from the pack's manifest: semantic-release.yml publishes a new pack with them and semantic-notes.yml writes them again; they say "the files of the search by meaning", never "a pack". | Pardes's own |
 

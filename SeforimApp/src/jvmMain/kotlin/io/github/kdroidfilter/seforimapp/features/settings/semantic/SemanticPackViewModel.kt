@@ -9,6 +9,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.features.search.semantic.Reranker
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.PendingSemanticPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackInstaller
@@ -76,6 +77,8 @@ class SemanticPackViewModel(
     data class State(
         val hasLibrary: Boolean = true,
         val installed: InstalledPack = InstalledPack.None,
+        /** Whether the library has the reranker of a page's first lines beside it ([Reranker]). */
+        val reranker: Boolean = false,
         val available: Available = Available.Checking,
         val work: Work = Work.Idle,
         /** Why the last start did not put the pack in place, or null. */
@@ -104,7 +107,7 @@ class SemanticPackViewModel(
             val dir = LibraryLocation.currentDir(appSettings)
             val hasLibrary = LibraryLocation.exists(dir)
             val installed = InstalledPack.read(dir)
-            _state.update { it.copy(hasLibrary = hasLibrary, installed = installed) }
+            _state.update { it.copy(hasLibrary = hasLibrary, installed = installed, reranker = Reranker.isInstalled(dir)) }
             // Without a library the card asks for it, and offers no pack
             if (!hasLibrary) return@launch
             val available =

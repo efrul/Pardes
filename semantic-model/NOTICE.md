@@ -24,5 +24,23 @@ results of these were graded for the project by a language model (Claude, by Ant
 
 Dicta does not endorse Pardes or this conversion. The model is provided as is, without warranties.
 
+## The reranker
+
+The reranker of Pardes's search (the folder `pardes-reranker`, which reads a search's first results again and orders
+them) is **multilingual-reranker-small** by Horizon Labs,
+<https://huggingface.co/Horizon-Labs/multilingual-reranker-small>, Copyright 2026 Horizon Labs, used under the
+[Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). It is a fine-tuned version of
+**mmBERT-small** by the mmBERT authors (Johns Hopkins University CLSP),
+<https://huggingface.co/jhu-clsp/mmBERT-small>, which is under the MIT License. The model's own `LICENSE` and `NOTICE`
+files are in its folder, with this notice.
+
+Changes by the Pardes project: its ONNX export's weights quantized to int8, and its table of tokens and its tokenizer
+cut to the tokens the library's texts can use. Pardes trained nothing in it.
+
+Horizon Labs and the mmBERT authors do not endorse Pardes or this conversion. The reranker is provided as is, without
+warranties.
+
+## Zayit
+
 Pardes is based on Zayit by Elie (Elyahou) Gambache, who did not make Pardes and is not responsible for it. Neither
-this model nor its index comes from Zayit or uses Zayit's semantic search package.
+this model, its index nor the reranker comes from Zayit or uses Zayit's semantic search package.

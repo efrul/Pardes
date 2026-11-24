@@ -44,6 +44,8 @@ class HybridSearchEngine internal constructor(
     private val semanticConfigured: Boolean,
     // The library's book levels and lines, for the precedence of the earlier level; without them, the fused order
     private val library: LibraryLines? = LibraryLines.beside(indexDir),
+    // What loads the reranker of a page's first lines, when the library has one
+    openReranker: (Path) -> Reranker? = { Reranker.open(it) },
     // What loads the model and its vector index
     private val openSemantic: (Path) -> IndependentSemanticSearch?,
 ) : SearchEngine,
@@ -67,6 +69,9 @@ class HybridSearchEngine internal constructor(
 
     @Volatile private var semanticTried = false
     private val semanticMutex = Mutex()
+
+    // A results page's first lines in the reranker's order ([PageReranker]); the fused order without one
+    private val pageReranker = PageReranker(indexDir, openReranker)
 
     // The passages closest in meaning, worked out one request at a time: the model's runs never hold every thread of the
     // default dispatcher, which the searches run on (tabs picked one after another waited up to 1.8 s behind the earlier
@@ -185,6 +190,10 @@ class HybridSearchEngine internal constructor(
                 }
             }
         }
+        // The reranker too, which those queries are too short for: its session's first run is its slowest
+        pageReranker.ready()?.let { reranker ->
+            withContext(Dispatchers.Default) { runSuspendCatching { reranker.scores(WARMUP_QUERIES.first(), WARMUP_QUERIES) } }
+        }
     }
 
     override suspend fun semanticFind(
@@ -210,6 +219,7 @@ class HybridSearchEngine internal constructor(
 
     override fun close() {
         runCatching { semantic?.close() }
+        pageReranker.close()
         runCatching { library?.close() }
         runCatching { lexical.close() }
     }
@@ -232,6 +242,8 @@ class HybridSearchEngine internal constructor(
         // How many lines the lexical side finds in all, of which the fusion takes the first CANDIDATES, and whether the
         // dense side answered: a list without its lines is the lexical side's ([HybridSession])
         onLexical: ((total: Long, denseAnswered: Boolean) -> Unit)? = null,
+        // A results page: its first lines in the reranker's order ([PageReranker])
+        rerank: Boolean = false,
     ): List<FusedEntry> =
         coroutineScope {
             val started = System.nanoTime()
@@ -314,7 +326,18 @@ class HybridSearchEngine internal constructor(
             // The order is the list's from here, not the scores': a kept lexical hit keeps its own (lower) score
             val page = keepLeaders(order, leaders)
             // Within one book every line has the same level: no line to put first
-            (if (bookIds?.size == 1) page else withPrecedence(page, query, lines))
+            val ordered = if (bookIds?.size == 1) page else withPrecedence(page, query, lines)
+            val rerankStarted = System.nanoTime()
+            val reranked =
+                if (!rerank) {
+                    ordered
+                } else {
+                    pageReranker.reordered(query, ordered) { id ->
+                        lines?.get(id)?.text ?: runSuspendCatching { resolveLine(id, query)?.rawText }.getOrNull()
+                    }
+                }
+            val rerankMillis = millisSince(rerankStarted)
+            reranked
                 .map { lineId ->
                     val lexicalHit = lexById[lineId]
                     FusedEntry(
@@ -329,7 +352,7 @@ class HybridSearchEngine internal constructor(
                     debugln {
                         "[HybridSearchEngine] ${bookIds?.size ?: "all"} books, fused in ${millisSince(started)} ms: " +
                             "words $wordsMillis, meaning $denseMillis, the candidates' lines $linesMillis, " +
-                            "their order ${millisSince(orderStarted)}"
+                            "their order ${millisSince(orderStarted) - rerankMillis}, the reranker $rerankMillis"
                     }
                 }
         }
@@ -393,10 +416,17 @@ class HybridSearchEngine internal constructor(
             snippets: Boolean,
         ): SearchPage? {
             val all =
-                fused ?: fuse(query, near, bookIds, baseOnly) { total, denseAnswered ->
-                    lexicalTotal = total
-                    lexicalOnly = !denseAnswered
-                }.also { list ->
+                fused ?: fuse(
+                    query,
+                    near,
+                    bookIds,
+                    baseOnly,
+                    onLexical = { total, denseAnswered ->
+                        lexicalTotal = total
+                        lexicalOnly = !denseAnswered
+                    },
+                    rerank = true,
+                ).also { list ->
                     fused = list
                     list.mapTo(shown) { it.lineId }
                 }
