@@ -425,6 +425,8 @@ private fun SearchResultContentMvi(
                                     // Pardes: the search by meaning or not, at the bar's end (request 54 of stage 3)
                                     trailing = { SearchModeSwitch(state.searchMode, actions.onSearchModeChange) },
                                 )
+                                // Pardes: the tree of the books found, in a pane when asked for (request 97 of stage 3)
+                                SearchTreeButton()
                             }
 
                             // Always there, as Google's, even with one category: "הכל" also undoes a kept filter

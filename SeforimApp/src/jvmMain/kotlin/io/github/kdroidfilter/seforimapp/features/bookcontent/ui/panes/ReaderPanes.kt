@@ -65,6 +65,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.booktoc.
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.CategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.SearchCategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NotesPanel
+import io.github.kdroidfilter.seforimapp.features.search.SearchTreeSettings
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
 import io.github.kdroidfilter.seforimapp.framework.desktop.DockSizes
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
@@ -555,9 +556,13 @@ private fun selectedTabDemand(
                 val bookDetails by LocalAppGraph.current.appSettings.bookDetailsPaneFlow
                     .collectAsState()
                 val findResults = rememberFindResultsShown(tabId)
+                // Pardes: a search's tree of the books it found, shown when asked for (request 97 of stage 3)
+                val searchTree by LocalAppGraph.current.appSettings
+                    .flow(SearchTreeSettings.shown)
+                    .collectAsState()
                 PaneDemand(
                     tabId,
-                    desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails) +
+                    desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails, searchTree) +
                         findResultsPane(uiState, findResults && destination !is TabsDestination.Search),
                     viewModel::onEvent,
                     uiState.layout,
@@ -726,12 +731,13 @@ private fun desiredPanes(
     uiState: BookContentState,
     isSearch: Boolean,
     bookDetails: Boolean,
+    searchTree: Boolean,
 ): Set<ReaderPane> =
     buildSet {
         // A book's details, or a search's selected result's: one setting for every tab
         if (bookDetails && (isSearch || isBookTextShown(uiState))) add(ReaderPane.BookDetails)
-        // A search filters by its category tabs, not by the library tree
-        if (!isSearch && uiState.navigation.isVisible) add(ReaderPane.Tree)
+        // A search filters by its category tabs; its tree of the books found is shown when asked for (request 97)
+        if (if (isSearch) searchTree else uiState.navigation.isVisible) add(ReaderPane.Tree)
         if (uiState.toc.isVisible) add(ReaderPane.Toc)
         if (!isSearch && uiState.notes.isVisible) add(ReaderPane.Notes)
         // The line panes exist only while a book is on screen.
@@ -866,9 +872,11 @@ private fun SearchTreePane(
     val isFiltering by viewModel.isFilteringFlow.collectAsState()
     val selectedCategoryIds by viewModel.selectedCategoryIdsFlow.collectAsState()
     val selectedBookIds by viewModel.selectedBookIdsFlow.collectAsState()
+    val appSettings = LocalAppGraph.current.appSettings
     SearchCategoryTreePanel(
         uiState = uiState,
-        onEvent = onEvent,
+        // Pardes: the pane's own close hides the search's tree, which one setting shows (request 97 of stage 3)
+        onEvent = { if (it == BookContentEvent.ToggleBookTree) appSettings[SearchTreeSettings.shown] = false else onEvent(it) },
         searchTree = searchTree,
         isFiltering = isFiltering,
         selectedCategoryIds = selectedCategoryIds,

@@ -23,7 +23,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import dev.nucleusframework.window.tao.DockLayout
 import dev.nucleusframework.window.tao.DockSide
 import dev.nucleusframework.window.tao.SatellitePlacement
@@ -75,9 +77,15 @@ fun WindowBody(openWindow: OpenWindow) {
         }
     // Pardes: with the daf's key (Ctrl/Cmd+D), the daf button's click of the selected tab (request 94 of stage 3)
     val dafKeys = LocalAppGraph.current.dafKeys
+    // Pardes: and F6, which goes round the parts of the window that take keys (request 100 of stage 3)
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val readerKeys =
         readerEvents?.let { events ->
-            { event: KeyEvent -> handleBookShortcut(event, events) || dafKeys.press(event, readerDestination?.tabId) }
+            { event: KeyEvent ->
+                handleBookShortcut(event, events) ||
+                    dafKeys.press(event, readerDestination?.tabId) ||
+                    openWindow.focusStops.cycle(event, rtl)
+            }
         }
     // Also from the window itself, which gets the keys when nothing has focus (no pane, no text).
     openWindow.readerShortcuts = readerKeys

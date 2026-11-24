@@ -86,6 +86,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.normalizeQueryFo
 import io.github.kdroidfilter.seforimapp.core.presentation.text.noteDisplayRanges
 import io.github.kdroidfilter.seforimapp.core.presentation.text.withBackground
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.presentation.window.rememberFocusStop
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafAnchor
@@ -1130,6 +1131,8 @@ fun BookContentView(
                 .fillMaxSize()
                 .graphicsLayer { alpha = contentAlpha } // Hide until positioned to prevent glitch
                 .then(if (showsDaf) dafZoom.modifier else zoom.modifier)
+                // Pardes: the text is a part the window's focus keys stop at (request 100 of stage 3)
+                .then(rememberFocusStop { focusRequester.requestFocus() })
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent(previewKeyHandler)
                 .focusable(),

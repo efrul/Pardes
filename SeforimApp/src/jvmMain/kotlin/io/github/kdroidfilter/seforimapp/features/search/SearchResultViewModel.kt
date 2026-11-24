@@ -316,10 +316,13 @@ class SearchResultViewModel(
         when (event) {
             is SearchResultEvents.SetCategoryChecked -> {
                 setCategoryChecked(event.categoryId, event.checked)
+                // Pardes: what is checked in the results' tree of books is in the bar too (request 97 of stage 3)
+                showPicksInBar(treePicks.category(event.categoryId, event.checked))
             }
 
             is SearchResultEvents.SetBookChecked -> {
                 setBookChecked(event.bookId, event.checked)
+                showPicksInBar(treePicks.book(event.bookId, event.checked))
             }
 
             is SearchResultEvents.SetTocChecked -> {
@@ -2013,6 +2016,7 @@ class SearchResultViewModel(
         setQuery(query)
         // What was typed is what is searched now
         setDraft(query)
+        treePicks.only()
         _selectedCategoryIds.value = emptySet()
         _selectedBookIds.value = emptySet()
         _selectedTocIds.value = emptySet()
@@ -2078,7 +2082,17 @@ class SearchResultViewModel(
     private fun showTabsInBar(picked: Set<Long>) {
         if (persistedSearchState().wideScope != SearchScope.Global) return
         val tabs = (_searchTree.value + _otherTabCategories.value).map { it.category.id }
+        treePicks.only(tabs.distinct().filter { it in picked })
         _scopeChanges.tryEmit(scopeOfTabs(tabs, picked) ?: SearchScope.Global)
+    }
+
+    // Pardes: what the reader checked in the results' tree of books (request 97 of stage 3), in the bar as the tabs
+    // picked are, and under the same rule: only in a search of the whole library
+    private val treePicks = SearchTreePicks()
+
+    private fun showPicksInBar(scope: SearchScope?) {
+        if (persistedSearchState().wideScope != SearchScope.Global) return
+        _scopeChanges.tryEmit(scope ?: SearchScope.Global)
     }
 
     fun setBookChecked(

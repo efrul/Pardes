@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -26,16 +27,22 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import io.github.kdroidfilter.seforimapp.core.presentation.window.FocusStop
+import io.github.kdroidfilter.seforimapp.core.presentation.window.focusStops
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
+import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.santimattius.structured.annotations.StructuredScope
@@ -230,6 +237,9 @@ class TreeKeys internal constructor(
 ) {
     internal val focusRequester = FocusRequester()
 
+    // The tree as a part the window's focus keys stop at (request 100): Shift with the arrow left or right, F6
+    internal val stop = FocusStop { focusRequester.requestFocus() }
+
     /** The key of the row the keys are on, null before any. */
     var focused: Any? by mutableStateOf(null)
         internal set
@@ -302,6 +312,11 @@ fun rememberTreeKeys(selected: Any?): TreeKeys {
     // Only in a reader's pane, which has the graph (a test of the tree alone has neither)
     val focusKey = LocalPaneFocusKey.current
     if (focusKey != null) {
+        val stops = LocalOpenWindow.current.focusStops
+        DisposableEffect(keys, stops) {
+            stops.add(keys.stop)
+            onDispose { stops.remove(keys.stop) }
+        }
         val requests = LocalAppGraph.current.paneFocusRequests
         LaunchedEffect(keys, focusKey) {
             requests.await(focusKey)
@@ -352,9 +367,13 @@ fun Modifier.treeKeys(
     onLeave: (() -> Unit)? = null,
 ): Modifier {
     keys.rows = rows
-    return focusRequester(keys.focusRequester)
-        .onFocusChanged { keys.hasFocus = it.hasFocus }
-        .onPreviewKeyEvent { keys.onKey(it, listState, onLeave) }
+    return onGloballyPositioned { keys.stop.bounds = it.boundsInWindow() }
+        .focusRequester(keys.focusRequester)
+        .onFocusChanged {
+            keys.hasFocus = it.hasFocus
+            keys.stop.focused = it.hasFocus
+        }.onPreviewKeyEvent { keys.onKey(it, listState, onLeave) }
+        .onKeyEvent(keys.stop::key)
         .focusable()
         .pointerInput(keys, listState) {
             awaitPointerEventScope {
