@@ -1,11 +1,13 @@
 package io.github.kdroidfilter.seforimapp.features.search.semantic
 
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** The reranker's order of a page ([Reranker.order]), its manifest ([RerankerSpec]) and a library without one. */
 class RerankerTest {
@@ -71,6 +73,19 @@ class RerankerTest {
                 dir.toFile().deleteRecursively()
             }
         }
+
+    @Test
+    fun `the settings' check finds no reranker, or says why one does not load`() {
+        val library = Files.createTempDirectory("pardes-library").toFile()
+        try {
+            assertNull(Reranker.check(library))
+            val dir = File(library, Reranker.DIR_NAME).apply { mkdirs() }
+            File(dir, RerankerSpec.FILE_NAME).writeText("""{"format":2}""")
+            assertTrue(Reranker.check(library)!!.isFailure)
+        } finally {
+            library.deleteRecursively()
+        }
+    }
 
     @Test
     fun `a query's words are counted as the reranker reads it`() {

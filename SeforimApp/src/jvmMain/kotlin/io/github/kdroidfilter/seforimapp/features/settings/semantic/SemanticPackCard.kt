@@ -96,6 +96,7 @@ import seforimapp.seforimapp.generated.resources.semantic_problem_missing
 import seforimapp.seforimapp.generated.resources.semantic_problem_no_space
 import seforimapp.seforimapp.generated.resources.semantic_problem_not_a_pack
 import seforimapp.seforimapp.generated.resources.semantic_problem_unusable
+import seforimapp.seforimapp.generated.resources.semantic_reranker_broken
 import seforimapp.seforimapp.generated.resources.semantic_reranker_installed
 import java.io.File
 
@@ -196,9 +197,16 @@ private fun PackSection(
     val settled = !state.busy && !waiting
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = installedText(state.installed, waiting), fontSize = 13.sp)
-        // The reranker comes apart from the pack, in a folder of its own beside the library
-        if (state.reranker && !missing) {
-            Text(text = stringResource(Res.string.semantic_reranker_installed), fontSize = 12.sp, color = JewelTheme.globalColors.text.info)
+        // The reranker comes apart from the pack, in a folder of its own beside the library: there and working, or why not
+        if (!missing) {
+            state.reranker?.let { reranker ->
+                val text =
+                    reranker.fold(
+                        onSuccess = { stringResource(Res.string.semantic_reranker_installed) },
+                        onFailure = { stringResource(Res.string.semantic_reranker_broken, it.message ?: it.toString()) },
+                    )
+                Text(text = text, fontSize = 12.sp, color = JewelTheme.globalColors.text.info)
+            }
         }
         if (settled) {
             Text(text = availableText(state.available, state.installed), fontSize = 12.sp, color = JewelTheme.globalColors.text.info)

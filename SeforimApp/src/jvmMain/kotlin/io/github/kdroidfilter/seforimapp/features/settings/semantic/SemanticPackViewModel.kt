@@ -77,8 +77,8 @@ class SemanticPackViewModel(
     data class State(
         val hasLibrary: Boolean = true,
         val installed: InstalledPack = InstalledPack.None,
-        /** Whether the library has the reranker of a page's first lines beside it ([Reranker]). */
-        val reranker: Boolean = false,
+        /** The reranker of a page's first lines beside the library ([Reranker.check]): null without one, else whether it works. */
+        val reranker: Result<String>? = null,
         val available: Available = Available.Checking,
         val work: Work = Work.Idle,
         /** Why the last start did not put the pack in place, or null. */
@@ -107,9 +107,11 @@ class SemanticPackViewModel(
             val dir = LibraryLocation.currentDir(appSettings)
             val hasLibrary = LibraryLocation.exists(dir)
             val installed = InstalledPack.read(dir)
-            _state.update { it.copy(hasLibrary = hasLibrary, installed = installed, reranker = Reranker.isInstalled(dir)) }
+            _state.update { it.copy(hasLibrary = hasLibrary, installed = installed) }
             // Without a library the card asks for it, and offers no pack
             if (!hasLibrary) return@launch
+            // The reranker beside the library is loaded once, to say whether it works: apart, so the pack list does not wait
+            launch { _state.update { it.copy(reranker = Reranker.check(dir)) } }
             val available =
                 runSuspendCatching { releases.newest(LibraryLocation.version(dir)) }
                     .map { pack -> pack?.let { Available.Pack(it) } ?: Available.NoneYet }

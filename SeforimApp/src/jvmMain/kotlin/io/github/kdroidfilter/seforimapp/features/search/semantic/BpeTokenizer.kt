@@ -181,6 +181,9 @@ class BpeTokenizer private constructor(
         private const val SPECIAL_TOKENS = 3
         private const val BYTE_VALUES = 256
         private const val BYTE_MASK = 0xFF
+        private const val HEX = "0123456789ABCDEF"
+        private const val HEX_BITS = 4
+        private const val HEX_MASK = 0xF
 
         private fun pairKey(
             left: Int,
@@ -272,6 +275,7 @@ class BpeTokenizer private constructor(
         ): Int = requireNotNull(vocab[token]) { "A merge of a token out of the vocabulary: $token" }
 
         // The tokens `<0x00>` to `<0xFF>`, -1 for a byte the vocabulary has no token for
-        private fun byteIds(vocab: Map<String, Int>): IntArray = IntArray(BYTE_VALUES) { vocab["<0x%02X>".format(it)] ?: -1 }
+        private fun byteIds(vocab: Map<String, Int>): IntArray =
+            IntArray(BYTE_VALUES) { vocab["<0x" + HEX[it shr HEX_BITS] + HEX[it and HEX_MASK] + ">"] ?: -1 }
     }
 }

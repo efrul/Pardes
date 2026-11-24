@@ -13,7 +13,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.nio.LongBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -149,14 +148,17 @@ class Reranker internal constructor(
         line: String,
     ): Float {
         val ids = tokenizer.encodePair(query, line, spec.maxTokens, spec.queryMaxTokens)
-        val shape = longArrayOf(1, ids.size.toLong())
-        OnnxTensor.createTensor(env, LongBuffer.wrap(ids), shape).use { tensorIds ->
-            OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(ids.size) { 1L }), shape).use { tensorMask ->
-                session.run(mapOf("input_ids" to tensorIds, "attention_mask" to tensorMask)).use { result ->
-                    @Suppress("UNCHECKED_CAST")
-                    return (result[0].value as Array<FloatArray>)[0][0]
-                }
+        // The tensors as OnnxEmbeddingProvider makes them, the calls the native build already runs
+        val tensorIds = OnnxTensor.createTensor(env, arrayOf(ids))
+        val tensorMask = OnnxTensor.createTensor(env, arrayOf(LongArray(ids.size) { 1L }))
+        try {
+            session.run(mapOf("input_ids" to tensorIds, "attention_mask" to tensorMask)).use { result ->
+                @Suppress("UNCHECKED_CAST")
+                return (result[0].value as Array<FloatArray>)[0][0]
             }
+        } finally {
+            tensorIds.close()
+            tensorMask.close()
         }
     }
 
@@ -170,8 +172,22 @@ class Reranker internal constructor(
 
         fun dirBeside(indexDir: Path): Path = indexDir.resolveSibling(DIR_NAME)
 
-        /** Whether the library in [libraryDir] has a reranker beside it (a cheap check, nothing loaded). */
-        fun isInstalled(libraryDir: File): Boolean = File(File(libraryDir, DIR_NAME), RerankerSpec.FILE_NAME).isFile
+        /**
+         * Whether the reranker beside the library in [libraryDir] loads and scores, for the settings: null without one,
+         * its id when it works, or why it does not. The model is loaded for the check and let go.
+         */
+        fun check(libraryDir: File): Result<String>? {
+            val dir = File(libraryDir, DIR_NAME).toPath()
+            if (!Files.isRegularFile(dir.resolve(RerankerSpec.FILE_NAME))) return null
+            return runCatching {
+                Reranker(checkNotNull(RerankerSpec.read(dir))).use { reranker ->
+                    checkNotNull(reranker.scores(CHECK_TEXT, listOf(CHECK_TEXT))?.single()) { "no score" }
+                    reranker.spec.id
+                }
+            }
+        }
+
+        private const val CHECK_TEXT = "בראשית ברא אלהים את השמים ואת הארץ"
 
         /** The reranker beside [indexDir], loaded; null when there is none or it can't be read: the fused order then. */
         fun open(indexDir: Path): Reranker? =

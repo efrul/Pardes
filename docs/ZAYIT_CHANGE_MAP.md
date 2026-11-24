@@ -2346,13 +2346,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +435 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 400 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +436 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 401 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
-  - semantic packs: `semantic_pack_*` (36), `semantic_problem_*` (6), and `semantic_reranker_installed`, the card's line for a
-    library with a reranker;
+  - semantic packs: `semantic_pack_*` (36), `semantic_problem_*` (6), and `semantic_reranker_*` (2), the card's line for a
+    library with a reranker that works, or does not load;
   - feedback: `feedback_send_*` (41), `feedback_consent_*` (20), `search_feedback_*` (5): among them the other apps'
     rows and the publication's, with what each means, and what the settings' feedback page says of what waits; the
     page's name in the sidebar, `settings_category_feedback`, after Zayit's `settings_category_data`; and under a comment, after `onboarding_library_folder_*`, the
@@ -6893,16 +6893,17 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/Reranker.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 256 lines.
+- **Size:** 272 lines.
 - **What:** the reranker of a results page's first lines, a trial (2026-11-24): `Reranker`, a small cross-encoder
   (ONNX, int8) that reads the query and a line together and scores how well the line answers (`scores`, a pair a run),
   and `order`, a page with its first lines in that order, the page's own first line kept unless another passes it by the
   manifest's margin; `RerankerSpec`, the manifest `pardes-reranker.json` (the files, how many first lines, from how
   many words of a query, a pair's tokens, the margin); `RerankText`, a query and a line as the reranker reads them
   (cleaned as the index holds a line, without its number, points and accents); `PageReranker`, which loads the
-  reranker when a page first asks and gives the page reordered. Optional: without the folder `pardes-reranker/` beside
-  the library the page is the fused order.
-- **Reached from:** `HybridSearchEngine.kt` (`fuse`, `warmUp`, `close`), `SemanticPackViewModel.kt` (`isInstalled`).
+  reranker when a page first asks and gives the page reordered; `check`, for the settings, loads the reranker beside a
+  library and scores a pair, to say that it works or why not. Optional: without the folder `pardes-reranker/` beside
+  the library the page is the fused order. The ONNX calls are `OnnxEmbeddingProvider`'s, which the native build runs.
+- **Reached from:** `HybridSearchEngine.kt` (`fuse`, `warmUp`, `close`), `SemanticPackViewModel.kt` (`check`).
 - **Follows:** `OnnxEmbeddingProvider` for the ONNX session and `OpenModelSpec` for the manifest; the measurements are
   efrul/pardes-semantic's `eval-pool/results-why.md` and the model its `reranker/` (Horizon Labs'
   multilingual-reranker-small, Apache-2.0). Zayit has no reranker.
@@ -6912,7 +6913,7 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/BpeTokenizer.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 277 lines.
+- **Size:** 281 lines.
 - **What:** `BpeTokenizer`, the reranker's `tokenizer.json` read and applied in Kotlin, with no native library: a
   byte-pair-encoding model after a Metaspace pre-tokenizer (the merges in their rank's order, a character out of the
   vocabulary as the tokens of its bytes) and the template of a pair, `<bos> query <eos> line <eos>`, the line cut
@@ -6990,11 +6991,12 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackCard.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 424 lines.
+- **Size:** 432 lines.
 - **What:** Settings › ניהול נתונים's card for the semantic search: the pack in use or offered, its download or import,
   the work's progress and problems, a pack that waits for the restart named by its version while the one above it is
   said to be in use until then (the user took the old pack's line for the import's result, 2026-11-11), and how to install one with or without internet; the card comes into view when the settings were opened for it.
-  Under a pack in use it says when the library also has a reranker beside it (`semantic_reranker_installed`).
+  Under a pack in use it says when the library also has a reranker beside it and that it works
+  (`semantic_reranker_installed`), or why it does not load (`semantic_reranker_broken`).
   A start that could not put the pack in place is told with its reason: tried again at the next start while the pack
   still waits (`semantic_pack_start_retry`), else dropped after `MAX_ATTEMPTS` starts (`semantic_pack_start_failed`).
   Feedback mode's switch stood in it until 2026-11-12 (it is a row of Settings › משוב), with the number of results
@@ -7006,8 +7008,8 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/semantic/SemanticPackViewModel.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 200 lines.
-- **What:** `SemanticPackViewModel`: the pack beside the library, whether a reranker is beside it too (`State.reranker`),
+- **Size:** 202 lines.
+- **What:** `SemanticPackViewModel`: the pack beside the library, whether a reranker beside it works (`State.reranker`, from `Reranker.check`, loaded apart from the pack list),
   the newest release for it, and installing one,
   downloaded or imported, with its progress; a pack that waits for the next start is known by its number (`Work.Ready`,
   from what was staged, also when the settings are opened again before the restart); a pack in use with no number is
@@ -7201,10 +7203,11 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/RerankerTest.kt`
 
 - **Feature:** Semantic search.
-- **Size:** 80 lines.
+- **Size:** 95 lines.
 - **What:** the reranker's order of a page (`Reranker.order`: the first lines by their scores, the rest as they were,
   the page's first line kept within the margin, a line it could not read after those it read), its manifest
-  (`RerankerSpec.read`), a library without a reranker (`PageReranker`: the page as it is), and a query's count of words.
+  (`RerankerSpec.read`), a library without a reranker (`PageReranker`: the page as it is; `check`: nothing, or why a
+  folder does not load), and a query's count of words.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
