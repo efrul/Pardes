@@ -99,6 +99,27 @@ class DafIndexTest {
     }
 
     @Test
+    fun `every line has the place it is printed at last, its last line's bottom, on a later amud when it goes on`() {
+        assertEquals(0 to 28f, index.ends[10])
+        assertEquals(0 to 28f, index.ends[11])
+        assertEquals(0 to 18f, index.ends[5001])
+        assertEquals(0 to 26f, index.ends[5002])
+        assertEquals(1 to 18f, index.ends[5003], "begun on 2a, ended on 2b")
+        assertEquals(1 to 28f, index.ends[12])
+        assertEquals(2 to 18f, index.ends[9003])
+    }
+
+    @Test
+    fun `a commentary's first comment at a place is the first printed there or below, on a later amud when none is`() {
+        val rashi = setOf(5001L, 5002L, 5003L, 5004L)
+        assertEquals(5001L, index.firstOf(0, 0f) { it in rashi })
+        assertEquals(5002L, index.firstOf(0, 15f) { it in rashi }, "below the first line, the comment on the next")
+        assertEquals(5004L, index.firstOf(0, 30f) { it in rashi }, "below the amud's last: the next amud's first")
+        assertEquals(9003L, index.firstOf(1, 0f) { it == 9003L })
+        assertNull(index.firstOf(2, 11f) { it in rashi })
+    }
+
+    @Test
     fun `every line has the place it is printed at first`() {
         assertEquals(0 to 10f, index.places[10])
         assertEquals(0 to 20f, index.places[11])

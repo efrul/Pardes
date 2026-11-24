@@ -88,6 +88,7 @@ Coordinates on the maximised 1440x900 window:
 | The reader's end bar (left in RTL): zoom in / out, ניקוד (סימונים while a daf is shown), צורת הדף | 33, 78 / 33, 145 / 33, 215 / 33, 285 |
 | The end bar's סריקה (a Bavli tractate): in the text view; in the daf or the scan, where שני עמודים comes in under the zoom's buttons and moves those below it down | 33, 355; 33, 420 |
 | The daf view's header: previous amud (right) / next amud (left) | 987, 66 / 93, 66 |
+| A book's own pages (`PREFS="book_daf.enabled=true"`, then the end bar's צורת הדף, which is under ניקוד and שנים מקרא in a Chumash's text): the style's button at their corner | 88, 66 |
 | Table of contents entries (right pane) | 1105, 100 + 33 a row |
 | The tools menu's rows (the siddur first when it is on) | 127, 59 + 25 a row |
 | Settings (a 700x500 window at +370+200): its pages from כללי down (כללי, תצוגה, פרופיל, גופנים, צורת הדף, ניהול נתונים, משוב, אודות, תנאים), its "סגור" | 1000, 270 + 34 a row / 422, 669 |

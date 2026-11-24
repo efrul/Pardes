@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SelectableIconButtonWithToolip
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafTractate
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.showsBookDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.PageSpread
@@ -38,11 +40,23 @@ fun PageSpreadsButton(
 }
 
 /**
- * Whether the tab of [uiState] shows pages rather than lines: a tractate as its daf or its scan, or a PDF book. The end
- * bar's diacritics have nothing to do on them (request 49 of docs/DESKTOP_STAGE3_PLAN.md).
+ * Whether the tab of [uiState] shows pages rather than lines: printed ones ([showsPrintedPages]), or another book's own
+ * (BookDafView), which the end bar's buttons set side by side and fit in the view as they do the others.
  */
-fun showsPages(uiState: BookContentState): Boolean {
-    val book = uiState.navigation.selectedBook ?: return false
+@Composable
+fun showsPages(uiState: BookContentState): Boolean = showsPrintedPages(uiState) || showsBookDaf(uiState)
+
+/**
+ * Whether the tab of [uiState] shows pages as printed: a tractate as its daf or its scan, a commentary printed on a
+ * tractate's daf as that daf (request 82), or a PDF book. The end bar's diacritics have nothing to do on them (request
+ * 49 of docs/DESKTOP_STAGE3_PLAN.md).
+ */
+@Composable
+fun showsPrintedPages(uiState: BookContentState): Boolean {
+    val book = uiState.navigation.selectedBook
+    val dafTractate = rememberDafTractate(book)
+    if (book == null) return false
     val tractatePages = book.isBavli && (uiState.content.dafView || uiState.content.scanView)
-    return tractatePages || pdfIdOf(book.id) != null
+    val commentaryPages = dafTractate != null && uiState.content.dafView
+    return tractatePages || commentaryPages || pdfIdOf(book.id) != null
 }

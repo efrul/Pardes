@@ -12,8 +12,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** The size of a line's letters to its box's height: the box spans the letters' ascenders and descenders. */
-private const val GEMARA_SIZE = 0.92f
-private const val RASHI_SIZE = 0.95f
+internal const val GEMARA_SIZE = 0.92f
+internal const val RASHI_SIZE = 0.95f
 private const val BIG_SIZE = 0.9f
 
 /**
@@ -114,6 +114,7 @@ internal fun layoutAmud(
     gemara: FontFamily,
     rashi: FontFamily,
     sizes: DafSizes? = null,
+    openings: DafOpenings? = null,
     beforeEachLine: () -> Unit = {},
 ): AmudLayout {
     val setter = AmudSetter(amud, scale, measurer, density, beforeEachLine)
@@ -121,11 +122,18 @@ internal fun layoutAmud(
     val text = setter.column("G", gemara, isGemara = true, sizes?.gemara?.times(scale))
     // A dibbur's first word in Tosafot is printed in the Gemara's letters, a little bigger than the Gemara's own
     val lead = (sizes?.let { it.gemara * scale * GEMARA_SIZE } ?: text?.size)?.let { gemara to it * LEAD_SIZE }
+    // A book's daf's comments open in the text's letters, a little smaller than their line's (BookDafBands)
+    val opening = openings?.let { o -> commentary?.let { gemara to it * RASHI_SIZE * o.size } }
     val columns =
         listOfNotNull(
             text,
-            setter.column("R", rashi, isGemara = false, commentary),
+            setter.column("R", rashi, isGemara = false, commentary, opening, openings?.words),
             setter.column("T", rashi, isGemara = false, commentary, lead),
+            // A book's daf's (BookDafLayout): the commentaries left of its text, as Rashi's; the commentators' names and
+            // the targum beside the text, in square letters as tall as their own lines' boxes
+            setter.column(LEFT_COLUMN, rashi, isGemara = false, commentary),
+            setter.column(NAME_COLUMN, gemara, isGemara = true),
+            setter.column(TARGUM_COLUMN, gemara, isGemara = true),
         )
     // Drawn last, on top of the runs whose lines they stand beside
     val bigRuns = columns.flatMap { it.bigRuns(gemara) }
@@ -133,6 +141,15 @@ internal fun layoutAmud(
     columns.forEach { it.place() }
     return AmudLayout(amud, scale, setter.width, setter.height, columns.flatMap { it.runs() } + bigRuns)
 }
+
+/**
+ * The words of a book's daf's commentaries printed apart (BookDafBands): those that open a comment, in the text's square
+ * letters, [size] of their line's; [words] has them by their line's index on the page.
+ */
+internal class DafOpenings(
+    val words: Map<Int, Set<Int>>,
+    val size: Float,
+)
 
 /** A line as set: its letters' [size], the [extra] after each of its spaces (or [gaps], each space's own), its [width]. */
 private class LineSet(
@@ -231,7 +248,8 @@ private class AmudSetter(
     /**
      * The column [column]'s lines, in [family] ([isGemara]: the Gemara's square letters), or null when it has none.
      * [usual]: its tractate's usual box height in pixels, when its letters are the tractate's size. [lead]: the square
-     * letters and the size in pixels of a dibbur's first word, when the column prints it so (Tosafot).
+     * letters and the size in pixels of a dibbur's first word, when the column prints it so (Tosafot), or of the words
+     * [leads] names (by their line's index, a book's daf's).
      */
     fun column(
         column: String,
@@ -239,9 +257,10 @@ private class AmudSetter(
         isGemara: Boolean,
         usual: Float? = null,
         lead: Pair<FontFamily, Float>? = null,
+        leads: Map<Int, Set<Int>>? = null,
     ): ColumnSetter? {
         val indices = lines.indices.filter { lines[it].c == column && lines[it].t.isNotBlank() }
-        return if (indices.isEmpty()) null else ColumnSetter(this, column, family, isGemara, indices, usual, lead)
+        return if (indices.isEmpty()) null else ColumnSetter(this, column, family, isGemara, indices, usual, lead, leads)
     }
 
     /** The width of [words] at [size], a normal space between two, those of [marks] as they are printed. */
@@ -341,6 +360,7 @@ private class ColumnSetter(
     indices: List<Int>,
     tractateUsual: Float? = null,
     leadLetters: Pair<FontFamily, Float>? = null,
+    leads: Map<Int, Set<Int>>? = null,
 ) {
     private val lines = amud.lines
     private val bigLines = indices.filter { lines[it].isBig }
@@ -366,7 +386,13 @@ private class ColumnSetter(
             var above: Int? = null
             for (i in indices) {
                 val bold = lines[i].d.toSet()
-                found[i] = if (lead == null || lines[i].isBig) Marks(bold) else Marks(bold, firsts(bold, above), lead)
+                found[i] =
+                    when {
+                        lead == null || lines[i].isBig -> Marks(bold)
+                        // A book's daf names its own: the words that open a comment
+                        leads != null -> Marks(bold, leads[i].orEmpty(), lead)
+                        else -> Marks(bold, firsts(bold, above), lead)
+                    }
                 above = i
             }
         }

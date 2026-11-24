@@ -56,6 +56,7 @@ import io.github.kdroidfilter.seforimapp.core.hasPunctuation
 import io.github.kdroidfilter.seforimapp.core.lettersOnly
 import io.github.kdroidfilter.seforimapp.core.locatedLinesOf
 import io.github.kdroidfilter.seforimapp.core.menuOwnSourceOf
+import io.github.kdroidfilter.seforimapp.core.presentation.components.SingleMarkMenus
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
@@ -202,7 +203,8 @@ private fun BookContentContextMenu(
         inputModeManager = androidx.compose.ui.platform.LocalInputModeManager.current
 
         CompositionLocalProvider(LocalMenuController provides menuController) {
-            MenuContent(modifier = modifier, content = content)
+            // Pardes: one item marked at a time, as every menu of the app (request 74 of stage 3)
+            SingleMarkMenus { MenuContent(modifier = modifier, content = content) }
         }
     }
 }

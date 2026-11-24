@@ -2,7 +2,6 @@
 
 package io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
@@ -75,11 +74,16 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
+import io.github.kdroidfilter.seforimapp.core.presentation.components.MarkOnHover
+import io.github.kdroidfilter.seforimapp.core.presentation.components.PopupMarking
+import io.github.kdroidfilter.seforimapp.core.presentation.components.markOnPointer
+import io.github.kdroidfilter.seforimapp.core.presentation.components.markedRowBackground
 import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberPillTextFieldStyle
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.components.CatalogRow
 import io.github.kdroidfilter.seforimapp.features.home.widgets.FullWidthSection
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeUserLocation
@@ -870,31 +874,17 @@ private fun SuggestionsPanel(
     loadingMessage: String? = null,
     // Books or categories picked already: Tab on another adds it to them
     adding: Boolean = false,
+    // Pardes: one row marked, the keys' or the pointer's ([onMark], its index), as every popup (request 74 of stage 3)
+    marking: PopupMarking? = null,
+    onMark: (Int) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     val menuStyle = JewelTheme.menuStyle
 
+    // Pardes: the row the keys move to in view by the least scroll, as the app's other lists keep theirs: whole at the
+    // list's bottom too, and a step down as a step up, not a page's jump (requests 75 and 76 of stage 3)
     LaunchedEffect(focusedIndex, rows.size) {
-        if (focusedIndex >= 0) {
-            val total = rows.size
-            if (total > 0) {
-                val visible = listState.layoutInfo.visibleItemsInfo
-                val firstVisible = visible.firstOrNull()?.index
-                val lastVisible = visible.lastOrNull()?.index
-                // Scroll down when at last visible
-                if (lastVisible != null && focusedIndex == lastVisible) {
-                    val nextIndex = (focusedIndex + 1).coerceAtMost(total - 1)
-                    if (nextIndex != focusedIndex) listState.scrollToItem(nextIndex)
-                } else if (firstVisible != null && focusedIndex == firstVisible) {
-                    // Scroll up when at first visible
-                    val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
-                    if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
-                } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
-                    // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
-                    listState.scrollToItem(focusedIndex)
-                }
-            }
-        }
+        if (focusedIndex in rows.indices && marking?.pointerMoved != true) listState.revealItem(focusedIndex)
     }
     val isEmpty = rows.isEmpty()
     Column(
@@ -911,7 +901,7 @@ private fun SuggestionsPanel(
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(marking?.let { Modifier.markOnPointer(it, listState, onMark) } ?: Modifier),
         ) {
             if (isLoading && !loadingMessage.isNullOrEmpty() && isEmpty) {
                 item {
@@ -1050,28 +1040,18 @@ private fun TocSuggestionsPanel(
     emptyMessage: String? = null,
     isLoading: Boolean = false,
     loadingMessage: String? = null,
+    // Pardes: one row marked, the keys' or the pointer's, as the bar's book stage (request 74 of stage 3)
+    marking: PopupMarking? = null,
+    onMark: (Int) -> Unit = {},
 ) {
     val isEmpty = suggestions.isEmpty() && textSearchLabel == null && addRows.isEmpty()
     val addStart = suggestions.size + if (textSearchLabel != null) 1 else 0
     val listState = rememberLazyListState()
     val menuStyle = JewelTheme.menuStyle
 
+    // Pardes: the row the keys move to in view by the least scroll, as the bar's book stage (requests 75 and 76 of stage 3)
     LaunchedEffect(focusedIndex, suggestions.size) {
-        if (focusedIndex >= 0 && suggestions.isNotEmpty()) {
-            val visible = listState.layoutInfo.visibleItemsInfo
-            val firstVisible = visible.firstOrNull()?.index
-            val lastVisible = visible.lastOrNull()?.index
-            if (lastVisible != null && focusedIndex == lastVisible) {
-                val nextIndex = (focusedIndex + 1).coerceAtMost(suggestions.lastIndex)
-                if (nextIndex != focusedIndex) listState.scrollToItem(nextIndex)
-            } else if (firstVisible != null && focusedIndex == firstVisible) {
-                val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
-                if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
-            } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
-                // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
-                listState.scrollToItem(focusedIndex)
-            }
-        }
+        if (!isEmpty && focusedIndex >= 0 && marking?.pointerMoved != true) listState.revealItem(focusedIndex)
     }
     Column(
         modifier =
@@ -1087,7 +1067,7 @@ private fun TocSuggestionsPanel(
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(marking?.let { Modifier.markOnPointer(it, listState, onMark) } ?: Modifier),
         ) {
             if (isLoading && !loadingMessage.isNullOrEmpty() && isEmpty) {
                 item {
@@ -1336,24 +1316,17 @@ internal fun SuggestionRow(
     detail: String? = null,
     // What the row does, with its keys; shown on the highlighted or hovered row, and clickable
     actions: List<RowAction> = emptyList(),
+    // Pardes: in a list whose rows mark themselves (a study plan's field), the pointer moved over the row marks it
+    onMark: (() -> Unit)? = null,
 ) {
     val hScroll = rememberScrollState(0)
     val hoverSource = remember { MutableInteractionSource() }
-    val isHovered by hoverSource.collectIsHoveredAsState()
-    val active = highlighted || isHovered
+    // Pardes: the row marked alone, by the keys or the pointer, tinted at once, as every popup's rows (request 74 of
+    // stage 3: the pointer marks a row of the bar's lists through their list, markOnPointer)
+    onMark?.let { MarkOnHover(hoverSource, onMark = it) }
+    val active = highlighted
     val hasContent = parts.isNotEmpty()
-
-    // Use Jewel-consistent hover color for native look
-    val backgroundColor by animateColorAsState(
-        targetValue =
-            if (active) {
-                JewelTheme.globalColors.outlines.focused
-                    .copy(alpha = 0.12f)
-            } else {
-                Color.Transparent
-            },
-        animationSpec = tween(durationMillis = 150),
-    )
+    val backgroundColor = markedRowBackground(active)
 
     LaunchedEffect(active, parts) {
         if (active) {
@@ -1541,6 +1514,8 @@ private fun SearchBar(
     val minBookPrefixLen = 2
     val minTocPrefixLen = 1
     var focusedIndex by remember { mutableIntStateOf(-1) }
+    // Pardes: whether the keys or the pointer marked the row last, one row marked as every popup's (request 74 of stage 3)
+    val marking = remember { PopupMarking() }
     var popupVisible by remember { mutableStateOf(false) }
     // Bumped when the field gets the focus or a click: the suggestions open (again, after a click outside
     // closed them). None before the first one (a restored results tab); losing the focus to a click in
@@ -1856,6 +1831,7 @@ private fun SearchBar(
                             // held (like Chrome's omnibox); neither event reaches the field, whose caret stays put
                             (ev.key == Key.DirectionDown || ev.key == Key.DirectionUp) && popupVisible -> {
                                 if (ev.type == KeyEventType.KeyDown) {
+                                    marking.keysMoved()
                                     val total = if (isTocMode) totalTocRows else totalCatBook
                                     val step = if (ev.key == Key.DirectionDown) 1 else -1
                                     // Pardes: round from the last row to the first and back, as every popup of the app,
@@ -2071,6 +2047,8 @@ private fun SearchBar(
                             emptyMessage = if (showTocEmptyState) stringResource(Res.string.autocomplete_no_results) else null,
                             isLoading = showTocLoading,
                             loadingMessage = stringResource(Res.string.autocomplete_loading),
+                            marking = marking,
+                            onMark = { focusedIndex = it },
                         )
                     } else if (!isTocMode && (showBookStageSuggestions || showBookEmptyState || showBookLoading)) {
                         SuggestionsPanel(
@@ -2103,6 +2081,8 @@ private fun SearchBar(
                             emptyMessage = if (showBookEmptyState) stringResource(Res.string.autocomplete_no_results) else null,
                             isLoading = showBookLoading,
                             loadingMessage = stringResource(Res.string.autocomplete_loading),
+                            marking = marking,
+                            onMark = { focusedIndex = it },
                         )
                     }
                 }

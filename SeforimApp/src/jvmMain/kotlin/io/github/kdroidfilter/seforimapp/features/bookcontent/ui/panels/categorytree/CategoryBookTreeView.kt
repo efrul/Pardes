@@ -379,6 +379,45 @@ private fun buildTreeItems(
     focusedId: String? = null,
 ): List<TreeItem> =
     buildList {
+        // Pardes: the books of an open category, Zayit's, in a function of their own for the 60 lines of detekt.yml that
+        // the tree's keys passed (request 47 of stage 3)
+        fun addBooks(
+            category: Category,
+            level: Int,
+        ) {
+            val booksSeq: Sequence<Book> =
+                if (showCounts) {
+                    booksForCategoryOverride[category.id].orEmpty().asSequence()
+                } else {
+                    booksByCategory[category.id].orEmpty().asSequence()
+                }
+            booksSeq
+                .distinctBy { it.id }
+                .forEach { book ->
+                    // In search mode, skip books with zero results
+                    if (showCounts && (bookCounts[book.id] ?: 0) <= 0) return@forEach
+                    add(
+                        TreeItem(
+                            id = "book_${book.id}",
+                            level = level + 1,
+                            content = {
+                                BookItem(
+                                    book = book,
+                                    isSelected =
+                                        focusedId?.let { it == "book_${book.id}" }
+                                            ?: selectedBookIdOverride?.let { it == book.id }
+                                            ?: (selectedBook?.id == book.id),
+                                    onClick = { onBookClick(book) },
+                                    count = bookCounts[book.id] ?: 0,
+                                    showCount = showCounts,
+                                )
+                            },
+                            click = { onBookClick(book) },
+                        ),
+                    )
+                }
+        }
+
         fun addCategory(
             category: Category,
             level: Int,
@@ -418,37 +457,7 @@ private fun buildTreeItems(
 
             if (expandedCategories.contains(category.id)) {
                 // Books in this category
-                val booksSeq: Sequence<Book> =
-                    if (showCounts) {
-                        booksForCategoryOverride[category.id].orEmpty().asSequence()
-                    } else {
-                        booksByCategory[category.id].orEmpty().asSequence()
-                    }
-                booksSeq
-                    .distinctBy { it.id }
-                    .forEach { book ->
-                        // In search mode, skip books with zero results
-                        if (showCounts && (bookCounts[book.id] ?: 0) <= 0) return@forEach
-                        add(
-                            TreeItem(
-                                id = "book_${book.id}",
-                                level = level + 1,
-                                content = {
-                                    BookItem(
-                                        book = book,
-                                        isSelected =
-                                            focusedId?.let { it == "book_${book.id}" }
-                                                ?: selectedBookIdOverride?.let { it == book.id }
-                                                ?: (selectedBook?.id == book.id),
-                                        onClick = { onBookClick(book) },
-                                        count = bookCounts[book.id] ?: 0,
-                                        showCount = showCounts,
-                                    )
-                                },
-                                click = { onBookClick(book) },
-                            ),
-                        )
-                    }
+                addBooks(category, level)
 
                 // Subcategories
                 categoryChildren[category.id]?.forEach { child ->
