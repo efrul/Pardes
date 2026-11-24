@@ -85,7 +85,7 @@ tools and the code did when it was written.
   `main`; code the experiment had moved to a new file had not changed since, which `git diff -U0 <its base> HEAD --
   <file> | grep '^@@'` showed before trusting the move (2026-11-23).
 - **A feature taken out after a merge is taken out by its own lines.** Restoring a file to the merge's first parent drops
-  everything the other side brought to it: before request 83 put back the files of request 82's commentary mode as the
+  everything the other side brought to it: before request 86 put back the files of request 82's commentary mode as the
   other branch had them, `git show <the side's commit> -- <file>` showed that the side had brought them request 82 alone
   (and not 81's fits), and `git diff <the parent> -- <file>` that nothing but the new change was left (2026-11-23).
 - **Scratch tests and benches** (`Tmp*`) are deleted before the commit. A benchmark runs alone: mockk in the same JVM
@@ -221,7 +221,7 @@ tools and the code did when it was written.
 - **A lambda remembered by some keys keeps what it read in its first composition.** Zayit's `previewKeyHandler`
   (`remember(onEvent)`) calls `stepLine`, which reads `dafControl`, made by `remember(bookId)`: with another book opened
   in the tab, the arrows and Page Up/Down went to the former book's daf, and the arrows stepped through the text's
-  lines on the new one (request 83 of stage 3, 2026-11-23). Give `remember` every remembered value its lambda reads
+  lines on the new one (request 86 of stage 3, 2026-11-23). Give `remember` every remembered value its lambda reads
   that can change, or read it through `rememberUpdatedState`.
 - **A jump to a row and back starts the rows between again.** `scrollToItem` disposes the rows it leaves, and a row
   that reads its text once on screen (the find pane's, `produceState`) reads it again, empty first, and grows: after a

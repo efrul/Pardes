@@ -707,7 +707,7 @@ private fun DafPages(
         }
 
         // Pardes: the comment a commentary's tab opened the daf at, once the tab's line is in view, selected as a click on
-        // it selects it: on its segment, the arrows going on through its commentary (request 83)
+        // it selects it: on its segment, the arrows going on through its commentary (request 86)
         LaunchedEffect(places) {
             if (places.isEmpty()) return@LaunchedEffect
             val commentId = graph.dafFocusRequests.take(control.tabId, book.id)?.takeIf { it in places } ?: return@LaunchedEffect

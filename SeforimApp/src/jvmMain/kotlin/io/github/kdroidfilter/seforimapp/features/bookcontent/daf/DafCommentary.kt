@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 // Pardes (request 82 of docs/DESKTOP_STAGE3_PLAN.md: "גם מרש"י או הפירוש המקביל אליו כאין רשי כמו כרשבם בבא בתרא או רן
-// בנדרים למשל ותוס יוכלו לעבור לצורת הדף"; request 83: "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא, אין אפשרות
+// בנדרים למשל ותוס יוכלו לעבור לצורת הדף"; request 86: "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא, אין אפשרות
 // היום להתמקד על הגמרא ככה"): a commentary printed on a tractate's daf, in Rashi's column or Tosafot's, opens that
 // daf, the tractate's own, at its comment, selected there as a click on it selects it, every option of the daf at hand.
 
@@ -45,7 +45,7 @@ internal fun rememberDafTractate(book: Book?): Book? {
 
 /**
  * The comment each tab's daf is to select once it shows it, as a click on it selects it: asked by a commentary's tab
- * as it opens its tractate's daf at the comment (request 83), taken once by the daf of that tractate.
+ * as it opens its tractate's daf at the comment (request 86), taken once by the daf of that tractate.
  */
 @Inject
 @SingleIn(AppScope::class)

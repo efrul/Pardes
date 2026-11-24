@@ -155,7 +155,7 @@ fun EndVerticalBar(
             if (!noBookSelected) {
                 val bookHasDiacritics = selectedBook.hasNekudot || selectedBook.hasTeamim
                 // Pardes: the tractate whose daf the book shows, itself or the one a commentary of it is printed on (82),
-                // whose daf a commentary's button opens at its comment, every option of the daf at hand (83)
+                // whose daf a commentary's button opens at its comment, every option of the daf at hand (86)
                 val dafTractate = rememberDafTractate(selectedBook)
                 val commentaryOf = dafTractate?.takeUnless { selectedBook.isBavli }
                 val openTractateDaf =

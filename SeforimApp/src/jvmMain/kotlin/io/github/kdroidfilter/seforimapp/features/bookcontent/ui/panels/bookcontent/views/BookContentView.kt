@@ -974,7 +974,7 @@ fun BookContentView(
     }
 
     // Global preview handler: handle basic navigation keys regardless of inner focus. Pardes: made again with the daf's
-    // control, the book's, which a book opened in the tab replaces (request 83 of stage 3: the arrows went to the former
+    // control, the book's, which a book opened in the tab replaces (request 86 of stage 3: the arrows went to the former
     // book's, and stepped through the text's lines on the daf)
     val previewKeyHandler =
         remember(onEvent, dafControl) {

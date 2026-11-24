@@ -435,7 +435,7 @@ The entries of this section by kind:
     io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneFocusRequests` (request 47 of stage 3); and
     after it, with a comment of its own, `abstract val pageFits: io.github.kdroidfilter.seforimapp.features.pdf.PageFits`
     (request 73 of the list after the public release); and after it, with a comment of its own, `abstract val
-    dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests` (request 83 of stage
+    dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests` (request 86 of stage
     3).
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
@@ -1333,7 +1333,7 @@ The entries of this section by kind:
     request 82 of stage 3), which opens that tractate in the tab, on its daf at the comment selected or read
     (`commentaryOf`, `openTractateDaf = rememberOpenTractateDaf(uiState.tabId) { … }`, and its import: `ToggleDafView`
     while the daf is off, then `OpenBookAtLine`, or `OpenBookById` without a line; on, `isSelected`, for a tractate
-    alone: request 83, "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא, אין אפשרות היום להתמקד על הגמרא ככה");
+    alone: request 86, "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא, אין אפשרות היום להתמקד על הגמרא ככה");
     and for another book offered pages of its own (`|| hasBookDaf(selectedBook)`: the
     experiment turned on, a book with commentaries), its tooltip then `book_daf_tooltip` (the Vilna page's own where
     `dafTractate` is one).
@@ -1626,7 +1626,7 @@ The entries of this section by kind:
     `previewKeyHandler` is remembered with `dafControl` too (`remember(onEvent, dafControl)`, its comment marked
     "Pardes:"): each book has a daf control of its own (`remember(bookId)`), and with a book opened in the tab the
     arrows and Page Up/Down went to the former book's, the arrows stepping through the text's lines on the daf (request
-    83 of stage 3).
+    86 of stage 3).
   - A word clicked on the daf is selected in the book's text (`selectInLine`), and the right-clicked word's line is the
     context menu's (`onContextLine`).
   - On the daf the tab's place is the daf's: `maybeSave` saves nothing there, the daf's `onScroll` saves the Gemara's
@@ -3091,7 +3091,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   segment going on from the right one to the left one's top, as far as the row's end): it came in at the view's top,
   which the user saw after the testers' build `desktop-1.0.11-61` (request 80 of stage 3: "החצים בצורת הדף: הקטע הבא
   עדיין נכנס בראש התצוגה"). The comment a commentary's tab opened the tractate's daf at (`DafFocusRequests`, request
-  83 of stage 3: "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא") is selected once the tab's line is in view,
+  86 of stage 3: "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא") is selected once the tab's line is in view,
   as a click on it selects it (a `LaunchedEffect(places)` under a comment marked "Pardes:": its segment, `baseOf`,
   now internal for `gemaraLineOf`, the passage selected, the comment focused for the arrows, and brought into view).
   Request 82 had shown the daf in the commentary's own tab, its lines the commentary's (`commentaryId`); 83 took it
@@ -3102,7 +3102,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`,
-  `ZoomPivotTest`, `RevealSpanUiTest`, `DafIndexTest`, `DafFocusRequestsTest`; request 83 tried in the app (Tosafot and
+  `ZoomPivotTest`, `RevealSpanUiTest`, `DafIndexTest`, `DafFocusRequestsTest`; request 86 tried in the app (Tosafot and
   Rashi on Berakhot: the comment selected on the tractate's daf, the arrows down through their comments, a click on
   the Gemara and the arrows through its segments); request 80 tried in the app (Berakhot 2a, a segment selected and
   the arrow down three times: each next segment whole at the view's bottom, the page a few lines on); the composables have no UI test; request 44 tried in the app (Berakhot 2a zoomed in with Ctrl and
@@ -3205,7 +3205,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 - **Size:** 108 lines.
 - **What:** a commentary printed on a tractate's daf, in Rashi's column or Tosafot's, opens that daf, the tractate's
   own, at its comment (request 82 of the list after the testers' build `desktop-1.0.11-61`: "גם מרש"י או הפירוש המקביל
-  אליו כאין רשי כמו כרשבם בבא בתרא או רן בנדרים למשל ותוס יוכלו לעבור לצורת הדף"; request 83: "פתיחה של צורת הדף מרשי
+  אליו כאין רשי כמו כרשבם בבא בתרא או רן בנדרים למשל ותוס יוכלו לעבור לצורת הדף"; request 86: "פתיחה של צורת הדף מרשי
   תפתח את כל האפשרויות כמו גמרא, אין אפשרות היום להתמקד על הגמרא ככה"). `rememberDafTractate(book)`: the tractate whose
   daf a tab's book shows, the book itself for a tractate, for a commentary the tractate its layout prints it on
   (`DafLayouts.tractateOf`, then `getBookCore`), with the commentary it is of while the next is looked for.
@@ -3577,7 +3577,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 - **Feature:** Daf view.
 - **Size:** 25 lines.
-- **What:** the comment a commentary's tab opens its tractate's daf at (request 83 of stage 3): taken once, by that
+- **What:** the comment a commentary's tab opens its tractate's daf at (request 86 of stage 3): taken once, by that
   tab's daf of that tractate; another tab's daf takes nothing, and another tractate's daf shown first drops it.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, backtick names.
@@ -3668,7 +3668,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   `SettingsGroup`, `book_daf.*`: `enabled`, off by default; `style`, every book's; `books`, a book's own by its
   id), `Book.isTanakh`, and the composables that read them:
   `hasBookDaf` (the experiment on, a book with commentaries; no tractate, nor a commentary printed on a tractate's
-  daf, whose button opens that daf, `rememberDafTractate`, requests 82 and 83 of stage 3), `showsBookDaf` (the tab shows such
+  daf, whose button opens that daf, `rememberDafTractate`, requests 82 and 86 of stage 3), `showsBookDaf` (the tab shows such
   pages) and `rememberBookDafStyle` (a book's own style, else every book's).
 - **Reached from:** `VerticalBars.kt` and `BookContentPanel.kt` (`hasBookDaf`), `PageSpreadsButton.kt`
   (`showsBookDaf`), `BookDafView.kt`, `BookDafPlaces.kt`, `BookDafBands.kt`, `BookDafAdjust.kt`, `BookDafCard.kt`.

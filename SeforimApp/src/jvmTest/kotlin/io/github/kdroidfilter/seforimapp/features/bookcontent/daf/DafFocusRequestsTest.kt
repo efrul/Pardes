@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * The comment a commentary's tab opens its tractate's daf at (request 83 of docs/DESKTOP_STAGE3_PLAN.md: "פתיחה של צורת
+ * The comment a commentary's tab opens its tractate's daf at (request 86 of docs/DESKTOP_STAGE3_PLAN.md: "פתיחה של צורת
  * הדף מרשי תפתח את כל האפשרויות כמו גמרא"): taken once, by that tab's daf of that tractate.
  */
 class DafFocusRequestsTest {
