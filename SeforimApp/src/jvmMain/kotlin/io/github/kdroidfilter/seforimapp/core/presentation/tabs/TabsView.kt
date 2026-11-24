@@ -583,10 +583,10 @@ private fun TabStripScope.RtlAwareTabStripContent(
         val noTabFits = layout.currentTabAsIcon
         val showOverflowMenu = layout.overflowing
         val visibleCount = layout.visibleCount
-        // Pardes: the wheel moves the tabs on show too (request 83)
+        // Pardes: a scroll moves the tabs on show too (request 83)
         val tabWindow = remember { ScrolledTabWindow() }
         val visibleKeys =
-            remember(tabs, pinnedWidths, visibleCount, showOverflowMenu, tabWindow.steps) {
+            remember(tabs, pinnedWidths, visibleCount, showOverflowMenu, tabWindow.first, tabWindow.between) {
                 if (!showOverflowMenu) {
                     null
                 } else if (visibleCount == 0) {
@@ -618,7 +618,7 @@ private fun TabStripScope.RtlAwareTabStripContent(
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().tabStripWheel(tabWindow, showOverflowMenu, isRtl),
+            modifier = Modifier.fillMaxWidth().tabStripWheel(tabWindow, showOverflowMenu, isRtl, tabWidth),
         ) {
             // Use hysteresis around the threshold to avoid flicker/glitch when toggling modes
             var shrinkToFitActive by remember { mutableStateOf(false) }
@@ -662,7 +662,8 @@ private fun TabStripScope.RtlAwareTabStripContent(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(0.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = rowModifier,
+                    // Pardes: on a scroll's way, the tab coming in is cut at the row's end (request 83)
+                    modifier = rowModifier.scrolledTabRun(tabWindow, tabWidth),
                 ) {
                     // Gap i is before logical tab i, logical 0 at the left: in RTL the keys come reversed, so the
                     // gap follows its tab here, and the one after the last tab comes first.
@@ -673,7 +674,8 @@ private fun TabStripScope.RtlAwareTabStripContent(
                         val workspaceTab = workspace.tab(key) ?: return@forEachIndexed
                         // Keyed outside the visible/hidden branch, so a tab moving along the strip keeps its composition.
                         key(key) {
-                            if (visibleKeys == null || tabEntry.key in visibleKeys) {
+                            // Pardes: and the tab a scroll brings in, still one of the hidden ones (request 83)
+                            if (visibleKeys == null || tabEntry.key in visibleKeys || tabWindow.arrives(tabEntry.key)) {
                                 val isClosing = closingKeys.contains(tabEntry.key)
                                 val isNew = !knownKeys.contains(tabEntry.key)
                                 val slide = remember { TabSlide() }
@@ -707,7 +709,13 @@ private fun TabStripScope.RtlAwareTabStripContent(
                                         visible = !isClosing
                                     }
                                     // The tab as drawn and clicked slides; its slot and grip stay where drops resolve.
-                                    Row(Modifier.tabStripCarry(tabDrag, workspaceTab).slideToNewPlace(slide, slideGeneration)) {
+                                    // Pardes: and it is drawn where a scroll has it (request 83)
+                                    Row(
+                                        Modifier
+                                            .tabStripCarry(tabDrag, workspaceTab)
+                                            .slideToNewPlace(slide, slideGeneration)
+                                            .scrolledTab(tabWindow, key, isRtl),
+                                    ) {
                                         AnimatedVisibility(
                                             visible = visible,
                                             exit =
@@ -1292,9 +1300,10 @@ private fun TabOverflowMenu(
     onAdd: (() -> Unit)?,
 ) {
     val shape = RoundedCornerShape(6.dp)
-    // Pardes: what is typed narrows the list, and Enter goes to its first tab (request 83)
+    // Pardes: what is typed narrows the list, and the keys mark its rows and open them (request 83)
     val filter = rememberHiddenTabsFilter()
     val shown = filter.matching(tabs) { listOfNotNull(it.labelProvider(), it.pinnedLabel) }
+    val keys = filter.keys(rememberScrollState(), shown, name = { it.key }, onOpen = onSelect, onAdd = onAdd)
     val tabsByKey = remember(shown) { shown.associateBy { it.key } }
     // Pinned tabs and the others reorder apart, as on the strip: a pinned one never moves among the rest.
     val runs =
@@ -1305,15 +1314,18 @@ private fun TabOverflowMenu(
                 .filter { it.isNotEmpty() }
                 .map { run -> run.map { it.key } }
         }
-    Column(
+    // Pardes: the column's rows reach the list's keys (request 83)
+    HiddenTabsColumn(
+        keys,
         Modifier
             .width(TabOverflowMenuWidth)
             .background(JewelTheme.globalColors.panelBackground, shape)
             .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
             .padding(4.dp),
     ) {
-        HiddenTabsFilterField(filter, onEnter = { shown.firstOrNull()?.let(onSelect) })
-        Column(Modifier.heightIn(max = TabOverflowMenuMaxHeight).verticalScroll(rememberScrollState())) {
+        HiddenTabsFilterField(filter, keys)
+        // Pardes: the keys' scroll, which keeps their row in view (request 83)
+        Column(Modifier.heightIn(max = TabOverflowMenuMaxHeight).verticalScroll(keys.scroll)) {
             TabOverflowMenuRuns(runs, tabsByKey, tabCount, onSelect, onMove)
         }
         if (onAdd != null) {
@@ -1331,7 +1343,8 @@ private fun TabOverflowMenu(
 @Composable
 private fun NewTabMenuRow(onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
-    val hovered by interactionSource.collectIsHoveredAsState()
+    // Pardes: the row the keys or the pointer marked, one at a time (request 83)
+    val hovered = hiddenTabMarked(HIDDEN_TABS_ADD_ROW, interactionSource)
     val accent = JewelTheme.globalColors.outlines.focused
     Row(
         modifier =
@@ -1386,7 +1399,8 @@ private fun TabOverflowMenuItem(
     var contextMenuOpen by remember { mutableStateOf(false) }
     var contextClickOffset by remember { mutableStateOf(IntOffset.Zero) }
     val interactionSource = remember { MutableInteractionSource() }
-    val hovered by interactionSource.collectIsHoveredAsState()
+    // Pardes: the row the keys or the pointer marked, one at a time (request 83)
+    val hovered = hiddenTabMarked(tab.key, interactionSource)
     val accent = JewelTheme.globalColors.outlines.focused
     Row(
         modifier =

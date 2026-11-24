@@ -1271,8 +1271,6 @@
     <string name="tab_split_beside">הצגה לצד הלשונית הנוכחית</string>
     <string name="tab_split_new">פיצול עם לשונית חדשה</string>
     <string name="tab_split_end">סיום התצוגה המפוצלת</string>
-    <!-- Pardes: the search from anywhere, its title-bar button (request 85 of stage 3, SearchAnywhere.kt) -->
-    <string name="search_anywhere_tooltip">חיפוש בכל הספרייה</string>
     <!-- Pardes: the pages drawn as images in the dark theme's colours, and the button of their own (request 42 of stage 3, PageColors) -->
     <string name="page_colors_original">צבעים מקוריים</string>
     <string name="page_colors_original_tooltip">העמודים של הסריקה ושל ספרי PDF בצבעים המקוריים שלהם, במקום הצבעים של המצב הכהה</string>

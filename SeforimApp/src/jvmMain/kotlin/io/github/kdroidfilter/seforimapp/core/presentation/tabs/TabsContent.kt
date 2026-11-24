@@ -416,7 +416,7 @@ private fun navigate(
 
 /**
  * The callbacks of a search bar's state, acting in the tab [currentTabId] returns.
- * Pardes: internal, for the search from anywhere, whose bar acts in a tab of its own (request 85).
+ * Pardes: internal, for the search from anywhere, whose bar acts in the tab it opens (request 85).
  */
 @Composable
 internal fun rememberHomeSearchCallbacks(

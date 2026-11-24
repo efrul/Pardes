@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.core.presentation.tabs
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /** What is typed over the hidden tabs' list narrows it (request 83 of stage 3). */
 class HiddenTabsFilterTest {
@@ -55,5 +56,23 @@ class HiddenTabsFilterTest {
     @Test
     fun `a title that holds nothing typed leaves no tab`() {
         assertEquals(emptyList(), found("זוהר"))
+    }
+
+    @Test
+    fun `the keys' row comes into view by the least scroll`() {
+        // Ten rows 30 px high in a view of 120 px: rows 0 to 3 in view at first
+        assertNull(revealScroll(row = 2, rows = 10, rowHeight = 30f, scrolled = 0, viewport = 120))
+        assertEquals(30, revealScroll(row = 4, rows = 10, rowHeight = 30f, scrolled = 0, viewport = 120))
+        assertEquals(180, revealScroll(row = 9, rows = 10, rowHeight = 30f, scrolled = 0, viewport = 120))
+        assertEquals(60, revealScroll(row = 2, rows = 10, rowHeight = 30f, scrolled = 150, viewport = 120))
+        // The + row, under the column, is always in view
+        assertNull(revealScroll(row = 10, rows = 10, rowHeight = 30f, scrolled = 0, viewport = 120))
+    }
+
+    @Test
+    fun `a page is the rows in view but four, one at least`() {
+        assertEquals(12, pageRows(viewport = 480, rowHeight = 30f))
+        assertEquals(1, pageRows(viewport = 120, rowHeight = 30f))
+        assertEquals(1, pageRows(viewport = 0, rowHeight = 0f))
     }
 }

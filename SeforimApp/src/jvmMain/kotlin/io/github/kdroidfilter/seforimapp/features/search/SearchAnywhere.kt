@@ -32,8 +32,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntOffset
@@ -46,29 +46,24 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewModelScope
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
-import io.github.kdroidfilter.seforim.tabs.TabsViewModel
-import io.github.kdroidfilter.seforimapp.core.presentation.components.TitleBarActionButton
 import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberDesktopOpener
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.rememberHomeSearchCallbacks
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.UnifiedSearchBar
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
+import io.github.kdroidfilter.seforimapp.framework.desktop.TabSplit
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
-import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.icons.AllIconsKeys
-import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.search_anywhere_tooltip
 import java.util.UUID
 import java.util.WeakHashMap
 import kotlin.math.roundToInt
 
 // Pardes (request 85 of docs/DESKTOP_STAGE3_PLAN.md, a search from anywhere): the home's search bar opened over any
-// screen of the window, by Ctrl/Cmd+L or its button in the title bar, as a browser's address bar is. What it finds
-// opens in a tab of its own, so the tab it was opened over stays as it was.
+// screen of the window by Ctrl/Cmd+L, as a browser's address bar is, with no button of its own in the title bar (the
+// user's word, 2026-11-24: "בלי אייקון חדש לחיפוש המלא"). What it finds opens in the tab it was opened over, as the
+// address bar's does ("פתיחת תוצאה מהחיפוש החדש תהיה באותה כרטיסיה").
 
 private val visibleByWindow = WeakHashMap<OpenWindow, MutableStateFlow<Boolean>>()
 
@@ -91,8 +86,8 @@ internal fun OpenWindow.searchAnywhereKey(event: KeyEvent): Boolean {
     return true
 }
 
-/** The tab a search bar's [event] opens, when it is opened from over another tab; null for a desktop's link. */
-internal fun newTabDestination(event: SearchHomeNavigationEvent): TabsDestination? =
+/** What a search bar's [event] opens, in the tab the bar acts in; null for a desktop's link, which is no tab. */
+internal fun tabDestination(event: SearchHomeNavigationEvent): TabsDestination? =
     when (event) {
         is SearchHomeNavigationEvent.NavigateToSearch -> TabsDestination.Search(searchQuery = event.query, tabId = event.tabId)
         is SearchHomeNavigationEvent.NavigateToBookContent ->
@@ -102,30 +97,16 @@ internal fun newTabDestination(event: SearchHomeNavigationEvent): TabsDestinatio
     }
 
 /**
- * The title bar's button of the search from anywhere, beside the find's, and the search bar it opens over the window.
- * macOS's title bar has no such buttons: there the key alone opens it.
+ * This window's search from anywhere, over the window while it is open. In the title bar, which it takes no room in:
+ * the bar opens right under it.
  */
 @Composable
-fun SearchAnywhereButton() {
+fun SearchAnywhere() {
     val openWindow = LocalOpenWindow.current
     val visible by openWindow.searchAnywhereVisible.collectAsState()
-    // The title bar's bottom, in the window: the bar opens right under it.
+    // The title bar's bottom, in the window: from the box's place, its bounds being those of no room at all
     var titleBarBottom by remember { mutableIntStateOf(0) }
-    Box(
-        modifier = Modifier.fillMaxHeight().onGloballyPositioned { titleBarBottom = it.boundsInWindow().bottom.roundToInt() },
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        if (!PlatformInfo.isMacOS) {
-            val label = stringResource(Res.string.search_anywhere_tooltip)
-            TitleBarActionButton(
-                // A magnifier over the whole width: the find's plain one stands beside it
-                key = AllIconsKeys.Actions.FindEntireFile,
-                contentDescription = label,
-                onClick = { openWindow.searchAnywhereVisible.value = !visible },
-                tooltipText = label,
-                shortcutHint = "Ctrl+L",
-            )
-        }
+    Box(Modifier.fillMaxHeight().onGloballyPositioned { titleBarBottom = it.positionInWindow().y.roundToInt() + it.size.height }) {
         if (visible) {
             Popup(
                 popupPositionProvider = WindowOrigin,
@@ -184,19 +165,19 @@ private fun SearchAnywhereBar(
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
-    val tabsViewModel = LocalOpenWindow.current.tabsViewModel
+    val openWindow = LocalOpenWindow.current
     // The bar's own state, as a results page's has its own; gone with the bar.
     val bar = remember { graph.desktopManager.newSearchBarViewModel() }
     DisposableEffect(bar) { onDispose { bar.viewModelScope.cancel() } }
-    // What the bar opens goes to a tab of its own.
+    // The tab what the bar finds opens as, in the selected tab's place: the bar keeps its search's state under this id.
     val tabId = remember { UUID.randomUUID().toString() }
     val searchUi by bar.uiState.collectAsState()
     val callbacks = rememberHomeSearchCallbacks(bar) { tabId }
     val openDesktop = rememberDesktopOpener()
     val currentOnDismiss by rememberUpdatedState(onDismiss)
-    LaunchedEffect(bar, tabsViewModel) {
+    LaunchedEffect(bar, openWindow) {
         bar.navigationEvents.collect { event ->
-            openFromAnywhere(event, tabsViewModel, openDesktop)
+            if (event is SearchHomeNavigationEvent.OpenDesktop) openDesktop(event) else tabDestination(event)?.let(openWindow::openInPlace)
             currentOnDismiss()
         }
     }
@@ -218,12 +199,29 @@ private fun SearchAnywhereBar(
 private fun closesSearchAnywhere(event: KeyEvent): Boolean =
     isSearchAnywhereKey(event) || (event.type == KeyEventType.KeyDown && event.key == Key.Escape)
 
-private fun openFromAnywhere(
-    event: SearchHomeNavigationEvent,
-    tabsViewModel: TabsViewModel,
-    openDesktop: (SearchHomeNavigationEvent.OpenDesktop) -> Unit,
-) {
-    if (event is SearchHomeNavigationEvent.OpenDesktop) openDesktop(event) else newTabDestination(event)?.let(tabsViewModel::openTab)
+/**
+ * [destination] opened in the selected tab's place: a fresh tab there, as the Home button's is (the tab's ViewModels
+ * are of what it showed), under the id the bar gave it. It keeps the pin of the tab it takes the place of, and its
+ * half of a split.
+ */
+private fun OpenWindow.openInPlace(destination: TabsDestination) {
+    val group = group()
+    val current = group?.selectedId ?: return tabsViewModel.openTab(destination)
+    val split = session.splits.saved(groupId)?.takeIf { current in it }
+    session.addTab(
+        destination,
+        groupId,
+        index = group.ids.indexOf(current).coerceAtLeast(0),
+        replacing = current,
+        pinned = session.isPinned(current),
+    )
+    split?.let { session.splits.restore(groupId, it.with(destination.tabId, inPlaceOf = current)) }
 }
+
+/** This pair with [tabId] where [inPlaceOf] was. */
+internal fun TabSplit.with(
+    tabId: String,
+    inPlaceOf: String,
+): TabSplit = if (first == inPlaceOf) copy(first = tabId) else copy(second = tabId)
 
 private const val BAR_WIDTH_SHARE = 0.6f
