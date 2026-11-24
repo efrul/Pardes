@@ -266,11 +266,12 @@ private fun BookDafPages(
         val scale = pagesScale(control, zoom, shown.view, setter.value)
         val places =
             BookDafList(listState, units, laid, setter, scale.perPoint, scale.frame, height) { id ->
-                runSuspendCatching { graph.repository.getLine(id) }.getOrNull()?.takeIf { it.bookId == book.id }?.lineIndex
+                runSuspendCatching { textIndexOf(graph.repository, book.id, id) }.getOrNull()
             }
         val current by rememberUpdatedState(places)
         KeepPlaceAtZoom(control, places)
         BookDafControl(control, current, tab, focused, pageClicks) { focused = it }
+        FindInCommentators(control, book.id, shown.own)
         RevealTabLine(control, current, tab, units, setter.value, clicked, onRelease = { clicked = null }, onScroll = onScroll)
         val ink = JewelTheme.globalColors.text.normal
         val look = DafLook(scale.perPoint, shown.letters.gemara, shown.letters.rashi, ink, JewelTheme.globalColors.outlines.focused)
@@ -338,6 +339,7 @@ private fun DafClicks.noting(
     onFocusComment = onFocus,
     onContextLine = onContextLine,
     onWordInText = onWordInText,
+    onClear = onClear,
 )
 
 /** The keys of the words selected on a page ([selected]: some are): Ctrl or Cmd + C copies them, Escape lets go of them. */
@@ -513,7 +515,7 @@ private fun BookDafPage(
 /**
  * A book's daf's list as it is now: its [units], those [laid] out (by the daf's [setter], or by the one before it while
  * they are laid out again), its scale ([perPoint] pixels a point) and its pages' [frame]; the index of a line of the
- * book ([indexOf], null for another's).
+ * book, or of the line a comment shown is on ([indexOf], null for another's).
  */
 private class BookDafList(
     val listState: LazyListState,

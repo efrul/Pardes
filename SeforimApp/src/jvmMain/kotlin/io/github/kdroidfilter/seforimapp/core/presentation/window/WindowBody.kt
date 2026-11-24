@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
@@ -46,6 +47,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.ReaderSpl
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
 import io.github.kdroidfilter.seforimapp.framework.desktop.DockSizes
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
+import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 
 /**
@@ -71,8 +73,14 @@ fun WindowBody(openWindow: OpenWindow) {
         } else {
             null
         }
+    // Pardes: with the daf's key (Ctrl/Cmd+D), the daf button's click of the selected tab (request 94 of stage 3)
+    val dafKeys = LocalAppGraph.current.dafKeys
+    val readerKeys =
+        readerEvents?.let { events ->
+            { event: KeyEvent -> handleBookShortcut(event, events) || dafKeys.press(event, readerDestination?.tabId) }
+        }
     // Also from the window itself, which gets the keys when nothing has focus (no pane, no text).
-    openWindow.readerShortcuts = readerEvents?.let { events -> { event -> handleBookShortcut(event, events) } }
+    openWindow.readerShortcuts = readerKeys
     val bottomOpen =
         lineWorkspace.satellites.any { entry ->
             entry.isOpen && (entry.placement as? SatellitePlacement.Docked)?.side == DockSide.Bottom
@@ -93,7 +101,7 @@ fun WindowBody(openWindow: OpenWindow) {
             .fillMaxSize()
             .then(rememberTabThumbnails(openWindow))
             .background(canvasBackground())
-            .onPreviewKeyEvent { event -> readerEvents?.let { handleBookShortcut(event, it) } ?: false },
+            .onPreviewKeyEvent { event -> readerKeys?.invoke(event) ?: false },
     ) {
         if (readerDestination != null) {
             key(readerDestination.tabId) { ReaderBar(session, readerDestination, start = true) }

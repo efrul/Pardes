@@ -20,6 +20,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.VerticalLa
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafKey
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMarksButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasBookDaf
@@ -192,25 +193,29 @@ fun EndVerticalBar(
                 // commentary printed on it, Rashi's, Tosafot's, the Rashbam's, the tractate's at its comment (requests 82
                 // and 83), not its scan; another book as pages of its own with its commentators (BookDafView)
                 if (dafTractate != null || hasBookDaf(selectedBook)) {
+                    val toggleDaf = {
+                        if (commentaryOf == null) {
+                            onEvent(BookContentEvent.ToggleDafView)
+                        } else {
+                            openTractateDaf(
+                                commentaryOf,
+                                uiState.content.primarySelectedLineId ?: uiState.content.anchorId.takeIf { it > 0 },
+                            )
+                        }
+                    }
+                    // The button's click is its key's too (request 94 of stage 3)
+                    DafKey(uiState.tabId, toggleDaf)
                     SelectableIconButtonWithToolip(
                         toolTipText =
                             stringResource(
                                 if (dafTractate != null) Res.string.daf_view_tooltip else Res.string.book_daf_tooltip,
                             ),
-                        onClick = {
-                            if (commentaryOf == null) {
-                                onEvent(BookContentEvent.ToggleDafView)
-                            } else {
-                                openTractateDaf(
-                                    commentaryOf,
-                                    uiState.content.primarySelectedLineId ?: uiState.content.anchorId.takeIf { it > 0 },
-                                )
-                            }
-                        },
+                        onClick = toggleDaf,
                         isSelected = uiState.content.dafView && commentaryOf == null,
                         icon = GemaraPage,
                         iconDescription = stringResource(Res.string.daf_view),
                         label = stringResource(Res.string.daf_view),
+                        shortcutHint = if (PlatformInfo.isMacOS) "D+⌘" else "D+Ctrl",
                     )
                 }
                 if (selectedBook.isBavli) {

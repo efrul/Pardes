@@ -26,13 +26,16 @@ import java.util.concurrent.ConcurrentHashMap
  * What the find on the daf searches besides the Gemara: the tractate's comments of each commentary column, as read
  * ([comments], R Rashi and T Tosafot, [DafIndex.comments]), where each line of the library is printed first
  * ([places], [DafIndex.places]: the amud's place in the order, and its top), and the commentaries' [books] (the
- * results pane reads their contents, whose entries are the Gemara's: דף ב., דף ב:).
+ * results pane reads their contents, whose entries are the Gemara's: דף ב., דף ב:). [pagesOf]: another book's own
+ * pages, the book's id: the commentators shown on them are [books], in their bands' order, and their comments are
+ * found in their books (BookDafFind), the pages being laid out as they come into view.
  */
 @Immutable
 class DafPrinted(
     val comments: Map<String, List<Long>>,
     val places: Map<Long, Pair<Int, Float>>,
     val books: Set<Long> = emptySet(),
+    val pagesOf: Long? = null,
 )
 
 /**
@@ -69,10 +72,10 @@ fun rememberDafFound(
                 null
             } else {
                 runSuspendCatching {
-                    if (smart) {
-                        withMeaningComments(gemara, printed, query) { book -> searchEngine.semanticFind(query, book, MEANING_LIMIT) }
-                    } else {
-                        DafFound(gemara, withComments(gemara, printed, query, texts, repository::getLinesByIds))
+                    when {
+                        printed.pagesOf != null -> bookDafFound(gemara, query, smart, printed, repository, searchEngine)
+                        smart -> withMeaningComments(gemara, printed, query) { searchEngine.semanticFind(query, it, MEANING_LIMIT) }
+                        else -> DafFound(gemara, withComments(gemara, printed, query, texts, repository::getLinesByIds))
                     }
                 }.getOrNull()
             }

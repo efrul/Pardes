@@ -287,6 +287,7 @@ private fun BookContentPanelContent(
                                         onOpen = { id, lines -> onEvent(BookContentEvent.OpenBookByIdInNewTab(id, lines)) },
                                         onDetach = { name -> onEvent(BookContentEvent.DetachCommentator(name)) },
                                     ),
+                                onClearSelection = { onEvent(BookContentEvent.SelectionCleared) },
                             )
                         } else {
                             null

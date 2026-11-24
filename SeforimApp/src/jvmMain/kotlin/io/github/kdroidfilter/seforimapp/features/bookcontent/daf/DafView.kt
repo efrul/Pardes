@@ -171,7 +171,8 @@ internal fun firstLines(toc: List<TocEntry>): Map<String, Long> {
  * A tab's book shown as its daf in the text view ([book]): a tractate its Vilna page, or its scan in the page's place
  * ([scan], DafScanReader); another book its own pages, with the [commentators] the commentaries pane shows. What a click
  * on a word of the page selects: a segment ([onSelectLine], with whether Ctrl or Cmd was held), or a passage
- * ([onSelectPassage]: the segment, the comments, their books).
+ * ([onSelectPassage]: the segment, the comments, their books); on a book's own pages a second click on what is marked
+ * lets the selection go ([onClearSelection], request 88 of docs/DESKTOP_STAGE3_PLAN.md).
  */
 class DafMode(
     val book: Book,
@@ -179,6 +180,7 @@ class DafMode(
     val onSelectPassage: (lineId: Long, commentIds: Set<Long>, commentBookIds: Set<Long>) -> Unit,
     val scan: Boolean = false,
     val commentators: DafCommentators? = null,
+    val onClearSelection: () -> Unit = {},
 )
 
 /**
@@ -314,11 +316,12 @@ fun DafView(
     onScroll: (lineId: Long) -> Unit = {},
     commentators: DafCommentators? = null,
     diacritics: DiacriticsMode = DiacriticsMode.All,
+    onClearSelection: () -> Unit = {},
 ) {
     // Another book than a tractate: its own pages, with the commentators shown with its text
     if (!book.isBavli && commentators != null) {
         val tab = DafTab(lineId, selectedLineIds, isTocEntrySelection, selectedPassage, scrollToLineTimestamp, openAt)
-        val clicks = DafClicks(onSelectLine, onSelectPassage, onFocusComment = {}, onContextLine, onWordInText)
+        val clicks = DafClicks(onSelectLine, onSelectPassage, onFocusComment = {}, onContextLine, onWordInText, onClearSelection)
         BookDafView(book, commentators, diacritics, listState, control, zoom, tab, clicks, find, onScroll, modifier)
         return
     }

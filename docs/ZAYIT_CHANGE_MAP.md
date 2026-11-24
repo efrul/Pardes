@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (362 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (366 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -415,7 +415,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +35 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane, A whole page in the view, Daf view.
+- **Change:** modified, +38 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search
+  speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane, A whole page in
+  the view, Daf view, A book's own pages.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -439,6 +441,7 @@ The entries of this section by kind:
     (request 73 of the list after the public release); and after it, with a comment of its own, `abstract val
     dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests` (request 86 of stage
     3).
+  - `abstract val dafKeys: …daf.DafKeys`: the daf button's click of each tab, for its key (request 94 of stage 3).
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
@@ -527,11 +530,14 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
 
-- **Change:** modified, +8 −1 lines. Feature: A pane at the window's edge, Two tabs side by side.
+- **Change:** modified, +18 −3 lines. Feature: A pane at the window's edge, Two tabs side by side, A book's own pages.
 - **What:** the reader's `DockLayout` takes `outerBandSides = LineOuterBandSides`, under a comment marked "Pardes:" (a
   pane dropped at the window's edge runs its full length), and its import. Two tabs side by side (request 59 of
   stage 3): the book's text counts as ready (`LocalBookTextReady`) for the tab shown beside the one selected too
   (`shownBeside`), which has no panes of its own to wait for, with a comment marked "Pardes:" and its import.
+  Since 2026-11-24 the reader's keys are `readerKeys`: `handleBookShortcut`, then the daf's key
+  (`LocalAppGraph.current.dafKeys.press`, request 94 of stage 3), for the row's `onPreviewKeyEvent` and for
+  `openWindow.readerShortcuts` alike.
 - **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, steps 1 and 4 of the docking in its plan,
   2026-11-12) that a side pane run from the top of the window to its bottom while something is open under the text.
   It is done pane by pane, by the drop (the mock-up approved on 2026-11-12): a pane released on the strip along the
@@ -1178,8 +1184,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentEvent.kt`
 
-- **Change:** modified, +47 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator selection kept, Reader's default
-  commentators, Find results pane.
+- **Change:** modified, +53 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator
+  selection kept, Reader's default commentators, Find results pane, A book's own pages.
 - **What:**
   - `ToggleDafView`: shows a Talmud tractate as its Vilna page, or as its text again; `ToggleScanView`: as its scan
     (request 46), or as its text again.
@@ -1193,6 +1199,8 @@ The entries of this section by kind:
     default for it and the books beside it, and that default let go.
   - `ToggleFindResults`, after Zayit's `ToggleBookDetails`: the pane of a book's find results shown or hidden, in every
     tab (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`).
+  - Since 2026-11-24 `SelectionCleared`: a second click on what is marked on a book's own pages lets the selection go,
+    its lines and its passage (request 88 of stage 3: "לחיצה חוזרת על מה שכבר מודגש תבטל את ההדגשה").
 - **Why:** the daf view (`4efa3e3c`) and the scan view, the commentators' own panes (`d85afee7`, `831ad272`) and the selection kept from
   line to line (`3c6bae9b`, `49b456d4`) and the reader's default commentators are driven through the reader's events, as all of Zayit's reader actions are.
 - **Kind:** Pardes feature in Zayit's file.
@@ -1252,8 +1260,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +83 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
-  Reader's default commentators, Find results pane.
+- **Change:** modified, +88 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes,
+  Commentator selection kept, Reader's default commentators, Find results pane, A book's own pages.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
     text, the daf and the scan are a tractate's three views), `DetachCommentator`, `ReattachCommentator` and
@@ -1285,6 +1293,8 @@ The entries of this section by kind:
     as the lines loaded above it next push it down). Since request 75 of stage 3 brought a selected line below the view
     in at the view's bottom (`revealItem`), a book opened at a line in its tab showed the line at the bottom, which
     request 87 met: a comment of Rashi or Tosafot opened back from the daf.
+  - Since 2026-11-24 `SelectionCleared` empties `selectedLines`, `primarySelectedLineId` and `selectedPassage`
+    (request 88 of stage 3), as a Ctrl+click on the only selected line leaves them.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
   opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45), its contents are
   searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54).
@@ -1348,7 +1358,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +92 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+- **Change:** modified, +97 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
   side, Pages in the dark theme's colours, A whole page in the view, A book's own pages.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
@@ -1386,6 +1396,9 @@ The entries of this section by kind:
     `commentaryEnabled = selectedBook?.hasCommentaryConnection == true || linked?.commentedOn == true`, and
     `sourcesEnabled` so with `linked?.comments`, where `linked` is `libraryLinks.connectionsOf(book.id)`, asked in a
     `produceState` for a book that lacks either flag.
+  - Since 2026-11-24 the daf button's click is a value (`toggleDaf`) that is the daf's key's too
+    (`DafKey(uiState.tabId, toggleDaf)`, request 94 of stage 3), and the button shows the key in its tooltip
+    (`shortcutHint`, "D+Ctrl", "D+⌘" on macOS).
 - **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`); a button
   is enabled exactly when its pane has something to show, as Zayit's comment there says. The library of 2026-10-12 has
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
@@ -1585,7 +1598,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/BookContentPanel.kt`
 
-- **Change:** modified, +209 −54 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept, A book's
+- **Change:** modified, +210 −54 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept, A book's
   own pages.
 - **What:**
   - `detachedCommentatorIds`: the split-off commentators' book ids, from the names and the loaded line connections;
@@ -1608,6 +1621,8 @@ The entries of this section by kind:
     commentator's own pane.
   - Since 2026-11-24 the daf's `DafCommentators` is given what a commentator's name on a page asks (requests 91 and
     93 of stage 3): `OpenBookByIdInNewTab(id, lines)` and `DetachCommentator(name)`.
+  - Since 2026-11-24 the `DafMode` is given `onClearSelection`, which sends `SelectionCleared` (request 88 of stage
+    3).
 - **Why:** the daf is drawn in the text view's frame and answers clicks as the text does, with the text's panes
   following (`4efa3e3c`, `b5ebdafd`, `e00754a4`, `8d3825e7`), and the scan in the daf's place; another book's own
   pages are a daf too, set with the commentators checked in the pane, "דינמי, כך שאפשר להתאים את המפרשים" (2026-11-13); a PDF book opens in the
@@ -1622,7 +1637,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +477 −235 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
+- **Change:** modified, +478 −235 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
   in the view.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
@@ -1681,6 +1696,7 @@ The entries of this section by kind:
     engine), the Gemara's alone until those are worked out; so the count, Enter and F3 (`navigateToMatch`, to the line
     by `DafControl.scrollToLine`), the current match drawn on the daf and the results pane all go through them. By
     meaning, the comments found (`dafComments`) are marked whole on the daf with the Gemara's lines (`DafFind.lines`).
+  - Since 2026-11-24 the `DafView` call passes `onClearSelection = daf.onClearSelection` (request 88 of stage 3).
 - **Why:** the daf view lives inside the text view's own frame, so that everything the reader does around the text
   works on the daf too (`e00754a4`, `8d3825e7`, `d334af46`, `efad35cc`); the user asked on 2026-11-09 that the arrows
   move within Rashi and Tosafot when the focus is on them, and that the text open from the daf in the same state (what
@@ -3076,7 +3092,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 - **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot, A whole page in the view,
   A book's own pages.
-- **Size:** 1315 lines.
+- **Size:** 1318 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
@@ -3137,6 +3153,8 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   (request 87).
   Since requests 91 and 93 of stage 3 `DafCommentators` also carries what a commentator's name on a page asks of the
   tab: `onOpen(bookId, baseLineIds)` and `onDetach(name)`.
+  Since request 88 of stage 3 `DafMode` and `DafView` carry `onClearSelection`, given to a book's own pages' clicks
+  (`DafClicks.onClear`); a tractate's daf selects again as before.
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
   (`DafMode`, `DafCommentators`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`), and the book's
   pages' files (`DafControl`, `DafPlace`, `DafScale`, `dafFamily`, `awaitPassage`, `sidewaysPan`).
@@ -3155,6 +3173,25 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   file, 60 lines for `DafPages`), as some of Zayit's largest files are; its amud's drawing went to `DafLinkedAmud.kt`
   on 2026-11-23 (`AmudItem`'s two findings with it), and it could be split further by its parts (pages, review, missing
   layout).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafKeys.kt`
+
+- **Feature:** A book's own pages, Daf view.
+- **Size:** 81 lines.
+- **What:** the daf's key (request 94 of stage 3: "מקש קיצור למעבר בין תצוגת ספר לרגיל"): Ctrl or Cmd + D shows the
+  tab's book as its daf (a tractate's page, another book's own pages) and back as its text. `DafKeys` (one for the
+  app, `AppGraph.dafKeys`) holds the daf button's click of each reader tab by the tab's id: `set` and `clear` by the
+  button while it is shown (`DafKey(tabId, onClick)`, a `DisposableEffect`; a clear by a button gone after the tab's
+  next one was set leaves that one), `press(event, tabId)` runs it when the event is the key (`isDafKey`: D pressed
+  with Ctrl or Cmd alone), `click(tabId)` without the event.
+- **Why:** the key does what the button does, whatever the book: a tractate toggles its daf, a commentary printed on a
+  tractate opens that tractate's daf at its comment, another book toggles its own pages, and a book with no daf has no
+  button and so no key. The button's click is built in the end bar's composition (`VerticalBars.kt`), out of the key
+  handler's reach.
+- **Reached from:** `VerticalBars.kt` (the daf button sets it), `WindowBody.kt` (the reader's keys press it).
+- **Follows:** `DafFocusRequests` and `PageFits`, the app's other holders by tab id; `handleBookShortcut` for what a
+  key is.
+- **Tests:** `DafKeysTest`; tried in the app on Bereshit 5: the text, and the pages again.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLayout.kt`
 
@@ -3278,7 +3315,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafFindComments.kt`
 
 - **Feature:** The daf's find in Rashi and Tosafot.
-- **Size:** 191 lines.
+- **Size:** 194 lines.
 - **What:** the user asked on 2026-11-19 that the find on the daf search Rashi and Tosafot too ("במצב צורת הדף החיפוש
   יהיה גם על רש"י ותוספות"). `DafPrinted` (the tractate's comments of each column as read, where each line is printed,
   and the commentaries' books, from `DafIndex` and the layout's `library.books`), `DafFound` (the Gemara's matches, the
@@ -3292,6 +3329,9 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   (`columnRank`), each from its top down, a Gemara line the daf does not print at the end; their line indices their
   places in that order (the daf goes to a match by its line, the results pane to a line by its index).
   `GEMARA_COLUMN`, the layout's "G".
+  Since request 97 of stage 3 `DafPrinted.pagesOf` says the daf is another book's own pages (the book's id; `books`
+  then its commentators shown, in their bands' order), and `rememberDafFound` gives `bookDafFound` then
+  (`BookDafFind.kt`).
 - **Reached from:** `BookContentView.kt` (`findResults`), `DafView.kt` (`DafControl.printed`).
 - **Follows:** Zayit's `findInBook` (its chunks, its confirmation and its `BookFindMatches`, built as its own are);
   Pardes's `DafIndex`.
@@ -3584,13 +3624,25 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLinksTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 70 lines.
+- **Size:** 84 lines.
 - **What:** on a small page, each dibbur quotes its words of the Gemara, a click selects the passage or the segment, and
   the passage is marked strongest, then the segment, then its comments.
+  Since request 88 of stage 3: what a second click is on (`isMarked`): the passage's words, the comment itself, a line
+  outside any passage; not another comment, another passage of the line, or one of several lines.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, `DafAmudLinks.kt`, `DafView.kt`'s marks).
 - **Notes:** camelCase test names.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafKeysTest.kt`
+
+- **Feature:** A book's own pages, Daf view.
+- **Size:** 28 lines.
+- **What:** one test of the daf's key: it is the click of the tab's button; none with no button shown, in another tab
+  or with no reader tab; a button gone after the tab's next one was set leaves that one.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafPageTest.kt`
 
@@ -3945,7 +3997,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafView.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 759 lines.
+- **Size:** 761 lines.
 - **What:** `BookDafView`, the book's pages inside the text view's frame as a tractate's are (its zoom, keys, find
   bar, selection and menu): the units in a list, each laid out when it comes into view and one on each side
   (`layUnits`, kept as they were while they are set again; a unit that could not be laid out is said in the log),
@@ -3976,6 +4028,8 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   the style's button); the banner of no commentators stands over the pages; `BookDafShown` holds what the pages
   show, `rememberHeads` what the commentators' names do (the change saved, `OpenBookByIdInNewTab` at the page's
   lines, the commentator taken out to a pane and off the pages), and `BookDafPage` lays `BookDafHeads` over a page.
+  Since requests 88 and 97 of stage 3: the pages' clicks pass `onClear` on (`noting`); `BookDafPages` calls
+  `FindInCommentators`, and its list finds a line's unit by `textIndexOf`, a comment's by the line it is on.
 - **Reached from:** `DafView.kt`.
 - **Follows:** `DafView`'s pages (its list, its control, its place and zoom), for units laid out as they come.
 - **Tests:** none of the composables; tried in the app on Bereshit 1 (Onkelos, Rashi, the Ramban, as the rules' own
@@ -4045,6 +4099,31 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 - **Follows:** `LineCommentsView.kt`'s list and its split, used as they are ("בהתאם לסגנון ושפת העיצוב של זית").
 - **Tests:** `BookDafCommentatorsTest`; tried in the app on Bereshit 5 (a commentator unchecked left the pages).
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafFind.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 150 lines.
+- **What:** the find on a book's own pages searches the commentators shown on them (request 97 of stage 3: "כמו בגמרא
+  - חיפוש בצורת הדף יחפש גם בכל המפרשים המוצגים"). `FindInCommentators(control, bookId, own)` tells the reader,
+  through the daf's `DafControl.printed`, the book and the commentators shown (the one beside the text first, then the
+  bands' in their order), while the pages are shown; `bookDafFound` is the find's matches then: each commentator's
+  book is searched as the text is (`findInBook`, or by meaning `SearchEngine.semanticFind`, the comments found so
+  marked whole), and of its lines found those that are comments on this book are kept, each with the line of the text
+  it is on (`commentBases`: the library's links to those lines read from their target's side,
+  `getCommentarySummariesForLines(…, includeSources = true)`, 500 at a time); `withBookComments` puts them in the
+  order the pages are read, line by line of the text, each followed by the comments on it, a commentator after
+  another, their line indices their places in that order as the daf's are. `textIndexOf` is where the pages go for a
+  match: a line of the book by its index, a comment by the line it is on, its unit being laid out only then.
+- **Why:** the find counted and stepped through the text alone, though the pages drew the matches in every line
+  printed on them. A book's pages are laid out as they come into view, so its comments are not known beforehand as a
+  tractate's are (`DafIndex`): the commentators' books are searched instead.
+- **Reached from:** `BookDafView.kt` (`BookDafPages`), `DafFindComments.kt` (`rememberDafFound`).
+- **Follows:** `DafFindComments.kt`, the same for a tractate's Rashi and Tosafot.
+- **Tests:** `BookDafFindTest`; tried in the app on Be'er HaGolah with Rabbi Hartman's notes on 2026-11-24: "הערה"
+  counted 3615 matches, and Enter went through those of the notes in view.
+- **Notes:** the targum beside the text is not searched; with many commentators shown each one's book is searched in
+  turn.
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafHeads.kt`
 
 - **Feature:** A book's own pages.
@@ -4073,7 +4152,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLinkedAmud.kt`
 
 - **Feature:** Daf view, A book's own pages.
-- **Size:** 395 lines.
+- **Size:** 427 lines.
 - **What:** an amud's text tied to the library, as both dafs show it: `LinkedAmud` draws a laid-out amud
   (`DafAmudText`) with the tab's marks on its words, the user's highlights and notes, the find's matches
   (`linkedWords`), its clicks as the text's (`clickOn`, `segmentOf`), a drag selecting its words for the text's own
@@ -4081,6 +4160,11 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   are small classes (`DafLook`, `DafMarks`, `DafClicks`, `AmudSelection`); `loadLinks` reads a page's links once,
   with the passages a book's anchors mark; `dafHighlight` is the page's marks (passage, segments, their comments);
   `LAYOUT_SCALE`.
+  Since request 88 of stage 3 ("בתצוגת ספר לחיצה חוזרת על מה שכבר מודגש תבטל את ההדגשה"): `DafClicks.onClear`, null
+  where a second click selects again (a tractate's daf); `DafClicks.onWord` is a click on a word, out of `LinkedAmud`
+  for `detekt.yml`: where `onClear` is set and the click is on what is marked already (`DafAmudLinks.isMarked`: the
+  comment alone, the passage it is in with its line, or its line alone outside any passage; not with Ctrl or Cmd) it
+  forgets the focused comment and clears the selection, else it selects as before.
 - **Reached from:** `DafView.kt` (`AmudItem`), `BookDafView.kt` (`BookDafPage`), `BookDafPlaces.kt` (`LAYOUT_SCALE`).
 - **Follows:** it is `DafView.kt`'s own code, moved here whole on 2026-11-13 (the experiment) so that a book's pages
   answer as a tractate's do: "כמו בצורת הדף של הגמרא ובקוד משותף איתה".
@@ -4137,6 +4221,18 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   uncheck takes a commentator from beside the text too; `moved` and `besideText`; `styled` drops a style that sets
   nothing apart; where a dropped name goes by the page's names (`headDrop`, beside the text only where the page has
   a column there); `dropped` after the page's last band.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafFindTest.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 43 lines.
+- **What:** two tests of the find's matches with the commentators shown (`withBookComments`): a line of the text is
+  followed by the comments on it, a commentator after another, with their counts, a comment on another book left out,
+  and their line indices their places in that order; with nothing found in the commentators the text's matches are the
+  same object.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).

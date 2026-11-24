@@ -87,6 +87,9 @@ abstract class AppGraph : ViewModelGraph {
 
     // Pardes: the comment a commentary's tab opens its tractate's daf at (request 86 of stage 3)
     abstract val dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests
+
+    // Pardes: the daf button's click of each tab, for its key (request 94 of stage 3)
+    abstract val dafKeys: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafKeys
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync

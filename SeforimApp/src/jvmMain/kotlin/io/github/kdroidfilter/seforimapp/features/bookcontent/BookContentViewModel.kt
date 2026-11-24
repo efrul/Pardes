@@ -558,6 +558,11 @@ class BookContentViewModel(
                     stateManager.updateContent { copy(selectedPassage = event.passage) }
                 }
 
+                BookContentEvent.SelectionCleared ->
+                    stateManager.updateContent {
+                        copy(selectedLines = emptySet(), primarySelectedLineId = null, selectedPassage = null, isTocEntrySelection = false)
+                    }
+
                 is BookContentEvent.LoadAndSelectLine ->
                     loadAndSelectLine(event.lineId)
 

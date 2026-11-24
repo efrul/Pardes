@@ -1159,6 +1159,7 @@ fun BookContentView(
                 scrollToLineTimestamp = scrollToLineTimestamp,
                 onSelectLine = daf.onSelectLine,
                 onSelectPassage = daf.onSelectPassage,
+                onClearSelection = daf.onClearSelection,
                 // Another book than a tractate: its commentators around its text, in the text's diacritics
                 commentators = daf.commentators,
                 diacritics = diacritics,

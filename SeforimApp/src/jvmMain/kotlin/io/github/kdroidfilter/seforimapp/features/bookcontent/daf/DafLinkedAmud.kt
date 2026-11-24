@@ -68,7 +68,8 @@ internal class DafMarks(
 /**
  * What an amud's clicks do, as the text's lines': select a segment, or a passage with its comments; a comment clicked
  * itself, focused for the arrows ([onFocusComment]); the line of a right-clicked word, for the text's menu; a word
- * clicked, selected in the text where it is in its line.
+ * clicked, selected in the text where it is in its line. [onClear]: where a second click on what is marked lets the
+ * selection go (a book's pages, request 88 of docs/DESKTOP_STAGE3_PLAN.md); null where it selects again.
  */
 internal class DafClicks(
     val onSelectLine: (Long, Boolean) -> Unit,
@@ -76,6 +77,7 @@ internal class DafClicks(
     val onFocusComment: (Long?) -> Unit,
     val onContextLine: (Long) -> Unit,
     val onWordInText: (DafAnchor) -> Unit,
+    val onClear: (() -> Unit)? = null,
 )
 
 /** An amud's own selection of its words ([range], each change given to [onRange]); [onPress] comes on any press on it. */
@@ -155,14 +157,7 @@ internal fun LinkedAmud(
                             range = selection.range,
                             selectionColor = LocalTextSelectionColors.current.backgroundColor,
                             onRange = selection.onRange,
-                            onWordClick = { word, withModifier ->
-                                links?.let { l ->
-                                    clickOn(l, word, withModifier, clicks.onSelectLine, clicks.onSelectPassage)
-                                    clicks.onFocusComment(l.lineIdOf(word)?.takeUnless { l.isGemara(word) })
-                                    // The word itself in the text, where it is in its line
-                                    l.anchors[word]?.takeIf { it.bookId == book.id }?.let(clicks.onWordInText)
-                                }
-                            },
+                            onWordClick = { word, withModifier -> links?.let { clicks.onWord(it, word, withModifier, marks, book.id) } },
                             onContextWord = { word ->
                                 contextWord = word
                                 links?.segmentOf(word)?.let(clicks.onContextLine)
@@ -384,6 +379,43 @@ internal fun clickOn(
         val base = links.segmentOf(word) ?: return
         onSelectPassage(base, setOf(id), setOfNotNull(links.bookOf[id]))
     }
+}
+
+/**
+ * A click on [word] of an amud of book [bookId]: what it selects ([clickOn]), the comment it focuses, and the word
+ * itself in the text, where it is in its line. A second click on what is marked already lets the selection go, where
+ * the amud does so ([DafClicks.onClear]).
+ */
+private fun DafClicks.onWord(
+    links: DafAmudLinks,
+    word: DafWord,
+    withModifier: Boolean,
+    marks: DafMarks,
+    bookId: Long,
+) {
+    val clear = onClear?.takeIf { !withModifier && links.isMarked(word, marks) }
+    if (clear != null) {
+        onFocusComment(null)
+        clear()
+        return
+    }
+    clickOn(links, word, withModifier, onSelectLine, onSelectPassage)
+    onFocusComment(links.lineIdOf(word)?.takeUnless { links.isGemara(word) })
+    links.anchors[word]?.takeIf { it.bookId == bookId }?.let(onWordInText)
+}
+
+/**
+ * Whether a click on [word] would select what [marks] show already: its comment alone, the passage it is in with its
+ * line, or its line alone outside any passage.
+ */
+internal fun DafAmudLinks.isMarked(
+    word: DafWord,
+    marks: DafMarks,
+): Boolean {
+    val id = lineIdOf(word) ?: return false
+    if (!isGemara(word)) return marks.passage == setOf(id)
+    val passage = passageAt(word)
+    return if (passage.isEmpty()) marks.passage.isEmpty() && marks.marked == setOf(id) else marks.passage == passage && id in marks.marked
 }
 
 /** The Gemara segment of [word]: its own line, or for a comment's word the segment it is on (the one on this page). */
