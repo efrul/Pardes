@@ -223,6 +223,11 @@ tools and the code did when it was written.
   in the tab, the arrows and Page Up/Down went to the former book's daf, and the arrows stepped through the text's
   lines on the new one (request 86 of stage 3, 2026-11-23). Give `remember` every remembered value its lambda reads
   that can change, or read it through `rememberUpdatedState`.
+- **A fix of how one path places a line moves every path that leaned on the old placement.** Request 75 brought a
+  selected line below the view in at its bottom, for a step down; a book opened at a line in its tab
+  (`OpenBookAtLine`) had leaned on the old jump to put that line at the top, and showed it at the bottom from then on,
+  found only with request 87 (2026-11-24). Before changing a shared reveal, list who selects a line without placing it
+  (`loadAndSelectLine(…, scroll = false)`), and give them a place of their own (the tab's anchor, as `loadBook` does).
 - **A jump to a row and back starts the rows between again.** `scrollToItem` disposes the rows it leaves, and a row
   that reads its text once on screen (the find pane's, `produceState`) reads it again, empty first, and grows: after a
   page down the rows above the row revealed grew and pushed it below the view, round after round (request 78,

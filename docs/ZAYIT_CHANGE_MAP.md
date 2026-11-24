@@ -1234,7 +1234,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +79 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
+- **Change:** modified, +83 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
   Reader's default commentators, Find results pane.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
@@ -1261,17 +1261,23 @@ The entries of this section by kind:
     `docs/DESKTOP_STAGE3_PLAN.md`).
   - `ToggleFindResults` turns `FindResultsSettings.shown` (request 55 of stage 3), with a comment marked "Pardes:" and
     its import.
+  - `OpenBookAtLine` of another book than the tab's sets the tab's place at the line before the book loads (`anchorId
+    = event.lineId`, `scrollIndex` and `scrollOffset` 0, as `loadBook` does for a tab opened at a line), under a comment
+    marked "Pardes:": the text opens with the line at its top, as Zayit's did (near a book's start a few lines below it,
+    as the lines loaded above it next push it down). Since request 75 of stage 3 brought a selected line below the view
+    in at the view's bottom (`revealItem`), a book opened at a line in its tab showed the line at the bottom, which
+    request 87 met: a comment of Rashi or Tosafot opened back from the daf.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
   opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45), its contents are
   searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small to medium: new `when` branches, an edit inside Zayit's prefetch function, a parameter at the
-  constructor's end, an elvis in `loadBookById` and in `OpenBookById`, and two lines that hand a PDF book's contents
-  search to Pardes's class.
+  constructor's end, an elvis in `loadBookById` and in `OpenBookById`, a line before `OpenBookAtLine`'s `loadBookData`,
+  and two lines that hand a PDF book's contents search to Pardes's class.
 - **Smaller:** already minimal.
 - **Tests:** `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`, `DetachedCommentatorsTest`;
   `PostSelectLineTest` builds the view model with a relaxed `PdfBookStore`; `PdfOutlineTest` (the contents searched);
-  tried in the app.
+  tried in the app (request 87: Tosafot on Berakhot opened at a comment of amud b, the comment at the view's top).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocView.kt`
 
@@ -1596,7 +1602,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +462 −235 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
+- **Change:** modified, +477 −235 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
   in the view.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
@@ -1635,7 +1641,11 @@ The entries of this section by kind:
     it is placed, the Gemara's segment at the daf's top scrolled to its own top, the selected line brought into view
     when it was in view on the daf, and, when a comment was selected on the daf by a click on itself, the commentaries
     pane opened (`onShowCommentaries`, a new parameter that says whether the pane was closed); the selected line is
-    looked for again once the pane has taken its part of the view (`PANE_WAIT`, 3 seconds at most).
+    looked for again once the pane has taken its part of the view (`PANE_WAIT`, 3 seconds at most). A comment of Rashi
+    or Tosafot so selected (`DafPlace.commentId`) opens its commentary's own text in the tab instead, at the comment
+    (`openCommentary`, `OpenBookAtLine` through `currentOnEvent`; the Gemara's text hidden until the commentary is the
+    tab's book, `currentBookId`, `COMMENTARY_WAIT`, 3 seconds at most, and placed as before should it not be: request 87
+    of stage 3, "גם לצד שני - כאשר נבחר רשי או תוספות מעבר למילים יפתח את המפרש פתוח על הקטע הנכון").
   - `BookSelectionContainer` gets `selection = null` and `ownsSelection = false` on the daf.
   - The lines' `LazyColumn` and the `ContentScrollbar` move into the `else` branch: re-indented, unchanged.
   - The find results pane (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`), with comments marked "Pardes:" and two
@@ -3039,7 +3049,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 - **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot, A whole page in the view,
   A book's own pages.
-- **Size:** 1306 lines.
+- **Size:** 1310 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
@@ -3095,7 +3105,9 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   as a click on it selects it (a `LaunchedEffect(places)` under a comment marked "Pardes:": its segment, `baseOf`,
   now internal for `gemaraLineOf`, the passage selected, the comment focused for the arrows, and brought into view).
   Request 82 had shown the daf in the commentary's own tab, its lines the commentary's (`commentaryId`); 83 took it
-  out for the tractate's own daf, every option of it at hand.
+  out for the tractate's own daf, every option of it at hand. The daf's place (`DafPlace`, its `where`) carries the
+  comment a click on itself selected (`commentId`), whose commentary's own text the tab opens at it as the daf is left
+  (request 87).
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
   (`DafMode`, `DafCommentators`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`), and the book's
   pages' files (`DafControl`, `DafPlace`, `DafScale`, `dafFamily`, `awaitPassage`, `sidewaysPan`).
@@ -3103,10 +3115,13 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`,
   `ZoomPivotTest`, `RevealSpanUiTest`, `DafIndexTest`, `DafFocusRequestsTest`; request 86 tried in the app (Tosafot and
-  Rashi on Berakhot: the comment selected on the tractate's daf, the arrows down through their comments, a click on
-  the Gemara and the arrows through its segments); request 80 tried in the app (Berakhot 2a, a segment selected and
-  the arrow down three times: each next segment whole at the view's bottom, the page a few lines on); the composables have no UI test; request 44 tried in the app (Berakhot 2a zoomed in with Ctrl and
-  the wheel over a word of the Mishnah: the word stays where it was).
+  Rashi on Berakhot: the comment selected on the tractate's daf, the arrows down through their comments, a click on the
+  Gemara and the arrows through its segments); request 87 tried in the app (Rashi's and Tosafot's comments selected on
+  Berakhot's daf, amud a and b, the daf left: their commentary's text at the comment, selected, at the view's top or a
+  few lines below it; the daf again from it, the comment selected; a Gemara segment selected, the Gemara's text as
+  before); request 80 tried in the app (Berakhot 2a, a segment selected and the arrow down three times: each next
+  segment whole at the view's bottom, the page a few lines on); the composables have no UI test; request 44 tried in the
+  app (Berakhot 2a zoomed in with Ctrl and the wheel over a word of the Mishnah: the word stays where it was).
 - **Notes:** at some 1,290 lines, with some 19 top-level functions, it is beyond `detekt.yml`'s limits (15 functions for a
   file, 60 lines for `DafPages`), as some of Zayit's largest files are; its amud's drawing went to `DafLinkedAmud.kt`
   on 2026-11-23 (`AmudItem`'s two findings with it), and it could be split further by its parts (pages, review, missing

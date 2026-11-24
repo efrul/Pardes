@@ -1072,8 +1072,11 @@ fun BookContentView(
 
     // Back from the daf, the text opens where the daf was: the Gemara's segment at the daf's top at its own top, the
     // selected line in view when it was on the daf, and a comment selected there by a click on itself in the
-    // commentaries pane
+    // commentaries pane; or rather, a comment of Rashi or Tosafot so selected, its commentary's own text in the tab, at
+    // the comment, as the commentary's daf button opens the tractate's daf at it (request 87 of stage 3)
     val currentOnShowCommentaries by rememberUpdatedState(onShowCommentaries)
+    val currentBookId by rememberUpdatedState(bookId)
+    val currentOnEvent by rememberUpdatedState(onEvent)
     LaunchedEffect(showsDaf) {
         if (showsDaf) {
             wasDaf = true
@@ -1088,7 +1091,16 @@ fun BookContentView(
             if (selected < 0 || isLineFullyVisible(shown?.offset, shown?.size, listState.layoutInfo.viewportEndOffset)) return
             listState.scrollToItem(selected)
         }
+
+        // The comment's commentary opened in the tab: the Gemara's text stays hidden until it is, and opens as before
+        // should it not be
+        suspend fun openCommentary(commentId: Long): Boolean {
+            val comment = runSuspendCatching { repository.getLine(commentId) }.getOrNull() ?: return false
+            currentOnEvent(BookContentEvent.OpenBookAtLine(comment.bookId, comment.id))
+            return withTimeoutOrNull(COMMENTARY_WAIT) { snapshotFlow { currentBookId }.first { it == comment.bookId } } != null
+        }
         val place = dafControl.place()
+        if (place?.commentId?.let { openCommentary(it) } == true) return@LaunchedEffect
         val opened = place?.onComment == true && currentOnShowCommentaries()
         try {
             val top = place?.let { runSuspendCatching { repository.getLine(it.topLineId) }.getOrNull() } ?: return@LaunchedEffect
@@ -1498,6 +1510,9 @@ private const val PERCENT = 100f
 
 // Longest wait for the commentaries pane, opened back from the daf, to take its part of the view
 private val PANE_WAIT = 3000.milliseconds
+
+// Longest wait for a comment's commentary, opened back from the daf, to be the tab's book (request 87 of stage 3)
+private val COMMENTARY_WAIT = 3000.milliseconds
 
 // Literal find: pause after the last keystroke before querying the index
 private val FIND_DEBOUNCE = 150.milliseconds

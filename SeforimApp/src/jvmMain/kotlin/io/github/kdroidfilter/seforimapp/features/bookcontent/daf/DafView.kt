@@ -231,12 +231,14 @@ class DafControl(
 
 /**
  * Where the daf is scrolled to: the Gemara's segment read at its top ([topLineId]), whether the tab's selected line is
- * in view ([selectionShown]), and whether a comment of Rashi or Tosafot is selected by a click on itself ([onComment]).
+ * in view ([selectionShown]), and whether a comment of Rashi or Tosafot is selected by a click on itself ([onComment]):
+ * that comment ([commentId]), whose commentary the text opens at it (request 87 of stage 3).
  */
 class DafPlace(
     val topLineId: Long,
     val selectionShown: Boolean,
     val onComment: Boolean,
+    val commentId: Long? = null,
 )
 
 /**
@@ -639,7 +641,8 @@ private fun DafPages(
         var rowsShown by remember { mutableStateOf(spreads) }
         val before = remember(spreads) { if (rowsShown != spreads) control.where()?.topLineId else null }
 
-        // Where the daf is: the Gemara's segment read at the view's top, and whether the tab's line is in view
+        // Where the daf is: the Gemara's segment read at the view's top, whether the tab's line is in view, and the
+        // comment a click on itself selected
         val currentLine by rememberUpdatedState(lineId)
         control.where = where@{
             val comments = currentIndex ?: return@where null
@@ -652,7 +655,8 @@ private fun DafPages(
                     val at = titleHeight + y * currentPerPoint
                     item != null && item.offset + at >= 0 && item.offset + at <= listState.layoutInfo.viewportEndOffset
                 } == true
-            DafPlace(topLine, shown, onComment = focused?.let { it in currentPassage?.targetLineIds.orEmpty() } == true)
+            val comment = focused?.takeIf { it in currentPassage?.targetLineIds.orEmpty() }
+            DafPlace(topLine, shown, onComment = comment != null, commentId = comment)
         }
 
         LaunchedEffect(spreads) {
