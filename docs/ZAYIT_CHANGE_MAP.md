@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (148 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (156 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -34,7 +34,7 @@ every file Pardes adds.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (803 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (802 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -343,18 +343,24 @@ The entries of this section by kind:
 
 #### `gradle/libs.versions.toml`
 
-- **Change:** modified, +5 −1 lines. Feature: Commentators in their own panes.
+- **Change:** modified, +6 −2 lines. Features: Commentators in their own panes; Default zmanim.
 - **What:**
   - A version `nucleusTao = "3.0.0-dev-202610272317-2-tearoff"`, with a three-line comment.
   - `nucleus-decorated-window-tao` takes `nucleusTao` instead of `nucleus`.
-- **Why:** the commentator's pane torn off the reader needs `Modifier.satelliteTearOffHandle`, and a pane dropped at
-  the window's edge the docks' outer bands, which only Pardes's fork of Nucleus (efrul/Nucleus) has; that one module
-  comes from `nucleus-fork/maven` until Nucleus releases them (`831ad272`, `0447981b`, `nucleus-fork/README.md`).
-- **Kind:** Pardes feature hook.
+  - `kosherkotlin = "4.0.1"` in place of 0.6.12's `"3.0.5"`.
+- **Why:**
+  - The tear-off: the commentator's pane torn off the reader needs `Modifier.satelliteTearOffHandle`, and a pane dropped
+    at the window's edge the docks' outer bands, which only Pardes's fork of Nucleus (efrul/Nucleus) has; that one
+    module comes from `nucleus-fork/maven` until Nucleus releases them (`831ad272`, `0447981b`, `nucleus-fork/README.md`).
+  - KosherKotlin: 4.0.1 drops only the luach's calculator, its atmosphere and refraction model and its ten zmanim (the
+    rest of the public API is the same as 3.0.5's); see `EarthWidgetZmanimView.kt`. Why: the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24).
+- **Kind:** Pardes feature hook; licence removal.
 - **Merge risk:** Zayit bumps `nucleus` often (0.6.13 does): `nucleusTao` must then be rebuilt for the new release or
-  dropped once Nucleus has the tear-off.
+  dropped once Nucleus has the tear-off. Zayit's master has `kosherkotlin = "4.0.1"` too (`3f1901c`), so a merge meets
+  the same line.
 - **Smaller:** already minimal.
-- **Tests:** the build; `CommentatorPaneIdTest` (the panes' ids; the tear-off itself is drawn by Nucleus).
+- **Tests:** the build; `CommentatorPaneIdTest` (the panes' ids; the tear-off itself is drawn by Nucleus); the zmanim's
+  tests (`ZmanimTimesTest`, `LuachDataTest`).
 
 #### `settings.gradle.kts`
 
@@ -2880,14 +2886,85 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/luach/LuachData.kt`
 
-- **Change:** modified, +3 −2 lines. Feature: Zmanim card.
-- **What:** `nextZmanim` takes the zmanim of the day after tomorrow too (`-1L..2L`), with the comment's reason.
-- **Why:** from the evening, tonight's and tomorrow's zmanim are some fifteen, fewer than the next zman's card lists,
-  so it showed half empty (`8f85d914`; the Android port the same).
-- **Kind:** fix of Zayit's code.
-- **Merge risk:** one line.
+- **Change:** modified, +4 −3 lines. Features: Zmanim card; Default zmanim.
+- **What:**
+  - `nextZmanim` takes the zmanim of the day after tomorrow too (`-1L..2L`), with the comment's reason.
+  - `upcomingEvents` passes the city to `havdalahTime` (`cityLabel`), which ends a Shabbat or Yom Tov in Jerusalem 40
+    minutes after sunset under the default zmanim (`ZmanimWidget.kt`).
+- **Why:**
+  - From the evening, tonight's and tomorrow's zmanim are some fifteen, fewer than the next zman's card lists, so it
+    showed half empty (`8f85d914`; the Android port the same).
+  - The city: as for `ZmanimWidget.kt`.
+- **Kind:** fix of Zayit's code; licence removal.
+- **Merge risk:** two lines; Zayit's master passes the city the same way (`3732514`).
 - **Smaller:** already minimal.
 - **Tests:** none of its own.
+
+#### `earthwidget/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/earthwidget/EarthWidgetZmanimView.kt`
+
+- **Change:** modified, +12 −20 lines. Feature: Default zmanim.
+- **What:**
+  - `ZmanimOpinion`'s first value is `DEFAULT`, "the library's standard GRA and MGA zmanim", in place of the luach's.
+  - `computeZmanimTimes` (default `DEFAULT`) gives for it KosherKotlin's own zmanim: `alosHashachar` (16.1°),
+    `sofZmanShmaMGA` and `sofZmanTfilaMGA` (72 minutes), `minchaGedola`, `tzais` (8.5°) and `tzais72` for Rabbeinu Tam,
+    with sunrise, sunset, the GRA hours, chatzos, mincha ketana and plag as before, in place of the luach's alos and
+    MGA day (90 or 72 במעלות), its mincha gedola and its tzeit; the comment above the `when` no longer says "luachs".
+- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24). The default zmanim are the ones Zayit had before the luach came in (`53039568`, 2026-09-30),
+  and the ones Zayit's master has since `3732514`.
+- **Kind:** licence removal.
+- **Merge risk:** small: Zayit's master made the same change (`3732514`, after 0.6.12, under the Zayit Public License):
+  a merge of it meets the same lines, Pardes's written for Pardes (section 5).
+- **Smaller:** already minimal.
+- **Tests:** `ZmanimTimesTest` (both opinions in order, and differing).
+- **Notes:** the Android port has the same (`androidApp/…/data/ZmanimEngine.kt`).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/HomeWidgetsState.kt`
+
+- **Change:** modified, +2 −2 lines. Feature: Default zmanim.
+- **What:** `zmanimOpinion` is `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח (who keep the אור החיים), with its
+  comment.
+- **Why:** as for `EarthWidgetZmanimView.kt`.
+- **Kind:** licence removal.
+- **Merge risk:** small; Zayit's master has the same line (`3732514`).
+- **Smaller:** already minimal.
+- **Tests:** none of its own.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/zmanim/ZmanimWidget.kt`
+
+- **Change:** modified, +14 −15 lines. Feature: Default zmanim.
+- **What:**
+  - `computeShabbatTimes` defaults to `ZmanimOpinion.DEFAULT` and passes the city to `havdalahTime`.
+  - `candleLightingTime` under `DEFAULT`: 18 minutes before sea-level sunset, 40 in Jerusalem (`isJerusalemLocation`),
+    in place of the luach's table of cities and its two fallbacks; their three imports are gone.
+  - `havdalahTime` takes `cityLabel` (default null) and under `DEFAULT` ends at 8.5° (`tzais`), or 40 minutes after
+    sea-level sunset in Jerusalem.
+- **Why:** as for `EarthWidgetZmanimView.kt`. 18 minutes, and 40 in Jerusalem, are the common customs Zayit had before
+  the luach's table.
+- **Kind:** licence removal.
+- **Merge risk:** small: Zayit's master made the same change (`3732514`).
+- **Smaller:** already minimal.
+- **Tests:** `LuachDataTest` (a Shemini Atzeret on Shabbat in Jerusalem has its candles and its end).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/zmanim/data/CandleLighting.kt`
+
+- **Change:** deleted. Feature: Default zmanim.
+- **What:** Zayit's `CandleLighting` and the luach's table of candle lighting by city (minutes before sunset, from
+  height or sea level), with its fallbacks for Israel and abroad.
+- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24).
+- **Kind:** removed Zayit file; licence removal.
+- **Merge risk:** none: Zayit's master no longer has it either.
+- **Tests:** none.
+
+#### `SeforimApp/addons/siddur/enabled/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/SiddurScreen.kt`
+
+- **Change:** modified, +1 −1 lines. Feature: Default zmanim.
+- **What:** the siddur of the hour reads the zmanim of `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח.
+- **Why:** the luach's opinion is gone (`EarthWidgetZmanimView.kt`). Pardes never builds this screen (Zayit's private
+  siddur), but it must not name the luach either.
+- **Kind:** licence removal.
+- **Merge risk:** small; Zayit's master has the same opinion there (`3732514`).
+- **Smaller:** already minimal.
+- **Tests:** none: Pardes does not compile it; the open siddur's screen (`addons/siddur/open`) has the same line.
 
 ### Onboarding
 
@@ -3094,6 +3171,36 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Why:** the function is gone (`SelectionBarLogic.kt`, request 75 of the list after the public release).
 - **Kind:** Fix of Zayit's code (its tests).
 - **Merge risk:** small.
+- **Smaller:** already minimal.
+- **Tests:** it is one.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/luach/LuachDataTest.kt`
+
+- **Change:** modified, +3 −3 lines. Feature: Default zmanim.
+- **What:** its three Jerusalem cases read `ZmanimOpinion.DEFAULT` in place of the luach's opinion.
+- **Why:** the opinion is gone (`EarthWidgetZmanimView.kt`).
+- **Kind:** licence removal.
+- **Merge risk:** small; Zayit's master has the same three lines (`3732514`).
+- **Smaller:** already minimal.
+- **Tests:** it is one.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/zmanim/data/CitiesTest.kt`
+
+- **Change:** modified, +0 −8 lines. Feature: Default zmanim.
+- **What:** `CandleLightingTest` (every city of the luach's table is a known place) is gone, with the table.
+- **Why:** `CandleLighting.kt` is deleted.
+- **Kind:** licence removal.
+- **Merge risk:** none; Zayit's master removed it too (`3732514`).
+- **Smaller:** already minimal.
+- **Tests:** it is one.
+
+#### `earthwidget/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/earthwidget/ZmanimTimesTest.kt`
+
+- **Change:** modified, +3 −3 lines. Feature: Default zmanim.
+- **What:** `luachs really differ` compares `ZmanimOpinion.DEFAULT` (`standard`) with the אור החיים.
+- **Why:** the luach's opinion is gone (`EarthWidgetZmanimView.kt`).
+- **Kind:** licence removal.
+- **Merge risk:** small; Zayit's master has the same test (`3732514`).
 - **Smaller:** already minimal.
 - **Tests:** it is one.
 
@@ -9383,7 +9490,7 @@ and `PopupKeys.kt`.
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (803 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (802 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -9451,12 +9558,11 @@ the description where something needs saying.
 |---|---|---|
 | `.github/scripts/daf_release.py` | Makes a daf-<n> release's files from pardes-rashi-ocr's layouts: each tractate's layout gzipped, pardes-daf.zip of them all to unpack beside the library, the manifest Pardes for desktop downloads them by (sha256 of each file and of its layout), and the release's tag, title and notes. Each tractate has a version of its own, written in its file's header and in the manifest: 1 at first, one more in a release where its layout is not the one of the release before (--previous, that release's manifest, whose contentSha256 is the layout's without its version), the same otherwise, so that a tractate that did not change is the same file byte for byte; the notes name the tractates that changed, and say where the lines' places were measured: on scans of a later edition that keeps the Vilna Shas's page line for line, from which only each line's break and place were taken. | Pardes's own |
 | `.github/scripts/test_daf_release.py` | The release script's tests, run by hand or by pytest and by daf-release.yml before it builds: a tractate's version goes up only in a release where its layout changed (the other's file the same bytes), the version at the head of the file, a layout that comes with a version of its own the same layout, and every tractate's first version after a release without versions or with none before. | Pardes's own |
-| `.github/gradle/central-mirror-fallback.init.gradle.kts` | Gradle init script for the release's runners: Google's mirror of Maven Central (`maven-central.storage-download.googleapis.com`) added after the repositories a build's settings declare, plugins' and dependencies', so that an artifact Maven Central no longer serves is still found. Written on 2026-11-23, when Maven Central answered 404 (NoSuchKey) for `io.github.kdroidfilter:kosherkotlin` 3.0.3 to 3.0.5 (its index still listing them, 4.0.0 and 4.0.1 just out) and the testers' build of that day failed on the 3.0.5 that Zayit 0.6.12 is built with. *Note:* Maven Central stays first; to drop once it serves the version again, or once the dependency moves on. The cloud container has its own, the mirror first, for Maven Central's 429 there (`.claude/skills/pardes-desktop-run/scripts/central-mirror.init.gradle.kts`). | Pardes's own |
 | `.github/workflows/android-release.yml` | Workflow, run by hand only (inputs prerelease and note), that builds Pardes for Android's release APK signed with Pardes's key from the repository's secrets, checks its certificate, the lucene-android API 26 gate and the release dex, and publishes `android-<versionName>-<run>` as the Latest release with the APK, the complete source with SeforimLibrary and the desktop-to-phone transfer scripts. *Note:* The notes come from androidApp/CHANGELOG.md's section for the version, and the run stops without one. Zayit's release and site workflows (deploy.yaml, pages.yaml) are removed here. | Pardes's own |
 | `.github/workflows/android-site.yml` | Workflow that deploys androidApp/site to GitHub Pages with the transfer scripts, both changelogs (changelog.md, changelog-desktop.md) and the releases.json, semantic.json, daf.json and downloads.json snapshots; runs on pushes to main that touch them, after every successful Android, Desktop, Semantic pack or Daf layouts release, and by hand. *Note:* The Android updater reads releases.json and changelog.md, Pardes for desktop semantic.json and daf.json (SemanticPackReleases, DafDownloads), so their shapes are a contract (its header). | Pardes's own; Zayit's pages.yaml, which deployed Zayit's website/, was removed |
 | `.github/workflows/change-map.yml` | Workflow that runs check_change_map.py --committed on every push and pull request, with the whole history (the map's base must be there): a red run names the files to describe. Its job, Change map, is the check main's ruleset requires, by that name. | Pardes's own |
 | `.github/workflows/daf-release.yml` | Workflow that publishes the daf view's layouts as a release daf-<n> (daf_release.py, after its tests), from this repository's branch daf-layouts, where pardes-rashi-ocr pushes its layouts/*.json, with the manifest of the release before it downloaded for each tractate's version; the notes say what the words are (Wikisource's Gemara under CC BY-SA through Sefaria, the Vilna Rashi and Tosafot) and where the lines' places were measured (scans of a later edition that keeps the Vilna Shas's page), and the files go out under CC BY-SA. | Pardes's own |
-| `.github/workflows/desktop-release.yml` | Workflow, run by hand only, that builds Pardes for desktop through branding/ (Windows x64 GraalVM and arm64 JVM as NSIS, Linux x64 and arm64 as deb, rpm and pacman, macOS Apple Silicon and Intel as dmg and zip), writes Nucleus's latest*.yml update feeds and the complete source, and publishes `desktop-<x.y.z>-<run>` with --latest=false. *Note:* Version and notes from desktop/CHANGELOG.md's top section; GITHUB_REF=refs/tags/v<version> set in the Gradle shell for Versioning. No Zayit secrets, add-ons or Rust installer wrapper; optional Linux GPG and PARDES_FEEDBACK_URL secrets. A build gets 300 minutes, for the Apple Silicon Mac's native image: 2 h 54 for 1.0.9, and 3 h 06 to 3 h 25 in CI for main of 2026-11-18, past the 180 it had. Since 2026-11-23 each build job copies `.github/gradle/central-mirror-fallback.init.gradle.kts` into Gradle's init.d first: Google's mirror of Maven Central after the build's own repositories, for kosherkotlin 3.0.5, which Maven Central answered 404 for that day. 609 lines. | Pardes's own, built as Zayit's deploy.yaml (removed here) builds its platforms |
+| `.github/workflows/desktop-release.yml` | Workflow, run by hand only, that builds Pardes for desktop through branding/ (Windows x64 GraalVM and arm64 JVM as NSIS, Linux x64 and arm64 as deb, rpm and pacman, macOS Apple Silicon and Intel as dmg and zip), writes Nucleus's latest*.yml update feeds and the complete source, and publishes `desktop-<x.y.z>-<run>` with --latest=false. *Note:* Version and notes from desktop/CHANGELOG.md's top section; GITHUB_REF=refs/tags/v<version> set in the Gradle shell for Versioning. No Zayit secrets, add-ons or Rust installer wrapper; optional Linux GPG and PARDES_FEEDBACK_URL secrets. A build gets 300 minutes, for the Apple Silicon Mac's native image: 2 h 54 for 1.0.9, and 3 h 06 to 3 h 25 in CI for main of 2026-11-18, past the 180 it had. 602 lines. *Note:* From 2026-11-23 to 2026-11-24 each build job took Google's mirror of Maven Central as a fallback, for the kosherkotlin 3.0.5 that Maven Central had stopped serving; it went with the move to 4.0.1, as a build must not fetch a version its author withdrew. | Pardes's own, built as Zayit's deploy.yaml (removed here) builds its platforms |
 | `.github/workflows/feedback-service.yml` | Workflow that tests the feedback service in Miniflare and, with its Cloudflare secrets, masks the account's name, e-mail and workers.dev subdomain, creates the D1 database the first time, applies the migrations, deploys the Worker and sets its admin token; runs by hand and on pushes to main that touch feedback-service/. *Note:* Without the secrets a push only tests. It deploys from main, the default branch (38ba9543), while CLAUDE.md keeps Zayit's line that PRs target master. | Pardes's own |
 | `.github/workflows/semantic-notes.yml` | Workflow, run by hand with a pack's tag (default semantic-2-v3-20261012193827), that writes a released semantic pack's title and notes again from semantic-model/release_notes.py and the release's manifest, then makes the newest Android release the Latest again. | Pardes's own |
 | `.github/workflows/semantic-release.yml` | Workflow, run by hand with a Kaggle dataset name (default pardes-semantic-pack-2), that downloads a semantic pack file by file from a private Kaggle dataset, checks it against its manifest (sizes, sha256), zips pardes-model/ and pardes.vec.lucene/ for installing by hand, and publishes `semantic-<pack>-<library>` with --latest=false, making the Android release the Latest again. *Note:* Secret KAGGLE_API_TOKEN; it refuses a dataset name with an owner and masks the token's account in the log. It installs six beside kaggle, which imports it without asking for it. | Pardes's own |
@@ -9802,7 +9908,7 @@ build leaves out for it.
 |---|---|---|
 | `androidApp/.gitattributes` | Git attributes of the Android build: `*.sh` and `gradlew` keep LF and `*.cmd` keeps CRLF on every checkout, so the transfer scripts run in Git Bash and WSL, and the Windows launcher stays CRLF when a Linux checkout packages it. | Pardes's own |
 | `androidApp/.gitignore` | Ignores the Android build's local outputs: `.gradle/`, `.kotlin/`, `build/`, `local.properties`, `*.apk` and `*.db`. | Pardes's own |
-| `androidApp/app/build.gradle.kts` | Build script of the app: a Kotlin Multiplatform `androidTarget` with the Android application plugin that compiles SeforimLibrary's core and dao, its search and delta-updater sources (less the files that have Android variants here), desktop's htmlparser and icons from their folders as they are, and six Sync tasks that copy named desktop files unchanged (`syncPatchTables`, `syncDesktopSemantic`, `syncDesktopSearch` with the typed references and the snippets, `syncDesktopZmanim` with the region lists and candle lighting, `syncDesktopSemanticTests`, `syncParityFixtures`). It sets the id `io.github.efrul.pardes`, minSdk 26, compile and target SDK 36, version 0.9.0 (code 11), the CMake build of the multiplex extension, the debug key or the `PARDES_KEYSTORE` release key, R8, ONNX Runtime for the 64-bit ABIs only and compressed native libraries. `LicenceAssets` and `DesktopTextAssets` copy LICENSE, Lucene's licence and notice, the model's NOTICE, temple_count.txt, comment-anchors/ and kleikodesh/ into the assets; lucene-core is substituted by `:lucene-android`; and it declares the SQLDelight databases `SeforimDb` (the library's schema) and `UserSettingsDb` (desktop 0.6.10's user schema and Pardes's two folders). *Note:* It reads named files from desktop's SeforimApp/src and from SeforimLibrary, so moving or renaming one of them there breaks the Android build. | Pardes's own |
+| `androidApp/app/build.gradle.kts` | Build script of the app: a Kotlin Multiplatform `androidTarget` with the Android application plugin that compiles SeforimLibrary's core and dao, its search and delta-updater sources (less the files that have Android variants here), desktop's htmlparser and icons from their folders as they are, and six Sync tasks that copy named desktop files unchanged (`syncPatchTables`, `syncDesktopSemantic`, `syncDesktopSearch` with the typed references and the snippets, `syncDesktopZmanim` with the region lists, `syncDesktopSemanticTests`, `syncParityFixtures`). It sets the id `io.github.efrul.pardes`, minSdk 26, compile and target SDK 36, version 0.9.1 (code 12), the CMake build of the multiplex extension, the debug key or the `PARDES_KEYSTORE` release key, R8, ONNX Runtime for the 64-bit ABIs only and compressed native libraries. `LicenceAssets` and `DesktopTextAssets` copy LICENSE, Lucene's licence and notice, the model's NOTICE, temple_count.txt, comment-anchors/ and kleikodesh/ into the assets; lucene-core is substituted by `:lucene-android`; and it declares the SQLDelight databases `SeforimDb` (the library's schema) and `UserSettingsDb` (desktop 0.6.10's user schema and Pardes's two folders). *Note:* It reads named files from desktop's SeforimApp/src and from SeforimLibrary, so moving or renaming one of them there breaks the Android build. | Pardes's own |
 | `androidApp/app/lint.xml` | Android Lint configuration: ignores `NewApi` in desktop's `LuceneSearchEngine.kt`, which lint reads from SeforimLibrary's search folder although the build leaves it out for its Android variant. | Pardes's own |
 | `androidApp/app/proguard-rules.pro` | R8 rules of the release build: file names and line numbers kept for crash reports; the optional dependencies of jsoup, KosherJava and commons-compress silenced; zstd-jni kept; the kotlinx.serialization serializers of the core and dao models kept; Lucene's classes found by name kept (codecs and formats through META-INF/services, analysis factories, attribute implementations, the class names in the index's attribute keys), each group checked with lucene-android/smoke; `AndroidCompatApi33` kept as a class of its own (Android 11's verifier rejected `GroupVIntUtil` once R8 had moved its VarHandle calls there); and `ai.onnxruntime.**`, which ONNX Runtime's JNI finds by name. | Pardes's own |
 | `androidApp/build-logic/build.gradle.kts` | Build of the included build-logic: a `java-gradle-plugin` that registers `pardes.compose-vector-moves` (`ComposeVectorMovesPlugin`), compiled for Java 17 against AGP's API and ASM 9.9.1, both compile-only because AGP brings them at run time. | Pardes's own |
@@ -9811,8 +9917,8 @@ build leaves out for it.
 | `androidApp/build-logic/src/main/java/io/github/kdroidfilter/seforimapp/buildlogic/ComposeVectorMovesPlugin.java` | Gradle plugin `pardes.compose-vector-moves`: on every variant of the app it transforms all classes, the dependencies' too, with `ComposeVectorMovesFactory` (frames copied). Below Android 13 Skia moves a relative moveTo that follows close() from the contour's last point, so most Material Symbols icons were drawn askew (seen on Android 11). *Note:* Java, as its factory. | Pardes's own |
 | `androidApp/build.gradle.kts` | Root build script of the Android Gradle build: the Kotlin Multiplatform, kotlinx-serialization, Compose compiler, Android application and SQLDelight plugins declared with `apply false`. | Pardes's own |
 | `androidApp/debug.keystore` | The project's shared debug signing key (alias `androiddebugkey`, CN=Pardes Android Debug), which app/build.gradle.kts signs debug builds with instead of each machine's own, so builds from any machine install over each other. *Note:* Public by design (its password is the standard `android`); releases are signed with a key kept only in the repository's secrets (`PARDES_KEYSTORE_*`). | Pardes's own |
-| `androidApp/gradle.properties` | Gradle properties of the Android build: a 3 GB Gradle heap and 2 GB Kotlin daemon, the build cache on, parallel off, AndroidX and non-transitive R classes, and `android.experimental.disableCompileSdkChecks=true`, because kosherkotlin-android 3.0.5 (desktop 0.6.10's zmanim engine) declares minCompileSdk 37 while AGP 8.12 stops at 36. | Pardes's own |
-| `androidApp/gradle/libs.versions.toml` | Version catalog of the Android build: Kotlin 2.4.20 and SQLDelight 2.3.2 as desktop, AGP 8.12.3 (desktop 9.1.1), the Compose BOM 2026.03.00, desktop's kosherkotlin 3.0.5, hebrewnumerals, zstd-jni and commons-compress versions, KosherJava zmanim 2.5.0, requery's sqlite-android 3.49.0 (the multiplex VFS), ONNX Runtime 1.22.0 (desktop runs 1.17.1; 1.22.0 is the first whose two Android libraries are 16 KB aligned), org.json for the JVM tests and the test runners. *Note:* jsoup 1.22.1, kotlinx-serialization 1.10.0 and coroutines 1.10.2, where desktop has 1.23.2, 1.11.0 and 1.11.0. | Pardes's own |
+| `androidApp/gradle.properties` | Gradle properties of the Android build: a 3 GB Gradle heap and 2 GB Kotlin daemon, the build cache on, parallel off, AndroidX and non-transitive R classes, and `android.experimental.disableCompileSdkChecks=true`, because kosherkotlin-android 4.0.1 (desktop's zmanim engine), as 3.0.5 before it, declares minCompileSdk 37 while AGP 8.12 stops at 36. | Pardes's own |
+| `androidApp/gradle/libs.versions.toml` | Version catalog of the Android build: Kotlin 2.4.20 and SQLDelight 2.3.2 as desktop, AGP 8.12.3 (desktop 9.1.1), the Compose BOM 2026.03.00, desktop's kosherkotlin 4.0.1, hebrewnumerals, zstd-jni and commons-compress versions, KosherJava zmanim 2.5.0, requery's sqlite-android 3.49.0 (the multiplex VFS), ONNX Runtime 1.22.0 (desktop runs 1.17.1; 1.22.0 is the first whose two Android libraries are 16 KB aligned), org.json for the JVM tests and the test runners. *Note:* jsoup 1.22.1, kotlinx-serialization 1.10.0 and coroutines 1.10.2, where desktop has 1.23.2, 1.11.0 and 1.11.0. | Pardes's own |
 | `androidApp/gradle/wrapper/gradle-wrapper.jar` | Gradle's wrapper jar of the Android build. *Note:* Not the root build's jar, which is Zayit's. | Gradle's wrapper (Apache-2.0) |
 | `androidApp/gradle/wrapper/gradle-wrapper.properties` | Pins the Android build to Gradle 9.1.0 (the binary distribution), with the wrapper's default settings. *Note:* Desktop's build, in the repository root, runs Gradle 9.8.0. | Gradle's wrapper |
 | `androidApp/gradlew` | Gradle's POSIX wrapper script for the Android build (kept LF by `.gitattributes`). *Note:* There is no `gradlew.bat`: on Windows the build runs from Git Bash. | Gradle's wrapper (Apache-2.0) |
@@ -9822,7 +9928,7 @@ build leaves out for it.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `androidApp/CHANGELOG.md` | Pardes for Android's user-facing changelog in Hebrew, one `## <version> · <date>` section per release, eleven from 0.2.0 (2026-10-16) to 0.9.0 (2026-11-05). android-release.yml takes a version's section as its release notes and fails without one; android-site.yml publishes it as changelog.md, which the in-app updater (`AppReleases`) and the site read. *Note:* Hebrew by design: text for users. | Pardes's own |
+| `androidApp/CHANGELOG.md` | Pardes for Android's user-facing changelog in Hebrew, one `## <version> · <date>` section per release, twelve from 0.2.0 (2026-10-16) to 0.9.1 (2026-11-24). android-release.yml takes a version's section as its release notes and fails without one; android-site.yml publishes it as changelog.md, which the in-app updater (`AppReleases`) and the site read. *Note:* Hebrew by design: text for users. | Pardes's own |
 | `androidApp/DESIGN.md` | Design spec of the Android app: desktop's Islands colour tokens (light and dark, the gold accent), shapes and fonts; how the desktop layout maps to a phone and a tablet by window size; the screens one by one (onboarding, Home, the library tree, the reader and its panes, search, settings, tools); and the data notes. | Pardes's own |
 | `androidApp/README.md` | README of Pardes for Android: what it is (based on Zayit by Elie Gambache, not on his behalf), building and signing, every way to get a library onto a device, the library on a memory card, the in-app updater, the source layout, the `zayit://` links, the known differences from desktop, and the licences and credits. | Pardes's own |
 | `androidApp/docs/DEVELOPMENT.md` | Developer notes of the Android app: the goal and constraints (Android 8.0+, parity with desktop Zayit 0.6.12, an app of its own based on Zayit, offline, desktop's code reused unchanged), the status by area, screenshots, how the work is done (committing as Zayit does, with the change map's rows), Windows, signing, testing the app update, Android 8 to 12, the semantic search, the decisions and why, and the known gaps. | Pardes's own |
@@ -9887,7 +9993,7 @@ build leaves out for it.
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/data/UserDataBackup.kt` | The user's data as desktop's backup archive (a zip of manifest.json with the portable preferences and user_settings.db), exported as `pardes_backup_<date>.zip`, checked, and staged to replace the data at the next start (`PendingUserDataRestore`); below SQLite 3.27 the database is copied under the write lock instead of `VACUUM INTO`. | Port of desktop 0.6.10's framework/backup/UserDataBackup.kt and PendingUserDataRestore.kt, in the same format |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/data/UserDataStore.kt` | user_settings.db with desktop's schema on one connection: the notes and highlights (`UserNote`, `UserHighlight`, cached per book), the categories' diacritics, the history, favourites, Shnayim Mikra and reading-time stores, `guardedWrite`, `clearAll` and the adoption of an imported desktop database. | Pardes's own, after desktop 0.6.10's NoteStore, HighlightStore and CategoryDisplaySettingsStore |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/data/Zmanim.kt` | `City` and `userCity` (the region setting's place, Jerusalem when unset, as desktop's HomeUserLocationViewModel), and the Temple countdown: `TempleCount` (Rashi's, the Rambam's or Tosafot's count), `computeTempleCountdown`, `templeCountdownAt` and `millisUntilNextJerusalemSunset`. | Port of desktop's HomeUserLocationViewModel place rules and of features/home/widgets/temple/TempleCountdownWidget.kt (0.6.8's TempleCount) |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/data/ZmanimEngine.kt` | The zmanim on KosherKotlin 3.0.5, to match desktop to the minute: `ZmanimTimes`, `ZmanimOpinion`, `computeZmanimTimes`, the Ohr HaChaim sunset, the Kiddush Levana opinions, Shabbat candle lighting and havdalah, and the luach each community follows. | Port, verbatim by its header, of desktop 0.6.10's EarthWidgetZmanimView.kt and KiddushLevanaData.kt (earthwidget), ZmanimWidget.kt and HomeWidgetsState.kt |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/data/ZmanimEngine.kt` | The zmanim on KosherKotlin 4.0.1, to match desktop to the minute: `ZmanimTimes`, `ZmanimOpinion`, `computeZmanimTimes`, the Ohr HaChaim sunset, the Kiddush Levana opinions, Shabbat candle lighting and havdalah, and the luach each community follows: the אור החיים for עדות המזרח, the default zmanim for everyone else, as Pardes desktop has them (`EarthWidgetZmanimView.kt`); `luachName`, the Android-only footnote "לפי …" of the zmanim pages, names the אור החיים alone and is null for the default zmanim, so `ZmanimTool`, `DailyPrayerTool` and `HebrewCalendarTool` show it only then. | Port, verbatim by its header but for the default zmanim in place of the luach's opinion (as Pardes desktop), of desktop 0.6.10's EarthWidgetZmanimView.kt and KiddushLevanaData.kt (earthwidget), ZmanimWidget.kt and HomeWidgetsState.kt |
 
 #### The code: incremental library updates (delta/)
 
@@ -9928,9 +10034,9 @@ build leaves out for it.
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/reference/RepositoryReferenceSource.kt` | `RepositoryReferenceSource`: the `ReferenceSource` over the repository; a TOC entry's lines are read in lists Android 8-11's SQLite can bind (`SqlVariableLimit`), a section reaching 9,400 lines. | Android variant of Zayit 0.6.10's SeforimApp/src/jvmMain/.../features/search/domain/reference/RepositoryReferenceSource.kt (same package and class) |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/BookLevels.kt` | `BookLevels` (a book's level, from Mikra to the latest authors, for the precedence of the earlier level among the lines that hold the query as a sentence) and `LibraryLines`, read through the app's own `SqlDriver` instead of a JDBC connection. | Android variant of Pardes for desktop's features/search/semantic/BookLevels.kt (same package and names; changes marked "Android:") |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/HfTokenizer.kt` | `HfTokenizer`: the open model's HuggingFace tokenizer.json read and applied in Kotlin (normalizers, pre-tokenizers, WordPiece, post-processor); Oniguruma's Unicode `\w`, `\d` and `\s` spelled out, because Android's ICU regex refuses `UNICODE_CHARACTER_CLASS`. | Android variant of Pardes for desktop's features/search/semantic/HfTokenizer.kt (same package and names; changes marked "Android:") |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/HybridSearchEngine.kt` | `HybridSearchEngine`: the full-text engine fused with the dense search by RRF (the model's dense weight, the lexical leaders that hold a quote, the earlier level first), snippets refined and highlighted by meaning, the reader's smart find, the fallback to words alone, and `lexicalEngine` for the facets; it logs with android.util.Log and reads the library through the app's connection. *Note:* Its fusion is RRF alone: desktop's `fusedScores` (2026-11-09) is not ported. | Android variant of Pardes for desktop's features/search/semantic/HybridSearchEngine.kt (same package and names; changes marked "Android:") |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/IndependentSemanticSearch.kt` | `IndependentSemanticSearch` and `DenseHit`: the KNN search of pardes.vec.lucene (HNSW) opened with `NIOFSDirectory`, with the model looked for beside the index only, and no legacy model. | Android variant of Pardes for desktop's features/search/semantic/IndependentSemanticSearch.kt (same package and names; changes marked "Android:") |
-| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/OnnxEmbeddingProvider.kt` | `OnnxEmbeddingProvider`: embeds a query, and passages of found lines, with the int8 ONNX model on onnxruntime-android into the vector the index is searched with; no legacy model. | Android variant of Pardes for desktop's features/search/semantic/OnnxEmbeddingProvider.kt (same package and names; changes marked "Android:") |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/HybridSearchEngine.kt` | `HybridSearchEngine`: the full-text engine fused with the dense search by RRF (the model's dense weight, the lexical leaders that hold a quote, the earlier level first), snippets refined and highlighted by meaning, the reader's smart find, the fallback to words alone, and `lexicalEngine` for the facets; its session tells the lines found by meaning alone (`meaningBookCounts`, and `meaningLines` with how far each stands above the dense candidates, `standingOf`, as desktop since 2026-11-12); it logs with android.util.Log and reads the library through the app's connection. *Note:* Its fusion is RRF alone: desktop's `fusedScores` (2026-11-09) is not ported. | Android variant of Pardes for desktop's features/search/semantic/HybridSearchEngine.kt (same package and names; changes marked "Android:") |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/IndependentSemanticSearch.kt` | `IndependentSemanticSearch` and `DenseHit`: the KNN search of pardes.vec.lucene (HNSW) opened with `NIOFSDirectory`, with the model looked for beside the index only, and no legacy model; the passage of each found line closest in meaning (`bestPassages`), stopping between the model's runs when `keepGoing` says so, as desktop since 2026-11-12. | Android variant of Pardes for desktop's features/search/semantic/IndependentSemanticSearch.kt (same package and names; changes marked "Android:") |
+| `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/OnnxEmbeddingProvider.kt` | `OnnxEmbeddingProvider`: embeds a query, and passages of found lines, with the int8 ONNX model on onnxruntime-android into the vector the index is searched with, passages stopping between the model's runs when `keepGoing` says so (desktop's `EmbeddingProvider` since 2026-11-12); no legacy model. | Android variant of Pardes for desktop's features/search/semantic/OnnxEmbeddingProvider.kt (same package and names; changes marked "Android:") |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/OpenModelSpec.kt` | `OpenModelSpec`: the open model's pardes-model.json (its id, files, cleaner, prefixes and dense weight), read with `Files.readAllBytes`, since Android 8 has no `Files.readString`. | Android variant of Pardes for desktop's features/search/semantic/OpenModelSpec.kt (same package and names; changes marked "Android:") |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/VectorIndexBuilder.kt` | The read side of `VectorIndexBuilder`: the vector index's names and `readInfo` (the model it was embedded with, its lines), which the search and the pack installer check; building the index stays a desktop tool. | Android variant of Pardes for desktop's features/search/semantic/VectorIndexBuilder.kt (same package and names; changes marked "Android:"), without the builder |
 | `androidApp/app/src/androidMain/kotlin/io/github/kdroidfilter/seforimapp/android/search/semantic/pack/InstalledPack.kt` | `InstalledPack`: the semantic pack beside a library as the settings show it, checked as the search opens it, plus `libraryVersion` from release_info.txt. | Android variant of Pardes for desktop's features/search/semantic/pack/InstalledPack.kt (same package and names; changes marked "Android:") |
@@ -10537,6 +10643,15 @@ bumps filament-kmp to 0.7.12 in `gradle/libs.versions.toml`.
     AGPL v3): Pardes's open siddur's screen has these 44 lines since 2026-11-11, at the user's word;
   - Nucleus 3.0.0-dev-202611011507 (`df678943`; `gradle/libs.versions.toml`);
   - the website, release CI and the Microsoft Store package.
+- **After 0.6.13, the zmanim (2026-11-22 and 23):** Zayit's master moved to KosherKotlin 4.0.0 and the default zmanim
+  (`3732514`, "refactor(zmanim): move to KosherKotlin 4.0.0 and restore the default zmanim") and to 4.0.1 (`3f1901c`),
+  at the request of the luach whose opinion and candle table 0.6.12 used, and asked Pardes to do the same
+  (efrul/pardes#50). Those commits are under the Zayit Public License and were not merged. On 2026-11-24, after the
+  luach's owners wrote to Pardes directly, Pardes made the same change itself: the same names and choices (the common
+  customs Zayit had before the luach: 18 minutes, 40 in Jerusalem; 8.5°, 40 minutes in Jerusalem) and comments close
+  to Zayit's, in a few lines of library calls, so that Pardes's zmanim stay Zayit's. The files are in section 1
+  (`EarthWidgetZmanimView.kt`, `ZmanimWidget.kt`, …).
+
 - **Where a merge would meet Pardes's changes:** ten files Pardes also changes:
   - `CLAUDE.md`, `SeforimApp/build.gradle.kts`, `strings.xml`, `MainAppWindow.kt`, `AppUpdateService.kt` and
     `gradle/libs.versions.toml`;
