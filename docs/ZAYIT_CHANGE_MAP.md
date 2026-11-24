@@ -538,7 +538,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/WindowBody.kt`
 
-- **Change:** modified, +26 −3 lines. Feature: A pane at the window's edge, Two tabs side by side, A book's own pages.
+- **Change:** modified, +48 −6 lines. Feature: A pane at the window's edge, Two tabs side by side, A book's own pages.
 - **What:** the reader's `DockLayout` takes `outerBandSides = LineOuterBandSides`, under a comment marked "Pardes:" (a
   pane dropped at the window's edge runs its full length), and its import. Two tabs side by side (request 59 of
   stage 3): the book's text counts as ready (`LocalBookTextReady`) for the tab shown beside the one selected too
@@ -548,6 +548,11 @@ The entries of this section by kind:
   `openWindow.readerShortcuts` alike.
   Since 2026-11-24 `readerKeys` ends with F6 (`openWindow.focusStops.cycle(event, rtl)`, request 100 of stage 3),
   which goes round the parts of the window that take keys.
+  Since 2026-11-24 (requests 94, 97 and 100 of stage 3) the reader's keys are built by `rememberReaderKeys(openWindow,
+  destination, events)`, out of `WindowBody` for `detekt.yml`: `handleBookShortcut`, whose book tree's key is in a
+  search tab its tree of the books found (`rememberSearchTreeToggle`), the daf's key and F6. And `ReaderBar` gives a
+  search's results their start bar (Zayit's have none), the book tree's button showing and hiding that tree
+  (`bookTreeShown`, the toggle's events).
 - **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, steps 1 and 4 of the docking in its plan,
   2026-11-12) that a side pane run from the top of the window to its bottom while something is open under the text.
   It is done pane by pane, by the drop (the mock-up approved on 2026-11-12): a pane released on the strip along the
@@ -1370,7 +1375,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +97 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+- **Change:** modified, +100 −15 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
   side, Pages in the dark theme's colours, A whole page in the view, A book's own pages.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
@@ -1411,6 +1416,8 @@ The entries of this section by kind:
   - Since 2026-11-24 the daf button's click is a value (`toggleDaf`) that is the daf's key's too
     (`DafKey(uiState.tabId, toggleDaf)`, request 94 of stage 3), and the button shows the key in its tooltip
     (`shortcutHint`, "D+Ctrl", "D+⌘" on macOS).
+  - Since 2026-11-24 `StartVerticalBar` takes `bookTreeShown` (the navigation's `isVisible` unless given), the book
+    tree's button's selected state: in a search tab it is the tree of the books found (request 97 of stage 3).
 - **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`); a button
   is enabled exactly when its pane has something to show, as Zayit's comment there says. The library of 2026-10-12 has
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
@@ -1537,7 +1544,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +276 −43 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+- **Change:** modified, +281 −43 lines. Feature: Commentators in their own panes, A pane at the window's edge,
   Pane layout kept, Find results pane, Keys in the book tree and the contents.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
@@ -1584,6 +1591,9 @@ The entries of this section by kind:
   - Since 2026-11-24 (request 97 of stage 3) a search tab has its tree pane again when `SearchTreeSettings.shown` is
     on (`desiredPanes(…, searchTree)`, read with the other settings of the pane demand), and `SearchTreePane` turns
     the pane's own close (`ToggleBookTree`) into that setting off.
+  - `SearchTreePane` takes its events from `rememberSearchTreeToggle` (the pane's close hides the tree), and lets go
+    of the focus asked for as its pane opens (`PaneFocusRequests.await`): the search's tree has no keys, and the
+    request would wait for the book tree of the next tab.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
   anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). A pane at the window's edge: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
   - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
@@ -2266,7 +2276,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +144 −36 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
+- **Change:** modified, +142 −36 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -2299,8 +2309,6 @@ alone. Every entry below that says "Search in categories" is part of that revers
     (`revealItem`, as the book tree's rows), in place of Zayit's `animateScrollToItem(next)`, which brought every
     result selected to the list's top with an animation (request 77 of the list after the public release), with a
     comment marked "Pardes:" and an import.
-  - Since 2026-11-24 the bar's row ends with `SearchTreeButton()`, which shows the tree of the books found in its pane
-    (request 97 of stage 3).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2424,8 +2432,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +454 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 417 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +452 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 416 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2511,8 +2519,6 @@ alone. Every entry below that says "Search in categories" is part of that revers
     Zayit's wallpaper strings, under a comment: `settings_show_home_logo` and its description (request 67 of stage 3).
   - the search from anywhere's keys, under a comment before the search by meaning's: `search_anywhere_keys` (where
     what it finds opens, request 96 of stage 3);
-  - a search's tree of books, under a comment before the search by meaning's: `search_tree_tooltip` (its button beside
-    the results' bar, request 97 of stage 3);
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -5002,26 +5008,31 @@ Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's messag
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchTree.kt`
 
 - **Feature:** Search results (request 97 of stage 3).
-- **Size:** 129 lines.
+- **Size:** 97 lines.
 - **What:** a search's tree of the books it found, shown when asked for ("שיכולו לפתוח את עץ הספרים בחיפוש, ברירת מחדל
   סגור - יפתח לפי בחירה. בחירה שם תהיה כמו בטאבים - תסמן בשורת החיפוש ויוכלו לחפש שוב"). `SearchTreeSettings.shown`
-  (`search_tree.shown`, off): whether a search tab has its tree pane, one setting for every tab. `SearchTreeButton`,
-  beside the results' search bar: a toggle with the book tree's icon (`Library`) and a tooltip, which takes no focus.
-  `SearchTreePicks`: what the reader checked in the tree, in the order checked (`category`, `book`), the tabs picked
-  above the results being its categories and no book (`only`); `scope()` is where the bar searches then: a
-  `SearchScope.Category`, a `Book`, several in a `Multi`, null with nothing checked.
+  (`search_tree.shown`, off): whether a search tab has its tree pane, one setting for every tab.
+  `rememberSearchTreeToggle(onEvent)` gives a search tab's `SearchTreeToggle`: whether the tree is shown, and the
+  tab's events with the book tree's toggle (`ToggleBookTree`) turned to that setting, so the book tree's own button in
+  the start bar, its key (Ctrl/Cmd+B) and its pane's close show it and hide it. `SearchTreePicks`: what the reader
+  checked in the tree, in the order checked (`category`, `book`), the tabs picked above the results being its
+  categories and no book (`only`); `scope()` is where the bar searches then: a `SearchScope.Category`, a `Book`,
+  several in a `Multi`, null with nothing checked.
 - **Why:** Zayit's search has a tree of its results' categories and books, with their counts and checkboxes
-  (`SearchCategoryTreePanel`), which Pardes's category tabs had taken the place of (`ReaderPanes.kt`'s
-  `desiredPanes`). The reader asked for it back, closed until opened, and for its checks to be in the bar as the tabs
-  picked are, so that the text is searched again in them.
-- **Reached from:** `SearchResultScreen.kt` (the button), `ReaderPanes.kt` (the setting), `SearchResultViewModel.kt`
-  (the picks).
-- **Follows:** `FindResultsSettings` for one setting of a pane in every tab; `SearchModeSwitch.kt` for a button at the
-  bar's end.
+  (`SearchCategoryTreePanel`), which its category tabs took the place of: a search tab has no start bar and no tree
+  pane there (`WindowBody.kt`'s `ReaderBar`, `ReaderPanes.kt`'s `desiredPanes`). The reader asked for it back, closed
+  until opened, and for its checks to be in the bar as the tabs picked are, so that the text is searched again in
+  them. The testers' build desktop-1.0.11-72 had a button of its own beside the search bar; at the reader's word the
+  same day ("למה אייקון פתיחת העץ לא במקום הרגיל שלו?") it is the book tree's own button, in the start bar.
+- **Reached from:** `WindowBody.kt` (the start bar and the key), `ReaderPanes.kt` (the setting, the pane's close),
+  `SearchResultViewModel.kt` (the picks).
+- **Follows:** `FindResultsSettings` for one setting of a pane in every tab; `StartVerticalBar`'s own button for the
+  book tree.
 - **Tests:** `SearchTreePicksTest`; tried in the app on 2026-11-24 with the library's full-text index: "בין השמשות"
-  found 847 results, the button opened the pane with the six categories found and their counts, a check of תלמוד put
-  its chip in the bar and marked its tab (138 results), a check of משנה › סדר קדשים added a second chip (144), and the
-  pane's own close hid it.
+  found 847 results, the pane opened with the six categories found and their counts, a check of תלמוד put its chip in
+  the bar and marked its tab (138 results), a check of משנה › סדר קדשים added a second chip (144), and the pane's own
+  close hid it; then, the button moved, the start bar's "ספרים" opened the pane and Ctrl+B closed it and opened it
+  again.
 - **Notes:** a category unchecked under a checked one filters the list but leaves the bar's chip whole; only in a
   search of the whole library, as the tabs (`showTabsInBar`).
 

@@ -1,42 +1,21 @@
 package io.github.kdroidfilter.seforimapp.features.search
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberUpdatedState
 import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforimapp.core.settings.SettingsGroup
+import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
-import io.github.kdroidfilter.seforimapp.icons.Library
-import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.component.Icon
-import org.jetbrains.jewel.ui.component.Text
-import org.jetbrains.jewel.ui.component.Tooltip
-import seforimapp.seforimapp.generated.resources.Res
-import seforimapp.seforimapp.generated.resources.search_tree_tooltip
 
 // Pardes (request 97 of docs/DESKTOP_STAGE3_PLAN.md: "שיכולו לפתוח את עץ הספרים בחיפוש, ברירת מחדל סגור - יפתח לפי
 // בחירה. בחירה שם תהיה כמו בטאבים - תסמן בשורת החיפוש ויוכלו לחפש שוב"): a search's tree of the books it found,
-// Zayit's own pane (SearchCategoryTreePanel), which the category tabs had taken the place of. It is closed until the
-// reader opens it, by a button beside the search bar, and what is checked in it is in the bar too, as a tab picked is.
+// Zayit's own pane (SearchCategoryTreePanel), which its category tabs took the place of. It is closed until the reader
+// opens it, by the book tree's own button in the start bar, which a search's results now have (the user's word on the
+// testers' build's button beside the search bar: "למה אייקון פתיחת העץ לא במקום הרגיל שלו?"), or by its key; and what
+// is checked in it is in the bar too, as a tab picked is.
 
 /** Whether a search's results show their tree of books in a pane: one setting, every tab, off until asked for. */
 object SearchTreeSettings : SettingsGroup("search_tree") {
@@ -86,44 +65,33 @@ internal class SearchTreePicks {
         }
 }
 
-private const val HOVER_ALPHA = 0.14f
-private const val SHOWN_ALPHA = 0.22f
+/**
+ * A search tab's tree of books for its bars and its keys: whether it is [shown], and the tab's events ([onEvent]) with
+ * the book tree's toggle turned to it.
+ */
+internal class SearchTreeToggle(
+    val shown: Boolean,
+    val onEvent: (BookContentEvent) -> Unit,
+)
 
-/** The button of a search's tree of books, beside its bar: it shows the pane, or hides it. */
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * The tree of books of a search tab whose events are [onEvent]: the book tree's own button and key (the start bar's
+ * "ספרים", Ctrl/Cmd+B) and its pane's close show it and hide it, where a book's tab shows the library's tree.
+ */
 @Composable
-internal fun SearchTreeButton(modifier: Modifier = Modifier) {
+internal fun rememberSearchTreeToggle(onEvent: (BookContentEvent) -> Unit): SearchTreeToggle {
     val appSettings = LocalAppGraph.current.appSettings
     val shown by appSettings.flow(SearchTreeSettings.shown).collectAsState()
-    val label = stringResource(Res.string.search_tree_tooltip)
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val accent = JewelTheme.globalColors.outlines.focused
-    val background =
-        when {
-            shown -> accent.copy(alpha = SHOWN_ALPHA)
-            hovered -> accent.copy(alpha = HOVER_ALPHA)
-            else -> Color.Transparent
+    val current by rememberUpdatedState(onEvent)
+    val events =
+        remember(appSettings) {
+            { event: BookContentEvent ->
+                if (event == BookContentEvent.ToggleBookTree) {
+                    appSettings[SearchTreeSettings.shown] = !appSettings[SearchTreeSettings.shown]
+                } else {
+                    current(event)
+                }
+            }
         }
-    Tooltip(tooltip = { Text(label) }, modifier = modifier) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(background)
-                    // The bar keeps the keys: the button is the pointer's
-                    .focusProperties { canFocus = false }
-                    .toggleable(
-                        value = shown,
-                        interactionSource = interaction,
-                        indication = null,
-                        role = Role.Switch,
-                        onValueChange = { appSettings[SearchTreeSettings.shown] = it },
-                    ).pointerHoverIcon(PointerIcon.Hand),
-        ) {
-            Icon(imageVector = Library, contentDescription = label, modifier = Modifier.size(18.dp))
-        }
-    }
+    return SearchTreeToggle(shown, events)
 }

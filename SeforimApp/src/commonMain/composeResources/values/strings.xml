@@ -1292,8 +1292,6 @@
     <string name="page_colors_original_tooltip">העמודים של הסריקה ושל ספרי PDF בצבעים המקוריים שלהם, במקום הצבעים של המצב הכהה</string>
     <!-- Pardes: where what the search from anywhere finds opens, by the keys held (request 96 of stage 3, SearchAnywhere) -->
     <string name="search_anywhere_keys">Enter: בלשונית הזו  ·  %1$s+Enter או %2$s+לחיצה: בלשונית חדשה  ·  Shift: בחלון חדש</string>
-    <!-- Pardes: a search's tree of the books it found, shown by a button beside its bar (request 97 of stage 3, SearchTree) -->
-    <string name="search_tree_tooltip">עץ הספרים של התוצאות: סימון בו נכנס לשורת החיפוש</string>
     <!-- Pardes: the search by meaning turned on or off at the search bar's end (request 54 of stage 3, SearchModeSwitch) -->
     <string name="search_mode_hybrid_missing">החיפוש לפי משמעות לא מותקן. אפשר להוריד אותו בהגדרות › ניהול נתונים</string>
     <!-- Pardes: every match of a book's find in a pane beside the text (request 55 of stage 3, FindResultsPane) -->

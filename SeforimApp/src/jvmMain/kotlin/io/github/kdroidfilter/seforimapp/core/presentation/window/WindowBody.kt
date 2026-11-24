@@ -33,6 +33,7 @@ import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.TabsContent
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.shownBeside
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabBookViewModel
+import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.handleBookShortcut
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.EndVerticalBar
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.StartVerticalBar
@@ -46,6 +47,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.LineSideO
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.NavigationLayeredSides
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.PaneCard
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panes.ReaderSplitter
+import io.github.kdroidfilter.seforimapp.features.search.rememberSearchTreeToggle
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
 import io.github.kdroidfilter.seforimapp.framework.desktop.DockSizes
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
@@ -75,18 +77,8 @@ fun WindowBody(openWindow: OpenWindow) {
         } else {
             null
         }
-    // Pardes: with the daf's key (Ctrl/Cmd+D), the daf button's click of the selected tab (request 94 of stage 3)
-    val dafKeys = LocalAppGraph.current.dafKeys
-    // Pardes: and F6, which goes round the parts of the window that take keys (request 100 of stage 3)
-    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val readerKeys =
-        readerEvents?.let { events ->
-            { event: KeyEvent ->
-                handleBookShortcut(event, events) ||
-                    dafKeys.press(event, readerDestination?.tabId) ||
-                    openWindow.focusStops.cycle(event, rtl)
-            }
-        }
+    // Pardes: with the daf's key, a search's tree of books and the focus keys (requests 94, 97 and 100 of stage 3)
+    val readerKeys = rememberReaderKeys(openWindow, readerDestination, readerEvents)
     // Also from the window itself, which gets the keys when nothing has focus (no pane, no text).
     openWindow.readerShortcuts = readerKeys
     val bottomOpen =
@@ -151,6 +143,28 @@ fun WindowBody(openWindow: OpenWindow) {
     }
 }
 
+/**
+ * Pardes: the keys of the window's selected reader tab [destination], whose events are [events]; none with no reader
+ * tab. The book view's shortcuts, of which the book tree's (Ctrl/Cmd+B) is in a search tab its tree of the books found
+ * (request 97 of stage 3); the daf's key (Ctrl/Cmd+D), the daf button's click of the tab (request 94); and F6, which
+ * goes round the parts of the window that take keys (request 100).
+ */
+@Composable
+private fun rememberReaderKeys(
+    openWindow: OpenWindow,
+    destination: TabsDestination?,
+    events: ((BookContentEvent) -> Unit)?,
+): ((KeyEvent) -> Boolean)? {
+    val dafKeys = LocalAppGraph.current.dafKeys
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    if (events == null) return null
+    val searchTree = if (destination is TabsDestination.Search) rememberSearchTreeToggle(events) else null
+    val onEvent = searchTree?.onEvent ?: events
+    return { event ->
+        handleBookShortcut(event, onEvent) || dafKeys.press(event, destination?.tabId) || openWindow.focusStops.cycle(event, rtl)
+    }
+}
+
 @Composable
 private fun ReaderBreadcrumb(
     session: DesktopSession,
@@ -171,11 +185,16 @@ private fun ReaderBar(
     val viewModel = tabBookViewModel(session.ownerOf(destination.tabId), destination)
     val uiState by viewModel.uiState.collectAsState()
     val diacritics by viewModel.diacritics.collectAsState()
-    // A search's results have no navigation bar (their tabs filter); the end bar keeps the zoom for the preview
-    if (start && destination is TabsDestination.Search && !isBookTextShown(uiState)) return
+    // Pardes: a search's results have the navigation bar too (Zayit's have none, their tabs filter), with the book
+    // tree's button in its own place for the tree of the books found (request 97 of stage 3)
+    val searchTree = (destination as? TabsDestination.Search)?.let { rememberSearchTreeToggle(viewModel::onEvent) }
     Box(Modifier.fillMaxHeight()) {
         if (start) {
-            StartVerticalBar(uiState = uiState, onEvent = viewModel::onEvent, showBookTree = destination !is TabsDestination.Search)
+            StartVerticalBar(
+                uiState = uiState,
+                onEvent = searchTree?.onEvent ?: viewModel::onEvent,
+                bookTreeShown = searchTree?.shown ?: uiState.navigation.isVisible,
+            )
         } else if (uiState.navigation.selectedBook != null || destination is TabsDestination.Search) {
             EndVerticalBar(uiState = uiState, onEvent = viewModel::onEvent, diacritics = diacritics)
         }

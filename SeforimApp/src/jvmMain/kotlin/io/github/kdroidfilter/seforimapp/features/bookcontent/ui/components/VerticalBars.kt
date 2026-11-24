@@ -49,6 +49,8 @@ fun StartVerticalBar(
     onEvent: (BookContentEvent) -> Unit,
     // A search tab has no library tree: its results filter by category tabs
     showBookTree: Boolean = true,
+    // Pardes: whether the book tree's pane is open; a search tab's is the tree of the books it found (request 97)
+    bookTreeShown: Boolean = uiState.navigation.isVisible,
 ) {
     VerticalLateralBar(
         position = VerticalLateralBarPosition.Start,
@@ -57,7 +59,7 @@ fun StartVerticalBar(
                 SelectableIconButtonWithToolip(
                     toolTipText = stringResource(Res.string.book_list),
                     onClick = { onEvent(BookContentEvent.ToggleBookTree) },
-                    isSelected = uiState.navigation.isVisible,
+                    isSelected = bookTreeShown,
                     icon = Library,
                     iconDescription = stringResource(Res.string.books),
                     label = stringResource(Res.string.books),

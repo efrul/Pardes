@@ -66,6 +66,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.category
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.SearchCategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NotesPanel
 import io.github.kdroidfilter.seforimapp.features.search.SearchTreeSettings
+import io.github.kdroidfilter.seforimapp.features.search.rememberSearchTreeToggle
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
 import io.github.kdroidfilter.seforimapp.framework.desktop.DockSizes
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
@@ -872,11 +873,15 @@ private fun SearchTreePane(
     val isFiltering by viewModel.isFilteringFlow.collectAsState()
     val selectedCategoryIds by viewModel.selectedCategoryIdsFlow.collectAsState()
     val selectedBookIds by viewModel.selectedBookIdsFlow.collectAsState()
-    val appSettings = LocalAppGraph.current.appSettings
+    // Pardes: the search's tree has no keys of its own: the focus asked for as its pane opens is let go here, not kept
+    // for the book tree of the next tab (request 97 of stage 3)
+    val focusKey = LocalPaneFocusKey.current
+    val focusRequests = LocalAppGraph.current.paneFocusRequests
+    LaunchedEffect(focusKey, focusRequests) { if (focusKey != null) while (true) focusRequests.await(focusKey) }
     SearchCategoryTreePanel(
         uiState = uiState,
         // Pardes: the pane's own close hides the search's tree, which one setting shows (request 97 of stage 3)
-        onEvent = { if (it == BookContentEvent.ToggleBookTree) appSettings[SearchTreeSettings.shown] = false else onEvent(it) },
+        onEvent = rememberSearchTreeToggle(onEvent).onEvent,
         searchTree = searchTree,
         isFiltering = isFiltering,
         selectedCategoryIds = selectedCategoryIds,
