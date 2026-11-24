@@ -1712,8 +1712,7 @@ The entries of this section by kind:
     by `DafControl.scrollToLine`), the current match drawn on the daf and the results pane all go through them. By
     meaning, the comments found (`dafComments`) are marked whole on the daf with the Gemara's lines (`DafFind.lines`).
   - Since 2026-11-24 the `DafView` call passes `onClearSelection = daf.onClearSelection` (request 88 of stage 3).
-  - Since 2026-11-24 the text's box is a part the window's focus keys stop at: `.then(rememberFocusStop {
-    focusRequester.requestFocus() })` before its `focusRequester` (request 100 of stage 3).
+  - Since 2026-11-24 the text's box is a part the window's focus keys stop at: `.then(rememberFocusStop(isTabSelected) { focusRequester.requestFocus() })` before its `focusRequester` (request 100 of stage 3).
 - **Why:** the daf view lives inside the text view's own frame, so that everything the reader does around the text
   works on the daf too (`e00754a4`, `8d3825e7`, `d334af46`, `efad35cc`); the user asked on 2026-11-09 that the arrows
   move within Rashi and Tosafot when the focus is on them, and that the text open from the daf in the same state (what
@@ -4806,7 +4805,7 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/FocusStops.kt`
 
 - **Feature:** Focus keys (request 100 of stage 3).
-- **Size:** 160 lines.
+- **Size:** 164 lines.
 - **What:** the keyboard's focus moved between the parts of a reader's window that take keys ("אני רוצה שמקש שיפט יהיה
   עם משמעות ויוכל להעביר פוקוס, תנסה לבדוק מה רלוונטי ואם מקובל וכדאי להשתמש גם בחיצי ימין ושמאל"): the book tree, the
   contents and the text. `FocusStop`: a part's place in the window, whether it has the focus, and how it takes it; its
@@ -4815,7 +4814,8 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
   toLeft)` and `cycle(event, rtl)`, F6 round them and Shift+F6 back. The choices are pure: `stopBeside(bounds, from,
   toLeft)`, of the parts whose middle is on that side the nearest, of two as near the one more level;
   `stopAfter(bounds, from, forward, rtl)`, the parts read from the right in a right-to-left window, from none the
-  first. `rememberFocusStop(focus)` gives the modifier of a part: its place (`onGloballyPositioned`), its focus
+  first. `rememberFocusStop(shown, focus)` gives the modifier of a part, a stop only while it is shown (every tab of a
+  window stays composed, and only the selected one's text is a stop): its place (`onGloballyPositioned`), its focus
   (`onFocusChanged`) and the keys that came up to it unused (`onKeyEvent`, so a field inside it keeps Shift with the
   arrows for its selection).
 - **Why:** the trees took the focus only as their pane opened or by a click, and gave it back by Escape; nothing went

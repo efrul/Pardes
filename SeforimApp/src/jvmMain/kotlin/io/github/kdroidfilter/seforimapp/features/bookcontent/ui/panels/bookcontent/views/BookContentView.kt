@@ -1132,7 +1132,7 @@ fun BookContentView(
                 .graphicsLayer { alpha = contentAlpha } // Hide until positioned to prevent glitch
                 .then(if (showsDaf) dafZoom.modifier else zoom.modifier)
                 // Pardes: the text is a part the window's focus keys stop at (request 100 of stage 3)
-                .then(rememberFocusStop { focusRequester.requestFocus() })
+                .then(rememberFocusStop(isTabSelected) { focusRequester.requestFocus() })
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent(previewKeyHandler)
                 .focusable(),

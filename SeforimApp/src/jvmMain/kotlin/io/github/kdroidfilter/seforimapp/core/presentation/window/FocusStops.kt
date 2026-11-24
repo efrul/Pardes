@@ -139,16 +139,20 @@ internal val OpenWindow.focusStops: FocusStops
     get() = synchronized(stopsByWindow) { stopsByWindow.getOrPut(this) { FocusStops() } }
 
 /**
- * A part of the window the focus keys stop at while it is shown, taking the focus by [focus]: for the modifier of what
- * takes its keys, before its `focusable` (it reads the part's place and focus, and the keys that came up to it unused).
+ * A part of the window the focus keys stop at while it is [shown] (every tab of a window stays composed: only the
+ * selected one's text is a stop), taking the focus by [focus]: for the modifier of what takes its keys, before its
+ * `focusable` (it reads the part's place and focus, and the keys that came up to it unused).
  */
 @Composable
-internal fun rememberFocusStop(focus: () -> Unit): Modifier {
+internal fun rememberFocusStop(
+    shown: Boolean,
+    focus: () -> Unit,
+): Modifier {
     val stops = LocalOpenWindow.current.focusStops
     val current by rememberUpdatedState(focus)
     val stop = remember { FocusStop { current() } }
-    DisposableEffect(stops, stop) {
-        stops.add(stop)
+    DisposableEffect(stops, stop, shown) {
+        if (shown) stops.add(stop)
         onDispose { stops.remove(stop) }
     }
     return remember(stop) {
