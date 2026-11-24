@@ -22,6 +22,10 @@ consent, to improve its search: the results they marked relevant and not relevan
 identifies them. Models trained from 2026-11-23 on also learn from searches those users sent without grading: the
 results of these were graded for the project by a language model (Claude, by Anthropic), on the users' scale.
 
+Models trained from 2026-11-24 on also learn from pairs made from Torah-pairs, a collection compiled by Philomath868
+(<https://huggingface.co/datasets/Philomath868/Torah-pairs>): questions, and the topics of responsa, each with the
+passage of the library that answers it. It is used with its compiler's permission, and is not passed on with a model.
+
 Dicta does not endorse Pardes or this conversion. The model is provided as is, without warranties.
 
 Pardes is based on Zayit by Elie (Elyahou) Gambache, who did not make Pardes and is not responsible for it. Neither
