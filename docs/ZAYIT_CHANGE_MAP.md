@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (358 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (359 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -3873,7 +3873,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafPlaces.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 443 lines.
+- **Size:** 446 lines.
 - **What:** a book's units laid out, and where its lines are on them. `UnitSetter.lay` reads a unit and sets it in the
   reader's style (`DafBandsSetter`, or `dafPagesAround`), all of it off the UI thread (a chapter with many
   commentators is thousands of comments, each one's HTML read into words), and gives a page of commentaries alone
@@ -3887,7 +3887,8 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   bands' setter each anchored comment's place (request 98), shifts the passages of a line that goes on from the
   page before to its words on the page (`from`, by `SetPage.starts`: `DafAmudLinks` counts a line's words on the
   page), and a unit keeps the commentators its lines have and those on its pages (`LaidUnit.groups`, `shown`), a
-  page its commentators' names (`LaidPage.heads`) and its width. `LaidPage` (the amud, its head
+  page its commentators' names (`LaidPage.heads`) and its width. `UnitSetter.followsView` says the page's size is the
+  view's, and `tallAspect` is the shape of a page of the rules' size, for the zooms that fit one (request 89). `LaidPage` (the amud, its head
   from its lines' references, `refRange`; its rules; where each library line is printed first), `LaidUnit` (its
   pages, in rows of one or two, `rows`; each row's top in its item, `rowTops`, and `rowsIn`, the rows between two
   offsets, one at least; the pixels down its item to a line,
@@ -3903,7 +3904,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafView.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 763 lines.
+- **Size:** 699 lines.
 - **What:** `BookDafView`, the book's pages inside the text view's frame as a tractate's are (its zoom, keys, find
   bar, selection and menu): the units in a list, each laid out when it comes into view and one on each side
   (`layUnits`, kept as they were while they are set again; a unit that could not be laid out is said in the log),
@@ -3917,13 +3918,16 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   hundreds of pages, and the testers' build `desktop-1.0.11-63` stopped answering on Bereshit 1 (the user's
   screenshot of a white window, "לא מגיב"; here, with all the commentators checked, the main thread measuring every
   page's runs and the process at 6 GB until the system ended it). The pages' size is the daf's zoom, a size whatever the view's width, and they
-  tell the tab their fit for "עמוד שלם" (`pagesScale`, `TellPageFit`, request 73 of stage 3); the place at the top is
+  tell the tab their fit for "עמוד שלם" (`pagesScale`, `TellPageFit`, request 73 of stage 3; in `BookDafSetup.kt`
+  since 2026-11-24, with the view's size taken once, by `BookDafView`'s `BoxWithConstraints`, for the page's own
+  size where the pages follow the view's width, `rememberWidePage`, request 89; what the pages show is handed on as
+  one `BookDafShown`); the place at the top is
   kept at a zoom (`KeepPlaceAtZoom`), the keys and the find bar are answered through `DafControl`
   (`BookDafControl`: a page up or down, the book's ends, a line brought into view, a step through a commentary), the
   tab's line is brought into view and the place told back (`RevealTabLine`), Ctrl or Cmd + C copies the words
   selected (`selectionKeys`). A new `UnitSetter` (a check in the pane, the diacritics, the fonts, the style) sets the
-  pages again (`rememberUnitSetter`, `rememberDafLetters`: the commentaries' script is swapped for the text's only around the
-  text, a band having its own letters since 2026-11-24). With no commentator checked, a banner says how to add
+  pages again (`rememberUnitSetter` and `rememberDafLetters`, in `BookDafSetup.kt`: the commentaries' script is
+  swapped for the text's only around the text, a band having its own letters since 2026-11-24). With no commentator checked, a banner says how to add
   them; at the pages' corner, a button shows the style's fields over them (`BookDafAdjust`).
 - **Reached from:** `DafView.kt`.
 - **Follows:** `DafView`'s pages (its list, its control, its place and zoom), for units laid out as they come.
@@ -3932,6 +3936,30 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   styles, with two pages a row and a whole page in the view; after the rows' change, Bereshit with all its
   commentators checked (the pages set in some five seconds, the window answering throughout; a jump to chapter 5
   from the contents; two pages a row with a whole page in the view, scrolled through).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafSetup.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 145 lines.
+- **What:** what a book's pages are set by and shown at, out of `BookDafView.kt` (fifteen functions a file):
+  `rememberDafLetters`, `rememberUnitSetter` (a new setter when the commentators, the diacritics, the fonts or the
+  `BookDafLook` change), `PagesScale` and `pagesScale`, and the page's head, padding and gap (`BookDafHead`,
+  `BookDafPadding`, `BookDafGap`). And request 89 of stage 3 ("הגדרות תצוגת רוחב ספר יהיו אמיתיות כלומר ישנו את
+  הפריסה שלו ולא רק את הגודל שלו"): `rememberWidePage(view, zoom, style)` is the page's size where the pages follow
+  the view's width (`BookDafSettings.wide`, the end bar's fit at "רוחב החלונית"): as wide as the view (half of it
+  with two pages side by side) and as tall, in points at the zoom's letters, which are those of a page
+  `BOOK_DAF_WIDTH` wide at that zoom; no smaller than `LEAST_PAGE_WIDTH` by `LEAST_PAGE_HEIGHT`; taken once the
+  view has rested at it (`PAGE_SIZE_REST_MS`: a pane dragged, the zoom's steps). So the fit sets the pages again
+  for the view, more words in a line and the wide page's columns (request 99), where it only made a page of the
+  rules' size larger. In `pagesScale` the zoom is then the letters' size alone (`UnitSetter.followsView`), the fits
+  told are those of a page of the rules' size (`tallAspect`), and the zoom shown is not held to the view's width
+  (`TellPageFit(capped = false)`). Around the text the pages are always the rules' size.
+- **Reached from:** `BookDafView.kt`.
+- **Follows:** `BookDafView.kt`'s own code, moved; `DafView`'s scale for the rest.
+- **Tests:** `PageFitTest` (the button's fits for a book's pages); tried in the app on Be'er HaGolah with Rabbi
+  Hartman's notes: the fit button from a whole page to two thirds of it, then "רוחב החלונית", where the page was
+  set again as wide as the view, two long lines of the text and the notes in three columns, at the letters of the
+  two thirds before it.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafAdjust.kt`
 
@@ -5772,7 +5800,7 @@ own files, `DafView.kt`, `DafScanView.kt`, `PdfBookView.kt` and `PdfPageList.kt`
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFit.kt`
 
 - **Feature:** A whole page in the view.
-- **Size:** 239 lines.
+- **Size:** 277 lines.
 - **What:** the pages' zoom a size (request 73 of the list after the public release: "כאשר סרגל צד נפתח למשל או
   מוסיפים מפרשים היחס של הדף משתנה לפי אחוז הגודל שלו ביחס למסך הקודם... גם הגדרת רוחב וגובה נקבעת כיום לפי יחס
   המצב הנוכחי ולא אבסלוטית"), which no pane opened or closed beside them changes: `ZOOM_ONE_WIDTH` (1000 dp, a row of
@@ -5796,12 +5824,18 @@ own files, `DafView.kt`, `DafScanView.kt`, `PdfBookView.kt` and `PdfPageList.kt`
   the width only wider than a whole page), `modeAt` and `nextMode` (from another zoom, a whole page), in place of
   `isWhole`; `FIT_SLACK`. On while the zoom shown is one of the fits, its icon and its name that fit's (`PageFit`,
   `PageFitTwoThirds`, `PageFitWidth`; "עמוד שלם", "שני שלישים", "רוחב החלונית"), off at another zoom with a whole
-  page's; its tooltip says where a press goes; off until the tab's pages have told their fit. Before,
+  page's; its tooltip says where a press goes; off until the tab's pages have told their fit. On a book's own pages
+  (`showsBookDaf`) the width is no zoom (request 89 of stage 3: "הגדרות תצוגת רוחב ספר יהיו אמיתיות כלומר ישנו את
+  הפריסה שלו ולא רק את הגודל שלו"): a whole page and two thirds of it are zooms of a page of the rules' size, and
+  the third press turns on `BookDafSettings.wide`, the pages following the view's width at whatever zoom
+  (`bookModes`, `bookModeAt`, `nextBookMode`); `TellPageFit(capped = false)` leaves such pages' zoom as it is,
+  their letters' size. A fit's name, tooltip and icon are `PageFitMode`'s own (`label`, `tooltip`, `icon`), out of
+  the button for `detekt.yml`'s complexity. Before,
   the pages were as wide as the view times the zoom (request 63 of the list after the third testers' build: "רוחב
   החלונית, זום נפרד"), so that a pane opened beside them shrank them, and "עמוד שלם" was a setting kept for every tab
   (`PageFitSettings`, "page_fit", now not read) times the zoom.
-- **Reached from:** `VerticalBars.kt` (the button), `DafView.kt`, `DafScanView.kt` and `PdfBookView.kt` (the width and
-  the fit), `BookContentView.kt` and `PdfBookView.kt` (`shownPageZoom`), `AppGraph.kt` (`pageFits`).
+- **Reached from:** `VerticalBars.kt` (the button), `DafView.kt`, `DafScanView.kt`, `PdfBookView.kt` and
+  `BookDafSetup.kt` (the width and the fit), `BookContentView.kt` and `PdfBookView.kt` (`shownPageZoom`), `AppGraph.kt` (`pageFits`).
 - **Follows:** `PageSpreadsButton.kt` beside it (`SelectableIconButtonWithToolip`, `showsPages`); Pardes's
   `BookFindHub` and `PdfBookStore.showPages` (what a tab's view tells the panes and bars, by its id).
 - **Tests:** `PageFitTest`, `DafZoomTest`; tried in the app (Berakhot's daf: fitted to its view's width when first
@@ -5813,14 +5847,15 @@ own files, `DafView.kt`, `DafScanView.kt`, `PdfBookView.kt` and `PdfPageList.kt`
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageFitTest.kt`
 
 - **Feature:** A whole page in the view.
-- **Size:** 90 lines.
+- **Size:** 110 lines.
 - **What:** a page as wide as the zoom says, whatever the view, two a row sharing the row, in dp or pixels; the view's
   width a zoom, of one page a row or two; a whole page the zoom that leaves it whole in the view, no wider than the
   view; two thirds of a page the zoom that leaves them in the view's height, no wider than the view (request 81); a page
   whose shape is not known yet fitting as wide as the view; the button from a whole page to two thirds of it, to the
   width, and back, a whole page from another zoom; a fit no other zoom than another one's passed over (two thirds as
   wide as the view, a whole page as wide as it, a view so short both are the zoom's least); a zoom at a fit as near as
-  the zoom's ends let it be; a tab's fit told and forgotten (`PageFits`).
+  the zoom's ends let it be; a book's own pages from a whole page to two thirds of it, to following the view's width
+  and back, at that width only while they follow it (request 89); a tab's fit told and forgotten (`PageFits`).
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).

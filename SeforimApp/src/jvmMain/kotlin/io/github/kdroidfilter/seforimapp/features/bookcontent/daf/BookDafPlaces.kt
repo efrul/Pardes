@@ -326,9 +326,12 @@ internal class UnitSetter(
     private val widths = measuredWidths(letters, sizes)
     private val mutex = Mutex()
 
-    /** A page's width in points, and its usual height to it, for a whole page fitted in the view. */
+    /** A page's width in points; whether it is the view's (the pages follow its width) rather than the rules' own. */
     val width: Float = bands?.width ?: BOOK_DAF_WIDTH
-    val aspect: Float = (bands?.height ?: BOOK_DAF_HEIGHT) / width
+    val followsView: Boolean = bands != null && look.page != null
+
+    /** The height to its width of a page of the rules' size, for a whole page fitted in the view. */
+    val tallAspect: Float = if (bands != null) look.style.aspect else BOOK_DAF_HEIGHT / BOOK_DAF_WIDTH
 
     /**
      * The unit [unit] laid out, its pages named after it: read and set in pages off the UI thread (a chapter with many

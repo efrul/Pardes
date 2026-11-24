@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -40,6 +39,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -50,9 +50,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
@@ -62,10 +60,6 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
-import io.github.kdroidfilter.seforimapp.features.pdf.TellPageFit
-import io.github.kdroidfilter.seforimapp.features.pdf.ZOOM_ONE_WIDTH
-import io.github.kdroidfilter.seforimapp.features.pdf.pageFit
-import io.github.kdroidfilter.seforimapp.features.pdf.pageWidthAt
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -85,7 +79,6 @@ import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.book_daf_continued
 import seforimapp.seforimapp.generated.resources.book_daf_no_commentators
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -98,10 +91,7 @@ import kotlin.math.roundToInt
 /** The units kept laid out: one scrolled back to from farther is laid out again. */
 private const val KEPT_UNITS = 16
 
-/** A page's running head, the room on its sides and below it, and a unit's place while it is laid out. */
-private val HeadHeight = 36.dp
-private val PagePadding = 24.dp
-private val PageGap = 12.dp
+/** A unit's place while it is laid out. */
 private val LoadingHeight = 240.dp
 
 /** How long a line brought into view waits for its unit to be laid out. */
@@ -135,17 +125,10 @@ internal fun BookDafView(
     val units by produceState(emptyList<DafUnit>(), book.id) {
         value = runSuspendCatching { unitsOf(graph.repository, book) }.getOrDefault(emptyList())
     }
-    val letters = rememberDafLetters(rememberBookDafStyle(book))
-    val setter = rememberUnitSetter(book, commentators, diacritics, letters)
+    val style = rememberBookDafStyle(book)
+    val letters = rememberDafLetters(style)
     // The units laid out, by their place in the list: those in view, and one on each side of them
     val laid = remember(book.id) { mutableStateMapOf<Int, LaidUnit>() }
-    LaunchedEffect(setter, units) {
-        if (units.isNotEmpty()) {
-            snapshotFlow {
-                listState.layoutInfo.visibleItemsInfo.map { it.index }
-            }.collectLatest { layUnits(it, units, setter, laid) }
-        }
-    }
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             // Nothing checked in the commentaries pane: the text alone, and how to set commentators with it
@@ -155,49 +138,36 @@ internal fun BookDafView(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 )
             }
-            BookDafPages(book, units, laid, rememberUpdatedState(setter), listState, control, zoom, tab, clicks, find, onScroll, letters)
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val view = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
+                // Where the pages follow the view's width, its size is theirs, and they are set again for it
+                val look = BookDafLook(style, rememberWidePage(view, zoom, style))
+                val setter = rememberUnitSetter(book, commentators, diacritics, letters, look)
+                LaunchedEffect(setter, units) {
+                    if (units.isNotEmpty()) {
+                        snapshotFlow {
+                            listState.layoutInfo.visibleItemsInfo.map { it.index }
+                        }.collectLatest { layUnits(it, units, setter, laid) }
+                    }
+                }
+                val shown = BookDafShown(book, units, laid, rememberUpdatedState(setter), letters, view)
+                BookDafPages(shown, listState, control, zoom, tab, clicks, find, onScroll)
+            }
         }
         // The pages' style, behind a button at their corner
         BookDafAdjust(book, Modifier.align(Alignment.TopEnd))
     }
 }
 
-/** The daf's letters as the reader's [style] has them: the commentaries in the text's square letters, or in Rashi script. */
-@Composable
-private fun rememberDafLetters(style: BookDafStyle): Pair<DafLetters, BookDafStyle> {
-    val graph = LocalAppGraph.current
-    val density = LocalDensity.current
-    val resolver = LocalFontFamilyResolver.current
-    val gemaraCode by graph.appSettings.dafGemaraFontCodeFlow.collectAsState()
-    val commentaryCode by graph.appSettings.dafCommentaryFontCodeFlow.collectAsState()
-    val gemara = dafFamily(gemaraCode)
-    // Around the text the commentaries' columns are Rashi's and Tosafot's, in one script; a band has its own (BandLetters)
-    val rashi = if (style.squareCommentary && style.layout == DafStyle.Around) gemara else dafFamily(commentaryCode)
-    val letters =
-        remember(resolver, density, gemara, rashi) {
-            DafLetters(TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0), density, gemara, rashi)
-        }
-    return letters to style
-}
-
-/**
- * What lays out [book]'s units: a new one when the pages are to be set otherwise (a check in the commentaries pane, the
- * text's [diacritics], the fonts, the style).
- */
-@Composable
-private fun rememberUnitSetter(
-    book: Book,
-    commentators: DafCommentators,
-    diacritics: DiacriticsMode,
-    letters: Pair<DafLetters, BookDafStyle>,
-): UnitSetter {
-    val repository = LocalAppGraph.current.repository
-    // Each commentator's place, kept while the book is shown: a check in the pane moves none of the others
-    val ranks = remember(book.id) { ConcurrentHashMap<Long, Int>() }
-    return remember(book.id, commentators.selection, diacritics, letters) {
-        UnitSetter(repository, book, commentators, diacritics, ranks, letters.first, BookDafLook(letters.second))
-    }
-}
+/** What a book's pages show: its [units], those [laid] out (by the daf's [setter]), in [letters], in a [view]. */
+private class BookDafShown(
+    val book: Book,
+    val units: List<DafUnit>,
+    val laid: Map<Int, LaidUnit>,
+    val setter: State<UnitSetter>,
+    val letters: DafLetters,
+    val view: Size,
+)
 
 /**
  * Lays out those of [units] in view (the list's items [visible]), and one on each side of them, into [laid]. When the
@@ -225,47 +195,10 @@ private suspend fun layUnits(
     }
 }
 
-/** A page's size on the screen: [perPoint] pixels a point, [columns] pages a row, their list [contentWidth] pixels wide. */
-private class PagesScale(
-    val perPoint: Float,
-    val columns: Int,
-    val contentWidth: Float,
-    val frame: PageFrame,
-)
-
-/**
- * The scale of the pages in a view [viewport] pixels wide and [height] tall, at the daf's [zoom]: a size, which no pane
- * opened beside the pages changes (request 73 of stage 3), two pages side by side sharing the view as a book open (the
- * end bar's button, as a tractate's amudim). The zooms that fit the view are told for the tab of [control].
- */
-@Composable
-private fun pagesScale(
-    control: DafControl,
-    zoom: Float,
-    viewport: Float,
-    height: Float,
-    aspect: Float,
-): PagesScale {
-    val density = LocalDensity.current
-    val spreads by LocalAppGraph.current.appSettings.pageSpreadsFlow
-        .collectAsState()
-    val columns = if (spreads) 2 else 1
-    val padding = with(density) { PagePadding.toPx() }
-    val frame = PageFrame(with(density) { HeadHeight.toPx() }, with(density) { PageGap.toPx() }, columns)
-    val one = with(density) { ZOOM_ONE_WIDTH.toPx() }
-    TellPageFit(control.tabId, pageFit(viewport / columns - 2 * padding, height, aspect, columns, frame.head + frame.gap, one))
-    val pageWidth = pageWidthAt(zoom, columns, one).coerceAtLeast(1f)
-    return PagesScale(pageWidth / BOOK_DAF_WIDTH, columns, maxOf(viewport, (pageWidth + 2 * padding) * columns), frame)
-}
-
-/** The pages of a book's daf: its [units] in a list, those [laid] out as pages, the others in their place meanwhile. */
-@Suppress("ComposeUnstableCollections") // the units and those laid out, as a tractate's daf takes its amudim
+/** The pages of a book's daf ([shown]): its units in a list, those laid out as pages, the others in their place meanwhile. */
 @Composable
 private fun BookDafPages(
-    book: Book,
-    units: List<DafUnit>,
-    laid: Map<Int, LaidUnit>,
-    setter: State<UnitSetter>,
+    shown: BookDafShown,
     listState: LazyListState,
     control: DafControl,
     zoom: Float,
@@ -273,8 +206,11 @@ private fun BookDafPages(
     clicks: DafClicks,
     find: DafFind,
     onScroll: (Long) -> Unit,
-    letters: Pair<DafLetters, BookDafStyle>,
 ) {
+    val book = shown.book
+    val units = shown.units
+    val laid = shown.laid
+    val setter = shown.setter
     val graph = LocalAppGraph.current
     val keys = remember { FocusRequester() }
     // The words selected on a page, one page's at a time (its name and range), copied with Ctrl or Cmd + C
@@ -293,15 +229,15 @@ private fun BookDafPages(
                 ?.let { copyToClipboard(it.amud.textOf(range)) }
         }
     }
-    BoxWithConstraints(
+    Box(
         Modifier
             .fillMaxSize()
             .focusRequester(keys)
             .selectionKeys(selection != null, copy) { selection = null }
             .focusable(),
     ) {
-        val height = constraints.maxHeight.toFloat()
-        val scale = pagesScale(control, zoom, constraints.maxWidth.toFloat(), height, setter.value.aspect)
+        val height = shown.view.height
+        val scale = pagesScale(control, zoom, shown.view, setter.value)
         val places =
             BookDafList(listState, units, laid, setter, scale.perPoint, scale.frame, height) { id ->
                 runSuspendCatching { graph.repository.getLine(id) }.getOrNull()?.takeIf { it.bookId == book.id }?.lineIndex
@@ -311,7 +247,7 @@ private fun BookDafPages(
         BookDafControl(control, current, tab, focused, pageClicks) { focused = it }
         RevealTabLine(control, current, tab, units, setter.value, clicked, onRelease = { clicked = null }, onScroll = onScroll)
         val ink = JewelTheme.globalColors.text.normal
-        val look = DafLook(scale.perPoint, letters.first.gemara, letters.first.rashi, ink, JewelTheme.globalColors.outlines.focused)
+        val look = DafLook(scale.perPoint, shown.letters.gemara, shown.letters.rashi, ink, JewelTheme.globalColors.outlines.focused)
         val marks =
             DafMarks(
                 marked = if (tab.isTocEntrySelection) emptySet() else tab.selectedLineIds,
@@ -484,7 +420,7 @@ private fun BookDafPage(
         value = page.layoutIfLaid ?: withContext(Dispatchers.Default) { page.layout() }
     }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.height(HeadHeight), contentAlignment = Alignment.BottomCenter) {
+        Box(Modifier.height(BookDafHead), contentAlignment = Alignment.BottomCenter) {
             Text(
                 if (page.isContinued) stringResource(Res.string.book_daf_continued, page.head) else page.head,
                 fontSize = 15.sp,
@@ -503,7 +439,7 @@ private fun BookDafPage(
             selection = selection,
             clicks = clicks,
             modifier =
-                Modifier.padding(horizontal = PagePadding).padding(bottom = PageGap).drawBehind {
+                Modifier.padding(horizontal = BookDafPadding).padding(bottom = BookDafGap).drawBehind {
                     // The page's own coordinates, left to right, whatever the view's direction
                     for (r in page.rules) {
                         drawLine(rule, Offset(r.x0, r.y0) * look.perPoint, Offset(r.x1, r.y1) * look.perPoint, strokeWidth = density)
