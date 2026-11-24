@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.SelectedPassage
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.commentAnchorIndex
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorGroup
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
 import kotlinx.coroutines.Dispatchers
@@ -38,8 +39,11 @@ internal class LaidPage(
     val textTops: List<Pair<Float, Long>>,
     val rules: List<PageRule> = emptyList(),
     val isContinued: Boolean = false,
+    /** The commentators' names on the page, for what a click or a drag on one does (BookDafHeads). */
+    val heads: List<BandHead> = emptyList(),
 ) {
     val height: Float get() = amud.block[3] - amud.block[1]
+    val width: Float get() = amud.block[2] - amud.block[0]
 
     /** The page's layout once it was laid out; null before. */
     val layoutIfLaid: AmudLayout? get() = if (laying.isInitialized()) laying.value else null
@@ -48,7 +52,7 @@ internal class LaidPage(
     fun layout(): AmudLayout = laying.value
 
     /** The page under the head of the page before it, whose text its commentaries go on from. */
-    fun continuing(head: String) = LaidPage(amud, laying, head, passages, tops, textTops, rules, isContinued = true)
+    fun continuing(head: String) = LaidPage(amud, laying, head, passages, tops, textTops, rules, isContinued = true, heads)
 }
 
 /** The tab's line, selection and place, as a book's daf takes them from the text view (DafView's). */
@@ -89,6 +93,9 @@ internal class LaidUnit(
     val pages: List<LaidPage>,
     val comments: List<List<DafComment>>,
     val setter: UnitSetter,
+    /** The commentators its lines have, as the commentaries pane lists them, and those on its pages (their books). */
+    val groups: List<CommentatorGroup> = emptyList(),
+    val shown: List<Long> = emptyList(),
 ) {
     /** The pages in rows of [columns], as the unit's item shows them: each row's pages, the one read first first. */
     fun rows(columns: Int): List<List<LaidPage>> = pages.chunked(columns.coerceAtLeast(1))
@@ -286,9 +293,19 @@ private fun measuredWidths(
 }
 
 /**
+ * How a book's pages are set: the reader's [style]; the page's size where it is the view's ([page], the pages following
+ * its width); and what the reader chose of the book's commentators on them ([own]).
+ */
+internal data class BookDafLook(
+    val style: BookDafStyle = BookDafStyle(),
+    val page: DafPageSize? = null,
+    val own: BookDafCommentators = BookDafCommentators(),
+)
+
+/**
  * The units of [book] laid out, one at a time (their reads and the commentators' order as they come): their text and
- * the [commentators] shown with it, from the library, in [letters] and the reader's [style]; their words with the
- * [diacritics] the text shows.
+ * the [commentators] shown with it, from the library, in [letters] and as the reader's [look] has them; their words
+ * with the [diacritics] the text shows.
  */
 internal class UnitSetter(
     private val repository: SeforimRepository,
@@ -298,17 +315,20 @@ internal class UnitSetter(
     /** Each commentator's place among those met, kept while the book is shown: its band, or its side. */
     ranks: MutableMap<Long, Int>,
     private val letters: DafLetters,
-    style: BookDafStyle = BookDafStyle(),
+    look: BookDafLook = BookDafLook(),
 ) {
     // In bands, the rules' measures; around the text, the letters of the Talmud's block, which the page is as wide as
-    private val bands = if (style.layout == DafStyle.Bands) BandsMeasures(style, style.runOn ?: book.isTanakh) else null
+    private val bands =
+        if (look.style.layout == DafStyle.Bands) BandsMeasures(look.style, look.style.runOn ?: book.isTanakh, look.page) else null
     private val sizes = bands?.let { DafSizes(it.text.box, it.commentary.box) } ?: DafSizes.of(BOOK_DAF_WIDTH)
-    private val look = DafUnitLook(diacritics, commentAnchorIndex(book.id), ranks, targum = bands != null && bands.sideWidth > 0f)
+    private val unitLook =
+        DafUnitLook(diacritics, commentAnchorIndex(book.id), ranks, targum = bands != null && bands.sideWidth > 0f, own = look.own)
     private val widths = measuredWidths(letters, sizes)
     private val mutex = Mutex()
 
-    /** A page's usual height to its width, for a whole page fitted in the view. */
-    val aspect: Float = (bands?.height ?: BOOK_DAF_HEIGHT) / BOOK_DAF_WIDTH
+    /** A page's width in points, and its usual height to it, for a whole page fitted in the view. */
+    val width: Float = bands?.width ?: BOOK_DAF_WIDTH
+    val aspect: Float = (bands?.height ?: BOOK_DAF_HEIGHT) / width
 
     /**
      * The unit [unit] laid out, its pages named after it: read and set in pages off the UI thread (a chapter with many
@@ -317,9 +337,18 @@ internal class UnitSetter(
     suspend fun lay(unit: DafUnit): LaidUnit =
         mutex.withLock {
             withContext(Dispatchers.Default) {
-                val text = loadDafUnit(repository, book.id, unit, commentators.selection, commentators.connections, look)
+                val text = loadDafUnit(repository, book.id, unit, commentators.selection, commentators.connections, unitLook)
                 val pages =
-                    bands?.let { DafBandsSetter(widths, text.text, text.commentaries, text.targum, it).pages { ensureActive() } }
+                    bands?.let {
+                        DafBandsSetter(
+                            widths,
+                            text.text,
+                            text.commentaries,
+                            text.targum,
+                            it,
+                            text.anchors,
+                        ).pages { ensureActive() }
+                    }
                         ?: dafPagesAround(text.text, text.commentaries, widths)
                 val laid = ArrayList<LaidPage>()
                 pages.forEachIndexed { i, page ->
@@ -334,7 +363,13 @@ internal class UnitSetter(
                             c.comments[segment.lineId].orEmpty().map { DafComment(it.lineId, segment.lineId, c.bookId) }
                         }
                     }
-                LaidUnit(laid, comments, this@UnitSetter)
+                LaidUnit(
+                    laid,
+                    comments,
+                    this@UnitSetter,
+                    text.groups,
+                    text.commentaries.map { it.bookId } + listOfNotNull(text.targum?.bookId),
+                )
             }
         }
 
@@ -375,9 +410,15 @@ internal class UnitSetter(
             } else {
                 refRange(refs.first(), refs.last())
             }
-        return LaidPage(amud, layout, head, text.passages.filterKeys { it in ids }, tops, textTops.sortedBy { it.first }, page.rules)
+        // A line that goes on from the page before has its passages by its words here
+        val passages = text.passages.filterKeys { it in ids }.mapValues { (id, marked) -> page.starts[id]?.let(marked::from) ?: marked }
+        return LaidPage(amud, layout, head, passages, tops, textTops.sortedBy { it.first }, page.rules, heads = page.heads)
     }
 }
+
+// A line's passages as its words on a page that begins at its word [first] have them
+private fun List<Pair<IntRange, Set<Long>>>.from(first: Int): List<Pair<IntRange, Set<Long>>> =
+    mapNotNull { (range, comments) -> if (range.last < first) null else (maxOf(range.first - first, 0)..(range.last - first)) to comments }
 
 /** The references [first] to [last] as one: "בראשית א, א–ה", "בראשית א, כט – ב, ג" across a chapter. */
 internal fun refRange(

@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (355 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (358 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2379,8 +2379,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +434 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 399 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +437 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 402 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2396,7 +2396,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - a book's own pages, under a comment after `daf_view_tooltip`: `book_daf_tooltip`, `book_daf_no_commentators`,
     `book_daf_continued` (a page of commentaries alone, under the head of the page before it), `book_daf_adjust` and
     its tooltip, `book_daf_own_style`, the settings' `settings_book_daf` and its description, and the style's fields
-    and their choices, `book_daf_style_*` (21);
+    and their choices, `book_daf_style_*` (24: among them a wide page's columns and the text waiting for its commentaries);
   - the existing Zayit library: `onboarding_existing_library_*` (5); and under a comment, after Zayit's
     `onboarding_choose_files`, the offline install's folder that holds a library: `onboarding_library_folder_*` (8:
     the question, its link, the note, and why a folder is not used);
@@ -3165,7 +3165,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafSetting.kt`
 
 - **Feature:** Daf view, A book's own pages.
-- **Size:** 716 lines.
+- **Size:** 739 lines.
 - **What:** typesetting an amud: `layoutAmud` sets every line in runs (a column's lines one below the other at its
   pitch), one size of letters per column, made smaller for a line only as far as its words need, its spaces widened to
   fill its box, a big word's neighbours set beside it, an overfull line given its empty neighbour's room. `DafSizes`
@@ -3182,7 +3182,10 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   text, in square letters as tall as their own lines' boxes), and `DafOpenings`: the words that open a comment, named
   by the page (by their line's index), set in the text's square letters, a share of their line's (`opening`, the
   `leads` of a column, in place of `firsts`). `GEMARA_SIZE` and `RASHI_SIZE` are internal, for those pages to measure
-  their words as they will be set. The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`,
+  their words as they will be set. Since 2026-11-24 each band of a page of bands is a column of its own
+  (`bandColumns`: every `BAND_COLUMN` code among the page's lines, its letters as tall as its own lines' boxes,
+  Rashi script with its openings or the text's square letters), and the side's column in Rashi script
+  (`SIDE_RASHI_COLUMN`), for a commentator's own letters (request 93 of stage 3). The private setters (`AmudSetter`, `ColumnSetter`, `LineSet`, `Piece`,
   `Marks`) and the constants of the printed page's proportions.
 - **Reached from:** `DafView.kt` (`layoutAmud`, `DafSizes`), `BookDafPlaces.kt` (with `DafOpenings`), `BookDafBands.kt` and
   `DafAroundSetter.kt` (the sizes).
@@ -3690,14 +3693,19 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafStyle.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 122 lines.
+- **Size:** 162 lines.
 - **What:** the reader's style and the experiment's switch. `DafStyle` (`Bands`, the rules' own; `Around`, the text in
   the middle as the Vilna Shas sets the Gemara), `BookDafStyle` (the layout, the letters of the text and of the
   commentaries, a commentator's columns, the targum's share of the width, the page's height to its width, whether the
-  text's lines run on, whether the commentaries are in square letters; the rules' numbers its defaults, in the rules'
-  unit, a block of text 616 wide; `sane` keeps each inside what a page can be set with), `BookDafSettings` (a
+  text's lines run on, whether the commentaries are in square letters; a commentator's columns on a page wider than
+  tall, `wideColumns`, request 99; whether the text waits for its commentaries, `together`, on by default, request
+  98; the rules' numbers its defaults, in the rules' unit, a block of text 616 wide; `sane` keeps each inside what a
+  page can be set with), `BandStyle` (a commentator's own letters: size, columns, square, each the style's where
+  null) and `BookDafCommentators` (what a book's pages show of its commentators: those shown in their bands' order,
+  the one beside the text, each one's `BandStyle`; requests 92 and 93), `BookDafSettings` (a
   `SettingsGroup`, `book_daf.*`: `enabled`, off by default; `style`, every book's; `books`, a book's own by its
-  id), `Book.isTanakh`, and the composables that read them:
+  id; `commentators`, a book's `BookDafCommentators` by its id; `wide`, the pages following the view's width,
+  request 89), `Book.isTanakh`, and the composables that read them:
   `hasBookDaf` (the experiment on, a book with commentaries; no tractate, nor a commentary printed on a tractate's
   daf, whose button opens that daf, `rememberDafTractate`, requests 82 and 86 of stage 3), `showsBookDaf` (the tab shows such
   pages) and `rememberBookDafStyle` (a book's own style, else every book's).
@@ -3710,39 +3718,105 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafBands.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 526 lines.
-- **What:** the rules' setting, a pure function of the words' widths. `BandsMeasures` turns a `BookDafStyle` into a
-  page's measures in points (the page `BOOK_DAF_WIDTH` wide: each column's `Letters`, their size, box and pitch; the
-  gaps, a band's head, the targum's column), and `DafBandsSetter.pages()` sets a unit: for each page, the last line
-  of the text it takes (`lastLine`: line after line while the text, its targum and every comment waiting up to it
-  fit, rule 2; one at least, rule 3; one more when over 15% of the page would be empty, rule 8, `fills`; never ending
-  on a heading, `offHeading`), the text at its top (`setText`: headings in the middle, the others in paragraphs with
-  their targum beside them at the left and a rule between, `setPart`; a line a paragraph, or where the text runs on,
-  as verses, the lines up to a petuchah, the last line short from the right, a paragraph left open ending in the
-  middle, `paragraphs`), then each commentator's band in turn (`setBands`, rule 5: as many of its words waiting as
-  the room left holds, none when that is under two lines a column, rule 7; `setBand`: a rule, the name, the lines in
-  balanced columns from the right, set across but the last where a comment ends). A commentator's comments are one
-  `WordRun` that goes on from page to page (rule 4), never past the lines of the text already set (`ends`, rule 1);
-  a line of commentary is left free at the bottom (rule 9); pages are one size, a line of the text taller than a page
-  making its own longer and a unit's last ending where its lines do; a page that could take nothing in takes a
-  band's least all the same (`force`), so no word is lost (rule 10), and every page takes a line or a word (a
-  `check`, in place of the cap of 2,000 pages a unit that a chapter with all its commentators passes). The bands
-  waiting are counted only while they fit (`used` stops at the page's room, `WordRun.lineCount` at `mostLines`, a
-  band taller than a page): a commentator's comments waiting may be a chapter's, and counting them all for every
-  line tried made such a unit's setting long; `pages(beforeEachPage)` lets the setting be let go of between pages. Lines are broken here, by measured widths, so
-  the rules' search for the most words that fit is one walk down the lines (`WordRun.endOf`). The words that open a
-  comment (its first bold words) are named for the text's square letters (`SetWord.lead`, `BandsPage.openings`,
-  `DIBBUR_SIZE`), where the commentaries are in Rashi script. `PageRule` is a rule drawn on a page.
+- **Size:** 284 lines.
+- **What:** the rules' setting, a pure function of the words' widths: what each page of a unit takes.
+  `DafBandsSetter(widths, text, commentaries, targum, measures, anchors).pages()`: for each page, the last piece of
+  the text it takes (`lastPiece`: piece after piece while the text, what stands beside it and every comment waiting
+  up to it fit, rule 2, `used` over `waiting`; one more when over 15% of the page would be empty, rule 8, or the next
+  line of a paragraph cut there whenever its comments may begin under it, `fills`; never ending on a heading,
+  `offHeading`), then each commentator's band in turn (`setBands`, rule 5: as many of its words waiting as the room
+  left holds, none when that is under two lines a column, rule 7). A commentator's comments are one `WordRun` that
+  goes on from page to page (rule 4), never past the pieces of the text already set (`Band.ends`, rule 1); a line of
+  commentary is left free at the bottom (rule 9); pages are one size, a unit's last ending where its lines do; a
+  page that could take nothing in takes a band's least all the same (`force`), so no word is lost (rule 10), and
+  every page takes a piece or a word (a `check`). The bands waiting are counted only while they fit (`waiting` stops
+  at the page's room, `WordRun.lineCount` at a band taller than a page): a commentator's comments waiting may be a
+  chapter's; `pages(beforeEachPage)` lets the setting be let go of between pages.
+  Since request 98 of stage 3 ("הפירוש לא היה מותאם לספר עצמו, כל אחד נהיה בעמוד אחר לגמרי… צריך למצוא מה מקובל
+  בעולם העימוד לעשות בכזה מצב", the Maharal's Be'er HaGolah with Rabbi Hartman's notes, and the Shulchan Aruch with
+  four commentaries) the text waits for its commentaries (`BandsMeasures.together`, the style's): the rules' third,
+  one new line of the text on every page whatever waits, holds only when no comment waits from the pieces before
+  (`used(first - 1) == 0f`); else the page is the commentaries' alone, and the text goes on where they end. So a
+  comment begins on the page of its text, as a footnote does (the GPO Style Manual's "must always begin on the page
+  where they are referenced", TeX's split insertions, the Tag scripts' "כמה": the leftovers first, then the text
+  line by line, and no room for the text where the leftovers fill the page). And a paragraph is cut between pages
+  (`cuts`: where the text waits and does not run on as verses do): the text is `TextPieces`, and a comment is set
+  with the piece its anchor is in (`TextPieces.of`, by `anchors`: each anchored comment's first word in its line),
+  an unanchored one with its paragraph's last. With `together` off the pages are the rules' as written: every page a
+  new line, lines whole, a long commentary lagging behind. Each band has its own letters and columns (`Band`, from
+  `BandsMeasures.band` over the commentator's `BandStyle`), and what stands beside the text is the targum or a
+  commentator put in its place (`DafTargum.bookId`), its parts set with the pieces they are on.
 - **Reached from:** `BookDafPlaces.kt` (`UnitSetter`).
 - **Follows:** the user's rules (`docs/BOOK_DAF_RULES.md`), whose numbers its constants are; the page's lines as
   `BookDafLayout.kt` gives them to the daf's own setting.
 - **Tests:** `BookDafBandsTest`; Bereshit 1 with Onkelos, Rashi and the Ramban seen in the app beside the rules'
-  own page.
+  own page; Be'er HaGolah with Rabbi Hartman's notes after request 98 (the first seven lines of its first paragraph
+  on the first page with the notes on them under them, its last line on the second with the second paragraph's
+  first lines and their notes).
+- **Notes:** split in four on 2026-11-24 for `detekt.yml` (fifteen functions a class): the measures
+  (`BookDafMeasures.kt`), the pieces (`BookDafPieces.kt`) and the page's parts (`BookDafBandsPage.kt`) went out of
+  it. The research behind request 98 is in `docs/DESKTOP_STAGE3_PLAN.md`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafMeasures.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 225 lines.
+- **What:** what a page of bands is measured by, out of `BookDafBands.kt`. `Letters` (a column's letters: size, box,
+  pitch); `BandsMeasures(style, runOn, page)` turns a `BookDafStyle` into a page's measures in points: the letters
+  are those of a page `BOOK_DAF_WIDTH` wide whatever the page's own size (`DafPageSize`, the view's where the pages
+  follow its width: a wider page holds more letters in a line), the text's, the targum's, the commentaries', the
+  names', the gaps, a band's head, the side's column; `isWide` and `columns` (a page wider than tall has the style's
+  `wideColumns`, request 99); `together` (request 98); `band(own)`, a commentator's `BandLetters` (letters, columns,
+  column's width, square letters or Rashi script: the style's, or its own `BandStyle`, request 93);
+  `beside(own, isTargum)`, the letters of what stands beside the text; `textRows`, the printed lines a paragraph
+  breaks into in the text's column, for `TextPieces`. `WordRun` is words set in lines of a width by their measured
+  widths (`lineEnd`, `lines`, `lineCount`, `endOf`, `width`); `PageRule` a rule drawn on a page; `LastLine` how a
+  paragraph's last line is set; `DIBBUR_SIZE` the words that open a comment.
+- **Reached from:** `BookDafBands.kt`, `BookDafBandsPage.kt`, `BookDafPieces.kt`, `BookDafPlaces.kt`
+  (`BandsMeasures`, `DafPageSize`, `DIBBUR_SIZE`).
+- **Follows:** the user's rules (`docs/BOOK_DAF_RULES.md`), whose numbers its constants are.
+- **Tests:** `BookDafBandsTest` (a commentator's own letters and columns; a wide page's columns).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafPieces.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 78 lines.
+- **What:** the text of a unit in the pieces a page takes whole (request 98). `TextPiece`: a whole line of the
+  library, or one printed line of a paragraph that may be cut (its line, the index of its first word among the
+  line's, whether it opens the line and closes it). `TextPieces(text, anchors, anchored, rows)`: a line is one piece,
+  as the rules' first has a verse ("פסוק אינו נחתך בין עמודים"); a paragraph a commentary is anchored inside, or one
+  of more than `WHOLE_ROWS` (8) printed lines, is its printed lines, so that a page ends where the comments that
+  fit it end, as a footnoted book's does. `of(lineId, commentId, atEnd)` is the piece a comment is set with: its
+  anchor's; without one the line's last (a band's comment is read after its paragraph), or its first (what stands
+  beside the text begins with it).
+- **Reached from:** `BookDafBands.kt`, `BookDafBandsPage.kt`.
+- **Follows:** Zayit's comment anchors (`CommentAnchor`, `BookDafSource.kt`'s passages), for where a comment is.
+- **Tests:** `BookDafBandsTest` (a paragraph cut where the comments anchored in it end; a short line whole; a long
+  paragraph without anchors cut, its comments after it).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafBandsPage.kt`
+
+- **Feature:** A book's own pages.
+- **Size:** 223 lines.
+- **What:** the parts of a page of bands as they are set, out of `BookDafBands.kt`. `BandsPage` is a page being set
+  from its top down (its lines, rules, the words that open a comment, the commentators' names, `BandHead`, and
+  where its next part goes); `Band` a commentator's band (its place, book, name, letters, run of words, and how many
+  of them are set once each piece of the text is); `BandsPrinter` sets the text's pieces at the page's top (`text`:
+  headings in the middle, the others in paragraphs with what stands beside them at the left and a rule between,
+  `part`; a line a paragraph, its pieces on the page set together, a paragraph the page cuts going across; where the
+  text runs on, as verses, the lines up to a petuchah, the last line short from the right, one left open ending in
+  the middle, `paragraphs`) and a band (`band`: a rule, the name, the lines in balanced columns from the right, in
+  the band's own letters and columns and a column code of its own, `bandColumn`; set across but the last where a
+  comment ends). The text's column is one width on every page of a unit whose paragraphs may be cut (`fixedColumn`),
+  since their printed lines were broken for it.
+- **Reached from:** `BookDafBands.kt`.
+- **Follows:** `BookDafBands.kt`'s own code of 2026-11-23, moved here with a column's letters in a `Column`.
+- **Tests:** `BookDafBandsTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafLayout.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 202 lines.
+- **Size:** 241 lines.
 - **What:** what both styles set with: a library line as set (`DafSegment`), a commentator and its comments by the
   line each is set with (`DafCommentary`), the targum (`DafTargum`), the words' widths (`WordWidths`), the columns'
   names (`TEXT_COLUMN`, `RIGHT_COLUMN`, `LEFT_COLUMN`, `NAME_COLUMN`, `TARGUM_COLUMN`), the page's width in points
@@ -3750,7 +3824,12 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   `DafAmud` by `amud`), a set word (`SetWord`), and the helpers `setWords`, `nameWords`, `fit`, `lineSpan` (a line
   across, in the middle, or short from the right) and `dafLine` (a printed line with its bold words and each library
   line's words among them). `dafPagesAround` sets a unit around its text: as many lines a page as keep it no taller
-  than `BOOK_DAF_HEIGHT`, a heading never last.
+  than `BOOK_DAF_HEIGHT`, a heading never last. Since 2026-11-24 (requests 91, 93 and 98 of stage 3): a commentator's
+  own letters (`DafCommentary.style`); a commentator in the targum's place (`DafTargum.bookId`, `style`); a band's
+  own column code, by its place among the commentators and marked when in square letters (`BAND_COLUMN`,
+  `bandColumn`, `isBandColumn`, `isSquareBand`), and the side's in Rashi script (`SIDE_RASHI_COLUMN`); on a set page
+  the commentators' names (`BandHead`: the book and the name's line), a line that goes on from the page before
+  (`SetPage.starts`: the index of its first word here) and the page's own width.
 - **Reached from:** `BookDafBands.kt`, `DafAroundSetter.kt`, `BookDafSource.kt`, `BookDafPlaces.kt`, `DafSetting.kt`
   (the columns' names).
 - **Follows:** the layout files' model (`DafAmud`, `DafLine`), which the pages are set as, so that the daf's own code
@@ -3773,7 +3852,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafSource.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 295 lines.
+- **Size:** 353 lines.
 - **What:** what a book's pages set, read from the library. `dafUnits` parts a book by its table of contents (from
   each entry to the next, a longer one in pieces of 40 lines, a heading alone with the next); `loadDafUnit` reads a
   unit's lines, the comments on each of the commentators the commentaries pane shows for it (`CommentatorSelection`
@@ -3781,7 +3860,11 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   order they are met (`DafUnitLook.ranks`: their bands' order, or their sides), the passages Zayit's anchors mark
   (`passagesOf`), and, in bands, the targum beside the text (`targumOf`: Onkelos where it is, else the one on most
   lines); `dafWords` gives a line's words as the text shows them, without the diacritics it hides, bold where most
-  of their letters are; `isHeading` tells a heading by its tag.
+  of their letters are; `isHeading` tells a heading by its tag. Since 2026-11-24: the commentators are the reader's own for the book's pages
+  once chosen on them (`DafUnitLook.own`, a `BookDafCommentators`: those shown, in their bands' order, `rankOf`; each
+  one's letters), the pane's until then (request 92); the one put beside the text stands in the targum's place and
+  has no band (request 93); a unit lists the commentators its lines have, as the pane groups them (`groupsOf`,
+  `DafUnitText.groups`), and each anchored comment's first word in its line (`DafUnitText.anchors`, request 98).
 - **Reached from:** `BookDafPlaces.kt` (`UnitSetter`, `unitsOf`).
 - **Follows:** Zayit's `buildAnnotatedFromHtml` and comment anchors (`CommentAnchorIndex`), and the repository's
   `getCommentariesForLineRange`.
@@ -3790,7 +3873,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafPlaces.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 402 lines.
+- **Size:** 443 lines.
 - **What:** a book's units laid out, and where its lines are on them. `UnitSetter.lay` reads a unit and sets it in the
   reader's style (`DafBandsSetter`, or `dafPagesAround`), all of it off the UI thread (a chapter with many
   commentators is thousands of comments, each one's HTML read into words), and gives a page of commentaries alone
@@ -3799,7 +3882,12 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   pages are set, kept up to `MOST_WIDTHS`, one measure at a time, since a check in the commentaries pane sets the
   pages again and a chapter with all its commentators has some eighty thousand words of its own). A page is laid
   out with the daf's own setting (`layoutAmud`, with the page's `DafOpenings`) only when it comes near the view:
-  `LaidPage` holds it as a `Lazy` (`layout()`, `layoutIfLaid`), one page at a time. `LaidPage` (the amud, its head
+  `LaidPage` holds it as a `Lazy` (`layout()`, `layoutIfLaid`), one page at a time. Since 2026-11-24 the setter
+  takes a `BookDafLook` (the style, the page's size where it is the view's, the reader's commentators), gives the
+  bands' setter each anchored comment's place (request 98), shifts the passages of a line that goes on from the
+  page before to its words on the page (`from`, by `SetPage.starts`: `DafAmudLinks` counts a line's words on the
+  page), and a unit keeps the commentators its lines have and those on its pages (`LaidUnit.groups`, `shown`), a
+  page its commentators' names (`LaidPage.heads`) and its width. `LaidPage` (the amud, its head
   from its lines' references, `refRange`; its rules; where each library line is printed first), `LaidUnit` (its
   pages, in rows of one or two, `rows`; each row's top in its item, `rowTops`, and `rowsIn`, the rows between two
   offsets, one at least; the pixels down its item to a line,
@@ -3815,7 +3903,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafView.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 762 lines.
+- **Size:** 763 lines.
 - **What:** `BookDafView`, the book's pages inside the text view's frame as a tractate's are (its zoom, keys, find
   bar, selection and menu): the units in a list, each laid out when it comes into view and one on each side
   (`layUnits`, kept as they were while they are set again; a unit that could not be laid out is said in the log),
@@ -3834,7 +3922,8 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   (`BookDafControl`: a page up or down, the book's ends, a line brought into view, a step through a commentary), the
   tab's line is brought into view and the place told back (`RevealTabLine`), Ctrl or Cmd + C copies the words
   selected (`selectionKeys`). A new `UnitSetter` (a check in the pane, the diacritics, the fonts, the style) sets the
-  pages again (`rememberUnitSetter`, `rememberDafLetters`). With no commentator checked, a banner says how to add
+  pages again (`rememberUnitSetter`, `rememberDafLetters`: the commentaries' script is swapped for the text's only around the
+  text, a band having its own letters since 2026-11-24). With no commentator checked, a banner says how to add
   them; at the pages' corner, a button shows the style's fields over them (`BookDafAdjust`).
 - **Reached from:** `DafView.kt`.
 - **Follows:** `DafView`'s pages (its list, its control, its place and zoom), for units laid out as they come.
@@ -3879,12 +3968,14 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/daf/BookDafCard.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 233 lines.
+- **Size:** 277 lines.
 - **What:** `BookDafCard`, Settings › צורת הדף: the experiment's switch ("צורת דף לכל הספרים (ניסיוני)") with what
   it does, and, once on, every book's style. `BookDafStyleFields` are the style's fields, each a list
   (`Choice`, a `ListComboBox`): the layout, and in bands (`BandsFields`) the text's letters and the commentaries',
-  a commentator's columns, the targum beside the text (none, narrow, the rules', wide), the page's shape, the text's
-  lines run on (the Tanakh's alone, every book's, none); the commentaries in square letters; and a button back to
+  a commentator's columns on a tall page and on a wide one (`ColumnsFields`, request 99 of stage 3), the targum
+  beside the text (none, narrow, the rules', wide), the page's shape, the text's lines run on (the Tanakh's alone,
+  every book's, none), whether the text waits for its commentaries, with what each way does (`TogetherField`,
+  request 98); the commentaries in square letters; and a button back to
   the rules' numbers when the style is not theirs.
 - **Reached from:** `DafSettingsScreen.kt` (the card), `BookDafAdjust.kt` (the fields).
 - **Follows:** Zayit's settings cards (`DisplaySettingsScreen.kt`'s list rows, the same frame and paddings).
@@ -3893,17 +3984,20 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafBandsTest.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 326 lines.
+- **Size:** 446 lines.
 - **What:** the rules' own checks ("בדיקות לפני מסירה"), on words of a known width: every word of the text and of
   each commentator set once and in order; no comment on a page before its line's; pages of one size, none
   overflowing, the last ending where its lines do; a line free at every page's bottom; no two lines overlapping; a
-  page taking lines while they and their comments fit; a new line of the text on every page while a long commentary
-  lags; sixty commentators at once set to the last word, asked before each page; the first commentator taking its
+  page taking lines while they and their comments fit; the text waiting for a commentary longer than a page, on
+  pages of it alone; a paragraph cut between pages where the comments anchored in it end, each page saying where it
+  goes on from; a short line whole, and a long paragraph without anchors cut with its comments after it; a
+  commentator's own letters and columns, and a wide page's; a commentator beside the text in the targum's place; a
+  new line of the text on every page while a long commentary lags, by the rules' third (`together` off); sixty commentators at once set to the last word, asked before each page; the first commentator taking its
   room first; a band with room for under two lines a column waiting; a band's
   columns balanced, in two or three; its last line short only where a comment ends; the words that open a comment
   named; a petuchah closing a paragraph and an open one ending in the middle; every line a paragraph where the text
   does not run on; the targum beside its lines, or none; a heading in the middle and never last; a line taller than
-  a page losing no word; larger letters making more pages.
+  a page losing no word where lines are not cut; larger letters making more pages.
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).

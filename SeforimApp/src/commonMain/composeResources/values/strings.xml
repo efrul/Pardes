@@ -417,7 +417,10 @@
     <string name="book_daf_style_layout_around">סביב הטקסט, כדף הגמרא</string>
     <string name="book_daf_style_text_size">גודל האות של הטקסט</string>
     <string name="book_daf_style_commentary_size">גודל האות של המפרשים</string>
-    <string name="book_daf_style_columns">טורים לכל מפרש</string>
+    <string name="book_daf_style_columns">טורים לכל מפרש, בעמוד לגובה</string>
+    <string name="book_daf_style_wide_columns">טורים לכל מפרש, בעמוד לרוחב</string>
+    <string name="book_daf_style_together">הטקסט ממתין למפרשים שלו</string>
+    <string name="book_daf_style_together_hint">שורה חדשה של הטקסט נכנסת לעמוד רק כשהפירושים על מה שלפניה נגמרים בו. פירוש ארוך ממשיך בעמודים משלו, ופסקה ארוכה נחתכת בין עמודים במקום שבו הפירושים עליה נגמרים. בלי הסימון, כל עמוד מקבל שורה חדשה והפירוש הארוך מפגר אחריה.</string>
     <string name="book_daf_style_side">התרגום לצד הטקסט</string>
     <string name="book_daf_style_side_none">בלי תרגום</string>
     <string name="book_daf_style_side_narrow">טור צר</string>

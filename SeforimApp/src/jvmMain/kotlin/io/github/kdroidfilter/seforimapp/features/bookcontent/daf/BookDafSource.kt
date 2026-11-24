@@ -6,6 +6,8 @@ import io.github.kdroidfilter.seforim.htmlparser.buildAnnotatedFromHtml
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.CommentAnchorIndex
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.commentSegments
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorGroup
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorSelection
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.listedCommentators
@@ -29,7 +31,8 @@ internal data class DafUnit(
 
 /**
  * A unit as its daf sets it: its lines and their references ([refs], by id), its commentators' comments on them, the
- * passages their anchors mark, and (in bands) the targum beside its text.
+ * passages their anchors mark, and (in bands) the targum beside its text, or the commentator put in its place; the
+ * commentators its lines have ([groups], as the commentaries pane lists them), for the reader to choose among.
  */
 internal class DafUnitText(
     val text: List<DafSegment>,
@@ -38,7 +41,25 @@ internal class DafUnitText(
     /** Each line's passages its anchors begin: the words (indices in its [DafSegment.words]) and the comments on them. */
     val passages: Map<Long, List<Pair<IntRange, Set<Long>>>>,
     val targum: DafTargum? = null,
-)
+    val groups: List<CommentatorGroup> = emptyList(),
+) {
+    /** Each anchored comment's place in its line: the first of the words its anchor puts it on. */
+    val anchors: Map<Long, Int>
+        get() {
+            val first = HashMap<Long, Int>()
+            for (marked in passages.values) {
+                for ((range, comments) in marked) {
+                    for (comment in comments) {
+                        first.putIfAbsent(
+                            comment,
+                            range.first,
+                        )
+                    }
+                }
+            }
+            return first
+        }
+}
 
 /** The most lines a unit has: a longer part of the table of contents is laid out in pieces of this many. */
 internal const val MOST_UNIT_LINES = 40
@@ -142,7 +163,13 @@ internal suspend fun loadDafUnit(
     val lines = repository.getLines(bookId, unit.first, unit.end - 1)
     val ids = lines.map { it.id }
     val listed = connections(ids)
-    val shown = ids.associateWith { id -> selection.shownOf(listed[id]?.commentatorGroups.orEmpty().listedCommentators()) }
+    val own = look.own.shown
+    val shown =
+        ids.associateWith { id ->
+            val on = listed[id]?.commentatorGroups.orEmpty().listedCommentators()
+            // The reader's own list for the book's pages, once chosen on them; until then the commentaries pane's
+            if (own != null) on.keys.filterTo(HashSet()) { it in own } else selection.shownOf(on)
+        }
     val names = HashMap<Long, String>()
     for (id in ids) {
         listed[id]?.commentatorGroups.orEmpty().forEach { group ->
@@ -160,13 +187,38 @@ internal suspend fun loadDafUnit(
                 shown[it.link.sourceLineId].orEmpty()
         }
     val text = lines.map { it.asSegment(look.diacritics, look.anchors.commentators) }
+    val all = commentaries(lines, comments, names, look)
+    // The commentator the reader put beside the text stands in the targum's place, and has no band
+    val beside = all.firstOrNull { it.bookId == look.own.beside && look.targum }
     return DafUnitText(
         text = text.map { it.first },
         refs = lines.mapNotNull { line -> line.heRef?.takeIf { it.isNotBlank() }?.let { line.id to it } }.toMap(),
-        commentaries = commentaries(lines, comments, names, look),
+        commentaries = all.filter { it !== beside },
         passages = passagesOf(lines, text.associate { it.first.lineId to it.second }, comments, look.anchors),
-        targum = if (look.targum) targumOf(linksOf(repository, ids, emptySet(), ConnectionType.TARGUM), look) else null,
+        targum =
+            when {
+                beside != null -> DafTargum(beside.name, beside.comments, beside.bookId, beside.style)
+                look.targum -> targumOf(linksOf(repository, ids, emptySet(), ConnectionType.TARGUM), look)
+                else -> null
+            },
+        groups = groupsOf(ids.mapNotNull { listed[it]?.commentatorGroups }),
     )
+}
+
+/** The commentators of a unit's lines, each line's [groups] as the commentaries pane lists them, as one list. */
+internal fun groupsOf(groups: List<List<CommentatorGroup>>): List<CommentatorGroup> {
+    val byLabel = LinkedHashMap<String, LinkedHashMap<Long, CommentatorItem>>()
+    for (ofLine in groups) {
+        for (group in ofLine) {
+            for (item in group.commentators) {
+                byLabel
+                    .getOrPut(group.label) {
+                        LinkedHashMap()
+                    }.putIfAbsent(item.bookId, item)
+            }
+        }
+    }
+    return byLabel.map { (label, items) -> CommentatorGroup(label, items.values.toList()) }
 }
 
 /** The targum a book is read with, of its lines' [targums]: Onkelos where it is, else the one on most of them. */
@@ -198,7 +250,8 @@ private const val ONKELOS = "אונקלוס"
 
 /**
  * What a unit's daf takes besides the library: the words' [diacritics], the book's [anchors], the commentators' order,
- * and whether a [targum] is set beside the text.
+ * whether a [targum] is set beside the text, and what the reader chose of the book's commentators on its pages ([own]:
+ * those shown and their order, the one beside the text, each one's letters).
  */
 internal class DafUnitLook(
     val diacritics: DiacriticsMode,
@@ -206,7 +259,12 @@ internal class DafUnitLook(
     /** Each commentator's place among those met on the book's pages, kept from unit to unit: its band, or its side. */
     val ranks: MutableMap<Long, Int>,
     val targum: Boolean = false,
-)
+    val own: BookDafCommentators = BookDafCommentators(),
+) {
+    /** A commentator's place among the bands: where the reader put it, else among those met, as they came. */
+    fun rankOf(bookId: Long): Int =
+        own.shown?.indexOf(bookId)?.takeIf { it >= 0 } ?: (own.shown.orEmpty().size + (ranks[bookId] ?: ranks.size))
+}
 
 private fun Line.asSegment(
     diacritics: DiacriticsMode,
@@ -266,9 +324,9 @@ private fun commentaries(
                         val words = dafWords(c.targetText, look.diacritics)
                         DafSegment(c.link.targetLineId, words.words, words.bold)
                     }
-            val rank = look.ranks[bookId] ?: look.ranks.size
-            DafCommentary(bookId, names[bookId].orEmpty(), onRight = rank % 2 == 0, comments = onLines)
-        }.sortedBy { look.ranks[it.bookId] ?: Int.MAX_VALUE }
+            val rank = look.rankOf(bookId)
+            DafCommentary(bookId, names[bookId].orEmpty(), onRight = rank % 2 == 0, comments = onLines, style = look.own.bands[bookId])
+        }.sortedBy { look.rankOf(it.bookId) }
 }
 
 // The passages each line's anchors begin, and the comments shown that they lead to

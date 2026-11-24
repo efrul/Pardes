@@ -171,7 +171,8 @@ private fun rememberDafLetters(style: BookDafStyle): Pair<DafLetters, BookDafSty
     val gemaraCode by graph.appSettings.dafGemaraFontCodeFlow.collectAsState()
     val commentaryCode by graph.appSettings.dafCommentaryFontCodeFlow.collectAsState()
     val gemara = dafFamily(gemaraCode)
-    val rashi = if (style.squareCommentary) gemara else dafFamily(commentaryCode)
+    // Around the text the commentaries' columns are Rashi's and Tosafot's, in one script; a band has its own (BandLetters)
+    val rashi = if (style.squareCommentary && style.layout == DafStyle.Around) gemara else dafFamily(commentaryCode)
     val letters =
         remember(resolver, density, gemara, rashi) {
             DafLetters(TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0), density, gemara, rashi)
@@ -194,7 +195,7 @@ private fun rememberUnitSetter(
     // Each commentator's place, kept while the book is shown: a check in the pane moves none of the others
     val ranks = remember(book.id) { ConcurrentHashMap<Long, Int>() }
     return remember(book.id, commentators.selection, diacritics, letters) {
-        UnitSetter(repository, book, commentators, diacritics, ranks, letters.first, letters.second)
+        UnitSetter(repository, book, commentators, diacritics, ranks, letters.first, BookDafLook(letters.second))
     }
 }
 

@@ -33,7 +33,11 @@ enum class DafStyle {
  * [commentarySize], in the rules' unit: a block of text [RULES_WIDTH] wide); a commentator's [columns]; the share of
  * the width the targum beside the text takes ([sideShare], none at 0); the page's height to its width ([aspect]);
  * whether the text's lines run on in one paragraph, as verses do ([runOn]; null: the Tanakh's alone); and whether the
- * commentaries are in the text's square letters rather than Rashi script ([squareCommentary]).
+ * commentaries are in the text's square letters rather than Rashi script ([squareCommentary]). On a page wider than
+ * tall, the view's own where the pages follow its width, a commentator has [wideColumns] (request 99 of
+ * docs/DESKTOP_STAGE3_PLAN.md). [together]: the text waits for its commentaries, a page of them alone going on where
+ * they are longer than a page, and a paragraph is cut between two pages where the comments on it end (request 98);
+ * without it every page takes a new line of the text, as the rules' third has it, and a long commentary lags behind.
  */
 @Serializable
 data class BookDafStyle(
@@ -45,6 +49,8 @@ data class BookDafStyle(
     val aspect: Float = DEFAULT_ASPECT,
     val runOn: Boolean? = null,
     val squareCommentary: Boolean = false,
+    val wideColumns: Int = DEFAULT_WIDE_COLUMNS,
+    val together: Boolean = true,
 ) {
     /** The style with every value inside what a page can be set with. */
     fun sane() =
@@ -54,6 +60,7 @@ data class BookDafStyle(
             columns = columns.coerceIn(COLUMNS),
             sideShare = sideShare.coerceIn(SIDE_SHARES),
             aspect = aspect.coerceIn(ASPECTS),
+            wideColumns = wideColumns.coerceIn(BAND_COLUMNS),
         )
 
     companion object {
@@ -63,21 +70,50 @@ data class BookDafStyle(
         const val DEFAULT_TEXT_SIZE = 22f
         const val DEFAULT_COMMENTARY_SIZE = 12.5f
         const val DEFAULT_COLUMNS = 2
+        const val DEFAULT_WIDE_COLUMNS = 3
         const val DEFAULT_SIDE_SHARE = 0.38f
         const val DEFAULT_ASPECT = 848f / RULES_WIDTH
 
         val TEXT_SIZES = 14f..30f
         val COMMENTARY_SIZES = 9f..18f
         val COLUMNS = 1..3
+
+        /** The columns a commentator may have: on a wide page, or its own. */
+        val BAND_COLUMNS = 1..5
         val SIDE_SHARES = 0f..0.5f
         val ASPECTS = 1f..1.8f
     }
 }
 
 /**
+ * A commentator's own letters on a book's pages, where the reader set them apart from the others' (request 93 of
+ * docs/DESKTOP_STAGE3_PLAN.md): their [size] (the rules' unit), its [columns], and whether they are the text's [square]
+ * letters; each the style's where null.
+ */
+@Serializable
+data class BandStyle(
+    val size: Float? = null,
+    val columns: Int? = null,
+    val square: Boolean? = null,
+)
+
+/**
+ * What a book's pages show of its commentators, as the reader chose on them (requests 92 and 93): those [shown], in the
+ * order of their bands (null: none chosen yet, and the pages take the book's usual ones); the one set [beside] the text,
+ * in its targum's place; and each one's own letters ([bands]), by its book's id.
+ */
+@Serializable
+data class BookDafCommentators(
+    val shown: List<Long>? = null,
+    val beside: Long? = null,
+    val bands: Map<Long, BandStyle> = emptyMap(),
+)
+
+/**
  * A book's daf's settings (Settings › צורת הדף): whether a book that is no tractate is offered pages of its own, an
  * experiment that is off until turned on there; the [style] of every book's pages, and a book's own by its id
- * ([books]).
+ * ([books]); a book's commentators on its pages ([commentators]); and whether the pages follow the view's width, set
+ * again for it rather than made larger ([wide], request 89).
  */
 object BookDafSettings : SettingsGroup("book_daf") {
     val enabled by boolean(false)
@@ -85,6 +121,10 @@ object BookDafSettings : SettingsGroup("book_daf") {
     val style by json(BookDafStyle())
 
     val books by json<Map<Long, BookDafStyle>>(emptyMap())
+
+    val commentators by json<Map<Long, BookDafCommentators>>(emptyMap())
+
+    val wide by boolean(false)
 }
 
 /** Whether [this] is a book of the Tanakh, whose verses run on in one paragraph. */

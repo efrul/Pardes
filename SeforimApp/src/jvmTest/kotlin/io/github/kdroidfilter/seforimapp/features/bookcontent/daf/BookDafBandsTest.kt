@@ -56,9 +56,37 @@ class BookDafBandsTest {
         commentaries: List<DafCommentary> = emptyList(),
         targum: DafTargum? = null,
         measures: BandsMeasures = measures(),
-    ) = DafBandsSetter(widths, text, commentaries, targum, measures).pages()
+        anchors: Map<Long, Int> = emptyMap(),
+    ) = DafBandsSetter(widths, text, commentaries, targum, measures, anchors).pages()
+
+    // The rules' third, a new line of the text on every page, in place of the text waiting for its commentaries
+    private val lagging = BookDafStyle(together = false)
+
+    // The page each word of the text line [lineId] is on, in their order
+    private fun List<SetPage>.pagesOf(lineId: Long): List<Int> =
+        flatMapIndexed { i, page ->
+            page.of(TEXT_COLUMN).flatMap { line ->
+                line.t
+                    .split(' ')
+                    .indices
+                    .filter { line.lineIdAt(it) == lineId }
+                    .map { i }
+            }
+        }
+
+    // The pages the comment [commentId] is on
+    private fun List<SetPage>.pagesOfComment(commentId: Long): List<Int> =
+        indices.filter { i ->
+            this[i].bandLines().any {
+                commentId in
+                    it.lineIds
+            }
+        }
 
     private fun SetPage.of(column: String) = lines.filter { it.c == column }
+
+    // The lines of the page's bands, each commentator's a column of its own
+    private fun SetPage.bandLines() = lines.filter { it.c.isBandColumn }
 
     private fun List<DafLine>.words() = flatMap { it.t.split(' ') }
 
@@ -67,7 +95,7 @@ class BookDafBandsTest {
         val names = of(NAME_COLUMN)
         val head = names.firstOrNull { it.t == name } ?: return emptyList()
         val next = names.filter { it.b[1] > head.b[1] }.minOfOrNull { it.b[1] } ?: Float.MAX_VALUE
-        return of(RIGHT_COLUMN).filter { it.b[1] > head.b[1] && it.b[1] < next }
+        return bandLines().filter { it.b[1] > head.b[1] && it.b[1] < next }
     }
 
     @Test
@@ -92,7 +120,7 @@ class BookDafBandsTest {
         val pageOfLine = HashMap<Long, Int>()
         pages.forEachIndexed { i, page -> page.of(TEXT_COLUMN).flatMap { it.lineIds }.forEach { pageOfLine.putIfAbsent(it, i) } }
         pages.forEachIndexed { i, page ->
-            for (comment in page.of(RIGHT_COLUMN).flatMap { it.lineIds }) {
+            for (comment in page.bandLines().flatMap { it.lineIds }) {
                 val line = comment % 1000
                 assertTrue(pageOfLine.getValue(line) <= i, "the comment $comment on page $i, its line on page ${pageOfLine[line]}")
             }
@@ -148,9 +176,101 @@ class BookDafBandsTest {
     }
 
     @Test
-    fun `every page has a new line of the text while a long commentary lags behind`() {
+    fun `the text waits for a commentary longer than a page, on pages of it alone`() {
+        val text = text(20, 20, 20)
+        val commentary = commentary(1, 100L to 6000, 101L to 40, 102L to 40)
+        val pages = pages(text, listOf(commentary))
+        val long = pages.pagesOfComment(1100L)
+        assertEquals(0, long.first(), "the comment begins on its line's page")
+        assertTrue(long.last() > 2, "and goes on for pages")
+        assertTrue(pages.subList(1, long.last()).all { it.of(TEXT_COLUMN).isEmpty() }, "which are its own")
+        assertEquals(long.last(), pages.pagesOf(101L).first(), "the next line comes where it ends")
+        for (line in listOf(101L, 102L)) assertEquals(pages.pagesOf(line).first(), pages.pagesOfComment(1000L + line).first())
+        assertEquals(text.flatMap { it.words }, pages.flatMap { it.of(TEXT_COLUMN).words() })
+        assertEquals(6080, pages.flatMap { it.band("מפרש 1").words() }.size)
+    }
+
+    @Test
+    fun `a paragraph is cut between pages where the comments anchored in it end`() {
+        val text = text(600)
+        // A note on every hundredth word, each most of a page long
+        val notes = (0 until 6).map { DafSegment(2000L + it, words(2000L + it, 700), setOf(0)) }
+        val commentary = DafCommentary(1, "מפרש 1", onRight = true, comments = mapOf(100L to notes))
+        val pages = pages(text, listOf(commentary), anchors = notes.indices.associate { 2000L + it to it * 100 })
+        assertEquals(text.single().words, pages.flatMap { it.of(TEXT_COLUMN).words() }, "every word of the paragraph, once and in order")
+        val pageOfWord = pages.pagesOf(100L)
+        assertTrue(pageOfWord.last() >= 4, "the paragraph is on as many pages as its notes need")
+        for (i in notes.indices) {
+            val at = pageOfWord[i * 100]
+            val begins = pages.pagesOfComment(2000L + i).first()
+            assertTrue(begins == at || begins == at + 1, "note $i begins on page $begins, its words on page $at")
+        }
+        for (i in 1 until pages.size) {
+            val first = pages[i].of(TEXT_COLUMN).firstOrNull() ?: continue
+            assertEquals(mapOf(100L to pageOfWord.indexOfFirst { it == i }), pages[i].starts, "page $i says where it goes on from")
+            assertEquals("100.${pages[i].starts.getValue(100L)}", first.t.substringBefore(' '))
+        }
+    }
+
+    @Test
+    fun `a short line stays whole, and a long paragraph without anchors is cut with its comments after it`() {
+        val short = pages(text(60), listOf(commentary(1, 100L to 3000)))
+        assertEquals(setOf(0), short.pagesOf(100L).toSet(), "a line of a few printed lines is one piece")
+        val long = pages(text(3000), listOf(commentary(1, 100L to 50)))
+        assertTrue(long.all { it.height <= measures().height + 0.01f }, "no page longer than a page")
+        assertTrue(long.pagesOf(100L).last() >= 3)
+        assertEquals(3000, long.flatMap { it.of(TEXT_COLUMN).words() }.size)
+        assertEquals(long.pagesOf(100L).last(), long.pagesOfComment(1100L).first(), "the comment begins where the paragraph ends")
+    }
+
+    @Test
+    fun `a commentator has its own letters and columns, and a wide page the wide page's`() {
+        val own = commentary(1, 100L to 60).copy(style = BandStyle(size = 20f, columns = 1, square = true))
+        val usual = commentary(2, 100L to 60)
+        val page = pages(text(20), listOf(own, usual)).first()
+        val first = page.lines.filter { it.c == bandColumn(0, square = true) }
+        val second = page.lines.filter { it.c == bandColumn(1, square = false) }
+        assertTrue(first.isNotEmpty() && second.isNotEmpty(), "each band a column of its own")
+        assertTrue(first.dropLast(1).all { it.b[0] == 0f && it.b[2] == width }, "one column across the page")
+        assertTrue(first.first().b[3] - first.first().b[1] > second.first().b[3] - second.first().b[1], "in larger letters")
+        assertEquals(listOf(1L, 2L), page.heads.map { it.bookId }, "each band's name, for a click on it")
+        val wide = BandsMeasures(BookDafStyle(wideColumns = 4), runOn = false, page = DafPageSize(900f, 500f))
+        val wideLines = pages(text(20), listOf(commentary(1, 100L to 900)), measures = wide).first()
+        assertEquals(900f, wideLines.width)
+        assertEquals(
+            4,
+            wideLines
+                .bandLines()
+                .map { it.b[2] }
+                .distinct()
+                .size,
+            "four columns on a wide page",
+        )
+    }
+
+    @Test
+    fun `a commentator put beside the text stands in the targum's place`() {
+        val beside =
+            DafTargum(
+                "מפרש 7",
+                mapOf(
+                    100L to listOf(DafSegment(7100, words(7100, 30))),
+                    101L to listOf(DafSegment(7101, words(7101, 20))),
+                ),
+                bookId = 7,
+            )
+        val measures = measures()
+        val page = pages(text(40, 30), listOf(commentary(1, 100L to 100)), beside, measures).single()
+        val side = page.of(SIDE_RASHI_COLUMN)
+        assertEquals(words(7100, 30) + words(7101, 20), side.words(), "its comments beside their lines, in Rashi script")
+        assertTrue(side.all { it.b[2] <= measures.sideWidth + 0.01f })
+        assertEquals(listOf(1L), page.heads.map { it.bookId }, "and it has no band")
+    }
+
+    @Test
+    fun `every page has a new line of the text while a long commentary lags behind, by the rules' third`() {
         val text = text(20, 20, 20, 20)
-        val pages = pages(text, listOf(commentary(1, 100L to 6000)))
+        val pages = pages(text, listOf(commentary(1, 100L to 6000)), measures = measures(lagging))
         val firstLines = pages.map { page -> page.of(TEXT_COLUMN).flatMap { it.lineIds }.toSet() }
         assertTrue(pages.size > 4)
         for (i in text.indices) assertEquals(setOf(100L + i), firstLines[i], "page $i")
@@ -230,7 +350,7 @@ class BookDafBandsTest {
         val comment = DafSegment(900, words(900, 12), bold = setOf(0, 1, 5))
         val commentary = DafCommentary(1, "מפרש 1", onRight = true, comments = mapOf(100L to listOf(comment)))
         val page = pages(text(10), listOf(commentary)).single()
-        val first = page.lines.indexOfFirst { it.c == RIGHT_COLUMN }
+        val first = page.lines.indexOfFirst { it.c.isBandColumn }
         assertEquals(mapOf(first to setOf(0, 1)), page.openings, "its first bold words, not those further on")
         assertEquals(listOf(0, 1, 5), page.lines[first].d.take(3), "all of them bold")
         val square = pages(text(10), listOf(commentary), measures = measures(BookDafStyle(squareCommentary = true))).single()
@@ -306,8 +426,8 @@ class BookDafBandsTest {
     }
 
     @Test
-    fun `a line of the text taller than a page makes its page longer, and loses no word`() {
-        val measures = measures()
+    fun `a line of the text taller than a page makes its page longer where lines are not cut, and loses no word`() {
+        val measures = measures(lagging)
         val pages = pages(text(3000), listOf(commentary(1, 100L to 50)), measures = measures)
         assertTrue(pages.first().height > measures.height)
         assertEquals(3000, pages.flatMap { it.of(TEXT_COLUMN).words() }.size)

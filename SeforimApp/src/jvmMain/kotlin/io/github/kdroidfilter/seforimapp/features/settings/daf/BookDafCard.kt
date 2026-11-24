@@ -49,6 +49,9 @@ import seforimapp.seforimapp.generated.resources.book_daf_style_side_regular
 import seforimapp.seforimapp.generated.resources.book_daf_style_side_wide
 import seforimapp.seforimapp.generated.resources.book_daf_style_square
 import seforimapp.seforimapp.generated.resources.book_daf_style_text_size
+import seforimapp.seforimapp.generated.resources.book_daf_style_together
+import seforimapp.seforimapp.generated.resources.book_daf_style_together_hint
+import seforimapp.seforimapp.generated.resources.book_daf_style_wide_columns
 import seforimapp.seforimapp.generated.resources.settings_book_daf
 import seforimapp.seforimapp.generated.resources.settings_book_daf_description
 import kotlin.math.abs
@@ -155,12 +158,7 @@ private fun BandsFields(
             selected = nearest(COMMENTARY_SIZES, style.commentarySize),
             onSelect = { onStyleChange(style.copy(commentarySize = COMMENTARY_SIZES[it])) },
         )
-        Choice(
-            label = stringResource(Res.string.book_daf_style_columns),
-            options = BookDafStyle.COLUMNS.map { it.toString() },
-            selected = style.columns - BookDafStyle.COLUMNS.first,
-            onSelect = { onStyleChange(style.copy(columns = BookDafStyle.COLUMNS.first + it)) },
-        )
+        ColumnsFields(style, onStyleChange)
         Choice(
             label = stringResource(Res.string.book_daf_style_side),
             options =
@@ -194,6 +192,52 @@ private fun BandsFields(
                 ),
             selected = RUN_ON.indexOf(style.runOn),
             onSelect = { onStyleChange(style.copy(runOn = RUN_ON[it])) },
+        )
+        TogetherField(style, onStyleChange)
+    }
+}
+
+/**
+ * A commentator's columns: on a page taller than wide, and on one wider than tall, the view's own where the pages
+ * follow its width (request 99 of docs/DESKTOP_STAGE3_PLAN.md).
+ */
+@Composable
+private fun ColumnsFields(
+    style: BookDafStyle,
+    onStyleChange: (BookDafStyle) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Choice(
+            label = stringResource(Res.string.book_daf_style_columns),
+            options = BookDafStyle.COLUMNS.map { it.toString() },
+            selected = style.columns - BookDafStyle.COLUMNS.first,
+            onSelect = { onStyleChange(style.copy(columns = BookDafStyle.COLUMNS.first + it)) },
+        )
+        Choice(
+            label = stringResource(Res.string.book_daf_style_wide_columns),
+            options = BookDafStyle.BAND_COLUMNS.map { it.toString() },
+            selected = style.wideColumns - BookDafStyle.BAND_COLUMNS.first,
+            onSelect = { onStyleChange(style.copy(wideColumns = BookDafStyle.BAND_COLUMNS.first + it)) },
+        )
+    }
+}
+
+/** Whether the text waits for its commentaries, or every page takes a new line of it (request 98), and what each does. */
+@Composable
+private fun TogetherField(
+    style: BookDafStyle,
+    onStyleChange: (BookDafStyle) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        CheckboxRow(
+            text = stringResource(Res.string.book_daf_style_together),
+            checked = style.together,
+            onCheckedChange = { onStyleChange(style.copy(together = it)) },
+        )
+        Text(
+            text = stringResource(Res.string.book_daf_style_together_hint),
+            fontSize = 12.sp,
+            color = JewelTheme.globalColors.text.info,
         )
     }
 }
