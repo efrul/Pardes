@@ -20,7 +20,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (147 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (148 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (352 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (361 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -57,7 +57,7 @@ The entries of this section by kind:
 
 | Kind | Files |
 |---|---|
-| Pardes feature hook | 58 |
+| Pardes feature hook | 59 |
 | Pardes feature in Zayit's file | 36 |
 | Fix of Zayit's code | 26 |
 | Branding hook | 4 |
@@ -413,7 +413,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +32 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane, A whole page in the view.
+- **Change:** modified, +35 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane, A whole page in the view, Daf view.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -434,7 +434,9 @@ The entries of this section by kind:
     with a comment of its own, `abstract val paneFocusRequests:
     io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.PaneFocusRequests` (request 47 of stage 3); and
     after it, with a comment of its own, `abstract val pageFits: io.github.kdroidfilter.seforimapp.features.pdf.PageFits`
-    (request 73 of the list after the public release).
+    (request 73 of the list after the public release); and after it, with a comment of its own, `abstract val
+    dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests` (request 86 of stage
+    3).
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
@@ -442,13 +444,13 @@ The entries of this section by kind:
   starts, and the commentators list reads the reader's default; the book tree and a PDF book's tab reach the user's
   PDF books, and the daf view a tractate's scan and its pages cut into images; a book's text and the find results pane
   meet in the find hub; a study plan's field finds books by the search bar's lookup, as the bar does; the end bar's
-  "עמוד שלם" reads the fit its tab's pages tell.
+  "עמוד שלם" reads the fit its tab's pages tell; a commentary's tab hands its tractate's daf the comment to select.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** fourteen declarations among Zayit's, with their comments, and three imports.
+- **Merge risk:** fifteen declarations among Zayit's, with their comments, and three imports.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`, `PageFitTest`.
+- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`, `PageFitTest`, `DafFocusRequestsTest`.
 - **Notes:** the first two types, and those of `libraryLinks`, `pdfBookStore`, `dafScans`, `dafScanPages`,
-  `bookFindHub`, `lookupSearch`, `paneFocusRequests` and `pageFits`, are written fully qualified instead of imported, unlike every
+  `bookFindHub`, `lookupSearch`, `paneFocusRequests`, `pageFits` and `dafFocusRequests`, are written fully qualified instead of imported, unlike every
   other line of the file: fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
@@ -490,8 +492,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/MainAppWindow.kt`
 
-- **Change:** modified, +28 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
-  A copy cut of its spaces, Tab shortcuts.
+- **Change:** modified, +32 −24 lines. Feature: Reading time, Settings window, Typing over a pane, Copy with a commentary's source,
+  A copy cut of its spaces, Tab shortcuts, A search from anywhere.
 - **What:** the window's content gets `.noteInput()` (pointer input counts as presence) and its key handler calls
   `LastInput.now()` first; two imports from `core.reading`.
 - **What, the settings:** the settings dialog composed inside the window it was opened from (modal to it) is gone with
@@ -510,7 +512,7 @@ The entries of this section by kind:
   has the focus; Zayit 0.6.13 fixes their direction itself, and its merge gives Ctrl+Tab back to them.
 - **What, a copy cut of its spaces:** the window's content gets `LocalClipboard provides rememberEdgeTrimmedClipboard()`
   among its locals, with a comment marked "Pardes:" and two imports: every copy in the window, Compose's own (Ctrl+C,
-  the menu's "העתקה") and the app's, is cut of the spaces at its ends (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`).
+  the menu's "העתקה") and the app's, is cut of the spaces at its ends (request 56 of `docs/DESKTOP_STAGE3_PLAN.md`). A search from anywhere (request 85 of stage 3): the window's own key handler, the one that gets the keys when nothing in the window has them, opens and closes the bar on Ctrl/Cmd+L (`openWindow.searchAnywhereKey`, a branch before `readerShortcuts`, with a comment marked "Pardes:"); with a focus in the window the key comes through Pardes's `rememberTabKeys`.
 - **Why:** the reading time counts only while the user is at the window, and stops after five minutes without mouse or
   keyboard (`ReadingTimeStore`, `0083381e`). The settings: as for `SettingsWindow.kt`. Typing over a pane: as for
   `TypeToSearch.kt` (request 24). The copy with source: as for `CommentarySource.kt` (request 40).
@@ -765,8 +767,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +55 −4 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link, The user's PDF books, Search modes, Two tabs side by side.
+- **Change:** modified, +60 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -791,7 +793,7 @@ The entries of this section by kind:
     selects it), Zayit's layout measuring a tab shown beside the one selected too (`isSelected || half != null`), and
     the grip between the halves after the tabs (`TabSplitGrip`); and the tab beside the selected one counts as on
     screen (`LocalTabShown`, provided with Zayit's `LocalTabSelected`), so that a PDF book's pages and a tractate's
-    scan draw there too, while its focus and popups stay the selected tab's.
+    scan draw there too, while its focus and popups stay the selected tab's. A search from anywhere (request 85 of stage 3): `rememberHomeSearchCallbacks` is internal, its KDoc saying so, for the bar of `SearchAnywhere.kt`, whose callbacks act in the tab the bar opens.
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
@@ -867,8 +869,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsView.kt`
 
-- **Change:** modified, +34 −22 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
-  keys in the popups.
+- **Change:** modified, +80 −41 lines. Feature: A copy of a tab, Two tabs side by side (request 59 of stage 3), The
+  keys in the popups, The tabs under load (request 83 of stage 3).
 - **What:** `TabActionsMenu` takes the tab's id (`tabId`, first) and draws Pardes's items (`pardesTabActions(tabId)`,
   resolved before the menu as the labels are, with a comment marked "Pardes:") after "העתק קישור", through Zayit's
   `tabContextMenuItem` in a loop; `RtlAwareTab` takes the tab's id to pass it on (`tabEntry.key`), and so does the
@@ -880,16 +882,16 @@ The entries of this section by kind:
   under a `DefaultMenuController` of its own (and its `@OptIn(InternalJewelApi::class)`): the same items drawn the same
   way, now answering the keys, up and down, Enter and Escape, as the Tools menu (`ToolsMenuButton`, Jewel's
   `PopupMenu`) does; since 2026-11-20 Pardes's `SingleMarkPopupMenu`, which marks one item at a time as IntelliJ's
-  menus do, its comment saying so.
+  menus do, its comment saying so. The tabs under load (request 83 of stage 3), each with a comment marked "Pardes:": a book tab's title in the strip is `tabItem.stripTitle()` in place of `tabItem.title`, in the two places a tab's content is drawn (the tooltip and the hidden tabs' list keep the whole title); `RtlAwareTab` draws its content in Pardes's `TabContentBox` in place of a `Box`, which tells the content its room, and shows a tab's close button, when the tab is not the selected one, only from 140 dp or under the pointer (`closeFits`, a value before `showCloseIcon`: `roomForCloseButton` and Pardes's `closeShown`); the strip's run of tabs is Pardes's `ScrolledTabWindow` in place of `TabWindow`, followed by the tabs' keys (the selected tab is then told from a tab's key, not from its row), recomputed when its first tab changes or it comes between two tabs (`tabWindow.first`, `tabWindow.between`); the strip's row takes `tabStripWheel`, with the tab's width, the scroll's unit; on a scroll's way the tab coming in is drawn too (`tabWindow.arrives`, beside `visibleKeys`, which it is not in, so that the chip still counts it), the tabs' row cuts it at its end (`scrolledTabRun` on `rowModifier`), and a tab is drawn where the scroll has it (`scrolledTab`, after `slideToNewPlace` on the row a tab is drawn in, whose modifiers stand a line each for it); `TabOverflowMenu` filters its tabs by what is typed (`rememberHiddenTabsFilter`, `matching` on a tab's title and pinned label) and draws `HiddenTabsFilterField` above them; the list answers the keys (`filter.keys`, on Zayit's `rememberScrollState()`, which the column of the rows then scrolls by, `keys.scroll`): its column is Pardes's `HiddenTabsColumn` in place of a `Column`, and a row's `hovered`, in `TabOverflowMenuItem` and `NewTabMenuRow`, is Pardes's `hiddenTabMarked`, the one row the keys or the pointer marked, in place of the pointer's hover; its popup closes on Escape (`hiddenTabsEscape`, an `onPreviewKeyEvent` on Zayit's `Popup`), which the field would keep from it; and the list's width, `TabOverflowMenuWidth`, is Pardes's `HiddenTabsListWidth` (280 dp) in place of a tab's width (180).
 - **Why:** a copy of a tab from its menu, as Chrome's "Duplicate" (request 59 of `docs/DESKTOP_STAGE3_PLAN.md`,
   2026-11-18); the items come from a Pardes file, so the split view of the same request adds its own there. The menu's
   keys: request 69 of the list after the third testers' build ("צריך תמיכה מלאה במקשים... מקש ימני על כרטיסיה... (כלים
-  כן עובד...)"): the popup had no key handling, which Jewel's `PopupMenu` gives; a fix Zayit can take as it is.
+  כן עובד...)"): the popup had no key handling, which Jewel's `PopupMenu` gives; a fix Zayit can take as it is. Request 83 ("לשדרג את תצורת הכרטיסיות... והאופן שבו הם מוצגים גם כאשר יש עומס כרטיסיות. תלמד מג'טבריינס", 2026-11-23): with the strip full, a tab is 112 dp wide and its title, the book's name then its place, was cut before the place, so the tabs of one book read alike, in the strip and in the hidden tabs' list; and the tabs out of the strip were reached only through that list. IntelliJ's strip scrolls by the wheel and its list of hidden tabs narrows by typing; the choices are in `docs/DESKTOP_STAGE3_PLAN.md`. After the testers' build desktop-1.0.11-66 (2026-11-24): "אין תמיכת מקשים ל"עוד" בכרטיסיות, למה?" (the list had Enter and Escape only, where the app's other popup lists answer the arrows), and "גלילה התכוונתי שיראו את הכרטיסיות המוסתרות על ידי הגלילה שעם שתי אצבעות לרוחב המסך יחשפו אותם - כמו גט בראין" (a scroll moved the run a whole tab at a time).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: a parameter on two of Zayit's composables and their three calls, and a loop in the
   menu; Zayit changes the menu now and then.
 - **Smaller:** already minimal: the menu's items are private to this file.
-- **Tests:** tried in the app (the menu's "שכפל לשונית" on the strip; request 69: the menu drawn as before, the arrow
+- **Tests:** `NarrowTabTitleTest`, `ScrolledTabWindowTest`, `HiddenTabsFilterTest`; request 83 tried in the app (nine tabs in a 1440 px window: "או"ח רנג" and "או"ח שח" told apart, no close button but the selected tab's, three notches of the wheel moving the run by three, the list 280 dp wide filtered by "או"ח", Enter and Escape in its field; on 2026-11-24, a notch of the wheel sliding the run a tab, the run followed frame by frame through a slowed slide, and the list's arrows, Enter on the marked row and the pointer's mark); and tried in the app (the menu's "שכפל לשונית" on the strip; request 69: the menu drawn as before, the arrow
   down three times on "העתק קישור", Escape closing it).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/desktop/DesktopManager.kt`
@@ -945,6 +947,22 @@ The entries of this section by kind:
 - **Tests:** `PopupKeysUiTest`; tried in the app (Ctrl+Shift+A, the arrow down twice on משנה ברורה's tab, Enter selecting
   it; request 74: the pointer moved over ברכות's tab marking it alone, the arrow down going on to the history's
   entry, the row under the still pointer not marked).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/TitleBarActionsButtonsView.kt`
+
+- **Change:** modified, +4 −0 lines. Feature: A search from anywhere (request 85 of stage 3).
+- **What:** `SearchAnywhere()`, Pardes's, after the find's button and before the block of the menus' buttons (outside
+  its `if (!PlatformInfo.isMacOS)`: macOS opens the bar by its key too), with a comment marked "Pardes:" and its
+  import. It draws nothing in the title bar: it holds the bar's popup, and reads the title bar's bottom, which the bar
+  opens under.
+- **Why:** request 85 ("לתכנן אפשרות לפתיחה של חיפוש מכל מקום באפליקציה. תיבת חיפוש בעיצוב תיבת החיפוש הכללית בתוך
+  המסכים הקיימים", 2026-11-23): the home's search bar was reached from a book only through a new tab. The bar opens
+  over any screen by Ctrl/Cmd+L, the user's choice of that day. The testers' build desktop-1.0.11-66 had a button
+  here too; it went the next day ("בלי אייקון חדש לחיפוש המלא").
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small: one call between two of Zayit's buttons.
+- **Smaller:** already minimal.
+- **Tests:** tried in the app (no button added to the title bar, the bar right under it).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/components/NotesPopup.kt`
 
@@ -1232,7 +1250,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +79 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
+- **Change:** modified, +83 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept,
   Reader's default commentators, Find results pane.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
@@ -1259,17 +1277,23 @@ The entries of this section by kind:
     `docs/DESKTOP_STAGE3_PLAN.md`).
   - `ToggleFindResults` turns `FindResultsSettings.shown` (request 55 of stage 3), with a comment marked "Pardes:" and
     its import.
+  - `OpenBookAtLine` of another book than the tab's sets the tab's place at the line before the book loads (`anchorId
+    = event.lineId`, `scrollIndex` and `scrollOffset` 0, as `loadBook` does for a tab opened at a line), under a comment
+    marked "Pardes:": the text opens with the line at its top, as Zayit's did (near a book's start a few lines below it,
+    as the lines loaded above it next push it down). Since request 75 of stage 3 brought a selected line below the view
+    in at the view's bottom (`revealItem`), a book opened at a line in its tab showed the line at the bottom, which
+    request 87 met: a comment of Rashi or Tosafot opened back from the daf.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
   opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45), its contents are
   searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small to medium: new `when` branches, an edit inside Zayit's prefetch function, a parameter at the
-  constructor's end, an elvis in `loadBookById` and in `OpenBookById`, and two lines that hand a PDF book's contents
-  search to Pardes's class.
+  constructor's end, an elvis in `loadBookById` and in `OpenBookById`, a line before `OpenBookAtLine`'s `loadBookData`,
+  and two lines that hand a PDF book's contents search to Pardes's class.
 - **Smaller:** already minimal.
 - **Tests:** `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`, `DetachedCommentatorsTest`;
   `PostSelectLineTest` builds the view model with a relaxed `PdfBookStore`; `PdfOutlineTest` (the contents searched);
-  tried in the app.
+  tried in the app (request 87: Tosafot on Berakhot opened at a comment of amud b, the comment at the view's top).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/booktoc/BookTocView.kt`
 
@@ -1322,19 +1346,23 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +75 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+- **Change:** modified, +92 −14 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
   side, Pages in the dark theme's colours, A whole page in the view, A book's own pages.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`; for a commentary a tractate's daf prints, Rashi's, Tosafot's,
     the Rashbam's (`dafTractate`, `rememberDafTractate(selectedBook)`, under a comment marked "Pardes:", and its import:
-    request 82 of stage 3); and for another book offered pages of its own (`|| hasBookDaf(selectedBook)`: the
+    request 82 of stage 3), which opens that tractate in the tab, on its daf at the comment selected or read
+    (`commentaryOf`, `openTractateDaf = rememberOpenTractateDaf(uiState.tabId) { … }`, and its import: `ToggleDafView`
+    while the daf is off, then `OpenBookAtLine`, or `OpenBookById` without a line; on, `isSelected`, for a tractate
+    alone: request 86, "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא, אין אפשרות היום להתמקד על הגמרא ככה");
+    and for another book offered pages of its own (`|| hasBookDaf(selectedBook)`: the
     experiment turned on, a book with commentaries), its tooltip then `book_daf_tooltip` (the Vilna page's own where
     `dafTractate` is one).
-  - With a daf shown (`uiState.content.dafView` of a Bavli tractate, or of a commentary on its daf), `DafMarksButton()` stands in the diacritics
+  - With a daf shown (`uiState.content.dafView` of a Bavli tractate), `DafMarksButton()` stands in the diacritics
     button's place: the printed page has no nikud to hide, and the daf's marks are shown or hidden there. Under the
     "צורת הדף" toggle, for every Bavli tractate (an `if (selectedBook.isBavli)` of its own, since the toggle's is wider:
-    a commentary on its daf has no scan, nor another book's own pages), `DafScanButton(selected = scanView, onClick = ToggleScanView, book,
+    a commentary's opens the tractate, and another book's own pages have no scan), `DafScanButton(selected = scanView, onClick = ToggleScanView, book,
     lineId)`, with a comment marked "Pardes:": the tractate's scan in place of its text or its daf (requests 41 and 46),
     and the page of the line read (`primarySelectedLineId`, else `anchorId`) made ready ahead (request 56). Nor is the
     diacritics button shown while the tab shows printed pages (`!showsPrintedPages(uiState)`, with its import): a
@@ -1555,7 +1583,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/BookContentPanel.kt`
 
-- **Change:** modified, +213 −54 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept, A book's
+- **Change:** modified, +207 −54 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes, Commentator selection kept, A book's
   own pages.
 - **What:**
   - `detachedCommentatorIds`: the split-off commentators' book ids, from the names and the loaded line connections;
@@ -1563,11 +1591,9 @@ The entries of this section by kind:
   - The hover prefetch of commentaries follows the book's `commentatorSelection`: with whole groups checked, each line
     prefetches its own commentators of those groups.
   - The call to `BookContentView` is wrapped in a `run { … }` that builds a `DafMode` for a Bavli tractate in daf view
-    or in scan view (`scan = scanView` of a tractate, request 46; its line clicks select the line, its passage clicks
-    call `selectDafPassage`) and passes it as `daf`; in daf view, for a commentary a tractate's daf prints, the
-    tractate's, with the commentary's `commentaryId` and no scan (`dafTractate`, `rememberDafTractate`, `tractateDaf`, `commentaryDaf`,
-    with its import: request 82 of stage 3); and for another book in daf view that is offered
-    pages of its own (`bookDaf`, `hasBookDaf(selectedBook)`, a value of its own for `detekt.yml`'s three conditions), with the commentators the commentaries pane shows
+    or in scan view (`tractate`; `scan = tractate && scanView`, request 46; its line clicks select the line, its
+    passage clicks call `selectDafPassage`) and passes it as `daf`; and for another book in daf view that is offered
+    pages of its own (`hasBookDaf(selectedBook)`), with the commentators the commentaries pane shows
     (`DafCommentators(commentatorSelection(selectedBook.id), providers.loadLineConnections)`). A PDF book of the user's (`pdfIdOf(selectedBook.id)`) is read in the
     text's place instead, `PdfBookReader(tabId, pdfId, paneCardModifier)`, before the call returns from the `run`
     (request 45), with its imports.
@@ -1592,14 +1618,13 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/BookContentView.kt`
 
-- **Change:** modified, +459 −233 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
+- **Change:** modified, +477 −235 lines. Feature: Daf view, Scan view, Find results pane, The daf's find in Rashi and Tosafot, Scrolling alike, A whole page
   in the view.
 - **What:**
   - A `daf: DafMode?` parameter. With it, the view's frame (its zoom, keys, selection, context menu and find bar) shows
     `DafView` in place of the lines' `LazyColumn`, or, for a `DafMode` of the scan, `DafScanReader` (request 46, a
     comment marked "Pardes:" and its import), given the daf's control, zoom, the tab's line, anchor and request to
-    scroll, and the daf's `onScroll`, and in a commentary's tab its id (`commentaryId = daf.commentaryId`, request 82):
-    the scan has the daf's keys, zoom and place, and the text opens where it was.
+    scroll, and the daf's `onScroll`: the scan has the daf's keys, zoom and place, and the text opens where it was.
     `DafView` is also given the mode's `commentators` and the text's `diacritics` (three lines): for another book
     than a tractate it draws the book's own pages (`BookDafView`), in the text's diacritics.
   - The daf's own `LazyListState` and `DafControl` (made with the tab's id, for the pages' fit, request 73 of the
@@ -1619,7 +1644,11 @@ The entries of this section by kind:
     `animateScrollToItem`: a page up went back by as many lines as were in view, not where a page down came from,
     and a line taller than the view stopped both.
   - The up and down arrows go through `stepLine`: on the daf they first ask `dafControl.stepComment`, which steps through
-    Rashi's or Tosafot's comments when one is selected, and step through the lines as before when it says no.
+    Rashi's or Tosafot's comments when one is selected, and step through the lines as before when it says no. Zayit's
+    `previewKeyHandler` is remembered with `dafControl` too (`remember(onEvent, dafControl)`, its comment marked
+    "Pardes:"): each book has a daf control of its own (`remember(bookId)`), and with a book opened in the tab the
+    arrows and Page Up/Down went to the former book's, the arrows stepping through the text's lines on the daf (request
+    86 of stage 3).
   - A word clicked on the daf is selected in the book's text (`selectInLine`), and the right-clicked word's line is the
     context menu's (`onContextLine`).
   - On the daf the tab's place is the daf's: `maybeSave` saves nothing there, the daf's `onScroll` saves the Gemara's
@@ -1628,7 +1657,11 @@ The entries of this section by kind:
     it is placed, the Gemara's segment at the daf's top scrolled to its own top, the selected line brought into view
     when it was in view on the daf, and, when a comment was selected on the daf by a click on itself, the commentaries
     pane opened (`onShowCommentaries`, a new parameter that says whether the pane was closed); the selected line is
-    looked for again once the pane has taken its part of the view (`PANE_WAIT`, 3 seconds at most).
+    looked for again once the pane has taken its part of the view (`PANE_WAIT`, 3 seconds at most). A comment of Rashi
+    or Tosafot so selected (`DafPlace.commentId`) opens its commentary's own text in the tab instead, at the comment
+    (`openCommentary`, `OpenBookAtLine` through `currentOnEvent`; the Gemara's text hidden until the commentary is the
+    tab's book, `currentBookId`, `COMMENTARY_WAIT`, 3 seconds at most, and placed as before should it not be: request 87
+    of stage 3, "גם לצד שני - כאשר נבחר רשי או תוספות מעבר למילים יפתח את המפרש פתוח על הקטע הנכון").
   - `BookSelectionContainer` gets `selection = null` and `ownsSelection = false` on the daf.
   - The lines' `LazyColumn` and the `ContentScrollbar` move into the `else` branch: re-indented, unchanged.
   - The find results pane (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`), with comments marked "Pardes:" and two
@@ -3033,7 +3066,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 
 - **Feature:** Daf view, Pages zoomed at the pointer, The daf's find in Rashi and Tosafot, A whole page in the view,
   A book's own pages.
-- **Size:** 1316 lines.
+- **Size:** 1310 lines.
 - **What:** the view itself. `DafView` draws every amud of the tractate's layout one below the other at its printed
   height, one scale and one size of letters for them all (`blockWidth`, `DafSizes`, kept with the layouts in
   `LayoutCache`), with its title, zoom, keys, selection, context menu, find marks and review; `DafMode` (what a click
@@ -3084,24 +3117,28 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   the view's top, a title's height inside the view, its top when it is taller than the view; two amudim a row, a
   segment going on from the right one to the left one's top, as far as the row's end): it came in at the view's top,
   which the user saw after the testers' build `desktop-1.0.11-61` (request 80 of stage 3: "החצים בצורת הדף: הקטע הבא
-  עדיין נכנס בראש התצוגה"). In the tab of a commentary the daf prints (`DafMode.commentaryId`, `DafView`'s, `DafPages`'
-  and `AmudItem`'s `commentaryId`: request 82), the daf is the tractate's and the tab's lines the commentary's: a click
-  selects the commentary's comment the word stands for (`commentaryLineAt`), the text's menu and a selection's link
-  take it too (`tabLineAt`), no comment is focused for the arrows (they go through the commentary's lines as in its
-  text), the daf's place is the commentary's first comment at its top (`rememberCommentaryLines`, `DafIndex.firstOf`),
-  the notes shown and the selection located are the commentary's (`tabBook`), the find is the commentary's own (no
-  `DafPrinted`) and marks its matches alone. The click, the menu's line, the notes, the located selection and the
-  find's marks are `LinkedAmud`'s, which `AmudItem` gives the `commentaryId` (the merge of 2026-11-23: request 82 was
-  written in `AmudItem`'s body, which the book daf's branch had moved to `DafLinkedAmud.kt`).
+  עדיין נכנס בראש התצוגה"). The comment a commentary's tab opened the tractate's daf at (`DafFocusRequests`, request
+  86 of stage 3: "פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא") is selected once the tab's line is in view,
+  as a click on it selects it (a `LaunchedEffect(places)` under a comment marked "Pardes:": its segment, `baseOf`,
+  now internal for `gemaraLineOf`, the passage selected, the comment focused for the arrows, and brought into view).
+  Request 82 had shown the daf in the commentary's own tab, its lines the commentary's (`commentaryId`); 83 took it
+  out for the tractate's own daf, every option of it at hand. The daf's place (`DafPlace`, its `where`) carries the
+  comment a click on itself selected (`commentId`), whose commentary's own text the tab opens at it as the daf is left
+  (request 87).
 - **Reached from:** `BookContentView.kt` (`DafView`, `DafControl`, `DafMode`, `DafFind`), `BookContentPanel.kt`
   (`DafMode`, `DafCommentators`, `isBavli`), `VerticalBars.kt` and `PageSpreadsButton.kt` (`isBavli`), and the book's
   pages' files (`DafControl`, `DafPlace`, `DafScale`, `dafFamily`, `awaitPassage`, `sidewaysPan`).
 - **Follows:** the text view's own frame and conventions (Zayit's `BookContentView`): its zoom, keys, find bar and menu
   are reused, not redrawn; the page itself is Pardes's own.
 - **Tests:** `DafLayoutsTest` (amud names, first lines), `DafLinksTest`, `DafViewStateTest`, `DafZoomTest`,
-  `ZoomPivotTest`, `RevealSpanUiTest`, `DafIndexTest`, `DafLinksTest` (a commentary's clicks); request 80 tried in the app (Berakhot 2a, a segment selected and
-  the arrow down three times: each next segment whole at the view's bottom, the page a few lines on); the composables have no UI test; request 44 tried in the app (Berakhot 2a zoomed in with Ctrl and
-  the wheel over a word of the Mishnah: the word stays where it was).
+  `ZoomPivotTest`, `RevealSpanUiTest`, `DafIndexTest`, `DafFocusRequestsTest`; request 86 tried in the app (Tosafot and
+  Rashi on Berakhot: the comment selected on the tractate's daf, the arrows down through their comments, a click on the
+  Gemara and the arrows through its segments); request 87 tried in the app (Rashi's and Tosafot's comments selected on
+  Berakhot's daf, amud a and b, the daf left: their commentary's text at the comment, selected, at the view's top or a
+  few lines below it; the daf again from it, the comment selected; a Gemara segment selected, the Gemara's text as
+  before); request 80 tried in the app (Berakhot 2a, a segment selected and the arrow down three times: each next
+  segment whole at the view's bottom, the page a few lines on); the composables have no UI test; request 44 tried in the
+  app (Berakhot 2a zoomed in with Ctrl and the wheel over a word of the Mishnah: the word stays where it was).
 - **Notes:** at some 1,290 lines, with some 19 top-level functions, it is beyond `detekt.yml`'s limits (15 functions for a
   file, 60 lines for `DafPages`), as some of Zayit's largest files are; its amud's drawing went to `DafLinkedAmud.kt`
   on 2026-11-23 (`AmudItem`'s two findings with it), and it could be split further by its parts (pages, review, missing
@@ -3179,7 +3216,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafIndex.kt`
 
 - **Feature:** Daf view.
-- **Size:** 132 lines.
+- **Size:** 117 lines.
 - **What:** `DafIndex`, a tractate's printed lines of the library, the Gemara's and the commentaries': where each is
   printed first (`places`, what `DafView` scrolls to) and last (`ends`: its last amud and the bottom of its last line
   there, for the arrows to bring a segment or a comment in whole, request 80 of stage 3, "המפה של צורת הדף יודעת איפה
@@ -3189,9 +3226,7 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
   the Gemara's segment read at the top of a view scrolled to a place (`gemaraAt`): that of the first line printed there
   or below, the first segment that begins on that line, or the one that goes on through it when none does; so a view
   scrolled to a segment's own place reads that segment again, and a tab reopened on the daf does not creep up the
-  page. `gemaraTop` is the top of an amud's first line of the Gemara. `firstOf(amud, top, of)`: the first line a test takes
-  printed at or below a place, on a later amud when none is, of two on one line the library's first: a commentary's
-  tab's place at a view's top (request 82).
+  page. `gemaraTop` is the top of an amud's first line of the Gemara.
 - **Reached from:** `DafView.kt` (`reveal`, `openOn`, `stepComment`, the daf's place, `DafControl.printed`).
 - **Follows:** Pardes's own; it takes the place of `DafView.kt`'s `placesOfLines`, which held the Gemara's lines alone.
 - **Tests:** `DafIndexTest`.
@@ -3199,22 +3234,29 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafCommentary.kt`
 
 - **Feature:** Daf view.
-- **Size:** 69 lines.
-- **What:** a commentary printed on a tractate's daf, in Rashi's column or Tosafot's, shown on that daf in its own tab
-  (request 82 of the list after the testers' build `desktop-1.0.11-61`: "גם מרש"י או הפירוש המקביל אליו כאין רשי כמו
-  כרשבם בבא בתרא או רן בנדרים למשל ותוס יוכלו לעבור לצורת הדף"). `rememberDafTractate(book)`: the tractate whose daf a
-  tab's book shows, the book itself for a tractate, for a commentary the tractate its layout prints it on
-  (`DafLayouts.tractateOf`, then `getBookCore`), with the commentary it is of while the next is looked for;
-  `rememberCommentaryLines(commentaryId)`, the commentary's line ids (`getLineTocMappingsForBook`), for its place on
-  the daf; `DafAmudLinks.commentaryLineAt(word, commentaryId)`, the commentary's comment a word stands for (its own
-  comment, or on a Gemara word the comment whose dibbur quotes it, else its comment on the segment; none for another
-  commentary's word); `tabLineAt(word, commentaryId)`, the tab's line of a word, the segment or the commentary's.
-- **Reached from:** `DafView.kt`, `DafLinkedAmud.kt` (`commentaryLineAt`, `tabLineAt`), `BookContentPanel.kt`,
-  `VerticalBars.kt`, `PageSpreadsButton.kt`, `BookDafStyle.kt` (`hasBookDaf`).
-- **Follows:** `DafView.kt`'s helpers beside it (`clickOn`, `segmentOf`), and `rememberDafLayouts`.
-- **Tests:** `DafLayoutsTest` (`tractateOf`), `DafLinksTest` (`commentaryLineAt`), `DafIndexTest` (`firstOf`); tried in
-  the app (Rashi on Berakhot on its daf, its comment marked, a click on another selecting it, the arrows stepping
-  through Rashi's comments, the text opening at the comment; Tosafot on Berakhot, a click on its comment).
+- **Size:** 108 lines.
+- **What:** a commentary printed on a tractate's daf, in Rashi's column or Tosafot's, opens that daf, the tractate's
+  own, at its comment (request 82 of the list after the testers' build `desktop-1.0.11-61`: "גם מרש"י או הפירוש המקביל
+  אליו כאין רשי כמו כרשבם בבא בתרא או רן בנדרים למשל ותוס יוכלו לעבור לצורת הדף"; request 86: "פתיחה של צורת הדף מרשי
+  תפתח את כל האפשרויות כמו גמרא, אין אפשרות היום להתמקד על הגמרא ככה"). `rememberDafTractate(book)`: the tractate whose
+  daf a tab's book shows, the book itself for a tractate, for a commentary the tractate its layout prints it on
+  (`DafLayouts.tractateOf`, then `getBookCore`), with the commentary it is of while the next is looked for.
+  `DafFocusRequests` (`@Inject @SingleIn(AppScope::class)`, the graph's `dafFocusRequests`): the comment each tab's daf
+  is to select once it shows it, by the tab's id with the tractate's, taken once by that tractate's daf
+  (`request`, `take`). `rememberOpenTractateDaf(tabId, onOpen)`: what the daf's button does in a commentary's tab, the
+  Gemara line of the comment found off the UI thread, the comment asked of the daf, then the tractate opened in the tab
+  at that line (`onOpen`). `gemaraLineOf(repository, tractate, lineId)`: the Gemara line a comment is on, the one the
+  library links it to (`baseOf`), else its amud's first by the two books' tables of contents (`amudOf`, `firstLines`).
+  Request 82's daf in the commentary's own tab, its lines the commentary's (`rememberCommentaryLines`,
+  `commentaryLineAt`, `tabLineAt`), is gone: the Gemara could not be focused on it, nor had it the daf's options.
+- **Reached from:** `VerticalBars.kt` (`rememberDafTractate`, `rememberOpenTractateDaf`), `DafView.kt`
+  (`DafFocusRequests.take`), `AppGraph.kt` (`dafFocusRequests`), `BookDafStyle.kt` (`hasBookDaf`).
+- **Follows:** `DafView.kt`'s helpers beside it (`baseOf`, `firstLines`), `rememberDafLayouts`, and the graph's other
+  per-tab hands-off (`PaneFocusRequests`, `PageFits`).
+- **Tests:** `DafLayoutsTest` (`tractateOf`), `DafFocusRequestsTest`; tried in the app (Tosafot and Rashi on Berakhot,
+  a comment selected and the daf's button pressed: the tab on Berakhot's daf with the comment selected, the end bar's
+  buttons the tractate's, the arrows down through Tosafot's and Rashi's comments, a click on the Gemara and the arrows
+  through its segments).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafFindComments.kt`
 
@@ -3525,11 +3567,9 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLinksTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 81 lines.
-- **What:** on a small page, each dibbur quotes its words of the Gemara, a click selects the passage or the segment, in
-  a commentary's tab a word stands for the commentary's comment (its own words, the Gemara's its dibbur quotes or its
-  segment's; another commentary's none: request 82), and the passage is marked strongest, then the segment, then its
-  comments.
+- **Size:** 70 lines.
+- **What:** on a small page, each dibbur quotes its words of the Gemara, a click selects the passage or the segment, and
+  the passage is marked strongest, then the segment, then its comments.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit, `DafAmudLinks.kt`, `DafView.kt`'s marks).
@@ -3554,14 +3594,23 @@ library). The hooks in Zayit's files are in `BookContentView.kt`, `BookContentPa
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafIndexTest.kt`
 
 - **Feature:** Daf view.
-- **Size:** 130 lines.
+- **Size:** 120 lines.
 - **What:** over three amudim made for it: a column's comments read in the library's order, each once, though a line
   lists one early; a second book of the column read where it is printed; a column ending where its comments do, the
   Gemara's lines no comments; the Gemara's segment read at a place (the first that begins on the line there, or the
   one going on through it; past an amud's last line, the next amud's first), and a view scrolled to a segment's place
   reading that segment again; every line with the place it is printed at first, and at last (its last line's bottom,
-  on a later amud when it goes on: request 80 of stage 3); a commentary's first comment at a place, on a later amud
-  when none is below (request 82).
+  on a later amud when it goes on: request 80 of stage 3).
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, backtick names.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafFocusRequestsTest.kt`
+
+- **Feature:** Daf view.
+- **Size:** 25 lines.
+- **What:** the comment a commentary's tab opens its tractate's daf at (request 86 of stage 3): taken once, by that
+  tab's daf of that tractate; another tab's daf takes nothing, and another tractate's daf shown first drops it.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, backtick names.
 - **Tests:** it is one (unit).
@@ -3642,7 +3691,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/BookDafStyle.kt`
 
 - **Feature:** A book's own pages.
-- **Size:** 121 lines.
+- **Size:** 122 lines.
 - **What:** the reader's style and the experiment's switch. `DafStyle` (`Bands`, the rules' own; `Around`, the text in
   the middle as the Vilna Shas sets the Gemara), `BookDafStyle` (the layout, the letters of the text and of the
   commentaries, a commentator's columns, the targum's share of the width, the page's height to its width, whether the
@@ -3651,7 +3700,7 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
   `SettingsGroup`, `book_daf.*`: `enabled`, off by default; `style`, every book's; `books`, a book's own by its
   id), `Book.isTanakh`, and the composables that read them:
   `hasBookDaf` (the experiment on, a book with commentaries; no tractate, nor a commentary printed on a tractate's
-  daf, which shows that daf, `rememberDafTractate`, request 82 of stage 3), `showsBookDaf` (the tab shows such
+  daf, whose button opens that daf, `rememberDafTractate`, requests 82 and 86 of stage 3), `showsBookDaf` (the tab shows such
   pages) and `rememberBookDafStyle` (a book's own style, else every book's).
 - **Reached from:** `VerticalBars.kt` and `BookContentPanel.kt` (`hasBookDaf`), `PageSpreadsButton.kt`
   (`showsBookDaf`), `BookDafView.kt`, `BookDafPlaces.kt`, `BookDafBands.kt`, `BookDafAdjust.kt`, `BookDafCard.kt`.
@@ -3814,16 +3863,11 @@ carried by a backup (a `SettingsGroup`'s keys are not portable).
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/daf/DafLinkedAmud.kt`
 
 - **Feature:** Daf view, A book's own pages.
-- **Size:** 422 lines.
+- **Size:** 395 lines.
 - **What:** an amud's text tied to the library, as both dafs show it: `LinkedAmud` draws a laid-out amud
   (`DafAmudText`) with the tab's marks on its words, the user's highlights and notes, the find's matches
   (`linkedWords`), its clicks as the text's (`clickOn`, `segmentOf`), a drag selecting its words for the text's own
-  menu (`dafTextManager`, `rememberLocated`), and a tractate's review when it has one (`AmudReview`). In the tab of a
-  commentary printed on the daf (`commentaryId`, request 82 of stage 3) the lines are the commentary's: a click
-  selects its comment (`commentaryLineAt`) and focuses none (`DafClicks.onWord`, a click's two ways apart from
-  `LinkedAmud`, which `detekt.yml` holds to 60 lines), the menu's line and a selection's link are its comment
-  (`tabLineAt`), the notes and the word clicked in the text are the commentary's (`tabBook`), and the find's matches
-  are the commentary's own lines'. Its parameters
+  menu (`dafTextManager`, `rememberLocated`), and a tractate's review when it has one (`AmudReview`). Its parameters
   are small classes (`DafLook`, `DafMarks`, `DafClicks`, `AmudSelection`); `loadLinks` reads a page's links once,
   with the passages a book's anchors mark; `dafHighlight` is the page's marks (passage, segments, their comments);
   `LAYOUT_SCALE`.
@@ -4287,14 +4331,14 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/window/TabKeys.kt`
 
-- **Feature:** Tab shortcuts.
-- **Size:** 109 lines.
+- **Feature:** Tab shortcuts, A search from anywhere.
+- **Size:** 114 lines.
 - **What:** `tabKeyAction(key, shift, current, count, rtl)`, what a tab shortcut does (`TabKeyAction.Select` or
   `Move`, an index), in the strip's order as read (from the right when right to left, where the tabs' index 0 is the
   strip's left end): Ctrl/Cmd with 1 to 8 the tab at that place and 9 the last one; Tab or Page Down the next tab and
   Shift+Tab or Page Up the one before, round the strip (`selectedPlace`); Shift+Page Down or Up the tab moved one place, not round (`movedPlace`). And
   `rememberTabKeys(tabsViewModel)`, the window's handler of them in its layout direction, which selects or reorders
-  through `TabsEvents`. Split on 2026-11-22 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3.
+  through `TabsEvents`. Split on 2026-11-22 to meet `detekt.yml`, whose `:SeforimApp:detektJvmMainSourceSet` had not been run on stage 3. Since 2026-11-23 the handler first gives the key to the search from anywhere (`openWindow.searchAnywhereKey`, Ctrl/Cmd+L, request 85 of stage 3), of the window it is in (`LocalOpenWindow`).
 - **Reached from:** `MainAppWindow.kt` (the preview key handler).
 - **Follows:** Pardes's `rememberCommentaryCopyShortcut` (a handler the window calls first); Chrome's shortcuts, and in
   Hebrew its order from the right.
@@ -4343,6 +4387,86 @@ in the strip's order as read, from the right (stage 3, request 47's "where else 
   a search tab's copy has no scope of its own; another tab is copied as it is.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's `DesktopManagerTest` beside it (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### The tabs under load
+
+Request 83 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 80 in the user's message): the tabs and the way they show when the strip is full, learned from JetBrains. Of the plan's choices, three are built: a book tab whose title does not fit shows the book's acronym then its place ("או"ח רנג"), and a narrow tab that is not the selected one keeps its close button for the pointer; a scroll over the strip, two fingers along it or the wheel, moves the tabs on show as far as it goes, the selected one staying selected, as IntelliJ's strip scrolls by the pixel; and the list of the hidden tabs narrows by what is typed, by a title or by a short name, answers the keys as the app's other popup lists do, and is wide enough for a book's name with its place. The scroll by the pixel and the list's keys came on 2026-11-24, after the testers' build desktop-1.0.11-66, where the wheel moved the run a whole tab at a time and the list had Enter and Escape only. The switcher by last use, the side tabs and the preview tab stay in the plan. Hooks: `TabsView.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/NarrowTabTitle.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 94 lines.
+- **What:** a book tab's short title. `narrowTabTitle(title, shortTitle)`: the book's acronym (a pinned tab's label) then its place, what follows the title's last " - ", without the unit's word before a number of up to four letters ("או"ח רנג" for "שולחן ערוך, אורח חיים - סימן רנג", "ברכות ב."; "פרק שלישי" and "הקדמה" stay whole); null for a tab without a short title. `TabItem.stripTitle()`, the title a tab shows: its own while it fits the tab's room (measured with the tab's text style, beside its icon), else the short one. `TabContentBox`, a tab's box for its content, which gives the content its room (`LocalTabContentRoom`). And `closeShown(width, hovered)`: a tab that is not the selected one shows its close button from 140 dp, or under the pointer.
+- **Reached from:** `TabsView.kt` (a tab's content, twice, and `RtlAwareTab`).
+- **Follows:** Zayit's `pinnedTabLabel` (the acronym) and `SingleLineTabContent` (the title's cut); Chrome's narrow tabs, which keep the close button for the selected one; IntelliJ's tabs, which add what tells two files of one name apart.
+- **Tests:** `NarrowTabTitleTest`; tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/ScrolledTabWindow.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 306 lines.
+- **What:** the strip scrolled by two fingers or by the wheel, by the pixel. `ScrolledTabWindow`, Zayit's `TabWindow` that a scroll moves too: where the run of tabs starts is a number of tabs, whole at rest and between two tabs on a scroll's way (`first`, `between`, `fraction`; `scrolls` is off while every tab is on show). `follow` keeps the run to the selected tab until a scroll moves it, then leaves it where the scroll left it until another tab is selected, never past the strip's ends; the tab after the run, which comes in on a scroll's way (`arrives`), is not one of the run's, so the strip still counts it hidden. `scroll(by)` moves the run at once, `aim` and `slideTo` slide it a notch (140 ms, the next notch going on from where the last one goes), `settle` slides it to the nearest whole tab. `Modifier.tabStripWheel(window, enabled, rtl, tabWidth)`: a touchpad's pan (Windows, macOS: `PanStart`, `PanMove`, `PanEnd`) moves the run as far as the fingers travel, along the strip or up and down by the pan's longer way, and settles when they lift; a fine scroll does the same and settles 250 ms after its last event; a notch of the wheel slides a tab, a sideways one by the strip's direction. `Modifier.scrolledTabRun(window, tabWidth)`: between two tabs, the tabs' row is measured with the coming tab and keeps its width at rest, cutting that tab at its end. `Modifier.scrolledTab(window, key, rtl)`: a tab of the run is drawn moved by the run's fraction of its width (a graphics layer), the run's first tab cut at its start, where a pinned tab may stand; a pinned tab is not moved. At rest the three change nothing: the strip is Zayit's.
+- **Reached from:** `TabsView.kt` (the strip's run, its row, the tabs' row and a tab's own row).
+- **Follows:** Zayit's `TabWindow` (`TabStripLayout.kt`), kept as it is; IntelliJ's strip, which scrolls by the pixel (`JBTabsImpl` hands the wheel to a scroll pane of its own); the pan's handling as in `CommentatorsGrid.kt`.
+- **Tests:** `ScrolledTabWindowTest`; tried in the app with the wheel, a notch down and a sideways one, and frame by frame through a slide slowed to nine seconds for the check (the first tab cut at the strip's start, the coming one at its end, the chip and its count in place). A touchpad's two fingers were tried in the tests only, as Nucleus's Tao windows send them, not on a device.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/HiddenTabsFilter.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 248 lines.
+- **What:** the hidden tabs' list narrowed by what is typed, and its keys. `HiddenTabsFilter` (the text and the field's focus), `matching(tabs, names)` and `matchingTabs(tabs, labels, query)`: the tabs one of whose names, the title or the short one a narrow tab shows, holds the text, nikud, quote marks and case aside (`searchKey`). `HiddenTabsKeys`: the app's `PopupKeys` over Zayit's column of rows, which is no lazy list, the rows known by name (a tab's key, or `HIDDEN_TABS_ADD_ROW` for the + row); `filter.keys(scroll, tabs, …)` builds them, on the first row again when the text changes, and keeps the keys' row in view by the least scroll (`revealScroll`, the rows being one height); Page Up and Down move a view of rows but four (`pageRows`). `HiddenTabsColumn`, the list's column, which gives its rows the keys (`LocalHiddenTabsKeys`) and notes the pointer's moves; `hiddenTabMarked(name, interactionSource)`, a row's `hovered`: the one row marked, by the keys or by the pointer moved over it. `HiddenTabsFilterField`, Zayit's `PopupSearchField` focused when the list opens, which hands the list's keys to it (`popupKeys`: up, down, Enter for the marked row); `hiddenTabsEscape` (Escape closes the list); and `HiddenTabsListWidth`, 280 dp.
+- **Reached from:** `TabsView.kt` (`TabOverflowChip`'s popup, `TabOverflowMenu`, `TabOverflowMenuItem`, `NewTabMenuRow`, `TabOverflowMenuWidth`).
+- **Follows:** Zayit's `PopupSearchField` and its "חיפוש…" (`tab_search_placeholder`), as the tab search's popup; Pardes's `PopupKeys.kt` and `PopupMarking.kt`, the one code of the app's popup lists (requests 69 and 74 of stage 3); IntelliJ's list of hidden tabs, which narrows by typing.
+- **Tests:** `HiddenTabsFilterTest`; tried in the app (the arrows round the rows, Enter on the marked one, the pointer marking its row and the arrows going on from it, the text narrowing the list, Escape).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/NarrowTabTitleTest.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 103 lines.
+- **What:** the acronym then the place; a book without an acronym; two tabs of one book; headings in words kept whole; a book at its opening; the last joint; a title that fits its tab stays and one that does not gives way, back and forth (UI); a search's tab keeps its title; the close button of a narrow tab; a tab that is not a book's.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
+- **Tests:** it is one (unit and Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/ScrolledTabWindowTest.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 385 lines.
+- **What:** the run as Zayit's `TabWindow` without a scroll; moved by a part of a tab, the tab after it coming in; stopped at the strip's ends; brought back whole by another tab selected; inside the strip after a tab is closed; at rest while every tab is on show. Under a touchpad's pan (an `ImageComposeScene`, read from the right): the run as far as the fingers travel and at rest on the nearest tab, back where it was before half a tab, the earlier tabs by a pan to the right, a pan up and down, a slanted one by its longer way. Under the wheel: a notch slides a tab and a second one goes on from the first, a sideways turn by the strip's direction, a fine scroll at once then at rest, nothing while every tab is on show. And the row on a scroll's way, from the left and from the right: its width kept, the tabs moved, the first cut at the pinned tab and the coming one at the row's end (by the pixels drawn).
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
+- **Tests:** it is one (unit and Compose UI).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/HiddenTabsFilterTest.kt`
+
+- **Feature:** The tabs under load (request 83 of stage 3).
+- **Size:** 78 lines.
+- **What:** nothing typed; a part of the title, in order; nikud and quote marks; the short name a narrow tab shows; letter case; no tab left; the keys' row brought into view by the least scroll; a page of rows.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
+- **Tests:** it is one (unit).
+
+### A search from anywhere
+
+Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's message): the home's search bar opened from anywhere in the app. Ctrl/Cmd+L, the user's choice, opens the bar under the title bar, over a book, a results page or any other screen, with its suggestions as on the home; what is picked opens in the tab the bar was opened over, in its place. Escape, the key again or a press beside the bar closes it. The testers' build desktop-1.0.11-66 had a button for it in the title bar and opened a new tab; both went on 2026-11-24, at the user's word. Not built yet: the selected text into the bar, recent books in the empty bar, a row for a search in the open book. Hooks: `TitleBarActionsButtonsView.kt`, `MainAppWindow.kt`, `TabsContent.kt`, Pardes's `TabKeys.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhere.kt`
+
+- **Feature:** A search from anywhere (request 85 of stage 3).
+- **Size:** 227 lines.
+- **What:** the home's search bar opened over any screen of the window. `OpenWindow.searchAnywhereVisible`, kept beside the window in a weak map (as `tabSearchVisible` is in it); `isSearchAnywhereKey` (Ctrl/Cmd+L alone) and `searchAnywhereKey`, which opens or closes it; `SearchAnywhere`, composed in the title bar, where it takes no room and reads the bar's bottom: the popup, a layer the size of the window whose press beside the bar closes it, with `UnifiedSearchBar` under the title bar, 60% of the window up to 640 dp, on a bar state of its own (`newSearchBarViewModel`, cancelled with the bar) and the search-by-meaning switch; Escape or the key closes it. What the bar opens (`tabDestination`: the results, a book or a reference at its line, a link, an author's page) takes the selected tab's place (`openInPlace`): a fresh tab there under the id the bar kept its search's state by, as the Home button's fresh tab is, with the pin of the tab it replaces and its half of a split (`TabSplit.with`); a desktop's link goes through `rememberDesktopOpener`. No button of its own: the testers' build's one went on 2026-11-24 ("בלי אייקון חדש לחיפוש המלא"), with the new tab what it found opened in ("פתיחת תוצאה מהחיפוש החדש תהיה באותה כרטיסיה").
+- **Reached from:** `TitleBarActionsButtonsView.kt` (where it is composed), `TabKeys.kt` and `MainAppWindow.kt` (the key).
+- **Follows:** Zayit's `TabSearchButton` (a title-bar composable holding its popup), the results page's own bar (`TabsContent.kt`) and `TabsViewModel.replaceCurrentTabWithNewTabId`, the Home button's fresh tab in place; a browser's Ctrl+L, whose address bar opens in the tab it is in, and IntelliJ's Search Everywhere, a popup over the editor.
+- **Tests:** `SearchAnywhereTest` (what opens, and a split's pair kept); tried in the app (over a results page, a reference opened in that tab, the tabs as many as before; in a split, a reference opened in the selected half, the pair kept; Escape; no button in the title bar).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhereTest.kt`
+
+- **Feature:** A search from anywhere (request 85 of stage 3).
+- **Size:** 43 lines.
+- **What:** a text search's results, a book and a reference at its line, a link or an author's page as it is, each under the bar's tab id; a desktop's link is not a tab; the tab that takes a split tab's place keeps its half and the split's share.
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
 ### Two tabs side by side
@@ -5506,12 +5630,11 @@ Pardes's `DafView.kt`, `PdfPageList.kt`, `PdfBookView.kt` and `DafScanView.kt`, 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/pdf/PageSpreadsButton.kt`
 
 - **Feature:** Two pages side by side, A book's own pages.
-- **Size:** 62 lines.
+- **Size:** 56 lines.
 - **What:** `PageSpreadsButton(uiState, modifier)`, the end bar's "שני עמודים" (the `PageSpread` icon, its tooltip),
   shown while the tab shows pages: it turns `AppSettings.pageSpreadsFlow` on and off, in every tab. `showsPages(uiState)`,
   a composable since it reads the experiment's setting, says whether the tab shows pages rather than lines: printed
-  ones (`showsPrintedPages`: a tractate's daf or scan, a commentary's daf, a PDF book; a composable too since request
-  82, which asks `rememberDafTractate`), or another book's own (`showsBookDaf`); the bar
+  ones (`showsPrintedPages`: a tractate's daf or scan, a PDF book), or another book's own (`showsBookDaf`); the bar
   hides the diacritics button by the printed ones alone (request 49 of `docs/DESKTOP_STAGE3_PLAN.md`), a book's own
   pages being set in the text's diacritics.
 - **Reached from:** `VerticalBars.kt`, under the zoom's buttons (request 47: "בצד שמאל של המסך מתחת כפתורי פלוס
@@ -9030,7 +9153,7 @@ the description where something needs saying.
 | `docs/BOOK_DAF_RULES.md` | The user's rules for setting a page of a text with its commentaries, in Hebrew (2026-11-23, "מסמך הוראות וכללים לעימוד מקראות גדולות"): the page's structure and its default measures, the ten rules that decide what a page takes, the typography, the algorithm, what went wrong in the first setting and the rule each fault gave, the checks before a page goes out, and what is still open. Written with a page of Bereshit 1 (Onkelos, Rashi, the Ramban) set in a browser; `BookDafBands.kt` follows it, and its comments name its rules by number. *Note:* Kept as the user gave it. Its sources of text (Sefaria through a browser) are that page's own: Pardes sets the library's texts. | The user's own |
 | `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
 | `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it; for 31 what was measured, the rule first chosen (a fixed 10) and the one by each line's score that replaced it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out; and under request 21, that it was taken up again on 2026-11-23 as a trial, by the user's rules (docs/BOOK_DAF_RULES.md): what was built, how it is turned on, what was seen in the app, what of the rules is not done yet, and its testers' build, desktop-1.0.11-63, with the Maven Central fault its first run met. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
-| `docs/DESKTOP_STAGE3_PLAN.md` | Hebrew plan (2026-11-18) for stage 3 of Pardes for desktop: the user's twenty requests of 2026-11-18 in his numbers (41 to 60, which repeat stage 2's 41 to 56: an author's books among the bar's suggestions, PDF pages in the dark theme, lenient names of a scans folder and the page of daf ב in a joined file, zoom at the pointer, the contents following a PDF's paging, a link in the search preview opening only itself, keys in the book tree and elsewhere, search in PDFs with bookmarks and pages together and the fast-paging stall, no nikud button for PDFs, a torn-off commentator's title opening its book, cutting scans only by consent, what Zayita's personal books teach, exact, broad and hybrid search, an in-book find's results in a side pane, the leading space of a copy, the settings window back from minimized, the notes icon mirrored, duplicating a tab and a split view), and the sync with Zayit that was asked with them; what is new in Zayit after 0.6.12 and why its Zayit Public License clashes with the open siddur's AGPL and Amud's GPL; the user's decisions of that day (Zayit 0.6.13 merged on a branch of its own, into main only once Ariel Daniely and Amud's authors allow it in writing; Chrome's split view; inverted PDF pages with a button for the original colours; exact as quotes, broad as words without the model, hybrid as today; everything built together, with one testers' build), every request's steps with its files and checks, the merge's steps, the checks, what is left out, and the permission requests (the one sent in efrul/Pardes#27, and the text for Amud's repository); and, since 2026-11-23, the fifteen proposals chosen on 2026-11-21 from INTELLIJ_LESSONS.md, none built, with what reading the code changed (their details are in docs/agents/2026-11-21-intellij-items-spec/), and requests 83 to 85 (80 to 82 in the user's message: the tabs under load, the split view and a search from anywhere, each learned from JetBrains), with what was read, the user's choices so far, what was not asked yet, and the order (the short titles, the strip's scrolling and the search from anywhere first). *Note:* Written in Hebrew. Like stage 2's plan, it keeps a status line of what is done, with the commits. | Pardes's own |
+| `docs/DESKTOP_STAGE3_PLAN.md` | Hebrew plan (2026-11-18) for stage 3 of Pardes for desktop: the user's twenty requests of 2026-11-18 in his numbers (41 to 60, which repeat stage 2's 41 to 56: an author's books among the bar's suggestions, PDF pages in the dark theme, lenient names of a scans folder and the page of daf ב in a joined file, zoom at the pointer, the contents following a PDF's paging, a link in the search preview opening only itself, keys in the book tree and elsewhere, search in PDFs with bookmarks and pages together and the fast-paging stall, no nikud button for PDFs, a torn-off commentator's title opening its book, cutting scans only by consent, what Zayita's personal books teach, exact, broad and hybrid search, an in-book find's results in a side pane, the leading space of a copy, the settings window back from minimized, the notes icon mirrored, duplicating a tab and a split view), and the sync with Zayit that was asked with them; what is new in Zayit after 0.6.12 and why its Zayit Public License clashes with the open siddur's AGPL and Amud's GPL; the user's decisions of that day (Zayit 0.6.13 merged on a branch of its own, into main only once Ariel Daniely and Amud's authors allow it in writing; Chrome's split view; inverted PDF pages with a button for the original colours; exact as quotes, broad as words without the model, hybrid as today; everything built together, with one testers' build), every request's steps with its files and checks, the merge's steps, the checks, what is left out, and the permission requests (the one sent in efrul/Pardes#27, and the text for Amud's repository); and, since 2026-11-23, the fifteen proposals chosen on 2026-11-21 from INTELLIJ_LESSONS.md, none built, with what reading the code changed (their details are in docs/agents/2026-11-21-intellij-items-spec/), and requests 83 to 85 (80 to 82 in the user's message: the tabs under load, the split view and a search from anywhere, each learned from JetBrains), with what was read, the user's choices so far, what was not asked yet, the order (the short titles, the strip's scrolling and the search from anywhere first), and what of them was built and tried on 2026-11-23 and 24, with what the testers' build of that night changed in them. *Note:* Written in Hebrew. Like stage 2's plan, it keeps a status line of what is done, with the commits. | Pardes's own |
 | `docs/INTELLIJ_LESSONS.md` | Hebrew research report (2026-11-20) on what Pardes can learn and take from JetBrains' IntelliJ IDEA: what Pardes already took from it (the navigation bar, the find bar, the settings window, the Drive backup), the cost of each idea under the change map's rules (configuration, a Pardes file with a one-line hook, an edit in Zayit's code, Nucleus), navigation and reading (back and forward inside a tab, recent places with a line of text, a teaching mode, sticky headings, rich-text copy), Jewel (what 0.41 already offers, the upgrade path, RTL and accessibility), infrastructure (a rolling log file, freeze capture, a diagnostics ZIP, a screen-reader audit), the title search (Hebrew typed on an English layout, a visit-frequency tie-breaker), eleven first steps, what not to take, and the licensing of Apache-2.0 code and JetBrains' trademarks. *Note:* Written in Hebrew. It read intellij-community at b2ba8bcb, Pardes at b2c284a and Nucleus at 65ccd12; claims that rest only on search summaries are marked (לא מאומת). | Pardes's own |
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |

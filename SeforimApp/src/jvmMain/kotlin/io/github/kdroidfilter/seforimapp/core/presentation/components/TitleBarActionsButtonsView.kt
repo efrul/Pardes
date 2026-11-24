@@ -8,6 +8,7 @@ import io.github.kdroidfilter.seforim.tabs.TabsViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.IntUiThemes
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.hasFindInPage
+import io.github.kdroidfilter.seforimapp.features.search.SearchAnywhere
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
@@ -132,6 +133,9 @@ fun TitleBarActionsButtonsView() {
         shortcutHint = findShortcutHint,
         enabled = findEnabled,
     )
+
+    // Pardes: the search from anywhere, its bar over the window while it is open (request 85)
+    SearchAnywhere()
 
     // Chrome-like Tab Search (open tabs + visit history), Favorites and Notes menus.
     // On macOS the native History/Favorites/Notes menus (searchable) cover them; shortcuts still work.

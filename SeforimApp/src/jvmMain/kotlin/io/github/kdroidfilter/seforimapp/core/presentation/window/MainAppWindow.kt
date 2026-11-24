@@ -61,6 +61,7 @@ import io.github.kdroidfilter.seforimapp.core.reading.noteInput
 import io.github.kdroidfilter.seforimapp.core.rememberCommentaryCopyShortcut
 import io.github.kdroidfilter.seforimapp.core.selectionCopyShortcut
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.TypeToSearch
+import io.github.kdroidfilter.seforimapp.features.search.searchAnywhereKey
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowEvents
 import io.github.kdroidfilter.seforimapp.features.settings.SettingsWindowViewModel
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
@@ -244,6 +245,9 @@ fun NucleusApplicationScope.MainAppWindow(
                         } else {
                             WindowPlacement.Fullscreen
                         }
+                    true
+                } else if (openWindow.searchAnywhereKey(keyEvent)) {
+                    // Pardes: the search from anywhere, here too for when nothing in the window has the keys (request 85)
                     true
                 } else if (openWindow.readerShortcuts?.invoke(keyEvent) == true) {
                     true

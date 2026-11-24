@@ -576,6 +576,10 @@ class BookContentViewModel(
                             // Select the book in navigation and open TOC on first open
                             navigationUseCase.selectBook(book)
                             ensureTocVisibleOnFirstOpen()
+                            // Pardes: the tab's place at the line, as a tab opened at one has it (`loadBook`), for the
+                            // text to open with the line at its top: since request 75 of stage 3 a line below the view
+                            // is brought in at its bottom (request 87 of stage 3: a comment opened back from the daf)
+                            stateManager.updateContent { copy(anchorId = event.lineId, scrollIndex = 0, scrollOffset = 0) }
                             loadBookData(book, forceAnchorId = event.lineId)
                             // Automatically close the book tree panel if the setting is enabled
                             closeBookTreeIfEnabled()
