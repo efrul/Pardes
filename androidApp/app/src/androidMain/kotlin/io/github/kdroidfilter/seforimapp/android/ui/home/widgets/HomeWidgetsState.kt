@@ -55,7 +55,7 @@ class HomeWidgetsState internal constructor(
     var community by mutableStateOf(app.prefs.communityFlow.value)
         internal set
 
-    // עדות המזרח read the אור החיים, everyone else עתים לבינה
+    // עדות המזרח read the אור החיים, everyone else the default zmanim
     val zmanimOpinion get() = zmanimOpinionFor(community)
     val kiddushLevanaEarliest get() = kiddushLevanaEarliestFor(community)
     val kiddushLevanaLatest get() = kiddushLevanaLatestFor(community)

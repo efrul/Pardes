@@ -61,9 +61,6 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetCardLoading
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberOffMain
 import io.github.kdroidfilter.seforimapp.features.home.widgets.shownDateHere
-import io.github.kdroidfilter.seforimapp.features.zmanim.data.ITIM_LABINA_ABROAD_CANDLES
-import io.github.kdroidfilter.seforimapp.features.zmanim.data.ITIM_LABINA_ISRAEL_CANDLES
-import io.github.kdroidfilter.seforimapp.features.zmanim.data.itimLabinaCandleLighting
 import io.github.kdroidfilter.seforimapp.features.zmanim.data.worldPlaces
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -1342,7 +1339,7 @@ private fun GradientDot(
 private fun computeShabbatTimes(
     date: LocalDate,
     location: EarthWidgetLocation,
-    opinion: ZmanimOpinion = ZmanimOpinion.ITIM_LABINA,
+    opinion: ZmanimOpinion = ZmanimOpinion.DEFAULT,
     cityLabel: String? = null,
     inIsrael: Boolean = false,
 ): ShabbatTimes {
@@ -1363,7 +1360,7 @@ private fun computeShabbatTimes(
     val parashaTitle = if (parashaName.isBlank()) "שבת" else "שבת $parashaName"
 
     val entryTime = candleLightingTime(fridayDate, location, opinion, cityLabel, inIsrael)
-    val exitTime = havdalahTime(shabbatDate, location, opinion, inIsrael)
+    val exitTime = havdalahTime(shabbatDate, location, opinion, inIsrael, cityLabel)
 
     return ShabbatTimes(
         parashaName = parashaTitle,
@@ -1385,14 +1382,10 @@ internal fun candleLightingTime(
         // אור החיים: candles 20 minutes before sunset everywhere
         ZmanimOpinion.OHR_HACHAIM -> calendar.ohrHaChaimSunset?.minus(20.minutes)?.toDate()
 
-        // עתים לבינה: candles follow the city's own custom
-        ZmanimOpinion.ITIM_LABINA -> {
-            val candles =
-                itimLabinaCandleLighting[cityLabel?.trim()]
-                    ?: itimLabinaCandleLighting["ירושלים"]?.takeIf { isJerusalemLocation(location, cityLabel) }
-                    ?: if (inIsrael) ITIM_LABINA_ISRAEL_CANDLES else ITIM_LABINA_ABROAD_CANDLES
-            val sunset = if (candles.fromHeight) calendar.sunset else calendar.seaLevelSunset
-            sunset?.minus(candles.minutes.minutes)?.toDate()
+        // Default: 18 minutes before sunset, 40 in Jerusalem
+        ZmanimOpinion.DEFAULT -> {
+            val minutes = if (isJerusalemLocation(location, cityLabel)) 40 else 18
+            calendar.seaLevelSunset?.minus(minutes.minutes)?.toDate()
         }
     }
 }
@@ -1403,6 +1396,7 @@ internal fun havdalahTime(
     location: EarthWidgetLocation,
     opinion: ZmanimOpinion,
     inIsrael: Boolean,
+    cityLabel: String? = null,
 ): Date? {
     val calendar = zmanimCalendar(day, location, opinion, inIsrael)
     return when (opinion) {
@@ -1413,8 +1407,13 @@ internal fun havdalahTime(
             calendar.tzaisAteretTorah.toDate()
         }
 
-        // עתים לבינה: 8.5° everywhere
-        ZmanimOpinion.ITIM_LABINA -> calendar.tzais.toDate()
+        // Default: 8.5°, or 40 minutes after sunset in Jerusalem
+        ZmanimOpinion.DEFAULT ->
+            if (isJerusalemLocation(location, cityLabel)) {
+                calendar.seaLevelSunset?.plus(40.minutes)?.toDate()
+            } else {
+                calendar.tzais.toDate()
+            }
     }
 }
 

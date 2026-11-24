@@ -20,7 +20,7 @@ internal fun JewishCalendar.nextDay(): JewishCalendar = JewishCalendar(gregorian
 
 /**
  * Calendar facts and prayer rules of a day for the siddur fallback (the desktop smart siddur is a private package),
- * on KosherKotlin 3.0.5 as desktop: TefilaRules and the desktop wordings.
+ * on KosherKotlin 4.0.1 as desktop: TefilaRules and the desktop wordings.
  */
 object JewishDay {
     private val rules = TefilaRules()
@@ -138,7 +138,7 @@ object ZmanimDay {
      * The day's zmanim in time order: the zmanim of desktop's "הזמן הבא" widget (LuachData.nextZmanim, same names), plus
      * the times its upcoming-events widget gives the day (LuachData.upcomingEvents): fast start and end, candle lighting
      * and havdala. Subtitles are the desktop zmanim cards' (home_widget_card_*_subtitle). Erev Pesach adds the GRA chametz
-     * times (Android only). Computes the עתים לבינה sun: call it off the main thread.
+     * times (Android only). Computes the sun: call it off the main thread.
      */
     fun rows(city: City, date: LocalDate, opinion: ZmanimOpinion): List<ZmanRow> {
         val israel = city.inIsrael
@@ -170,7 +170,7 @@ object ZmanimDay {
         when {
             // A day off work: candles on the eve of the first one, havdala at the end of the last
             jc.isAssurBemelacha -> if (!calendarOf(date.plusDays(1)).isAssurBemelacha) {
-                rows += ZmanRow("יציאה", null, havdalahTime(date, location, opinion, israel), true)
+                rows += ZmanRow("יציאה", null, havdalahTime(date, location, opinion, israel, city.name.ifBlank { null }), true)
             }
             jc.isTaanis -> {
                 val start = if (jc.isTishaBav) computeZmanimTimes(date.minusDays(1), location, opinion, israel).sunset else z.alosHashachar

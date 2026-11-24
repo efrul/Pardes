@@ -181,11 +181,3 @@ class CitiesTest {
         assertTrue(totalPlaces >= 100, "Should have at least 100 places total, got $totalPlaces")
     }
 }
-
-class CandleLightingTest {
-    @Test
-    fun `every itim labina city is a known place`() {
-        val known = worldPlaces.values.flatMap { it.keys }.toSet()
-        assertEquals(emptySet(), itimLabinaCandleLighting.keys - known)
-    }
-}

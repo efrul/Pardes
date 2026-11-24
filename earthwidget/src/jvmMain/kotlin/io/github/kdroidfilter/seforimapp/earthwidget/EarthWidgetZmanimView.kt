@@ -32,7 +32,6 @@ import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.HebrewDateFormatter
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishCalendar
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishDate
 import io.github.kdroidfilter.kosherkotlin.util.GeoLocation
-import io.github.kdroidfilter.kosherkotlin.util.ItimLabinaCalculator
 import io.github.kdroidfilter.kosherkotlin.util.NOAACalculator
 import io.github.kdroidfilter.seforimapp.luach.LuachDateButton
 import kotlinx.datetime.toJavaLocalDate
@@ -139,8 +138,8 @@ data class ZmanimTimes(
 
 /** The luach the zmanim are read from: its sun, and which opinions it prints. */
 enum class ZmanimOpinion {
-    /** עתים לבינה: degree-based zmanim off the luach's own refracted horizon. */
-    ITIM_LABINA,
+    /** The library's standard GRA and MGA zmanim. */
+    DEFAULT,
 
     /** אור החיים, the luach Rabbi Ovadia Yosef used: zmaniyos minutes off an ordinary sun. */
     OHR_HACHAIM,
@@ -1077,35 +1076,29 @@ private fun computeHebrewMonthOrbitLabels(
 fun computeZmanimTimes(
     date: LocalDate,
     location: EarthWidgetLocation,
-    opinion: ZmanimOpinion = ZmanimOpinion.ITIM_LABINA,
+    opinion: ZmanimOpinion = ZmanimOpinion.DEFAULT,
     inIsrael: Boolean = false,
 ): ZmanimTimes {
     val calendar = zmanimCalendar(date, location, opinion, inIsrael)
-    // GRA hours, chatzos and mincha ketana are shared; both luachs print sunrise במישור
+    // GRA hours, chatzos and mincha ketana are shared; both print sunrise במישור
     return when (opinion) {
-        ZmanimOpinion.ITIM_LABINA -> {
-            // The luach prints alos 90 במעלות in Israel and counts the MGA day from it; abroad it uses 72
-            val alos = if (inIsrael) calendar.alos90ItimLabina else calendar.alos72ItimLabina
-            val mgaEnd = if (inIsrael) calendar.tzais90ItimLabina else calendar.tzais72ItimLabina
-            val alosAt = alos.momentOfOccurrence
-            val mgaEndAt = mgaEnd.momentOfOccurrence
+        ZmanimOpinion.DEFAULT ->
             ZmanimTimes(
-                alosHashachar = alosAt?.toDate(),
+                alosHashachar = calendar.alosHashachar.toDate(),
                 sunrise = calendar.seaLevelSunrise?.toDate(),
                 sofZmanShmaGra = calendar.sofZmanShmaGRA.toDate(),
-                sofZmanShmaMga = calendar.getSofZmanShma(alosAt, mgaEndAt)?.toDate(),
+                sofZmanShmaMga = calendar.sofZmanShmaMGA.toDate(),
                 sofZmanTfilaGra = calendar.sofZmanTfilaGRA.toDate(),
-                sofZmanTfilaMga = calendar.getSofZmanTfila(alosAt, mgaEndAt)?.toDate(),
+                sofZmanTfilaMga = calendar.sofZmanTfilaMGA.toDate(),
                 chatzosHayom = calendar.chatzos.toDate(),
-                minchaGedola = calendar.minchaGedolaGreaterThan30.toDate(),
+                minchaGedola = calendar.minchaGedola.toDate(),
                 minchaKetana = calendar.minchaKetana.toDate(),
                 plagHamincha = calendar.plagHamincha.toDate(),
                 sunset = calendar.seaLevelSunset?.toDate(),
-                tzais = calendar.tzaisGeonim18MinutesItimLabina.toDate(),
-                tzaisRabbeinuTam = calendar.tzais72ItimLabina.toDate(),
+                tzais = calendar.tzais.toDate(),
+                tzaisRabbeinuTam = calendar.tzais72.toDate(),
                 chatzosLayla = calendar.solarMidnight.toDate(),
             )
-        }
 
         ZmanimOpinion.OHR_HACHAIM ->
             ZmanimTimes(
@@ -1145,8 +1138,7 @@ fun zmanimCalendar(
     ).apply {
         astronomicalCalculator =
             when (opinion) {
-                ZmanimOpinion.ITIM_LABINA -> ItimLabinaCalculator()
-                ZmanimOpinion.OHR_HACHAIM -> NOAACalculator()
+                ZmanimOpinion.DEFAULT, ZmanimOpinion.OHR_HACHAIM -> NOAACalculator()
             }
     }
 }
