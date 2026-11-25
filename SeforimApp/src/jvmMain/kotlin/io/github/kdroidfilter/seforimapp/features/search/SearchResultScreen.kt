@@ -249,9 +249,11 @@ private fun SearchResultContentMvi(
     val listState = rememberLazyListState()
     // A flat list by relevance, as on Google: at most two passages of a book in a row
     // Narrowed to a book ("more from it"), or searched in one from the start (home's book / TOC scope):
-    // all its passages show
-    val inBook = bookFilterIds.isNotEmpty()
-    val oneBook = inBook || state.scopeBook != null || state.scopeTocId != null
+    // all its passages show. Pardes: one book checked alone, the book of the contents pane counting only with nothing
+    // checked; a book checked with other places is a list of theirs too, shown as ever (the reader's word on build 76)
+    val inBook = bookFilterIds.size == 1 && selectedCategoryIds.isEmpty()
+    val noMarks = bookFilterIds.isEmpty() && selectedCategoryIds.isEmpty()
+    val oneBook = inBook || (state.scopeBook != null && noMarks) || state.scopeTocId != null
     // In the library's order every passage shows too: a book's stand together, as it has them
     val everyPassage = oneBook || state.catalogOrder
     val items = remember(visibleResults, bookCounts, everyPassage) { flattenResults(visibleResults, bookCounts, everyPassage) }
@@ -490,10 +492,11 @@ private fun SearchResultContentMvi(
                                     // In one book, or books and categories picked, where it searched: no choice of the
                                     // library's base books there, a category's own base books instead
                                     scope =
-                                        if (oneBook) {
-                                            state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle
-                                        } else {
-                                            state.scopeLabel
+                                        when {
+                                            // Pardes: the book checked alone, its results' (the contents pane's may be another's)
+                                            inBook -> visibleResults.firstOrNull()?.bookTitle ?: state.scopeBook?.title
+                                            oneBook -> state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle
+                                            else -> state.scopeLabel
                                         },
                                     total = totalResults,
                                     isLoading = showProgress,

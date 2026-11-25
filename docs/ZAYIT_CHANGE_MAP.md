@@ -2297,7 +2297,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +538 −72 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
+- **Change:** modified, +557 −72 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -2357,6 +2357,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     counted by `executeFilteredSearch`, and `_filterDone`, set as a run ends but not when the next cut it short), a
     moment later for the visible results to follow (`FILTER_SETTLE_MS`); a change with no filtered search of its own
     (the contents' book, set as a book is checked) ends it then too.
+  - Since then too, "more from it" (`showMoreFromBook`) shows the book alone, whatever else is marked: the marks are
+    kept (`marksBeforeBook`) and let go for the book's, and the way back brings them back (`backFromBook`, and
+    `clearBookFilter` without kept results); a change of the marks meanwhile, or a new search, lets them go.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
   the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
@@ -2380,7 +2383,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +232 −54 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
+- **Change:** modified, +238 −57 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -2425,6 +2428,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
     book cut, not the buttons; and `FilterTabs` lays "הכל" and its tabs in one row (`TabsInOneRow`, a
     `SubcomposeLayout`), those with no room behind "עוד" too, which shows them all as before ("פחות" back), two
     imports.
+  - Since the reader's word on build 76, on the screen "inside one book" that any book checked put it in, with other
+    places checked too (a book's name over the results of all of them, every passage listed, the way back letting the
+    books go alone): it is one book's only when it is one, a book checked alone (`inBook`, as "more from it" leaves
+    the marks), or a search in one book with nothing checked (`state.scopeBook`, which the contents pane of a book
+    checked also sets, counting then alone); a book checked with other places gets the screen as ever. The status line
+    names the book checked alone by its results (the contents pane's book may be another's).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2442,10 +2451,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
   marked in the passage; general, 101). After build 76, on 2026-11-25, in a window 1,060 wide: the status line cut its
   place before its two links, "עוד 12 תוצאות מקרבן העדה על תלמ…" was cut before the three grade buttons, and "אריה"
   listed הכל, מדרש, תלמוד, תנ"ך, הלכה and "עוד" in one row, the tree open beside it (תוספתא behind "עוד", which listed
-  the seven).
+  the seven). The book checked with other places, tried in the app on 2026-11-25: מלכים א alone listed its 10 results
+  with the way back; the תלמוד tab added by Ctrl+click gave the screen as ever (142 results, grouped, no way back);
+  "עוד 6 תוצאות מחולין" showed its 7 alone, and the way back brought the תלמוד tab and the book back, 142 again.
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do. The header's line takes
   `SearchResultContentMvi`'s cyclomatic complexity from 65 to 66, and `TabsInOneRow` the file's functions from 24 to
-  25 (`detekt.yml` allows 15 for both; they were past it already).
+  25 (`detekt.yml` allows 15 for both; they were past it already). The one-book flags take `SearchResultContentMvi`'s
+  cyclomatic complexity from 66 to 72 (it was past `detekt.yml`'s 15 already).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt`
 

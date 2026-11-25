@@ -1966,6 +1966,10 @@ class SearchResultViewModel(
 
     private var beforeBook: BeforeBook? = null
 
+    // Pardes: what was marked when one book's results were shown ("more from it"): the book is shown alone, and the
+    // marks come back with the way back (the reader's word on build 76); null without, or once the marks changed
+    private var marksBeforeBook: SearchMarks? = null
+
     /** Narrows the results to one book ("more from it"), keeping the full ones to come back to. */
     fun showMoreFromBook(bookId: Long) {
         viewModelScope.launch {
@@ -1981,6 +1985,11 @@ class SearchResultViewModel(
                             .also { currentSession = null } // kept open for the way back
                     }
             }
+            // Pardes: the book alone, whatever else is marked (tabs picked, the tree's checks): those come back with it
+            marksBeforeBook = SearchMarks(_selectedCategoryIds.value, _selectedBookIds.value)
+            _selectedCategoryIds.value = emptySet()
+            _selectedBookIds.value = emptySet()
+            updatePersistedSearch { it.copy(selectedCategoryIds = emptySet(), selectedBookIds = emptySet()) }
             setBookChecked(bookId, true)
         }
     }
@@ -1995,8 +2004,12 @@ class SearchResultViewModel(
                 currentSession?.close()
                 currentSession = saved.session
             }
-            _selectedBookIds.value = emptySet()
-            updatePersistedSearch { it.copy(selectedBookIds = emptySet()) }
+            // Pardes: the marks as they were before the book's results
+            val marks = marksBeforeBook ?: SearchMarks()
+            marksBeforeBook = null
+            _selectedCategoryIds.value = marks.categories
+            _selectedBookIds.value = marks.books
+            updatePersistedSearch { it.copy(selectedCategoryIds = marks.categories, selectedBookIds = marks.books) }
             _categoryAgg.value = saved.agg
             _searchTree.value = saved.tree
             _uiState.value = saved.ui
@@ -2004,8 +2017,12 @@ class SearchResultViewModel(
     }
 
     // Without kept results (a restored tab, a search cut short): drop the book filter, one search
-    // Pardes: by the marks' one way, the bar told: a book checked in the tree of books is its chip too
-    private fun clearBookFilter() = mark { _, marks -> marks.copy(books = emptySet()) }
+    // Pardes: by the marks' one way, the bar told: a book checked in the tree of books is its chip too; after "more from
+    // it", the marks as they were before it
+    private fun clearBookFilter() {
+        val before = marksBeforeBook
+        mark { _, marks -> before ?: marks.copy(books = emptySet()) }
+    }
 
     /** Where this tab's search looks (the one truth, persisted with the tab). */
     val searchScope: SearchScope get() = persistedSearchState().scope
@@ -2036,6 +2053,7 @@ class SearchResultViewModel(
     private fun dropBeforeBook() {
         beforeBook?.session?.let { runCatching { it.close() } }
         beforeBook = null
+        marksBeforeBook = null
     }
 
     /**
@@ -2089,6 +2107,7 @@ class SearchResultViewModel(
         tellBar: Boolean = true,
         change: (LibraryShape?, SearchMarks) -> SearchMarks,
     ) {
+        marksBeforeBook = null
         viewModelScope.launch {
             val shape = runSuspendCatching { libraryCategories.shape() }.getOrNull()
             val before = SearchMarks(_selectedCategoryIds.value, _selectedBookIds.value)
