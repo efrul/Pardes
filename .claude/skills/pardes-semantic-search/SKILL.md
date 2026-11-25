@@ -155,8 +155,8 @@ Kaggle pitfalls already met:
 ## Saving the working data
 
 A session's container is reclaimed when the session ends (it was also restarted twice in one night, 2026-11-25), and
-the files no repository may hold (Torah-pairs' rows, the library's text, the lines a miner found) took GPU and CPU
-hours to make. Every time a step writes such a file, save it in the account's private Kaggle dataset
+the files no repository may hold (the private collection's pairs, the library's text, the lines a miner found) took GPU
+and CPU hours to make. Every time a step writes such a file, save it in the account's private Kaggle dataset
 `pardes-semantic-work`, with pardes-semantic's `save_work.py`, before going on:
 
 ```bash
@@ -171,9 +171,13 @@ python save_work.py --restore build/work # every file, in a new container
   negatives; the evaluations' ranks and `test_rank.py`'s `.npz`.
 - **Safe already:** each run's own data (the `pardes-semantic-<stage>-data` datasets) and its output (models, ranks)
   stay on Kaggle as long as no later run takes the kernel's name: give every run its own `--as`. What can be fetched
-  again (the library's releases, Torah-pairs on the Hub with the user's token, Sefaria's dump) needs no copy.
+  again (the library's releases, the private collection with the user's token, Sefaria's dump) needs no copy.
 - **Never:** a user's data (the feedback's inbox, histories and grades: `save_work.py` refuses them, and they can be
   fetched again from the service), nor the account's name in any file.
+- **The private collection of questions and passages** (pardes-semantic's `build_collection_pairs.py`): its owner asked
+  that his datasets not be shown publicly (2026-11-25). Its name, its link, its files' names and the names the code
+  gives them are in the dataset's `collection-notes.md` only, never in a repository, a commit message, a model's
+  `NOTICE` or a release.
 - **How it works:** each save uploads every file of the dataset as its next version (Kaggle keeps the earlier ones),
   from `build/work-mirror`; a mirror that a new container lacks is downloaded first, file by file.
 
