@@ -65,7 +65,6 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.booktoc.
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.CategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.SearchCategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NotesPanel
-import io.github.kdroidfilter.seforimapp.features.search.SearchTreeSettings
 import io.github.kdroidfilter.seforimapp.features.search.rememberSearchTreeToggle
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
 import io.github.kdroidfilter.seforimapp.framework.desktop.DockSizes
@@ -557,10 +556,8 @@ private fun selectedTabDemand(
                 val bookDetails by LocalAppGraph.current.appSettings.bookDetailsPaneFlow
                     .collectAsState()
                 val findResults = rememberFindResultsShown(tabId)
-                // Pardes: a search's tree of the books it found, shown when asked for (request 97 of stage 3)
-                val searchTree by LocalAppGraph.current.appSettings
-                    .flow(SearchTreeSettings.shown)
-                    .collectAsState()
+                // Pardes: a search's tree of books, shown in the tab it was asked for in (request 97 of stage 3)
+                val searchTree = LocalAppGraph.current.searchTrees.isShown(tabId)
                 PaneDemand(
                     tabId,
                     desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails, searchTree) +
@@ -869,14 +866,15 @@ private fun SearchTreePane(
 ) {
     val viewModel = tabSearchViewModel(owner, destination)
     val actions = rememberSearchShellActions(viewModel)
-    val searchTree by viewModel.searchTreeFlow.collectAsState()
+    // Pardes: the whole library's tree, with what the search found in it (request 97 of stage 3)
+    val searchTree by viewModel.libraryTreeFlow.collectAsState()
     val isFiltering by viewModel.isFilteringFlow.collectAsState()
     val selectedCategoryIds by viewModel.selectedCategoryIdsFlow.collectAsState()
     val selectedBookIds by viewModel.selectedBookIdsFlow.collectAsState()
     SearchCategoryTreePanel(
         uiState = uiState,
-        // Pardes: the pane's own close hides the search's tree, which one setting shows (request 97 of stage 3)
-        onEvent = rememberSearchTreeToggle(onEvent).onEvent,
+        // Pardes: the pane's own close hides the search's tree, a tab's own (request 97 of stage 3)
+        onEvent = rememberSearchTreeToggle(destination.tabId, onEvent).onEvent,
         searchTree = searchTree,
         isFiltering = isFiltering,
         selectedCategoryIds = selectedCategoryIds,
@@ -885,6 +883,7 @@ private fun SearchTreePane(
         onBookCheckedChange = actions.onBookCheckedChange,
         onEnsureScopeBookForToc = actions.onEnsureScopeBookForToc,
         modifier = modifier,
+        onPointerCheck = actions.onPointerCheck,
     )
 }
 

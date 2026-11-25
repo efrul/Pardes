@@ -158,7 +158,7 @@ private fun rememberReaderKeys(
     val dafKeys = LocalAppGraph.current.dafKeys
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     if (events == null) return null
-    val searchTree = if (destination is TabsDestination.Search) rememberSearchTreeToggle(events) else null
+    val searchTree = if (destination is TabsDestination.Search) rememberSearchTreeToggle(destination.tabId, events) else null
     val onEvent = searchTree?.onEvent ?: events
     return { event ->
         handleBookShortcut(event, onEvent) || dafKeys.press(event, destination?.tabId) || openWindow.focusStops.cycle(event, rtl)
@@ -187,7 +187,7 @@ private fun ReaderBar(
     val diacritics by viewModel.diacritics.collectAsState()
     // Pardes: a search's results have the navigation bar too (Zayit's have none, their tabs filter), with the book
     // tree's button in its own place for the tree of the books found (request 97 of stage 3)
-    val searchTree = (destination as? TabsDestination.Search)?.let { rememberSearchTreeToggle(viewModel::onEvent) }
+    val searchTree = (destination as? TabsDestination.Search)?.let { rememberSearchTreeToggle(it.tabId, viewModel::onEvent) }
     Box(Modifier.fillMaxHeight()) {
         if (start) {
             StartVerticalBar(

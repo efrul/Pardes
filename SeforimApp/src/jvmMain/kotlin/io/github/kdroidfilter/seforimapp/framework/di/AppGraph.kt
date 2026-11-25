@@ -90,6 +90,9 @@ abstract class AppGraph : ViewModelGraph {
 
     // Pardes: the daf button's click of each tab, for its key (request 94 of stage 3)
     abstract val dafKeys: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafKeys
+
+    // Pardes: which search tabs show their tree of books (request 97 of stage 3)
+    abstract val searchTrees: io.github.kdroidfilter.seforimapp.features.search.SearchTrees
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync

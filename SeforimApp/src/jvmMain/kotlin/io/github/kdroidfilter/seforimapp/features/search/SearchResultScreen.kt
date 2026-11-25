@@ -96,9 +96,11 @@ import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -142,6 +144,10 @@ data class SearchShellActions(
     val onOpenAuthor: (Long) -> Unit = {},
     // Pardes: feedback mode, a grade given to a result (again: taken back)
     val onGrade: (SearchResult, FeedbackGrade) -> Unit = { _, _ -> },
+    // Pardes: the bar is asked to take the keys (a tab picked, the tree checked by the pointer), and what asks it for
+    // the tree (request 97 of stage 3: "רק יסנן ויאפשר מיד חיפוש מחדש")
+    val barFocusRequests: Flow<Unit> = emptyFlow(),
+    val onPointerCheck: () -> Unit = {},
 )
 
 /**
@@ -361,6 +367,14 @@ private fun SearchResultContentMvi(
     val listFocus = remember { FocusRequester() }
     // Pardes: back to the bar once a tab is picked, for Enter to search again in the tabs picked
     val barFocus = remember { FocusRequester() }
+    // Pardes: the bar takes the keys when the search's marks changed by the pointer, a tab picked or the tree checked,
+    // a moment later, once its chips follow them: Enter there searches again in what is marked
+    LaunchedEffect(actions.barFocusRequests) {
+        actions.barFocusRequests.collect {
+            delay(BAR_FOCUS_DELAY_MS)
+            runCatching { barFocus.requestFocus() }
+        }
+    }
 
     // In a new tab
     fun openResult(result: SearchResult) = actions.onOpenResult(result, true)
@@ -430,14 +444,8 @@ private fun SearchResultContentMvi(
                             // Always there, as Google's, even with one category: "הכל" also undoes a kept filter
                             if (categories.isNotEmpty()) {
                                 Spacer(Modifier.height(10.dp))
-                                CategoryTabs(categories, selectedCategoryIds) { id, add ->
-                                    actions.onShowOnlyCategory(id, add)
-                                    // The bar's chips follow the tabs a moment later
-                                    scope.launch {
-                                        delay(BAR_FOCUS_DELAY_MS)
-                                        runCatching { barFocus.requestFocus() }
-                                    }
-                                }
+                                // Pardes: the bar takes the keys after it, as after a check of the tree (barFocusRequests)
+                                CategoryTabs(categories, selectedCategoryIds) { id, add -> actions.onShowOnlyCategory(id, add) }
                             }
                             Spacer(Modifier.height(8.dp))
                             // Inside one book: the way back to all the results

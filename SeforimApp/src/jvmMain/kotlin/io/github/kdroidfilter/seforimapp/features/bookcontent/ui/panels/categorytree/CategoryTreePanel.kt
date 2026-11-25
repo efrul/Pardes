@@ -141,6 +141,8 @@ fun SearchCategoryTreePanel(
     onBookCheckedChange: (Long, Boolean) -> Unit,
     onEnsureScopeBookForToc: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    // Pardes: a checkbox turned by the pointer, after its change (request 97 of stage 3)
+    onPointerCheck: () -> Unit = {},
 ) {
     val paneHoverSource = remember { MutableInteractionSource() }
     Column(modifier = modifier.hoverable(paneHoverSource)) {
@@ -165,6 +167,7 @@ fun SearchCategoryTreePanel(
                 onCategoryCheckedChange = onCategoryCheckedChange,
                 onBookCheckedChange = onBookCheckedChange,
                 onEnsureScopeBookForToc = onEnsureScopeBookForToc,
+                onPointerCheck = onPointerCheck,
             )
         }
     }

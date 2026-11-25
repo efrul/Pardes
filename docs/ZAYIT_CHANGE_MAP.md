@@ -28,7 +28,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (380 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (379 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -421,9 +421,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +38 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search
+- **Change:** modified, +41 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search
   speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane, A whole page in
-  the view, Daf view, A book's own pages.
+  the view, Daf view, A book's own pages, Search results.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -448,6 +448,8 @@ The entries of this section by kind:
     dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests` (request 86 of stage
     3).
   - `abstract val dafKeys: …daf.DafKeys`: the daf button's click of each tab, for its key (request 94 of stage 3).
+  - `abstract val searchTrees: …search.SearchTrees`, with a comment of its own: which search tabs show their tree of
+    books (request 97 of stage 3).
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
@@ -457,11 +459,11 @@ The entries of this section by kind:
   meet in the find hub; a study plan's field finds books by the search bar's lookup, as the bar does; the end bar's
   "עמוד שלם" reads the fit its tab's pages tell; a commentary's tab hands its tractate's daf the comment to select.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** fifteen declarations among Zayit's, with their comments, and three imports.
+- **Merge risk:** sixteen declarations among Zayit's, with their comments, and three imports.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`, `PageFitTest`, `DafFocusRequestsTest`.
+- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`, `PageFitTest`, `DafFocusRequestsTest`, `SearchMarksTest`.
 - **Notes:** the first two types, and those of `libraryLinks`, `pdfBookStore`, `dafScans`, `dafScanPages`,
-  `bookFindHub`, `lookupSearch`, `paneFocusRequests`, `pageFits` and `dafFocusRequests`, are written fully qualified instead of imported, unlike every
+  `bookFindHub`, `lookupSearch`, `paneFocusRequests`, `pageFits`, `dafFocusRequests`, `dafKeys` and `searchTrees`, are written fully qualified instead of imported, unlike every
   other line of the file: fewer import lines to conflict, but not Zayit's way.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/modules/AppCoreBindings.kt`
@@ -550,7 +552,7 @@ The entries of this section by kind:
   which goes round the parts of the window that take keys.
   Since 2026-11-24 (requests 94, 97 and 100 of stage 3) the reader's keys are built by `rememberReaderKeys(openWindow,
   destination, events)`, out of `WindowBody` for `detekt.yml`: `handleBookShortcut`, whose book tree's key is in a
-  search tab its tree of the books found (`rememberSearchTreeToggle`), the daf's key and F6. And `ReaderBar` gives a
+  search tab its own tree of books (`rememberSearchTreeToggle(tabId, …)`), the daf's key and F6. And `ReaderBar` gives a
   search's results their start bar (Zayit's have none), the book tree's button showing and hiding that tree
   (`bookTreeShown`, the toggle's events).
 - **Why:** the user asked (request ב of `docs/DESKTOP_STAGE2.md`, steps 1 and 4 of the docking in its plan,
@@ -793,7 +795,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +60 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+- **Change:** modified, +65 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
   Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
@@ -820,6 +822,9 @@ The entries of this section by kind:
     the grip between the halves after the tabs (`TabSplitGrip`); and the tab beside the selected one counts as on
     screen (`LocalTabShown`, provided with Zayit's `LocalTabSelected`), so that a PDF book's pages and a tractate's
     scan draw there too, while its focus and popups stay the selected tab's. A search from anywhere (request 85 of stage 3): `rememberHomeSearchCallbacks` is internal, its KDoc saying so, for the bar of `SearchAnywhere.kt`, whose callbacks act in the tab the bar opens.
+  Since 2026-11-24 (request 97 of stage 3) `rememberSearchShellActions` gives the results screen `barFocusRequests`
+  and `onPointerCheck` (the view model's `focusBar`), and a book's chip taken out of the results page's bar lets its
+  mark go too (`unpickBook`), as a category's does.
 - **Why:** the search in a category and in several books and categories (`54180126`, `574f3d55`, `37d4fe60`), the new
   tab's bar (`03c84c1f`) and the grades of feedback mode (`90f8a24a`) reach the search screen through this file, where
   Zayit wires its own search callbacks; the tabs picked go into the search bar as the user asked on 2026-11-10 (no
@@ -1547,7 +1552,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +276 −43 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+- **Change:** modified, +276 −44 lines. Feature: Commentators in their own panes, A pane at the window's edge,
   Pane layout kept, Find results pane, Keys in the book tree and the contents.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
@@ -1591,10 +1596,11 @@ The entries of this section by kind:
     עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
     panes the same tab's demand adds (not those of a tab switched to, nor at start), and `PaneBody` provides each
     pane's key (`LocalPaneFocusKey`, the window's and the pane's ids) around its content, indented once.
-  - Since 2026-11-24 (request 97 of stage 3) a search tab has its tree pane again when `SearchTreeSettings.shown` is
-    on (`desiredPanes(…, searchTree)`, read with the other settings of the pane demand), and `SearchTreePane` turns
-    the pane's own close (`ToggleBookTree`) into that setting off.
-  - `SearchTreePane` takes its events from `rememberSearchTreeToggle` (the pane's close hides the tree). Until
+  - Since 2026-11-24 (request 97 of stage 3) a search tab has its tree pane again when its own tree is shown
+    (`desiredPanes(…, searchTree)`, `searchTrees.isShown(tabId)` read with the other settings of the pane demand), and
+    `SearchTreePane` turns the pane's own close (`ToggleBookTree`) into that tab's tree hidden.
+  - `SearchTreePane` takes its events from `rememberSearchTreeToggle` (the pane's close hides the tree), shows the
+    whole library (`libraryTreeFlow`) and gives the tree `onPointerCheck`, the bar's keys after a check. Until
     the reader's word on the testers' build of 2026-11-24 it let go of the focus asked for as its pane opens: the
     search's tree had no keys; it has the book tree's since, and takes that focus itself
     (`CategoryBookTreeView.kt`).
@@ -1779,7 +1785,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +405 −120 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +580 −120 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes, The Home's big name shown or hidden, A card's book in place of the
   Home, Daily study plans, One marking in every popup, Scrolling alike.
 - **What:**
@@ -1838,6 +1844,17 @@ The entries of this section by kind:
     alone, tinted at once (`markedRowBackground`), where Zayit made the hovered row active too with an animated tint
     (`animateColorAsState`, its import gone); in a list whose rows mark themselves (a study plan's field) it takes
     `onMark`, run as the pointer moves over it (`MarkOnHover`). Comments marked "Pardes:", five imports.
+  - Since the reader's word on build 74 ("עומס בשורת החיפוש לא נראה טוב", of three chips that filled the results
+    page's bar): the bar's chips of its books and categories are `ScopeChips`, in half its width at most
+    (`SCOPE_CHIPS_SHARE`): two, or one where two would each be narrower than `SCOPE_CHIP_MIN_WIDTH`, and how many more
+    there are (`MoreScopeChips`, "+N"), their names under the pointer. A click on it lists them below it (`ScopeList`;
+    the reader's questions on it: "מה קורה בלחיצה על +3", and of its first list, of chips one over the other, "זה תואם
+    לעיצוב הכללי?"): the bar's own rows (`SuggestionRow`: a category's or a book's icon, its whole path) in a menu's
+    panel as the bar's suggestions are, one marked by the pointer or the arrows, with its action "הסרה"
+    (`scope_list_remove`, `KEY_DELETE`), which Delete and Backspace do too; Escape, Enter and the last taken out give
+    the bar the keys again; a click elsewhere, or on the count, closes it (`SCOPE_LIST_RECLICK_MS`, the press that
+    closed it). `SelectedBookChip`'s name takes the room left (`weight(1f, fill = false)`), cut before its close icon.
+    Comments marked "Pardes:", three imports.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -1858,7 +1875,10 @@ The entries of this section by kind:
   the bar, opened by Enter; request 41: רמב"ן typed, his row, his folder, then his books, and the same with תלמוד ›
   בבלי picked; request 64: a study plan's field, מועד and שוע typed, their categories and books in the bar's rows;
   requests 74 to 76: הלכות typed, the arrow down past the list's bottom a row at a time, the row marked whole at the
-  bottom, the pointer moved over היכלות אליהו marking it alone and the arrow down going on to the next).
+  bottom, the pointer moved over היכלות אליהו marking it alone and the arrow down going on to the next). After build
+  74, on 2026-11-25: the results page's bar held one chip and "+3"; a click on it listed משנה › אחרונים, משנה › מפרשים
+  and תלמוד in the bar's rows, the first marked with "הסרה Delete"; the arrow down and Delete took משנה › מפרשים out
+  ("+2", the mark on תלמוד), Escape gave the bar the keys, and a second click on the count closed the list it opened.
 - **Notes:** Zayit's search UI on purpose has no category scope (`SearchScope.Category` is "read back only" there,
   with category tabs over the results): this file brings back what Zayit chose to drop.
 
@@ -2015,8 +2035,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryTreePanel.kt`
 
-- **Change:** modified, +24 −8 lines. Feature: Typing over a pane, The user's PDF books, Keys in the book tree and the
-  contents.
+- **Change:** modified, +27 −8 lines. Feature: Typing over a pane, The user's PDF books, Keys in the book tree and the
+  contents, Search results (request 97 of stage 3).
 - **What:**
   - `TypeToSearchTarget(paneHoverSource)` before the pane's column, with a comment marked "Pardes:": the same for the
     book tree's search (`ToggleBookTreeSearch`); two imports.
@@ -2027,6 +2047,8 @@ The entries of this section by kind:
     the user's PDF books its query names are found too (request 51).
   - Both trees, the library's and the search's, are given `onLeave` (`FocusText`), with a comment marked "Pardes:":
     Escape, and Enter on a book, give the focus back to the text (request 47 of stage 3).
+  - Since 2026-11-24 (request 97 of stage 3) `SearchCategoryTreePanel` takes `onPointerCheck`, last, with a default,
+    and gives it to the search's tree: a checkbox turned by the pointer gives the results page's bar the keys.
 - **Why:** the user asked on 2026-11-11 (request 24 of `docs/DESKTOP_STAGE2.md`) to type with the pointer over the table of
   contents and get straight to a daf, without the search button first, and without hurting anything else. The user's
   PDF books are a category of the book tree (request 28, the user's decision of 2026-11-12), found by its search
@@ -2039,7 +2061,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/categorytree/CategoryBookTreeView.kt`
 
-- **Change:** modified, +112 −44 lines. Feature: Keys in the book tree and the contents (request 47 of stage 3), The
+- **Change:** modified, +124 −44 lines. Feature: Keys in the book tree and the contents (request 47 of stage 3), The
   open book in the book tree, Search results (request 97 of stage 3).
 - **What:**
   - `TreeItem` gains, after its content and under a comment marked "Pardes:", what the keys need of a row: `folder`,
@@ -2065,9 +2087,13 @@ The entries of this section by kind:
     `rememberTreeKeys(null)`, which takes the focus asked for as its pane opens, `treeKeys` on its box, each row built
     with what the keys need (`folder`, `open`, `click` for a category; `check` for both, the checkbox's own change),
     and the keys' row shown as selected while the tree has the keys, the rows checked otherwise as Zayit shows them
-    (`shownSelected`). A book's checkbox change, Zayit's, is named (`toggle`) so that Space turns it too, and
+    (`shownSelected`). A book's checkbox change, Zayit's, is a local function (`toggleBook`) so that Space turns it too, and
     `TreeItem.keyRow` gives both trees the row as the keys take it; these two for `detekt.yml`'s 60 lines and its
     complexity, which the hooks had passed.
+  - Since the reader's word on build 74 the search's tree lists the whole library (`SearchTree.kt`'s `libraryTree`): a
+    row shows its count only where the search found something (`showCount = count > 0`, Zayit's `true`); and a
+    checkbox turned by the pointer calls `onPointerCheck`, last with a default, after its change (the bar then takes
+    the keys, as after a tab picked), Space not; `toggleBook` stands before `addNode`, for `detekt.yml`'s 60 lines.
 - **Why:** request 47 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-18): "מקשים בעץ הספרים, איך מקובל בעורכי קוד": the tree had
   no keys at all, only its pane's search. Code editors' trees (IntelliJ's project view, VS Code's explorer) move a row
   of their own with the arrows, open and close a folder with the arrows toward and away from its inside, and open with
@@ -2084,6 +2110,8 @@ The entries of this section by kind:
   opened with Enter.
   The search's tree, on 2026-11-24, on "בין השמשות": Ctrl+B opened it with the keys, the arrow down went to משנה and
   Space checked it (its chip in the bar, 134 results), Space again unchecked it.
+  On 2026-11-25 the whole library listed, a count beside משנה, תלמוד and the categories found alone; משנה › ראשונים
+  checked by the pointer gave the bar the keys, מחברי זמננו by Space left them in the tree.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/backup/UserDataBackup.kt`
 
@@ -2228,7 +2256,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +477 −54 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
+- **Change:** modified, +511 −66 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
@@ -2249,10 +2277,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - **Result tabs:** `showOnlyCategory(categoryId, add)` shows a tab alone, as Zayit's did, and with `add`
     (Ctrl/Cmd+click) picks it with those already picked, or lets it go; `listed` keeps the search's session when its list can be shown in part (`SessionViews`), and
     `executeFilteredSearch` then shows the tabs' categories from that list with no new search (a category with no line
-    in it is searched, as before); in a search of the whole library the tabs picked are the bar's categories
-    (`showTabsInBar`, through `scopeChanges` and the file-level `scopeOfTabs(tabs, picked)`; `SearchScope.Global` when
-    none is picked any longer), so the text searched again from the bar is searched in them, and `unpickCategoryTab`
-    lets a tab go when its category is taken out of the bar.
+    in it is searched, as before); the tabs picked are the search's marks, as the checks of its tree of books are
+    (below), and `unpickCategoryTab` lets a tab go when its category is taken out of the bar.
   - **Results in the library's order:** the constructor's `lucene` is a plain parameter named `engine`, and the
     `lucene` the file searches with is `CatalogOrderEngine(engine, libraryCategories::bookOrder)`, which lists in
     the library's order while the tab's `catalogOrder` says so; `SearchUiState.catalogOrder` (restored from the
@@ -2269,10 +2295,20 @@ alone. Every entry below that says "Search in categories" is part of that revers
     libraryCategories::books)`); and the flow that builds a tree from the first results no longer sets it once the
     facets' tree is in (`if (!facetsComputed)` in its `collect`): one finished late replaced the full tree with
     the first page's.
-  - Since 2026-11-24 (request 97 of stage 3) a check in the results' tree of books is in the bar too:
-    `SetCategoryChecked` and `SetBookChecked` note it in `treePicks` (`SearchTreePicks`) and emit its scope to
-    `scopeChanges` (`showPicksInBar`, only in a search of the whole library, as `showTabsInBar`, which now sets the
-    picks to the tabs picked); `searchFromBar` empties them.
+  - Since 2026-11-24 (request 97 of stage 3) the tabs picked and the checks of the results' tree of books are one
+    thing, the search's marks, which change one way, `mark` (the reader's word on build 74: "סימון לבד יהיה כמו בסימון
+    טאב של קטגוריה - רק יסנן ויאפשר מיד חיפוש מחדש - קוד משותף"): `SetCategoryChecked`, `SetBookChecked` and
+    `showOnlyCategory` give it their change of the marks (`SearchMarks`, as the library's shape has it,
+    `LibraryCategories.shape`), and it sets Zayit's `_selectedCategoryIds` and `_selectedBookIds`, filters the list
+    (`executeFilteredSearch`) and tells the bar where the marks search (`scopeChanges`) in a search of the library, of
+    categories or of several books and categories (`barFollowsMarks`), a category's base books kept (`baseOnlyAs`);
+    `unpickCategoryTab` and `unpickBook` let a mark go when its chip is taken out of the bar, which is not told back;
+    and the way back from one book's results without kept ones (`clearBookFilter`) goes through it too.
+    `searchFromBar`, and a fresh tab opened with a scope, mark the categories the search runs in when they are all it
+    runs in (`markScope`): they stay checked, to be changed and searched again. `focusBar` and `barFocusRequests` give
+    the bar the keys after a tab picked or a check by the pointer. `libraryTreeFlow` is the tree the pane shows: the
+    whole library, with what was found in each category and book (`libraryTree`), the results' own tree without a
+    catalog. Zayit's `setCategoryChecked` and `setBookChecked` stay, for the other paths (a book's "more from it").
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
   the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
@@ -2289,12 +2325,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Smaller:** feedback mode could live in a Pardes class the ViewModel holds (its flow and `grade`), and the scope
   labels in `LibraryCategories`; keeping Zayit's name `authorBookIds` would shrink the diff.
 - **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`,
-  `ResultTabsTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`,
+  `SearchMarksTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`,
   `ResultsTreeLibraryBooksTest`, `SearchModesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +142 −36 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
+- **Change:** modified, +150 −36 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -2327,6 +2363,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     (`revealItem`, as the book tree's rows), in place of Zayit's `animateScrollToItem(next)`, which brought every
     result selected to the list's top with an animation (request 77 of the list after the public release), with a
     comment marked "Pardes:" and an import.
+  - Since 2026-11-24 (request 97 of stage 3) `SearchShellActions` takes `barFocusRequests` and `onPointerCheck`, last,
+    with defaults: the bar takes the keys when the view model asks (`barFocusRequests`, a moment later, as after a tab
+    picked, its chips following), a tab picked as a check of the tree by the pointer; the tabs' own handler is
+    `onShowOnlyCategory` alone; two imports.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2339,7 +2379,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
 - **Smaller:** already near minimal.
-- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `ResultTabsTest`, `SearchModesTest`; the tabs,
+- **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `SearchMarksTest`, `SearchModesTest`; the tabs,
   the link to the library's order and the modes were tried in the app (ברכות השחר exact: one result, its phrase alone
   marked in the passage; general, 101).
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
@@ -2450,8 +2490,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +465 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 428 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +466 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 429 Hebrew strings added in twenty-two blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2479,7 +2519,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
     the question, its link, the note, and why a folder is not used);
   - search in categories and by name: `search_text_row_in_category`, `search_text_row_in_scope`,
     `search_switch_scope_all`, `search_switch_scope_base`, `row_action_add_to_search`, `row_action_search_category`,
-    `scope_base_books_label`, `category_base_books_only`, `author_of_book`;
+    `scope_base_books_label`, `scope_list_remove` (the action of a row of the bar's chips listed, request 97 of stage 3),
+    `category_base_books_only`, `author_of_book`;
   - the user fonts' card, after `settings_font_reset_defaults`: `settings_user_fonts_*` (8) and
     `settings_user_font_missing`;
   - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה"), `search_sort_relevance` and
@@ -5167,7 +5208,7 @@ Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's messag
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhere.kt`
 
 - **Feature:** A search from anywhere (requests 85 and 96 of stage 3).
-- **Size:** 365 lines.
+- **Size:** 379 lines.
 - **What:** the home's search bar opened over any screen of the window. `OpenWindow.searchAnywhereVisible`, kept beside the window in a weak map (as `tabSearchVisible` is in it); `isSearchAnywhereKey` (Ctrl/Cmd+L alone) and `searchAnywhereKey`, which opens or closes it; `SearchAnywhere`, composed in the title bar, where it takes no room and reads the bar's bottom: the popup, a layer the size of the window whose press beside the bar closes it, with `UnifiedSearchBar` under the title bar (in the window's upper third since 2026-11-24), 60% of the window up to 640 dp, on a bar state of its own (`newSearchBarViewModel`, cancelled with the bar) and the search-by-meaning switch; Escape or the key closes it. What the bar opens (`tabDestination`: the results, a book or a reference at its line, a link, an author's page) takes the selected tab's place (`openInPlace`): a fresh tab there under the id the bar kept its search's state by, as the Home button's fresh tab is, with the pin of the tab it replaces and its half of a split (`TabSplit.with`); a desktop's link goes through `rememberDesktopOpener`. No button of its own: the testers' build's one went on 2026-11-24 ("בלי אייקון חדש לחיפוש המלא"), with the new tab what it found opened in ("פתיחת תוצאה מהחיפוש החדש תהיה באותה כרטיסיה").
   Since request 96 of stage 3 ("כיום השורה נפתחת ורק שניה אחרי זה מודגשת ברקע המוזהב, שיהיה מיד. שיוכלו לבחור האם יפתח
   באותו חלון או חדש, בדומה ללחיצה עם קונטרול וכדומה"): the bar's field has the keys a frame after it opens (its own
@@ -5181,9 +5222,17 @@ Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's messag
   בשליש העליון ולא ממש למעלה"): the bar's top is a fifth of the window's height down it (`BAR_TOP_SHARE`), in the
   window's upper third, and under the title bar at least; and the line of the keys is `SearchAnywhereKeysLine`
   (`SearchAnywhereSettings.kt`), which the reader can hide for good.
+  Since the reader's word on build 74 ("בשורה חיפוש מכל מקום - מה ההבדל בין אנטר לשיפט? לא ראיתי הבדל"): Shift opened
+  a new tab, not a window, for a tab opened joins its window's group only when it is first composed, and
+  `detachTabToNewWindow` right after `openTab` found none to detach. `OpenWindow.open` is a suspending function,
+  called in the bar's collector before it closes, that waits for the tab in the group (`PLACED_WAIT` at most, looked
+  at every `PLACED_POLL`) and detaches it then. The line of the keys says Shift+Enter and Shift+click.
 - **Reached from:** `TitleBarActionsButtonsView.kt` (where it is composed), `TabKeys.kt` and `MainAppWindow.kt` (the key).
 - **Follows:** Zayit's `TabSearchButton` (a title-bar composable holding its popup), the results page's own bar (`TabsContent.kt`) and `TabsViewModel.replaceCurrentTabWithNewTabId`, the Home button's fresh tab in place; a browser's Ctrl+L, whose address bar opens in the tab it is in, and IntelliJ's Search Everywhere, a popup over the editor.
-- **Tests:** `SearchAnywhereTest` (what opens, and a split's pair kept); tried in the app (over a results page, a reference opened in that tab, the tabs as many as before; in a split, a reference opened in the selected half, the pair kept; Escape; no button in the title bar).
+- **Tests:** `SearchAnywhereTest` (what opens, and a split's pair kept); tried in the app (over a results page, a
+  reference opened in that tab, the tabs as many as before; in a split, a reference opened in the selected half, the
+  pair kept; Escape; no button in the title bar; Shift+Enter on "אברהם אבינו", after build 74, opened a window of its
+  own with the results, its tree closed, the first window back on its tab).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhereSettings.kt`
 
@@ -5206,33 +5255,56 @@ Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's messag
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchTree.kt`
 
 - **Feature:** Search results (request 97 of stage 3).
-- **Size:** 97 lines.
-- **What:** a search's tree of the books it found, shown when asked for ("שיכולו לפתוח את עץ הספרים בחיפוש, ברירת מחדל
-  סגור - יפתח לפי בחירה. בחירה שם תהיה כמו בטאבים - תסמן בשורת החיפוש ויוכלו לחפש שוב"). `SearchTreeSettings.shown`
-  (`search_tree.shown`, off): whether a search tab has its tree pane, one setting for every tab.
-  `rememberSearchTreeToggle(onEvent)` gives a search tab's `SearchTreeToggle`: whether the tree is shown, and the
-  tab's events with the book tree's toggle (`ToggleBookTree`) turned to that setting, so the book tree's own button in
-  the start bar, its key (Ctrl/Cmd+B) and its pane's close show it and hide it. `SearchTreePicks`: what the reader
-  checked in the tree, in the order checked (`category`, `book`), the tabs picked above the results being its
-  categories and no book (`only`); `scope()` is where the bar searches then: a `SearchScope.Category`, a `Book`,
-  several in a `Multi`, null with nothing checked.
+- **Size:** 275 lines.
+- **What:** a search's tree of books, shown when asked for ("שיכולו לפתוח את עץ הספרים בחיפוש, ברירת מחדל סגור - יפתח
+  לפי בחירה. בחירה שם תהיה כמו בטאבים - תסמן בשורת החיפוש ויוכלו לחפש שוב"), and the marks it shares with the tabs
+  picked above the results. `SearchTrees` (the graph's `searchTrees`): which search tabs show their tree, by the tab's
+  id, closed until opened there whatever another tab has, kept while the app runs. `rememberSearchTreeToggle(tabId,
+  onEvent)` gives a search tab's `SearchTreeToggle`: whether its tree is shown, and the tab's events with the book
+  tree's toggle (`ToggleBookTree`) turned to it, so that the book tree's own button in the start bar, its key
+  (Ctrl/Cmd+B) and its pane's close show it and hide it. `SearchMarks`: what a search has marked, its categories (a
+  category with all those under it) and its books, changed by `category` and `book` as the library's shape has it: a
+  category marked marks every category under it and lets the books marked under it go; one let go under a marked
+  category opens that one (its other categories stay marked, its own books are marked one by one), and so a book.
+  `LibraryShape`: the catalog's top categories (`roots`), each category's parent, the categories right under it and
+  its own books, and each book's category, in the library's order; `scopeOf(marks)` is where the marks search, the
+  categories under none of them and the books under none, in that order (a `SearchScope.Category`, a `Book`, several
+  in a `Multi`; null with nothing marked). `libraryTree(roots, found)`: the whole library as the tree shows it, every
+  category and book in order, each with what the search found in it (`found`, the results' own tree) and nothing where
+  it found nothing. And three of a scope: `categoriesAlone()`, the categories a search runs in when they are all it
+  runs in (none for the whole library); `barFollowsMarks()`, a search of the library, of categories or of several
+  books and categories, whose bar shows its marks; `baseOnlyAs(wide)`, a category searched in its base books alone
+  kept so while it is marked.
 - **Why:** Zayit's search has a tree of its results' categories and books, with their counts and checkboxes
   (`SearchCategoryTreePanel`), which its category tabs took the place of: a search tab has no start bar and no tree
   pane there (`WindowBody.kt`'s `ReaderBar`, `ReaderPanes.kt`'s `desiredPanes`). The reader asked for it back, closed
   until opened, and for its checks to be in the bar as the tabs picked are, so that the text is searched again in
   them. The testers' build desktop-1.0.11-72 had a button of its own beside the search bar; at the reader's word the
-  same day ("למה אייקון פתיחת העץ לא במקום הרגיל שלו?") it is the book tree's own button, in the start bar.
-- **Reached from:** `WindowBody.kt` (the start bar and the key), `ReaderPanes.kt` (the setting, the pane's close),
-  `SearchResultViewModel.kt` (the picks).
-- **Follows:** `FindResultsSettings` for one setting of a pane in every tab; `StartVerticalBar`'s own button for the
-  book tree.
-- **Tests:** `SearchTreePicksTest`; tried in the app on 2026-11-24 with the library's full-text index: "בין השמשות"
-  found 847 results, the pane opened with the six categories found and their counts, a check of תלמוד put its chip in
-  the bar and marked its tab (138 results), a check of משנה › סדר קדשים added a second chip (144), and the pane's own
+  same day ("למה אייקון פתיחת העץ לא במקום הרגיל שלו?") it is the book tree's own button, in the start bar. On build
+  74 the reader asked for the whole library in it ("אני רוצה שיוצג תמיד העץ המלא, גם מה שלא נמצא בו כדי שיוכלו לסמן
+  ולחפש בו שוב"), for a check to do what a tab picked does, by the same code ("אני רוצה שסימון לבד יהיה כמו בסימון טאב
+  של קטגוריה - רק יסנן ויאפשר מיד חיפוש מחדש - קוד משותף"), and for the tree to be closed in a new tab though
+  another's is open ("עץ הספרים יהיה סגור ברירת מחדל גם אם לשונית קודמת הוא פתוח"): one setting
+  (`SearchTreeSettings.shown`) had opened it in every tab, and the checks (`SearchTreePicks`, in the order checked)
+  had gone to the bar apart from the tabs.
+- **Reached from:** `WindowBody.kt` (the start bar and the key), `ReaderPanes.kt` (the pane and its close),
+  `AppGraph.kt` (`searchTrees`), `SearchResultViewModel.kt` (the marks, the tree shown), `LibraryCategories.kt` (the
+  shape).
+- **Follows:** `PageFits` for a state of each tab kept in the graph by the tab's id; `StartVerticalBar`'s own button
+  for the book tree; Zayit's `setCategoryChecked`, whose check of a category takes the categories under it.
+- **Tests:** `SearchMarksTest`; tried in the app on 2026-11-24 with the library's full-text index: "בין השמשות" found
+  847 results, the pane opened with the six categories found and their counts, a check of תלמוד put its chip in the
+  bar and marked its tab (138 results), a check of משנה › סדר קדשים added a second chip (144), and the pane's own
   close hid it; then, the button moved, the start bar's "ספרים" opened the pane and Ctrl+B closed it and opened it
-  again.
-- **Notes:** a category unchecked under a checked one filters the list but leaves the bar's chip whole; only in a
-  search of the whole library, as the tabs (`showTabsInBar`).
+  again. On 2026-11-25, after build 74: the tree listed the whole library, a count only where something was found
+  (משנה 19, תלמוד 138); משנה › ראשונים and משנה › אחרונים, nothing found in them, checked by the pointer beside תלמוד,
+  the bar took the keys with one chip and "+2", and Enter searched in the three (about 9,415 results), which stayed
+  checked, with their new counts; a chip taken out of the bar unchecked its category (9,221); Space checked a row and
+  left the keys in the tree; a second search tab, and one in a window of its own, opened with their trees closed while
+  the first's stayed open.
+- **Notes:** a category let go under a marked one opens it: the bar's chips are then its other categories and its own
+  books. The bar follows the marks in a search of the whole library, of categories, or of several books and
+  categories; inside one book, or an author's books, it keeps the reader's choice.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchAnywhereTest.kt`
 
@@ -5245,13 +5317,19 @@ Request 85 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-23; 82 in the user's messag
 - **Follows:** Pardes's tests beside the code (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
 
-#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchTreePicksTest.kt`
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchMarksTest.kt`
 
 - **Feature:** Search results (request 97 of stage 3).
-- **Size:** 32 lines.
-- **What:** two tests of what is checked in a search's tree: one category or one book is the bar's, several are
-  searched together, and unchecked they leave it; the tabs picked are the categories checked, and none at a new
-  search.
+- **Size:** 176 lines.
+- **What:** eleven tests of a search's marks and its tree of books, on a small library of two top categories: a
+  category marked with all those under it, where the text is searched again; several searched together in the
+  library's order, one book alone the bar's book; a category let go under a marked one opens it; a book let go under a
+  marked category leaves the category's others marked; a book under a marked category is marked with it; without a
+  catalog a mark is its category or its book alone; the tree shows the whole library with what was found where it was
+  (`libraryTree`); the bar follows the marks of a search in the library, in categories or in several books, not in one
+  book nor an author's (`barFollowsMarks`); the categories a search ran in are its marks when it ran in categories
+  alone (`categoriesAlone`); a category searched in its base books alone stays so while it is marked (`baseOnlyAs`);
+  and a search's tree shown in its own tab, closed until opened there (`SearchTrees`).
 - **Reached from:** the JVM tests.
 - **Follows:** Pardes's tests beside it (Kotlin Test, backtick names).
 - **Tests:** it is one (unit).
@@ -7673,17 +7751,6 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
   (SeforimLibrary's interface is not changed).
 - **Tests:** `HybridSearchEngineFallbackTest`.
 
-#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/ResultTabsTest.kt`
-
-- **Feature:** Semantic search (result tabs).
-- **Size:** 20 lines.
-- **What:** `scopeOfTabs`: the tabs picked are where the text is searched again, one category or several together in
-  the tabs' order, each once though a category may be a tab twice, a tab's subcategories picked with it not counted,
-  none picked giving nothing.
-- **Reached from:** the JVM tests.
-- **Follows:** `SearchUiStateTest` beside it (Kotlin Test, backtick names).
-- **Tests:** it is one (unit).
-
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/IndependentSemanticSearch.kt`
 
 - **Feature:** Semantic search.
@@ -8407,7 +8474,7 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/LibraryCategories.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 232 lines.
+- **Size:** 244 lines.
 - **What:** `LibraryCategories`, the library's categories for the search: each with its path (what the bar suggests), the
   books it searches (all those under it, or its base books alone), whether it holds both kinds, and its chip (`hit`). It holds the commentaries on a book by their time too
   (`CommentaryGroups`, read with the categories from the same links): `named(query, limit)` offers them before the
@@ -8418,12 +8485,16 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
   ahead of their first use. `bookPlace(bookId)` gives a book's title and its categories' titles, and
   `commentariesOn(bookId)` the commentaries the library links to it, with their titles, for the reader's default
   commentators (`CommentatorDefaults`).
+  Since 2026-11-24 (request 97 of stage 3) `shape()` gives the library's `LibraryShape` (its catalog's tree, in
+  order), read with the categories (`fromCatalog`, as the commentary groups are), for a search's marks and its tree of
+  books; null without a catalog. `commentariesByBook` is a function of the file's, out of the class, for
+  `detekt.yml`'s fifteen functions a class.
 - **Reached from:** `AppCoreBindings.kt`, `SearchHomeViewModel.kt`, `SearchResultViewModel.kt`, `AppGraph.kt` and
   `main.kt` (the warm-up), `CommentatorDefaults.kt`.
 - **Follows:** Zayit's catalog (`CatalogCache`) and `CategoryNavigationUseCase`, whose `collectBookIdsUnderCategory` it
   replaces in the results.
 - **Tests:** `LibraryCategoriesTest`, `CategorySuggestionsE2ETest`, `CategoryScopeSearchTest`, `CatalogOrderSessionTest`,
-  `CommentatorDefaultsTest`.
+  `CommentatorDefaultsTest`, `SearchMarksTest` (the shape).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommentaryGroups.kt`
 

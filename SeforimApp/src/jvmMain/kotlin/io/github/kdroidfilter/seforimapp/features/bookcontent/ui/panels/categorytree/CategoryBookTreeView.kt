@@ -233,6 +233,9 @@ fun SearchResultCategoryTreeView(
     onBookCheckedChange: (Long, Boolean) -> Unit,
     onEnsureScopeBookForToc: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    // Pardes: a checkbox turned by the pointer, after its change: the search's bar then takes the keys, as after a tab
+    // picked; the keys' Space leaves them in the tree (request 97 of stage 3)
+    onPointerCheck: () -> Unit = {},
 ) {
     // Restore/track scroll position using the same keys as the classic tree
     val listState: LazyListState =
@@ -252,6 +255,16 @@ fun SearchResultCategoryTreeView(
     val items =
         remember(searchTree, expanded, selectedCategoryIds, selectedBookIds, focusedId) {
             buildList {
+                // Pardes: a book's checkbox toggle, Zayit's, named for Space on the keys' row to turn it too
+                fun toggleBook(
+                    bookId: Long,
+                    checked: Boolean,
+                ) {
+                    onBookCheckedChange(bookId, checked)
+                    // Ensure TOC panel appears for this book
+                    if (checked) onEnsureScopeBookForToc(bookId)
+                }
+
                 fun addNode(
                     node: SearchResultViewModel.SearchTreeCategory,
                     level: Int,
@@ -271,11 +284,13 @@ fun SearchResultCategoryTreeView(
                                     isSelected = shownSelected(focusedId, "category_${node.category.id}", isThisSelected),
                                     onClick = { onCategoryRowClick(node.category) },
                                     count = node.count,
-                                    showCount = true,
+                                    // Pardes: the whole library is listed, a count only where the search found
+                                    showCount = node.count > 0,
                                     checkboxChecked = isThisSelected,
                                     onCheckboxToggle = { checked ->
                                         // Checkbox exclusively controls selection
                                         onCategoryCheckedChange(node.category.id, checked)
+                                        onPointerCheck()
                                     },
                                 )
                             },
@@ -289,17 +304,11 @@ fun SearchResultCategoryTreeView(
                     if (expanded.contains(node.category.id)) {
                         // Books under this category (only those with results)
                         node.books.forEach { sb ->
-                            // Pardes: the checkbox's own toggle, Zayit's, named for Space on the keys' row to turn it too
-                            val toggle = { checked: Boolean ->
-                                onBookCheckedChange(sb.book.id, checked)
-                                // Ensure TOC panel appears for this book
-                                if (checked) onEnsureScopeBookForToc(sb.book.id)
-                            }
                             add(
                                 TreeItem(
                                     id = "book_${sb.book.id}",
                                     level = level + 1,
-                                    check = { toggle(!(selectedBookIds.contains(sb.book.id) || cascadedSelected)) },
+                                    check = { toggleBook(sb.book.id, !(selectedBookIds.contains(sb.book.id) || cascadedSelected)) },
                                     content = {
                                         val checkedByBook = selectedBookIds.contains(sb.book.id)
                                         val checkedByCategory = cascadedSelected
@@ -313,9 +322,12 @@ fun SearchResultCategoryTreeView(
                                                 // Intentionally no-op to avoid checking the checkbox
                                             },
                                             count = sb.count,
-                                            showCount = true,
+                                            showCount = sb.count > 0,
                                             checkboxChecked = isChecked,
-                                            onCheckboxToggle = toggle,
+                                            onCheckboxToggle = { checked ->
+                                                toggleBook(sb.book.id, checked)
+                                                onPointerCheck()
+                                            },
                                         )
                                     },
                                 ),

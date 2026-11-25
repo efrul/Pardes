@@ -601,6 +601,7 @@
     <string name="search_text_row_in_scope">חיפוש ב%2$s: %1$s</string>
     <!-- A category searched in its base books alone: the texts without their commentaries (its chip, the status line) -->
     <string name="scope_base_books_label">%1$s (ספרי יסוד)</string>
+    <string name="scope_list_remove">הסרה</string>
     <!-- The suggestion of a category in its base books alone, beside the same category whole -->
     <string name="category_base_books_only">ספרי יסוד בלבד</string>
     <string name="search_by_category_or_book">חפש לפי קטגוריה או ספר</string>
@@ -1301,7 +1302,7 @@
     <string name="page_colors_original">צבעים מקוריים</string>
     <string name="page_colors_original_tooltip">העמודים של הסריקה ושל ספרי PDF בצבעים המקוריים שלהם, במקום הצבעים של המצב הכהה</string>
     <!-- Pardes: where what the search from anywhere finds opens, by the keys held (request 96 of stage 3, SearchAnywhere) -->
-    <string name="search_anywhere_keys">Enter: בלשונית הזו  ·  %1$s+Enter או %2$s+לחיצה: בלשונית חדשה  ·  Shift: בחלון חדש</string>
+    <string name="search_anywhere_keys">Enter: בלשונית הזו  ·  %1$s+Enter או %2$s+לחיצה: בלשונית חדשה  ·  Shift+Enter או Shift+לחיצה: בחלון חדש</string>
     <string name="search_anywhere_keys_hide">אל תציג עוד</string>
     <string name="settings_search_anywhere_keys">הצג את מקשי הפתיחה מתחת לשורת החיפוש</string>
     <string name="settings_search_anywhere_keys_description">מתחת לשורת החיפוש שנפתחת ב־Ctrl+L כתוב באילו מקשים נפתח מה שנמצא: בלשונית הזו, בלשונית חדשה או בחלון חדש. מי שכבר מכיר את המקשים יכול להסתיר את השורה, מכאן או בלחיצה על "אל תציג עוד" שבסופה.</string>

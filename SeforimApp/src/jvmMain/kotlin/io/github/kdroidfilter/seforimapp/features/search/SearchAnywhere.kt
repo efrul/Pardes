@@ -64,7 +64,9 @@ import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
 import io.github.kdroidfilter.seforimapp.framework.desktop.TabSplit
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import java.util.UUID
 import java.util.WeakHashMap
@@ -323,16 +325,28 @@ private fun rememberHeldKeys(): HeldKeys {
 private fun closesSearchAnywhere(event: KeyEvent): Boolean =
     isSearchAnywhereKey(event) || (event.type == KeyEventType.KeyDown && event.key == Key.Escape)
 
-/** [destination] opened [where] the keys held say: in the selected tab's place, in a new tab, or in a new window. */
-private fun OpenWindow.open(
+/**
+ * [destination] opened [where] the keys held say: in the selected tab's place, in a new tab, or in a new window: the
+ * new tab taken out to one once it is in this window's strip, which it waits for. A tab joins its strip when it is
+ * first composed, a frame or two after it is opened: taken out at once it stayed a new tab (the user's word on the
+ * testers' build, "מה ההבדל בין אנטר לשיפט? לא ראיתי הבדל"; seen in the app on 2026-11-24).
+ */
+private suspend fun OpenWindow.open(
     destination: TabsDestination,
     where: OpensIn,
     desktopManager: DesktopManager,
 ) {
     if (where == OpensIn.Place) return openInPlace(destination)
     tabsViewModel.openTab(destination)
-    if (where == OpensIn.NewWindow) desktopManager.detachTabToNewWindow(destination.tabId, id)
+    if (where != OpensIn.NewWindow) return
+    val tabId = destination.tabId
+    withTimeoutOrNull(PLACED_WAIT) { while (group()?.ids?.contains(tabId) != true) delay(PLACED_POLL) }
+    desktopManager.detachTabToNewWindow(tabId, id)
 }
+
+/** How long a tab just opened is waited for to be in its window's strip, and how often it is looked for there. */
+private val PLACED_WAIT = 2_000.milliseconds
+private val PLACED_POLL = 16.milliseconds
 
 /**
  * [destination] opened in the selected tab's place: a fresh tab there, as the Home button's is (the tab's ViewModels

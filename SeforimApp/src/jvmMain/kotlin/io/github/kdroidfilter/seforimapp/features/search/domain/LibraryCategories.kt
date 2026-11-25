@@ -2,6 +2,7 @@ package io.github.kdroidfilter.seforimapp.features.search.domain
 
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import io.github.kdroidfilter.seforimapp.features.search.LibraryShape
 import io.github.kdroidfilter.seforimapp.framework.database.CatalogCache
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -128,6 +129,16 @@ class LibraryCategories(
         books()
     }
 
+    // The library's shape, for a search's marks and its tree of books, read with the categories; none without a catalog
+    @Volatile
+    private var shape: LibraryShape? = null
+
+    /** The library's shape ([LibraryShape]: its catalog's tree, in order); null when the library has no catalog. */
+    internal suspend fun shape(): LibraryShape? {
+        entries()
+        return shape
+    }
+
     // The library's books by id, as the catalog has them; null until read
     @Volatile
     private var books: Map<Long, Book>? = null
@@ -169,13 +180,6 @@ class LibraryCategories(
         return titles
     }
 
-    // {a book: its commentaries}, from the links' {commentary: {a book it comments on: its links}}
-    private fun commentariesByBook(links: Map<Long, Map<Long, Int>>): Map<Long, LongArray> {
-        val byBook = HashMap<Long, MutableList<Long>>()
-        links.forEach { (commentary, commented) -> commented.keys.forEach { byBook.getOrPut(it) { ArrayList() } += commentary } }
-        return byBook.mapValues { (_, ids) -> ids.toLongArray() }
-    }
-
     // A category of the library, or a group of commentaries searched as one
     private suspend fun entry(categoryId: Long): Entry? = entries()[categoryId] ?: groups[categoryId]
 
@@ -192,6 +196,7 @@ class LibraryCategories(
         val books = BaseBooks.of(roots, links.mapValues { (_, commented) -> commented.keys.toLongArray() })
         groups = CommentaryGroups.of(roots, links).associate { it.hit.id to Entry(it.hit, it.bookIds, it.bookIds) }
         commentaries = commentariesByBook(links)
+        shape = LibraryShape(roots)
         val result = LinkedHashMap<Long, Entry>()
 
         // Lists [category] before its subcategories
@@ -229,4 +234,11 @@ class LibraryCategories(
         // The groups a text names are few: the book's commentaries of each time it names
         const val MAX_GROUPS = 3
     }
+}
+
+// {a book: its commentaries}, from the links' {commentary: {a book it comments on: its links}}
+private fun commentariesByBook(links: Map<Long, Map<Long, Int>>): Map<Long, LongArray> {
+    val byBook = HashMap<Long, MutableList<Long>>()
+    links.forEach { (commentary, commented) -> commented.keys.forEach { byBook.getOrPut(it) { ArrayList() } += commentary } }
+    return byBook.mapValues { (_, ids) -> ids.toLongArray() }
 }
