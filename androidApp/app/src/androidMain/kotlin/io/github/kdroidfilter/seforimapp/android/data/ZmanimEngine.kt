@@ -18,7 +18,8 @@ import kotlin.math.abs
 import kotlin.time.Duration.Companion.minutes
 
 /*
- * The desktop 0.6.10 zmanim, ported verbatim on the same library (KosherKotlin 3.0.5):
+ * The desktop 0.6.10 zmanim, ported verbatim on the same library (KosherKotlin 4.0.1), with the default zmanim in place
+ * of the luach desktop 0.6.10 read for everyone but עדות המזרח, as in Pardes desktop:
  * - earthwidget EarthWidgetZmanimView.kt: EarthWidgetLocation, ZmanimTimes, ZmanimOpinion, computeZmanimTimes,
  *   zmanimCalendar, ohrHaChaimSunset and the conversions;
  * - earthwidget KiddushLevanaData.kt: the kiddush levana opinions;
@@ -53,6 +54,8 @@ data class ZmanimTimes(
 
 /** The luach the zmanim are read from: its sun, and which opinions it prints. */
 enum class ZmanimOpinion {
+    /** The library's standard GRA and MGA zmanim. */
+    DEFAULT,
 
     /** אור החיים, the luach Rabbi Ovadia Yosef used: zmaniyos minutes off an ordinary sun. */
     OHR_HACHAIM,
@@ -76,8 +79,10 @@ enum class KiddushLevanaLatestOpinion {
     DAYS_15,
 }
 
+// HomeWidgetsState: עדות המזרח read the אור החיים, everyone else the default zmanim (an unset community included)
 private fun isSephardi(community: String?) = Community.fromStored(community) == Community.SEPHARADE
 
+fun zmanimOpinionFor(community: String?): ZmanimOpinion = if (isSephardi(community)) ZmanimOpinion.OHR_HACHAIM else ZmanimOpinion.DEFAULT
 
 fun kiddushLevanaEarliestFor(community: String?): KiddushLevanaEarliestOpinion =
     if (isSephardi(community)) KiddushLevanaEarliestOpinion.DAYS_7 else KiddushLevanaEarliestOpinion.DAYS_3
@@ -85,38 +90,39 @@ fun kiddushLevanaEarliestFor(community: String?): KiddushLevanaEarliestOpinion =
 fun kiddushLevanaLatestFor(community: String?): KiddushLevanaLatestOpinion =
     if (isSephardi(community)) KiddushLevanaLatestOpinion.DAYS_15 else KiddushLevanaLatestOpinion.BETWEEN_MOLDOS
 
-/** Android-only footnote of the zmanim pages: the luach the times come from. */
-val ZmanimOpinion.luachName: String
+/** Android-only footnote of the zmanim pages: the luach the times come from, none for the default zmanim. */
+val ZmanimOpinion.luachName: String?
     get() = when (this) {
+        ZmanimOpinion.DEFAULT -> null
         ZmanimOpinion.OHR_HACHAIM -> "לוח אור החיים"
     }
 
 fun computeZmanimTimes(
     date: LocalDate,
     location: EarthWidgetLocation,
+    opinion: ZmanimOpinion = ZmanimOpinion.DEFAULT,
     inIsrael: Boolean = false,
 ): ZmanimTimes {
     val calendar = zmanimCalendar(date, location, opinion, inIsrael)
-    // GRA hours, chatzos and mincha ketana are shared; both luachs print sunrise במישור
+    // GRA hours, chatzos and mincha ketana are shared; both print sunrise במישור
     return when (opinion) {
-            // The luach prints alos 90 במעלות in Israel and counts the MGA day from it; abroad it uses 72
-            val alosAt = alos.momentOfOccurrence
-            val mgaEndAt = mgaEnd.momentOfOccurrence
+        ZmanimOpinion.DEFAULT ->
             ZmanimTimes(
-                alosHashachar = alosAt?.toDate(),
+                alosHashachar = calendar.alosHashachar.toDate(),
                 sunrise = calendar.seaLevelSunrise?.toDate(),
                 sofZmanShmaGra = calendar.sofZmanShmaGRA.toDate(),
-                sofZmanShmaMga = calendar.getSofZmanShma(alosAt, mgaEndAt)?.toDate(),
+                sofZmanShmaMga = calendar.sofZmanShmaMGA.toDate(),
                 sofZmanTfilaGra = calendar.sofZmanTfilaGRA.toDate(),
-                sofZmanTfilaMga = calendar.getSofZmanTfila(alosAt, mgaEndAt)?.toDate(),
+                sofZmanTfilaMga = calendar.sofZmanTfilaMGA.toDate(),
                 chatzosHayom = calendar.chatzos.toDate(),
-                minchaGedola = calendar.minchaGedolaGreaterThan30.toDate(),
+                minchaGedola = calendar.minchaGedola.toDate(),
                 minchaKetana = calendar.minchaKetana.toDate(),
                 plagHamincha = calendar.plagHamincha.toDate(),
                 sunset = calendar.seaLevelSunset?.toDate(),
+                tzais = calendar.tzais.toDate(),
+                tzaisRabbeinuTam = calendar.tzais72.toDate(),
                 chatzosLayla = calendar.solarMidnight.toDate(),
             )
-        }
 
         ZmanimOpinion.OHR_HACHAIM ->
             ZmanimTimes(
@@ -156,7 +162,7 @@ fun zmanimCalendar(
     ).apply {
         astronomicalCalculator =
             when (opinion) {
-                ZmanimOpinion.OHR_HACHAIM -> NOAACalculator()
+                ZmanimOpinion.DEFAULT, ZmanimOpinion.OHR_HACHAIM -> NOAACalculator()
             }
     }
 }
@@ -182,6 +188,7 @@ data class ShabbatTimes(
 fun computeShabbatTimes(
     date: LocalDate,
     location: EarthWidgetLocation,
+    opinion: ZmanimOpinion = ZmanimOpinion.DEFAULT,
     cityLabel: String? = null,
     inIsrael: Boolean = false,
 ): ShabbatTimes {
@@ -202,7 +209,7 @@ fun computeShabbatTimes(
     val parashaTitle = if (parashaName.isBlank()) "שבת" else "שבת $parashaName"
 
     val entryTime = candleLightingTime(fridayDate, location, opinion, cityLabel, inIsrael)
-    val exitTime = havdalahTime(shabbatDate, location, opinion, inIsrael)
+    val exitTime = havdalahTime(shabbatDate, location, opinion, inIsrael, cityLabel)
 
     return ShabbatTimes(
         parashaName = parashaTitle,
@@ -224,9 +231,10 @@ fun candleLightingTime(
         // אור החיים: candles 20 minutes before sunset everywhere
         ZmanimOpinion.OHR_HACHAIM -> calendar.ohrHaChaimSunset?.minus(20.minutes)?.toDate()
 
-            val candles =
-            val sunset = if (candles.fromHeight) calendar.sunset else calendar.seaLevelSunset
-            sunset?.minus(candles.minutes.minutes)?.toDate()
+        // Default: 18 minutes before sunset, 40 in Jerusalem
+        ZmanimOpinion.DEFAULT -> {
+            val minutes = if (isJerusalemLocation(location, cityLabel)) 40 else 18
+            calendar.seaLevelSunset?.minus(minutes.minutes)?.toDate()
         }
     }
 }
@@ -237,6 +245,7 @@ fun havdalahTime(
     location: EarthWidgetLocation,
     opinion: ZmanimOpinion,
     inIsrael: Boolean,
+    cityLabel: String? = null,
 ): Date? {
     val calendar = zmanimCalendar(day, location, opinion, inIsrael)
     return when (opinion) {
@@ -247,6 +256,13 @@ fun havdalahTime(
             calendar.tzaisAteretTorah.toDate()
         }
 
+        // Default: 8.5°, or 40 minutes after sunset in Jerusalem
+        ZmanimOpinion.DEFAULT ->
+            if (isJerusalemLocation(location, cityLabel)) {
+                calendar.seaLevelSunset?.plus(40.minutes)?.toDate()
+            } else {
+                calendar.tzais.toDate()
+            }
     }
 }
 
