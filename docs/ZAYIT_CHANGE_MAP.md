@@ -8,7 +8,10 @@ and its desktop app is Zayit's code built as Pardes for desktop. This file descr
 differs from the Zayit release it is based on**: every file of Zayit's that Pardes changes, deletes or renames, and
 every file Pardes adds.
 
-- **Base:** Zayit v0.6.12 (`d7777e2e`, 2026-10-29), merged by `164a91f2` ("Merge Zayit v0.6.12 into Pardes").
+- **Base:** Zayit v0.6.12 (`4bb1b68a`, 2026-10-29), merged by `576cc19e` ("Merge Zayit v0.6.12 into Pardes").
+  Zayit's commits are the ones Zayit's history has now: in November 2026 Zayit's author rewrote it without the
+  lines that named the luach of the Default zmanim (section 1) and without its candle table, and Pardes's history
+  was rewritten by the same rule on 2026-11-25, so Zayit's commits here have Zayit's own shas.
   SeforimLibrary and SeforimAcronymizer are at Zayit's pins (`4f07145`, `dea83b3`), unchanged.
 - **Written** from 2026-11-05 to 2026-11-09 from the whole diff of every file and its Pardes commits. Then
   876 files differed: 779 added, 89 modified, 6 deleted, 2 renamed.
@@ -20,7 +23,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (156 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (155 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -34,7 +37,7 @@ every file Pardes adds.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (802 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (803 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -3048,27 +3051,31 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `earthwidget/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/earthwidget/EarthWidgetZmanimView.kt`
 
-- **Change:** modified, +12 −20 lines. Feature: Default zmanim.
+- **Change:** modified, +12 −10 lines. Feature: Default zmanim.
 - **What:**
-  - `ZmanimOpinion`'s first value is `DEFAULT`, "the library's standard GRA and MGA zmanim", in place of the luach's.
-  - `computeZmanimTimes` (default `DEFAULT`) gives for it KosherKotlin's own zmanim: `alosHashachar` (16.1°),
-    `sofZmanShmaMGA` and `sofZmanTfilaMGA` (72 minutes), `minchaGedola`, `tzais` (8.5°) and `tzais72` for Rabbeinu Tam,
-    with sunrise, sunset, the GRA hours, chatzos, mincha ketana and plag as before, in place of the luach's alos and
-    MGA day (90 or 72 במעלות), its mincha gedola and its tzeit; the comment above the `when` no longer says "luachs".
-- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24). The default zmanim are the ones Zayit had before the luach came in (`53039568`, 2026-09-30),
+  - `ZmanimOpinion`'s first value is `DEFAULT`, "the library's standard GRA and MGA zmanim". The base, its lines
+    that named the luach dropped from Zayit's history, has the אור החיים alone and does not compile.
+  - `computeZmanimTimes` has its `opinion` parameter again (default `DEFAULT`), and gives for `DEFAULT`
+    KosherKotlin's own zmanim: `alosHashachar` (16.1°), `sofZmanShmaMGA` and `sofZmanTfilaMGA` (72 minutes),
+    `minchaGedola`, `tzais` (8.5°) and `tzais72` for Rabbeinu Tam, with sunrise, sunset, the GRA hours, chatzos,
+    mincha ketana and plag as before, where the base keeps the rest of the luach's branch without its head (its
+    alos and MGA day, its mincha gedola); the comment above the `when` no longer says "luachs".
+  - `zmanimCalendar` runs both opinions on `NOAACalculator`.
+- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24). The default zmanim are the ones Zayit had before the luach came in (`b5e82d44`, 2026-09-30),
   and the ones Zayit's master has since `3732514`.
 - **Kind:** licence removal.
 - **Merge risk:** small: Zayit's master made the same change (`3732514`, after 0.6.12, under the Zayit Public License):
-  a merge of it meets the same lines, Pardes's written for Pardes (section 5).
+  a merge of it meets the same lines, Pardes's written for Pardes (section 5). The base's broken lines are Zayit's
+  history, not its master: a merge brings the master's.
 - **Smaller:** already minimal.
 - **Tests:** `ZmanimTimesTest` (both opinions in order, and differing).
 - **Notes:** the Android port has the same (`androidApp/…/data/ZmanimEngine.kt`).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/HomeWidgetsState.kt`
 
-- **Change:** modified, +2 −2 lines. Feature: Default zmanim.
-- **What:** `zmanimOpinion` is `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח (who keep the אור החיים), with its
-  comment.
+- **Change:** modified, +2 −0 lines. Feature: Default zmanim.
+- **What:** `zmanimOpinion`, `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח (who keep the אור החיים), with its
+  comment: the base, its line that named the luach dropped, has none.
 - **Why:** as for `EarthWidgetZmanimView.kt`.
 - **Kind:** licence removal.
 - **Merge risk:** small; Zayit's master has the same line (`3732514`).
@@ -3077,11 +3084,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/zmanim/ZmanimWidget.kt`
 
-- **Change:** modified, +14 −15 lines. Feature: Default zmanim.
+- **Change:** modified, +14 −4 lines. Feature: Default zmanim.
 - **What:**
-  - `computeShabbatTimes` defaults to `ZmanimOpinion.DEFAULT` and passes the city to `havdalahTime`.
+  - `computeShabbatTimes` has its `opinion` parameter again, defaulting to `ZmanimOpinion.DEFAULT`, and passes the
+    city to `havdalahTime`.
   - `candleLightingTime` under `DEFAULT`: 18 minutes before sea-level sunset, 40 in Jerusalem (`isJerusalemLocation`),
-    in place of the luach's table of cities and its two fallbacks; their three imports are gone.
+    where the base keeps three lines of the luach's branch without its head and its table.
   - `havdalahTime` takes `cityLabel` (default null) and under `DEFAULT` ends at 8.5° (`tzais`), or 40 minutes after
     sea-level sunset in Jerusalem.
 - **Why:** as for `EarthWidgetZmanimView.kt`. 18 minutes, and 40 in Jerusalem, are the common customs Zayit had before
@@ -3091,20 +3099,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Smaller:** already minimal.
 - **Tests:** `LuachDataTest` (a Shemini Atzeret on Shabbat in Jerusalem has its candles and its end).
 
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/zmanim/data/CandleLighting.kt`
-
-- **Change:** deleted. Feature: Default zmanim.
-- **What:** Zayit's `CandleLighting` and the luach's table of candle lighting by city (minutes before sunset, from
-  height or sea level), with its fallbacks for Israel and abroad.
-- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24).
-- **Kind:** removed Zayit file; licence removal.
-- **Merge risk:** none: Zayit's master no longer has it either.
-- **Tests:** none.
-
 #### `SeforimApp/addons/siddur/enabled/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/SiddurScreen.kt`
 
-- **Change:** modified, +1 −1 lines. Feature: Default zmanim.
-- **What:** the siddur of the hour reads the zmanim of `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח.
+- **Change:** modified, +1 −0 lines. Feature: Default zmanim.
+- **What:** the siddur of the hour has its `opinion` again: the zmanim of `ZmanimOpinion.DEFAULT` for everyone but
+  עדות המזרח, where the base, its line that named the luach dropped, reads an opinion it no longer defines.
 - **Why:** the luach's opinion is gone (`EarthWidgetZmanimView.kt`). Pardes never builds this screen (Zayit's private
   siddur), but it must not name the luach either.
 - **Kind:** licence removal.
@@ -3322,8 +3321,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/luach/LuachDataTest.kt`
 
-- **Change:** modified, +3 −3 lines. Feature: Default zmanim.
-- **What:** its three Jerusalem cases read `ZmanimOpinion.DEFAULT` in place of the luach's opinion.
+- **Change:** modified, +3 −0 lines. Feature: Default zmanim.
+- **What:** its three Jerusalem cases have their call again, reading `ZmanimOpinion.DEFAULT`: the base dropped the
+  lines, which named the luach's opinion.
 - **Why:** the opinion is gone (`EarthWidgetZmanimView.kt`).
 - **Kind:** licence removal.
 - **Merge risk:** small; Zayit's master has the same three lines (`3732514`).
@@ -3332,9 +3332,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/zmanim/data/CitiesTest.kt`
 
-- **Change:** modified, +0 −8 lines. Feature: Default zmanim.
-- **What:** `CandleLightingTest` (every city of the luach's table is a known place) is gone, with the table.
-- **Why:** `CandleLighting.kt` is deleted.
+- **Change:** modified, +0 −6 lines. Feature: Default zmanim.
+- **What:** what the base keeps of `CandleLightingTest`, the test of the luach's table (its class, its `@Test` and a
+  line), is gone.
+- **Why:** the table is gone from Zayit's history and from Pardes.
 - **Kind:** licence removal.
 - **Merge risk:** none; Zayit's master removed it too (`3732514`).
 - **Smaller:** already minimal.
@@ -3342,8 +3343,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `earthwidget/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/earthwidget/ZmanimTimesTest.kt`
 
-- **Change:** modified, +3 −3 lines. Feature: Default zmanim.
-- **What:** `luachs really differ` compares `ZmanimOpinion.DEFAULT` (`standard`) with the אור החיים.
+- **Change:** modified, +3 −2 lines. Feature: Default zmanim.
+- **What:** `luachs really differ` compares `ZmanimOpinion.DEFAULT` (`standard`) with the אור החיים, where the base
+  compares a value whose line, naming the luach, it dropped.
 - **Why:** the luach's opinion is gone (`EarthWidgetZmanimView.kt`).
 - **Kind:** licence removal.
 - **Merge risk:** small; Zayit's master has the same test (`3732514`).
@@ -9891,7 +9893,7 @@ and `PopupKeys.kt`.
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (802 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (803 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -9920,7 +9922,7 @@ the description where something needs saying.
 | `.claude/skills/pardes-desktop-run/scripts/onb.sh` | Skill script that drives the install wizard opened by onboarding.sh: `to-disk` (welcome and licence, on to the disk-space step), `pick <path>` (types into the Swing folder chooser), `click x y` at the wizard's own coordinates, `shot <name>` (the display and the wizard alone). | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/onboarding.sh` | Skill script: as start.sh, but with preferences of a first run (no library, the onboarding not done, `INSTALL_DIR` as the folder offered), so the app opens its install wizard; it sets a test address as the feedback service's, so the wizard shows its feedback step. | Pardes's own |
 | `.claude/skills/pardes-desktop-run/scripts/stop.sh` | Skill script that closes the app's main window (or the wizard's, `stop.sh wizard`) and waits until its process has ended, after which Gradle may run again. | Pardes's own |
-| `.claude/skills/pardes-semantic-search/SKILL.md` | Claude Code skill for Pardes's open semantic search: the app side here (features/search/semantic/, its packs), the model's pipeline in the efrul/pardes-semantic repository since 2026-11-05 (export, benchmark, fine-tuning, distillation, Kaggle runs, the vector index), the invariants (one cleaner and tokenizer for queries and corpus, the model id in the index, int8 with reduce_range, pooling in the ONNX graph), the pitfalls solved (among them the trap of a repeated line's vectors and the app's way out of it, the search measured by scope, what the reader waits for measured with the app's view model and the passages that held the search's threads, the tabs as views of the list found, the library's order and its rule, other apps' searches in the feedback), the Android port, an outside question set kept for measuring only, and Klei Kodesh's data; and the zayit-fidelity skill's rules for every change of the app side. *Note:* Says never to use Zayit's private semantic package or its model for Pardes, and to name Kaggle datasets and kernels without their owner. | Pardes's own |
+| `.claude/skills/pardes-semantic-search/SKILL.md` | Claude Code skill for Pardes's open semantic search: the app side here (features/search/semantic/, its packs), the model's pipeline in the efrul/pardes-semantic repository since 2026-11-05 (export, benchmark, fine-tuning, distillation, Kaggle runs, the vector index), the invariants (one cleaner and tokenizer for queries and corpus, the model id in the index, int8 with reduce_range, pooling in the ONNX graph), the pitfalls solved (among them the trap of a repeated line's vectors and the app's way out of it, the search measured by scope, what the reader waits for measured with the app's view model and the passages that held the search's threads, the tabs as views of the list found, the library's order and its rule, other apps' searches in the feedback), the Android port, an outside question set kept for measuring only, Klei Kodesh's data, and saving the working files no repository may hold in a private Kaggle dataset after every step (pardes-semantic's `save_work.py`), where alone the private collection of questions and passages is named, its owner having asked that his datasets not be shown publicly; and the zayit-fidelity skill's rules for every change of the app side. *Note:* Says never to use Zayit's private semantic package or its model for Pardes, and to name Kaggle datasets and kernels without their owner. | Pardes's own |
 | `.claude/skills/zayit-android/SKILL.md` | Claude Code skill for Pardes for Android (androidApp/): the name and authorship rules every Pardes text follows, talking to the user, the site and the CI release, a fresh session to a running emulator, the inner loop, the library on the device, matching desktop Zayit 0.6.12, the architecture, offline Lucene and semantic search, and the pitfalls that cost the most. *Note:* Keeps the name zayit-android from before the app became Pardes (2026-10-15). Since 2026-11-05 it asks for Zayit's Conventional Commits (`feat(android): …`) and a change-map row for every file of androidApp/, as the zayit-fidelity skill does. | Pardes's own |
 | `.claude/skills/zayit-android/evals/evals.json` | Four test prompts for the zayit-android skill, in skill-creator's format (prompt, expected output, expectations): a Jelly Star settings screenshot, the ClassValue search crash, fetching the library and a subset DB, and About and welcome parity that keeps the authorship texts. | Pardes's own |
 | `.claude/skills/zayit-android/references/architecture.md` | zayit-android reference on androidApp's architecture: the separate Gradle build and the SeforimLibrary code it compiles unchanged (the submodule at 4f07145), the runtime flow, a source map, state and navigation, data and storage, and conventions. | Pardes's own |
@@ -10062,12 +10064,13 @@ the description where something needs saying.
 | `docs/LEXICON.md` | Hebrew report (2026-11-03) on the regular search's dictionary: two defects of lexical.db (bases with no forms, the 32 forms cut in id order), Pardes's fix (`PardesLexicon` builds pardes-lexical.db beside it), the measurement, Klei Kodesh's materials tried, and how to run it again; an addition of 2026-11-09 names the defective spellings of version 2 (fusion-compare/SPELLING.md). *Note:* Written in Hebrew; docs/ZAYIT_LEXICAL_REPORT.md is the English report for Zayit. | Pardes's own |
 | `docs/PARDES_PLAN.md` | English plan written 2026-10-20 and updated to 2026-10-29: the merges of Zayit 0.6.7, 0.6.10, 0.6.11 and 0.6.12 (decisions, conflicts, what stays removed), Pardes for Android's parity, Pardes for desktop (branding, data isolation, updater, deep links, versioning, release workflow), the library location, a personal-books placeholder and risks. *Note:* Its title still says "on Zayit 0.6.7". Parts of Phase 3 keep the first design (BuildConfig.BRAND_APP_ID, MSI) that the built branding replaced (Brand.APP_ID, NSIS); its header says the later decisions win. | Pardes's own |
 | `docs/SEARCH_FUSION_RESEARCH.md` | Hebrew research note (2026-11-08) on merging the words' search and the meaning's: what plain RRF implies (a line only the words found, from their 11th place on, ranks below every line only the meaning found), rank against score fusion and their normalizations, calibration (ProbFuse, SSL, score distributions), weights by kind of query, a small learned ranker, and an offline measuring plan, which docs/fusion-compare/ carries out. *Note:* Written in Hebrew. | Pardes's own |
+| `docs/SEARCH_MARKS_PLAN.md` | Hebrew build plan (2026-11-24) for using the marks a user gives search results (feedback mode's three buttons), in three layers: a memory of each user's own marks (the lines marked relevant first and those marked not relevant last, when the same search or a near one comes again), marks acting within one search (the query's vector moved by them, Otzaria's issue 5890), and a file of marks shared between users. It gives each layer's rule as measured in efrul/pardes-semantic (`eval-pool/results-votes.md`), the first layer's code file by file with its tests, the blind judging the second waits for, when the third could start, the work order, who builds and the open questions; nothing of it is built. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to `main` of 2026-11-24. | Pardes's own |
 | `docs/SEARCH_ORDER_ISSUES.md` | Hebrew working document (from 2026-10-28) on the order of the combined search's results: how it was measured (search history, eval-real, eval-100), ten issues (short semantic lines on top, rank-only fusion, "(א)" numbers, the 32 forms, long lines, the switch to all books, commentaries before the source, no noise floor, the same text twice, identical lines in the graph) with fixes measured offline, and what was not measured; issues 1 and 2 are marked done (2026-11-09) with the window, as fusion-compare/IMPLEMENTATION.md measures them, and issue 11 eased in the app (2026-11-10, the walk started again at the words' hits). *Note:* Written in Hebrew. Its first numbers were measured in a separate working repository. | Pardes's own |
 | `docs/SEARCH_OTZARIA_AND_LIBRARIES.md` | Hebrew research (2026-11-08), system by system, on how large libraries search: Otzaria read from its code (per-word options, short lines embedded with their neighbours, long lines in 512-character windows, vectors keyed by their text, an exact scan instead of HNSW, a fusion weight by kind of query), Wikipedia's CirrusSearch, CourtListener, PubMed, Semantic Scholar, TLG, Perseus and STEP Bible, and their licences (Otzaria's app and semantic engine are for personal use only; its lexical engine is MIT). *Note:* Written in Hebrew. | Pardes's own |
 | `docs/SEARCH_PLAN.md` | English plan (2026-11-10) for the search after pull request #28: Pardes for desktop 1.0.9 from its Windows pre-release to the public release, per-word forms in the regular search (measure the spelling and ים↔ין forms in the measurement build, then the owner's decision on SeforimLibrary), the new eval-real grades into pardes-semantic, Android's lexicon and fusion behind desktop's, one re-embedding for short lines and the "(א)" numbers, and the open questions with what was measured and is not to do. | Pardes's own |
 | `docs/SEARCH_SYNTAX_REPORT.md` | English report (measured 2026-11-03) on how the search reads quotes, geresh and gershayim, maqaf and niqqud, prefixes and suffixes, word distance (near = 5, which only ranks) and order, with line counts on the October 2026 library, the recommendations not built, and Klei Kodesh's search syntax for comparison. *Note:* Finds that Hebrew-keyboard gershayim (רש״י) search as רשי, typographic quotes are ignored, and Zayit's strings.xml keeps unused search_level_1..5 strings. | Pardes's own |
 | `docs/SEARCH_WORLD_RESEARCH.md` | Hebrew research (2026-11-08) on how search systems outside Pardes handle each problem SEARCH_ORDER_ISSUES.md measures, with sources and what to try, cheapest first; it notes that the words' search adds each of a word's forms as a term of its own, twice, so scores add up across forms and favour long lines (Lucene's `SynonymQuery` is the known remedy). *Note:* Written in Hebrew. | Pardes's own |
-| `docs/SEMANTIC_PLAN.md` | Hebrew plan (2026-10-28) for shipping the semantic search's model and vector index as packs: how Zayit ships its library, what is ready, publishing packs as `semantic-*` releases from a Kaggle dataset, the code and the in-app install (both done), incremental index updates (open), and open decisions. *Note:* Written in Hebrew. | Pardes's own |
+| `docs/SEMANTIC_PLAN.md` | Hebrew plan (2026-10-28) for shipping the semantic search's model and vector index as packs: how Zayit ships its library, what is ready, publishing packs as `semantic-*` releases from a Kaggle dataset, the code and the in-app install (both done), incremental index updates (open), the reranker of the first results that was tried and taken out on 2026-11-24, and open decisions. *Note:* Written in Hebrew. | Pardes's own |
 | `docs/ZAYIT_CHANGE_MAP.md` | This map (מפת השינויים): every file in which Pardes differs from the Zayit release it is based on, Zayit's files changed in full, the files added in Zayit's modules by feature, Pardes's own trees in rows, the departures from Zayit's style still to fix, Zayit after the base, and why GitHub does not show Pardes as a fork. | Pardes's own |
 | `docs/ZAYIT_LEXICAL_REPORT.md` | English report addressed to Zayit: lexical.db (release 20261012193827) has 4,711 bases with no forms, 2,479 of them spelled like another base's form, which `MagicDictionaryIndex.expansionFor` prefers, and the 32 forms kept are the first by id; the measured effect and a fix in the generator or at runtime. *Note:* Pardes applies the fix at runtime (PardesLexicon, docs/LEXICON.md) without changing SeforimLibrary. | Pardes's own |
 
@@ -10292,7 +10295,7 @@ one test added; `siddur-open/README.md`).
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `semantic-model/NOTICE.md` | The credit of the semantic search's model: Dicta's neodictabert-bilingual-embed under CC BY 4.0, what Pardes changed (fine-tuned and distilled when `pardes-model.json` says derived, converted to ONNX with pooling and L2 in the graph, int8), that the vector index was computed with it, and what the models learn from besides the library's texts: Klei Kodesh's index and Torat Emet's dictionary from run 3 on, and from 2026-11-19 the searches users graded in the app and sent with their consent. A copy of efrul/pardes-semantic's `NOTICE.md`, which travels with every model. Pardes for Android shows it in Settings › רישיונות. | Pardes's own; Dicta's attribution terms |
+| `semantic-model/NOTICE.md` | The credit of the semantic search's model: Dicta's neodictabert-bilingual-embed under CC BY 4.0, what Pardes changed (fine-tuned and distilled when `pardes-model.json` says derived, converted to ONNX with pooling and L2 in the graph, int8), that the vector index was computed with it, and what the models learn from besides the library's texts: Klei Kodesh's index and Torat Emet's dictionary from run 3 on, and from 2026-11-19 the searches users graded in the app and sent with their consent, with, from 2026-11-23, searches they sent without grading, whose results a language model graded, and from 2026-11-24 statements of Mikropedia Talmudit's entries with the passages they cite. A copy of efrul/pardes-semantic's `NOTICE.md`, which travels with every model. Pardes for Android shows it in Settings › רישיונות. | Pardes's own; Dicta's attribution terms |
 | `semantic-model/README.md` | Hebrew note that the model moved on 2026-11-05 to its own repository, efrul/pardes-semantic (its pipeline, tests, results and the models as releases), and what stays here: NOTICE.md and release_notes.py. | Pardes's own |
 | `semantic-model/release_notes.py` | The title and notes of a semantic pack's release, from the pack's manifest: semantic-release.yml publishes a new pack with them and semantic-notes.yml writes them again; they say "the files of the search by meaning", never "a pack". | Pardes's own |
 
