@@ -26,7 +26,9 @@ what is left of `semantic-model/`, their tests) described in `docs/ZAYIT_CHANGE_
 - **Index and model share the id** (`pardes-model.json` `id` = the index's commit `pardes.model`); the app refuses a
   mismatch. The id covers the weights and the cleaner, not the quantization.
 - **int8 with `reduce_range`.** Full-range int8 saturates on x86 without VNNI (Kaggle's CPU: cosine 0.78). The export
-  checks int8 against PyTorch and fails below min 0.97 / mean 0.985.
+  checks int8 against PyTorch and fails below min 0.97 / mean 0.985; before failing it leaves in fp32 the one
+  feed-forward output that drifts most, when that passes (tune14: the third layer's `ffn/w3`, 0.939 → 0.993, 8 MB
+  more), and `pardes-model.json`'s `quantization` names it.
 - **Mean pooling and L2 are in the ONNX graph**; output `sentence_embedding` [batch, dim]. Queries get `"query: "`.
 
 ## Pitfalls already solved
