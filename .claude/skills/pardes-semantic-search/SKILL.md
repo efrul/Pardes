@@ -150,6 +150,31 @@ Kaggle pitfalls already met:
 - transformers warns of an "incorrect regex pattern" in the model's tokenizer: a false alarm here (52k library lines
   and the benchmark's queries tokenize identically to Dicta's `tokenizer.json`, which the app's queries use).
 
+## Saving the working data
+
+A session's container is reclaimed when the session ends (it was also restarted twice in one night, 2026-11-25), and
+the files no repository may hold (Torah-pairs' rows, the library's text, the lines a miner found) took GPU and CPU
+hours to make. Every time a step writes such a file, save it in the account's private Kaggle dataset
+`pardes-semantic-work`, with pardes-semantic's `save_work.py`, before going on:
+
+```bash
+python save_work.py build/train/<pairs>.jsonl build/train/<pairs>-test.jsonl -m "what they are, for which run"
+python save_work.py build/kaggle-output/<kernel>/ranks-*.json --prefix <kernel>- -m "..."   # names that could clash
+python save_work.py --list               # what it holds; its MANIFEST.tsv says where each file came from, and when
+python save_work.py --restore build/work # every file, in a new container
+```
+
+- **What:** new pairs and their kept-out tests, with the `-cands.json` a test is ranked among; what `Mine.kt` found
+  and the candidates a reranker read; the reranker's scores; the files a run learns (`--more`) once they have
+  negatives; the evaluations' ranks and `test_rank.py`'s `.npz`.
+- **Safe already:** each run's own data (the `pardes-semantic-<stage>-data` datasets) and its output (models, ranks)
+  stay on Kaggle as long as no later run takes the kernel's name: give every run its own `--as`. What can be fetched
+  again (the library's releases, Torah-pairs on the Hub with the user's token, Sefaria's dump) needs no copy.
+- **Never:** a user's data (the feedback's inbox, histories and grades: `save_work.py` refuses them, and they can be
+  fetched again from the service), nor the account's name in any file.
+- **How it works:** each save uploads every file of the dataset as its next version (Kaggle keeps the earlier ones),
+  from `build/work-mirror`; a mirror that a new container lacks is downloaded first, file by file.
+
 ## Outside evaluation set: crfh1672/search-queries
 
 [crfh1672/search-queries](https://github.com/crfh1672/search-queries) (as of 2026-11-01; check its branches again)
