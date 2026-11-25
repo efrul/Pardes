@@ -8,7 +8,10 @@ and its desktop app is Zayit's code built as Pardes for desktop. This file descr
 differs from the Zayit release it is based on**: every file of Zayit's that Pardes changes, deletes or renames, and
 every file Pardes adds.
 
-- **Base:** Zayit v0.6.12 (`d7777e2e`, 2026-10-29), merged by `164a91f2` ("Merge Zayit v0.6.12 into Pardes").
+- **Base:** Zayit v0.6.12 (`4bb1b68a`, 2026-10-29), merged by `576cc19e` ("Merge Zayit v0.6.12 into Pardes").
+  Zayit's commits are the ones Zayit's history has now: in November 2026 Zayit's author rewrote it without the
+  lines that named the luach of the Default zmanim (section 1) and without its candle table, and Pardes's history
+  was rewritten by the same rule on 2026-11-25, so Zayit's commits here have Zayit's own shas.
   SeforimLibrary and SeforimAcronymizer are at Zayit's pins (`4f07145`, `dea83b3`), unchanged.
 - **Written** from 2026-11-05 to 2026-11-09 from the whole diff of every file and its Pardes commits. Then
   876 files differed: 779 added, 89 modified, 6 deleted, 2 renamed.
@@ -20,7 +23,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (155 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (154 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -2821,27 +2824,31 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `earthwidget/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/earthwidget/EarthWidgetZmanimView.kt`
 
-- **Change:** modified, +12 −20 lines. Feature: Default zmanim.
+- **Change:** modified, +12 −10 lines. Feature: Default zmanim.
 - **What:**
-  - `ZmanimOpinion`'s first value is `DEFAULT`, "the library's standard GRA and MGA zmanim", in place of the luach's.
-  - `computeZmanimTimes` (default `DEFAULT`) gives for it KosherKotlin's own zmanim: `alosHashachar` (16.1°),
-    `sofZmanShmaMGA` and `sofZmanTfilaMGA` (72 minutes), `minchaGedola`, `tzais` (8.5°) and `tzais72` for Rabbeinu Tam,
-    with sunrise, sunset, the GRA hours, chatzos, mincha ketana and plag as before, in place of the luach's alos and
-    MGA day (90 or 72 במעלות), its mincha gedola and its tzeit; the comment above the `when` no longer says "luachs".
-- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24). The default zmanim are the ones Zayit had before the luach came in (`53039568`, 2026-09-30),
+  - `ZmanimOpinion`'s first value is `DEFAULT`, "the library's standard GRA and MGA zmanim". The base, its lines
+    that named the luach dropped from Zayit's history, has the אור החיים alone and does not compile.
+  - `computeZmanimTimes` has its `opinion` parameter again (default `DEFAULT`), and gives for `DEFAULT`
+    KosherKotlin's own zmanim: `alosHashachar` (16.1°), `sofZmanShmaMGA` and `sofZmanTfilaMGA` (72 minutes),
+    `minchaGedola`, `tzais` (8.5°) and `tzais72` for Rabbeinu Tam, with sunrise, sunset, the GRA hours, chatzos,
+    mincha ketana and plag as before, where the base keeps the rest of the luach's branch without its head (its
+    alos and MGA day, its mincha gedola); the comment above the `when` no longer says "luachs".
+  - `zmanimCalendar` runs both opinions on `NOAACalculator`.
+- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24). The default zmanim are the ones Zayit had before the luach came in (`b5e82d44`, 2026-09-30),
   and the ones Zayit's master has since `3732514`.
 - **Kind:** licence removal.
 - **Merge risk:** small: Zayit's master made the same change (`3732514`, after 0.6.12, under the Zayit Public License):
-  a merge of it meets the same lines, Pardes's written for Pardes (section 5).
+  a merge of it meets the same lines, Pardes's written for Pardes (section 5). The base's broken lines are Zayit's
+  history, not its master: a merge brings the master's.
 - **Smaller:** already minimal.
 - **Tests:** `ZmanimTimesTest` (both opinions in order, and differing).
 - **Notes:** the Android port has the same (`androidApp/…/data/ZmanimEngine.kt`).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/HomeWidgetsState.kt`
 
-- **Change:** modified, +2 −2 lines. Feature: Default zmanim.
-- **What:** `zmanimOpinion` is `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח (who keep the אור החיים), with its
-  comment.
+- **Change:** modified, +2 −0 lines. Feature: Default zmanim.
+- **What:** `zmanimOpinion`, `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח (who keep the אור החיים), with its
+  comment: the base, its line that named the luach dropped, has none.
 - **Why:** as for `EarthWidgetZmanimView.kt`.
 - **Kind:** licence removal.
 - **Merge risk:** small; Zayit's master has the same line (`3732514`).
@@ -2850,11 +2857,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/zmanim/ZmanimWidget.kt`
 
-- **Change:** modified, +14 −15 lines. Feature: Default zmanim.
+- **Change:** modified, +14 −4 lines. Feature: Default zmanim.
 - **What:**
-  - `computeShabbatTimes` defaults to `ZmanimOpinion.DEFAULT` and passes the city to `havdalahTime`.
+  - `computeShabbatTimes` has its `opinion` parameter again, defaulting to `ZmanimOpinion.DEFAULT`, and passes the
+    city to `havdalahTime`.
   - `candleLightingTime` under `DEFAULT`: 18 minutes before sea-level sunset, 40 in Jerusalem (`isJerusalemLocation`),
-    in place of the luach's table of cities and its two fallbacks; their three imports are gone.
+    where the base keeps three lines of the luach's branch without its head and its table.
   - `havdalahTime` takes `cityLabel` (default null) and under `DEFAULT` ends at 8.5° (`tzais`), or 40 minutes after
     sea-level sunset in Jerusalem.
 - **Why:** as for `EarthWidgetZmanimView.kt`. 18 minutes, and 40 in Jerusalem, are the common customs Zayit had before
@@ -2864,20 +2872,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Smaller:** already minimal.
 - **Tests:** `LuachDataTest` (a Shemini Atzeret on Shabbat in Jerusalem has its candles and its end).
 
-#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/zmanim/data/CandleLighting.kt`
-
-- **Change:** deleted. Feature: Default zmanim.
-- **What:** Zayit's `CandleLighting` and the luach's table of candle lighting by city (minutes before sunset, from
-  height or sea level), with its fallbacks for Israel and abroad.
-- **Why:** the owners of the luach that Zayit 0.6.12's opinion for everyone but עדות המזרח followed asked Pardes to remove its name, its method and its candle-lighting table, which were used without their permission, and to move to KosherKotlin 4.0.1 or later; Zayit's author asked the same in efrul/pardes#50 (2026-11-23), having removed them from Zayit and KosherKotlin 4.0.0, whose 3.0.3 to 3.0.5 Maven Central no longer serves (2026-11-24).
-- **Kind:** removed Zayit file; licence removal.
-- **Merge risk:** none: Zayit's master no longer has it either.
-- **Tests:** none.
-
 #### `SeforimApp/addons/siddur/enabled/kotlin/io/github/kdroidfilter/seforimapp/features/siddur/SiddurScreen.kt`
 
-- **Change:** modified, +1 −1 lines. Feature: Default zmanim.
-- **What:** the siddur of the hour reads the zmanim of `ZmanimOpinion.DEFAULT` for everyone but עדות המזרח.
+- **Change:** modified, +1 −0 lines. Feature: Default zmanim.
+- **What:** the siddur of the hour has its `opinion` again: the zmanim of `ZmanimOpinion.DEFAULT` for everyone but
+  עדות המזרח, where the base, its line that named the luach dropped, reads an opinion it no longer defines.
 - **Why:** the luach's opinion is gone (`EarthWidgetZmanimView.kt`). Pardes never builds this screen (Zayit's private
   siddur), but it must not name the luach either.
 - **Kind:** licence removal.
@@ -3095,8 +3094,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/luach/LuachDataTest.kt`
 
-- **Change:** modified, +3 −3 lines. Feature: Default zmanim.
-- **What:** its three Jerusalem cases read `ZmanimOpinion.DEFAULT` in place of the luach's opinion.
+- **Change:** modified, +3 −0 lines. Feature: Default zmanim.
+- **What:** its three Jerusalem cases have their call again, reading `ZmanimOpinion.DEFAULT`: the base dropped the
+  lines, which named the luach's opinion.
 - **Why:** the opinion is gone (`EarthWidgetZmanimView.kt`).
 - **Kind:** licence removal.
 - **Merge risk:** small; Zayit's master has the same three lines (`3732514`).
@@ -3105,9 +3105,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/zmanim/data/CitiesTest.kt`
 
-- **Change:** modified, +0 −8 lines. Feature: Default zmanim.
-- **What:** `CandleLightingTest` (every city of the luach's table is a known place) is gone, with the table.
-- **Why:** `CandleLighting.kt` is deleted.
+- **Change:** modified, +0 −6 lines. Feature: Default zmanim.
+- **What:** what the base keeps of `CandleLightingTest`, the test of the luach's table (its class, its `@Test` and a
+  line), is gone.
+- **Why:** the table is gone from Zayit's history and from Pardes.
 - **Kind:** licence removal.
 - **Merge risk:** none; Zayit's master removed it too (`3732514`).
 - **Smaller:** already minimal.
@@ -3115,8 +3116,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `earthwidget/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/earthwidget/ZmanimTimesTest.kt`
 
-- **Change:** modified, +3 −3 lines. Feature: Default zmanim.
-- **What:** `luachs really differ` compares `ZmanimOpinion.DEFAULT` (`standard`) with the אור החיים.
+- **Change:** modified, +3 −2 lines. Feature: Default zmanim.
+- **What:** `luachs really differ` compares `ZmanimOpinion.DEFAULT` (`standard`) with the אור החיים, where the base
+  compares a value whose line, naming the luach, it dropped.
 - **Why:** the luach's opinion is gone (`EarthWidgetZmanimView.kt`).
 - **Kind:** licence removal.
 - **Merge risk:** small; Zayit's master has the same test (`3732514`).
