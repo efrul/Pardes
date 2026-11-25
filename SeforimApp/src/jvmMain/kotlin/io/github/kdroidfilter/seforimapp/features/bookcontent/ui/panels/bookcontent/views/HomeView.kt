@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
@@ -74,13 +75,11 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
-import io.github.kdroidfilter.seforimapp.core.presentation.components.LocalPopupMarking
 import io.github.kdroidfilter.seforimapp.core.presentation.components.MarkOnHover
 import io.github.kdroidfilter.seforimapp.core.presentation.components.PopupMarking
 import io.github.kdroidfilter.seforimapp.core.presentation.components.StartBelowAnchorPositionProvider
 import io.github.kdroidfilter.seforimapp.core.presentation.components.markOnPointer
 import io.github.kdroidfilter.seforimapp.core.presentation.components.markedRowBackground
-import io.github.kdroidfilter.seforimapp.core.presentation.components.notePointer
 import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberPillTextFieldStyle
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
@@ -620,7 +619,13 @@ internal fun UnifiedSearchBar(
         if (seededQuery == initialText && !restoredBook) return@LaunchedEffect
         seededQuery = initialText
         val field = if (inBook) tocSearchState else referenceSearchState
-        if (field.text.toString() != initialText) field.edit { replace(0, length, initialText) }
+        if (field.text.toString() != initialText) {
+            // Pardes: the search's text put in a book's field names none of its pages: its TOC shows once typed in, not
+            // at the focus, where Enter opened a page (a book checked in a search's tree is the bar's book; the reader's
+            // question on build 76: "למה סימון של ספר אחרי חיפוש מציע לי את דפי הספר לפתיחה")
+            if (inBook) skipNextTocQuery = true
+            field.edit { replace(0, length, initialText) }
+        }
     }
 
     // Back to the bar once a book is picked, to type in its TOC. The selected tab's bar only: the window's other
@@ -1299,6 +1304,7 @@ private val SCOPE_CHIP_MIN_WIDTH = 130.dp
 // Pardes: the width of the list of the chips the bar has no room for, and how soon after it closed on a press outside a
 // click on its count is that same click (the press closed it: the release must not open it again)
 private val SCOPE_LIST_WIDTH = 280.dp
+private val SCOPE_LIST_MAX_HEIGHT = 320.dp
 private const val SCOPE_LIST_RECLICK_MS = 300L
 private const val KEY_DELETE = "Delete"
 
@@ -1392,9 +1398,10 @@ private fun MoreScopeChips(
 
 /**
  * Pardes: the chips the bar has no room for ([items]) in the bar's own rows, as its suggestions ([SuggestionRow]: a
- * category's or a book's icon, its whole path), in a menu's panel as theirs: one marked, by the pointer or the arrows,
- * with its action, "הסרה", which Delete or Backspace does too ([onRemove]); Escape and Enter close it ([onClose], the
- * bar's keys again), as the last taken out does.
+ * category's or a book's icon, its whole path), in a menu's panel as theirs, as tall as theirs at most and scrolled (the
+ * reader's word on build 76 of a list taller than the window: "הגלילה לא טובה כאשר מסומנים הרבה"): one marked, by
+ * the pointer or the arrows, and kept in view, with its action, "הסרה", which Delete or Backspace does too
+ * ([onRemove]); Escape and Enter close it ([onClose], the bar's keys again), as the last taken out does.
  */
 @Composable
 private fun ScopeList(
@@ -1430,25 +1437,31 @@ private fun ScopeList(
         }
         return true
     }
+    val listState = rememberLazyListState()
     LaunchedEffect(focus) { focus.requestFocus() }
-    CompositionLocalProvider(LocalPopupMarking provides marking) {
-        Column(
-            modifier =
-                Modifier
-                    .padding(top = 4.dp)
-                    .width(SCOPE_LIST_WIDTH)
-                    .shadow(menuStyle.metrics.shadowSize, shape)
-                    .clip(shape)
-                    .border(menuStyle.metrics.borderWidth, menuStyle.colors.border, shape)
-                    .background(menuStyle.colors.background)
-                    .padding(menuStyle.metrics.contentPadding)
-                    .notePointer(marking)
-                    .focusRequester(focus)
-                    .focusable()
-                    .onPreviewKeyEvent(::onKey),
+    // The keys' row in view by the least scroll, as the bar's lists keep theirs (the list is gone with its last row)
+    LaunchedEffect(row, items.size) { if (!marking.pointerMoved) listState.revealItem(row) }
+    Column(
+        modifier =
+            Modifier
+                .padding(top = 4.dp)
+                .width(SCOPE_LIST_WIDTH)
+                .shadow(menuStyle.metrics.shadowSize, shape)
+                .clip(shape)
+                .border(menuStyle.metrics.borderWidth, menuStyle.colors.border, shape)
+                .background(menuStyle.colors.background)
+                .heightIn(max = SCOPE_LIST_MAX_HEIGHT)
+                .padding(menuStyle.metrics.contentPadding)
+                .focusRequester(focus)
+                .focusable()
+                .onPreviewKeyEvent(::onKey),
+    ) {
+        LazyColumn(
+            state = listState,
             verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().markOnPointer(marking, listState) { marked = it },
         ) {
-            items.forEachIndexed { index, item ->
+            itemsIndexed(items) { index, item ->
                 SuggestionRow(
                     parts = (item as? ScopeItem.CategoryItem)?.category?.path ?: listOf(item.label),
                     onClick = { marked = index },
@@ -1456,7 +1469,6 @@ private fun ScopeList(
                     highlighted = index == row,
                     detail = (item as? ScopeItem.CategoryItem)?.let { baseBooksDetail(it.category) },
                     actions = listOf(RowAction(KEY_DELETE, removeLabel) { remove(index) }),
-                    onMark = { marked = index },
                 )
             }
         }

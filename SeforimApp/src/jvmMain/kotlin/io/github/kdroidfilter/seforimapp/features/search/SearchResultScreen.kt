@@ -41,6 +41,8 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -503,7 +505,8 @@ private fun SearchResultContentMvi(
                                     catalogOrder = state.catalogOrder,
                                     onCatalogOrderChange = actions.onCatalogOrderChange,
                                     fartherLines = if (totalResults > 0) state.fartherLines else 0,
-                                    modifier = Modifier.padding(end = 12.dp),
+                                    // Pardes: the row's room, the cancel button's kept, where Zayit's spacer had it
+                                    modifier = (if (showProgress) Modifier else Modifier.weight(1f)).padding(end = 12.dp),
                                 )
 
                                 // The progress shows while searching only
@@ -529,8 +532,6 @@ private fun SearchResultContentMvi(
                                             )
                                         }
                                     }
-                                } else {
-                                    Spacer(Modifier.weight(1f))
                                 }
 
                                 // Reserve space for the cancel button to prevent width jumps
@@ -812,16 +813,19 @@ private fun ResultView(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (item.more > 0) {
-                ResultLink(
-                    stringResource(Res.string.search_more_from_book, item.more, hit.bookTitle),
-                    accent,
-                    resultSp(11f),
-                    onClick = onMoreInBook,
-                )
+                // Pardes: a long book's title cut, not the grade buttons after it (the reader's word on build 76)
+                Box(if (feedbackOn) Modifier.weight(1f) else Modifier) {
+                    ResultLink(
+                        stringResource(Res.string.search_more_from_book, item.more, hit.bookTitle),
+                        accent,
+                        resultSp(11f),
+                        onClick = onMoreInBook,
+                    )
+                }
             }
             // Pardes: feedback mode, at the row's end
             if (feedbackOn) {
-                Spacer(Modifier.weight(1f))
+                if (item.more <= 0) Spacer(Modifier.weight(1f))
                 SearchFeedbackButtons(grade, onGrade)
             }
         }
@@ -1139,23 +1143,79 @@ internal fun FilterTabs(
         } else {
             tabs.take(TOP_TABS) + tabs.drop(TOP_TABS).filter { it.first in selected }
         }
+    val allTab = @Composable { CategoryTab(stringResource(Res.string.search_tab_all), selected.isEmpty()) { onSelect(null) } }
+    val tab = @Composable { index: Int ->
+        CategoryTab(shown[index].second, shown[index].first in selected) { onSelect(shown[index].first) }
+    }
+    // Not a tab: a link, in the accent as the other links of the results
+    val moreLink =
+        @Composable {
+            ResultLink(
+                stringResource(if (showAll) Res.string.search_tabs_less else Res.string.search_tabs_more),
+                JewelTheme.globalColors.outlines.focused,
+                13.sp,
+            ) { showAll = !showAll }
+        }
+    if (!showAll) {
+        // Pardes: in one row, those with no room in it behind "עוד" too (the reader's question on build 76, of five tabs
+        // that took two rows of a narrow pane and no "עוד": "לאיפה נעלם ה"עוד" בטאבי בקטגוריה?")
+        TabsInOneRow(shown.size, tabs.size > TOP_TABS, allTab, tab, moreLink, modifier)
+        return
+    }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxWidth(),
     ) {
-        CategoryTab(stringResource(Res.string.search_tab_all), selected.isEmpty()) { onSelect(null) }
-        shown.forEach { (id, title) ->
-            CategoryTab(title, id in selected) { onSelect(id) }
-        }
-        // Not a tab: a link, in the accent as the other links of the results
-        if (tabs.size > TOP_TABS) {
-            ResultLink(
-                stringResource(if (showAll) Res.string.search_tabs_less else Res.string.search_tabs_more),
-                JewelTheme.globalColors.outlines.focused,
-                13.sp,
-            ) { showAll = !showAll }
+        allTab()
+        shown.indices.forEach { tab(it) }
+        moreLink()
+    }
+}
+
+/**
+ * Pardes: "הכל" ([allTab]) and as many of the [count] tabs ([tab], by index) as the row has room for, then [moreLink]
+ * when some had none, or when there are more anyway ([alwaysMore]); in the row's direction, its items centred on it.
+ */
+@Composable
+private fun TabsInOneRow(
+    count: Int,
+    alwaysMore: Boolean,
+    allTab: @Composable () -> Unit,
+    tab: @Composable (Int) -> Unit,
+    moreLink: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SubcomposeLayout(modifier.fillMaxWidth()) { constraints ->
+        val gap = 8.dp.roundToPx()
+        val loose = constraints.copy(minWidth = 0)
+        val all = subcompose("all", allTab).map { it.measure(loose) }
+        val tabs = (0 until count).map { index -> subcompose(index) { tab(index) }.map { it.measure(loose) } }
+        val more = subcompose("more", moreLink).map { it.measure(loose) }
+
+        fun width(placeables: List<Placeable>) = placeables.sumOf { it.width }
+
+        // The width of "הכל" and the first [n] tabs, with "עוד" after them when [withMore]
+        fun widthOf(
+            n: Int,
+            withMore: Boolean,
+        ) = width(all) + tabs.take(n).sumOf { width(it) + gap } + if (withMore) gap + width(more) else 0
+        val fitting =
+            if (!alwaysMore && widthOf(count, false) <= constraints.maxWidth) {
+                count
+            } else {
+                (count downTo 0).firstOrNull { widthOf(it, true) <= constraints.maxWidth } ?: 0
+            }
+        val withMore = alwaysMore || fitting < count
+        val row = listOf(all) + tabs.take(fitting) + if (withMore) listOf(more) else emptyList()
+        val height = row.flatten().maxOfOrNull { it.height } ?: 0
+        layout(constraints.maxWidth, height) {
+            var x = 0
+            row.forEach { item ->
+                item.forEach { it.placeRelative(x, (height - it.height) / 2) }
+                x += width(item) + gap
+            }
         }
     }
 }
@@ -1303,6 +1363,10 @@ private fun SearchStatusLine(
             color = grey,
             fontSize = 13.sp,
             maxLines = 1,
+            // Pardes: a long place cut, not the links after it (the reader's word on build 76: "המיון לפי וסינון מפרשים
+            // נעלם כשאין מקום בשורה")
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
         if (!isLoading && !baseBooksHadNoResults && scope == null) {
             Text("·", color = grey, fontSize = 13.sp)

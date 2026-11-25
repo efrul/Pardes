@@ -1791,7 +1791,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +580 −120 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +593 −121 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes, The Home's big name shown or hidden, A card's book in place of the
   Home, Daily study plans, One marking in every popup, Scrolling alike.
 - **What:**
@@ -1861,6 +1861,17 @@ The entries of this section by kind:
     the bar the keys again; a click elsewhere, or on the count, closes it (`SCOPE_LIST_RECLICK_MS`, the press that
     closed it). `SelectedBookChip`'s name takes the room left (`weight(1f, fill = false)`), cut before its close icon.
     Comments marked "Pardes:", three imports.
+  - Since the reader's word on build 76 ("הגלילה לא טובה כאשר מסומנים הרבה", of a list of the chips taller than the
+    window, from its top and cut at its bottom): `ScopeList` is as tall as the bar's suggestions at most
+    (`SCOPE_LIST_MAX_HEIGHT`), its rows in a `LazyColumn` that the pointer marks (`markOnPointer`) and that brings the
+    keys' row into view (`revealItem`), as the bar's lists do; the marking's local, its pointer note and an import are
+    gone, `itemsIndexed` imported.
+  - Since the reader's question on build 76 ("למה סימון של ספר אחרי חיפוש מציע לי את דפי הספר לפתיחה"): a book checked
+    alone in a search's tree is the bar's book, as Zayit makes one book alone, and the results page's query is put in
+    its field (`UnifiedSearchBar`'s seeding, for a restored tab's book too); that text no longer goes to the TOC's
+    query (`skipNextTocQuery`), so the book's entries show once typed in, not at the focus the bar takes after a
+    check, where Enter opened the first. With `SearchHomeViewModel.onPickBook`'s, the field's panel then holds the
+    search in the book alone ("חיפוש בתוך …"), which Enter runs.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -1885,8 +1896,13 @@ The entries of this section by kind:
   74, on 2026-11-25: the results page's bar held one chip and "+3"; a click on it listed משנה › אחרונים, משנה › מפרשים
   and תלמוד in the bar's rows, the first marked with "הסרה Delete"; the arrow down and Delete took משנה › מפרשים out
   ("+2", the mark on תלמוד), Escape gave the bar the keys, and a second click on the count closed the list it opened.
+  After build 76, on 2026-11-25: twelve top categories checked in the tree, a click on "+12" listed them in a panel of
+  nine rows under the bar, and the arrow down ten times brought ספרי מוסר into view at its bottom; מלכים א checked
+  alone by its checkbox put it in the bar, whose panel held "חיפוש בתוך מלכים א: אריה" alone, with no chapter.
 - **Notes:** Zayit's search UI on purpose has no category scope (`SearchScope.Category` is "read back only" there,
-  with category tabs over the results): this file brings back what Zayit chose to drop.
+  with category tabs over the results): this file brings back what Zayit chose to drop. The seeding's branch takes
+  `UnifiedSearchBar`'s cyclomatic complexity from 38 to 39 and its length from 155 lines to 158 (`detekt.yml` allows
+  15 and 60; it was past both already).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/PaneHeader.kt`
 
@@ -2230,7 +2246,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchHomeViewModel.kt`
 
-- **Change:** modified, +280 −15 lines. Feature: Search in categories, Book and author titles search, Desktop link.
+- **Change:** modified, +283 −16 lines. Feature: Search in categories, Book and author titles search, Desktop link.
 - **What:**
   - `SearchHomeUiState` gains `categorySuggestions`, `selectedScopeCategory` and `scopeItems` (the books and categories
     picked, in order).
@@ -2260,6 +2276,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     marked "Pardes:", as `applyScopeItems` does: Zayit's bar clears its field as it picks the author without telling
     the view model (`skipNextReferenceQuery`), so the books were filtered by the name typed, and an author found by an
     alias listed only the books it names (חפץ חיים: 4 of his 19). A fix of Zayit's code, which Zayit can take as it is.
+  - Since the reader's question on build 76 ("למה סימון של ספר אחרי חיפוש מציע לי את דפי הספר לפתיחה") `onPickBook`
+    with `showSuggestions` off (a book the bar was put in: a results tab's, a book checked in a search's tree) leaves
+    `tocSuggestions` empty when the book's TOC is loaded: its entries come once the field is typed in (`HomeView.kt`),
+    where Enter opened the first of them, the search's text being in the field.
 - **Why:** search in a whole category (`54180126`), in several books and categories together (`574f3d55`), in a
   category's base books (`37d4fe60`), books and authors found by name (`67fe471e`), a new tab's bar empty as in Zayit
   (`03c84c1f`), the commentaries on a book by their time, which the user asked to type on 2026-11-09. A desktop's
@@ -2272,7 +2292,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Smaller:** the category and scope state could be a Pardes helper class the ViewModel delegates to; the suggestion
   pipeline's edits stay.
 - **Tests:** `CategorySuggestionsTest`, `ScopeItemsTest`, `CategoryScopeSearchTest`, `CategorySuggestionsE2ETest`,
-  `AuthorBooksTest`, `CommentaryGroupsTest`, `DesktopLinkPasteTest`, `AuthorPickTest` (it fails on Zayit's code).
+  `AuthorBooksTest`, `CommentaryGroupsTest`, `DesktopLinkPasteTest`, `AuthorPickTest` (it fails on Zayit's code). The
+  book checked alone, tried in the app on 2026-11-25 (`HomeView.kt`).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
@@ -2359,7 +2380,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +150 −36 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
+- **Change:** modified, +232 −54 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -2396,6 +2417,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
     with defaults: the bar takes the keys when the view model asks (`barFocusRequests`, a moment later, as after a tab
     picked, its chips following), a tab picked as a check of the tree by the pointer; the tabs' own handler is
     `onShowOnlyCategory` alone; two imports.
+  - Since the reader's word on build 76 ("המיון לפי וסינון מפרשים נעלם כשאין מקום בשורה גם הסימון של הדירוגים נעלם",
+    and "לאיפה נעלם ה"עוד" בטאבי בקטגוריה?"), in a narrow pane: the status line's text gives way (`weight(1f, fill =
+    false)`, cut with an ellipsis), so a long place no longer pushes its links out ("חיפוש בלי המפרשים", "מיון לפי סדר
+    הספרייה"), the line taking the header's room when no progress shows (`Modifier.weight(1f)`, Zayit's spacer gone);
+    a result's "עוד N תוצאות מ…" takes the room the grade buttons leave (a `Box` weighted in feedback mode), its long
+    book cut, not the buttons; and `FilterTabs` lays "הכל" and its tabs in one row (`TabsInOneRow`, a
+    `SubcomposeLayout`), those with no room behind "עוד" too, which shows them all as before ("פחות" back), two
+    imports.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2410,8 +2439,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Smaller:** already near minimal.
 - **Tests:** `SearchFeedbackButtonsUiTest`, `PreviewHighlightsUiTest`, `SearchMarksTest`, `SearchModesTest`; the tabs,
   the link to the library's order and the modes were tried in the app (ברכות השחר exact: one result, its phrase alone
-  marked in the passage; general, 101).
-- **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
+  marked in the passage; general, 101). After build 76, on 2026-11-25, in a window 1,060 wide: the status line cut its
+  place before its two links, "עוד 12 תוצאות מקרבן העדה על תלמ…" was cut before the three grade buttons, and "אריה"
+  listed הכל, מדרש, תלמוד, תנ"ך, הלכה and "עוד" in one row, the tree open beside it (תוספתא behind "עוד", which listed
+  the seven).
+- **Notes:** comments here are marked "Pardes:", which Zayit's code does not do. The header's line takes
+  `SearchResultContentMvi`'s cyclomatic complexity from 65 to 66, and `TabsInOneRow` the file's functions from 24 to
+  25 (`detekt.yml` allows 15 for both; they were past it already).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorNames.kt`
 
