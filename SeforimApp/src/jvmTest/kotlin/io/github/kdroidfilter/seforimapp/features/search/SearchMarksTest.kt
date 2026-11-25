@@ -135,6 +135,23 @@ class SearchMarksTest {
             .Book(id = id, categoryId = 0, sourceId = 0, title = "ספר $id")
 
     @Test
+    fun `the tree searched as the book tree is shows the books found with their categories`() {
+        val tree = libraryTree(roots, emptyList())
+        val found =
+            io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookFilterResult(
+                books = setOf(shapeBook(111)),
+                categoryIds = setOf(1L, 11L),
+                matchIds = listOf(111L),
+            )
+        val narrowed = tree.narrowedTo(found)
+        assertEquals(listOf(1L), narrowed.map { it.category.id }, "the top category of the book found alone")
+        val torah = narrowed.single().children.single()
+        assertEquals(11L, torah.category.id)
+        assertEquals(listOf(111L), torah.books.map { it.book.id }, "its book found, not the other")
+        assertTrue(torah.children.isEmpty() && narrowed.single().books.isEmpty(), "nothing found under the others")
+    }
+
+    @Test
     fun `the bar follows the marks of a search in the library, in categories or in several books`() {
         assertTrue(SearchScope.Global.barFollowsMarks())
         assertTrue(SearchScope.Category(1).barFollowsMarks())

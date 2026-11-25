@@ -65,13 +65,30 @@ private data class TreeItem(
     val keyRow: TreeKeyRow get() = TreeKeyRow(id, TreeNode(level, folder, open), check, click)
 }
 
-// Pardes: whether a row of a search's tree is shown as selected: the keys' row while the tree has the keys ([focusedId]),
-// else the rows checked (request 97 of stage 3)
+// Pardes: whether a row of a search's tree is shown as selected: the keys' row while the tree has the keys ([keysRow]),
+// else the book the pane's search marks ([activeBookId]), else the rows checked (request 97 of stage 3)
 private fun shownSelected(
-    focusedId: String?,
+    keysRow: Any?,
+    activeBookId: Long?,
     id: String,
     checked: Boolean,
-): Boolean = if (focusedId != null) focusedId == id else checked
+): Boolean {
+    val shown = keysRow as? String ?: activeBookId?.let { "book_$it" }
+    return if (shown != null) shown == id else checked
+}
+
+// Pardes: the book the pane's search marks ([activeBookId]) brought into view among [items], as the book tree's
+@Composable
+private fun RevealActiveBook(
+    listState: LazyListState,
+    items: List<TreeItem>,
+    activeBookId: Long?,
+) {
+    LaunchedEffect(activeBookId, items) {
+        val index = items.indexOfFirst { it.id == "book_$activeBookId" }
+        if (index >= 0) listState.revealItem(index)
+    }
+}
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -236,6 +253,8 @@ fun SearchResultCategoryTreeView(
     // Pardes: a checkbox turned by the pointer, after its change: the search's bar then takes the keys, as after a tab
     // picked; the keys' Space leaves them in the tree (request 97 of stage 3)
     onPointerCheck: () -> Unit = {},
+    // Pardes: the book the pane's search marks, shown so and brought into view, as the book tree's (CategoryTreePanel)
+    activeBookId: Long? = null,
 ) {
     // Restore/track scroll position using the same keys as the classic tree
     val listState: LazyListState =
@@ -248,12 +267,11 @@ fun SearchResultCategoryTreeView(
     // Pardes: the book tree's keys here too, their row shown as selected while the tree has the focus, and Space for
     // the row's checkbox (request 97 of stage 3: "הפוקוס לא עובד בעץ הספרים בחיפוש כמו תמיד")
     val keys = rememberTreeKeys(null)
-    val focusedId = keys.shown as? String
 
     // Flatten the search tree with current expansion state
     val expanded = expandedCategoryIds
     val items =
-        remember(searchTree, expanded, selectedCategoryIds, selectedBookIds, focusedId) {
+        remember(searchTree, expanded, selectedCategoryIds, selectedBookIds, keys.shown, activeBookId) {
             buildList {
                 // Pardes: a book's checkbox toggle, Zayit's, named for Space on the keys' row to turn it too
                 fun toggleBook(
@@ -281,7 +299,7 @@ fun SearchResultCategoryTreeView(
                                     category = node.category,
                                     isExpanded = expanded.contains(node.category.id),
                                     // In search mode, highlight remains aligned with checkbox selection
-                                    isSelected = shownSelected(focusedId, "category_${node.category.id}", isThisSelected),
+                                    isSelected = shownSelected(keys.shown, activeBookId, "category_${node.category.id}", isThisSelected),
                                     onClick = { onCategoryRowClick(node.category) },
                                     count = node.count,
                                     // Pardes: the whole library is listed, a count only where the search found
@@ -316,7 +334,7 @@ fun SearchResultCategoryTreeView(
                                         BookItem(
                                             book = sb.book,
                                             // Align highlight with effective checkbox (book OR cascaded category)
-                                            isSelected = shownSelected(focusedId, "book_${sb.book.id}", isChecked),
+                                            isSelected = shownSelected(keys.shown, activeBookId, "book_${sb.book.id}", isChecked),
                                             onClick = {
                                                 // Do not toggle selection when clicking the row in search mode
                                                 // Intentionally no-op to avoid checking the checkbox
@@ -349,6 +367,7 @@ fun SearchResultCategoryTreeView(
             hasRestored = true
         }
     }
+    RevealActiveBook(listState, items, activeBookId)
 
     // 2) Persist scroll only after restoration to avoid thrashing
     LaunchedEffect(listState, hasRestored) {

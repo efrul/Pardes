@@ -25,8 +25,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.WindowPlacement
@@ -155,6 +157,8 @@ fun NucleusApplicationScope.MainAppWindow(
             }
         }
 
+    // Pardes: the strip's direction, for the tabs' list of Ctrl+Tab
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     JewelDecoratedWindow(
         onCloseRequest = {
             if (desktopMgr.windows.value.size <= 1) {
@@ -170,9 +174,11 @@ fun NucleusApplicationScope.MainAppWindow(
         state = windowState,
         minimumSize = DpSize(600.dp, 300.dp),
         onKeyEvent = { keyEvent ->
-            // Pardes: the tabs' list of Ctrl+Tab, here too for when nothing in the window has the keys (request 95)
-            openWindow.tabSwitcherKey(keyEvent)
-            if (keyEvent.type == KeyEventType.KeyDown) {
+            // Pardes: the tabs' list of Ctrl+Tab, here too for when nothing in the window has the keys (request 95), and
+            // Ctrl+Tab its own: the tab marked selected when Ctrl is let go
+            if (openWindow.tabSwitcherKey(keyEvent, rtl)) {
+                true
+            } else if (keyEvent.type == KeyEventType.KeyDown) {
                 // Read fresh state to avoid stale captures in cached lambda
                 val currentState = tabsVm.state.value
                 val currentTabs = currentState.tabs

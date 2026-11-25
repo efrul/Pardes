@@ -95,8 +95,9 @@ internal fun rememberTabKeys(tabsViewModel: TabsViewModel): (KeyEvent) -> Boolea
     val openWindow = LocalOpenWindow.current
     return remember(tabsViewModel, rtl, openWindow) {
         keys@{ event ->
-            // The tabs are listed while Ctrl stays down after Ctrl+Tab (request 95)
-            openWindow.tabSwitcherKey(event)
+            // The tabs are listed while Ctrl stays down after Ctrl+Tab, the one marked selected when it is let go
+            // (request 95)
+            if (openWindow.tabSwitcherKey(event, rtl)) return@keys true
             if (openWindow.searchAnywhereKey(event)) return@keys true
             val ctrl = event.isCtrlPressed || event.isMetaPressed
             val state = tabsViewModel.state.value

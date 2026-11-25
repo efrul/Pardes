@@ -88,6 +88,9 @@ private const val LAZY_PAGE_SIZE = 25
 // No book has it: a filter on it finds nothing
 private const val NO_BOOK_ID = -1L
 
+// Pardes: the time the visible results take to follow a filtered search done, before its overlay goes
+private const val FILTER_SETTLE_MS = 150L
+
 @Stable
 data class SearchUiState(
     val query: String = "",
@@ -605,15 +608,26 @@ class SearchResultViewModel(
                 val initial = Pair(visibleResultsFlow.value.size, System.identityHashCode(visibleResultsFlow.value))
                 flow {
                     emit(true)
-                    visibleResultsFlow
-                        .map { Pair(it.size, System.identityHashCode(it)) }
-                        .distinctUntilChanged()
-                        .filter { it != initial }
-                        .first()
+                    val changed =
+                        visibleResultsFlow
+                            .map { Pair(it.size, System.identityHashCode(it)) }
+                            .distinctUntilChanged()
+                            .filter { it != initial }
+                    // Pardes: or until the last filtered search started is done, its results as they were
+                    val done = _filterDone.filter { it >= filterRuns }.onEach { delay(FILTER_SETTLE_MS) }
+                    merge(changed, done).first()
                     emit(false)
                 }
             }.distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    // Pardes: the filtered searches started ([executeFilteredSearch]) and the last one done, not cut short by the next.
+    // A change of the marks that leaves the visible results as they were (a category checked that the search found
+    // nothing in, the whole library being in the tree since request 97 of stage 3) kept the overlay on for good, waiting
+    // for a change that never came (the reader's word: "למה זה מראה אין סופי?"). A change with no filtered search of its
+    // own (the book of the contents pane, set as a book is checked) ends it once the visible results have followed
+    private var filterRuns = 0L
+    private val _filterDone = MutableStateFlow(0L)
 
     val tocCountsFlow: StateFlow<Map<Long, Int>> = _tocCounts.asStateFlow()
 
@@ -2166,7 +2180,12 @@ class SearchResultViewModel(
      */
     private fun executeFilteredSearch() {
         val q = _uiState.value.query.trim()
-        if (q.isBlank()) return
+        // Pardes: each run counted, its end told to the overlay (isFilteringFlow)
+        val run = ++filterRuns
+        if (q.isBlank()) {
+            _filterDone.value = run
+            return
+        }
 
         currentJob?.cancel()
         currentJob =
@@ -2296,6 +2315,8 @@ class SearchResultViewModel(
                     refineSnippets(session, firstPage.hits)
                 } finally {
                     _uiState.value = _uiState.value.copy(isLoading = false)
+                    // Pardes: done, or given up on an error; not when the next run cut it short
+                    if (isActive) _filterDone.value = run
                 }
             }
     }

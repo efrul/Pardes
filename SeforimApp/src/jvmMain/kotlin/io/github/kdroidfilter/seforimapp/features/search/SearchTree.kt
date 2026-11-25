@@ -9,6 +9,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookFilterResult
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.CatalogCategory
@@ -244,6 +245,23 @@ internal fun libraryTree(
             books = category.books.map { SearchResultViewModel.SearchTreeBook(it.toBook(), inBook[it.id] ?: 0) },
         )
     return roots.map(::node)
+}
+
+/**
+ * [this] tree of books narrowed to what the book tree's search found ([found]: its categories and its books), for a
+ * search's tree searched as the book tree is: the categories and books found, with their counts and checks.
+ */
+internal fun List<SearchResultViewModel.SearchTreeCategory>.narrowedTo(
+    found: BookFilterResult,
+): List<SearchResultViewModel.SearchTreeCategory> {
+    val books = found.books.mapTo(HashSet()) { it.id }
+
+    fun narrow(node: SearchResultViewModel.SearchTreeCategory): SearchResultViewModel.SearchTreeCategory? =
+        node.takeIf { it.category.id in found.categoryIds }?.copy(
+            children = node.children.mapNotNull(::narrow),
+            books = node.books.filter { it.book.id in books },
+        )
+    return mapNotNull(::narrow)
 }
 
 /**

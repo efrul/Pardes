@@ -28,8 +28,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -41,11 +43,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import io.github.kdroidfilter.seforim.tabs.TabsEvents
+import io.github.kdroidfilter.seforimapp.core.presentation.window.TabKeyAction
+import io.github.kdroidfilter.seforimapp.core.presentation.window.tabKeyAction
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.TabContentScope
 import org.jetbrains.jewel.ui.component.TabData
@@ -55,31 +59,54 @@ import java.util.WeakHashMap
 import kotlin.time.Duration.Companion.milliseconds
 
 // Pardes (request 95 of docs/DESKTOP_STAGE3_PLAN.md: "בקונטרול טאב כאשר הקונטרול נשאר לחוץ יוצגו הלשוניות כמו בלחיצה
-// על ה"עוד..."): Ctrl+Tab goes to the next tab as it did, and while Ctrl stays down the window's tabs are listed under
-// the strip as the hidden tabs' menu lists its own, the selected one marked: each Tab goes on to the next, and the
-// list goes when Ctrl is let go. The list takes no focus, so the window's own keys go on stepping through the tabs.
+// על ה"עוד..."): while Ctrl stays down after Ctrl+Tab, the window's tabs are listed under the strip
+// as the hidden tabs' menu lists its own. The list takes no focus. Since the reader's question on build 75 ("בקונטרול
+// טאב - זה מחליף מיד עוד לפני עזית בקונטרול. מה מקובל?"), as a list shown while a key is held is read elsewhere
+// (IntelliJ's Switcher, VS Code's, Windows' Alt+Tab): each Tab marks the next tab in it, the tab marked is selected
+// when Ctrl is let go, and Escape lets the list go with no tab changed. Ctrl+Tab went to the next tab at once, as a
+// browser's does.
 
-private val shownByWindow = WeakHashMap<OpenWindow, MutableStateFlow<Boolean>>()
+private val markByWindow = WeakHashMap<OpenWindow, MutableStateFlow<Int?>>()
 
-/** Whether this window lists its tabs, Ctrl held down after Ctrl+Tab: kept beside the window, as the search from anywhere's. */
-internal val OpenWindow.tabSwitcherShown: MutableStateFlow<Boolean>
-    get() = synchronized(shownByWindow) { shownByWindow.getOrPut(this) { MutableStateFlow(false) } }
+/** The tab this window's list marks, Ctrl held down after Ctrl+Tab; null with no list. Kept beside the window. */
+internal val OpenWindow.tabSwitcherMark: MutableStateFlow<Int?>
+    get() = synchronized(markByWindow) { markByWindow.getOrPut(this) { MutableStateFlow(null) } }
 
 /**
- * Whether the tabs are listed after a key, [shown] before it: while Ctrl or Cmd is [held], from a press of Tab on
- * ([tabPressed]). A key with neither held hides them: the Ctrl let go, or whatever comes after one that was missed.
+ * The tab marked after a key, [mark] before it (null: no list): while Ctrl or Cmd is [held], the one a press of Tab
+ * marks ([next]), else the one marked still; with neither held, none: the Ctrl let go, or whatever comes after one that
+ * was missed.
  */
-internal fun tabSwitcherShown(
-    shown: Boolean,
+internal fun tabSwitcherMark(
+    mark: Int?,
     held: Boolean,
-    tabPressed: Boolean,
-): Boolean = held && (tabPressed || shown)
+    next: Int?,
+): Int? = if (held) next ?: mark else null
 
-/** A key [event] of this window, for its tabs' list; it is not taken. */
-internal fun OpenWindow.tabSwitcherKey(event: KeyEvent) {
+/**
+ * A key [event] of this window, for its tabs' list, the strip read right to left when [rtl]: Ctrl+Tab marks the next
+ * tab (Shift: the one before), from the one marked or the selected one, and is taken; the Ctrl let go selects the tab
+ * marked; Escape lets the list go, taken too.
+ */
+internal fun OpenWindow.tabSwitcherKey(
+    event: KeyEvent,
+    rtl: Boolean,
+): Boolean {
     val held = event.isCtrlPressed || event.isMetaPressed
-    val tabPressed = event.type == KeyEventType.KeyDown && event.key == Key.Tab
-    tabSwitcherShown.update { tabSwitcherShown(it, held, tabPressed) }
+    val down = event.type == KeyEventType.KeyDown
+    val before = tabSwitcherMark.value
+    if (before != null && down && event.key == Key.Escape) {
+        tabSwitcherMark.value = null
+        return true
+    }
+    val state = tabsViewModel.state.value
+    val tab = down && held && !event.isAltPressed && event.key == Key.Tab
+    val from = before ?: state.selectedTabIndex
+    val next = if (tab) (tabKeyAction(Key.Tab, event.isShiftPressed, from, state.tabs.size, rtl) as? TabKeyAction.Select)?.index else null
+    val after = tabSwitcherMark(before, held, next)
+    tabSwitcherMark.value = after
+    if (before != null && after == null && before in state.tabs.indices) tabsViewModel.onEvent(TabsEvents.OnSelect(before))
+    return tab
 }
 
 /** A row of the list: a tab's key, and the tab as the strip draws it. */
@@ -95,15 +122,25 @@ private val ListShape = RoundedCornerShape(6.dp)
 
 /**
  * This window's tabs ([rows], in the order they are read) listed under the strip while Ctrl stays down after Ctrl+Tab,
- * the selected one marked and kept in view; a click on a row selects its tab.
+ * the one marked kept in view; a click on a row selects its tab.
  */
 @Composable
 internal fun TabSwitcher(rows: List<TabSwitcherRow>) {
     val openWindow = LocalOpenWindow.current
-    val held by openWindow.tabSwitcherShown.collectAsState()
-    // A window that lost the keys never hears the Ctrl let go
+    val mark by openWindow.tabSwitcherMark.collectAsState()
+    val held = mark != null
+    // The tab marked, by its key: the rows are read in the strip's direction, the tabs' places are the window's own
+    val tabs by openWindow.tabsViewModel.state.collectAsState()
+    val markedKey =
+        mark?.let {
+            tabs.tabs
+                .getOrNull(it)
+                ?.destination
+                ?.tabId
+        }
+    // A window that lost the keys never hears the Ctrl let go: no tab is selected then
     val focused = LocalWindowInfo.current.isWindowFocused
-    LaunchedEffect(focused) { if (!focused) openWindow.tabSwitcherShown.value = false }
+    LaunchedEffect(focused) { if (!focused) openWindow.tabSwitcherMark.value = null }
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(held) {
         if (held) delay(SHOW_AFTER)
@@ -121,15 +158,19 @@ internal fun TabSwitcher(rows: List<TabSwitcherRow>) {
                 .heightIn(max = ListMaxHeight)
                 .verticalScroll(scroll),
         ) {
-            rows.forEach { row -> TabSwitcherItem(row) }
+            rows.forEach { row -> TabSwitcherItem(row, row.key == markedKey) { openWindow.tabSwitcherMark.value = null } }
         }
     }
 }
 
+// A row, [selected] when marked; a click selects its tab, the list let go first ([onPick]), Ctrl let go after it
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TabSwitcherItem(row: TabSwitcherRow) {
-    val selected = row.data.selected
+private fun TabSwitcherItem(
+    row: TabSwitcherRow,
+    selected: Boolean,
+    onPick: () -> Unit,
+) {
     val inView = remember { BringIntoViewRequester() }
     LaunchedEffect(selected) { if (selected) inView.bringIntoView() }
     val accent = JewelTheme.globalColors.outlines.focused
@@ -138,8 +179,10 @@ private fun TabSwitcherItem(row: TabSwitcherRow) {
             .fillMaxWidth()
             .bringIntoViewRequester(inView)
             .background(if (selected) accent.copy(alpha = 0.20f) else Color.Transparent, RoundedCornerShape(4.dp))
-            .clickable(onClick = row.data.onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .clickable {
+                onPick()
+                row.data.onClick()
+            }.padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         // Drawn as the current tab is, at full strength, as the hidden tabs' menu draws its rows
         row.data.content(SwitcherTabScope, TabState.of(selected = true))
