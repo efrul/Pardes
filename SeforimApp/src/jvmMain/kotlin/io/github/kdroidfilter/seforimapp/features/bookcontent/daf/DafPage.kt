@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -349,6 +350,7 @@ internal fun DafAmudText(
     ink: Color,
     modifier: Modifier = Modifier,
     highlight: DafHighlight = DafHighlight.NONE,
+    stripe: DafHighlight = DafHighlight.NONE,
     range: DafRange? = null,
     selectionColor: Color = Color.Transparent,
     onRange: (DafRange?) -> Unit = {},
@@ -371,6 +373,7 @@ internal fun DafAmudText(
     val unsureInk = if (markUnsure) ink.copy(alpha = ink.alpha * UNSURE_INK) else null
     // Each run's text as laid out, and where it is (the page's pixels): what the pointer is on
     val results = remember(layout, k) { arrayOfNulls<TextLayoutResult>(layout.runs.size) }
+    val edges = remember(layout) { stripeEdges(layout.runs) }
 
     fun spare(run: TextRun) = run.size * RUN_SPARE * k
 
@@ -495,6 +498,7 @@ internal fun DafAmudText(
                         }
                     }
                 val marks = remember(run, highlight) { marksOf(run, highlight) }
+                val stripes = remember(run, stripe) { stripesOf(run, stripe) }
                 val selected =
                     remember(run, range, selectionColor) {
                         range?.let { r -> marksOf(run) { word -> selectionColor.takeIf { word in r } } }.orEmpty()
@@ -517,6 +521,7 @@ internal fun DafAmudText(
                             .pointerHoverIcon(PointerIcon.Text)
                             .drawBehind {
                                 textLayout?.let {
+                                    drawStripes(it, stripes, (edges[i] - run.left - run.width) * k)
                                     drawMarks(it, marks, run.pitch * k)
                                     drawMarks(it, selected, run.pitch * k, rounded = false)
                                     drawUnderlines(it, underlines, run.pitch * k)
@@ -574,6 +579,97 @@ private fun marksOf(
         }
     }
     return out
+}
+
+/** Lines of a run one below the other with a bar at their side: a character of the first of them and of the last, and the bar's color. */
+internal class RunStripe(
+    val first: Int,
+    val last: Int,
+    val color: Color,
+)
+
+/**
+ * A run's bars ([stripe]: the color of a word's, request 102 of docs/DESKTOP_STAGE3_PLAN.md): a line any word of which
+ * has one has a bar, the strongest of its words'; lines one below the other with the same bar share it.
+ */
+internal fun stripesOf(
+    run: TextRun,
+    stripe: DafHighlight,
+): List<RunStripe> {
+    if (stripe === DafHighlight.NONE) return emptyList()
+    val out = ArrayList<RunStripe>()
+    var open: RunStripe? = null
+    run.lines.forEachIndexed { slot, line ->
+        val color =
+            line
+                ?.words
+                ?.indices
+                ?.mapNotNull { stripe.colorOf(DafWord(line.index, line.firstWord + it)) }
+                ?.maxByOrNull { it.alpha }
+        val before = open
+        if (color == null) {
+            before?.let(out::add)
+            open = null
+            return@forEachIndexed
+        }
+        val at = run.rangeOf(slot, 0).first
+        if (before != null && before.color == color) {
+            open = RunStripe(before.first, at, color)
+        } else {
+            before?.let(out::add)
+            open = RunStripe(at, at, color)
+        }
+    }
+    open?.let(out::add)
+    return out
+}
+
+/** How near the middle of the lines above it a line set in their middle stands (pixels), and how near under them (to its pitch). */
+private const val MIDDLE_SLACK = 3f
+private const val UNDER_SLACK = 0.75f
+
+/**
+ * Where each run's bar stands, the pixels of its right edge as laid out: its own; a line alone set in the middle under
+ * the lines of its column (a paragraph's short last line, a run of its own) at theirs, so that the paragraph's bar goes
+ * on straight.
+ */
+internal fun stripeEdges(runs: List<TextRun>): FloatArray =
+    FloatArray(runs.size) { i ->
+        val run = runs[i]
+        val right = run.left + run.width
+        val above =
+            runs.firstOrNull { other ->
+                run.lines.size == 1 &&
+                    other !== run &&
+                    other.column == run.column &&
+                    abs(other.top + other.lines.size * other.pitch - run.top) <= run.pitch * UNDER_SLACK &&
+                    other.left <= run.left + MIDDLE_SLACK &&
+                    other.left + other.width >= right - MIDDLE_SLACK &&
+                    abs(other.left + other.width / 2f - (run.left + run.width / 2f)) <= MIDDLE_SLACK
+            }
+        above?.let { it.left + it.width } ?: right
+    }
+
+/** A bar's width, and how far it stands from its lines' right edge, where they begin. */
+private val StripeWidth = 3.dp
+private val StripeGap = 4.dp
+
+/**
+ * A bar at the side of each stretch of [stripes]' lines, right of the run's right edge, where its lines begin ([shift]
+ * pixels from it: [stripeEdges]), as tall as they are: as the text view's bar beside its selected line. One straight
+ * bar, a line set in from the edge having it there too.
+ */
+private fun DrawScope.drawStripes(
+    layout: TextLayoutResult,
+    stripes: List<RunStripe>,
+    shift: Float,
+) {
+    for (stripe in stripes) {
+        if (stripe.last >= layout.layoutInput.text.length) continue
+        val top = layout.getLineTop(layout.getLineForOffset(stripe.first))
+        val bottom = layout.getLineBottom(layout.getLineForOffset(stripe.last))
+        drawRect(stripe.color, Offset(size.width + shift + StripeGap.toPx(), top), Size(StripeWidth.toPx(), bottom - top))
+    }
 }
 
 /** A dotted line under each run of [marks]' words (the words a note is on), as the text draws a note's. */

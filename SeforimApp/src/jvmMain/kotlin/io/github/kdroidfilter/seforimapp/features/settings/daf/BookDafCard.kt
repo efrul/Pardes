@@ -49,6 +49,9 @@ import seforimapp.seforimapp.generated.resources.book_daf_style_side_regular
 import seforimapp.seforimapp.generated.resources.book_daf_style_side_wide
 import seforimapp.seforimapp.generated.resources.book_daf_style_square
 import seforimapp.seforimapp.generated.resources.book_daf_style_text_size
+import seforimapp.seforimapp.generated.resources.book_daf_style_together
+import seforimapp.seforimapp.generated.resources.book_daf_style_together_hint
+import seforimapp.seforimapp.generated.resources.book_daf_style_wide_columns
 import seforimapp.seforimapp.generated.resources.settings_book_daf
 import seforimapp.seforimapp.generated.resources.settings_book_daf_description
 import kotlin.math.abs
@@ -113,7 +116,7 @@ internal fun BookDafStyleFields(
 ) {
     val bands = style.layout == DafStyle.Bands
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_layout),
             options =
                 listOf(
@@ -143,25 +146,20 @@ private fun BandsFields(
     onStyleChange: (BookDafStyle) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_text_size),
             options = TEXT_SIZES.map(::sizeLabel),
             selected = nearest(TEXT_SIZES, style.textSize),
             onSelect = { onStyleChange(style.copy(textSize = TEXT_SIZES[it])) },
         )
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_commentary_size),
             options = COMMENTARY_SIZES.map(::sizeLabel),
             selected = nearest(COMMENTARY_SIZES, style.commentarySize),
             onSelect = { onStyleChange(style.copy(commentarySize = COMMENTARY_SIZES[it])) },
         )
-        Choice(
-            label = stringResource(Res.string.book_daf_style_columns),
-            options = BookDafStyle.COLUMNS.map { it.toString() },
-            selected = style.columns - BookDafStyle.COLUMNS.first,
-            onSelect = { onStyleChange(style.copy(columns = BookDafStyle.COLUMNS.first + it)) },
-        )
-        Choice(
+        ColumnsFields(style, onStyleChange)
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_side),
             options =
                 listOf(
@@ -173,7 +171,7 @@ private fun BandsFields(
             selected = nearest(SIDE_SHARES, style.sideShare),
             onSelect = { onStyleChange(style.copy(sideShare = SIDE_SHARES[it])) },
         )
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_aspect),
             options =
                 listOf(
@@ -184,7 +182,7 @@ private fun BandsFields(
             selected = nearest(ASPECTS, style.aspect),
             onSelect = { onStyleChange(style.copy(aspect = ASPECTS[it])) },
         )
-        Choice(
+        StyleChoice(
             label = stringResource(Res.string.book_daf_style_run_on),
             options =
                 listOf(
@@ -195,12 +193,58 @@ private fun BandsFields(
             selected = RUN_ON.indexOf(style.runOn),
             onSelect = { onStyleChange(style.copy(runOn = RUN_ON[it])) },
         )
+        TogetherField(style, onStyleChange)
+    }
+}
+
+/**
+ * A commentator's columns: on a page taller than wide, and on one wider than tall, the view's own where the pages
+ * follow its width (request 99 of docs/DESKTOP_STAGE3_PLAN.md).
+ */
+@Composable
+private fun ColumnsFields(
+    style: BookDafStyle,
+    onStyleChange: (BookDafStyle) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        StyleChoice(
+            label = stringResource(Res.string.book_daf_style_columns),
+            options = BookDafStyle.COLUMNS.map { it.toString() },
+            selected = style.columns - BookDafStyle.COLUMNS.first,
+            onSelect = { onStyleChange(style.copy(columns = BookDafStyle.COLUMNS.first + it)) },
+        )
+        StyleChoice(
+            label = stringResource(Res.string.book_daf_style_wide_columns),
+            options = BookDafStyle.BAND_COLUMNS.map { it.toString() },
+            selected = style.wideColumns - BookDafStyle.BAND_COLUMNS.first,
+            onSelect = { onStyleChange(style.copy(wideColumns = BookDafStyle.BAND_COLUMNS.first + it)) },
+        )
+    }
+}
+
+/** Whether the text waits for its commentaries, or every page takes a new line of it (request 98), and what each does. */
+@Composable
+private fun TogetherField(
+    style: BookDafStyle,
+    onStyleChange: (BookDafStyle) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        CheckboxRow(
+            text = stringResource(Res.string.book_daf_style_together),
+            checked = style.together,
+            onCheckedChange = { onStyleChange(style.copy(together = it)) },
+        )
+        Text(
+            text = stringResource(Res.string.book_daf_style_together_hint),
+            fontSize = 12.sp,
+            color = JewelTheme.globalColors.text.info,
+        )
     }
 }
 
 /** A field of the style: its [label], and its [options] in a list that shows the one [selected]. */
 @Composable
-private fun Choice(
+internal fun StyleChoice(
     label: String,
     options: List<String>,
     selected: Int,
@@ -230,4 +274,4 @@ private fun nearest(
 ): Int = values.indices.minBy { abs(values[it] - value) }
 
 /** A letters' size as shown: whole when it is. */
-private fun sizeLabel(size: Float): String = if (size % 1f == 0f) size.toInt().toString() else size.toString()
+internal fun sizeLabel(size: Float): String = if (size % 1f == 0f) size.toInt().toString() else size.toString()

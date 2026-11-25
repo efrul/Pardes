@@ -79,6 +79,26 @@ class PageFitTest {
     }
 
     @Test
+    fun `a book's own pages go from a whole page to two thirds of it, to following the view's width, and back`() {
+        val fit = PageFit(width = 2.4f, whole = 0.56f, twoThirds = 0.84f)
+        assertEquals(listOf(PageFitMode.WHOLE, PageFitMode.TWO_THIRDS, PageFitMode.WIDTH), fit.bookModes())
+        assertEquals(PageFitMode.WHOLE, fit.nextBookMode(null))
+        assertEquals(PageFitMode.TWO_THIRDS, fit.nextBookMode(PageFitMode.WHOLE))
+        assertEquals(PageFitMode.WIDTH, fit.nextBookMode(PageFitMode.TWO_THIRDS))
+        assertEquals(PageFitMode.WHOLE, fit.nextBookMode(PageFitMode.WIDTH))
+    }
+
+    @Test
+    fun `a book's own pages are at their view's width only while they follow it, at whatever zoom`() {
+        val fit = PageFit(width = 2.4f, whole = 0.56f, twoThirds = 0.84f)
+        assertEquals(PageFitMode.WIDTH, fit.bookModeAt(0.84f, wide = true))
+        assertEquals(PageFitMode.TWO_THIRDS, fit.bookModeAt(0.84f, wide = false))
+        assertEquals(null, fit.bookModeAt(2.4f, wide = false), "a page as wide as the view by its zoom is no fit of theirs")
+        // A view as wide as a whole page: the width is still a fit of its own, the pages set for it
+        assertEquals(listOf(PageFitMode.WHOLE, PageFitMode.WIDTH), PageFit(0.4f, 0.4f, 0.4f).bookModes())
+    }
+
+    @Test
     fun `a tab's fit is told while its pages are shown`() {
         val fits = PageFits()
         fits.show("a", PageFit(1f, 0.5f))

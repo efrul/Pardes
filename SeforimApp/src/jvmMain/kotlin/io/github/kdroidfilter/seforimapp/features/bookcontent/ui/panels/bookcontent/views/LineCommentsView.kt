@@ -676,7 +676,7 @@ private fun MultiLineCommentariesContent(
  */
 @OptIn(ExperimentalSplitPaneApi::class)
 @Composable
-private fun CommentatorsListAndTexts(
+internal fun CommentatorsListAndTexts(
     isListVisible: Boolean,
     compact: Boolean,
     list: @Composable () -> Unit,
@@ -713,7 +713,7 @@ private fun CommentatorsListAndTexts(
 
 @OptIn(FlowPreview::class)
 @Composable
-private fun CommentatorsList(
+internal fun CommentatorsList(
     groups: List<CommentatorGroup>,
     selectedCommentators: Set<String>,
     initialScrollIndex: Int,
@@ -1652,7 +1652,8 @@ private fun rememberCommentariesLayoutConfig(
     val windowInfo = LocalWindowInfo.current
     val commentaryFontCode by appSettings.commentaryFontCodeFlow.collectAsState()
     val commentaryFontFamily = FontCatalog.familyFor(commentaryFontCode)
-    val maxCommentatorsPerPage by appSettings.maxCommentatorsPerPageFlow.collectAsState()
+    // Pardes: a pane at the window's side has its own number (request 99 of stage 3)
+    val maxCommentatorsPerPage = rememberMaxCommentatorsPerPage()
     val boldScaleForPlatform = FontCatalog.boldScaleFor(commentaryFontCode)
     val tearOffs = LocalCommentatorTearOffs.current
 
@@ -1706,7 +1707,7 @@ private fun rememberCommentariesLayoutConfig(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CommentatorsSidebarToggleButton(
+internal fun CommentatorsSidebarToggleButton(
     isVisible: Boolean,
     onToggle: () -> Unit,
 ) {

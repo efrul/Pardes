@@ -88,22 +88,8 @@ private const val LAZY_PAGE_SIZE = 25
 // No book has it: a filter on it finds nothing
 private const val NO_BOOK_ID = -1L
 
-/**
- * Where the tabs picked search, for the bar to show: the top categories of [tabs] (in their order, each once: a
- * category may be a tab of the results and of the library's others) that are among [picked], one category or several
- * together; null when none is picked.
- */
-internal fun scopeOfTabs(
-    tabs: List<Long>,
-    picked: Set<Long>,
-): SearchScope? {
-    val categories = tabs.distinct().filter { it in picked }
-    return when (categories.size) {
-        0 -> null
-        1 -> SearchScope.Category(categories.single())
-        else -> SearchScope.Multi(bookIds = emptyList(), categoryIds = categories)
-    }
-}
+// Pardes: the time the visible results take to follow a filtered search done, before its overlay goes
+private const val FILTER_SETTLE_MS = 150L
 
 @Stable
 data class SearchUiState(
@@ -314,12 +300,13 @@ class SearchResultViewModel(
 
     fun onEvent(event: SearchResultEvents) {
         when (event) {
+            // Pardes: a check in the tree of books marks as a tab picked does (request 97 of stage 3)
             is SearchResultEvents.SetCategoryChecked -> {
-                setCategoryChecked(event.categoryId, event.checked)
+                mark { shape, marks -> marks.category(event.categoryId, event.checked, shape) }
             }
 
             is SearchResultEvents.SetBookChecked -> {
-                setBookChecked(event.bookId, event.checked)
+                mark { shape, marks -> marks.book(event.bookId, event.checked, shape) }
             }
 
             is SearchResultEvents.SetTocChecked -> {
@@ -621,15 +608,26 @@ class SearchResultViewModel(
                 val initial = Pair(visibleResultsFlow.value.size, System.identityHashCode(visibleResultsFlow.value))
                 flow {
                     emit(true)
-                    visibleResultsFlow
-                        .map { Pair(it.size, System.identityHashCode(it)) }
-                        .distinctUntilChanged()
-                        .filter { it != initial }
-                        .first()
+                    val changed =
+                        visibleResultsFlow
+                            .map { Pair(it.size, System.identityHashCode(it)) }
+                            .distinctUntilChanged()
+                            .filter { it != initial }
+                    // Pardes: or until the last filtered search started is done, its results as they were
+                    val done = _filterDone.filter { it >= filterRuns }.onEach { delay(FILTER_SETTLE_MS) }
+                    merge(changed, done).first()
                     emit(false)
                 }
             }.distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    // Pardes: the filtered searches started ([executeFilteredSearch]) and the last one done, not cut short by the next.
+    // A change of the marks that leaves the visible results as they were (a category checked that the search found
+    // nothing in, the whole library being in the tree since request 97 of stage 3) kept the overlay on for good, waiting
+    // for a change that never came (the reader's word: "למה זה מראה אין סופי?"). A change with no filtered search of its
+    // own (the book of the contents pane, set as a book is checked) ends it once the visible results have followed
+    private var filterRuns = 0L
+    private val _filterDone = MutableStateFlow(0L)
 
     val tocCountsFlow: StateFlow<Map<Long, Int>> = _tocCounts.asStateFlow()
 
@@ -691,6 +689,17 @@ class SearchResultViewModel(
 
     private val _searchTree = MutableStateFlow<ImmutableList<SearchTreeCategory>>(persistentListOf())
     val searchTreeFlow: StateFlow<ImmutableList<SearchTreeCategory>> = _searchTree.asStateFlow()
+
+    /**
+     * Pardes: the tree the results' pane shows, the whole library with what the search found in each category and book
+     * ([libraryTree]); the results' own tree where the library has no catalog (request 97 of stage 3).
+     */
+    val libraryTreeFlow: StateFlow<ImmutableList<SearchTreeCategory>> =
+        _searchTree
+            .mapLatest { found ->
+                val roots = runSuspendCatching { libraryCategories.shape() }.getOrNull()?.roots ?: return@mapLatest found
+                withContext(Dispatchers.Default) { libraryTree(roots, found).toImmutableList() }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
 
     // Bumped by each new search (not by its filters), with the tree cleared: the tabs restart from it
     private val searchGeneration = MutableStateFlow(0)
@@ -1014,8 +1023,12 @@ class SearchResultViewModel(
 
     init {
         val navQuery = savedStateHandle.get<String>("searchQuery") ?: ""
-        // A fresh tab opened with a scope (a search reopened from history) runs in that scope
-        if (persistedSearchState().query.isBlank()) seedNavigationScope(savedStateHandle)
+        // A fresh tab opened with a scope (a search reopened from history) runs in that scope. Pardes: its categories
+        // marked, as a search from the bar's
+        if (persistedSearchState().query.isBlank()) {
+            seedNavigationScope(savedStateHandle)
+            markScope(persistedSearchState().wideScope)
+        }
         val persisted = persistedSearchState()
         val initialQuery = persisted.query.takeIf { it.isNotBlank() } ?: navQuery
 
@@ -1953,6 +1966,10 @@ class SearchResultViewModel(
 
     private var beforeBook: BeforeBook? = null
 
+    // Pardes: what was marked when one book's results were shown ("more from it"): the book is shown alone, and the
+    // marks come back with the way back (the reader's word on build 76); null without, or once the marks changed
+    private var marksBeforeBook: SearchMarks? = null
+
     /** Narrows the results to one book ("more from it"), keeping the full ones to come back to. */
     fun showMoreFromBook(bookId: Long) {
         viewModelScope.launch {
@@ -1968,6 +1985,11 @@ class SearchResultViewModel(
                             .also { currentSession = null } // kept open for the way back
                     }
             }
+            // Pardes: the book alone, whatever else is marked (tabs picked, the tree's checks): those come back with it
+            marksBeforeBook = SearchMarks(_selectedCategoryIds.value, _selectedBookIds.value)
+            _selectedCategoryIds.value = emptySet()
+            _selectedBookIds.value = emptySet()
+            updatePersistedSearch { it.copy(selectedCategoryIds = emptySet(), selectedBookIds = emptySet()) }
             setBookChecked(bookId, true)
         }
     }
@@ -1982,8 +2004,12 @@ class SearchResultViewModel(
                 currentSession?.close()
                 currentSession = saved.session
             }
-            _selectedBookIds.value = emptySet()
-            updatePersistedSearch { it.copy(selectedBookIds = emptySet()) }
+            // Pardes: the marks as they were before the book's results
+            val marks = marksBeforeBook ?: SearchMarks()
+            marksBeforeBook = null
+            _selectedCategoryIds.value = marks.categories
+            _selectedBookIds.value = marks.books
+            updatePersistedSearch { it.copy(selectedCategoryIds = marks.categories, selectedBookIds = marks.books) }
             _categoryAgg.value = saved.agg
             _searchTree.value = saved.tree
             _uiState.value = saved.ui
@@ -1991,11 +2017,11 @@ class SearchResultViewModel(
     }
 
     // Without kept results (a restored tab, a search cut short): drop the book filter, one search
+    // Pardes: by the marks' one way, the bar told: a book checked in the tree of books is its chip too; after "more from
+    // it", the marks as they were before it
     private fun clearBookFilter() {
-        _selectedBookIds.value = emptySet()
-        updatePersistedSearch { it.copy(selectedBookIds = emptySet()) }
-        maybeClearFiltersIfNoneChecked()
-        executeFilteredSearch()
+        val before = marksBeforeBook
+        mark { _, marks -> before ?: marks.copy(books = emptySet()) }
     }
 
     /** Where this tab's search looks (the one truth, persisted with the tab). */
@@ -2019,6 +2045,7 @@ class SearchResultViewModel(
         updatePersistedSearch {
             it.withScope(scope).copy(selectedCategoryIds = emptySet(), selectedBookIds = emptySet(), selectedTocIds = emptySet())
         }
+        markScope(scope)
         executeSearch()
     }
 
@@ -2026,59 +2053,101 @@ class SearchResultViewModel(
     private fun dropBeforeBook() {
         beforeBook?.session?.let { runCatching { it.close() } }
         beforeBook = null
+        marksBeforeBook = null
     }
 
     /**
      * Shows a top category's results (a tab above the results) alone, or, when [add] (Ctrl/Cmd+click), with those of the
-     * tabs already picked, or no longer when it is one of them; all the results for null. The tabs picked are the bar's
-     * categories too ([showTabsInBar]).
+     * tabs already picked, or no longer when it is one of them; all the results for null. The tabs picked are marks, as
+     * the checks of the tree of books ([mark]), and the bar takes the keys, to search again in them at once.
      */
     fun showOnlyCategory(
         categoryId: Long?,
         add: Boolean = false,
     ) {
         dropBeforeBook()
-        val picked = _selectedCategoryIds.value
-        // Pardes: a plain click picks its tab alone, Ctrl/Cmd+click ([add]) adds it to the others or takes it out
-        val categories = if (categoryId == null || !add) emptySet() else picked
-        _selectedCategoryIds.value = categories
-        _selectedBookIds.value = emptySet()
         _selectedTocIds.value = emptySet()
-        updatePersistedSearch { it.copy(selectedCategoryIds = categories, selectedBookIds = emptySet(), selectedTocIds = emptySet()) }
-        if (categoryId != null) {
-            setCategoryChecked(categoryId, !add || categoryId !in picked)
-            showTabsInBar(
-                when {
-                    !add -> setOf(categoryId)
-                    categoryId in picked -> picked - categoryId
-                    else -> picked + categoryId
-                },
-            )
-        } else {
+        updatePersistedSearch { it.copy(selectedTocIds = emptySet()) }
+        // Pardes: a plain click picks its tab alone, Ctrl/Cmd+click ([add]) adds it to the others or takes it out
+        mark { shape, marks ->
+            val kept = if (categoryId == null || !add) SearchMarks() else marks
+            when {
+                categoryId == null -> kept
+                else -> kept.category(categoryId, !add || categoryId !in marks.categories, shape)
+            }
+        }
+        if (categoryId != null) focusBar()
+    }
+
+    /**
+     * Lets the mark of the category [categoryId] go: it was taken out of the bar, which is not told of what it did
+     * itself (it may hold more than the marks). Only where the marks are what the bar shows ([mark]).
+     */
+    fun unpickCategoryTab(categoryId: Long) {
+        if (!persistedSearchState().wideScope.barFollowsMarks()) return
+        if (categoryId in _selectedCategoryIds.value) mark(tellBar = false) { shape, marks -> marks.category(categoryId, false, shape) }
+    }
+
+    /** Lets the mark of the book [bookId] go, as [unpickCategoryTab] a category's. */
+    fun unpickBook(bookId: Long) {
+        if (!persistedSearchState().wideScope.barFollowsMarks()) return
+        if (bookId in _selectedBookIds.value) mark(tellBar = false) { shape, marks -> marks.book(bookId, false, shape) }
+    }
+
+    /**
+     * Pardes: the one way a search's marks change, the tabs picked above the results and the checks of the tree of books
+     * alike (the user's word on the testers' build: "סימון לבד יהיה כמו בסימון טאב של קטגוריה - רק יסנן ויאפשר מיד
+     * חיפוש מחדש - קוד משותף"): the marks as [change] leaves them (given the library's shape, null without a catalog)
+     * filter the list found, and are the bar's categories and books ([scopeChanges]; none of them clears it), so that
+     * the text searched again from the bar is searched in them. The bar follows ([tellBar]) in a search of the whole
+     * library, of categories, which are marked themselves ([markScope]), or of several books and categories; inside
+     * one book, or an author's books, the bar is the reader's choice already, which it keeps.
+     */
+    private fun mark(
+        tellBar: Boolean = true,
+        change: (LibraryShape?, SearchMarks) -> SearchMarks,
+    ) {
+        marksBeforeBook = null
+        viewModelScope.launch {
+            val shape = runSuspendCatching { libraryCategories.shape() }.getOrNull()
+            val before = SearchMarks(_selectedCategoryIds.value, _selectedBookIds.value)
+            val marks = change(shape, before)
+            _selectedCategoryIds.value = marks.categories
+            _selectedBookIds.value = marks.books
+            updatePersistedSearch { it.copy(selectedCategoryIds = marks.categories, selectedBookIds = marks.books) }
             maybeClearFiltersIfNoneChecked()
+            // Trigger filtered Lucene search
             executeFilteredSearch()
-            if (picked.isNotEmpty()) showTabsInBar(emptySet())
+            val wide = persistedSearchState().wideScope
+            if (tellBar && marks != before && wide.barFollowsMarks()) {
+                val marked = (shape?.scopeOf(marks) ?: marks.scope())?.baseOnlyAs(wide)
+                // With nothing marked the bar searches everywhere; where the search's own books could not be marked
+                // (a list with a book marked is that book's), it is back at them
+                _scopeChanges.tryEmit(marked ?: wide.takeIf { it.categoriesAlone() == null } ?: SearchScope.Global)
+            }
         }
     }
 
-    /**
-     * Lets the tab of [categoryId] go when picked: its category was taken out of the bar, which is not told again. Only
-     * in a search of the whole library, where the tabs are what the bar shows ([showTabsInBar]).
-     */
-    fun unpickCategoryTab(categoryId: Long) {
-        if (persistedSearchState().wideScope != SearchScope.Global) return
-        if (categoryId in _selectedCategoryIds.value) setCategoryChecked(categoryId, false)
+    // Pardes: the categories the bar searched in are the search's marks: checked in the tree of books and picked among
+    // the tabs, to be changed there and searched again. The list is theirs already: nothing is filtered
+    private fun markScope(scope: SearchScope) {
+        val categories = scope.categoriesAlone()?.takeIf { it.isNotEmpty() } ?: return
+        viewModelScope.launch {
+            val shape = runSuspendCatching { libraryCategories.shape() }.getOrNull()
+            val marks = categories.fold(SearchMarks()) { marks, id -> marks.category(id, true, shape) }
+            _selectedCategoryIds.value = marks.categories
+            updatePersistedSearch { it.copy(selectedCategoryIds = marks.categories) }
+        }
     }
 
-    /**
-     * The tabs [picked] become the bar's categories ([scopeChanges]), none of them clearing it: the tabs filter the list
-     * found, and the text searched again from the bar is searched in them. Only in a search of the whole library:
-     * another scope is the reader's choice already, which the bar keeps.
-     */
-    private fun showTabsInBar(picked: Set<Long>) {
-        if (persistedSearchState().wideScope != SearchScope.Global) return
-        val tabs = (_searchTree.value + _otherTabCategories.value).map { it.category.id }
-        _scopeChanges.tryEmit(scopeOfTabs(tabs, picked) ?: SearchScope.Global)
+    private val _barFocus = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Pardes: the search bar is asked to take the keys: after a tab picked, or a check of the tree by the pointer. */
+    val barFocusRequests: SharedFlow<Unit> = _barFocus.asSharedFlow()
+
+    /** Asks the search bar to take the keys ([barFocusRequests]): Enter there searches again in what is marked. */
+    fun focusBar() {
+        _barFocus.tryEmit(Unit)
     }
 
     fun setBookChecked(
@@ -2130,7 +2199,12 @@ class SearchResultViewModel(
      */
     private fun executeFilteredSearch() {
         val q = _uiState.value.query.trim()
-        if (q.isBlank()) return
+        // Pardes: each run counted, its end told to the overlay (isFilteringFlow)
+        val run = ++filterRuns
+        if (q.isBlank()) {
+            _filterDone.value = run
+            return
+        }
 
         currentJob?.cancel()
         currentJob =
@@ -2260,6 +2334,8 @@ class SearchResultViewModel(
                     refineSnippets(session, firstPage.hits)
                 } finally {
                     _uiState.value = _uiState.value.copy(isLoading = false)
+                    // Pardes: done, or given up on an error; not when the next run cut it short
+                    if (isActive) _filterDone.value = run
                 }
             }
     }

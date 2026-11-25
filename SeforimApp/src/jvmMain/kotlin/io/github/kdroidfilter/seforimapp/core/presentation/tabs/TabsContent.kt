@@ -328,10 +328,13 @@ private fun SearchTabContent(
                     if (extended) viewModel.onEvent(SearchResultViewModel.SearchResultEvents.SetGlobalExtended(true))
                 },
                 onSubmitTextSearch = { query -> viewModel.searchFromBar(query, barViewModel.barScope()) },
-                // A category taken out of the bar is a tab picked no longer
+                // A category taken out of the bar is a tab picked no longer; Pardes: nor a book a book checked
                 onRemoveScope = { item ->
                     homeSearchCallbacks.onRemoveScope(item)
-                    if (item is ScopeItem.CategoryItem) viewModel.unpickCategoryTab(item.category.id)
+                    when (item) {
+                        is ScopeItem.CategoryItem -> viewModel.unpickCategoryTab(item.category.id)
+                        is ScopeItem.BookItem -> viewModel.unpickBook(item.book.id)
+                    }
                 },
                 // Its own bar, which opens where its search looked
                 onNewBarOpened = null,
@@ -414,9 +417,12 @@ private fun navigate(
     }
 }
 
-/** The callbacks of a search bar's state, acting in the tab [currentTabId] returns. */
+/**
+ * The callbacks of a search bar's state, acting in the tab [currentTabId] returns.
+ * Pardes: internal, for the search from anywhere, whose bar acts in the tab it opens (request 85).
+ */
 @Composable
-private fun rememberHomeSearchCallbacks(
+internal fun rememberHomeSearchCallbacks(
     searchHomeViewModel: SearchHomeViewModel,
     currentTabId: () -> String?,
 ): HomeSearchCallbacks {
@@ -535,6 +541,8 @@ fun rememberSearchShellActions(viewModel: SearchResultViewModel): SearchShellAct
             onBackFromBook = viewModel::backFromBook,
             onOpenAuthor = viewModel::openAuthor,
             onGrade = { result, grade -> viewModel.onEvent(SearchResultViewModel.SearchResultEvents.Grade(result, grade)) },
+            barFocusRequests = viewModel.barFocusRequests,
+            onPointerCheck = viewModel::focusBar,
         )
     }
 

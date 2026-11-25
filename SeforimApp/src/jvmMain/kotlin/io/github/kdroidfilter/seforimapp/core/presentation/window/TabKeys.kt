@@ -15,6 +15,9 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.kdroidfilter.seforim.tabs.TabsEvents
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
+import io.github.kdroidfilter.seforimapp.core.presentation.tabs.tabSwitcherKey
+import io.github.kdroidfilter.seforimapp.features.search.searchAnywhereKey
+import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 
 /**
  * Pardes (stage 3, the tab shortcuts of request 47): what a tab shortcut does in a strip of [count] tabs, [current]
@@ -88,8 +91,14 @@ private val DIGITS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key
 @Composable
 internal fun rememberTabKeys(tabsViewModel: TabsViewModel): (KeyEvent) -> Boolean {
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    return remember(tabsViewModel, rtl) {
-        { event ->
+    // The search from anywhere's key is the window's too (request 85): it opens the bar, and closes it
+    val openWindow = LocalOpenWindow.current
+    return remember(tabsViewModel, rtl, openWindow) {
+        keys@{ event ->
+            // The tabs are listed while Ctrl stays down after Ctrl+Tab, the one marked selected when it is let go
+            // (request 95)
+            if (openWindow.tabSwitcherKey(event, rtl)) return@keys true
+            if (openWindow.searchAnywhereKey(event)) return@keys true
             val ctrl = event.isCtrlPressed || event.isMetaPressed
             val state = tabsViewModel.state.value
             val action =

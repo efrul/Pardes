@@ -84,6 +84,15 @@ abstract class AppGraph : ViewModelGraph {
 
     // Pardes: the zooms that fit each tab's pages in their view, for the end bar's button (request 73 of stage 3)
     abstract val pageFits: io.github.kdroidfilter.seforimapp.features.pdf.PageFits
+
+    // Pardes: the comment a commentary's tab opens its tractate's daf at (request 86 of stage 3)
+    abstract val dafFocusRequests: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafFocusRequests
+
+    // Pardes: the daf button's click of each tab, for its key (request 94 of stage 3)
+    abstract val dafKeys: io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafKeys
+
+    // Pardes: which search tabs show their tree of books (request 97 of stage 3)
+    abstract val searchTrees: io.github.kdroidfilter.seforimapp.features.search.SearchTrees
     abstract val desktopManager: DesktopManager
     abstract val sessionManager: SessionManager
     abstract val googleDriveSync: GoogleDriveSync
