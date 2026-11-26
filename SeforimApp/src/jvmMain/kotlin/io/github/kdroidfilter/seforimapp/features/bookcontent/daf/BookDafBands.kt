@@ -9,33 +9,16 @@ import kotlin.math.floor
 // balanced columns. A commentator's comments are one run of words that goes on from page to page by itself, never
 // ahead of the text it is on. Lines are broken here, by the words' measured widths, so a line count is exact and the
 // rules' search for the most words that fit is one walk down the lines.
-
-/** A line's pitch to its letters: the text's, the targum's beside it, a commentary's, a commentator's name's. */
-private const val TEXT_PITCH = 1.6f
-private const val SIDE_PITCH = 1.62f
-private const val COMMENTARY_PITCH = 1.52f
-private const val NAME_PITCH = 1.385f
-
-/** The targum's letters to the text's, and a commentator's name's to its commentary's. */
-private const val SIDE_SIZE = 0.64f
-private const val NAME_SIZE = 1.04f
-
-/** The words that open a comment (its dibbur hamatchil), in the text's square letters, to their line's letters. */
-internal const val DIBBUR_SIZE = 0.94f
-
-/**
- * In the rules' unit: between the text and its targum and between a band's columns; under the text; above a band's
- * rule, between the rule and the name, under the name; and how far down its column the targum begins.
- */
-private const val COLUMN_GAP = 20f
-private const val TEXT_FOOT = 6f
-private const val BAND_GAP = 8f
-private const val RULE_PAD = 4f
-private const val NAME_FOOT = 2f
-private const val SIDE_INSET = 4f
-
-/** Above a heading of the text that is not at the page's top, to a line of the text. */
-private const val HEADING_SPACE = 0.4f
+//
+// Since request 98 of docs/DESKTOP_STAGE3_PLAN.md the text waits for its commentaries (BookDafStyle.together), as a
+// footnoted book's does: a page takes a new piece of the text only when the comments on the pieces before it end on
+// that page, so a comment begins on the page of its text, and where they are longer than a page the next pages are
+// theirs alone. The rules' third ("פסוק חדש אחד לפחות בכל עמוד"), which let a long commentary lag pages behind, is the
+// other way to set them, kept in the style.
+//
+// A commentator the reader put beside the text (request 93) is a band as the others, the first of them: on a page its
+// first lines stand beside the text, as many as the text is tall, and the rest go on under the text across the page, as
+// Rashi does under the Gemara; on a page of commentaries alone it is a band under its name.
 
 /** Rule 7: a band of fewer lines a column than this waits for the next page. */
 private const val MIN_ROWS = 2
@@ -49,209 +32,100 @@ private const val SAFETY_LINES = 1
 /** A line of the text that ends with this closes its paragraph (a parashah petuchah), where the text runs on. */
 internal const val PETUCHAH = "{פ}"
 
-/** A column's letters: their [size] in points, a line's [box] (which they take [share] of) and its [pitch]. */
-internal class Letters(
-    val size: Float,
-    share: Float,
-    pitchRatio: Float,
-) {
-    val box = size / share
-    val pitch = size * pitchRatio
-}
-
 /**
- * The measures a page of bands is set by, in the page's points ([BOOK_DAF_WIDTH] wide), from the reader's [style];
- * [runOn]: the text's lines run on in one paragraph, as verses do.
- */
-internal class BandsMeasures(
-    style: BookDafStyle,
-    val runOn: Boolean,
-) {
-    private val unit = BOOK_DAF_WIDTH / BookDafStyle.RULES_WIDTH
-    val width = BOOK_DAF_WIDTH
-    val height = BOOK_DAF_WIDTH * style.aspect
-    val columns = style.columns
-    val text = Letters(style.textSize * unit, GEMARA_SIZE, TEXT_PITCH)
-    val side = Letters(style.textSize * SIDE_SIZE * unit, GEMARA_SIZE, SIDE_PITCH)
-    val commentary = Letters(style.commentarySize * unit, RASHI_SIZE, COMMENTARY_PITCH)
-
-    /** Whether a comment opens in the text's square letters: where the commentaries are in Rashi script. */
-    val squareOpenings = !style.squareCommentary
-    val name = Letters(style.commentarySize * NAME_SIZE * unit, GEMARA_SIZE, NAME_PITCH)
-    val gap = COLUMN_GAP * unit
-
-    /** The targum's column, at the page's left; 0 with none beside the text. */
-    val sideWidth = if (style.sideShare > 0f) width * style.sideShare - gap / 2 else 0f
-    val sideInset = SIDE_INSET * unit
-    val textFoot = TEXT_FOOT * unit
-    val bandGap = BAND_GAP * unit
-    val rulePad = RULE_PAD * unit
-    val nameFoot = NAME_FOOT * unit
-
-    /** A band's column's width, and what a band takes above its lines: its rule and its commentator's name. */
-    val columnWidth = (width - gap * (columns - 1)) / columns
-    val bandHead = bandGap + rulePad + name.pitch + nameFoot
-}
-
-/** A rule drawn on a page (points): above a band, between two columns. */
-internal class PageRule(
-    val x0: Float,
-    val y0: Float,
-    val x1: Float,
-    val y1: Float,
-)
-
-/**
- * Words set in lines [room] wide, in letters [scale] times the page's: a paragraph, the targum, a commentator's run,
- * whose comments open in the text's letters, [leadScale] times the page's.
- */
-private class WordRun(
-    val words: List<SetWord>,
-    widths: WordWidths,
-    square: Boolean,
-    scale: Float,
-    private val room: Float,
-    leadScale: Float = scale,
-) {
-    private val wide =
-        FloatArray(words.size) { i ->
-            val word = words[i]
-            if (word.lead) widths.of(word.text, true, true) * leadScale else widths.of(word.text, square, word.bold) * scale
-        }
-    private val space = widths.space(square) * scale
-
-    /** Where the line that begins at the word [from] ends (the word after its last), no further than [until]. */
-    fun lineEnd(
-        from: Int,
-        until: Int,
-    ): Int {
-        var end = from + 1
-        var width = wide[from]
-        while (end < until && width + space + wide[end] <= room) {
-            width += space + wide[end]
-            end++
-        }
-        return end
-    }
-
-    /** The lines of the words [from] until [until], each its words. */
-    fun lines(
-        from: Int,
-        until: Int,
-    ): List<IntRange> {
-        val lines = ArrayList<IntRange>()
-        var at = from
-        while (at < until) {
-            val end = lineEnd(at, until)
-            lines += at until end
-            at = end
-        }
-        return lines
-    }
-
-    /** How many lines the words [from] until [until] are, counted no further than [most]. */
-    fun lineCount(
-        from: Int,
-        until: Int,
-        most: Int,
-    ): Int {
-        var count = 0
-        var at = from
-        while (at < until && count < most) {
-            at = lineEnd(at, until)
-            count++
-        }
-        return count
-    }
-
-    /** Where [count] lines from the word [from] end, no further than [until]. */
-    fun endOf(
-        from: Int,
-        until: Int,
-        count: Int,
-    ): Int {
-        var at = from
-        var left = count
-        while (at < until && left-- > 0) at = lineEnd(at, until)
-        return at
-    }
-
-    /** The width of a line of the words [range]. */
-    fun width(range: IntRange): Float {
-        var width = space * (range.last - range.first)
-        for (i in range) width += wide[i]
-        return width
-    }
-}
-
-/** A page being set from its top down: its lines, its rules, the words that open a comment, where its next part goes. */
-private class BandsPage {
-    val lines = ArrayList<DafLine>()
-    val rules = ArrayList<PageRule>()
-    val openings = HashMap<Int, Set<Int>>()
-    var y = 0f
-
-    /** A line of a commentary's column: its words that open a comment are noted. */
-    fun add(
-        words: List<SetWord>,
-        box: List<Float>,
-    ) {
-        val opening = words.indices.filterTo(HashSet()) { words[it].lead }
-        if (opening.isNotEmpty()) openings[lines.size] = opening
-        lines += dafLine(RIGHT_COLUMN, words, box)
-    }
-}
-
-/** How a paragraph's last line is set: across as the others, from the right when short, or in the middle. */
-private enum class LastLine { Across, Short, Centred }
-
-/**
- * A unit of a book ([text], its lines in order) set in pages of bands: its [targum] beside its text, each of
- * [commentaries] (in the order of their bands, which is their turn for a page's room too, rule 5) under it.
+ * A unit of a book ([text], its lines in order) set in pages of bands: its [targum] (or the commentator put in its
+ * place) beside its text, each of [commentaries] (in the order of their bands, which is their turn for a page's room
+ * too, rule 5) under it. [anchors]: each anchored comment's place in its line of the text, the first of the words its
+ * anchor puts it on (BookDafSource's passages).
  */
 internal class DafBandsSetter(
     private val widths: WordWidths,
-    private val text: List<DafSegment>,
-    private val commentaries: List<DafCommentary>,
-    private val targum: DafTargum?,
+    text: List<DafSegment>,
+    commentaries: List<DafCommentary>,
+    targum: DafTargum?,
     private val measures: BandsMeasures,
+    anchors: Map<Long, Int> = emptyMap(),
 ) {
-    private val width = measures.width
+    // A paragraph is cut between pages where the text waits for its commentaries, and does not run on as verses do
+    private val cuts = measures.together && !measures.runOn
+    private val pieces: List<TextPiece>
+    private val printer: BandsPrinter
+    private val bands: List<Band>
 
-    // Each commentator's comments as one run of words, and for each line of the text how many of them are on it or
-    // on a line before it: what may be set once that line is (rule 1's "never before its verse")
-    private val runs =
-        commentaries.map { c ->
-            val opening = measures.commentary.size * DIBBUR_SIZE / measures.text.size
-            WordRun(text.flatMap { commentWords(c, it) }, widths, false, 1f, measures.columnWidth * LINE_FILL, opening)
-        }
-    private val ends =
-        commentaries.map { c ->
-            var count = 0
-            IntArray(text.size) { i -> (count + commentWords(c, text[i]).size).also { count = it } }
-        }
+    init {
+        val beside = targum?.takeIf { measures.sideWidth > 0f }
+        val side = beside?.verses.orEmpty()
+        val narrow = text.any { side[it.lineId].orEmpty().isNotEmpty() }
+        val anchored = text.filter { line -> (commentaries.map { it.comments } + side).any { it.anchors(line, anchors) } }
+        // A paragraph's printed lines are those of the text's column, which what stands beside it narrows
+        val rows = { words: List<SetWord> -> measures.textRows(words, widths, narrow) }
+        val all = TextPieces(text, anchors, anchored.mapTo(HashSet()) { it.lineId }, rows.takeIf { cuts })
+        pieces = all.list
+        val placed = all.placed(text, side, atEnd = false).sortedBy { it.first }
+        // The commentator beside the text: a band after the others' in name, the first of them in turn
+        val sideBand =
+            beside?.bookId?.takeIf { narrow }?.let { bookId ->
+                band(
+                    commentaries.size,
+                    DafCommentary(bookId, beside.name, onRight = true, emptyMap(), beside.style),
+                    placed,
+                    isBeside = true,
+                )
+            }
+        val targumWords = placed.takeIf { sideBand == null }.orEmpty().groupBy({ it.first }) { setWords(it.second) }
+        printer = BandsPrinter(widths, measures, pieces, targumWords.mapValues { it.value.flatten() }, cuts, sideBand)
+        bands =
+            listOfNotNull(sideBand) +
+            commentaries.mapIndexed { index, commentary ->
+                band(index, commentary, all.placed(text, commentary.comments, atEnd = true).sortedBy { it.first })
+            }
+    }
 
-    // A commentator's comments on a line of the text: each one's first bold words open it, in the text's letters
-    private fun commentWords(
+    // A commentator's band: its comments, each with the piece of the text it is set with ([placed]), as one run of
+    // words; [isBeside]: with its run in the lines of the column beside the text too
+    private fun band(
+        index: Int,
         commentary: DafCommentary,
-        line: DafSegment,
-    ) = commentary.comments[line.lineId].orEmpty().flatMap { comment ->
+        placed: List<Pair<Int, DafSegment>>,
+        isBeside: Boolean = false,
+    ): Band {
+        val letters = measures.band(commentary.style)
+        val size = letters.letters.size
+        val words = placed.map { (_, comment) -> commentWords(comment, letters.square) }
+        val counts = IntArray(pieces.size)
+        placed.forEachIndexed { i, (piece, _) -> counts[piece] += words[i].size }
+        var count = 0
+        val ends = IntArray(pieces.size) { i -> (count + counts[i]).also { count = it } }
+        val scale = size / if (letters.square) measures.text.size else measures.commentary.size
+        val all = words.flatten()
+        val run = { width: Float ->
+            WordRun(all, widths, letters.square, scale, width * LINE_FILL, size * DIBBUR_SIZE / measures.text.size)
+        }
+        val beside = if (isBeside) run(measures.sideWidth) else null
+        return Band(index, commentary.bookId, commentary.name, letters, run(letters.columnWidth), ends, beside)
+    }
+
+    // A comment's words: its first bold ones open it, in the text's letters where its band is in Rashi script
+    private fun commentWords(
+        comment: DafSegment,
+        square: Boolean,
+    ): List<SetWord> {
         val opening =
-            if (measures.squareOpenings) {
+            if (square) {
+                0
+            } else {
                 comment.words.indices
                     .takeWhile { it in comment.bold }
                     .size
-            } else {
-                0
             }
-        comment.words.mapIndexed { i, word -> SetWord(word, comment.lineId, i in comment.bold, lead = i < opening) }
+        return comment.words.mapIndexed { i, word -> SetWord(word, comment.lineId, i in comment.bold, lead = i < opening) }
     }
 
-    // The words of a commentator set once the text's line [line] is; none before the first
+    // The words of a band set once the text's piece [piece] is; none before the first
     private fun endAt(
-        commentary: Int,
-        line: Int,
-    ) = if (line < 0) 0 else ends[commentary][line]
+        band: Band,
+        piece: Int,
+    ) = if (piece < 0) 0 else band.ends[piece]
 
     /**
      * The unit's pages, in order; [beforeEachPage] is called before each is set (a chapter with all its commentators is
@@ -259,23 +133,26 @@ internal class DafBandsSetter(
      */
     fun pages(beforeEachPage: () -> Unit = {}): List<SetPage> {
         val pages = ArrayList<SetPage>()
-        val at = IntArray(runs.size)
+        val at = IntArray(bands.size)
         var next = 0
-        while (next < text.size || at.indices.any { at[it] < runs[it].words.size }) {
+        while (next < pieces.size || bands.indices.any { at[it] < bands[it].run.words.size }) {
             beforeEachPage()
             val set = next + at.sum()
-            val last = lastLine(next, at)
+            val last = lastPiece(next, at)
             val page = BandsPage()
-            if (last >= next) setText(next, last, page)
-            val taken = setBands(at, maxOf(last, next - 1), page)
+            val wraps = last >= next && setText(next, last, page, at)
+            val taken = setBands(at, maxOf(last, next - 1), page, wraps)
             // Nothing new on the page (its room too small for a band's least): the first band waiting is set all the same
             if (last < next && !taken) force(at, page)
+            // The line of the text that goes on from the page before, by the first of its words here
+            val starts = pieces.getOrNull(next)?.takeIf { last >= next && !it.opens }?.let { mapOf(it.lineId to it.from) }
             next = maxOf(next, last + 1)
-            // A line or a word at least on each page: the unit ends
+            // A piece or a word at least on each page: the unit ends
             check(next + at.sum() > set) { "a page of bands took nothing in" }
-            val isLast = next >= text.size && at.indices.all { at[it] >= runs[it].words.size }
+            val isLast = next >= pieces.size && bands.indices.all { at[it] >= bands[it].run.words.size }
             // Pages of one size (a line taller than a page makes its own longer); a unit's last ends where its lines do
-            pages += SetPage(page.lines, if (isLast) page.y else maxOf(measures.height, page.y), page.rules, page.openings)
+            val height = if (isLast) page.y else maxOf(measures.height, page.y)
+            pages += SetPage(page.lines, height, page.rules, page.openings, page.heads, starts.orEmpty(), measures.width)
         }
         return pages
     }
@@ -283,88 +160,145 @@ internal class DafBandsSetter(
     // A page's room: its height less the lines left free at its bottom (rule 9)
     private val room = measures.height - measures.commentary.pitch * SAFETY_LINES
 
-    // A band of this many lines is taller than a page's room: none is counted further (a commentator's comments waiting
-    // may be a chapter's)
-    private val mostLines = (floor(room / measures.commentary.pitch).toInt() + 2) * measures.columns
+    // The band of the commentator beside the text, the first where there is one
+    private val side = bands.firstOrNull()?.takeIf { it.beside != null }
+
+    // The text's pieces [first] to [last] at the top of [page], with the side commentator's lines beside them, its run
+    // going on in [at]. Whether it has lines there: the rest of its words then go on under the text with no name.
+    private fun setText(
+        first: Int,
+        last: Int,
+        page: BandsPage,
+        at: IntArray,
+    ): Boolean {
+        val end = printer.text(first, last, page, if (side == null) 0 else at[0])
+        if (side == null || end == at[0]) return false
+        at[0] = end
+        return true
+    }
+
+    // What a band takes above its lines: its rule and its name, or, the side commentator's going on from beside the
+    // text ([wraps]), a gap alone
+    private fun head(
+        band: Band,
+        wraps: Boolean,
+    ) = if (wraps && band === side) measures.bandGap else measures.bandHead
 
     /**
-     * The last line of the text a page that begins at the line [first] takes, with each commentator's run at [at]: line
-     * after line while the text, its targum and all the comments waiting up to it fit (rule 2), one at least while lines
-     * are left (rule 3), one more when much of the page would be left empty (rule 8); a heading is not a page's last line.
-     * [first] less one with no line left.
+     * The last piece of the text a page that begins at the piece [first] takes, with each band's run at [at]: piece after
+     * piece while the text, what stands beside it and all the comments waiting up to it fit (rule 2); one more when much
+     * of the page would be left empty (rule 8), or the next line of a paragraph cut there; a heading is not a page's
+     * last. Where nothing fits, one piece all the same (rule 3) — but, the text waiting for its commentaries, only when
+     * none of them waits from the pieces before: else the page is theirs alone. [first] less one with no piece taken.
      */
-    private fun lastLine(
+    private fun lastPiece(
         first: Int,
         at: IntArray,
     ): Int {
-        if (first >= text.size) return first - 1
-        val heights = HashMap<Int, Float>()
+        if (first >= pieces.size) return first - 1
+        val tops = HashMap<Int, PageTop>()
 
-        fun textHeight(last: Int) = if (last < first) 0f else heights.getOrPut(last) { BandsPage().also { setText(first, last, it) }.y }
-
-        // The bands counted while they fit: with many commentators waiting, the first few are more than the page's room
-        fun used(last: Int): Float {
-            var height = textHeight(last)
-            for (c in runs.indices) {
-                if (height > room) break
-                height += bandHeight(c, at[c], endAt(c, last))
+        // The text of the pieces up to [last] at the page's top, set once for each
+        fun top(last: Int): PageTop {
+            if (last < first) return PageTop(0f, at, wraps = false)
+            return tops.getOrPut(last) {
+                val after = at.copyOf()
+                val page = BandsPage()
+                val wraps = setText(first, last, page, after)
+                PageTop(page.y, after, wraps)
             }
-            return height
         }
+
+        fun used(last: Int) = top(last).let { it.height + waiting(it, last, room - it.height) }
         var last = first - 1
-        while (last < text.lastIndex && used(last + 1) <= room) last++
-        if (last < first) last = first
-        if (last < text.lastIndex && fills(room - used(last), textHeight(last + 1) - textHeight(last))) last++
+        while (last < pieces.lastIndex && used(last + 1) <= room) last++
+        if (last < first && (!measures.together || used(first - 1) == 0f)) last = first
+        if (last < pieces.lastIndex && fills(last, room - used(last), top(last + 1).height - top(last).height, top(last).at)) last++
         return offHeading(first, last)
     }
 
-    // Rule 8: whether a page with [spare] room left takes one more line of the text, [oneMore] tall, its comments to go
-    // on from the page's bottom
+    // The height of the bands of the comments waiting up to the piece [last] under a page's [top], counted while they
+    // fit in [spare]: with many commentators waiting, the first few are more than a page's room
+    private fun waiting(
+        top: PageTop,
+        last: Int,
+        spare: Float,
+    ): Float {
+        var height = 0f
+        for (c in bands.indices) {
+            if (height > spare) break
+            height += bandHeight(bands[c], top.at[c], endAt(bands[c], last), head(bands[c], top.wraps))
+        }
+        return height
+    }
+
+    /**
+     * Whether a page whose text ends at the piece [last], with [spare] room left, takes one more piece, [oneMore] tall,
+     * its comments to go on from the page's bottom. Rule 8: when much of the page would be left empty. And a paragraph
+     * cut between pages gives its next line whenever the comments on it may begin under it.
+     */
     private fun fills(
+        last: Int,
         spare: Float,
         oneMore: Float,
-    ) = spare > FILL * room && oneMore < spare - MIN_ROWS * measures.commentary.pitch
+        at: IntArray,
+    ): Boolean {
+        val least = MIN_ROWS * measures.commentary.pitch
+        if (!cuts || pieces[last + 1].opens) return spare > FILL * room && oneMore < spare - least
+        // A band already on the page goes on under its name; another needs room for its own
+        val head = if (bands.indices.any { endAt(bands[it], last) > at[it] }) 0f else measures.bandHead
+        return oneMore < spare - least - head
+    }
 
-    // The last line of a page that begins at [first] and would end at [last], when that is a heading: the line before
-    // it, or, a heading alone, the lines after it up to one that is none
+    // The last piece of a page that begins at [first] and would end at [last], when that is a heading: the piece before
+    // it, or, a heading alone, the pieces after it up to one that is none
     private fun offHeading(
         first: Int,
         last: Int,
     ): Int {
+        if (last < first) return last
         var end = last
-        while (end > first && end < text.lastIndex && text[end].isHeading) end--
-        while (end < text.lastIndex && text[end].isHeading) end++
+        while (end > first && end < pieces.lastIndex && pieces[end].isHeading) end--
+        while (end < pieces.lastIndex && pieces[end].isHeading) end++
         return end
     }
 
-    // The height of a commentator's band of the words [from] until [until]; none with no words
+    // The height of a band of the words [from] until [until] under its [head]; none with no words. A band taller than
+    // a page's room is counted no further (a commentator's comments waiting may be a chapter's)
     private fun bandHeight(
-        commentary: Int,
+        band: Band,
         from: Int,
         until: Int,
+        head: Float,
     ): Float {
         if (until <= from) return 0f
-        val lines = runs[commentary].lineCount(from, until, mostLines)
-        return measures.bandHead + ceil(lines / measures.columns.toFloat()) * measures.commentary.pitch
+        val pitch = band.letters.letters.pitch
+        val most = (floor(room / pitch).toInt() + 2) * band.letters.columns
+        val lines = band.run.lineCount(from, until, most)
+        return head + ceil(lines / band.letters.columns.toFloat()) * pitch
     }
 
     /**
-     * The bands of a page whose text ends at the line [last]: each commentator in turn takes as many of its words waiting
-     * as the room left holds (rule 5), none when that is fewer lines a column than a band's least (rule 7). Whether any
-     * took words.
+     * The bands of a page whose text ends at the piece [last]: each commentator in turn takes as many of its words
+     * waiting as the room left holds (rule 5), none when that is fewer lines a column than a band's least (rule 7).
+     * [wraps]: the side commentator has lines beside the text of this page, and goes on under it. Whether any took
+     * words.
      */
     private fun setBands(
         at: IntArray,
         last: Int,
         page: BandsPage,
+        wraps: Boolean,
     ): Boolean {
         var taken = false
-        for (c in runs.indices) {
-            val most = endAt(c, last)
-            val rows = floor((room - page.y - measures.bandHead) / measures.commentary.pitch).toInt()
-            if (most <= at[c] || rows < MIN_ROWS) continue
-            val until = runs[c].endOf(at[c], most, rows * measures.columns)
-            setBand(c, at[c], until, page)
+        for ((c, band) in bands.withIndex()) {
+            val most = endAt(band, last)
+            val goesOn = wraps && band === side
+            val rows = floor((room - page.y - head(band, wraps)) / band.letters.letters.pitch).toInt()
+            // Going on from beside the text, a line is no band's beginning: the least is one
+            if (most <= at[c] || rows < if (goesOn) 1 else MIN_ROWS) continue
+            val until = band.run.endOf(at[c], most, rows * band.letters.columns)
+            printer.band(band, at[c], until, page, named = !goesOn)
             at[c] = until
             taken = true
         }
@@ -376,151 +310,30 @@ internal class DafBandsSetter(
         at: IntArray,
         page: BandsPage,
     ) {
-        val c = at.indices.first { at[it] < runs[it].words.size }
-        val until = runs[c].endOf(at[c], runs[c].words.size, MIN_ROWS * measures.columns)
-        setBand(c, at[c], until, page)
+        val c = at.indices.first { at[it] < bands[it].run.words.size }
+        val band = bands[c]
+        val until = band.run.endOf(at[c], band.run.words.size, MIN_ROWS * band.letters.columns)
+        printer.band(band, at[c], until, page)
         at[c] = until
     }
-
-    /**
-     * The text's lines [first] to [last] at the page's top: its headings alone in the middle, the others in paragraphs
-     * with their targum beside them, each heading beginning a part of its own.
-     */
-    private fun setText(
-        first: Int,
-        last: Int,
-        page: BandsPage,
-    ) {
-        var i = first
-        while (i <= last) {
-            if (text[i].isHeading) {
-                if (page.lines.isNotEmpty()) page.y += measures.text.pitch * HEADING_SPACE
-                page.y = paragraph(setWords(text[i]), TEXT_COLUMN, measures.text, 0f to width, page.y, LastLine.Centred, page)
-                i++
-                continue
-            }
-            val from = i
-            while (i <= last && !text[i].isHeading) i++
-            setPart(from, i - 1, page)
-        }
-        page.y += measures.textFoot
-    }
-
-    // The text's lines [first] to [last], none a heading, with their targum beside them at the page's left
-    private fun setPart(
-        first: Int,
-        last: Int,
-        page: BandsPage,
-    ) {
-        val beside =
-            if (measures.sideWidth >
-                0f
-            ) {
-                (first..last).flatMap { targum?.verses?.get(text[it].lineId).orEmpty() }.flatMap(::setWords)
-            } else {
-                emptyList()
-            }
-        val column = (if (beside.isEmpty()) 0f else measures.sideWidth + measures.gap) to width
-        val top = page.y
-        var bottom = top
-        for ((words, end) in paragraphs(first, last)) bottom = paragraph(words, TEXT_COLUMN, measures.text, column, bottom, end, page)
-        if (beside.isNotEmpty()) {
-            val side = 0f to measures.sideWidth
-            val sideBottom = paragraph(beside, TARGUM_COLUMN, measures.side, side, top + measures.sideInset, LastLine.Centred, page)
-            bottom = maxOf(bottom, sideBottom)
-            val x = measures.sideWidth + measures.gap / 2
-            page.rules += PageRule(x, top, x, bottom)
-        }
-        page.y = bottom
-    }
-
-    /**
-     * The paragraphs of the text's lines [first] to [last], each with how its last line is set: a line a paragraph, or,
-     * where the text runs on, the lines up to one that closes its paragraph, whose last line is short; one left open, as a
-     * page's last is, ends in the middle.
-     */
-    private fun paragraphs(
-        first: Int,
-        last: Int,
-    ): List<Pair<List<SetWord>, LastLine>> {
-        if (!measures.runOn) return (first..last).map { setWords(text[it]) to LastLine.Short }
-        val paragraphs = ArrayList<Pair<List<SetWord>, LastLine>>()
-        var words = ArrayList<SetWord>()
-        for (i in first..last) {
-            words += setWords(text[i])
-            if (text[i].words.lastOrNull() == PETUCHAH) {
-                paragraphs += words to LastLine.Short
-                words = ArrayList()
-            }
-        }
-        if (words.isNotEmpty()) paragraphs += words to LastLine.Centred
-        return paragraphs
-    }
-
-    /**
-     * A band: its rule, its commentator's name, then the words [from] until [until] of its run in lines, the first of them
-     * in the right column and as many in each column (the odd ones in the first). A line is set across its column, but
-     * the band's last when a comment ends with it.
-     */
-    private fun setBand(
-        commentary: Int,
-        from: Int,
-        until: Int,
-        page: BandsPage,
-    ) {
-        val run = runs[commentary]
-        page.y += measures.bandGap
-        page.rules += PageRule(0f, page.y, width, page.y)
-        page.y += measures.rulePad
-        paragraph(nameWords(commentaries[commentary].name), NAME_COLUMN, measures.name, 0f to width, page.y, LastLine.Centred, page)
-        page.y += measures.name.pitch + measures.nameFoot
-        val lines = run.lines(from, until)
-        val rows = ceil(lines.size / measures.columns.toFloat()).toInt()
-        val top = page.y
-        val letters = measures.commentary
-        val closes = until == run.words.size || run.words[until].lineId != run.words[until - 1].lineId
-        lines.forEachIndexed { i, range ->
-            val column = i / rows
-            val x1 = width - column * (measures.columnWidth + measures.gap)
-            val x0 = x1 - measures.columnWidth
-            val isShort = closes && i == lines.lastIndex
-            val (left, right) = lineSpan(x0, x1, run.width(range), centred = false, isEnd = isShort)
-            val lineTop = top + (i % rows) * letters.pitch + (letters.pitch - letters.box) / 2
-            page.add(run.words.subList(range.first, range.last + 1), listOf(left, lineTop, right, lineTop + letters.box))
-        }
-        page.y = top + rows * letters.pitch
-        for (column in 1 until ceil(lines.size / rows.toFloat()).toInt()) {
-            val x = width - column * (measures.columnWidth + measures.gap) + measures.gap / 2
-            page.rules += PageRule(x, top, x, page.y)
-        }
-    }
-
-    /**
-     * [words] in lines of [column] (its left and right) from [top] down, in [letters]; its last line as [end] says. Where
-     * its next line would go.
-     */
-    private fun paragraph(
-        words: List<SetWord>,
-        code: String,
-        letters: Letters,
-        column: Pair<Float, Float>,
-        top: Float,
-        end: LastLine,
-        page: BandsPage,
-    ): Float {
-        if (words.isEmpty()) return top
-        val (x0, x1) = column
-        val run = WordRun(words, widths, square = true, scale = letters.size / measures.text.size, room = (x1 - x0) * LINE_FILL)
-        var lineTop = top
-        val lines = run.lines(0, words.size)
-        lines.forEachIndexed { i, range ->
-            val isLast = i == lines.lastIndex
-            val (left, right) =
-                lineSpan(x0, x1, run.width(range), centred = isLast && end == LastLine.Centred, isEnd = isLast && end == LastLine.Short)
-            val boxTop = lineTop + (letters.pitch - letters.box) / 2
-            page.lines += dafLine(code, words.subList(range.first, range.last + 1), listOf(left, boxTop, right, boxTop + letters.box))
-            lineTop += letters.pitch
-        }
-        return lineTop
-    }
 }
+
+/** A page's top as set: the text's [height], each band's run after it ([at]), and whether the side commentator [wraps]. */
+private class PageTop(
+    val height: Float,
+    val at: IntArray,
+    val wraps: Boolean,
+)
+
+// Each of [comments] on the lines of [text], with the piece of the text it is set with (TextPieces.of)
+private fun TextPieces.placed(
+    text: List<DafSegment>,
+    comments: Map<Long, List<DafSegment>>,
+    atEnd: Boolean,
+): List<Pair<Int, DafSegment>> = text.flatMap { line -> comments[line.lineId].orEmpty().map { of(line.lineId, it.lineId, atEnd) to it } }
+
+// Whether any of these comments on [line] is anchored inside it
+private fun Map<Long, List<DafSegment>>.anchors(
+    line: DafSegment,
+    anchors: Map<Long, Int>,
+): Boolean = this[line.lineId].orEmpty().any { it.lineId in anchors }

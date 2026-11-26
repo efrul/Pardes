@@ -134,13 +134,35 @@ internal fun layoutAmud(
             setter.column(LEFT_COLUMN, rashi, isGemara = false, commentary),
             setter.column(NAME_COLUMN, gemara, isGemara = true),
             setter.column(TARGUM_COLUMN, gemara, isGemara = true),
-        )
+        ) + bandColumns(amud, setter, scale, gemara to rashi, openings)
     // Drawn last, on top of the runs whose lines they stand beside
     val bigRuns = columns.flatMap { it.bigRuns(gemara) }
     // Where every column's words are first, the boxes wrong for them made right: then the room a line may take is known
     columns.forEach { it.place() }
     return AmudLayout(amud, scale, setter.width, setter.height, columns.flatMap { it.runs() } + bigRuns)
 }
+
+/**
+ * A book's page of bands' commentators (BookDafBands), each a column of its own, in letters as tall as its own lines'
+ * boxes (the reader may have set them apart): Rashi script, its comments opening in the text's letters, or the text's
+ * square letters ([letters]: the square ones and Rashi script).
+ */
+private fun bandColumns(
+    amud: DafAmud,
+    setter: AmudSetter,
+    scale: Float,
+    letters: Pair<FontFamily, FontFamily>,
+    openings: DafOpenings?,
+): List<ColumnSetter> =
+    amud.lines.filter { it.c.isBandColumn }.distinctBy { it.c }.mapNotNull { line ->
+        val box = (line.b[3] - line.b[1]) * scale
+        if (line.c.isSquareBand) {
+            setter.column(line.c, letters.first, isGemara = true, box)
+        } else {
+            val opening = openings?.let { letters.first to box * RASHI_SIZE * it.size }
+            setter.column(line.c, letters.second, isGemara = false, box, opening, openings?.words)
+        }
+    }
 
 /**
  * The words of a book's daf's commentaries printed apart (BookDafBands): those that open a comment, in the text's square

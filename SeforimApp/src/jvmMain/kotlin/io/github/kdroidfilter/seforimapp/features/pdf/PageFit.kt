@@ -8,11 +8,14 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SelectableIconButtonWithToolip
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.BookDafSettings
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.showsBookDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.page_fit
@@ -125,6 +129,23 @@ internal fun PageFit.nextMode(zoom: Float): PageFitMode {
     return modes[(at + 1) % modes.size]
 }
 
+/**
+ * The fits of a book's own pages (BookDafView), which their view's width does not make larger but sets again for it
+ * (request 89 of docs/DESKTOP_STAGE3_PLAN.md: "הגדרות תצוגת רוחב ספר יהיו אמיתיות כלומר ישנו את הפריסה שלו ולא רק את
+ * הגודל שלו"): a whole page and two thirds of it are zooms, of a page of the rules' size; the width is the pages
+ * following the view's ([wide], BookDafSettings.wide), at whatever zoom.
+ */
+internal fun PageFit.bookModes(): List<PageFitMode> = (modes() - PageFitMode.WIDTH) + PageFitMode.WIDTH
+
+/** The fit a book's own pages are at: the view's width while they follow it ([wide]), else a zoom's; null at none. */
+internal fun PageFit.bookModeAt(
+    zoom: Float,
+    wide: Boolean,
+): PageFitMode? = if (wide) PageFitMode.WIDTH else modeAt(zoom)?.takeIf { it != PageFitMode.WIDTH }
+
+/** The fit a press of the button goes to on a book's own pages, from the one they are [at]. */
+internal fun PageFit.nextBookMode(at: PageFitMode?): PageFitMode = bookModes().let { it[(it.indexOf(at) + 1) % it.size] }
+
 /** The fit of each tab's pages in their view, by the tab's id, as their view lays them out: a daf, a scan, a PDF book. */
 @Inject
 @SingleIn(AppScope::class)
@@ -150,17 +171,20 @@ class PageFits {
 
 /**
  * The pages of [tabId] fit their view so ([fit]) while they are shown, for the end bar's button and for the zoom they
- * are shown at ([shownPageZoom]); the zoom never set yet, it is set to their view's width.
+ * are shown at ([shownPageZoom]); the zoom never set yet, it is set to their view's width. Not [capped]: the zoom is
+ * shown as it is, whatever the view's width (a book's pages that follow the view's width, whose zoom is their
+ * letters' size: request 89).
  */
 @Composable
 internal fun TellPageFit(
     tabId: String,
     fit: PageFit,
+    capped: Boolean = true,
 ) {
     val graph = LocalAppGraph.current
     SideEffect {
         graph.pageFits.show(tabId, fit)
-        graph.appSettings.showPageWidth(tabId, fit.width)
+        graph.appSettings.showPageWidth(tabId, fit.width.takeIf { capped })
     }
     DisposableEffect(tabId) {
         onDispose {
@@ -200,37 +224,51 @@ fun PageFitButton(
     val fits by graph.pageFits.fits.collectAsState()
     val zoom = shownPageZoom(uiState.tabId)
     val fit = fits[uiState.tabId]
-    val at = fit?.modeAt(zoom)
+    // A book's own pages: their width fit sets them again for the view (request 89)
+    val book = showsBookDaf(uiState)
+    val wide by graph.appSettings.flow(BookDafSettings.wide).collectAsState()
+    val at = if (book) fit?.bookModeAt(zoom, wide) else fit?.modeAt(zoom)
     val shown = at ?: PageFitMode.WHOLE
-    val next = fit?.nextMode(zoom) ?: PageFitMode.WHOLE
-    val name =
-        when (shown) {
+    val next = (if (book) fit?.nextBookMode(at) else fit?.nextMode(zoom)) ?: PageFitMode.WHOLE
+    SelectableIconButtonWithToolip(
+        toolTipText = stringResource(next.tooltip),
+        onClick = {
+            if (book) graph.appSettings[BookDafSettings.wide] = next == PageFitMode.WIDTH
+            if (!book || next != PageFitMode.WIDTH) fit?.let { graph.appSettings.setDafZoom(it.zoomOf(next)) }
+        },
+        isSelected = at != null,
+        icon = shown.icon,
+        label = stringResource(shown.label),
+        modifier = modifier,
+        enabled = fit != null,
+        iconDescription = stringResource(shown.label),
+    )
+}
+
+// A fit's name on the button, what its tooltip says a press gives, and its icon
+private val PageFitMode.label: StringResource
+    get() =
+        when (this) {
             PageFitMode.WHOLE -> Res.string.page_fit
             PageFitMode.TWO_THIRDS -> Res.string.page_fit_two_thirds
             PageFitMode.WIDTH -> Res.string.page_fit_width
         }
-    val tooltip =
-        when (next) {
+
+private val PageFitMode.tooltip: StringResource
+    get() =
+        when (this) {
             PageFitMode.WHOLE -> Res.string.page_fit_tooltip
             PageFitMode.TWO_THIRDS -> Res.string.page_fit_two_thirds_tooltip
             PageFitMode.WIDTH -> Res.string.page_fit_width_tooltip
         }
-    SelectableIconButtonWithToolip(
-        toolTipText = stringResource(tooltip),
-        onClick = { fit?.let { graph.appSettings.setDafZoom(it.zoomOf(next)) } },
-        isSelected = at != null,
-        icon =
-            when (shown) {
-                PageFitMode.WHOLE -> PageFit
-                PageFitMode.TWO_THIRDS -> PageFitTwoThirds
-                PageFitMode.WIDTH -> PageFitWidth
-            },
-        label = stringResource(name),
-        modifier = modifier,
-        enabled = fit != null,
-        iconDescription = stringResource(name),
-    )
-}
+
+private val PageFitMode.icon: ImageVector
+    get() =
+        when (this) {
+            PageFitMode.WHOLE -> PageFit
+            PageFitMode.TWO_THIRDS -> PageFitTwoThirds
+            PageFitMode.WIDTH -> PageFitWidth
+        }
 
 // A zoom this close to a fit is at it
 private const val FIT_SLACK = 0.005f

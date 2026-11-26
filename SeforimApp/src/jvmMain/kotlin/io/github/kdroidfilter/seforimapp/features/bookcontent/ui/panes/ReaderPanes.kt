@@ -65,6 +65,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.booktoc.
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.CategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.SearchCategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NotesPanel
+import io.github.kdroidfilter.seforimapp.features.search.rememberSearchTreeToggle
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
 import io.github.kdroidfilter.seforimapp.features.sefaria.topics.LineTopicsPane
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
@@ -580,12 +581,14 @@ private fun selectedTabDemand(
                 val bookDetails by LocalAppGraph.current.appSettings.bookDetailsPaneFlow
                     .collectAsState()
                 val findResults = rememberFindResultsShown(tabId)
+                // Pardes: a search's tree of books, shown in the tab it was asked for in (request 97 of stage 3)
+                val searchTree = LocalAppGraph.current.searchTrees.isShown(tabId)
                 val topics by LocalAppGraph.current.appSettings
                     .flow(SefariaSettings.topicsPane)
                     .collectAsState()
                 PaneDemand(
                     tabId,
-                    desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails) +
+                    desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails, searchTree) +
                         findResultsPane(uiState, findResults && destination !is TabsDestination.Search) +
                         topicsPane(uiState, topics),
                     viewModel::onEvent,
@@ -755,12 +758,13 @@ private fun desiredPanes(
     uiState: BookContentState,
     isSearch: Boolean,
     bookDetails: Boolean,
+    searchTree: Boolean,
 ): Set<ReaderPane> =
     buildSet {
         // A book's details, or a search's selected result's: one setting for every tab
         if (bookDetails && (isSearch || isBookTextShown(uiState))) add(ReaderPane.BookDetails)
-        // A search filters by its category tabs, not by the library tree
-        if (!isSearch && uiState.navigation.isVisible) add(ReaderPane.Tree)
+        // A search filters by its category tabs; its tree of the books found is shown when asked for (request 97)
+        if (if (isSearch) searchTree else uiState.navigation.isVisible) add(ReaderPane.Tree)
         if (uiState.toc.isVisible) add(ReaderPane.Toc)
         if (!isSearch && uiState.notes.isVisible) add(ReaderPane.Notes)
         // The line panes exist only while a book is on screen.
@@ -898,13 +902,15 @@ private fun SearchTreePane(
 ) {
     val viewModel = tabSearchViewModel(owner, destination)
     val actions = rememberSearchShellActions(viewModel)
-    val searchTree by viewModel.searchTreeFlow.collectAsState()
+    // Pardes: the whole library's tree, with what the search found in it (request 97 of stage 3)
+    val searchTree by viewModel.libraryTreeFlow.collectAsState()
     val isFiltering by viewModel.isFilteringFlow.collectAsState()
     val selectedCategoryIds by viewModel.selectedCategoryIdsFlow.collectAsState()
     val selectedBookIds by viewModel.selectedBookIdsFlow.collectAsState()
     SearchCategoryTreePanel(
         uiState = uiState,
-        onEvent = onEvent,
+        // Pardes: the pane's own close hides the search's tree, a tab's own (request 97 of stage 3)
+        onEvent = rememberSearchTreeToggle(destination.tabId, onEvent).onEvent,
         searchTree = searchTree,
         isFiltering = isFiltering,
         selectedCategoryIds = selectedCategoryIds,
@@ -913,6 +919,7 @@ private fun SearchTreePane(
         onBookCheckedChange = actions.onBookCheckedChange,
         onEnsureScopeBookForToc = actions.onEnsureScopeBookForToc,
         modifier = modifier,
+        onPointerCheck = actions.onPointerCheck,
     )
 }
 

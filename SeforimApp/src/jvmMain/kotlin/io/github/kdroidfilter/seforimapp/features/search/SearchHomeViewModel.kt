@@ -668,7 +668,9 @@ class SearchHomeViewModel(
                 if (typed.length < minTocPrefixLen) tocEntries.take(maxTocPredictive) else tocMatching(tocEntries, typed)
             _uiState.value =
                 _uiState.value.copy(
-                    tocSuggestions = initialSuggestions,
+                    // Pardes: a book the bar was put in (a results tab's, a book checked in a search's tree) lists none of
+                    // its entries until typed in: its field holds the search's text, and Enter opened its first entry
+                    tocSuggestions = if (showSuggestions) initialSuggestions else emptyList(),
                     tocSuggestionsVisible = showSuggestions && initialSuggestions.isNotEmpty(),
                     isTocLoading = false,
                 )

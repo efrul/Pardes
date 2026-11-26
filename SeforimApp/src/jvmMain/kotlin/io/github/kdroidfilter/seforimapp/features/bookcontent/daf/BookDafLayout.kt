@@ -19,19 +19,26 @@ internal data class DafSegment(
 
 /**
  * A commentator of a book's daf: its book, its [name] over its part of each page, the side it is set on (around the
- * text), and its [comments] on the book's lines, by the id of the line each is set with, in the order they are read.
+ * text), and its [comments] on the book's lines, by the id of the line each is set with, in the order they are read;
+ * its own letters in its band ([style]), where the reader set them apart.
  */
 internal data class DafCommentary(
     val bookId: Long,
     val name: String,
     val onRight: Boolean,
     val comments: Map<Long, List<DafSegment>>,
+    val style: BandStyle? = null,
 )
 
-/** The targum set beside the text (in bands): its [name], and its lines on each line of the text, by that line's id. */
+/**
+ * What is set beside the text (in bands): the book's targum, or a commentator the reader put in its place ([bookId],
+ * with its own letters, [style]); its [name], and its lines on each line of the text, by that line's id.
+ */
 internal data class DafTargum(
     val name: String,
     val verses: Map<Long, List<DafSegment>>,
+    val bookId: Long? = null,
+    val style: BandStyle? = null,
 )
 
 /** How wide a word is in points, at a book's daf's letters: square (the text's and the names') or Rashi script. */
@@ -54,6 +61,21 @@ internal const val RIGHT_COLUMN = "R"
 internal const val LEFT_COLUMN = "L"
 internal const val NAME_COLUMN = "H"
 internal const val TARGUM_COLUMN = "O"
+
+/**
+ * A commentator's band on a page of bands, a column of its own (its letters may be its own): named by its place among
+ * the commentators, and marked when it is in the text's square letters.
+ */
+internal const val BAND_COLUMN = "B"
+private const val SQUARE_BAND = "s"
+
+internal fun bandColumn(
+    index: Int,
+    square: Boolean,
+) = "$BAND_COLUMN$index${if (square) SQUARE_BAND else ""}"
+
+internal val String.isBandColumn: Boolean get() = startsWith(BAND_COLUMN)
+internal val String.isSquareBand: Boolean get() = isBandColumn && endsWith(SQUARE_BAND)
 
 /** A page's width in points: the Talmud's block, which the daf's letter sizes are made for. */
 internal const val BOOK_DAF_WIDTH = 412f
@@ -101,6 +123,21 @@ internal fun dafPagesAround(
     return pages
 }
 
+/**
+ * A commentator's name on a page of bands: its book, the name's line across its band (points, left to right), the
+ * name itself in it ([left] to [right]), and whether it stands beside the text rather than over a band ([isBeside]).
+ */
+internal class BandHead(
+    val bookId: Long,
+    val x0: Float,
+    val y0: Float,
+    val x1: Float,
+    val y1: Float,
+    val left: Float = x0,
+    val right: Float = x1,
+    val isBeside: Boolean = false,
+)
+
 /** A page as set: its lines, in the order they are read, its height, and the rules drawn between its parts. */
 internal class SetPage(
     val lines: List<DafLine>,
@@ -108,12 +145,17 @@ internal class SetPage(
     val rules: List<PageRule> = emptyList(),
     /** The words that open a comment, printed in the text's letters (in bands): by their line's index in [lines]. */
     val openings: Map<Int, Set<Int>> = emptyMap(),
+    /** The commentators' names on the page (in bands), for what a click or a drag on one does. */
+    val heads: List<BandHead> = emptyList(),
+    /** A line of the text that goes on from the page before (in bands): the index, among its words, of its first here. */
+    val starts: Map<Long, Int> = emptyMap(),
+    val width: Float = BOOK_DAF_WIDTH,
 ) {
     fun amud(name: String) =
         DafAmud(
             amud = name,
-            page = listOf(BOOK_DAF_WIDTH, height),
-            block = listOf(0f, 0f, BOOK_DAF_WIDTH, height),
+            page = listOf(width, height),
+            block = listOf(0f, 0f, width, height),
             lines = lines,
         )
 }

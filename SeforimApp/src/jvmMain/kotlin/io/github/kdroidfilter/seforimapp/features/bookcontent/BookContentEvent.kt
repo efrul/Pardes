@@ -126,6 +126,12 @@ sealed interface BookContentEvent {
         val passage: SelectedPassage,
     ) : BookContentEvent
 
+    /**
+     * Pardes (request 88 of docs/DESKTOP_STAGE3_PLAN.md): a second click on what is marked on a book's pages lets the
+     * selection go, its lines and its passage.
+     */
+    data object SelectionCleared : BookContentEvent
+
     data class LoadAndSelectLine(
         val lineId: Long,
     ) : BookContentEvent

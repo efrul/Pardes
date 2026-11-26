@@ -2,7 +2,6 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -40,6 +39,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -50,9 +50,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
@@ -61,11 +59,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
+import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalIsTouchMode
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberCopyToClipboard
-import io.github.kdroidfilter.seforimapp.features.pdf.TellPageFit
-import io.github.kdroidfilter.seforimapp.features.pdf.ZOOM_ONE_WIDTH
-import io.github.kdroidfilter.seforimapp.features.pdf.pageFit
-import io.github.kdroidfilter.seforimapp.features.pdf.pageWidthAt
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsListAndTexts
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentatorsSidebarToggleButton
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.warnln
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -85,7 +82,6 @@ import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.book_daf_continued
 import seforimapp.seforimapp.generated.resources.book_daf_no_commentators
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -98,16 +94,13 @@ import kotlin.math.roundToInt
 /** The units kept laid out: one scrolled back to from farther is laid out again. */
 private const val KEPT_UNITS = 16
 
-/** A page's running head, the room on its sides and below it, and a unit's place while it is laid out. */
-private val HeadHeight = 36.dp
-private val PagePadding = 24.dp
-private val PageGap = 12.dp
+/** A unit's place while it is laid out. */
 private val LoadingHeight = 240.dp
 
 /** How long a line brought into view waits for its unit to be laid out. */
 private const val LAY_WAIT_MS = 10_000L
 
-/** A page up or down moves this much of the view, as a tractate's. */
+/** A page up or down moves this much of the view, as a tractate's, while the unit at the view's top is not laid out. */
 private const val PAGE_STEP = 0.9f
 
 /**
@@ -135,68 +128,74 @@ internal fun BookDafView(
     val units by produceState(emptyList<DafUnit>(), book.id) {
         value = runSuspendCatching { unitsOf(graph.repository, book) }.getOrDefault(emptyList())
     }
-    val letters = rememberDafLetters(rememberBookDafStyle(book))
-    val setter = rememberUnitSetter(book, commentators, diacritics, letters)
+    val style = rememberBookDafStyle(book)
+    val letters = rememberDafLetters(style)
+    // The book's commentators on its pages: the reader's own, the commentaries pane's the first time (request 92)
+    val own = rememberBookDafCommentators(book, commentators, units, tab.openAt ?: tab.lineId)
+    val chooser by graph.appSettings.flow(BookDafSettings.chooser).collectAsState()
     // The units laid out, by their place in the list: those in view, and one on each side of them
     val laid = remember(book.id) { mutableStateMapOf<Int, LaidUnit>() }
-    LaunchedEffect(setter, units) {
-        if (units.isNotEmpty()) {
-            snapshotFlow {
-                listState.layoutInfo.visibleItemsInfo.map { it.index }
-            }.collectLatest { layUnits(it, units, setter, laid) }
+    // The pages' two buttons show while the pointer is at the view's head, as a pane's header shows its own (the
+    // user's word on the testers' build: "הסמלים למעלה לא אמורים להופיע אלא כשהעכבר בכותרת - כמו בתצוגת מפרשים")
+    var atHead by remember { mutableStateOf(false) }
+    Box(modifier.fillMaxSize().pointerAtHead { atHead = it }) {
+        if (own == null) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
+        } else {
+            // The list of the pages' commentators beside them, as the commentaries pane's stands beside its texts
+            CommentatorsListAndTexts(
+                isListVisible = chooser,
+                compact = false,
+                list = { BookDafChooser(book, own, laid) },
+                texts = {
+                    Column(Modifier.fillMaxSize()) {
+                        // No commentator chosen for the pages: the text alone, and where to choose them
+                        if (own.shown.isNullOrEmpty()) {
+                            InlineInformationBanner(
+                                text = stringResource(Res.string.book_daf_no_commentators),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                            )
+                        }
+                        BoxWithConstraints(Modifier.fillMaxSize()) {
+                            val view = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
+                            // Where the pages follow the view's width, its size is theirs, and they are set again for it
+                            val look = BookDafLook(style, rememberWidePage(view, zoom, style), own)
+                            val setter = rememberUnitSetter(book, commentators, diacritics, letters, look)
+                            LaunchedEffect(setter, units) {
+                                if (units.isNotEmpty()) {
+                                    snapshotFlow {
+                                        listState.layoutInfo.visibleItemsInfo.map { it.index }
+                                    }.collectLatest { layUnits(it, units, setter, laid) }
+                                }
+                            }
+                            val shown = BookDafShown(book, units, laid, rememberUpdatedState(setter), letters, view, own, commentators)
+                            BookDafPages(shown, listState, control, zoom, tab, clicks, find, onScroll)
+                        }
+                    }
+                },
+            )
+        }
+        // The pages' style and the list of their commentators, behind two buttons at their corner
+        BookDafAdjust(book, Modifier.align(Alignment.TopEnd), shown = atHead || LocalIsTouchMode.current) {
+            CommentatorsSidebarToggleButton(isVisible = chooser, onToggle = { graph.appSettings[BookDafSettings.chooser] = !chooser })
         }
     }
-    Box(modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            // Nothing checked in the commentaries pane: the text alone, and how to set commentators with it
-            if (commentators.selection.isEmpty) {
-                InlineInformationBanner(
-                    text = stringResource(Res.string.book_daf_no_commentators),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
-            BookDafPages(book, units, laid, rememberUpdatedState(setter), listState, control, zoom, tab, clicks, find, onScroll, letters)
-        }
-        // The pages' style, behind a button at their corner
-        BookDafAdjust(book, Modifier.align(Alignment.TopEnd))
-    }
-}
-
-/** The daf's letters as the reader's [style] has them: the commentaries in the text's square letters, or in Rashi script. */
-@Composable
-private fun rememberDafLetters(style: BookDafStyle): Pair<DafLetters, BookDafStyle> {
-    val graph = LocalAppGraph.current
-    val density = LocalDensity.current
-    val resolver = LocalFontFamilyResolver.current
-    val gemaraCode by graph.appSettings.dafGemaraFontCodeFlow.collectAsState()
-    val commentaryCode by graph.appSettings.dafCommentaryFontCodeFlow.collectAsState()
-    val gemara = dafFamily(gemaraCode)
-    val rashi = if (style.squareCommentary) gemara else dafFamily(commentaryCode)
-    val letters =
-        remember(resolver, density, gemara, rashi) {
-            DafLetters(TextMeasurer(resolver, density, LayoutDirection.Rtl, cacheSize = 0), density, gemara, rashi)
-        }
-    return letters to style
 }
 
 /**
- * What lays out [book]'s units: a new one when the pages are to be set otherwise (a check in the commentaries pane, the
- * text's [diacritics], the fonts, the style).
+ * What a book's pages show: its [units], those [laid] out (by the daf's [setter]), in [letters], in a [view]; the
+ * reader's commentators for them ([own]), and what a commentator's name asks of the tab ([commentators]).
  */
-@Composable
-private fun rememberUnitSetter(
-    book: Book,
-    commentators: DafCommentators,
-    diacritics: DiacriticsMode,
-    letters: Pair<DafLetters, BookDafStyle>,
-): UnitSetter {
-    val repository = LocalAppGraph.current.repository
-    // Each commentator's place, kept while the book is shown: a check in the pane moves none of the others
-    val ranks = remember(book.id) { ConcurrentHashMap<Long, Int>() }
-    return remember(book.id, commentators.selection, diacritics, letters) {
-        UnitSetter(repository, book, commentators, diacritics, ranks, letters.first, letters.second)
-    }
-}
+private class BookDafShown(
+    val book: Book,
+    val units: List<DafUnit>,
+    val laid: Map<Int, LaidUnit>,
+    val setter: State<UnitSetter>,
+    val letters: DafLetters,
+    val view: Size,
+    val own: BookDafCommentators,
+    val commentators: DafCommentators,
+)
 
 /**
  * Lays out those of [units] in view (the list's items [visible]), and one on each side of them, into [laid]. When the
@@ -224,47 +223,10 @@ private suspend fun layUnits(
     }
 }
 
-/** A page's size on the screen: [perPoint] pixels a point, [columns] pages a row, their list [contentWidth] pixels wide. */
-private class PagesScale(
-    val perPoint: Float,
-    val columns: Int,
-    val contentWidth: Float,
-    val frame: PageFrame,
-)
-
-/**
- * The scale of the pages in a view [viewport] pixels wide and [height] tall, at the daf's [zoom]: a size, which no pane
- * opened beside the pages changes (request 73 of stage 3), two pages side by side sharing the view as a book open (the
- * end bar's button, as a tractate's amudim). The zooms that fit the view are told for the tab of [control].
- */
-@Composable
-private fun pagesScale(
-    control: DafControl,
-    zoom: Float,
-    viewport: Float,
-    height: Float,
-    aspect: Float,
-): PagesScale {
-    val density = LocalDensity.current
-    val spreads by LocalAppGraph.current.appSettings.pageSpreadsFlow
-        .collectAsState()
-    val columns = if (spreads) 2 else 1
-    val padding = with(density) { PagePadding.toPx() }
-    val frame = PageFrame(with(density) { HeadHeight.toPx() }, with(density) { PageGap.toPx() }, columns)
-    val one = with(density) { ZOOM_ONE_WIDTH.toPx() }
-    TellPageFit(control.tabId, pageFit(viewport / columns - 2 * padding, height, aspect, columns, frame.head + frame.gap, one))
-    val pageWidth = pageWidthAt(zoom, columns, one).coerceAtLeast(1f)
-    return PagesScale(pageWidth / BOOK_DAF_WIDTH, columns, maxOf(viewport, (pageWidth + 2 * padding) * columns), frame)
-}
-
-/** The pages of a book's daf: its [units] in a list, those [laid] out as pages, the others in their place meanwhile. */
-@Suppress("ComposeUnstableCollections") // the units and those laid out, as a tractate's daf takes its amudim
+/** The pages of a book's daf ([shown]): its units in a list, those laid out as pages, the others in their place meanwhile. */
 @Composable
 private fun BookDafPages(
-    book: Book,
-    units: List<DafUnit>,
-    laid: Map<Int, LaidUnit>,
-    setter: State<UnitSetter>,
+    shown: BookDafShown,
     listState: LazyListState,
     control: DafControl,
     zoom: Float,
@@ -272,8 +234,11 @@ private fun BookDafPages(
     clicks: DafClicks,
     find: DafFind,
     onScroll: (Long) -> Unit,
-    letters: Pair<DafLetters, BookDafStyle>,
 ) {
+    val book = shown.book
+    val units = shown.units
+    val laid = shown.laid
+    val setter = shown.setter
     val graph = LocalAppGraph.current
     val keys = remember { FocusRequester() }
     // The words selected on a page, one page's at a time (its name and range), copied with Ctrl or Cmd + C
@@ -284,6 +249,7 @@ private fun BookDafPages(
     var clicked by remember { mutableStateOf<Long?>(null) }
     var focused by remember(setter.value) { mutableStateOf<Long?>(null) }
     val pageClicks = clicks.noting(onClick = { clicked = it }, onFocus = { focused = it })
+    val heads = rememberHeads(shown)
     val copy: () -> Unit = {
         selection?.let { (name, range) ->
             laid.values
@@ -292,25 +258,27 @@ private fun BookDafPages(
                 ?.let { copyToClipboard(it.amud.textOf(range)) }
         }
     }
-    BoxWithConstraints(
+    Box(
         Modifier
             .fillMaxSize()
             .focusRequester(keys)
             .selectionKeys(selection != null, copy) { selection = null }
             .focusable(),
     ) {
-        val height = constraints.maxHeight.toFloat()
-        val scale = pagesScale(control, zoom, constraints.maxWidth.toFloat(), height, setter.value.aspect)
+        val height = shown.view.height
+        val scale = pagesScale(control, zoom, shown.view, setter.value)
         val places =
             BookDafList(listState, units, laid, setter, scale.perPoint, scale.frame, height) { id ->
-                runSuspendCatching { graph.repository.getLine(id) }.getOrNull()?.takeIf { it.bookId == book.id }?.lineIndex
+                runSuspendCatching { textIndexOf(graph.repository, book.id, id) }.getOrNull()
             }
         val current by rememberUpdatedState(places)
+        places.latest = { current }
         KeepPlaceAtZoom(control, places)
         BookDafControl(control, current, tab, focused, pageClicks) { focused = it }
+        FindInCommentators(control, book.id, shown.own)
         RevealTabLine(control, current, tab, units, setter.value, clicked, onRelease = { clicked = null }, onScroll = onScroll)
         val ink = JewelTheme.globalColors.text.normal
-        val look = DafLook(scale.perPoint, letters.first.gemara, letters.first.rashi, ink, JewelTheme.globalColors.outlines.focused)
+        val look = DafLook(scale.perPoint, shown.letters.gemara, shown.letters.rashi, ink, JewelTheme.globalColors.outlines.focused)
         val marks =
             DafMarks(
                 marked = if (tab.isTocEntrySelection) emptySet() else tab.selectedLineIds,
@@ -325,9 +293,41 @@ private fun BookDafPages(
                     onRange = { range -> selection = range?.let { name to it } },
                     onPress = { keys.requestFocus() },
                 )
-            BookDafPage(book, page, look, marks, pageSelection, pageClicks)
+            BookDafPage(book, page, look, marks, pageSelection, pageClicks, heads)
         }
     }
+}
+
+/**
+ * What the commentators' names on the pages of [shown] do (BookDafHeads): a change of the book's commentators is saved,
+ * and sets the pages again; a click opens the commentator's book at its comment on the page's lines; a commentator
+ * taken out leaves the pages for a pane of its own.
+ */
+@Composable
+private fun rememberHeads(shown: BookDafShown): BookDafHeadsState {
+    val settings = LocalAppGraph.current.appSettings
+    // The name whose letters are being set: kept over the pages, which every change sets again
+    var setting by remember(shown.book.id) { mutableStateOf<Pair<Long, String>?>(null) }
+    val bookId = shown.book.id
+    val nameOf = { id: Long ->
+        shown.laid.values
+            .firstNotNullOfOrNull { unit ->
+                unit.groups.firstNotNullOfOrNull { group -> group.commentators.firstOrNull { it.bookId == id } }
+            }?.name
+    }
+    return BookDafHeadsState(
+        own = shown.own,
+        hasSide = shown.setter.value.hasSide,
+        settings = setting,
+        onSettings = { setting = it },
+        onOpen = { id, page -> shown.commentators.onOpen(id, page.lines) },
+        onDetach = { id ->
+            nameOf(id)?.let(shown.commentators.onDetach)
+            settings.setBookDafCommentators(bookId, shown.own.checked(listOf(id), checked = false))
+        },
+        onChange = { settings.setBookDafCommentators(bookId, it) },
+        nameOf = { nameOf(it).orEmpty() },
+    )
 }
 
 /** These clicks with the line each selects told first ([onClick]), and the comment one focuses ([onFocus]). */
@@ -346,6 +346,7 @@ private fun DafClicks.noting(
     onFocusComment = onFocus,
     onContextLine = onContextLine,
     onWordInText = onWordInText,
+    onClear = onClear,
 )
 
 /** The keys of the words selected on a page ([selected]: some are): Ctrl or Cmd + C copies them, Escape lets go of them. */
@@ -475,6 +476,7 @@ private fun BookDafPage(
     marks: DafMarks,
     selection: AmudSelection,
     clicks: DafClicks,
+    heads: BookDafHeadsState,
     modifier: Modifier = Modifier,
 ) {
     val rule = JewelTheme.globalColors.borders.normal
@@ -483,7 +485,7 @@ private fun BookDafPage(
         value = page.layoutIfLaid ?: withContext(Dispatchers.Default) { page.layout() }
     }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.height(HeadHeight), contentAlignment = Alignment.BottomCenter) {
+        Box(Modifier.height(BookDafHead), contentAlignment = Alignment.BottomCenter) {
             Text(
                 if (page.isContinued) stringResource(Res.string.book_daf_continued, page.head) else page.head,
                 fontSize = 15.sp,
@@ -492,31 +494,35 @@ private fun BookDafPage(
                 color = JewelTheme.globalColors.text.info,
             )
         }
-        LinkedAmud(
-            book = book,
-            amud = page.amud,
-            // (the page's own: a unit set otherwise gives this place another page before its layout comes)
-            layout = layout?.takeIf { it.amud === page.amud },
-            look = look,
-            marks = marks,
-            selection = selection,
-            clicks = clicks,
-            modifier =
-                Modifier.padding(horizontal = PagePadding).padding(bottom = PageGap).drawBehind {
-                    // The page's own coordinates, left to right, whatever the view's direction
-                    for (r in page.rules) {
-                        drawLine(rule, Offset(r.x0, r.y0) * look.perPoint, Offset(r.x1, r.y1) * look.perPoint, strokeWidth = density)
-                    }
-                },
-            passages = page.passages,
-        )
+        Box(Modifier.padding(horizontal = BookDafPadding).padding(bottom = BookDafGap)) {
+            LinkedAmud(
+                book = book,
+                amud = page.amud,
+                // (the page's own: a unit set otherwise gives this place another page before its layout comes)
+                layout = layout?.takeIf { it.amud === page.amud },
+                look = look,
+                marks = marks,
+                selection = selection,
+                clicks = clicks,
+                modifier =
+                    Modifier.drawBehind {
+                        // The page's own coordinates, left to right, whatever the view's direction
+                        for (r in page.rules) {
+                            drawLine(rule, Offset(r.x0, r.y0) * look.perPoint, Offset(r.x1, r.y1) * look.perPoint, strokeWidth = density)
+                        }
+                    },
+                passages = page.passages,
+            )
+            // Its commentators' names, each over where it is printed: a click, two buttons, a drag (requests 91 and 93)
+            BookDafHeads(page, look.perPoint, heads, Modifier.matchParentSize())
+        }
     }
 }
 
 /**
  * A book's daf's list as it is now: its [units], those [laid] out (by the daf's [setter], or by the one before it while
  * they are laid out again), its scale ([perPoint] pixels a point) and its pages' [frame]; the index of a line of the
- * book ([indexOf], null for another's).
+ * book, or of the line a comment shown is on ([indexOf], null for another's).
  */
 private class BookDafList(
     val listState: LazyListState,
@@ -528,6 +534,9 @@ private class BookDafList(
     val viewportHeight: Float,
     val indexOf: suspend (Long) -> Int?,
 ) {
+    /** The list of the pages as they are shown now: this one until its composable makes another. */
+    var latest: () -> BookDafList = { this }
+
     /** The unit a library line is on: a line of the book's by its index, a comment's among the units laid out. */
     suspend fun unitOf(id: Long): Int? {
         laid.entries.firstOrNull { (_, unit) -> unit.pages.any { id in it.tops } }?.let { return it.key }
@@ -535,46 +544,114 @@ private class BookDafList(
         return units.indexOfFirst { index >= it.first && index < it.end }.takeIf { it >= 0 }
     }
 
+    // The unit [index] laid out as the pages are set now (the map of those laid out is the one the list keeps, filled as
+    // the unit is laid out): not in view, brought there to be laid out; in view, as it was until laid out again
+    private suspend fun laidAt(index: Int): LaidUnit? =
+        laid[index]?.takeIf { it.setter === setter.value } ?: run {
+            if (index !in laid) listState.scrollToItem(index)
+            withTimeoutOrNull(LAY_WAIT_MS) {
+                snapshotFlow { laid[index]?.takeIf { it.setter === setter.value } }.filterNotNull().first()
+            }
+        }
+
     /**
-     * The pixels down the item of the unit [index] to where the library line [id] is printed first, once laid out (the
-     * map of those laid out is the one the list keeps, filled as the unit is laid out).
+     * Brings the library line [id] into view, a page at a time (request 101 of stage 3: "בתצוגת ספר המעבר על ידי המקשים
+     * יהיה עמוד - עמוד... כאשר הקטע הבא בעמוד הבא יהיה מעבר שלם"): on another row of pages than the one at the view's
+     * top, or out of view, the view goes to where it rests down the line's row with the line in it (its top, with its
+     * head; down a row taller than the view, a view at a time: [restsOf]). In view on the row at the view's top, the view
+     * stays where it is, unless [always]. On the pages as they are once it is there: set again or at another scale
+     * meanwhile, the line is brought there again on those ([latest]).
      */
-    suspend fun offsetOf(
-        index: Int,
+    suspend fun bring(
         id: Long,
-    ): Float? {
-        val unit =
-            laid[index]?.takeIf { it.setter === setter.value } ?: run {
-                // Not in view: brought there to be laid out; in view, as it was until laid out again
-                if (index !in laid) listState.scrollToItem(index)
-                withTimeoutOrNull(LAY_WAIT_MS) {
-                    snapshotFlow { laid[index]?.takeIf { it.setter === setter.value } }.filterNotNull().first()
-                }
-            } ?: return null
-        return unit.offsetOf(id, perPoint, frame)
+        always: Boolean,
+    ) {
+        var list = this
+        var force = always
+        while (!list.reveal(id, force)) {
+            list = latest()
+            force = true
+        }
+    }
+
+    // The line [id] brought into view on this list's pages ([bring]); false when they are no longer the pages shown
+    private suspend fun reveal(
+        id: Long,
+        always: Boolean,
+    ): Boolean {
+        val index = unitOf(id) ?: return true
+        val unit = laidAt(index) ?: return true
+        if (!isCurrent(unit)) return false
+        val y = unit.offsetOf(id, perPoint, frame) ?: return true
+        val row = unit.rowAt(y, perPoint, frame)
+        if (!always && isShown(index, y) && rowAtTop() == index to row) return true
+        return goTo(index, unit, restFor(unit.rests(row, viewportHeight, perPoint, frame), y, viewportHeight, frame.head))
     }
 
     /**
-     * Brings the library line [id] into view, a page's head below the view's top ([atTop]: at the very top), unless it is
-     * in view; a line in a page's first lines, the page from its own top, with its head.
+     * A page down ([forward]) or up, a page at a time: to where the view rests next down the row of pages at its top, or
+     * before; from the last of them the top of the row after it, and from its top the end of the row before it. Down a
+     * row it slides, as the text's page keys; to another row it is there at once, a page turned.
      */
-    suspend fun reveal(
-        id: Long,
-        always: Boolean,
-        atTop: Boolean = false,
-    ) {
-        val index = unitOf(id) ?: return
-        val y = offsetOf(index, id) ?: return
-        if (!always && isShown(index, y)) return
-        val unit = laid[index] ?: return
-        val at = unit.pageOpenedBy(id, perPoint, frame) ?: if (atTop) y else y - frame.head
-        // The list measures a unit just laid out in a frame to come: an offset into it before then would run on through
-        // the places of the units after it
+    suspend fun turn(forward: Boolean) {
+        val at = rowAtTop()
+        val unit = at?.let { laid[it.first] }
+        if (at == null || unit == null) {
+            listState.animateScrollBy((if (forward) 1 else -1) * viewportHeight * PAGE_STEP)
+            return
+        }
+        val (index, row) = at
+        val offset = listState.firstVisibleItemScrollOffset.toFloat()
+        val rests = unit.rests(row, viewportHeight, perPoint, frame)
+        val within = if (forward) rests.firstOrNull { it > offset + 1f } else rests.lastOrNull { it < offset - 1f }
+        val lastRow = (unit.pages.size - 1) / frame.columns
+        when {
+            within != null -> listState.animateScrollBy(within - offset)
+            forward && row < lastRow -> goTo(index, unit, unit.rests(row + 1, viewportHeight, perPoint, frame).first())
+            forward -> if (index < units.lastIndex) listState.scrollToItem(index + 1)
+            row > 0 -> goTo(index, unit, unit.rests(row - 1, viewportHeight, perPoint, frame).last())
+            index > 0 -> toEnd(index - 1)
+        }
+    }
+
+    /** The view at the end of the unit [index]: where it rests last down its last row of pages. */
+    suspend fun toEnd(index: Int) {
+        val unit = laidAt(index) ?: return
+        if (!isCurrent(unit)) return latest().toEnd(index)
+        goTo(index, unit, unit.rests((unit.pages.size - 1) / frame.columns, viewportHeight, perPoint, frame).last())
+    }
+
+    // The unit at the view's top and its row of pages there; none while that unit is not laid out
+    private fun rowAtTop(): Pair<Int, Int>? {
+        val index = listState.firstVisibleItemIndex
+        val unit = laid[index] ?: return null
+        return index to unit.rowAt(listState.firstVisibleItemScrollOffset.toFloat(), perPoint, frame)
+    }
+
+    // Whether [unit]'s pages are the ones shown, as this list has them: not set again since, nor at another scale or in
+    // another view. A list is made anew with each of these; what goes on over frames (a wait for a unit to be laid out)
+    // may be at an old one, whose places are no places of the pages shown
+    private fun isCurrent(unit: LaidUnit): Boolean {
+        val now = latest()
+        val asShown = now.perPoint == perPoint && now.frame.columns == frame.columns && now.viewportHeight == viewportHeight
+        return asShown && setter.value === unit.setter
+    }
+
+    // The view [at] pixels down the item of the unit [index], once the list has measured it as [unit] laid out: in a
+    // frame to come for a unit just laid out, and an offset into it before then would run on through the places of the
+    // units after it. False, the view where it was, when the pages are no longer as this list has them
+    private suspend fun goTo(
+        index: Int,
+        unit: LaidUnit,
+        at: Float,
+    ): Boolean {
         if (!isMeasured(index, unit)) {
             listState.scrollToItem(index)
-            withTimeoutOrNull(LAY_WAIT_MS) { snapshotFlow { isMeasured(index, unit) }.first { it } }
+            withTimeoutOrNull(LAY_WAIT_MS) { snapshotFlow { isMeasured(index, unit) || !isCurrent(unit) }.first { it } }
         }
+        if (!isCurrent(unit)) return false
         listState.scrollToItem(index, at.toInt().coerceAtLeast(0))
+        return true
     }
 
     /** Whether the list has measured the item of the unit [index] as [unit] laid out: its height, give or take a pixel a page. */
@@ -651,7 +728,8 @@ private fun KeepPlaceAtZoom(
 /**
  * What the reader's keys and find bar ask of a book's daf ([control]): a page up or down, the book's first or last
  * page, a line brought into view, a step through the commentary of the comment [focused] (selected by a click on
- * itself; [onFocus] given the one stepped to), and where the daf is.
+ * itself; [onFocus] given the one stepped to), and where the daf is. Each moves the view a page at a time, to a page's
+ * top and never to between two pages (request 101 of stage 3).
  */
 @Composable
 private fun BookDafControl(
@@ -667,16 +745,10 @@ private fun BookDafControl(
     val currentFocused by rememberUpdatedState(focused)
     val stepping = remember { Mutex() }
     val listState = places.listState
-    control.page = { forward -> listState.animateScrollBy((if (forward) 1 else -1) * places.viewportHeight * PAGE_STEP) }
-    control.edge = { end ->
-        if (end) {
-            listState.scrollToItem((places.units.size - 1).coerceAtLeast(0))
-            listState.scrollBy(1_000_000f)
-        } else {
-            listState.scrollToItem(0)
-        }
-    }
-    control.toLine = { id -> places.reveal(id, always = false) }
+    // A page at a time (request 101 of stage 3)
+    control.page = { forward -> places.turn(forward) }
+    control.edge = { end -> if (end) places.toEnd((places.units.size - 1).coerceAtLeast(0)) else listState.scrollToItem(0) }
+    control.toLine = { id -> places.bring(id, always = false) }
     control.step = step@{ forward ->
         val from = currentFocused ?: return@step false
         // One step at a time: a key held down waits for the selection it asked for
@@ -690,7 +762,7 @@ private fun BookDafControl(
             val next = places.unitWithComment(from)?.next(from, forward) ?: return@step true
             onFocus(next.id)
             clicks.onSelectPassage(next.lineId, setOf(next.id), setOf(next.bookId))
-            places.reveal(next.id, always = false)
+            places.bring(next.id, always = false)
             awaitPassage(next.id) { currentPassage }
             true
         } finally {
@@ -708,8 +780,9 @@ private fun BookDafControl(
  * The tab's line in view: once the units are known, then whenever it changes or the tab asks. At first the place the
  * tab was at (the text's top line, or the daf's own when it was last shown), the selection where it is; not a line the
  * page selected itself by a click ([clicked], let go of with [onRelease]). When the pages are set again ([setter]: a
- * check in the commentaries pane, the book's default commentators as it opens), the line read at the top stays there.
- * Once there, the daf's place is told to [onScroll] whenever it rests, for the tab to come back to it.
+ * check in the commentaries pane, the book's default commentators as it opens), the line read at the top stays in view.
+ * Each time on its page from the page's top, a page at a time (BookDafList's bring). Once there, the daf's place is
+ * told to [onScroll] whenever it rests, for the tab to come back to it.
  */
 @Suppress("ComposeUnstableCollections") // as BookDafPages
 @Composable
@@ -737,14 +810,14 @@ private fun RevealTabLine(
         when {
             id == null -> Unit
             id == currentClicked && revealed -> currentOnRelease()
-            else -> current.reveal(id, always = !revealed, atTop = opening != null)
+            else -> current.bring(id, always = !revealed)
         }
         revealed = true
         top[0] = current.topLine() ?: id
     }
     LaunchedEffect(setter) {
         val at = top[0]
-        if (at != null && revealed) current.reveal(at, always = true, atTop = true)
+        if (at != null && revealed) current.bring(at, always = true)
     }
     // Not before: a place told while the daf still goes to the tab's would become the tab's
     val currentOnScroll by rememberUpdatedState(onScroll)

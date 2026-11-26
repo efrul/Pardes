@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 import androidx.compose.ui.graphics.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -57,14 +58,16 @@ class DafLinksTest {
     }
 
     @Test
-    fun inACommentarysTabAWordStandsForTheCommentarysComment() {
-        // Its comment's own words, and the Gemara's words its dibbur quotes or its segment's
-        assertEquals(second, links.commentaryLineAt(DafWord(1, 6), rashi))
-        assertEquals(second, links.commentaryLineAt(DafWord(0, 3), rashi))
-        assertEquals(first, links.commentaryLineAt(DafWord(0, 0), rashi))
-        // Another commentary's tab: none
-        assertNull(links.commentaryLineAt(DafWord(1, 6), 8L))
-        assertNull(links.commentaryLineAt(DafWord(0, 0), 8L))
+    fun aSecondClickIsOnWhatIsMarkedAlready() {
+        val marks = DafMarks(setOf(gemara), setOf(second), DafFind.NONE)
+        assertTrue(links.isMarked(DafWord(0, 3), marks), "the passage's words in the text")
+        assertTrue(links.isMarked(DafWord(1, 6), marks), "the comment itself")
+        assertFalse(links.isMarked(DafWord(1, 1), marks), "another comment")
+        assertFalse(links.isMarked(DafWord(0, 0), marks), "another passage of the same line")
+        val alone = DafAmudLinks(amud, emptyMap(), emptyMap())
+        assertTrue(alone.isMarked(DafWord(0, 0), DafMarks(setOf(gemara), emptySet(), DafFind.NONE)), "a line outside any passage")
+        assertFalse(alone.isMarked(DafWord(0, 0), DafMarks(setOf(gemara, 101L), emptySet(), DafFind.NONE)), "one of several lines")
+        assertFalse(alone.isMarked(DafWord(0, 0), DafMarks(emptySet(), emptySet(), DafFind.NONE)))
     }
 
     @Test

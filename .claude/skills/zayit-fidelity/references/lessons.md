@@ -85,6 +85,10 @@ tools and the code did when it was written.
   daf's one commit onto the newest code met five small conflicts where a merge of the branch would have met ten days of
   `main`; code the experiment had moved to a new file had not changed since, which `git diff -U0 <its base> HEAD --
   <file> | grep '^@@'` showed before trusting the move (2026-11-23).
+- **A feature taken out after a merge is taken out by its own lines.** Restoring a file to the merge's first parent drops
+  everything the other side brought to it: before request 86 put back the files of request 82's commentary mode as the
+  other branch had them, `git show <the side's commit> -- <file>` showed that the side had brought them request 82 alone
+  (and not 81's fits), and `git diff <the parent> -- <file>` that nothing but the new change was left (2026-11-23).
 - **Scratch tests and benches** (`Tmp*`) are deleted before the commit. A benchmark runs alone: mockk in the same JVM
   slows the real repository's calls.
 
@@ -215,6 +219,16 @@ tools and the code did when it was written.
   Material Symbols (composables.com's Kotlin of them, the 960 viewport): take the icon from there when it has one
   (`fit_page_height`, `fit_page_width`), with the Apache License's notice, look at Fluent and the PDF readers beside it,
   and draw only what none has (two thirds of a page) after the one it is nearest to.
+- **A lambda remembered by some keys keeps what it read in its first composition.** Zayit's `previewKeyHandler`
+  (`remember(onEvent)`) calls `stepLine`, which reads `dafControl`, made by `remember(bookId)`: with another book opened
+  in the tab, the arrows and Page Up/Down went to the former book's daf, and the arrows stepped through the text's
+  lines on the new one (request 86 of stage 3, 2026-11-23). Give `remember` every remembered value its lambda reads
+  that can change, or read it through `rememberUpdatedState`.
+- **A fix of how one path places a line moves every path that leaned on the old placement.** Request 75 brought a
+  selected line below the view in at its bottom, for a step down; a book opened at a line in its tab
+  (`OpenBookAtLine`) had leaned on the old jump to put that line at the top, and showed it at the bottom from then on,
+  found only with request 87 (2026-11-24). Before changing a shared reveal, list who selects a line without placing it
+  (`loadAndSelectLine(…, scroll = false)`), and give them a place of their own (the tab's anchor, as `loadBook` does).
 - **A jump to a row and back starts the rows between again.** `scrollToItem` disposes the rows it leaves, and a row
   that reads its text once on screen (the find pane's, `produceState`) reads it again, empty first, and grows: after a
   page down the rows above the row revealed grew and pushed it below the view, round after round (request 78,
@@ -414,6 +428,11 @@ Each of these was built, shown, and sent back. They say what the user expects:
   used takes the focus.
 - **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
   to the text's right beside the contents ("יהיה בימין").
+- **A screen opened from elsewhere is the screen itself, not a narrowed copy of it.** Rashi's and Tosafot's tabs got
+  the tractate's daf with the commentary's lines (request 82); the user asked for every option of the Gemara's daf, the
+  Gemara to be focused too ("פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא, אין אפשרות היום להתמקד על הגמרא
+  ככה", 2026-11-23). The commentary's button now opens the tractate's own daf in its tab, the comment selected there as
+  a click selects it. A second mode of a screen lacks what the first one has, and each new option must be built twice.
 - **One row marked, never two alike.** The home's dropdowns tinted the keys' row and the pointer's alike ("עכשיו שתי
   שורות מסומנות באותו צבע. מה התקן?", 2026-11-20). The standard, as in the OS's menus and IntelliJ's popups: the
   pointer's move marks the row under it, the arrows go on from the row marked, and a still pointer's row is not

@@ -1,13 +1,19 @@
 package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,15 +54,25 @@ private val AdjustWidth = 400.dp
 internal fun BookDafAdjust(
     book: Book,
     modifier: Modifier = Modifier,
+    // Whether the buttons show: while the pointer is at the pages' head, as a pane's header shows its own; and while
+    // the fields are open
+    shown: Boolean = true,
+    beside: @Composable () -> Unit = {},
 ) {
     var open by remember(book.id) { mutableStateOf(false) }
     Column(modifier.padding(8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Tooltip({ Text(stringResource(Res.string.book_daf_adjust_tooltip)) }) {
-            IconActionButton(
-                key = AllIconsKeys.General.Settings,
-                onClick = { open = !open },
-                contentDescription = stringResource(Res.string.book_daf_adjust),
-            )
+        AnimatedVisibility(visible = shown || open, enter = fadeIn(), exit = fadeOut()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The pages' other button: the list of their commentators (request 92 of stage 3)
+                beside()
+                Tooltip({ Text(stringResource(Res.string.book_daf_adjust_tooltip)) }) {
+                    IconActionButton(
+                        key = AllIconsKeys.General.Settings,
+                        onClick = { open = !open },
+                        contentDescription = stringResource(Res.string.book_daf_adjust),
+                    )
+                }
+            }
         }
         if (open) AdjustFields(book)
     }
@@ -77,6 +93,8 @@ private fun AdjustFields(book: Book) {
                 .clip(shape)
                 .border(1.dp, JewelTheme.globalColors.borders.normal, shape)
                 .background(JewelTheme.globalColors.panelBackground)
+                // Taller than a short view since the fields of requests 98 and 99: they scroll in it
+                .verticalScroll(rememberScrollState())
                 .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
