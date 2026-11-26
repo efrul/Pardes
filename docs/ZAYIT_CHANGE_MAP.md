@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (381 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (382 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2956,7 +2956,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontsSettingsScreen.kt`
 
-- **Change:** modified, +38 −10 lines. Feature: Daf view, User fonts.
+- **Change:** modified, +41 −11 lines. Feature: Daf view, User fonts.
 - **What:** two `FontSettingCard`s after Zayit's last, the daf's Gemara and its Rashi and Tosafot; their two imports.
   The daf's checkboxes that stood here too (the unsure lines, the review) are in `DafSettingsScreen.kt` since
   2026-11-10; the fonts stay here, with the other fonts, as the user asked on 2026-11-11.
@@ -2964,12 +2964,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
     (`UserFonts.fonts`), so `FontSettingCard` takes the fonts' codes in place of `FontOption`s, and a user font of
     the setting whose file is gone is listed as missing (`withMissingFont`); `UserFontsCard()` after the six cards;
     the `FontOption` import gone, four imports.
-- **Why:** as for `FontsSettingsEvents.kt`; the user fonts, the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup.
+  - The card's `ListComboBox` keys its rows by the fonts' codes (`itemKeys`, a comment marked "Pardes:"), and
+    `FontSettingCard` is `internal` (Zayit's is private), for its UI test.
+- **Why:** as for `FontsSettingsEvents.kt`; the user fonts, the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup. The keys: Jewel's `ListComboBox` of strings keys its rows by
+  their text, and two fonts of the user's of one family's name (a font's regular and bold files, or one file added
+  twice) closed the app as a list opened (the user's report of 2026-11-26; `Key "David" was already used` in
+  `FontSettingCardUiTest` without the keys).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: a block after Zayit's last card, and the card's list of fonts from codes, which a
   Zayit change of the card meets.
 - **Smaller:** already near minimal.
-- **Tests:** none of the screen; `UserFontsTest`; the font added and chosen were tried in the app.
+- **Tests:** `FontSettingCardUiTest` (the card); `UserFontsTest`; the font added and chosen were tried in the app,
+  and two fonts of one name added, their list opened and each chosen (2026-11-26).
 
 ### Home widgets
 
@@ -9201,8 +9207,9 @@ front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowStat
 A font from a TTF or OTF file can be added in Settings › גופנים since 2026-11-12, as the user asked: it is copied into
 the app's data folder (fonts/), offered in all six lists of fonts after the catalog's, can be taken out, and goes into the
 backup. A font whose file is gone shows the default font and is listed as missing; one without Hebrew letters is added
-with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`, `PendingUserDataRestore.kt`,
-`strings.xml`.
+with a warning. Two fonts of one name are told apart in the lists by their codes (2026-11-26: two of one family's name
+closed the app as a list opened). Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`,
+`PendingUserDataRestore.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFonts.kt`
 
@@ -9252,6 +9259,18 @@ with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBack
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, on temporary folders and the app's own font files.
 - **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontSettingCardUiTest.kt`
+
+- **Feature:** User fonts.
+- **Size:** 51 lines.
+- **What:** Zayit's `FontSettingCard` with a catalog font and two fonts of the user's of one name: its list opened (a
+  click on the font shown) and the second of the two chosen, which must give its own code. On the card without its
+  `itemKeys` it fails as the app crashed (`Key "David" was already used`).
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's settings cards' UI tests (`DafLayoutsCardUiTest`: `runDesktopComposeUiTest`, `IntUiTheme`,
+  right to left).
+- **Tests:** it is one (Compose UI).
 
 ### Typing over a side pane
 

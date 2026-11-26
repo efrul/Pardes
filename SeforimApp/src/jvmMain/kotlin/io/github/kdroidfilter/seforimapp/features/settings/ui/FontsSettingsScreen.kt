@@ -143,7 +143,7 @@ private fun FontsSettingsView(
 }
 
 @Composable
-private fun FontSettingCard(
+internal fun FontSettingCard(
     label: StringResource,
     fontCode: String,
     options: ImmutableList<String>,
@@ -180,6 +180,8 @@ private fun FontSettingCard(
                 items = labels,
                 selectedIndex = selectedIndex,
                 onSelectedItemChange = { idx -> onFontChange(codes[idx]) },
+                // Pardes: by code, not by name, which two fonts of the user's may share
+                itemKeys = { idx, _ -> codes[idx] },
                 modifier = Modifier.fillMaxWidth(0.4f),
             )
         }
