@@ -16,9 +16,13 @@ import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 /** Sefaria's two windows: tools of the app's Tools menu (ToolWindows' availableTools), never widgets of the Home. */
 internal val sefariaTools: List<HomeWidget> get() = listOf(TopicsTool, SagesTool)
 
-/** Whether the reader shows the topics of its line in a pane beside the text (LineTopicsPane): one setting, every tab. */
+/**
+ * Whether the reader shows the topics of its line in a pane beside the text (LineTopicsPane), one setting for every
+ * tab; and whether a search shows the topic its query names beside its results (SearchTopicCard), until it is hidden.
+ */
 object SefariaSettings : SettingsGroup("sefaria") {
     val topicsPane by boolean(false)
+    val searchTopicCard by boolean(true)
 }
 
 /**

@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (396 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (398 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -2419,7 +2419,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +241 −57 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Sefaria's content.
+- **Change:** modified, +246 −58 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Sefaria's content, The search's cards hidden.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -2472,6 +2472,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     names the book checked alone by its results (the contents pane's book may be another's).
   - Beside the results, under the panel of a book or an author the query names, `SearchTopicCard(state.executedQuery)`:
     the topic of Sefaria's the query names, with a comment marked "Pardes:" and its import.
+  - The book or author panel (`EntityPanel`) shows only while `SearchPanelsSettings.entity` is on (`showEntity`, read
+    beside `showBookDetails` under a comment marked "Pardes:"), and ends with `HideForGoodLink`, its "אל תציג עוד" at
+    the card's end, which turns it off; Settings › כללי turns it on again.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2479,7 +2482,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   menu on a right click, and scrolling up and down past it. The link to the library's order is the user's request
   of 2026-11-09, beside the status line's other choice. A tab picked alone unless Ctrl/Cmd is held, and the focus in
   the bar after it, are the user's request of 2026-11-12 (request 38). The search modes, the user's decision of
-  2026-11-18 (request 54 of stage 3, the design's variant ב: in the bar's row). The topic's card, of Sefaria's content the user chose on 2026-11-26.
+  2026-11-18 (request 54 of stage 3, the design's variant ב: in the bar's row). The topic's card, of Sefaria's content the user chose on 2026-11-26. The panels hidden, as the user asked of the testers' build of 2026-11-26: "צריך אפשרות להסתיר את
+  הדברים הללו בתוצאות חיפוש כמו בשאר המקומות".
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
@@ -2491,7 +2495,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   listed הכל, מדרש, תלמוד, תנ"ך, הלכה and "עוד" in one row, the tree open beside it (תוספתא behind "עוד", which listed
   the seven). The book checked with other places, tried in the app on 2026-11-25: מלכים א alone listed its 10 results
   with the way back; the תלמוד tab added by Ctrl+click gave the screen as ever (142 results, grouped, no way back);
-  "עוד 6 תוצאות מחולין" showed its 7 alone, and the way back brought the תלמוד tab and the book back, 142 again. The topic's card tried in the app (קריאת שמע: 203 sources in 92 books).
+  "עוד 6 תוצאות מחולין" showed its 7 alone, and the way back brought the תלמוד tab and the book back, 142 again. The topic's card tried in the app (קריאת שמע: 203 sources in 92 books). `SearchPanelsSettingsUiTest` (the topic card, by the same link).
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do. The header's line takes
   `SearchResultContentMvi`'s cyclomatic complexity from 65 to 66, and `TabsInOneRow` the file's functions from 24 to
   25 (`detekt.yml` allows 15 for both; they were past it already). The one-book flags take `SearchResultContentMvi`'s
@@ -2603,8 +2607,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +514 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 476 Hebrew strings added in twenty-three blocks,
+- **Change:** modified, +519 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 480 Hebrew strings added in twenty-four blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2705,6 +2709,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
     and a sage's page, `sefaria_sage_*` (teachers, students, family, groups, mentioned in, all, an ambiguous name, its
     Wikipedia page); the generations, `sefaria_generation_*` (tannaim, amoraim, zugot, between them); and the reader's
     menu, `sefaria_mark_*` and `sefaria_copy_*` for a sugya, a Mishnah and a story (47 strings).
+  - The cards beside a search's results hidden, under a comment after Sefaria's block, at the file's end: the
+    settings' two cards that bring them back, `settings_search_entity_panel` ("הצג ליד תוצאות החיפוש את הספר או המחבר
+    שחיפשת") and `settings_search_topic_card` ("…את הנושא שחיפשת, מספריא"), each with its description; their link is
+    `search_anywhere_keys_hide` ("אל תציג עוד").
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -2928,18 +2936,20 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/GeneralSettingsScreen.kt`
 
-- **Change:** modified, +11 −2 lines. Feature: Branding, the open smart siddur, A search from anywhere.
+- **Change:** modified, +15 −2 lines. Feature: Branding, the open smart siddur, A search from anywhere, The search's cards hidden.
 - **What:** the header's title is `stringResource(Res.string.app_name)` instead of the literal "זית", and its GitHub
   button opens `BrandInfo.SOURCE_URL` instead of Zayit's repository; two imports. After the last of Zayit's three
   cards, `OpenSiddurCard()`, with its import: the experimental siddur's switch.
   Since 2026-11-24, after it and under a comment marked "Pardes:", `SearchAnywhereKeysCard()` with its import: the
-  line of keys under the search from anywhere, for who hid it there (request 96 of stage 3).
+  line of keys under the search from anywhere, for who hid it there (request 96 of stage 3). Since 2026-11-26, after
+  it and under a comment marked "Pardes:", `SearchPanelsCards()` with its import: the cards beside a search's results
+  (the book or author it names, the topic it names), for who hid them there.
 - **Why:** the settings name the app and link its AGPL source, which are Pardes's (`07e14dac`; `branding/README.md`).
   The siddur's switch is a general setting of the app, as the three cards above it are, and belongs to no other page.
 - **Kind:** branding hook and Pardes feature hook.
 - **Merge risk:** small.
 - **Smaller:** already minimal; `app_name` itself is replaced by the brand overlay.
-- **Tests:** none of its own; `OpenSiddurSwitchTest` (what the card switches).
+- **Tests:** none of its own; `OpenSiddurSwitchTest` (what the card switches). `SearchPanelsSettingsUiTest` (the cards beside a search's results).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsEvents.kt`
 
@@ -10008,9 +10018,10 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaWindows.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 59 lines.
+- **Size:** 63 lines.
 - **What:** `sefariaTools` (the topics' and the sages' windows, for the Tools menu), `SefariaSettings` (`topicsPane`:
-  the reader's pane of the line's topics, one setting for every tab) and
+  the reader's pane of the line's topics, one setting for every tab; `searchTopicCard`: the search's topic card, until
+  it is hidden) and
   `SefariaWindows` (Metro-injected, one in the app): the topic or sage asked for and `openTopic`/`openSage`, which open
   the tools' windows on it; `SAGE_LINK` and `sageOf(uri)`, the sages' links in the texts.
 - **Reached from:** `AppGraph.sefariaWindows`; `RefLinkUriHandler.kt`, the reader's pane, the search's card; `ToolWindows.kt`
@@ -10068,12 +10079,14 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/SearchTopicCard.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 138 lines.
+- **Size:** 163 lines.
 - **What:** `SearchTopicCard`, beside a search's results, the topic its query names (with sources): its description,
-  its count of sources and the books most of them are in, the topics around it and "לדף הנושא".
-- **Reached from:** `SearchResultScreen.kt`.
+  its count of sources and the books most of them are in, the topics around it and "לדף הנושא"; at its end
+  `HideForGoodLink`, its "אל תציג עוד", while `SefariaSettings.searchTopicCard` is on. `SearchTopicCardSetting`, its
+  card in Settings › כללי.
+- **Reached from:** `SearchResultScreen.kt`; `SearchPanelsSettings.kt` (its Settings card).
 - **Follows:** Zayit's `EntityPanel` (the panel of a book or an author the query names), whose look it takes.
-- **Tests:** none of its own; tried in the app (קריאת שמע).
+- **Tests:** `SearchPanelsSettingsUiTest` (hidden and shown again); tried in the app (קריאת שמע, רבא).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinks.kt`
 
@@ -10160,6 +10173,37 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 - **Reached from:** the JVM tests.
 - **Follows:** `VerseQuotesTest` beside it.
 - **Tests:** it is one (unit).
+
+### The cards beside a search's results, hidden for good
+
+The panel of the book or the author a search's query names, and the topic it names, each hidden from its own "אל תציג
+עוד" and brought back in Settings › כללי, as the search from anywhere's line of keys is (request 96 of stage 3): the
+user's word on the testers' build of Sefaria's content (2026-11-26), "צריך אפשרות להסתיר את הדברים הללו בתוצאות חיפוש
+כמו בשאר המקומות". Hooks: `SearchResultScreen.kt`, `GeneralSettingsScreen.kt`, `strings.xml`; `SearchTopicCard.kt`,
+Pardes's own.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettings.kt`
+
+- **Feature:** The search's cards hidden.
+- **Size:** 56 lines.
+- **What:** `SearchPanelsSettings` (`entity`: the book or author panel beside a search's results, on until hidden);
+  `HideForGoodLink(setting)`, "אל תציג עוד" turning a card's setting off; `SearchPanelsCards`, the two cards of
+  Settings › כללי that turn them on again (the entity's, and `SearchTopicCardSetting`).
+- **Reached from:** `SearchResultScreen.kt` (`EntityPanel` and its condition), `SearchTopicCard.kt`,
+  `GeneralSettingsScreen.kt`.
+- **Follows:** Pardes's `SearchAnywhereSettings.kt` (the line of keys hidden for good, its card in Settings › כללי).
+- **Tests:** `SearchPanelsSettingsUiTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettingsUiTest.kt`
+
+- **Feature:** The search's cards hidden.
+- **Size:** 80 lines.
+- **What:** the topic card hidden from its link and shown again from its setting; Settings' two boxes, the first
+  turning the entity's setting on.
+- **Reached from:** the JVM tests.
+- **Follows:** `DictionaryWindowUiTest` (the real graph in a desktop Compose UI test), names in backticks as Zayit's.
+- **Tests:** it is one (UI).
+- **Notes:** it writes the real graph's settings, and turns both back on after each test.
 
 ## 3. Pardes's own trees
 
