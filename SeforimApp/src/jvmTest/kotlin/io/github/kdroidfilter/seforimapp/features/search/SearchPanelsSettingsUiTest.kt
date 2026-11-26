@@ -7,7 +7,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -15,24 +14,37 @@ import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
 import io.github.kdroidfilter.seforimapp.features.sefaria.topics.SearchTopicCard
+import io.github.kdroidfilter.seforimapp.features.sefaria.topics.SearchTopicCardButton
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.testAppGraph
 import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** The cards beside a search's results: hidden for good from their own "אל תציג עוד", brought back in Settings › כללי. */
+/** The cards beside a search's results, shown or hidden from the buttons of the search's end bar. */
 @OptIn(ExperimentalTestApi::class)
 class SearchPanelsSettingsUiTest {
     private val graph by lazy { testAppGraph() }
 
-    @AfterTest
-    fun showThemAgain() {
-        graph.appSettings[SefariaSettings.searchTopicCard] = true
+    // The real graph's settings, the machine's own: both cards shown for the test, as they were after it
+    private var before: Pair<Boolean, Boolean>? = null
+
+    @BeforeTest
+    fun showThem() {
+        before = graph.appSettings[SearchPanelsSettings.entity] to graph.appSettings[SefariaSettings.searchTopicCard]
         graph.appSettings[SearchPanelsSettings.entity] = true
+        graph.appSettings[SefariaSettings.searchTopicCard] = true
+    }
+
+    @AfterTest
+    fun putThemBack() {
+        before?.let { (entity, topic) ->
+            graph.appSettings[SearchPanelsSettings.entity] = entity
+            graph.appSettings[SefariaSettings.searchTopicCard] = topic
+        }
     }
 
     private fun ComposeUiTest.show(content: @Composable () -> Unit) =
@@ -44,37 +56,43 @@ class SearchPanelsSettingsUiTest {
             }
         }
 
-    private fun ComposeUiTest.hideLinks() = onAllNodesWithText(HIDE).fetchSemanticsNodes().size
+    private fun ComposeUiTest.cards() = onAllNodesWithText(OPEN_PAGE).fetchSemanticsNodes().size
 
     @Test
-    fun `the topic card hides for good from its link, and comes back from its setting`() =
+    fun `the topic card shows while its setting is on`() =
         runDesktopComposeUiTest(width = 640, height = 520) {
             show { SearchTopicCard("קריאת שמע") }
             // Sefaria's topics are read off the UI thread at first
-            waitUntil(timeoutMillis = LOADING_MS) { hideLinks() == 1 }
-            onNodeWithText(HIDE).performClick()
+            waitUntil(timeoutMillis = LOADING_MS) { cards() == 1 }
+            graph.appSettings[SefariaSettings.searchTopicCard] = false
             waitForIdle()
-            assertFalse(graph.appSettings[SefariaSettings.searchTopicCard])
-            onAllNodesWithText("קריאת שמע").assertCountEquals(0)
+            onAllNodesWithText(OPEN_PAGE).assertCountEquals(0)
             graph.appSettings[SefariaSettings.searchTopicCard] = true
-            waitUntil(timeoutMillis = LOADING_MS) { hideLinks() == 1 }
+            waitUntil(timeoutMillis = LOADING_MS) { cards() == 1 }
         }
 
     @Test
-    fun `Settings have a box for each card, as its setting is`() =
-        runDesktopComposeUiTest(width = 640, height = 520) {
-            graph.appSettings[SearchPanelsSettings.entity] = false
-            show { Column { SearchPanelsCards() } }
+    fun `the bar's buttons hide and show the cards`() =
+        runDesktopComposeUiTest(width = 200, height = 400) {
+            show {
+                Column {
+                    SearchEntityPanelButton()
+                    SearchTopicCardButton()
+                }
+            }
+            onNodeWithText("ספר/מחבר").performClick()
             waitForIdle()
-            val boxes = onAllNodes(isToggleable()).fetchSemanticsNodes()
-            assertEquals(2, boxes.size)
-            onAllNodes(isToggleable())[0].performClick()
+            assertFalse(graph.appSettings[SearchPanelsSettings.entity])
+            onNodeWithText("ספר/מחבר").performClick()
             waitForIdle()
             assertTrue(graph.appSettings[SearchPanelsSettings.entity])
+            onNodeWithText("נושא").performClick()
+            waitForIdle()
+            assertFalse(graph.appSettings[SefariaSettings.searchTopicCard])
         }
 
     private companion object {
-        const val HIDE = "אל תציג עוד"
+        const val OPEN_PAGE = "לדף הנושא"
         const val LOADING_MS = 30_000L
     }
 }

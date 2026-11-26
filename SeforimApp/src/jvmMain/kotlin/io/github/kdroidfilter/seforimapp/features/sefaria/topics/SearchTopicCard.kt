@@ -20,12 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.kdroidfilter.seforimapp.features.search.HideForGoodLink
+import io.github.kdroidfilter.seforimapp.core.presentation.components.SelectableIconButtonWithToolip
 import io.github.kdroidfilter.seforimapp.features.search.readingSecondary
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaTopics
 import io.github.kdroidfilter.seforimapp.features.sefaria.Topic
-import io.github.kdroidfilter.seforimapp.features.settings.ui.SettingCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.Contextual_token
 import kotlinx.coroutines.Dispatchers
@@ -36,13 +35,13 @@ import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.OutlinedButton
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
+import seforimapp.seforimapp.generated.resources.search_card_topic
+import seforimapp.seforimapp.generated.resources.search_card_topic_tooltip
 import seforimapp.seforimapp.generated.resources.sefaria_topic_card_kind
 import seforimapp.seforimapp.generated.resources.sefaria_topic_open_page
 import seforimapp.seforimapp.generated.resources.sefaria_topic_related
 import seforimapp.seforimapp.generated.resources.sefaria_topic_sources_in_books
 import seforimapp.seforimapp.generated.resources.sefaria_topics_credit
-import seforimapp.seforimapp.generated.resources.settings_search_topic_card
-import seforimapp.seforimapp.generated.resources.settings_search_topic_card_description
 
 /**
  * Beside a search's results, the topic its [query] names (SefariaTopics.named), as the panel of a book or an author it
@@ -55,7 +54,7 @@ fun SearchTopicCard(
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalAppGraph.current
-    // Hidden for good from its "אל תציג עוד", until Settings › כללי brings it back
+    // Shown or hidden from the search's end bar (SearchTopicCardButton)
     val shown by graph.appSettings.flow(SefariaSettings.searchTopicCard).collectAsState()
     if (!shown) return
     val found by produceState<Pair<SefariaTopics, Topic>?>(null, query) {
@@ -138,23 +137,23 @@ private fun TopicCard(
             )
         }
         OutlinedButton(onClick = onOpen) { Text(stringResource(Res.string.sefaria_topic_open_page)) }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(Res.string.sefaria_topics_credit), fontSize = 11.sp, color = grey, modifier = Modifier.weight(1f))
-            HideForGoodLink(SefariaSettings.searchTopicCard)
-        }
+        Text(stringResource(Res.string.sefaria_topics_credit), fontSize = 11.sp, color = grey)
     }
 }
 
-/** Settings › כללי: whether a search shows the topic its query names, for who hid the card there. */
+/** The search's end bar's button of the topic card (SearchPanelsSettings.kt), lit while it shows. */
 @Composable
-internal fun SearchTopicCardSetting() {
+fun SearchTopicCardButton() {
     val appSettings = LocalAppGraph.current.appSettings
     val shown by appSettings.flow(SefariaSettings.searchTopicCard).collectAsState()
-    SettingCard(
-        title = Res.string.settings_search_topic_card,
-        description = Res.string.settings_search_topic_card_description,
-        checked = shown,
-        onCheckedChange = { appSettings[SefariaSettings.searchTopicCard] = it },
+    val label = stringResource(Res.string.search_card_topic)
+    SelectableIconButtonWithToolip(
+        toolTipText = stringResource(Res.string.search_card_topic_tooltip),
+        onClick = { appSettings[SefariaSettings.searchTopicCard] = !shown },
+        isSelected = shown,
+        icon = Contextual_token,
+        iconDescription = label,
+        label = label,
     )
 }
 

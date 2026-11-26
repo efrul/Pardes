@@ -1366,9 +1366,9 @@
     <string name="sefaria_mark_story">סמן את הסיפור</string>
     <string name="sefaria_copy_story">העתק את הסיפור</string>
 
-    <!-- Pardes: the cards beside a search's results, hidden for good from their "אל תציג עוד" and shown again in Settings › כללי (features/search/SearchPanelsSettings.kt) -->
-    <string name="settings_search_entity_panel">הצג ליד תוצאות החיפוש את הספר או המחבר שחיפשת</string>
-    <string name="settings_search_entity_panel_description">כשמחפשים שם של ספר או של מחבר, ליד התוצאות מופיע כרטיס שלו, עם הכפתורים שפותחים אותו. אפשר להסתיר אותו מכאן, או בלחיצה על "אל תציג עוד" שבכרטיס.</string>
-    <string name="settings_search_topic_card">הצג ליד תוצאות החיפוש את הנושא שחיפשת, מספריא</string>
-    <string name="settings_search_topic_card_description">כשמחפשים שם של נושא מהנושאים של ספריא, ליד התוצאות מופיע כרטיס שלו, עם מספר המקורות, הספרים שהם בהם והכפתור לדף הנושא. אפשר להסתיר אותו מכאן, או בלחיצה על "אל תציג עוד" שבכרטיס.</string>
+    <!-- Pardes: the cards beside a search's results, shown or hidden from the search's end bar (features/search/SearchPanelsSettings.kt) -->
+    <string name="search_card_entity">ספר/מחבר</string>
+    <string name="search_card_entity_tooltip">הצג ליד התוצאות את הספר או המחבר שחיפשת</string>
+    <string name="search_card_topic">נושא</string>
+    <string name="search_card_topic_tooltip">הצג ליד התוצאות את הנושא שחיפשת, מספריא</string>
 </resources>

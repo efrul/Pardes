@@ -1403,8 +1403,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +114 −15 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
-  side, Pages in the dark theme's colours, A whole page in the view, A book's own pages, Sefaria's content.
+- **Change:** modified, +121 −15 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+  side, Pages in the dark theme's colours, A whole page in the view, A book's own pages, Sefaria's content, The search's cards shown or hidden.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`; for a commentary a tractate's daf prints, Rashi's, Tosafot's,
@@ -1449,16 +1449,21 @@ The entries of this section by kind:
   - After the references' button, in every book, the topics' button ("נושאים", Zayit's unused `Contextual_token`
     icon), lit while `SefariaSettings.topicsPane` is on, sending `ToggleTopics`, with a comment marked "Pardes:" and
     its import.
+  - In a tab with no book (a search's results: `WindowBody` gives the end bar without a book to a search alone), after
+    "פרטי הספר", `SearchEntityPanelButton()` and `SearchTopicCardButton()`, under a comment marked "Pardes:", with
+    their imports: the cards beside the results, the book or author the query names and the topic it names, shown
+    or hidden as the reader's panes are from this bar.
 - **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`); a button
   is enabled exactly when its pane has something to show, as Zayit's comment there says. The library of 2026-10-12 has
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
-  their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10. The pane of the line's topics opens from the bar, as the references' and the other line panes do.
+  their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10. The pane of the line's topics opens from the bar, as the references' and the other line panes do. The cards' buttons, as the user asked of the testers' builds of 2026-11-26: "עדיף פשוט שיהיה את המתג
+  בסרגל השמאלי כמו בשאר המקומות".
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small; two buttons among the bar's and two under the zoom's, a branch before the diacritics button and
   a button after it, `ZoomButtons`' body, the references' availability and the two `…Enabled` lines.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`); the scan's, two pages' and the pages'
-  colours' buttons were checked in the app, and the toggle on Bereshit, Mishnah Berakhot and Orach Chaim. The topics' button tried in the app.
+  colours' buttons were checked in the app, and the toggle on Bereshit, Mishnah Berakhot and Orach Chaim. The topics' button tried in the app. `SearchPanelsSettingsUiTest` (the cards' buttons); the buttons tried in the app (רבא).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LineReferences.kt`
 
@@ -2419,7 +2424,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +246 −58 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Sefaria's content, The search's cards hidden.
+- **Change:** modified, +244 −58 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Sefaria's content, The search's cards shown or hidden.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -2473,8 +2478,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - Beside the results, under the panel of a book or an author the query names, `SearchTopicCard(state.executedQuery)`:
     the topic of Sefaria's the query names, with a comment marked "Pardes:" and its import.
   - The book or author panel (`EntityPanel`) shows only while `SearchPanelsSettings.entity` is on (`showEntity`, read
-    beside `showBookDetails` under a comment marked "Pardes:"), and ends with `HideForGoodLink`, its "אל תציג עוד" at
-    the card's end, which turns it off; Settings › כללי turns it on again.
+    beside `showBookDetails` under a comment marked "Pardes:"), which the search's end bar turns
+    (`SearchEntityPanelButton`, in `VerticalBars.kt`).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2483,7 +2488,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   of 2026-11-09, beside the status line's other choice. A tab picked alone unless Ctrl/Cmd is held, and the focus in
   the bar after it, are the user's request of 2026-11-12 (request 38). The search modes, the user's decision of
   2026-11-18 (request 54 of stage 3, the design's variant ב: in the bar's row). The topic's card, of Sefaria's content the user chose on 2026-11-26. The panels hidden, as the user asked of the testers' build of 2026-11-26: "צריך אפשרות להסתיר את
-  הדברים הללו בתוצאות חיפוש כמו בשאר המקומות".
+  הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט שיהיה את המתג בסרגל השמאלי".
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
@@ -2495,7 +2500,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   listed הכל, מדרש, תלמוד, תנ"ך, הלכה and "עוד" in one row, the tree open beside it (תוספתא behind "עוד", which listed
   the seven). The book checked with other places, tried in the app on 2026-11-25: מלכים א alone listed its 10 results
   with the way back; the תלמוד tab added by Ctrl+click gave the screen as ever (142 results, grouped, no way back);
-  "עוד 6 תוצאות מחולין" showed its 7 alone, and the way back brought the תלמוד tab and the book back, 142 again. The topic's card tried in the app (קריאת שמע: 203 sources in 92 books). `SearchPanelsSettingsUiTest` (the topic card, by the same link).
+  "עוד 6 תוצאות מחולין" showed its 7 alone, and the way back brought the תלמוד tab and the book back, 142 again. The topic's card tried in the app (קריאת שמע: 203 sources in 92 books). `SearchPanelsSettingsUiTest` (the bar's buttons, and the topic card as its setting is).
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do. The header's line takes
   `SearchResultContentMvi`'s cyclomatic complexity from 65 to 66, and `TabsInOneRow` the file's functions from 24 to
   25 (`detekt.yml` allows 15 for both; they were past it already). The one-book flags take `SearchResultContentMvi`'s
@@ -2709,10 +2714,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     and a sage's page, `sefaria_sage_*` (teachers, students, family, groups, mentioned in, all, an ambiguous name, its
     Wikipedia page); the generations, `sefaria_generation_*` (tannaim, amoraim, zugot, between them); and the reader's
     menu, `sefaria_mark_*` and `sefaria_copy_*` for a sugya, a Mishnah and a story (47 strings).
-  - The cards beside a search's results hidden, under a comment after Sefaria's block, at the file's end: the
-    settings' two cards that bring them back, `settings_search_entity_panel` ("הצג ליד תוצאות החיפוש את הספר או המחבר
-    שחיפשת") and `settings_search_topic_card` ("…את הנושא שחיפשת, מספריא"), each with its description; their link is
-    `search_anywhere_keys_hide` ("אל תציג עוד").
+  - The cards beside a search's results shown or hidden, under a comment after Sefaria's block, at the file's end:
+    the search's end bar's two buttons, `search_card_entity` ("ספר/מחבר") and `search_card_topic` ("נושא"), each with
+    its tooltip ("הצג ליד התוצאות את הספר או המחבר שחיפשת", "…את הנושא שחיפשת, מספריא").
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
@@ -2936,20 +2940,18 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/GeneralSettingsScreen.kt`
 
-- **Change:** modified, +15 −2 lines. Feature: Branding, the open smart siddur, A search from anywhere, The search's cards hidden.
+- **Change:** modified, +11 −2 lines. Feature: Branding, the open smart siddur, A search from anywhere.
 - **What:** the header's title is `stringResource(Res.string.app_name)` instead of the literal "זית", and its GitHub
   button opens `BrandInfo.SOURCE_URL` instead of Zayit's repository; two imports. After the last of Zayit's three
   cards, `OpenSiddurCard()`, with its import: the experimental siddur's switch.
   Since 2026-11-24, after it and under a comment marked "Pardes:", `SearchAnywhereKeysCard()` with its import: the
-  line of keys under the search from anywhere, for who hid it there (request 96 of stage 3). Since 2026-11-26, after
-  it and under a comment marked "Pardes:", `SearchPanelsCards()` with its import: the cards beside a search's results
-  (the book or author it names, the topic it names), for who hid them there.
+  line of keys under the search from anywhere, for who hid it there (request 96 of stage 3).
 - **Why:** the settings name the app and link its AGPL source, which are Pardes's (`07e14dac`; `branding/README.md`).
   The siddur's switch is a general setting of the app, as the three cards above it are, and belongs to no other page.
 - **Kind:** branding hook and Pardes feature hook.
 - **Merge risk:** small.
 - **Smaller:** already minimal; `app_name` itself is replaced by the brand overlay.
-- **Tests:** none of its own; `OpenSiddurSwitchTest` (what the card switches). `SearchPanelsSettingsUiTest` (the cards beside a search's results).
+- **Tests:** none of its own; `OpenSiddurSwitchTest` (what the card switches).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/FontsSettingsEvents.kt`
 
@@ -10079,14 +10081,13 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/SearchTopicCard.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 163 lines.
+- **Size:** 162 lines.
 - **What:** `SearchTopicCard`, beside a search's results, the topic its query names (with sources): its description,
-  its count of sources and the books most of them are in, the topics around it and "לדף הנושא"; at its end
-  `HideForGoodLink`, its "אל תציג עוד", while `SefariaSettings.searchTopicCard` is on. `SearchTopicCardSetting`, its
-  card in Settings › כללי.
-- **Reached from:** `SearchResultScreen.kt`; `SearchPanelsSettings.kt` (its Settings card).
+  its count of sources and the books most of them are in, the topics around it and "לדף הנושא", while
+  `SefariaSettings.searchTopicCard` is on; `SearchTopicCardButton`, its button in the search's end bar ("נושא").
+- **Reached from:** `SearchResultScreen.kt`; `VerticalBars.kt` (its button).
 - **Follows:** Zayit's `EntityPanel` (the panel of a book or an author the query names), whose look it takes.
-- **Tests:** `SearchPanelsSettingsUiTest` (hidden and shown again); tried in the app (קריאת שמע, רבא).
+- **Tests:** `SearchPanelsSettingsUiTest` (shown as its setting is, and its button); tried in the app (קריאת שמע, רבא).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinks.kt`
 
@@ -10174,36 +10175,36 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 - **Follows:** `VerseQuotesTest` beside it.
 - **Tests:** it is one (unit).
 
-### The cards beside a search's results, hidden for good
+### The cards beside a search's results, shown or hidden from the search's bar
 
-The panel of the book or the author a search's query names, and the topic it names, each hidden from its own "אל תציג
-עוד" and brought back in Settings › כללי, as the search from anywhere's line of keys is (request 96 of stage 3): the
-user's word on the testers' build of Sefaria's content (2026-11-26), "צריך אפשרות להסתיר את הדברים הללו בתוצאות חיפוש
-כמו בשאר המקומות". Hooks: `SearchResultScreen.kt`, `GeneralSettingsScreen.kt`, `strings.xml`; `SearchTopicCard.kt`,
+The panel of the book or the author a search's query names, and the topic it names, each shown or hidden from its
+button in the search's end bar, as the reader's panes are from theirs: the user's words on the testers' builds of
+Sefaria's content (2026-11-26), "צריך אפשרות להסתיר את הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט
+שיהיה את המתג בסרגל השמאלי". Hooks: `SearchResultScreen.kt`, `VerticalBars.kt`, `strings.xml`; `SearchTopicCard.kt`,
 Pardes's own.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettings.kt`
 
-- **Feature:** The search's cards hidden.
-- **Size:** 56 lines.
-- **What:** `SearchPanelsSettings` (`entity`: the book or author panel beside a search's results, on until hidden);
-  `HideForGoodLink(setting)`, "אל תציג עוד" turning a card's setting off; `SearchPanelsCards`, the two cards of
-  Settings › כללי that turn them on again (the entity's, and `SearchTopicCardSetting`).
-- **Reached from:** `SearchResultScreen.kt` (`EntityPanel` and its condition), `SearchTopicCard.kt`,
-  `GeneralSettingsScreen.kt`.
-- **Follows:** Pardes's `SearchAnywhereSettings.kt` (the line of keys hidden for good, its card in Settings › כללי).
+- **Feature:** The search's cards shown or hidden.
+- **Size:** 39 lines.
+- **What:** `SearchPanelsSettings` (`entity`: the book or author panel beside a search's results, on until turned off,
+  one setting for every search tab) and `SearchEntityPanelButton`, its button in the search's end bar ("ספר/מחבר",
+  Zayit's unused `Manage_search` icon), lit while the panel shows.
+- **Reached from:** `SearchResultScreen.kt` (the panel's condition), `VerticalBars.kt` (the button).
+- **Follows:** Zayit's end bar buttons (`SelectableIconButtonWithToolip`, as "פרטי הספר" over the book details' setting).
 - **Tests:** `SearchPanelsSettingsUiTest`.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettingsUiTest.kt`
 
-- **Feature:** The search's cards hidden.
-- **Size:** 80 lines.
-- **What:** the topic card hidden from its link and shown again from its setting; Settings' two boxes, the first
-  turning the entity's setting on.
+- **Feature:** The search's cards shown or hidden.
+- **Size:** 98 lines.
+- **What:** the topic card shown while its setting is on, gone while it is off; the bar's two buttons turning the
+  cards' settings off and on.
 - **Reached from:** the JVM tests.
 - **Follows:** `DictionaryWindowUiTest` (the real graph in a desktop Compose UI test), names in backticks as Zayit's.
 - **Tests:** it is one (UI).
-- **Notes:** it writes the real graph's settings, and turns both back on after each test.
+- **Notes:** it writes the real graph's settings, the machine's own: both cards on for each test, and the values they
+  had put back after it.
 
 ## 3. Pardes's own trees
 

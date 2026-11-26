@@ -369,7 +369,7 @@ private fun SearchResultContentMvi(
     // The selection lives in the ViewModel, as the preview it drives
     val selectedLineId = preview?.hit?.lineId
     val showBookDetails by appSettings.bookDetailsPaneFlow.collectAsState()
-    // Pardes: the panel of the book or the author the query names, until it is hidden (SearchPanelsSettings.kt)
+    // Pardes: the panel of the book or the author the query names, shown or hidden from the bar (SearchPanelsSettings.kt)
     val showEntity by appSettings.flow(SearchPanelsSettings.entity).collectAsState()
     val listFocus = remember { FocusRequester() }
     // Pardes: back to the bar once a tab is picked, for Enter to search again in the tabs picked
@@ -1291,8 +1291,6 @@ private fun EntityPanel(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.card().padding(16.dp)) {
         EntityDetails(entity, onOpenBookAt, onOpenAuthor)
-        // Pardes: hidden for good from here, brought back in Settings › כללי
-        HideForGoodLink(SearchPanelsSettings.entity, Modifier.align(Alignment.End))
     }
 }
 
