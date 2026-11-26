@@ -68,6 +68,7 @@ class AuthorScopeSearchTest : SearchIntegrationTestBase() {
             appSettings = testAppSettings(),
             lookup = mockk(relaxed = true),
             libraryCategories = LibraryCategories(mockk { every { getCatalog() } returns null }, requireRepository(), mockk()),
+            commonSources = mockk(relaxed = true),
         )
     }
 

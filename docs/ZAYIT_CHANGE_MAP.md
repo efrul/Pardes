@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (379 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (384 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -804,8 +804,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +65 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere.
+- **Change:** modified, +67 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere, Common sources line.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -815,7 +815,8 @@ The entries of this section by kind:
     taken out of the bar is a tab picked no longer.
   - The search tab's own bar passes `onNewBarOpened = null` (a bar in a new tab opens empty, as in Zayit; this one opens
     where its search looked).
-  - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`.
+  - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`; so is
+    `commonSources`, from `viewModel.commonSourcesFlow`.
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
     `onNewBarOpened` to `SearchHomeViewModel`.
   - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
@@ -2300,10 +2301,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +557 −72 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
+- **Change:** modified, +591 −72 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
-  - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
+  - New constructor parameters `feedbackStore: SearchFeedbackStore`, `libraryCategories: LibraryCategories` and
+    `commonSources: CommonSourcesReader`.
   - Events `SetScopeBaseBooksOnly` (the status line's choice in a category with base books and others) and `Grade`.
   - **Feedback mode:** `feedbackFlow` holds the grades of the search shown, read again when the search or the mode
     changes; `grade()` shows a grade at once and saves it in order (a `Mutex`) with the query, rank, scope and the
@@ -2363,6 +2365,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - Since then too, "more from it" (`showMoreFromBook`) shows the book alone, whatever else is marked: the marks are
     kept (`marksBeforeBook`) and let go for the book's, and the way back brings them back (`backFromBook`, and
     `clearBookFilter` without kept results); a change of the marks meanwhile, or a new search, lets them go.
+  - **Common sources line** (`docs/COMMON_SOURCES_PLAN.md`): `commonSourcesFlow`, the line's sources
+    (`CommonSourcesReader.line`) for the first `CommonSources.PAGE` results' ids, in the visible tab only, in the cases
+    measured: no tab, book or contents entry picked, by relevance (not the library's order), searched everywhere (no
+    book, contents entry or category), in the base books or in all of them after the automatic switch
+    (`baseBooksHadNoResults`), whose meaning search ran (`highlightsByMeaning`); empty in any other case.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
   the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
@@ -2372,7 +2379,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   of `BuildSearchTreeUseCase.kt`; the guard is a fix of Zayit's code, seen once in the app when the first tree
   from the catalog came in after the facets'. A tab picked alone on a plain click, others added only with Ctrl/Cmd,
   is the user's request of 2026-11-12 (request 38). The search modes, exact, general or hybrid, are the user's
-  decision of 2026-11-18 (request 54 of stage 3), wrapped as the library's order is.
+  decision of 2026-11-18 (request 54 of stage 3), wrapped as the library's order is. The line of common sources
+  is the plan of 2026-10-27, its first version built for the user's mockup of 2026-11-26.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
@@ -2380,17 +2388,21 @@ alone. Every entry below that says "Search in categories" is part of that revers
   labels in `LibraryCategories`; keeping Zayit's name `authorBookIds` would shrink the diff.
 - **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`,
   `SearchMarksTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`,
-  `ResultsTreeLibraryBooksTest`, `SearchModesTest`.
+  `ResultsTreeLibraryBooksTest`, `SearchModesTest`, `CommonSourcesTest` (the line's rule; its flow was seen in the
+  app on the whole library, 2026-11-26).
 - **Notes:** the runs counted take `executeFilteredSearch`'s cyclomatic complexity from 22 to 23 (`detekt.yml` allows
   15; it was past it already).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +238 −57 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
+- **Change:** modified, +246 −57 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Common sources line.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
   - With feedback mode on (`searchFeedbackFlow`), each result row ends with `SearchFeedbackButtons`.
+  - `SearchResultInBookShellMvi` and `SearchResultContentMvi` take `commonSources` too, and the header shows
+    `CommonSourcesLine` under the status line's row, before the divider; a source opens in a new tab
+    (`actions.onOpenBookAt`). Empty where it doesn't apply (the view model's `commonSourcesFlow`).
   - The status line names the category or books searched (`state.scopeLabel`), and in a category with base books and
     others offers the other choice (`search_switch_scope_all` / `…_base`).
   - The preview's highlights come from `rememberPreviewHighlights(...)` instead of an inline `produceState`.
@@ -2543,10 +2555,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorScopeSearchTest.kt`
 
-- **Change:** modified, +7 −1 lines. Feature: Feedback mode, Search in categories, Results in the library's order.
-- **What:** the test's `SearchResultViewModel` gets a `feedbackStore` (an in-memory `SearchFeedbackStore`) and a
-  `libraryCategories` (a `LibraryCategories` without a catalog), and its engine by the parameter's new name, `engine`.
-- **Why:** the ViewModel's constructor gained both (`90f8a24a`, `37d4fe60`), and wraps the engine it is given
+- **Change:** modified, +8 −1 lines. Feature: Feedback mode, Search in categories, Results in the library's order, Common sources line.
+- **What:** the test's `SearchResultViewModel` gets a `feedbackStore` (an in-memory `SearchFeedbackStore`), a
+  `libraryCategories` (a `LibraryCategories` without a catalog), a `commonSources` (a relaxed mock), and its engine by the parameter's new name, `engine`.
+- **Why:** the ViewModel's constructor gained them (`90f8a24a`, `37d4fe60`, and the line of common sources), and wraps the engine it is given
   (`CatalogOrderEngine`), which keeps the name `lucene` for the wrapped one.
 - **Kind:** Pardes feature hook (a test kept compiling).
 - **Merge risk:** small.
@@ -2568,8 +2580,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +466 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 429 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +471 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 433 Hebrew strings added in twenty-three blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2603,7 +2615,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `settings_user_font_missing`;
   - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה"), `search_sort_relevance` and
     `search_farther_lines` (the lines found by meaning alone the library's order leaves out), after
-    `search_switch_scope_base`;
+    `search_switch_scope_base`; right after them, under a comment of their own, the line of common sources's
+    `search_common_source` ("מקור משותף:"), `search_common_sources`, `search_common_source_books` ("(%1$d ספרים)")
+    and `search_common_source_books_tip` (what the number counts);
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
     the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
@@ -8725,9 +8739,9 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CategoryScopeSearchTest.kt`
 
 - **Feature:** Search in categories (base books).
-- **Size:** 105 lines.
+- **Size:** 106 lines.
 - **What:** over the dev database (skipped without it), a category searched in its base books alone finds in its texts
-  only, not in their commentaries.
+  only, not in their commentaries. The line of common sources is a relaxed mock.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's search integration tests (`SearchIntegrationTestBase`).
 - **Tests:** it is one (end to end).
@@ -8771,27 +8785,101 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/ScopeFlowBench.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 315 lines.
+- **Size:** 316 lines.
 - **What:** a `main` that times a search as the reader waits for it: `SearchResultViewModel` over the engines the app
   builds (`provideSearchEngine`'s, `LibraryCategories` over catalog.pb), on the library `SEFORIMAPP_DATABASE_PATH`
   names, the screen's flows collected; from a search's start to its first results, its tabs and its end, in eight
   scopes (the whole library, a book, three books, a small category, תלמוד, הלכה, אחרונים on the Bavli, ראשונים and
   אחרונים together), then the first two tabs picked and all again, and the library's order with a tab in it; the cold
-  first round apart.
+  first round apart. The line of common sources is a relaxed mock.
 - **Reached from:** run by hand (docs/scope-search-speed/README.md).
 - **Follows:** `CategoryScopeSearchTest` (the view model built in a test), `ScopeSearchBench` and `CategorySearchBench`.
 - **Tests:** a bench.
 
+### Common sources line
+
+A line above the search results with up to three sources: the book lines that many of the first twenty results link
+to (`docs/COMMON_SOURCES_PLAN.md`, the rule measured in pardes-semantic's `eval-real/common_source.py`), each a link that
+opens it in a new tab, with how many books of the page link to it. The plan's first version, built for the user's
+mockup (2026-11-26): it shows in the cases measured only, and a running read is not yet stopped when another search
+starts, nor the line hidden while a filter is being let go. The hooks in Zayit's files are in
+`SearchResultViewModel.kt` (`commonSourcesFlow`), `SearchResultScreen.kt` (under the status line), `TabsContent.kt` and
+`strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSources.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 64 lines.
+- **What:** the rule, pure code: `CommonSources.pick` takes the page (its results as lineId and bookId), the ends of
+  their links (`LinkEnd`) and the base books, and gives up to three `CommonSourcePick`: lines at the other end of a
+  link, neither the result itself nor one of the first three, linked from at least three books of the page (in a base
+  books' search, lines of base books only); the most books first, then a base book, then the place in the page, then
+  the id; those linked from half the first's books or more.
+- **Reached from:** `CommonSourcesQueries`.
+- **Follows:** `docs/COMMON_SOURCES_PLAN.md`'s sketch of it, and pardes-semantic's `eval-real/common_source.py`.
+- **Tests:** `CommonSourcesTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/CommonSourcesQueries.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 101 lines.
+- **What:** `CommonSource` (what the screen shows: the line, its book, its label, the books linking to it) and
+  `CommonSourcesQueries.line`: on a read-only connection of its own (`open_mode=1`, the path as a plain file name, not
+  `?mode=ro`), opened for each line and closed after it, the page's links from the `link` table in both directions, the
+  base books (the catalog's, else the database's, kept for the run), `CommonSources.pick`, and each pick's label (its
+  `heRef` with its spaces collapsed, else its book's title). None for a page of fewer than three books, with no
+  connection opened.
+- **Reached from:** `CommonSourcesReader`.
+- **Follows:** `CommentaryLinks` (the library read on a connection of its own); not through `SeforimRepository`, whose
+  queries keep a part of the links only (the plan's measurement: 8 right sources of 28).
+- **Tests:** none of its own; its rule's are `CommonSourcesTest`, and the line was seen in the app on the whole library,
+  light and dark (2026-11-26).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/CommonSourcesReader.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 29 lines.
+- **What:** `CommonSourcesReader`, the app's `CommonSourcesQueries`: on `DatabasePathProvider`'s library, with
+  `CatalogCache`'s base books.
+- **Reached from:** `SearchResultViewModel` (its constructor).
+- **Follows:** `CommentaryLinks` and `CatalogCache` (Metro's `@Inject`, `@SingleIn(AppScope::class)`).
+- **Tests:** none.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/CommonSourcesLine.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 74 lines.
+- **What:** `CommonSourcesLine`, the line under the status line: "מקור משותף:" or "מקורות משותפים:" in the status
+  line's grey, then each source a `ResultLink` with "(N ספרים)" after it and a tooltip saying what the number counts, in
+  a `FlowRow` (two rows in a narrow pane); it slides in after the first page and out with a new search
+  (`AnimatedVisibility`), the last sources drawn while it goes.
+- **Reached from:** `SearchResultScreen.kt` (`SearchResultContentMvi`'s header).
+- **Follows:** `SearchStatusLine` (the grey 13 sp text, `ResultLink`), `CategoryTabs` (`FlowRow`) and `SearchModeSwitch`
+  (Jewel's `Tooltip`).
+- **Tests:** none; seen in the app, light and dark, with its tooltip and a source opened (2026-11-26).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSourcesTest.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 132 lines.
+- **What:** the rule alone (three books needed, a book counted once, the first three never a source, no link of a line
+  to itself, base books only in a base books' search, the order, the half cut), and against `common-sources-e100.json.gz`:
+  eval-100's 95 pages give the line measured (47 lines, 86 sources), and with the fused list's order after the page,
+  `common_source.py`'s.
+- **Reached from:** the JVM tests.
+- **Follows:** `HfTokenizerParityTest` (a gzipped fixture of pardes-semantic's).
+- **Tests:** it is one.
+
 #### `SeforimApp/src/jvmTest/resources/search/common-sources-e100.json.gz`
 
-- **Feature:** Common sources line (planned).
+- **Feature:** Common sources line.
 - **Size:** binary.
 - **What:** the eval-100 questions' results and the common sources expected for them (215 KB gzipped), for a parity test
   of the common sources line above the results (`docs/COMMON_SOURCES_PLAN.md`), added with the semantic search
   (`20e2fa81`).
-- **Reached from:** nothing yet: no test reads it, and `CommonSources` is not written.
+- **Reached from:** `CommonSourcesTest`.
 - **Follows:** Pardes's own data.
-- **Tests:** a fixture of a test still to write.
+- **Tests:** the fixture of `CommonSourcesTest`.
 
 ### Feedback: grades of search results, and sending them
 
@@ -10055,7 +10143,7 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
+| `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; a first version built on the branch claude/eloquent-goldberg-x6t9wz (2026-11-26), its state at the top. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
 | `docs/BOOK_DAF_RULES.md` | The user's rules for setting a page of a text with its commentaries, in Hebrew (2026-11-23, "מסמך הוראות וכללים לעימוד מקראות גדולות"): the page's structure and its default measures, the ten rules that decide what a page takes, the typography, the algorithm, what went wrong in the first setting and the rule each fault gave, the checks before a page goes out, and what is still open. Written with a page of Bereshit 1 (Onkelos, Rashi, the Ramban) set in a browser; `BookDafBands.kt` follows it, and its comments name its rules by number. *Note:* Kept as the user gave it. Its sources of text (Sefaria through a browser) are that page's own: Pardes sets the library's texts. | The user's own |
 | `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
 | `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it; for 31 what was measured, the rule first chosen (a fixed 10) and the one by each line's score that replaced it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out; and under request 21, that it was taken up again on 2026-11-23 as a trial, by the user's rules (docs/BOOK_DAF_RULES.md): what was built, how it is turned on, what was seen in the app, what of the rules is not done yet, and its testers' build, desktop-1.0.11-63, with the Maven Central fault its first run met. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |

@@ -363,6 +363,7 @@ private fun SearchTabContent(
     val bookFilterIds by viewModel.selectedBookIdsFlow.collectAsState()
     val entity by viewModel.entityFlow.collectAsState()
     val feedback by viewModel.feedbackFlow.collectAsState()
+    val commonSources by viewModel.commonSourcesFlow.collectAsState()
 
     SearchResultInBookShellMvi(
         bookUiState = bcUiState,
@@ -383,6 +384,7 @@ private fun SearchTabContent(
         actions = actions,
         tabUi = tabUi(tabOwner),
         feedback = feedback,
+        commonSources = commonSources,
     )
 }
 

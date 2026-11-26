@@ -89,11 +89,13 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
 import io.github.kdroidfilter.seforimlibrary.core.models.SearchResult
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -183,6 +185,8 @@ fun SearchResultInBookShellMvi(
     tabUi: BookTabUi,
     // Pardes: the grades given to the results shown, in feedback mode
     feedback: ImmutableMap<Long, FeedbackGrade> = persistentMapOf(),
+    // Pardes: the line of common sources above the results (docs/COMMON_SOURCES_PLAN.md)
+    commonSources: ImmutableList<CommonSource> = persistentListOf(),
 ) {
     val tabId = bookUiState.tabId
     val currentOnEvent by rememberUpdatedState(onEvent)
@@ -219,6 +223,7 @@ fun SearchResultInBookShellMvi(
                 actions = actions,
                 tabId = tabId,
                 feedback = feedback,
+                commonSources = commonSources,
             )
         }
     }
@@ -242,6 +247,7 @@ private fun SearchResultContentMvi(
     actions: SearchShellActions,
     tabId: String,
     feedback: ImmutableMap<Long, FeedbackGrade> = persistentMapOf(),
+    commonSources: ImmutableList<CommonSource> = persistentListOf(),
 ) {
     val appSettings = LocalAppGraph.current.appSettings
     // Pardes: feedback mode (Settings), each result's grade buttons
@@ -552,6 +558,8 @@ private fun SearchResultContentMvi(
                                     }
                                 }
                             }
+                            // Pardes: the sources the first results link to, in a new tab (docs/COMMON_SOURCES_PLAN.md)
+                            CommonSourcesLine(commonSources, onOpen = { source -> actions.onOpenBookAt(source.bookId, source.lineId) })
                         }
                         Divider(Orientation.Horizontal, Modifier.fillMaxWidth())
                         Box(

@@ -83,6 +83,7 @@ class CategoryScopeSearchTest : SearchIntegrationTestBase() {
                     appSettings = testAppSettings(),
                     lookup = mockk(relaxed = true),
                     libraryCategories = categories,
+                    commonSources = mockk(relaxed = true),
                 )
             val done = withTimeout(60_000) { vm.uiState.first { !it.isLoading && it.results.isNotEmpty() } }
             assertTrue(

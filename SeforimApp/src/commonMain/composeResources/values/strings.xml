@@ -962,6 +962,11 @@
     <string name="search_sort_catalog">מיון לפי סדר הספרייה</string>
     <string name="search_sort_relevance">מיון לפי רלוונטיות</string>
     <string name="search_farther_lines">ועוד %1$d קרובות פחות:</string>
+    <!-- Pardes: the line of common sources above the results (docs/COMMON_SOURCES_PLAN.md) -->
+    <string name="search_common_source">מקור משותף:</string>
+    <string name="search_common_sources">מקורות משותפים:</string>
+    <string name="search_common_source_books">(%1$d ספרים)</string>
+    <string name="search_common_source_books_tip">%1$d ספרים מבין עשרים התוצאות הראשונות מקושרים למקור הזה</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>

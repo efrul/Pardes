@@ -204,6 +204,7 @@ private class SearchFlow(
                 appSettings = appSettings,
                 lookup = mockk(relaxed = true),
                 libraryCategories = categories,
+                commonSources = mockk(relaxed = true),
             )
         vm.onEvent(SearchResultViewModel.SearchResultEvents.SetUiVisible(true))
         // What the screen collects, which the view model's shared flows run for
