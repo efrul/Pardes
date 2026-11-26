@@ -172,7 +172,7 @@ internal fun withVerseLinks(
             val start = line[run.first].start
             val end = line[run.last].end
             append(html, at, start)
-            appendLinked(html, start, end, verseId)
+            appendLinked(html, start, end, VERSE_LINK + verseId)
             at = end
         }
         append(html, at, html.length)
@@ -203,14 +203,15 @@ private fun MutableList<Pair<IntRange, Long>>.addQuotes(
 }
 
 /**
- * [html] from [start] to [end] as a link to [verseId]. A link crosses no tag and no quote mark (a run of a verse's
- * words may be two quotes of it, one after the other): each stretch of words between them is a link of its own.
+ * [html] from [start] to [end] as a link to [href] (a verse's, or a sage's in SageLinks). A link crosses no tag and no
+ * quote mark (a run of a verse's words may be two quotes of it, one after the other): each stretch of words between
+ * them is a link of its own.
  */
-private fun StringBuilder.appendLinked(
+internal fun StringBuilder.appendLinked(
     html: String,
     start: Int,
     end: Int,
-    verseId: Long,
+    href: String,
 ) {
     var at = start
     while (at < end) {
@@ -223,7 +224,7 @@ private fun StringBuilder.appendLinked(
         } else {
             val last = (at until stop).last { html[it] in ALEF..TAV || html[it].isMark() || html[it] in GERESH } + 1
             append(html, at, first)
-            append("<a class=\"ref\" href=\"").append(VERSE_LINK).append(verseId).append("\">")
+            append("<a class=\"ref\" href=\"").append(href).append("\">")
             append(html, first, last).append("</a>")
             append(html, last, stop)
         }

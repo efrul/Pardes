@@ -88,6 +88,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
+import io.github.kdroidfilter.seforimapp.features.sefaria.topics.SearchTopicCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
@@ -374,6 +375,8 @@ private fun SearchResultContentMvi(
     // The selection lives in the ViewModel, as the preview it drives
     val selectedLineId = preview?.hit?.lineId
     val showBookDetails by appSettings.bookDetailsPaneFlow.collectAsState()
+    // Pardes: the panel of the book or the author the query names, shown or hidden from the bar (SearchPanelsSettings.kt)
+    val showEntity by appSettings.flow(SearchPanelsSettings.entity).collectAsState()
     val listFocus = remember { FocusRequester() }
     // Pardes: back to the bar once a tab is picked, for Enter to search again in the tabs picked
     val barFocus = remember { FocusRequester() }
@@ -655,7 +658,7 @@ private fun SearchResultContentMvi(
                     // The query's book is already in the details pane when a result of it is shown
                     val duplicate =
                         entity is SearchEntity.BookEntity && showBookDetails && entity.book.id == preview?.hit?.bookId
-                    if (entity != null && !duplicate) {
+                    if (entity != null && !duplicate && showEntity) {
                         EntityPanel(
                             entity = entity,
                             onOpenBookAt = actions.onOpenBookAt,
@@ -663,6 +666,8 @@ private fun SearchResultContentMvi(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    // Pardes: the topic of Sefaria's the query names, as the panel of a book or an author it names
+                    SearchTopicCard(query = state.executedQuery, modifier = Modifier.fillMaxWidth())
                     // Until the first result's passage is loaded, the pane says so
                     if (preview == null && (items.isNotEmpty() || state.isLoading)) {
                         Box(Modifier.weight(1f).fillMaxWidth().card(), contentAlignment = Alignment.Center) {

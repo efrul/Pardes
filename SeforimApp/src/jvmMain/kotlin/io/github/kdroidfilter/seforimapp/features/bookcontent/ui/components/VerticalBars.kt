@@ -35,6 +35,9 @@ import io.github.kdroidfilter.seforimapp.features.pdf.PageColorsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageFitButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.showsPrintedPages
+import io.github.kdroidfilter.seforimapp.features.search.SearchEntityPanelButton
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
+import io.github.kdroidfilter.seforimapp.features.sefaria.topics.SearchTopicCardButton
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.icons.*
@@ -255,6 +258,11 @@ fun EndVerticalBar(
                 iconDescription = bookDetailsLabel,
                 label = bookDetailsLabel,
             )
+            // Pardes: a tab with no book here is a search's results (WindowBody): the cards beside them, shown or hidden
+            if (noBookSelected) {
+                SearchEntityPanelButton()
+                SearchTopicCardButton()
+            }
             val targumEnabled = selectedBook?.hasTargumConnection == true
             // A book whose flags say neither may still have the links (חברותא and its notes): they tell
             val linked by produceState<BookConnections?>(null, selectedBook?.id) {
@@ -337,6 +345,19 @@ fun EndVerticalBar(
                         shortcutHint = if (PlatformInfo.isMacOS) "K+⇧+⌥+⌘" else "K+Shift+Alt+Ctrl",
                     )
                 }
+
+                // Pardes: the line's topics, from Sefaria (LineTopicsPane), one setting for every tab
+                val topicsShown by LocalAppGraph.current.appSettings
+                    .flow(SefariaSettings.topicsPane)
+                    .collectAsState()
+                SelectableIconButtonWithToolip(
+                    toolTipText = stringResource(Res.string.sefaria_topics_tooltip),
+                    onClick = { onEvent(BookContentEvent.ToggleTopics) },
+                    isSelected = topicsShown,
+                    icon = Contextual_token,
+                    iconDescription = stringResource(Res.string.sefaria_topics_pane),
+                    label = stringResource(Res.string.sefaria_topics_pane),
+                )
 
                 if (sourcesEnabled) {
                     SelectableIconButtonWithToolip(
