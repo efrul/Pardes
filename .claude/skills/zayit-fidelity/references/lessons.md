@@ -245,6 +245,13 @@ tools and the code did when it was written.
   `SingleMarkMenus`. A popup's pointer `Enter` is no move, and its first `Move` only noted: a popup opened under a
   still pointer marks nothing. A modifier factory cannot `rememberUpdatedState` its lambda: make it a node whose
   `update` takes the new one, or the lambda reads stale values (`filtered` in the breadcrumb's popup).
+- **A text laid over a `SelectionContainer`'s lines takes part in its selections.** The find bar sits inside the
+  book's container, its placeholder and counter over the first lines: a drag from a line past the end of a
+  right-to-left row, into the margin, was crossed by Compose's layout of both texts against its offsets and drawn
+  reversed, which closed the app ("Start(3638) or End(3594) is out of range", the user's report of 2026-11-26; Zayit's
+  `ComposePatches` took a third patch, `SelectionDrawPatch`). A crash inside Compose is read in its sources of the
+  version built (`foundation-desktop-<version>-sources.jar` from Maven Central's mirror) and reproduced in a UI test
+  first: 300 random drags over a plain right-to-left list never crashed, one text laid over a line did at once.
 
 ## Data and settings
 

@@ -23,7 +23,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (155 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (156 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (379 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (381 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -62,7 +62,7 @@ The entries of this section by kind:
 |---|---|
 | Pardes feature hook | 59 |
 | Pardes feature in Zayit's file | 36 |
-| Fix of Zayit's code | 26 |
+| Fix of Zayit's code | 27 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
@@ -328,6 +328,26 @@ The entries of this section by kind:
 - **Merge risk:** two blocks inserted inside a 2,900-line generated list; a conflict if Zayit regenerates the file.
 - **Smaller:** already minimal.
 - **Tests:** the native builds of `desktop-release.yml`.
+
+#### `buildSrc/src/main/kotlin/io/github/kdroidfilter/buildsrc/ComposePatches.kt`
+
+- **Change:** modified, +6 −2 lines. Feature: A selection dragged past a row's end.
+- **What:**
+  - `patches`: the foundation jar's map takes `SelectionDrawPatch.SELECTION_CONTROLLER` to
+    `SelectionDrawPatch::patchSelectionController` beside `SelectionPinPatch`'s pair, its `mapOf` written one pair a
+    line.
+  - The object's KDoc names `[SelectionDrawPatch]` among the patches.
+- **Why:** the app closed ("The application encountered an unrecoverable error and will close", the user's report of
+  2026-11-26: `IllegalArgumentException: Start(3638) or End(3594) is out of range [0..3638), or start > end!`, then
+  the same in a text of 17,300 characters) when a selection in the reader was dragged past the end of a row, into
+  the margin, while the find bar, whose texts lie over the book's first lines, was open: Compose drew the selection
+  reversed (`SelectionDrawPatch.kt`, section 2).
+  Compose 1.13.0-rc01 and androidx's 1.14.0-alpha01 have the same code.
+- **Kind:** fix of Zayit's code (a fix for both brands, to drop once Compose has one).
+- **Merge risk:** small; one pair in a map Zayit rarely touches. A patch of Zayit's own to the foundation jar would
+  go in the same `mapOf`.
+- **Smaller:** already minimal.
+- **Tests:** `CrossedSelectionUiTest`; tried in the app (section 2's feature).
 
 #### `buildSrc/src/main/kotlin/io/github/kdroidfilter/buildsrc/Versioning.kt`
 
@@ -9891,6 +9911,48 @@ and `PopupKeys.kt`.
 - **Follows:** `RevealItemUiTest`.
 - **Tests:** it is one (Compose UI).
 
+### A selection dragged past a row's end (a fix of Compose's code)
+
+The user's report of 2026-11-26: the app closed with "Start(3638) or End(3594) is out of range [0..3638), or start >
+end!" while text was being selected in the reader, and again in a text of 17,300 characters. A selection whose two
+ends are in one text, in a layout that holds another text laid over that one (the find bar's texts, its field's
+placeholder and its counter, over the book's first lines while it is open), is crossed by the layout's slots and not
+by its offsets: a drag past the end of a right-to-left row, into the margin, gives a crossed selection whose start
+comes before its end, which Compose keeps as it is for one text, and its `SelectionController.draw` asks for a
+reversed path. It now draws the range between the two offsets, the text the selection copies, by a patch of
+Compose's jar as Zayit patches it for two other selection bugs. Tried in the app on Berakhot, zoomed in: with the find
+bar open, a drag from a paragraph's last row, under the bar, past the row's end closed the app ("Start(280) or
+End(258) is out of range [0..280)"); with the bar closed, or with the patch, the row's end is selected, and Ctrl+C
+copies the same words. The hook in Zayit's files is in `ComposePatches.kt`.
+
+#### `buildSrc/src/main/kotlin/io/github/kdroidfilter/buildsrc/SelectionDrawPatch.kt`
+
+- **Feature:** A selection dragged past a row's end (a fix of Compose's code, for both brands).
+- **Size:** 95 lines.
+- **What:** `SelectionDrawPatch.patchSelectionController(bytes)`: in `SelectionController.draw()`, the call
+  `params.getPathForRange(start, end)` goes to `zayit$pathForRange(params, start, end)`, a private static method the
+  patch writes into the class, which calls `params.getPathForRange(min(start, end), max(start, end))`; the build fails
+  unless it finds that call exactly once (Compose changed: drop the patch, or update it). `SELECTION_CONTROLLER`, the
+  class's path in the jar.
+- **Reached from:** `ComposePatches.kt` (the foundation jar's patches, on every runtime classpath).
+- **Follows:** Zayit's `PlacedSubtreePatch` (a call replaced by a static helper written into the class, the build
+  failing when the call is gone) and `SelectionPinPatch` (the foundation jar's other patch).
+- **Tests:** `CrossedSelectionUiTest`, `ShiftClickSelectionUiTest` and `UnplacedSelectionUiTest` (the jar's other
+  patches still apply); tried in the app (the feature's text above).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/CrossedSelectionUiTest.kt`
+
+- **Feature:** A selection dragged past a row's end.
+- **Size:** 64 lines.
+- **What:** a right-to-left paragraph with a margin at its end and a short text laid over its first row, in a
+  `SelectionContainer`: a mouse drag from the middle of its third row, below that text, past the row's end into the
+  margin, is drawn, and the row's end is selected. On Compose's code as released it fails with the user's exception
+  ("Start(493) or End(409) is out of range [0..1139), or start > end!").
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `UnplacedSelectionUiTest` and `ShiftClickSelectionUiTest` (a Compose UI test of a patch of
+  Compose's selection, its KDoc naming the patch).
+- **Tests:** it is one (Compose UI).
+
 ## 3. Pardes's own trees
 
 Every other file Pardes adds (803 files): Pardes for Android (`androidApp/`), branding, documents,
@@ -9951,7 +10013,7 @@ the description where something needs saying.
 | `.claude/skills/zayit-android/scripts/temple-picture.py` | zayit-android script that builds the Temple countdown widget's picture from a public-domain 1850 painting ("The Siege and Destruction of Jerusalem"): Android's still JPG, three desktop JPGs, and Android's animated WebP whose fires flicker. *Note:* Stale for desktop: it writes SeforimApp/.../drawable/temple_jerusalem_in_fire_{small,medium,large}.jpg, which Zayit deleted (0c8e6c3c) and nothing reads; desktop's files/temple_jerusalem_in_fire.webp is a hand copy of the Android WebP (docs/PARDES_PLAN.md › Phase 1). | Pardes's own; its picture replaced the Shutterstock one inherited from Zayit |
 | `.claude/skills/zayit-fidelity/SKILL.md` | Claude Code skill, mandatory for every change: Pardes stays as identical to Zayit as it can be. The smallest change (nothing, a branding value, a new file behind a one-line hook, then an edit), written as Elie Gambache writes Zayit, committed as he commits, every file that differs from Zayit described in docs/ZAYIT_CHANGE_MAP.md in the same commit with check_change_map.py passing, and main reached only through the Change map check (main's ruleset: a pull request, or a fast-forward to a checked commit); merging a Zayit release (its licence first); why GitHub does not show Pardes as a fork. It points to its lessons (references/lessons.md), to the Gradle wrapper of pardes-desktop-run and to scripts/mapedit.py. | Pardes's own |
 | `.claude/skills/zayit-fidelity/references/eli-style.md` | The zayit-fidelity skill's reference on writing as Zayit's author writes it: his guidelines (AGENTS.md, CONTRIBUTING.md, CLAUDE.md, .editorconfig, detekt.yml, SeforimLibrary/AGENTS.md, CI), what his code shows (structure, state and events, Metro, settings, errors, logging, Compose, comments, KDoc, tests), how he works (Conventional Commits with their counts, one topic a branch, docs and tests with the change), and Pardes in his style. | Pardes's own; measured on Zayit v0.6.12 and its history |
-| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-23): building and checking (what CI runs where, ktlint's and detekt's findings, detekt counted against main's, escapes turned into characters, a version Maven Central stopped serving), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build and the public release with the Apple Silicon Mac's slow native image, and what the user asked to be done again. | Pardes's own |
+| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-26): building and checking (what CI runs where, ktlint's and detekt's findings, detekt counted against main's, escapes turned into characters, a version Maven Central stopped serving), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build and the public release with the Apple Silicon Mac's slow native image, and what the user asked to be done again. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/check_change_map.py` | The change map's check: every file that differs from the map's Zayit base has its entry (a heading with Change, What, Why, Kind, Merge risk and Tests for a Zayit file changed; Feature, Size, What, Reached from, Follows and Tests for a file added in Zayit's modules; at least a row for the others), the line counts of detailed entries match the files, no entry is left for a file back to Zayit's, and the base is the last merged release. Compares the working tree (untracked files included), or HEAD with --committed (CI); --stats prints the counts. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/mapedit.py` | A small Python class for scripts that edit the change map by entry: a file's line counts or size set to what they are now, a text replaced inside one entry or one row, a block put before a heading, each asserting it found its text once; run alone it prints each section's count of entries. *Note:* Written after a global sed hit two entries at once. | Pardes's own |
 
