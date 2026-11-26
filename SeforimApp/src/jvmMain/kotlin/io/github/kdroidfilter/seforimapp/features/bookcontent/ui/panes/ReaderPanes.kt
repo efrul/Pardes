@@ -65,6 +65,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.booktoc.
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.CategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.SearchCategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NotesPanel
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
+import io.github.kdroidfilter.seforimapp.features.sefaria.topics.LineTopicsPane
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
 import io.github.kdroidfilter.seforimapp.framework.desktop.DockSizes
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
@@ -87,6 +89,7 @@ import seforimapp.seforimapp.generated.resources.links
 import seforimapp.seforimapp.generated.resources.notes_pane
 import seforimapp.seforimapp.generated.resources.references
 import seforimapp.seforimapp.generated.resources.search_book_details
+import seforimapp.seforimapp.generated.resources.sefaria_topics_pane
 import seforimapp.seforimapp.generated.resources.sources
 import seforimapp.seforimapp.generated.resources.table_of_contents
 import kotlin.math.roundToInt
@@ -191,6 +194,15 @@ sealed class ReaderPane(
         navigation = false,
     )
 
+    // Pardes: the topics of the line, from Sefaria (LineTopicsPane): one setting for every tab, beside the references
+    data object Topics : ReaderPane(
+        "topics",
+        Res.string.sefaria_topics_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 3, extent = 320.dp),
+        toggle = BookContentEvent.ToggleTopics,
+        navigation = false,
+    )
+
     /**
      * A commentator split off the commentaries pane ([name], DetachedCommentators), in a pane of its own: torn off
      * the commentaries pane by its column's header, it opens where it is dropped, and from there it moves as any line
@@ -222,7 +234,20 @@ sealed class ReaderPane(
 
     companion object {
         /** The panes every reader window has, in their declaration order. */
-        val standard: List<ReaderPane> by lazy { listOf(Tree, Toc, Notes, Targum, Comments, Sources, BookDetails, References, FindResults) }
+        val standard: List<ReaderPane> by lazy {
+            listOf(
+                Tree,
+                Toc,
+                Notes,
+                Targum,
+                Comments,
+                Sources,
+                BookDetails,
+                References,
+                FindResults,
+                Topics,
+            )
+        }
 
         /** The commentator pane whose satellite in window [groupId] is [satelliteId], null for any other satellite. */
         fun commentatorOf(
@@ -555,10 +580,14 @@ private fun selectedTabDemand(
                 val bookDetails by LocalAppGraph.current.appSettings.bookDetailsPaneFlow
                     .collectAsState()
                 val findResults = rememberFindResultsShown(tabId)
+                val topics by LocalAppGraph.current.appSettings
+                    .flow(SefariaSettings.topicsPane)
+                    .collectAsState()
                 PaneDemand(
                     tabId,
                     desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails) +
-                        findResultsPane(uiState, findResults && destination !is TabsDestination.Search),
+                        findResultsPane(uiState, findResults && destination !is TabsDestination.Search) +
+                        topicsPane(uiState, topics),
                     viewModel::onEvent,
                     uiState.layout,
                 )
@@ -693,7 +722,7 @@ private fun writeBack(
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage = ratio
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage = ratio
         // Never planned (see plannedExtents): their size is the dock's own
-        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, is ReaderPane.Commentator -> Unit
+        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, ReaderPane.Topics, is ReaderPane.Commentator -> Unit
     }
 }
 
@@ -705,7 +734,7 @@ private fun ReaderPane.position(layout: LayoutState): Float =
         ReaderPane.Notes -> layout.notesSplitState.positionPercentage
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage
-        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, is ReaderPane.Commentator -> 0f
+        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, ReaderPane.Topics, is ReaderPane.Commentator -> 0f
     }
 
 /** The first pane's minimum of this pane's split (the text, for the line panes), in dp. */
@@ -834,6 +863,13 @@ private fun BookPaneBody(
                     modifier,
                     onHide = { onEvent(BookContentEvent.ToggleFindResults) },
                 ) { onEvent(BookContentEvent.FocusText) }
+            ReaderPane.Topics ->
+                LineTopicsPane(
+                    line = uiState.content.primaryLine,
+                    onHide = { onEvent(BookContentEvent.ToggleTopics) },
+                    onOpenLine = { onEvent(BookContentEvent.OpenCommentaryTarget(it.bookId, it.id)) },
+                    modifier = modifier,
+                )
             ReaderPane.Targum, ReaderPane.Comments, ReaderPane.Sources -> {
                 val book = uiState.navigation.selectedBook ?: return@BookTextMenus
                 val connections = tabUi.connections(book.id)
@@ -993,6 +1029,12 @@ private fun findResultsPane(
     uiState: BookContentState,
     shown: Boolean,
 ): Set<ReaderPane> = if (shown && isBookTextShown(uiState)) setOf(ReaderPane.FindResults) else emptySet()
+
+/** Pardes: the pane of the line's topics, from Sefaria, asked for ([shown]) and only while a book is on screen. */
+private fun topicsPane(
+    uiState: BookContentState,
+    shown: Boolean,
+): Set<ReaderPane> = if (shown && isBookTextShown(uiState)) setOf(ReaderPane.Topics) else emptySet()
 
 /** Whether the tab [tabId] shows its find's results in their pane: asked for, and its find bar open on a query. */
 @Composable

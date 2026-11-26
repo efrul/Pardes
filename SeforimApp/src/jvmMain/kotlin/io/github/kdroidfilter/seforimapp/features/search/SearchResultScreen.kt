@@ -86,6 +86,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
+import io.github.kdroidfilter.seforimapp.features.sefaria.topics.SearchTopicCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
 import io.github.kdroidfilter.seforimlibrary.core.models.SearchResult
@@ -643,6 +644,8 @@ private fun SearchResultContentMvi(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    // Pardes: the topic of Sefaria's the query names, as the panel of a book or an author it names
+                    SearchTopicCard(query = state.executedQuery, modifier = Modifier.fillMaxWidth())
                     // Until the first result's passage is loaded, the pane says so
                     if (preview == null && (items.isNotEmpty() || state.isLoading)) {
                         Box(Modifier.weight(1f).fillMaxWidth().card(), contentAlignment = Alignment.Center) {

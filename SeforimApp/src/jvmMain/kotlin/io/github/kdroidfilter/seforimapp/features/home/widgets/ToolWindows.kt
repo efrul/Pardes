@@ -30,6 +30,7 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.ThemeUtils
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.rememberWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
+import io.github.kdroidfilter.seforimapp.features.sefaria.sefariaTools
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import org.jetbrains.compose.resources.stringResource
@@ -39,7 +40,8 @@ import org.jetbrains.jewel.ui.component.Text
 
 /** The widgets that also open alone in a window, from the app's Tools menu (see [HomeWidget.toolWindowSize]). */
 internal val availableTools: List<HomeWidget>
-    get() = availableHomeWidgets.filter { it.toolWindowSize != null && it.isSupported }
+    // Pardes: Sefaria's windows, tools alone, never placed on the Home (sefariaTools)
+    get() = availableHomeWidgets.filter { it.toolWindowSize != null && it.isSupported } + sefariaTools
 
 /** The tools open in their own window, app-wide: one window per tool, brought back rather than opened twice. */
 @Inject

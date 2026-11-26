@@ -34,6 +34,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookConte
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.altTocIdOfSearchMatch
 import io.github.kdroidfilter.seforimapp.features.search.domain.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.session.SessionManager
@@ -660,6 +661,10 @@ class BookContentViewModel(
                 // Pardes: the find results' pane, one setting for every tab (request 55 of stage 3)
                 BookContentEvent.ToggleFindResults ->
                     appSettings[FindResultsSettings.shown] = !appSettings[FindResultsSettings.shown]
+
+                // Pardes: the line's topics' pane, one setting for every tab (LineTopicsPane)
+                BookContentEvent.ToggleTopics ->
+                    appSettings[SefariaSettings.topicsPane] = !appSettings[SefariaSettings.topicsPane]
 
                 BookContentEvent.CycleDiacritics ->
                     cycleDiacriticsForCurrentCategory()

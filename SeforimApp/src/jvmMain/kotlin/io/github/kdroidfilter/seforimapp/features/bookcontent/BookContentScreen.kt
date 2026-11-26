@@ -76,6 +76,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.No
 import io.github.kdroidfilter.seforimapp.features.home.widgets.library.DictionaryReadFor
 import io.github.kdroidfilter.seforimapp.features.home.widgets.library.lookupWord
 import io.github.kdroidfilter.seforimapp.features.search.SearchHomeUiState
+import io.github.kdroidfilter.seforimapp.features.sefaria.rememberSugyaMenu
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.text.HebrewTextUtils
 import io.github.santimattius.structured.annotations.StructuredScope
@@ -528,6 +529,8 @@ fun BookTextMenus(
                     // Shift+click one read from the database): what the copies, highlights and sources take, the AWT
                     // shortcuts included through the SelectionContext
                     val bookSelection = LocalBookSelection.current
+                    // Pardes: the sugya of Sefaria's the right-clicked line is in, marked or copied (SugyaMenu)
+                    val sugyaMenu = rememberSugyaMenu(onEvent)
                     val shiftRange = bookSelection?.range
                     val rawText = textManager.selectedText.text
                     DictionaryReadFor(rawText)
@@ -769,6 +772,15 @@ fun BookTextMenus(
                                             }
                                         },
                                     )
+                                }
+                                // Pardes: the sugya, the Mishnah or the story the right-clicked line is in (main pane only)
+                                if (selectionContext.activeCommentaryColumn.value
+                                        .isEmpty()
+                                ) {
+                                    val line =
+                                        selectionContext.visibleLines.value.lines
+                                            .firstOrNull { it.id == selectionContext.currentLineId.value }
+                                    addAll(sugyaMenu.items(line))
                                 }
                                 // Report an error (main pane only) in the selection, or the right-clicked line without one
                                 if (bookForCopy != null &&

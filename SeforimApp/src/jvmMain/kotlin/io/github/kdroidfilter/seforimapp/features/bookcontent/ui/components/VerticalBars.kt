@@ -33,6 +33,7 @@ import io.github.kdroidfilter.seforimapp.features.pdf.PageColorsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageFitButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.showsPrintedPages
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.icons.*
@@ -313,6 +314,19 @@ fun EndVerticalBar(
                         shortcutHint = if (PlatformInfo.isMacOS) "K+⇧+⌥+⌘" else "K+Shift+Alt+Ctrl",
                     )
                 }
+
+                // Pardes: the line's topics, from Sefaria (LineTopicsPane), one setting for every tab
+                val topicsShown by LocalAppGraph.current.appSettings
+                    .flow(SefariaSettings.topicsPane)
+                    .collectAsState()
+                SelectableIconButtonWithToolip(
+                    toolTipText = stringResource(Res.string.sefaria_topics_tooltip),
+                    onClick = { onEvent(BookContentEvent.ToggleTopics) },
+                    isSelected = topicsShown,
+                    icon = Contextual_token,
+                    iconDescription = stringResource(Res.string.sefaria_topics_pane),
+                    label = stringResource(Res.string.sefaria_topics_pane),
+                )
 
                 if (sourcesEnabled) {
                     SelectableIconButtonWithToolip(
