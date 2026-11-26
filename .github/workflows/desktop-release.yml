@@ -277,19 +277,13 @@ jobs:
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # Both, as upstream's deploy.yaml builds them: the dmg is the download, the zip what installed apps update from.
-      # In two runs of Gradle: the Apple Silicon runner has 7 GB, of which native-image takes 85% (CI is set), and beside
-      # the Gradle and Kotlin daemons that compiled the app (-Xmx4G each, gradle.properties) it swapped, spent 89% of its
-      # time collecting garbage and was stopped by its watchdog after 4 h (1.0.11's first run). They stop before it.
+      # Both, as upstream's deploy.yaml builds them: the dmg is the download, the zip what installed apps update from
       - name: Build the macOS packages
         if: runner.os == 'macOS'
         run: |
           unset GH_TOKEN GITHUB_TOKEN
           export GITHUB_REF="refs/tags/v$VERSION"
-          ./gradlew --console=plain :SeforimApp:packageUberJarForCurrentOS
-          ./gradlew --stop
-          pkill -f KotlinCompileDaemon || true
-          ./gradlew --console=plain -Dorg.gradle.jvmargs=-Xmx1536m :SeforimApp:packageGraalvmDmg :SeforimApp:packageGraalvmZip
+          ./gradlew --console=plain :SeforimApp:packageGraalvmDmg :SeforimApp:packageGraalvmZip
 
       # Exactly one package, Pardes's (pardes-*), built with this version; renamed to the names installed apps match
       - name: Stage the Linux package
