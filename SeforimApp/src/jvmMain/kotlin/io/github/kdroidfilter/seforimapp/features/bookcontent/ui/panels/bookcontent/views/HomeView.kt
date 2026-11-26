@@ -2041,6 +2041,22 @@ private fun SearchBar(
                                 true
                             }
 
+                            // Pardes: Tab picks a row of the list shown, with no Ctrl, Alt or Cmd, and never the text
+                            // search's, which Enter runs (its row's keys say so). Ctrl+Tab is the window's tabs, which
+                            // take its key-down, and its key-up searched again here, as Tab did on that row, the list's
+                            // first (the reader's remark 97 of stage 3; a fix for both brands)
+                            ev.key == Key.Tab &&
+                                ev.type == KeyEventType.KeyUp &&
+                                (
+                                    !popupVisible ||
+                                        ev.isCtrlPressed ||
+                                        ev.isMetaPressed ||
+                                        ev.isAltPressed ||
+                                        (!isTocMode && catBookRows.getOrNull(focusedIndex) == CatBookRow.TextSearch)
+                                ) -> {
+                                false
+                            }
+
                             // In a book, Tab on another book or a category adds it (no TOC entry to open)
                             ev.key == Key.Tab &&
                                 ev.type == KeyEventType.KeyUp &&
