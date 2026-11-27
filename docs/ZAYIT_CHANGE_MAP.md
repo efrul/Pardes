@@ -2392,7 +2392,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +604 −74 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line, The search's area.
+- **Change:** modified, +626 −74 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line, The search's area.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore`, `libraryCategories: LibraryCategories` and
@@ -2456,11 +2456,15 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - Since then too, "more from it" (`showMoreFromBook`) shows the book alone, whatever else is marked: the marks are
     kept (`marksBeforeBook`) and let go for the book's, and the way back brings them back (`backFromBook`, and
     `clearBookFilter` without kept results); a change of the marks meanwhile, or a new search, lets them go.
-  - **Common sources line** (`docs/COMMON_SOURCES_PLAN.md`): `commonSourcesFlow`, the line's sources
-    (`CommonSourcesReader.line`) for the first `CommonSources.PAGE` results' ids, in the visible tab only, in the cases
-    measured: no tab, book or contents entry picked, by relevance (not the library's order), searched everywhere (no
-    book, contents entry or category), in the base books or in all of them after the automatic switch
-    (`baseBooksHadNoResults`), whose meaning search ran (`highlightsByMeaning`); empty in any other case.
+  - **Common sources line** (`docs/COMMON_SOURCES_PLAN.md`): `commonSourcesFlow`, the area's sources
+    (`CommonSourcesReader.line`) for the first `CommonSources.PAGE` results shown (`visibleResultsFlow`: a tab, a
+    category, books or a contents entry picked too), in the visible tab only, in every search since the user's word of
+    2026-11-27 (no condition of the measured cases left: the library's order, a search in a book, in an author's books or
+    in all the books, without the meaning search); lines of base books alone in a search of the base books
+    (`!globalExtended`). In the library's order, the sources last read by relevance for the same search
+    (`relevanceSources`, kept with its `SourcesSearch`: the query, the scope, `globalExtended`, the mode and the filters
+    picked), else the library's first page (`readSources`). `SourcesPage` and `SourcesSearch`, private data classes at
+    the file's end, are the page read and its search.
   - **A source in the preview** (the search's area): `previewLine(hit)`, a line that is no result shown in the preview
     with the query it was shown for (`previewedLine`, under a comment marked "Pardes:"); `previewFlow`'s `combine` takes
     it and `uiState` too, the line first while the query is the same, and `selectResult` clears it.
@@ -8946,11 +8950,12 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 ### Common sources line
 
 Up to three sources: the book lines that many of the first twenty results link to (`docs/COMMON_SOURCES_PLAN.md`, the
-rule measured in pardes-semantic's `eval-real/common_source.py`), each a link that opens it in a new tab, with its text
-and how many books of the page link to it. The plan's first version, built for the user's mockup (2026-11-26), a line
-above the results at first; since 2026-11-27 they show in the area beside the results (The search's area, below). They
-show in the cases measured only, and a running read is not yet stopped when another search starts, nor the sources
-hidden while a filter is being let go. The hooks in Zayit's files are in `SearchResultViewModel.kt`
+rule measured in pardes-semantic's `eval-real/common_source.py`), each its place and its text, a click showing it in
+the preview beside the results. The plan's first version, built for the user's mockup (2026-11-26), a line
+above the results at first; since 2026-11-27 they show in the area beside the results (The search's area, below), in
+every search the user makes, read from the results shown (the user's word of 2026-11-27: "תסיר את כל ההגבלות"; the rule
+was measured on a search everywhere, in the base books, by relevance, with the meaning search). A running read is not
+yet stopped when another search starts. The hooks in Zayit's files are in `SearchResultViewModel.kt`
 (`commonSourcesFlow`), `SearchResultScreen.kt` (through the area), `TabsContent.kt` and `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSources.kt`

@@ -651,9 +651,10 @@ class SearchResultViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /**
-     * Pardes: the line of common sources above the results (docs/COMMON_SOURCES_PLAN.md), in the cases measured: a search
-     * everywhere, in the base books or in all of them after the automatic switch, by relevance, unfiltered, whose meaning
-     * search ran; read from the first page's ids, in the visible tab only. Empty in any other case.
+     * Pardes: the sources the first results link to, for the area beside them (docs/COMMON_SOURCES_PLAN.md), in every
+     * search, as the user asked on 2026-11-27: read from the first page of the results shown, a tab or the books picked
+     * too, in the visible tab only; in the library's order, those read by relevance for the same search and filters, else
+     * the library's first page. Lines of base books alone in a search of the base books.
      */
     val commonSourcesFlow: StateFlow<ImmutableList<CommonSource>> =
         _uiVisible
@@ -661,23 +662,27 @@ class SearchResultViewModel(
                 if (!visible) {
                     emptyFlow()
                 } else {
-                    combine(uiState, _selectedCategoryIds, _selectedBookIds, _selectedTocIds) { s, cats, books, tocs ->
-                        val unfiltered = cats.isEmpty() && books.isEmpty() && tocs.isEmpty() && !s.catalogOrder
-                        val everywhere = s.scopeBook == null && s.scopeTocId == null && s.scopeLabel == null
-                        val applies = unfiltered && everywhere && (!s.globalExtended || s.baseBooksHadNoResults)
-                        val page = if (applies) s.results.take(CommonSources.PAGE).map { it.lineId to it.bookId } else emptyList()
-                        Triple(page, !s.globalExtended, s.executedQuery)
+                    combine(uiState, visibleResultsFlow, filterKeyExtra) { s, shown, filters ->
+                        val page = shown.take(CommonSources.PAGE).map { it.lineId to it.bookId }
+                        val search = SourcesSearch(s.executedQuery, searchScope, s.globalExtended, s.searchMode, filters)
+                        SourcesPage(page, !s.globalExtended, s.catalogOrder, search)
                     }
                 }
             }.distinctUntilChanged()
-            .mapLatest { (page, baseOnly, query) ->
-                if (page.isEmpty() || searchScope != SearchScope.Global || !lucene.highlightsByMeaning(query)) {
-                    persistentListOf()
-                } else {
-                    runSuspendCatching { commonSources.line(page, baseOnly) }.getOrDefault(emptyList()).toImmutableList()
-                }
-            }.flowOn(Dispatchers.Default)
+            .mapLatest(::readSources)
+            .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
+
+    // Pardes: the sources last read by relevance, and their search, which its library's order keeps
+    private var relevanceSources: Pair<SourcesSearch, ImmutableList<CommonSource>>? = null
+
+    private suspend fun readSources(page: SourcesPage): ImmutableList<CommonSource> {
+        relevanceSources?.takeIf { page.catalogOrder && it.first == page.search }?.let { return it.second }
+        if (page.lines.isEmpty()) return persistentListOf()
+        val read = runSuspendCatching { commonSources.line(page.lines, page.baseOnly) }.getOrDefault(emptyList()).toImmutableList()
+        if (!page.catalogOrder) relevanceSources = page.search to read
+        return read
+    }
 
     /**
      * The lines around a result, by length rather than count: short lines (a verse, a heading) come
@@ -2601,3 +2606,20 @@ private const val CONTEXT_CHARS = 700
 
 // An HTML tag, to read a line or snippet as plain text
 internal val HTML_TAG = Regex("<[^>]+>")
+
+/** Pardes: what the area's sources are read from (`commonSourcesFlow`): the first page of the results shown, of [search]. */
+private data class SourcesPage(
+    val lines: List<Pair<Long, Long>>,
+    val baseOnly: Boolean,
+    val catalogOrder: Boolean,
+    val search: SourcesSearch,
+)
+
+/** Pardes: a search but its order: its query, where and how it runs, and the filters picked on its results. */
+private data class SourcesSearch(
+    val query: String,
+    val scope: SearchScope,
+    val globalExtended: Boolean,
+    val mode: SearchMode,
+    val filters: Triple<Set<Long>, Set<Long>, Set<Long>>,
+)
