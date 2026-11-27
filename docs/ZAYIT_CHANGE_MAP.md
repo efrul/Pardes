@@ -8472,7 +8472,8 @@ Hooks: `LuceneLookupSearchService.kt`, `AppCoreBindings.kt`, `SearchHomeViewMode
   the categories right under it (`ofNamedCategory`, `NAMED_CATEGORY_DEPTH`), rank after the titles typed whole or begun
   and before the titles that only hold the name, in the library's order: `תנך` lists בראשית before אור הישר (תנך), as
   the user asked on 2026-11-10.
-- **Reached from:** `LuceneLookupSearchService.kt` (`titleIndex`), `BookTitleIndexLoader.kt`, `AppCoreBindings.kt`.
+- **Reached from:** `LuceneLookupSearchService.kt` (`titleIndex`), `BookTitleIndexLoader.kt`, `AppCoreBindings.kt`;
+  `SefariaData.kt` (Sefaria's topics and persons found by name, through `searchAuthors`).
 - **Follows:** Klei Kodesh's Kitvei Hakodesh search, in spirit; Zayit's lookup index stays behind it for what it misses.
 - **Tests:** `BookTitleIndexTest`, `TitleSearchE2ETest`, `TitleSearchBench`.
 - **Notes:** with some 20 functions it passes `detekt.yml`'s 15.
@@ -9982,21 +9983,25 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaData.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 342 lines.
+- **Size:** 389 lines.
 - **What:** Sefaria's data as `scripts/sefaria_content.py` packs it under `resources/sefaria/`, each read on first use
   (off the UI thread by its callers) and kept:
   - `SefariaTopics` (`Topic`, `TopicRelation`, `TopicNeighbours`): the topics, the roots of their tree, the lines each
     is about (`sourcesOf`, `sourceCount`, in Sefaria's order), the topics of a line (`of`, the most sourced first), the
     children in the tree, the neighbours on a page (shown under, broader, narrower, contains and around, dependents,
-    related), a topic named as typed (`named`, by `searchKey`), the index by first letter and the search;
+    related), a topic named whole for the search's card (`named`: by
+    `searchKey`, then in another spelling, with or without the article, its words in any order, never a typo), the index by first letter, and the search
+    (`search`), as the bar finds authors by name (`BookTitleIndex.searchAuthors` over the topics with sources: another
+    spelling, a typo, another order, the article, a leading רבי or הרב), the name typed whole first, then the most sourced;
   - `SefariaSages` (`Sage`, `AmbiguousSage`, `Mention`, `SageRelation`): the persons the library's lines mention, the
     names Sefaria could not tell apart, the mentions of a line (`at`), a person's lines (`placesOf`, a line once), its
-    students, teachers, family and groups, and the search;
+    students, teachers, family and groups, and the search, by the same rules, the most mentioned first;
   - `SefariaSugyot` (`Sugya`): the passage of a line, a sugya over the Mishnah it shares lines with; `ifRead()` for the
     menu, which must not wait;
   - `KrupnikDictionary`: Krupnik's headwords, each other headword of an entry with its text.
 - **Reached from:** `SefariaLines`, the reader's pane, the two tools, the search's card, `SageLinks`, `SugyaMenu`, `DictionaryWidget.kt`.
-- **Follows:** Pardes's `KleiKodeshPack` (a gzipped TSV resource parsed lazily into maps).
+- **Follows:** Pardes's `BookTitleIndex` (the bar's search of books and authors by name), whose author search it
+  uses for the topics and the persons; Pardes's `KleiKodeshPack` (a gzipped TSV resource parsed lazily into maps).
 - **Tests:** `SefariaDataTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaLines.kt`
@@ -10164,10 +10169,11 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaDataTest.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 170 lines.
+- **Size:** 194 lines.
 - **What:** the topics, the sages, the passages and Krupnik's rows parsed from small fixtures (a line's topics and
-  their order, the tree, the neighbours both ways, a name as typed, the index and the search; mentions, places,
-  relations, an ambiguous name; a sugya over its Mishnah; other headwords), and the shipped data read.
+  their order, the tree, the neighbours both ways, a name as typed, the index and the search, in another spelling, with a typo and in another
+  order; the topic the search's card names, in another spelling or order and never by a typo; mentions, places,
+  relations, an ambiguous name, a person found in another spelling, with a typo or a leading רבי; a sugya over its Mishnah; other headwords), and the shipped data read.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, names in backticks as Zayit's.
 - **Tests:** it is one (unit).

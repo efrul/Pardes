@@ -149,7 +149,7 @@ private fun ColumnScope.SagesIndex(
         modifier = Modifier.fillMaxWidth(),
     )
     val typed = query.text.toString()
-    val found = remember(sages, typed) { sages.search(typed).take(MAX_LISTED) }
+    val found = remember(sages, typed) { sages.search(typed, MAX_LISTED) }
     if (found.isEmpty()) return SefariaHint(stringResource(Res.string.sefaria_sages_none_found))
     LazyColumn(Modifier.fillMaxSize()) {
         items(found, key = { it.id }) { sage -> SageRow(sage, sages.placesOf(sage.id).size, accent) { onSage(sage.id) } }

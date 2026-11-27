@@ -162,7 +162,7 @@ private fun ColumnScope.TopicsBrowser(
     }
     val typed = query.text.toString()
     if (typed.isNotBlank()) {
-        val found = remember(topics, typed) { topics.search(typed).take(MAX_FOUND) }
+        val found = remember(topics, typed) { topics.search(typed, MAX_FOUND) }
         if (found.isEmpty()) {
             SefariaHint(stringResource(Res.string.sefaria_topics_none_found))
         } else {
