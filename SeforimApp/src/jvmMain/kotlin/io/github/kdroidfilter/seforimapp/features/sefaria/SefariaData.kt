@@ -2,6 +2,9 @@ package io.github.kdroidfilter.seforimapp.features.sefaria
 
 import androidx.compose.runtime.Immutable
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
+import io.github.kdroidfilter.seforimapp.framework.search.titles.BookTitleIndex
+import io.github.kdroidfilter.seforimapp.framework.search.titles.TitleAuthor
+import io.github.kdroidfilter.seforimapp.framework.search.titles.TitleText
 import java.util.zip.GZIPInputStream
 
 // Sefaria's topics, the persons its texts mention and its passages, as scripts/sefaria_content.py packs them under
@@ -94,8 +97,17 @@ class SefariaTopics(
                 ).distinct(),
         )
 
-    /** The topic named [query] (its name or another of its names, as typed), the one with the most sources first. */
-    fun named(query: String): Topic? = query.searchKey().takeIf { it.isNotEmpty() }?.let(byName::get)
+    /**
+     * The topic named [query]: its name or another of its names typed whole, as typed or in another spelling, with or
+     * without the article, its words in any order; the one with the most sources first. Never a typo: a search that names
+     * no topic (שבט) shows none.
+     */
+    fun named(query: String): Topic? {
+        val key = query.searchKey().takeIf { it.isNotEmpty() } ?: return null
+        return byName[key] ?: names.searchAuthors(query, NAMED_CANDIDATES).firstNotNullOfOrNull { match ->
+            topics[match.author.id.toInt()]?.takeIf { topic -> (listOf(topic.name) + topic.others).any { sameWords(it, query) } }
+        }
+    }
 
     /** The topics with sources whose name starts with [letter], by their name: a page of the index. */
     fun startingWith(letter: Char): List<Topic> =
@@ -103,13 +115,20 @@ class SefariaTopics(
             .filter { sourceCount(it.id) > 0 && it.name.searchKey().firstOrNull() == letter }
             .sortedBy { it.name.searchKey() }
 
-    /** The topics with sources whose name or another name holds [query], the ones with the most sources first. */
-    fun search(query: String): List<Topic> {
-        val key = query.searchKey().takeIf { it.isNotEmpty() } ?: return emptyList()
-        return topics.values
-            .filter { topic -> sourceCount(topic.id) > 0 && (listOf(topic.name) + topic.others).any { key in it.searchKey() } }
-            .sortedWith(compareBy<Topic> { !it.name.searchKey().startsWith(key) }.thenByDescending { sourceCount(it.id) })
+    // The topics with sources found by name as the bar finds books and authors (BookTitleIndex): in another spelling,
+    // with a typo, the words in another order, with or without the article, a leading רבי or הרב not needed
+    private val names: BookTitleIndex by lazy {
+        BookTitleIndex(
+            emptyList(),
+            topics.values.filter { sourceCount(it.id) > 0 }.map { TitleAuthor(it.id.toLong(), it.name, it.others, sourceCount(it.id)) },
+        )
     }
+
+    /** The topics with sources named by [query], as the bar finds authors: its name typed whole first, then the most sourced. */
+    fun search(
+        query: String,
+        limit: Int,
+    ): List<Topic> = names.searchAuthors(query, limit).mapNotNull { topics[it.author.id.toInt()] }
 
     private fun Map<Int, List<Pair<TopicRelation, Int>>>.related(
         id: Int,
@@ -118,6 +137,7 @@ class SefariaTopics(
 
     companion object {
         private const val RESOURCE = "/sefaria/topics.tsv.gz"
+        private const val NAMED_CANDIDATES = 5
 
         /** The topics packed in the app; empty when the resource can't be read. */
         val shipped: SefariaTopics by lazy { readResource(RESOURCE, ::parse) ?: parse(emptySequence()) }
@@ -237,13 +257,22 @@ class SefariaSages(
 
     fun groups(id: Int): List<Sage> = out.related(id, SageRelation.MEMBER)
 
-    /** The persons whose name or another name holds [query]; all of them when it is blank. The most mentioned first. */
-    fun search(query: String): List<Sage> {
-        val key = query.searchKey()
-        return sages.values
-            .filter { sage -> key.isEmpty() || (listOf(sage.name) + sage.others).any { key in it.searchKey() } }
-            .sortedByDescending { placesOf(it.id).size }
+    // The persons found by name as the bar finds authors (BookTitleIndex): another spelling, a typo, the words in another
+    // order, a leading רבי or הרב not needed
+    private val names: BookTitleIndex by lazy {
+        BookTitleIndex(emptyList(), sages.values.map { TitleAuthor(it.id.toLong(), it.name, it.others, placesOf(it.id).size) })
     }
+
+    /** The persons named by [query], as the bar finds authors; all of them when it is blank. The most mentioned first. */
+    fun search(
+        query: String,
+        limit: Int,
+    ): List<Sage> =
+        if (query.isBlank()) {
+            sages.values.sortedByDescending { placesOf(it.id).size }.take(limit)
+        } else {
+            names.searchAuthors(query, limit).mapNotNull { sages[it.author.id.toInt()] }
+        }
 
     private fun Map<Int, List<Pair<SageRelation, Int>>>.related(
         id: Int,
@@ -344,6 +373,24 @@ object KrupnikDictionary {
 }
 
 private fun List<String>.names(index: Int): List<String> = getOrElse(index) { "" }.split('|').filter { it.isNotEmpty() }
+
+// The words of [name] are those of [query], each as typed, in another spelling or with the article, in any order
+private fun sameWords(
+    name: String,
+    query: String,
+): Boolean {
+    val left = TitleText.words(name).toMutableList()
+    val typed = TitleText.words(query)
+    if (left.size != typed.size) return false
+    return typed.all { q ->
+        val word =
+            left.firstOrNull { w ->
+                q in TitleText.articleForms(w) ||
+                    TitleText.spellingVariants(TitleText.skeleton(w), TitleText.skeleton(q))
+            }
+        word != null && left.remove(word)
+    }
+}
 
 private fun <T> readResource(
     path: String,

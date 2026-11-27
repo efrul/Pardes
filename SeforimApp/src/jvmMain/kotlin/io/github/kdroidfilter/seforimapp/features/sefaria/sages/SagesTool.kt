@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
@@ -34,6 +35,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidget
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HoverBox
 import io.github.kdroidfilter.seforimapp.features.home.widgets.PanelCard
+import io.github.kdroidfilter.seforimapp.features.home.widgets.WIDGET_LOADING_TAG
 import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetTitle
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
 import io.github.kdroidfilter.seforimapp.features.sefaria.AmbiguousSage
@@ -53,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.CircularProgressIndicator
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.TextField
@@ -76,16 +79,15 @@ import java.util.UUID
 /**
  * The persons the Mishnah and the Talmud mention, from Sefaria's data: an index of them, the most mentioned first, and a
  * person's page (its generation, its teachers and students, its description) with every line that mentions it, by
- * tractate, each opening in the reader. A tool window of the Tools menu (sefariaTools), never a widget of the Home,
- * opened on a person by a name's link (SageLinks).
+ * tractate, each opening in the reader. A Home card and a tool window, as the dictionary's, its window opened on a person
+ * by a name's link (SageLinks).
  */
-internal val SagesTool: HomeWidget = SagesWindow()
-
-// A class and not an object, as TopicsWindow
-private class SagesWindow : HomeWidget {
+internal object SagesTool : HomeWidget {
     override val id = "sefaria_sages"
     override val title = Res.string.home_widget_name_sages
-    override val defaultSpan = CellSpan(6, 6)
+    override val defaultSpan = CellSpan(6, 5)
+    override val minSpan = CellSpan(4, 4)
+    override val maxSpan = CellSpan(10, 10)
     override val toolWindowSize = DpSize(560.dp, 700.dp)
     override val toolWindowMinSize = DpSize(400.dp, 440.dp)
     override val toolSymbol = "person.2"
@@ -109,11 +111,12 @@ private class SagesWindow : HomeWidget {
         }
         val accent = rememberAccentColor(JewelTheme.isDark)
         PanelCard(modifier) {
+            val loaded = sages
+            // Still loading, as the other widgets' loading card: its tag is what the size test waits for
+            if (loaded == null) return@PanelCard CircularProgressIndicator(Modifier.align(Alignment.Center).testTag(WIDGET_LOADING_TAG))
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val loaded = sages
                 val page = trail.lastOrNull()
                 when {
-                    loaded == null -> SefariaHint(stringResource(Res.string.sefaria_loading))
                     page != null ->
                         SagePage(loaded, page, accent, onBack = { trail = trail.dropLast(1) }, onSage = { trail = trail + it }) { line ->
                             state.openTab(
@@ -146,7 +149,7 @@ private fun ColumnScope.SagesIndex(
         modifier = Modifier.fillMaxWidth(),
     )
     val typed = query.text.toString()
-    val found = remember(sages, typed) { sages.search(typed).take(MAX_LISTED) }
+    val found = remember(sages, typed) { sages.search(typed, MAX_LISTED) }
     if (found.isEmpty()) return SefariaHint(stringResource(Res.string.sefaria_sages_none_found))
     LazyColumn(Modifier.fillMaxSize()) {
         items(found, key = { it.id }) { sage -> SageRow(sage, sages.placesOf(sage.id).size, accent) { onSage(sage.id) } }

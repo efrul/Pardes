@@ -86,8 +86,27 @@ class SefariaDataTest {
         // The index and the search show the topics that have sources
         assertEquals(listOf("קריאת שמע"), topics.startingWith('ק').map { it.name })
         assertTrue(topics.startingWith('ש').isEmpty())
-        assertEquals(listOf("קריאת שמע"), topics.search("שמע").map { it.name })
-        assertEquals(listOf("תפילה"), topics.search("תפ").map { it.name })
+        assertEquals(listOf("קריאת שמע"), topics.search("שמע", 10).map { it.name })
+        assertEquals(listOf("תפילה"), topics.search("תפ", 10).map { it.name })
+    }
+
+    @Test
+    fun `a topic is found as the bar finds books, in another spelling, with a typo or in another order`() {
+        assertEquals(listOf("קריאת שמע"), topics.search("קראת שמע", 10).map { it.name })
+        assertEquals(listOf("קריאת שמע"), topics.search("שמע קריאת", 10).map { it.name })
+        assertEquals(listOf("תפילה"), topics.search("תפילא", 10).map { it.name })
+        // The topics with sources alone: שבת is a name of no source
+        assertTrue(topics.search("שבת", 10).isEmpty())
+    }
+
+    @Test
+    fun `the search's card names a topic in another spelling or order, never by a typo`() {
+        assertEquals(2, topics.named("קראת שמע")?.id)
+        assertEquals(2, topics.named("שמע קריאת")?.id)
+        assertNull(topics.named("קריעת שמע"))
+        assertNull(topics.named("תפילא"))
+        // The name whole: a word more or less names nothing
+        assertNull(topics.named("קריאת"))
     }
 
     @Test
@@ -107,9 +126,13 @@ class SefariaDataTest {
 
     @Test
     fun `a sage is found by any of its names, the most mentioned first`() {
-        assertEquals(listOf(12), sages.search("בן חנניה").map { it.id })
-        assertEquals(listOf(10), sages.search("עקיבא").map { it.id })
-        assertEquals(listOf(10, 11), sages.search("").take(2).map { it.id })
+        assertEquals(listOf(12), sages.search("בן חנניה", 10).map { it.id })
+        assertEquals(listOf(10), sages.search("עקיבא", 10).map { it.id })
+        assertEquals(listOf(10, 11), sages.search("", 2).map { it.id })
+        // Another spelling, a typo, and a leading רבי not needed
+        assertEquals(listOf(13), sages.search("טרפן", 10).map { it.id })
+        assertEquals(listOf(10), sages.search("עקיבה", 10).map { it.id })
+        assertEquals(listOf(12), sages.search("רבי יהושע", 10).map { it.id })
     }
 
     @Test
@@ -162,7 +185,8 @@ class SefariaDataTest {
         assertTrue(sages.at("ברכות ב:, יג").any { it.text == "רבי יהודה" })
         // Sefaria's ר without its geresh is the library's ר'
         assertTrue(sages.sages.values.none { it.name.startsWith("ר ") })
-        assertEquals("רבי עקיבא", sages.search("רבי עקיבא").first().name)
+        assertEquals("רבי עקיבא", sages.search("רבי עקיבא", 10).first().name)
+        assertEquals("תפילה", shipped.search("תפלה", 10).first().name)
         assertEquals('M', SefariaSugyot.shipped.of("ברכות ב., א")?.kind)
         assertEquals('S', SefariaSugyot.shipped.of("ברכות ב:, ה")?.kind)
         assertTrue(KrupnikDictionary.shipped.size > 18_000)

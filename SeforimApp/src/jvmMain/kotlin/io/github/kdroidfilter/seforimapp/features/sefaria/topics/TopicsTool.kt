@@ -24,6 +24,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
@@ -36,6 +37,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidget
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HoverBox
 import io.github.kdroidfilter.seforimapp.features.home.widgets.PanelCard
+import io.github.kdroidfilter.seforimapp.features.home.widgets.WIDGET_LOADING_TAG
 import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetTitle
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
 import io.github.kdroidfilter.seforimapp.features.sefaria.BackTitle
@@ -53,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.CircularProgressIndicator
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.IconButton
 import org.jetbrains.jewel.ui.component.Text
@@ -79,16 +82,17 @@ import java.util.UUID
 
 /**
  * Sefaria's topics: browsed in the tree Sefaria shows them in or by their first letter, or searched by name; a topic
- * opened shows its description, its sources by book (each opens in the reader) and the topics around it. A tool window
- * of the Tools menu (sefariaTools), never a widget of the Home, opened on a topic from the reader's pane or the search.
+ * opened shows its description, its sources by book (each opens in the reader) and the topics around it. A Home card
+ * and a tool window, as the dictionary's, its window opened on a topic from the reader's pane or the search.
  */
-internal val TopicsTool: HomeWidget = TopicsWindow()
-
-// A class and not an object: the widget processor makes every HomeWidget object a widget of the Home
-private class TopicsWindow : HomeWidget {
+internal object TopicsTool : HomeWidget {
     override val id = "sefaria_topics"
     override val title = Res.string.home_widget_name_topics
-    override val defaultSpan = CellSpan(6, 6)
+    override val defaultSpan = CellSpan(6, 5)
+    override val minSpan = CellSpan(4, 4)
+
+    // Taller, the tree's fourteen roots leave the card's foot empty
+    override val maxSpan = CellSpan(10, 6)
     override val toolWindowSize = DpSize(560.dp, 680.dp)
     override val toolWindowMinSize = DpSize(400.dp, 440.dp)
     override val toolSymbol = "tag"
@@ -113,11 +117,12 @@ private class TopicsWindow : HomeWidget {
         }
         val accent = rememberAccentColor(JewelTheme.isDark)
         PanelCard(modifier) {
+            val loaded = topics
+            // Still loading, as the other widgets' loading card: its tag is what the size test waits for
+            if (loaded == null) return@PanelCard CircularProgressIndicator(Modifier.align(Alignment.Center).testTag(WIDGET_LOADING_TAG))
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val loaded = topics
                 val page = trail.lastOrNull()
                 when {
-                    loaded == null -> SefariaHint(stringResource(Res.string.sefaria_loading))
                     page != null ->
                         TopicPage(loaded, page, accent, onBack = { trail = trail.dropLast(1) }, onTopic = { trail = trail + it }) { line ->
                             state.openTab(
@@ -157,7 +162,7 @@ private fun ColumnScope.TopicsBrowser(
     }
     val typed = query.text.toString()
     if (typed.isNotBlank()) {
-        val found = remember(topics, typed) { topics.search(typed).take(MAX_FOUND) }
+        val found = remember(topics, typed) { topics.search(typed, MAX_FOUND) }
         if (found.isEmpty()) {
             SefariaHint(stringResource(Res.string.sefaria_topics_none_found))
         } else {

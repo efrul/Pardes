@@ -7,14 +7,10 @@ import androidx.compose.runtime.setValue
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.settings.SettingsGroup
-import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidget
 import io.github.kdroidfilter.seforimapp.features.home.widgets.ToolWindows
 import io.github.kdroidfilter.seforimapp.features.sefaria.sages.SagesTool
 import io.github.kdroidfilter.seforimapp.features.sefaria.topics.TopicsTool
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
-
-/** Sefaria's two windows: tools of the app's Tools menu (ToolWindows' availableTools), never widgets of the Home. */
-internal val sefariaTools: List<HomeWidget> get() = listOf(TopicsTool, SagesTool)
 
 /**
  * Whether the reader shows the topics of its line in a pane beside the text (LineTopicsPane), one setting for every
