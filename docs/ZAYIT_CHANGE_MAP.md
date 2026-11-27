@@ -2961,9 +2961,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
   The daf's checkboxes that stood here too (the unsure lines, the review) are in `DafSettingsScreen.kt` since
   2026-11-10; the fonts stay here, with the other fonts, as the user asked on 2026-11-11.
   - The user fonts (comments marked "Pardes:"): the lists offer the fonts the user added after the catalog's
-    (`UserFonts.fonts`), so `FontSettingCard` takes the fonts' codes in place of `FontOption`s, and a user font of
-    the setting whose file is gone is listed as missing (`withMissingFont`); `UserFontsCard()` after the six cards;
-    the `FontOption` import gone, four imports.
+    (`UserFonts.fonts`, by their `shortName`), so `FontSettingCard` takes the fonts' codes in place of `FontOption`s,
+    and a user font of the setting whose file is gone is listed as missing (`withMissingFont`); `UserFontsCard()`
+    after the six cards; the `FontOption` import gone, four imports.
   - The card's `ListComboBox` keys its rows by the fonts' codes (`itemKeys`, a comment marked "Pardes:"), and
     `FontSettingCard` is `internal` (Zayit's is private), for its UI test.
 - **Why:** as for `FontsSettingsEvents.kt`; the user fonts, the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup. The keys: Jewel's `ListComboBox` of strings keys its rows by
@@ -9207,23 +9207,26 @@ front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowStat
 A font from a TTF or OTF file can be added in Settings › גופנים since 2026-11-12, as the user asked: it is copied into
 the app's data folder (fonts/), offered in all six lists of fonts after the catalog's, can be taken out, and goes into the
 backup. A font whose file is gone shows the default font and is listed as missing; one without Hebrew letters is added
-with a warning. Two fonts of one name are told apart in the lists by their codes (2026-11-26: two of one family's name
-closed the app as a list opened). Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`,
-`PendingUserDataRestore.kt`, `strings.xml`.
+with a warning. Two fonts of one family's name are listed with their files' names, and the lists keep them apart by
+their codes (2026-11-26: two of one name closed the app as a list opened; the names, as the user asked on 2026-11-27).
+Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`, `PendingUserDataRestore.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFonts.kt`
 
 - **Feature:** User fonts.
-- **Size:** 138 lines.
+- **Size:** 161 lines.
 - **What:** `UserFonts`, the fonts in a folder (`shared`: the data folder's fonts/, `FileKit.filesDir`; `sharedOrNull`
-  where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, whether
-  its file is there): `add` (a TTF or OTF that Skia loads, copied under a name of its own, and whether it has an alef),
-  `remove`, `familyFor` (a `FontFamily` from the file, kept), `fontOf` (a code's font, one whose file is gone included),
-  `writeTo` and `restoreFrom` (the backup archive's fonts/ entries).
+  where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, with
+  its file's name in parentheses when another font of the folder has the same, whether its file is there, and
+  `shortName`, the name the lists of fonts give it, its file's alone then, as they are too narrow for both): `add` (a
+  TTF or OTF that Skia loads, copied under a name of its own, named as the folder's list names it, and whether it has
+  an alef), `remove`, `familyFor` (a `FontFamily` from the file, kept), `fontOf` (a code's font, one whose file is
+  gone included), `writeTo` and `restoreFrom` (the backup archive's fonts/ entries).
 - **Reached from:** `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserFontsCard.kt`, `UserDataBackup.kt`,
   `PendingUserDataRestore.kt`.
 - **Follows:** Zayit's `FontCatalog` (codes in the settings, a family for each); Skia's `FontMgr` as Compose loads fonts.
-- **Tests:** `UserFontsTest`; a font added from a file, chosen for the book's text and seen there, tried in the app.
+- **Tests:** `UserFontsTest`; a font added from a file, chosen for the book's text and seen there, tried in the app;
+  two files of Noto Sans Hebrew, their names in the card and the lists (2026-11-27).
 - **Notes:** a font loaded from a file in the Windows build (a native image) is for the testers' build.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/UserFontsCard.kt`
@@ -9252,10 +9255,12 @@ closed the app as a list opened). Hooks: `FontCatalog.kt`, `FontsSettingsScreen.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFontsTest.kt`
 
 - **Feature:** User fonts.
-- **Size:** 76 lines.
-- **What:** a font file added under a name of its own (twice, two files), listed and offered by its code; one without
-  Hebrew letters said to be so, a file that is not a font refused; a font taken out, or gone, listed as missing and shown
-  in the default font; the fonts written into a backup archive and read back from it.
+- **Size:** 92 lines.
+- **What:** a font file added under a name of its own (twice, two files), listed and offered by its code; two fonts
+  of one family's name told apart by their files' names (by those names alone in the lists), the font added named as
+  the list names it; one without Hebrew letters said to be so, a file that is not a font refused; a font taken out, or
+  gone, listed as missing and shown in the default font; the fonts written into a backup archive and read back from
+  it.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, on temporary folders and the app's own font files.
 - **Tests:** it is one (unit).

@@ -70,7 +70,7 @@ private fun FontsSettingsView(
     // Pardes: the fonts the user added, after the catalog's (UserFonts)
     val userFonts by (UserFonts.sharedOrNull()?.fonts ?: MutableStateFlow(emptyList())).collectAsState()
     val codes = (options.map { it.code } + userFonts.map { it.code }).toImmutableList()
-    val optionLabels = (options.map { stringResource(it.label) } + userFonts.map { it.name }).toImmutableList()
+    val optionLabels = (options.map { stringResource(it.label) } + userFonts.map { it.shortName }).toImmutableList()
 
     VerticallyScrollableContainer(modifier = Modifier.fillMaxSize()) {
         Column(
