@@ -85,6 +85,6 @@ private fun PrayerTimesCard(state: HomeWidgetsState) {
                 Text(time?.let(clock) ?: "--:--", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
         }
-        Text("לפי ${opinion.luachName}", color = c.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+        opinion.luachName?.let { Text("לפי $it", color = c.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
     }
 }

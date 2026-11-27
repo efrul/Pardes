@@ -121,7 +121,8 @@ private fun dayFacts(
                     add(Triple("הדלקת נרות", if (full) candleLightingTime(date, location, opinion, city.name.ifBlank { null }, inIsrael) else null, true))
                 }
                 if (today.isAssurBemelacha && !tomorrow.isAssurBemelacha) {
-                    add(Triple("יציאה", if (full) havdalahTime(date, location, opinion, inIsrael) else null, true))
+                    val end = if (full) havdalahTime(date, location, opinion, inIsrael, city.name.ifBlank { null }) else null
+                    add(Triple("יציאה", end, true))
                 }
             },
     )
@@ -157,7 +158,7 @@ private fun DayDetails(
             }
         }
         Text(
-            listOfNotNull(cityLabel, "לפי ${opinion.luachName}").joinToString(" · "),
+            listOfNotNull(cityLabel, opinion.luachName?.let { "לפי $it" }).joinToString(" · "),
             color = c.textSecondary,
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp),
