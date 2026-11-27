@@ -216,6 +216,18 @@ class SefariaSages(
     /** The lines that mention [id], a line once. */
     fun placesOf(id: Int): List<String> = places[id].orEmpty()
 
+    // A person by its names as typed (searchKey), for the search's area, as the topics' byName
+    private val byName: Map<String, Sage> by lazy {
+        buildMap {
+            sages.values.sortedByDescending { placesOf(it.id).size }.forEach { sage ->
+                (listOf(sage.name) + sage.others).forEach { putIfAbsent(it.searchKey(), sage) }
+            }
+        }
+    }
+
+    /** The person named [query] (its name or another of its names, as typed), the most mentioned first. */
+    fun named(query: String): Sage? = query.searchKey().takeIf { it.isNotEmpty() }?.let(byName::get)
+
     /** Those [id] taught, those who taught [id], [id]'s parents and children, and the groups [id] belongs to. */
     fun students(id: Int): List<Sage> = out.related(id, SageRelation.TAUGHT)
 

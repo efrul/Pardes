@@ -962,10 +962,22 @@
     <string name="search_sort_catalog">מיון לפי סדר הספרייה</string>
     <string name="search_sort_relevance">מיון לפי רלוונטיות</string>
     <string name="search_farther_lines">ועוד %1$d קרובות פחות:</string>
-    <!-- Pardes: the line of common sources above the results (docs/COMMON_SOURCES_PLAN.md) -->
-    <string name="search_common_source">מקור משותף:</string>
-    <string name="search_common_sources">מקורות משותפים:</string>
-    <string name="search_common_source_books">(%1$d ספרים)</string>
+    <!-- Pardes: the area beside the results, what the query names and the sources its first results link to
+         (SearchArea.kt, docs/COMMON_SOURCES_PLAN.md) -->
+    <string name="search_area_also">גם:</string>
+    <string name="search_area_kind_book">ספר</string>
+    <string name="search_area_kind_author">מחבר</string>
+    <string name="search_area_kind_sage">חכם</string>
+    <string name="search_area_kind_topic">נושא</string>
+    <string name="search_area_topic_sources">%1$d מקורות</string>
+    <string name="search_area_topic_line">בנושאים של ספריא: %1$d מקורות</string>
+    <string name="search_area_sage_line">בחכמים של ספריא: %1$s</string>
+    <string name="search_area_sage_mentions">נזכר ב־%1$s שורות בספרייה, הרבה ביותר ב:</string>
+    <string name="search_area_sage_page">לדף החכם</string>
+    <string name="search_area_sefaria_credit">מתוך החכמים והנושאים של ספריא</string>
+    <string name="search_area_sources">מקורות שהתוצאות מפנות אליהם</string>
+    <string name="search_area_sources_page">לפי %1$d התוצאות הראשונות</string>
+    <string name="search_area_source_books">%1$d ספרים</string>
     <string name="search_common_source_books_tip">%1$d ספרים מבין עשרים התוצאות הראשונות מקושרים למקור הזה</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>

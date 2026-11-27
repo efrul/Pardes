@@ -6,22 +6,25 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.CommonSources
 import io.github.kdroidfilter.seforimapp.features.search.domain.LinkEnd
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.Properties
 
-/** A source of the line of common sources, as the screen shows it. */
+/** A source the first results link to, as the area beside them shows it: its place, its [books] and its [text]. */
 @Immutable
 data class CommonSource(
     val lineId: Long,
     val bookId: Long,
     val label: String,
     val books: Int,
+    val text: String = "",
 )
 
 /**
- * Pardes: the line of common sources read from the library (docs/COMMON_SOURCES_PLAN.md): the page's links from the
- * `link` table alone, both directions, on a read-only connection of its own, opened for each line and closed after it.
+ * Pardes: the sources the first results link to, read from the library for the area beside them (docs/COMMON_SOURCES_PLAN.md):
+ * the page's links from the `link` table alone, both directions, on a read-only connection of its own, opened for each
+ * read and closed after it.
  * Not through SeforimRepository: its queries keep a part of the links only.
  */
 class CommonSourcesQueries(
@@ -72,30 +75,47 @@ class CommonSourcesQueries(
             }
         ).also { baseBooks = it }
 
-    // Each pick with its place as the library names it (heRef, the book's title when it has none), in the picks' order
+    // Each pick with its place as the library names it (heRef, the book's title when it has none) and its text, in the
+    // picks' order
     private fun labels(
         connection: Connection,
         picks: List<CommonSourcePick>,
     ): List<CommonSource> {
         if (picks.isEmpty()) return emptyList()
-        val names = HashMap<Long, String>()
+        val names = HashMap<Long, Pair<String, String>>()
         connection.prepareStatement(LABELS_SQL.replace("?", picks.joinToString(",") { "?" })).use { statement ->
             picks.forEachIndexed { i, pick -> statement.setLong(i + 1, pick.lineId) }
             statement.executeQuery().use { rows ->
                 while (rows.next()) {
                     val heRef = rows.getString(2)
-                    names[rows.getLong(1)] = if (heRef.isNullOrBlank()) rows.getString(3) else heRef.replace(SPACES, " ").trim()
+                    val label = if (heRef.isNullOrBlank()) rows.getString(3) else heRef.replace(SPACES, " ").trim()
+                    names[rows.getLong(1)] = label to plain(rows.getString(4).orEmpty())
                 }
             }
         }
-        return picks.mapNotNull { pick -> names[pick.lineId]?.let { CommonSource(pick.lineId, pick.bookId, it, pick.books) } }
+        return picks.mapNotNull { pick ->
+            names[pick.lineId]?.let { (label, text) -> CommonSource(pick.lineId, pick.bookId, label, pick.books, text) }
+        }
     }
+
+    // A line's text on one row: no tags, no cantillation, no section marks, no verse number before it
+    private fun plain(html: String): String =
+        Jsoup
+            .parse(html)
+            .text()
+            .replace(MARKS, "")
+            .replace(VERSE_NUMBER, "")
+            .replace(SPACES, " ")
+            .trim()
 
     private companion object {
         const val FROM_SOURCE_SQL = "SELECT sourceLineId, targetLineId, targetBookId FROM link WHERE sourceLineId IN (?)"
         const val FROM_TARGET_SQL = "SELECT targetLineId, sourceLineId, sourceBookId FROM link WHERE targetLineId IN (?)"
         const val BASE_BOOKS_SQL = "SELECT id FROM book WHERE isBaseBook = 1"
-        const val LABELS_SQL = "SELECT l.id, l.heRef, b.title FROM line l JOIN book b ON b.id = l.bookId WHERE l.id IN (?)"
+        const val LABELS_SQL =
+            "SELECT l.id, l.heRef, b.title, l.content FROM line l JOIN book b ON b.id = l.bookId WHERE l.id IN (?)"
         val SPACES = Regex("\\s+")
+        val MARKS = Regex("[\\u0591-\\u05AF\\u05C0]|\\{[ספ]\\}")
+        val VERSE_NUMBER = Regex("^\\s*\\([^)]{1,4}\\)\\s*")
     }
 }

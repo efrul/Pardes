@@ -83,12 +83,12 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LogoBranch
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.UnifiedSearchBar
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookdetails.BookDetails
+import io.github.kdroidfilter.seforimapp.features.search.area.SearchArea
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchModeEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
-import io.github.kdroidfilter.seforimapp.features.sefaria.topics.SearchTopicCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
@@ -186,7 +186,7 @@ fun SearchResultInBookShellMvi(
     tabUi: BookTabUi,
     // Pardes: the grades given to the results shown, in feedback mode
     feedback: ImmutableMap<Long, FeedbackGrade> = persistentMapOf(),
-    // Pardes: the line of common sources above the results (docs/COMMON_SOURCES_PLAN.md)
+    // Pardes: the sources the first results link to, shown in the area beside them (docs/COMMON_SOURCES_PLAN.md)
     commonSources: ImmutableList<CommonSource> = persistentListOf(),
 ) {
     val tabId = bookUiState.tabId
@@ -561,8 +561,6 @@ private fun SearchResultContentMvi(
                                     }
                                 }
                             }
-                            // Pardes: the sources the first results link to, in a new tab (docs/COMMON_SOURCES_PLAN.md)
-                            CommonSourcesLine(commonSources, onOpen = { source -> actions.onOpenBookAt(source.bookId, source.lineId) })
                         }
                         Divider(Orientation.Horizontal, Modifier.fillMaxWidth())
                         Box(
@@ -658,16 +656,22 @@ private fun SearchResultContentMvi(
                     // The query's book is already in the details pane when a result of it is shown
                     val duplicate =
                         entity is SearchEntity.BookEntity && showBookDetails && entity.book.id == preview?.hit?.bookId
-                    if (entity != null && !duplicate && showEntity) {
+                    // Pardes: one area for what the query names and the sources its first results link to (SearchArea.kt)
+                    SearchArea(
+                        query = state.executedQuery,
+                        entity = entity?.takeIf { !duplicate && showEntity },
+                        sources = commonSources,
+                        onOpenSource = { source -> actions.onOpenBookAt(source.bookId, source.lineId) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { shown, extra ->
                         EntityPanel(
-                            entity = entity,
+                            entity = shown,
                             onOpenBookAt = actions.onOpenBookAt,
                             onOpenAuthor = actions.onOpenAuthor,
                             modifier = Modifier.fillMaxWidth(),
+                            extra = extra,
                         )
                     }
-                    // Pardes: the topic of Sefaria's the query names, as the panel of a book or an author it names
-                    SearchTopicCard(query = state.executedQuery, modifier = Modifier.fillMaxWidth())
                     // Until the first result's passage is loaded, the pane says so
                     if (preview == null && (items.isNotEmpty() || state.isLoading)) {
                         Box(Modifier.weight(1f).fillMaxWidth().card(), contentAlignment = Alignment.Center) {
@@ -1296,9 +1300,12 @@ private fun EntityPanel(
     onOpenBookAt: (bookId: Long, lineId: Long) -> Unit,
     onOpenAuthor: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    // Pardes: the rest of the area beside the results, under the panel's details (SearchArea.kt)
+    extra: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.card().padding(16.dp)) {
         EntityDetails(entity, onOpenBookAt, onOpenAuthor)
+        extra()
     }
 }
 
