@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -37,6 +38,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.features.search.readingSecondary
 import io.github.kdroidfilter.seforimapp.features.sefaria.Sage
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaData
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSages
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaTopics
 import io.github.kdroidfilter.seforimapp.features.sefaria.Topic
@@ -85,8 +87,10 @@ fun SearchArea(
     wide: Boolean = false,
     panel: @Composable (entity: SearchEntity, extra: @Composable ColumnScope.() -> Unit) -> Unit,
 ) {
-    val named by produceState<SefariaNamed?>(null, query) {
-        value = withContext(Dispatchers.Default) { SefariaNamed.of(query.trim()) }
+    // Read again once Sefaria's data is put in place or taken out (SefariaPack)
+    val revision by SefariaData.revision.collectAsState()
+    val named by produceState<SefariaNamed?>(null, query, revision) {
+        value = withContext(Dispatchers.IO) { SefariaNamed.of(query.trim()) }
     }
     val entities = remember(query, entity, named) { SearchFacets.entities(facetsOf(query, entity, named)).toImmutableList() }
     // The entity shown in full, picked on the "also" line; the first until one is
@@ -145,9 +149,11 @@ internal class SefariaNamed(
     val any: Boolean get() = sage != null || topic != null
 
     companion object {
-        fun of(query: String): SefariaNamed {
-            val sages = SefariaSages.shipped
-            val topics = SefariaTopics.shipped
+        /** What [query] names in Sefaria's data; null without the data (SefariaPack). Reads the file: off the UI thread. */
+        fun of(query: String): SefariaNamed? {
+            val data = SefariaData.current() ?: return null
+            val sages = data.sages
+            val topics = data.topics
             return SefariaNamed(sages, topics, sages.named(query), topics.named(query)?.takeIf { topics.sourceCount(it.id) > 0 })
         }
     }

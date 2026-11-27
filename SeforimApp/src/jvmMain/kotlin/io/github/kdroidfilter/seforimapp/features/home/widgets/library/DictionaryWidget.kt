@@ -296,7 +296,7 @@ internal suspend fun readDictionaries(
                                 dictionary.textEntries(
                                     // Pardes: Krupnik's is Sefaria's text, the others Klei Kodesh's data
                                     if (dictionary == Dictionary.KRUPNIK) {
-                                        KrupnikDictionary.shipped
+                                        KrupnikDictionary.entries()
                                     } else {
                                         KleiKodeshPack.shipped.texts[dictionary].orEmpty()
                                     },

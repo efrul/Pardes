@@ -13,6 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +35,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HoverBox
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
@@ -230,4 +237,25 @@ private fun marked(
         append(text)
         places.forEach { addStyle(SpanStyle(fontWeight = FontWeight.Bold), it.first, it.last + 1) }
     }
+}
+
+/** What a screen reads of Sefaria's data: [value] null when the library's folder has no file of it (SefariaPack). */
+@Immutable
+class SefariaRead<T : Any>(
+    val value: T?,
+)
+
+/**
+ * The part of Sefaria's data a screen shows ([part] of it, read off the UI thread), read again when the data is put in
+ * place or taken out (SefariaData.revision); null while it is read.
+ */
+@Composable
+fun <T : Any> rememberSefaria(part: (SefariaData.Opened) -> T): SefariaRead<T>? {
+    val revision by SefariaData.revision.collectAsState()
+    // The part asked for when the data is read, not the one of the first composition
+    val currentPart by rememberUpdatedState(part)
+    val read by produceState<SefariaRead<T>?>(null, revision) {
+        value = SefariaRead(withContext(Dispatchers.IO) { SefariaData.current()?.let(currentPart) })
+    }
+    return read
 }

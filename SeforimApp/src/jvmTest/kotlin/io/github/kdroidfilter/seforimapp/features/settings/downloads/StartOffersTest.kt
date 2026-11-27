@@ -42,6 +42,17 @@ class StartOffersTest {
     }
 
     @Test
+    fun `Sefaria's data opens the data page while it is missing, and a newer pack once`() {
+        assertEquals(listOf(Data), StartOffers.pagesFor(Found(missingSefaria = true), 0, 0))
+        val newer = Found(installedSefaria = 1, newestSefaria = 2)
+        assertEquals(listOf(Data), StartOffers.pagesFor(newer, 0, 0, offeredSefaria = 1))
+        assertEquals(emptyList(), StartOffers.pagesFor(newer, 0, 0, offeredSefaria = 2), "offered once")
+        assertEquals(emptyList(), StartOffers.pagesFor(Found(installedSefaria = 2, newestSefaria = 2), 0, 0))
+        // Not installed and not offered at start (the user unticked it): nothing, even with a pack out
+        assertEquals(emptyList(), StartOffers.pagesFor(Found(newestSefaria = 2), 0, 0))
+    }
+
+    @Test
     fun `a page's mark is taken once its card is shown`() {
         assertFalse(StartOffers.take(Daf))
     }

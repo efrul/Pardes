@@ -1381,6 +1381,23 @@
     <string name="sefaria_mark_story">סמן את הסיפור</string>
     <string name="sefaria_copy_story">העתק את הסיפור</string>
 
+    <!-- Pardes: Sefaria's data as a pack of its own beside the library, downloaded, offered at start and updated (features/sefaria/pack/) -->
+    <string name="sefaria_pack_title">התוכן של ספריא (ניסיוני)</string>
+    <string name="sefaria_pack_description">הנושאים של כל שורה ודפי נושא, שמות החכמים במשנה ובתלמוד וכרטיסי חכם, הסוגיות ומילון קרופניק, מתוך הנתונים הפתוחים של ספריא. נשמר בתיקייה pardes-sefaria ליד הספרייה ונקרא לפי שורה, בלי לטעון הכול לזיכרון.</string>
+    <string name="sefaria_pack_installed">מותקנת חבילה %1$d</string>
+    <string name="sefaria_pack_missing">לא הורד עדיין</string>
+    <string name="sefaria_pack_checking">בודק אם יש חבילה…</string>
+    <string name="sefaria_pack_none">עוד אין חבילה להורדה</string>
+    <string name="sefaria_pack_current">זו החבילה האחרונה</string>
+    <string name="sefaria_pack_available">חבילה %1$d להורדה, %2$s MB</string>
+    <string name="sefaria_pack_download">הורדה והתקנה (%1$s MB)</string>
+    <string name="sefaria_pack_update">עדכון לחבילה %1$d (%2$s MB)</string>
+    <string name="sefaria_pack_remove">הסרה</string>
+    <string name="sefaria_pack_cancel">ביטול</string>
+    <string name="sefaria_pack_progress">הורדו %1$s מתוך %2$s MB</string>
+    <string name="sefaria_pack_problem">ההורדה נעצרה: %1$s</string>
+    <string name="sefaria_pack_prompt">להציע בכל הפעלה, עד שיותקן</string>
+    <string name="sefaria_pack_needed">התוכן של ספריא לא הורד עדיין. הנושאים, החכמים והסוגיות נמצאים בקובץ נפרד, שאפשר להוריד כאן או בהגדרות › ניהול נתונים.</string>
     <!-- Pardes: the pane of the area beside a search's results, shown or hidden from the search's end bar (features/search/SearchPanelsSettings.kt, area/SearchAreaPane.kt) -->
     <string name="search_area_pane">על החיפוש</string>
     <string name="search_area_pane_tooltip">הצג בחלונית את מה שחיפשת, ספר, מחבר, חכם או נושא, ואת המקורות שהתוצאות מפנות אליהם. את החלונית אפשר לגרור לכל צד, להגדיל ולפתוח בחלון נפרד</string>

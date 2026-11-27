@@ -40,7 +40,7 @@ class SugyaMenu internal constructor(
     /** The items for the line [line] right-clicked; none when it is in no passage or the passages are not read yet. */
     fun items(line: Line?): List<ContextMenuItem> {
         val heRef = line?.heRef?.takeIf { it.isNotBlank() } ?: return emptyList()
-        val passage = SefariaSugyot.ifRead()?.of(heRef) ?: return emptyList()
+        val passage = SefariaData.ifOpen()?.sugyot?.of(heRef) ?: return emptyList()
         val (mark, copyLabel) = labels[passage.kind] ?: return emptyList()
         return listOf(
             ContextMenuItemOption(icon = AllIconsKeys.Actions.Selectall, label = mark) {
@@ -70,7 +70,7 @@ fun rememberSugyaMenu(onEvent: (BookContentEvent) -> Unit): SugyaMenu {
     val lines = LocalAppGraph.current.sefariaLines
     val scope = rememberCoroutineScope()
     val copy = rememberCopyToClipboard()
-    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { SefariaSugyot.shipped } }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { SefariaData.current() } }
     val labels =
         mapOf(
             'S' to (stringResource(Res.string.sefaria_mark_sugya) to stringResource(Res.string.sefaria_copy_sugya)),

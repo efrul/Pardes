@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.seforim.tabs.SearchScope
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
 import io.github.kdroidfilter.seforimapp.features.onboarding.userprofile.Community
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaPackBuilder
 import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.testAppGraph
@@ -79,6 +80,8 @@ class WidgetSizesScreenshotTest {
 
     @Test
     fun `no widget size leaves its card half empty`() {
+        // Sefaria's widgets show its data, from its file: the repository's
+        SefariaPackBuilder.showRepositoryData()
         val faults = mutableListOf<String>()
         val report = StringBuilder()
         for (widget in availableHomeWidgets.filterNot { it.id in FILAMENT_WIDGETS || it.id in LIBRARY_DB_WIDGETS }) {
@@ -98,6 +101,7 @@ class WidgetSizesScreenshotTest {
             }
         }
         File(out, "report.txt").writeText(report.toString())
+        SefariaPackBuilder.hideData()
         assertTrue(faults.isEmpty(), faults.joinToString("\n"))
     }
 

@@ -31,13 +31,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (414 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (415 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (805 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (811 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -404,14 +404,16 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/main.kt`
 
-- **Change:** modified, +76 −8 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts, Search speed,
-  Settings window.
+- **Change:** modified, +79 −8 lines. Feature: Branding, Library location, Semantic search packs, Feedback mode, Links in the texts, Search speed,
+  Settings window, Sefaria's content.
 - **What:**
   - `val appId = Brand.APP_ID` instead of Zayit's literal `"io.github.kdroidfilter.seforimapp"` (FileKit's data folder).
   - Before the graph: `remember { PendingSemanticPack.runOnce() }` puts a pack unpacked in the settings in place of the
     old one, and `remember { PendingLibraryMove.read() }` reads a library move asked for in the settings.
   - Once the graph is made, `TextLinks.library = it.libraryLinks`: Pardes's links in the texts (the verses the Talmud
-    quotes, the Chavruta's notes) read the library's links.
+    quotes, the Chavruta's notes) read the library's links; and, with a comment marked "Pardes:",
+    `SefariaData.appSettings = it.appSettings`: Sefaria's data is read from its pack beside the library (`SefariaPack`),
+    which an object the reader reaches without the graph finds by the settings.
   - With a move pending, the catalog is not warmed (`if (pendingLibraryMove == null) warmCatalog(it)`) and the window
     shows `LibraryMoveWindow(pendingLibraryMove)` before the onboarding and the database update.
   - Once the library is open: `LaunchedEffect`s that warm the search (`warmSearch`) and, outside E2E runs, open the
@@ -2683,7 +2685,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +532 −1 lines. Feature: every Pardes feature with interface text.
+- **Change:** modified, +549 −1 lines. Feature: every Pardes feature with interface text.
 - **What:** one string removed, `font_rashi_amiti` (the font is gone), and 497 Hebrew strings added in twenty-five blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
@@ -2789,6 +2791,13 @@ alone. Every entry below that says "Search in categories" is part of that revers
     and a sage's page, `sefaria_sage_*` (teachers, students, family, groups, mentioned in, all, an ambiguous name, its
     Wikipedia page); the generations, `sefaria_generation_*` (tannaim, amoraim, zugot, between them); and the reader's
     menu, `sefaria_mark_*` and `sefaria_copy_*` for a sugya, a Mishnah and a story (47 strings).
+  - Sefaria's data as a pack of its own, under a comment after Sefaria's block (`features/sefaria/pack/`, the user's word
+    of 2026-11-27, "עשה זאת ויציע אוטומטית ויזהה עדכונים לאותו קובץ"): the settings' card, `sefaria_pack_title` ("התוכן של ספריא (ניסיוני)") and its
+    description (what the data is, the folder `pardes-sefaria` beside the library, read by line), the folder's state
+    (`…_installed`, `…_missing`), what is out (`…_checking`, `…_none`, `…_current`, `…_available`), the buttons
+    (`…_download`, `…_update`, `…_remove`, `…_cancel`), the download's `…_progress` and `…_problem`, the box
+    `sefaria_pack_prompt` ("להציע בכל הפעלה, עד שיותקן"), and `sefaria_pack_needed`, the hint where a feature of the data
+    shows it is missing (16 strings).
   - The pane of the area beside a search's results, under a comment after Sefaria's block, at the file's end: its
     name and its button's in the search's end bar, `search_area_pane` ("על החיפוש"), and the button's tooltip,
     `search_area_pane_tooltip` (what the pane shows, and that it is dragged to any side, sized and opened in a window of
@@ -2961,17 +2970,21 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DataSettingsScreen.kt`
 
-- **Change:** modified, +20 −7 lines. Feature: Library location, Semantic search packs, No error reports, The user's PDF books.
+- **Change:** modified, +24 −7 lines. Feature: Library location, Semantic search packs, No error reports, The user's PDF books,
+  Sefaria's content.
 - **What:**
-  - Three Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()` and, with a comment, the
-    folders of the user's PDF books, `PdfBooksCard()` (the daf's layouts card stood among them until 2026-11-10, and the feedback's sending card
-    until 2026-11-12: each is in a settings page of its own); its import.
+  - Four Pardes cards before the reset: `LibraryLocationCard()`, `SemanticPackCard()`, with a comment Sefaria's data,
+    `SefariaPackCard()` (its pack beside the library, since 2026-11-27), and, with a comment, the folders of the user's
+    PDF books, `PdfBooksCard()` (the daf's layouts card stood among them until 2026-11-10, and the feedback's sending card
+    until 2026-11-12: each is in a settings page of its own); their imports.
   - The error-reports card only when `isErrorReportingAvailable`, with a comment.
-- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`; the PDF books' folders, request 44); a build without a DSN sends no reports (`fabcf4e8`).
+- **Why:** each card is the settings page of a Pardes feature (`58586e1a`, `77f5349b`; the PDF books' folders, request 44;
+  Sefaria's data, the user's word of 2026-11-27, "עשה זאת ויציע אוטומטית ויזהה עדכונים לאותו קובץ"); a build without a DSN sends no reports (`fabcf4e8`).
 - **Kind:** Pardes feature hooks.
 - **Merge risk:** small: one call per card in Zayit's column, and one `if` around its last card.
-- **Smaller:** the three cards could be one `PardesDataCards()` call.
-- **Tests:** `SemanticPackCardUiTest`; the other cards have none (the PDF books', tried in the app).
+- **Smaller:** the four cards could be one `PardesDataCards()` call.
+- **Tests:** `SemanticPackCardUiTest`; `SefariaPackTest` (the card's downloads); the other cards have none (the PDF
+  books' and Sefaria's, tried in the app).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/navigation/SettingsDestination.kt`
 
@@ -3174,7 +3187,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - The entry page shows a text entry's text and attribution, and no "open in the book" button for it; the options page
     marks Klei Kodesh's dictionaries ("· כלי קודש").
   - `KRUPNIK`, the last entry, under a comment marked "Pardes:": Krupnik and Silberman's dictionary of the Talmud
-    (1927, public domain), a `TEXT` dictionary read from `KrupnikDictionary.shipped` (Sefaria's text) in place of
+    (1927, public domain), a `TEXT` dictionary read from `KrupnikDictionary.entries()` (Sefaria's text, from its pack
+    beside the library: none without it, and, read once for the app's life as the others, none until a restart once
+    the pack is downloaded) in place of
     Klei Kodesh's pack, in `readDictionaries`' `TEXT` branch, and marked "· ספריא" in the options page (a `when` in
     place of the `if`), with its import.
 - **Why:** more dictionaries and related words in the Home's dictionary card, from Klei Kodesh's Kitvei Hakodesh data
@@ -3185,7 +3200,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 - **Merge risk:** medium: Zayit's `readDictionaries` body was moved into `readBook`, so a Zayit change there conflicts.
 - **Smaller:** `readIndexed`, `titleVariants` and `RelatedWords` could move to `KleiKodeshDictionary.kt`; keeping Zayit's
   reading code where it was would avoid the move.
-- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`, `DictionaryLookupTest`. `SefariaDataTest` (Krupnik's rows); Krupnik's entry tried in the app (בסורא).
+- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`, `DictionaryLookupTest`. `SefariaDataTest` (Krupnik's rows, and the repository's in the pack); Krupnik's entry tried in the app (בסורא).
 - **Notes:** the attributions and the "· כלי קודש" mark are Hebrew literals in Kotlin, as the file's dictionary labels
   already were in Zayit; ktlint left one `if (kind ==` broken over three lines.
 
@@ -3418,11 +3433,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetSizesScreenshotTest.kt`
 
-- **Change:** modified, +15 −2 lines. Feature: Learning split widget, Home widgets loading, Daily study plans, PDF reading experiment.
+- **Change:** modified, +19 −2 lines. Feature: Learning split widget, Home widgets loading, Daily study plans, PDF reading experiment,
+  Sefaria's content.
 - **What:** it waits until no card shows `WIDGET_LOADING_TAG` (`OFF_MAIN_TIMEOUT_MS`, 10 s) before measuring, and leaves
   out the learning split widget, which reads its books' titles in the library, and the study plans, whose parts come from
   their books' tables of contents, as the dictionary is left out, and the PDF reader, an experiment that draws a file
-  opened and is no card; the class KDoc and the list's comment say so.
+  opened and is no card; the class KDoc and the list's comment say so. Sefaria's two tools are measured on the
+  repository's data, built into the file the app reads (`SefariaPackBuilder.showRepositoryData()`, `hideData()` after),
+  with a comment: the app has its data only from its pack beside the library, which the test has none of.
 - **Why:** the cards read off the UI thread were measured while loading (`022af5bb`); the learning split widget has no
   library in the test (`0083381e`; `LearningSplitCardUiTest` draws it), nor do the study plans (`StudyCardUiTest` draws
   their card).
@@ -7805,11 +7823,12 @@ which comes first and needs no free space for it. Hooks: `main.kt`,
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/database/LibraryLocation.kt`
 
 - **Feature:** Library location.
-- **Size:** 532 lines.
+- **Size:** 535 lines.
 - **What:** `LibraryLocation`, where the library is and where it goes: `installDir` (the app's databases folder unless
   the user chose another), `chooseInstallDir` with its `Problem`s, `move` (a rename on one drive, a checked copy across
-  drives, the semantic pack's folders carried along, `NAMES` (with `pardes-daf` and, since request 56, the
-  scans' pages cut into images, `pardes-scans`), `LEFTOVERS`), the copies kept (`copies`, `isKeptCopy`,
+  drives, the semantic pack's folders carried along, `NAMES` (with `pardes-daf`, since request 56 the scans'
+  pages cut into images, `pardes-scans`, and since 2026-11-27 Sefaria's data, `pardes-sefaria`), `LEFTOVERS` (with
+  `.pardes-sefaria-download`)), the copies kept (`copies`, `isKeptCopy`,
   `deleteCopy`, switching back), a move killed half way undone or finished, `freeBytes`/`totalBytes`, `currentDir`.
 - **Reached from:** `main.kt` (through `PendingLibraryMove`), the onboarding's `DownloadUseCase`, `ExtractUseCase`,
   `AvailableDiskSpaceUseCase`, `InstallLocationRow`, `DatabaseCleanupUseCase.kt`, `DataSettingsViewModel.kt`,
@@ -9050,9 +9069,10 @@ the next). The hooks in Zayit's code are in `SearchResultScreen.kt`, `TabsConten
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchArea.kt`
 
 - **Feature:** The search's area.
-- **Size:** 300 lines.
+- **Size:** 306 lines.
 - **What:** `SearchArea`: Sefaria's person and topic the query names (`SefariaSages.named`, `SefariaTopics.named` with
-  sources), read off the UI thread (`SefariaNamed`, internal, which the pane's demand reads too); the facets of Zayit's entity and of them ordered and joined
+  sources), read off the UI thread and again once the data is put in place or taken out (`SefariaNamed`, internal,
+  which the pane's demand reads too; none without the data); the facets of Zayit's entity and of them ordered and joined
   by `SearchFacets`; the entity shown, the first or the one picked on the "גם:" line (`AlsoLine`: a pill each, its kind,
   its name and what it holds, a click showing it); a book or an author in Zayit's panel (`panel`), with the lines of the
   person's faces of Sefaria's under it (`PersonFacets`: `SageLine`, `TopicLine`, the credit); a person (`SageDetails`)
@@ -9072,10 +9092,10 @@ the next). The hooks in Zayit's code are in `SearchResultScreen.kt`, `TabsConten
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaPerson.kt`
 
 - **Feature:** The search's area.
-- **Size:** 242 lines.
+- **Size:** 244 lines.
 - **What:** a person of Sefaria's in the area: `SageDetails` (its name and kinds, its generation, its description, its
-  teachers and students as links to their pages, how many lines of the library mention it and the four books most of
-  them are in as thin bars with their counts, its topic's line when it has one, "לדף החכם" and the credit), and the
+  teachers and students as links to their pages, how many lines of the library mention it (`placeCount`) and the four
+  books most of them are in as thin bars with their counts (its lines read from the file off the UI thread), its topic's line when it has one, "לדף החכם" and the credit), and the
   lines of an author's faces of Sefaria's (`SageLine`, `TopicLine`), each with the way to its page in Sefaria's windows.
 - **Reached from:** `SearchArea`.
 - **Follows:** the persons' window of Sefaria's content (`SagesTool`'s `SagePage`: the teachers, the students, the lines
@@ -9101,13 +9121,14 @@ the next). The hooks in Zayit's code are in `SearchResultScreen.kt`, `TabsConten
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchAreaPane.kt`
 
 - **Feature:** The search's area pane.
-- **Size:** 168 lines.
+- **Size:** 170 lines.
 - **What:** `SearchAreaPane`: the pane of the area beside a search tab's results, Zayit's `PaneHeader` ("על החיפוש",
   also its grip, its hide sending `ToggleSearchArea`) over `SearchArea`, the tab's query, the book or author it names
   (none when the details pane shows its book, Zayit's rule), the sources its first results link to, a source shown in
   the preview (`onRequestBreadcrumb`, `onPreviewLine` of `asResult()`), Zayit's `EntityPanel` as the area's panel, side by side once the pane is at least 720 dp wide and 1.8 times wider than
   tall (`WIDE_MIN_WIDTH`, `WIDE_RATIO`); `rememberSearchAreaShown`, the pane's demand: asked for
-  (`SearchPanelsSettings.area`), and its search naming a book, an author, a person or a topic, or linking to sources, a
+  (`SearchPanelsSettings.area`), and its search naming a book, an author, a person or a topic (read again once
+  Sefaria's data is put in place or taken out), or linking to sources, a
   search that names nothing closing it once it is no longer loading and `SETTLE_MS` passed, so that a search on its way
   or a source read late does not close and open it again; `SearchAreas` (Metro-injected, one in the app), whether each
   search tab has its pane open, so that a tab selected again opens it at once.
@@ -9667,28 +9688,35 @@ is read once for a while. Hooks: `main.kt`, `AppSettings.kt`, `SettingsSidebar.k
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/StartOffers.kt`
 
 - **Feature:** Start offers.
-- **Size:** 138 lines.
+- **Size:** 186 lines.
 - **What:** `StartOffers.openAtStart`: what the start has to offer (`Found`: the semantic files missing, the pack in use
   and the newest released, the newest release of layouts when it has a newer version of a tractate the folder has, read
   with `DafDownloads`), the pages it opens (`pagesFor`: the data page for missing files or a newer pack not offered yet,
   the daf page for a newer release of layouts not offered yet), then, once the session is restored, a window is focused
   and an update dialog is closed, the versions offered kept, the semantic card's focus set (`SemanticPackPrompt`), the
   pages marked (`marked`, taken by each card as it is shown, `take`) and the settings opened on the first. The releases
-  are read only while the app checks for updates by itself, and for 20 seconds at most.
+  are read only while the app checks for updates by itself, and for 20 seconds at most. Since 2026-11-27, Sefaria's
+  data too, on the data page with a card of its own (`SefariaPackPrompt`): while the folder has none and a pack is out
+  to download (from the same release list, so only while the app checks for updates), at every start until the user
+  unticks it (`SefariaPackSettings.prompt`), and a newer pack than the folder's once (`SefariaPackSettings.offered`);
+  each card of the page comes into view only when it has something new (`newerPack`, `newerSefaria`).
 - **Reached from:** `main.kt` (in place of `SemanticPackPrompt.openAtStart`), `SettingsSidebar.kt` (`marked`),
-  `DafLayoutsCard.kt` and `SemanticPackPrompt.kt` (`take`).
+  `DafLayoutsCard.kt`, `SemanticPackPrompt.kt` and `SefariaPack.kt` (`take`).
 - **Follows:** `SemanticPackPrompt`'s start, which it takes over.
 - **Tests:** `StartOffersTest`; the newer pack's offer was tried in the app on the whole library (the settings opened on
-  the semantic card, framed, and the version offered kept).
+  the semantic card, framed, and the version offered kept), and Sefaria's missing data (the settings opened on its card,
+  framed, 2026-11-27, before the offer waited for a pack to be out; none is out yet).
 - **Notes:** a release of layouts gives its tractates versions since daf-3; daf-2 has none, so it offers nothing.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/downloads/StartOffersTest.kt`
 
 - **Feature:** Start offers.
-- **Size:** 67 lines.
+- **Size:** 78 lines.
 - **What:** missing files open the semantic search's page at every start; a newer pack than the one in use is offered
   once (not the one in use, not over a pack with no number); a newer release of layouts once, after the semantic page; a
-  page's mark taken once; a release list read lately is not read again, one read ten minutes ago or that failed is.
+  page's mark taken once; a release list read lately is not read again, one read ten minutes ago or that failed is;
+  Sefaria's data opens the data page while it is missing, a newer pack once, and nothing once the user unticked its
+  offer.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test.
 - **Tests:** it is one (unit).
@@ -10272,35 +10300,64 @@ Sefaria's topics, the sages it finds in the Mishnah and the Talmud, its passages
 Talmud, from its dump of 2026-11-25, as the user chose on 2026-11-26 ("תממש את כל ההצעות"): the topics of the line in a
 pane beside the text, a topic's page and the topics browsed, the sages' names as links to their page and its places, a
 topic's card in a search, the sugya marked or copied from the reader's menu, and Krupnik in the dictionary. Credited to
-Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalBars.kt`, `BookContentEvent.kt`,
-`BookContentViewModel.kt`, `BookContentScreen.kt`, `SearchResultScreen.kt`, `RefLinkUriHandler.kt`, `DictionaryWidget.kt`,
-`AppGraph.kt`, `strings.xml`; `TextLinks.kt` and `VerseQuotes.kt`, Pardes's own.
+Sefaria while Pardes asks it (`sefaria-data/NOTICE.txt`). Since 2026-11-27 the data is not in the app: it is a pack
+of its own, an SQLite file read by line, which the app downloads beside the library, offers at start while it is missing
+and offers again once a newer one is out (`pack/`, `sefaria-release.yml`, the user's word: "עשה זאת ויציע אוטומטית ויזהה עדכונים לאותו קובץ"). Hooks:
+`ReaderPanes.kt`, `VerticalBars.kt`, `BookContentEvent.kt`, `BookContentViewModel.kt`, `BookContentScreen.kt`,
+`SearchResultScreen.kt`, `RefLinkUriHandler.kt`, `DictionaryWidget.kt`, `DataSettingsScreen.kt`, `main.kt`, `AppGraph.kt`,
+`strings.xml`; `TextLinks.kt`, `VerseQuotes.kt`, `StartOffers.kt` and `LibraryLocation.kt`, Pardes's own.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaData.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 411 lines.
-- **What:** Sefaria's data as `scripts/sefaria_content.py` packs it under `resources/sefaria/`, each read on first use
-  (off the UI thread by its callers) and kept:
-  - `SefariaTopics` (`Topic`, `TopicRelation`, `TopicNeighbours`): the topics, the roots of their tree, the lines each
-    is about (`sourcesOf`, `sourceCount`, in Sefaria's order), the topics of a line (`of`, the most sourced first), the
-    children in the tree, the neighbours on a page (shown under, broader, narrower, contains and around, dependents,
-    related), a topic named whole for the search's card (`named`: by
-    `searchKey`, then in another spelling, with or without the article, its words in any order, never a typo), the index by first letter, and the search
-    (`search`), as the bar finds authors by name (`BookTitleIndex.searchAuthors` over the topics with sources: another
-    spelling, a typo, another order, the article, a leading רבי or הרב), the name typed whole first, then the most sourced;
+- **Size:** 448 lines.
+- **What:** `SefariaData`, the data in use: its file in the library's folder (`fileIn`, `pardes-sefaria/sefaria.db`, found by
+  the settings main.kt gives, `appSettings`; a test gives its own, `locate`), opened read-only on first use (`current`,
+  off the UI thread; `ifOpen` for a menu, which must not wait) and kept until it is replaced or taken out (`close`),
+  and `revision`, which `changed` bumps then, so that the screens that show the data read it again (`Opened`: its
+  topics and persons read once, its passages by line, its pack's number). The classes that hold its parts, each
+  reading its small tables whole and a line's rows by its heRef (`SefariaDb`):
+  - `SefariaTopics` (`Topic`, `TopicRelation`, `TopicNeighbours`): the topics, the roots of their tree and their
+    relations held, with each topic's count of sources (`sourceCount`); read from the file, the lines a topic is about
+    (`sourcesOf`, in Sefaria's order) and the topics of a line (`of`, the most sourced first); the children in the tree,
+    the neighbours on a page (shown under, broader, narrower, contains and around, dependents, related), a topic named
+    whole for the search's card (`named`: by `searchKey`, then in another spelling, with or without the article, its
+    words in any order, never a typo), the index by first letter, and the search (`search`), as the bar finds authors by
+    name (`BookTitleIndex.searchAuthors` over the topics with sources: another spelling, a typo, another order, the
+    article, a leading רבי or הרב), the name typed whole first, then the most sourced;
   - `SefariaSages` (`Sage`, `AmbiguousSage`, `Mention`, `SageRelation`): the persons the library's lines mention, the
-    names Sefaria could not tell apart, the mentions of a line (`at`), a person's lines (`placesOf`, a line once), a
-    person named for the search's area (`named`, by the topics' rules: by `searchKey`, then in another spelling, with
-    or without the article, its words in any order, never a typo; the most mentioned first), its students, teachers,
-    family and groups, and the search, by the same rules as the topics' search, the most mentioned first;
-  - `SefariaSugyot` (`Sugya`): the passage of a line, a sugya over the Mishnah it shares lines with; `ifRead()` for the
-    menu, which must not wait;
-  - `KrupnikDictionary`: Krupnik's headwords, each other headword of an entry with its text.
-- **Reached from:** `SefariaLines`, the reader's pane, the two tools, the search's area, `SageLinks`, `SugyaMenu`, `DictionaryWidget.kt`.
+    names Sefaria could not tell apart and their relations held, with each person's count of lines (`placeCount`); read
+    from the file, the mentions of a line (`at`) and a person's lines (`placesOf`, a line once); a person named for the
+    search's area (`named`, by the topics' rules: by `searchKey`, then in another spelling, with or without the article,
+    its words in any order, never a typo; the most mentioned first), its students, teachers, family and groups, and the
+    search, by the same rules as the topics' search, the most mentioned first;
+  - `SefariaSugyot` (`Sugya`): the passage of a line, read from the file, a sugya over the Mishnah it shares lines with;
+  - `KrupnikDictionary`: Krupnik's headwords, each other headword of an entry with its text (`entries`, none without
+    the data).
+  Until 2026-11-27 the data was gzipped TSV resources in the app, parsed into maps on first use: some 92 MB of the heap
+  once read (170,819 lines with topics, 226,297 mentions), 11 MB now.
+- **Reached from:** `SefariaLines`, the reader's pane, the two tools, the search's area, `SageLinks`, `SugyaMenu`,
+  `DictionaryWidget.kt`, `SefariaPack.kt` (the file's place, closed and read again around a download), `main.kt`
+  (`appSettings`).
 - **Follows:** Pardes's `BookTitleIndex` (the bar's search of books and authors by name), whose author search it
-  uses for the topics and the persons; Pardes's `KleiKodeshPack` (a gzipped TSV resource parsed lazily into maps).
-- **Tests:** `SefariaDataTest`.
+  uses for the topics and the persons; Pardes's `LibraryLinks` (the library read through JDBC, read-only).
+- **Tests:** `SefariaDataTest`, `SefariaPackTest`.
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaDb.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 124 lines.
+- **What:** `SefariaDb`, Sefaria's data file opened read-only (SQLite's `open_mode` 1, as the library's lines are
+  read): its tables (`SCHEMA`: `meta`, a `line` by its heRef once, the topics, the tree's roots, their relations, a
+  topic's lines (`topic_line`, a source of its own or a line of a source's range, in Sefaria's order, indexed by line and
+  by topic), the persons with their counts, the ambiguous names, their relations, the mentions (indexed by line and by
+  person), the passages and each line's (`sugya_line`), Krupnik's entries), its format (`FORMAT` 1, `META_FORMAT`: a
+  file of another format is not opened) and its pack's number (`pack`, `META_PACK`); `rows`, a query at a time, its
+  statement prepared once; once closed, or when the file can't be read, a query gives no rows, so that a screen still
+  showing the data while its file is replaced or taken out shows none rather than failing.
+- **Reached from:** `SefariaData.kt` (the parts' queries), `SefariaPack.kt` (a file checked before it is put in place,
+  the folder's pack read).
+- **Follows:** Pardes's `LibraryLinks` and `SefariaLines` (a read-only JDBC connection opened by a property, not a URI).
+- **Tests:** `SefariaDataTest`, `SefariaPackTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaLines.kt`
 
@@ -10316,12 +10373,14 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaParts.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 233 lines.
+- **Size:** 261 lines.
 - **What:** what the Sefaria screens share: `LocalSefariaWindow` (whether a tool is drawn in its own window),
   `SefariaChip` (a pill with a count, lit when picked), `ChipFlow` and `ChipSection`, `SourceRow` (a line of the library
   with its place, a few words around a name marked bold), `BackTitle`, `SefariaHint`, `generationLabel` (Sefaria's code,
-  T3 or A5, as "התנאים, דור 3"), and `plainText` and `snippet`.
-- **Reached from:** The reader's pane and the two tools.
+  T3 or A5, as "התנאים, דור 3"), and `plainText` and `snippet`; and `rememberSefaria` (`SefariaRead`), the part of
+  Sefaria's data a screen shows, read off the UI thread and read again when the data is put in place or taken out
+  (`SefariaData.revision`), its value null without the data (since 2026-11-27, the data a pack of its own).
+- **Reached from:** The reader's pane and the two tools (`rememberSefaria` too).
 - **Follows:** Zayit's widgets' parts (`HoverBox`, `rememberAccentColor`, `WidgetTitle`), which it uses.
 - **Tests:** none of its own; the screens tried in the app.
 
@@ -10344,7 +10403,9 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 - **Size:** 81 lines.
 - **What:** `SugyaMenu`, the reader's menu items of the passage a line is in (`SefariaSugyot`): the sugya (or the
   Mishnah, or the story of the Tanakh) marked in the text as a reading's range is (`OpenBookAtLine` with its last line),
-  or its lines copied as plain text; `rememberSugyaMenu(onEvent)`, which reads the passages as soon as the reader shows.
+  or its lines copied as plain text; `rememberSugyaMenu(onEvent)`, which opens the data's file off the UI thread as soon
+  as the reader shows, so that the menu, which must not wait, finds it open (`SefariaData.ifOpen`) and reads the
+  line's passage, one indexed query; no items without the data.
 - **Reached from:** `BookContentScreen.kt` (`BookTextMenus`).
 - **Follows:** Zayit's context-menu items (`ContextMenuItemOption`) and its marked reading range (`MarkedEnd`).
 - **Tests:** `SefariaDataTest` (the passages); the Mishnah marked in the app.
@@ -10352,51 +10413,59 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/sages/SagesTool.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 290 lines.
+- **Size:** 299 lines.
 - **What:** `SagesTool`, a Home card and a tool window as the dictionary's ("חכמים", "person.2"; 6×5 cells, 4×4
   to 10×10; the loading card's spinner and tag until the persons are read): the persons the library's lines
   mention, the most mentioned first, searched by name; a person's page (its generation, description and Wikipedia page,
   its teachers, students, family and groups, and its places, a tractate's at a time once picked, up to 400, its name
-  marked in each); for a name Sefaria could not tell apart, the persons it may be.
+  marked in each, as its line writes it); for a name Sefaria could not tell apart, the persons it may be. The persons
+  are read through `rememberSefaria`, a person's lines and each line's mention from the file off the UI thread, the
+  counts from the data held (`placeCount`); without the data, `SefariaPackHint` in place of the card.
 - **Reached from:** the widget processor (a `HomeWidget` object with a `toolWindowSize`: the Home's gallery and the
   Tools menu); `SefariaWindows.openSage`.
 - **Follows:** Zayit's tool widgets (`DictionaryWidget`'s own window, `LocalDictionaryWindow`).
-- **Tests:** none of its own; the index and רבי אליעזר's page tried in the app.
+- **Tests:** `WidgetSizesScreenshotTest` (its sizes, on the repository's data); the index and רבי אליעזר's page tried in
+  the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/TopicsTool.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 406 lines.
+- **Size:** 414 lines.
 - **What:** `TopicsTool`, a Home card and a tool window as the dictionary's ("נושאים", "tag"; 6×5 cells, 4×4 to
   10×6: taller, the tree's fourteen roots leave the card's foot empty; the loading card's spinner and tag until the
   topics are read): the topics searched by name, browsed in
   Sefaria's tree (its roots but the authors, branches opened in place) or by first letter; a topic's page (its
   description, its sources by book, three a book and "עוד", its neighbours, the credit), each from its top, or, asked
-  for from the search's area, on one book's sources, all of them (`SefariaWindows.topicBook`).
+  for from the search's area, on one book's sources, all of them (`SefariaWindows.topicBook`). The topics are read
+  through `rememberSefaria`, a topic's sources from the file off the UI thread, then their lines in the library, the
+  page saying it is loading until both are read; without the data, `SefariaPackHint` in place of the card.
 - **Reached from:** the widget processor (a `HomeWidget` object with a `toolWindowSize`: the Home's gallery and the
   Tools menu); `SefariaWindows.openTopic`.
 - **Follows:** Zayit's tool widgets, as `SagesTool`.
-- **Tests:** none of its own; the tree, the index and תפילה's page tried in the app, and חנוכה's on ספר מקבים א from
-  the search's area (2026-11-27).
+- **Tests:** `WidgetSizesScreenshotTest` (its sizes, on the repository's data); the tree, the index and תפילה's page
+  tried in the app, and חנוכה's on ספר מקבים א from the search's area (2026-11-27).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/LineTopicsPane.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 138 lines.
+- **Size:** 148 lines.
 - **What:** `LineTopicsPane`, the reader's pane of the topics the primary line is about: pills with their counts, the
   one picked read below (its description, two of its sources) with the way to its page; a hint for no line or a line
-  of no topic.
+  of no topic. The topics are read through `rememberSefaria`, the line's and a topic's sources from the file off the UI
+  thread; without the data, `SefariaPackHint` first, whatever the line (since 2026-11-27).
 - **Reached from:** `ReaderPanes.kt` (`ReaderPane.Topics`).
 - **Follows:** Zayit's side panes (`PaneHeader`, the references pane's place).
-- **Tests:** none of its own; tried in the app (Berakhot 2a: 5 and 7 topics).
+- **Tests:** none of its own; tried in the app (Berakhot 2a: 5 and 7 topics; Shabbat 2a from the pack, and its hint once
+  the pack was removed, 2026-11-27).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/SearchTopicCard.kt`
 
 - **Feature:** Sefaria's content, The search's area.
-- **Size:** 122 lines.
+- **Size:** 131 lines.
 - **What:** `TopicDetails`, the topic a search's query names as the area beside its results shows it: its description,
-  its count of sources and the books most of them are in (read off the UI thread), each a link (Zayit's `ResultLink`)
-  to the topic's page on its sources, and "עוד N" to the page, the topics around it, each a link to its own page (the
+  its count of sources and the books most of them are in (its sources read from the file off the UI thread, then
+  their books in the library; `TopicBooks`), each a link (Zayit's `ResultLink`) to the topic's page on its sources, and
+  "עוד N" to the page, the topics around it, each a link to its own page (the
   user's word of 2026-11-27, "מה קורה בלחיצה על אלו ?": they were text, though gold), "לדף הנושא"
   (Jewel's `DefaultButton`, in the accent's gold, as Zayit's panel has "לדף המחבר" and the sage's card "לדף החכם",
   since the user's word of 2026-11-27: "תואם לשפת העיצוב של זית? לא צריך צבע זהב?") and the credit. The card of its own it was until 2026-11-27 is the area's, and its button in the search's end bar the
@@ -10410,80 +10479,109 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinks.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 118 lines.
+- **Size:** 119 lines.
 - **What:** `SageLinks`, a `QuoteLinksFeature` over the Mishnah's, the Bavli's and the Yerushalmi's books
   (`CatalogPresets` categories): where Sefaria found a person named in a line, the name as the line writes it becomes a
   `seforim://sage/<id>` link (`withSageLinks`): the line's words compared letter by letter without nikud, the longer
-  names first, a name in short (ר"מ) one link with its gershayim, never inside the line's own links.
+  names first, a name in short (ר"מ) one link with its gershayim, never inside the line's own links. The mentions are
+  read from the data's file with each page of lines, off the UI thread; none without it (`SefariaData.current()`).
 - **Reached from:** `TextLinks`, over the verses' and the notes' links.
 - **Follows:** Pardes's `VerseQuotes.kt` (`wordsOfLine`, `appendLinked`).
 - **Tests:** `SageLinksTest`.
 - **Notes:** of 50,595 distinct mentions in a sample of 20,000 lines, 85.5% are found word for word (a prefix letter is no
   part of the name); the rest are names the library spells otherwise.
 
-#### `SeforimApp/src/jvmMain/resources/sefaria/NOTICE.txt`
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/pack/SefariaPack.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 11 lines.
-- **What:** the credit and terms of the four files beside it: Sefaria's dump of 2026-11-25; its topics, passages and
-  mentions carry no licence in the dump, and are used crediting Sefaria while Pardes asks it; Krupnik's dictionary is in
-  the public domain.
-- **Reached from:** shipped beside the data.
-- **Follows:** Pardes's `kleikodesh/NOTICE.txt`.
-- **Tests:** none.
+- **Size:** 276 lines.
+- **What:** Sefaria's data as a pack of its own, the user's word of 2026-11-27 ("עשה זאת ויציע אוטומטית ויזהה עדכונים לאותו קובץ"): `SefariaPack`, its
+  release (`sefaria-<n>` of Pardes's repository, `select`: the published one of the highest number with a manifest), its
+  files' names (`FILE_NAME`, the data's file gzipped; `MANIFEST_NAME`), its folder beside the library (`DIR_NAME`,
+  `pardes-sefaria`, which a library's full update leaves, and a move carries) and the pack the folder has
+  (`installedIn`); `SefariaManifest` (its format, number, file, size and sha256, the data file's size and sha256, the
+  export's day); `SefariaPackSettings` (whether a start offers the pack while it is missing, `prompt`, on by default;
+  the newest pack a start offered, `offered`); `SefariaPackPrompt`, the card's focus when a start opens the settings on
+  it; `SefariaDownloads` (one for the app, `shared`): the folder's pack and the newest release with its manifest
+  (`refresh`, `recount`), the download (`download`, `cancel`: the file downloaded into `.pardes-sefaria-download`,
+  checked by its sha256, unzipped, checked by the data's sha256 and opened, the data in use closed, the file moved into
+  place, the screens told, the download's folder deleted whatever happens) and the removal (`remove`).
+- **Reached from:** `SefariaPackCard.kt`, `StartOffers.kt` (`select`, `installedIn`, the settings and the focus),
+  `SefariaData.kt` (`DIR_NAME`, `DB_NAME`).
+- **Follows:** Pardes's daf layouts' downloads (`DafDownloads`: a release's manifest and files, sha256, the newest
+  offered once) and the semantic packs' (`SemanticPackReleases`, whose release list it reads, `SemanticPackPrompt`).
+- **Tests:** `SefariaPackTest`.
 
-#### `SeforimApp/src/jvmMain/resources/sefaria/topics.tsv.gz`
-
-- **Feature:** Sefaria's content.
-- **Size:** binary.
-- **What:** Sefaria's topics with Hebrew names, gzipped TSV (2.1 MB): 4,835 topics, the tree's 14 roots, 7,912
-  relations, and 340,112 rows of a topic's lines (168,976 of Sefaria's 190,289 links mapped to the library's lines).
-- **Reached from:** `SefariaTopics.shipped`.
-- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
-- **Tests:** `SefariaDataTest` (the shipped data read).
-
-#### `SeforimApp/src/jvmMain/resources/sefaria/sages.tsv.gz`
-
-- **Feature:** Sefaria's content.
-- **Size:** binary.
-- **What:** the persons the library's lines mention, gzipped TSV (1.1 MB): 1,557 persons, 88 ambiguous names, 649
-  relations and 226,297 mentions with the name as written (the people of Israel and the Name left out).
-- **Reached from:** `SefariaSages.shipped`.
-- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
-- **Tests:** `SefariaDataTest`.
-
-#### `SeforimApp/src/jvmMain/resources/sefaria/sugyot.tsv.gz`
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/pack/SefariaPackCard.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** binary.
-- **What:** Sefaria's passages, gzipped TSV (306 KB): 14,261 sugyot, Mishnayot in the Gemara and stories of the Tanakh,
-  each with its lines in the library.
-- **Reached from:** `SefariaSugyot.shipped`.
-- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
-- **Tests:** `SefariaDataTest`.
-
-#### `SeforimApp/src/jvmMain/resources/sefaria/krupnik.tsv.gz`
-
-- **Feature:** Sefaria's content.
-- **Size:** binary.
-- **What:** Krupnik and Silberman's dictionary of the Talmud (1927, public domain) as Sefaria has it, gzipped TSV
-  (485 KB): 18,957 entries, their other headwords and their text.
-- **Reached from:** `KrupnikDictionary.shipped`.
-- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
-- **Tests:** `SefariaDataTest`.
+- **Size:** 193 lines.
+- **What:** `SefariaPackCard`, the card of Settings › ניהול נתונים after the semantic search's: what the data is, the
+  pack the folder has or that it has none, what is out (checking, nothing yet, the newest pack and its size, or that
+  the folder has it), the download's progress and why it stopped, the download or the update, its cancel, the removal,
+  and while the folder has none the box of the start's offer; framed and brought into view when a start opened the
+  settings on it. `SefariaPackHint`, where a feature of the data shows it is missing (the reader's pane, the two tools):
+  what it is and its download in place, with its progress.
+- **Reached from:** `DataSettingsScreen.kt`; `LineTopicsPane`, `TopicsTool`, `SagesTool`.
+- **Follows:** Pardes's `SemanticPackCard` and `DafLayoutsCard` (Jewel's `DefaultButton`, `OutlinedButton`,
+  `CheckboxRow`, `InlineErrorBanner`, the progress bar, the card's frame when it is marked).
+- **Tests:** `SefariaPackTest` (its downloads); tried in the app on the whole library (the settings opened on it at
+  start with no pack, framed, before the start's offer waited for a pack to be out; the pack installed by hand, then
+  removed from the card, and the reader's pane showing its hint, 2026-11-27).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaDataTest.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 205 lines.
-- **What:** the topics, the sages, the passages and Krupnik's rows parsed from small fixtures (a line's topics and
-  their order, the tree, the neighbours both ways, a name as typed, the index and the search, in another spelling, with a typo and in another
-  order; the topic the search's card names, in another spelling or order and never by a typo; mentions, places,
-  relations, an ambiguous name, a person found in another spelling, with a typo or a leading רבי; the person the search's
-  area names, whole, in another spelling or order and never by a typo; a sugya over its Mishnah; other headwords), and the
-  shipped data read.
+- **Size:** 241 lines.
+- **What:** the topics, the sages, the passages and Krupnik's rows built into the data's file (`SefariaPackBuilder`) from
+  small fixtures, and read as the app reads it (a line's topics and their order, the tree, the neighbours both ways, a
+  name as typed, the index and the search, in another spelling, with a typo and in another order; the topic the
+  search's card names, in another spelling or order and never by a typo; mentions, places, relations, an ambiguous
+  name, a person found in another spelling, with a typo or a leading רבי; the person the search's area names, whole, in
+  another spelling or order and never by a typo; a sugya over its Mishnah; other headwords), and the repository's data
+  built into the pack the app reads (its number, the topics and roots, a line's topics, a sage's mentions, the counts,
+  the passages, Krupnik's entries).
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, names in backticks as Zayit's.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaPackBuilder.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 223 lines.
+- **What:** `SefariaPackBuilder`, the data's file (`SefariaDb.SCHEMA`) built from the rows `scripts/sefaria_content.py`
+  writes under `sefaria-data/` (`buildFrom`, `build`: a line written once, the topics' counts of sources and the
+  persons' of lines, a sugya over the Mishnah it shares lines with, each other headword of Krupnik's its row, batches,
+  then `VACUUM`): for the tests, and for the pack's release (`SefariaPackGen`); the app only reads the file. The
+  repository's data built once for the tests whose screens show it (`showRepositoryData`, `hideData`).
+- **Reached from:** the JVM tests (`SefariaDataTest`, `SefariaPackTest`, `SearchPanelsSettingsUiTest`,
+  `WidgetSizesScreenshotTest`), `SefariaPackGen`.
+- **Follows:** `scripts/sefaria_content.py`'s rows, which it reads as the app's parsing of them did until 2026-11-27.
+- **Tests:** the tests that read it.
+- **Notes:** a test source, so that the app carries no writer of the file; the release builds the file with it, in a
+  test run (`sefaria-release.yml`).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaPackGen.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 55 lines.
+- **What:** the pack's release files, built from `sefaria-data/` when `SEFARIA_PACK_OUT` names where they go: the data's
+  file gzipped at its tightest (`Deflater.BEST_COMPRESSION`, 16.9 MB of 54 MB) and its manifest, of the pack
+  `SEFARIA_PACK_NUMBER`, on Sefaria's export of `SEFARIA_PACK_DUMP`; nothing otherwise.
+- **Reached from:** `.github/workflows/sefaria-release.yml` (`--tests "*SefariaPackGen*"`).
+- **Follows:** Pardes's test-as-generator tests (`CommentAnchorTargetsGen`).
+- **Tests:** it is one (a generator, which passes doing nothing without its variable).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/pack/SefariaPackTest.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 162 lines.
+- **What:** the newest published pack with a manifest chosen (not a prerelease, not one without a manifest, not another
+  release's tag), a manifest of another format refused; a pack downloaded from memory, put beside the library, read,
+  the screens told (`revision`), its download's folder gone, then replaced by a newer one though the old one is open,
+  and taken out; a file that is not the manifest's not put in place, the folder left as it was.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, names in backticks as Zayit's; `TestScope` with its dispatcher for the downloads' work.
 - **Tests:** it is one (unit).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinksTest.kt`
@@ -10522,12 +10620,12 @@ Sefaria's topic, until then. The pane itself is the area's section's (`SearchAre
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettingsUiTest.kt`
 
 - **Feature:** The search's area pane, The search's area.
-- **Size:** 144 lines.
+- **Size:** 148 lines.
 - **What:** the area shows the topic its query names; a source of the results shown alone in the area, with its text,
   a click on its place or its text showing it, and no count of its books; a wide pane, as docked under the results, shows what
   the query names beside the sources, the sources on its far side; a topic around the one named a link to its page;
   the bar's button turning the pane's setting off and
-  on.
+  on. Sefaria's data is the repository's, built into the file the app reads (`SefariaPackBuilder`).
 - **Reached from:** the JVM tests.
 - **Follows:** `DictionaryWindowUiTest` (the real graph in a desktop Compose UI test), names in backticks as Zayit's.
 - **Tests:** it is one (UI).
@@ -10595,7 +10693,7 @@ dealt into groups the search holds. Hook: `ArrangeLayout.kt`.
 
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (805 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (811 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -10669,6 +10767,7 @@ the description where something needs saying.
 | `.github/workflows/daf-release.yml` | Workflow that publishes the daf view's layouts as a release daf-<n> (daf_release.py, after its tests), from this repository's branch daf-layouts, where pardes-rashi-ocr pushes its layouts/*.json, with the manifest of the release before it downloaded for each tractate's version; the notes say what the words are (Wikisource's Gemara under CC BY-SA through Sefaria, the Vilna Rashi and Tosafot) and where the lines' places were measured (scans of a later edition that keeps the Vilna Shas's page), and the files go out under CC BY-SA. | Pardes's own |
 | `.github/workflows/desktop-release.yml` | Workflow, run by hand only, that builds Pardes for desktop through branding/ (Windows x64 GraalVM and arm64 JVM as NSIS, Linux x64 and arm64 as deb, rpm and pacman, macOS Apple Silicon and Intel as dmg and zip), writes Nucleus's latest*.yml update feeds and the complete source, and publishes `desktop-<x.y.z>-<run>` with --latest=false. *Note:* Version and notes from desktop/CHANGELOG.md's top section; GITHUB_REF=refs/tags/v<version> set in the Gradle shell for Versioning. No Zayit secrets, add-ons or Rust installer wrapper; optional Linux GPG and PARDES_FEEDBACK_URL secrets. A build gets 300 minutes, for the Apple Silicon Mac's native image: 2 h 54 for 1.0.9, and 3 h 06 to 3 h 25 in CI for main of 2026-11-18, past the 180 it had. 602 lines. *Note:* From 2026-11-23 to 2026-11-24 each build job took Google's mirror of Maven Central as a fallback, for the kosherkotlin 3.0.5 that Maven Central had stopped serving; it went with the move to 4.0.1, as a build must not fetch a version its author withdrew. | Pardes's own, built as Zayit's deploy.yaml (removed here) builds its platforms |
 | `.github/workflows/feedback-service.yml` | Workflow that tests the feedback service in Miniflare and, with its Cloudflare secrets, masks the account's name, e-mail and workers.dev subdomain, creates the D1 database the first time, applies the migrations, deploys the Worker and sets its admin token; runs by hand and on pushes to main that touch feedback-service/. *Note:* Without the secrets a push only tests. It deploys from main, the default branch (38ba9543), while CLAUDE.md keeps Zayit's line that PRs target master. | Pardes's own |
+| `.github/workflows/sefaria-release.yml` | Workflow, run by hand only (inputs number, dump and note), that builds Sefaria's data for Pardes for desktop from sefaria-data/ with the app's own builder (the test SefariaPackGen, so that the file is the one the app reads) and publishes `sefaria-<n>` (one more than the newest by default) with the data's file gzipped and its manifest, the notes saying what the data is and repeating sefaria-data/NOTICE.txt, --latest=false and then the Android release made the Latest again, as daf-release.yml does. *Note:* No private package's token, as every Pardes build; it refuses a number already released. The data waits for Sefaria's permission (docs/SEFARIA_LESSONS.md): a release publishes it. | Pardes's own |
 | `.github/workflows/semantic-notes.yml` | Workflow, run by hand with a pack's tag (default semantic-2-v3-20261012193827), that writes a released semantic pack's title and notes again from semantic-model/release_notes.py and the release's manifest, then makes the newest Android release the Latest again. | Pardes's own |
 | `.github/workflows/semantic-release.yml` | Workflow, run by hand with a Kaggle dataset name (default pardes-semantic-pack-2), that downloads a semantic pack file by file from a private Kaggle dataset, checks it against its manifest (sizes, sha256), zips pardes-model/ and pardes.vec.lucene/ for installing by hand, and publishes `semantic-<pack>-<library>` with --latest=false, making the Android release the Latest again. *Note:* Secret KAGGLE_API_TOKEN; it refuses a dataset name with an owner and masks the token's account in the log. It installs six beside kaggle, which imports it without asking for it. | Pardes's own |
 
@@ -10710,7 +10809,7 @@ the description where something needs saying.
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-LICENSE.txt` | MIT licence of ONNX Runtime, which runs the semantic search's model (1.17.1 on desktop). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from ONNX Runtime (MIT); same text as androidApp/app/src/androidMain/assets/licenses/ONNX-Runtime-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-ThirdPartyNotices.txt` | ONNX Runtime's third-party notices (6,508 lines). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Differs from androidApp's copy, which is ONNX Runtime 1.22.0's (a665f012). | copied from ONNX Runtime (MIT) |
 | `branding/pardes/assetsExtra/common/licenses/PDFium-LICENSES.txt` | PDFium's licence (BSD 3-Clause) and those of the components of others it is built with (Abseil, AGG 2.3, Brotli, Dragonbox, fast_float, FreeType, HarfBuzz, Highway, ICU, Little CMS, libjpeg-turbo, libyuv, LLVM libc, OpenJPEG, libpng, LibTIFF, simdutf, zlib) and of pdfium-binaries, word for word under a header each (1,739 lines), for the PDF reading experiment, whose Windows builds carry PDFium. Shipped as a plain file in the install folder's licenses/ and listed in its README.md. | the texts the PDFium binaries' build ships, as pypdfium2 5.15.2's wheel carries them (its dist-info licenses/BUILD_LICENSES; FreeType's converted from Latin-1) |
-| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), Sefaria's topics, sages, passages and Krupnik's dictionary (no licence stated for the first three, credited while Pardes asks; Krupnik public domain), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
+| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), Sefaria's topics, sages, passages and Krupnik's dictionary (no licence stated for the first three, credited while Pardes asks; Krupnik public domain; since 2026-11-27 not in the app but a pack it downloads beside the library, its terms in sefaria-data/NOTICE.txt), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
 | `branding/pardes/assetsExtra/common/licenses/Radix-Icons-LICENSE.txt` | MIT licence of Radix Icons, drawn in the app's icons module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Radix Icons (MIT); same text as androidApp/app/src/androidMain/assets/licenses/Radix-Icons-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/Robius-LICENSE-MIT.txt` | MIT licence of Project Robius's robius-share, derived source in Nucleus's share module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Project Robius (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-robius.txt |
 | `branding/pardes/assetsExtra/common/licenses/SLF4J-LICENSE.txt` | MIT licence of SLF4J. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from SLF4J (MIT) |
@@ -10772,7 +10871,7 @@ the description where something needs saying.
 | `docs/SEARCH_PLAN.md` | English plan (2026-11-10) for the search after pull request #28: Pardes for desktop 1.0.9 from its Windows pre-release to the public release, per-word forms in the regular search (measure the spelling and ים↔ין forms in the measurement build, then the owner's decision on SeforimLibrary), the new eval-real grades into pardes-semantic, Android's lexicon and fusion behind desktop's, one re-embedding for short lines and the "(א)" numbers, and the open questions with what was measured and is not to do. | Pardes's own |
 | `docs/SEARCH_SYNTAX_REPORT.md` | English report (measured 2026-11-03) on how the search reads quotes, geresh and gershayim, maqaf and niqqud, prefixes and suffixes, word distance (near = 5, which only ranks) and order, with line counts on the October 2026 library, the recommendations not built, and Klei Kodesh's search syntax for comparison. *Note:* Finds that Hebrew-keyboard gershayim (רש״י) search as רשי, typographic quotes are ignored, and Zayit's strings.xml keeps unused search_level_1..5 strings. | Pardes's own |
 | `docs/SEARCH_WORLD_RESEARCH.md` | Hebrew research (2026-11-08) on how search systems outside Pardes handle each problem SEARCH_ORDER_ISSUES.md measures, with sources and what to try, cheapest first; it notes that the words' search adds each of a word's forms as a term of its own, twice, so scores add up across forms and favour long lines (Lucene's `SynonymQuery` is the known remedy). *Note:* Written in Hebrew. | Pardes's own |
-| `docs/SEFARIA_LESSONS.md` | Hebrew research report (2026-11-24), brought by the user, on what Pardes can learn and take from Sefaria: its data and code (a rank by links like its `pagesheetrank`, chronological order, topics, passages, the Linker and its Disambiguator, English as a pack, dictionaries), three deep dives (Patot and the ACL 2025 paper on segmenting ancient Hebrew, against the semantic search's short lines; `pagesheetrank.py` read in full, beside proposal 9 of SEARCH_WORLD_RESEARCH.md; Sefaria's dictionaries, topics, sage mentions and sugyot measured against the library: their sizes, Hebrew, licences and how much falls on the library's lines, with the rule that turns a Sefaria ref into the library's heRef), what Sefaria offers developers (an open API, MCP servers, `llms.txt`, a schema document), what Pardes seems to lack and what it already has, an optional AI assistant over the semantic search, ideas built from the library's own data (commentators by generation, a local source sheet, accessibility, a daily passage), a numbered list of 23 proposals with what each would touch, a work order of nine steps, and sources. *Note:* Written in Hebrew. Checked against the code on 2026-11-25 (Pardes at `f657229`, SeforimLibrary at its pin `4f07145` and the kdroidFilter/SefariaExport it reads; Sefaria-Project, patot and rabbinic_chunker at that day's master), which corrected it in place: the commentators pane is already grouped and in time order (by a year table in Zayit's code, not the database's years), issue 1's 35% was measured before its fix, a book keeps one merged text and not several versions, English is dropped in the export, Sefaria's `cat_bonus` and `length_penalty` are unused, and new packs would be built in Pardes's own pipeline, since SeforimLibrary stays Zayit's. Its content was measured the same day on Sefaria's public database dump and library 20261012193827: all 14,261 sugyot, Mishnah and story units fall on library lines, as do 88% of the 190,289 topic links and 99.99% of the 494,514 sage mentions; 1,499 of 7,889 books have no link and 339 of 1,080 authors a death year. Its order puts Krupnik's Talmud dictionary first (Hebrew, public domain), then the sugyot, then the topics; Sefaria states no terms for the topics or the sugyot. Since 2026-11-26 it says which proposals were built for a testers' build (17, 18 and 23, and Krupnik of 20: `features/sefaria/`), credited to Sefaria while Pardes asks it, and taken out before a public release if Sefaria refuses. | Pardes's own |
+| `docs/SEFARIA_LESSONS.md` | Hebrew research report (2026-11-24), brought by the user, on what Pardes can learn and take from Sefaria: its data and code (a rank by links like its `pagesheetrank`, chronological order, topics, passages, the Linker and its Disambiguator, English as a pack, dictionaries), three deep dives (Patot and the ACL 2025 paper on segmenting ancient Hebrew, against the semantic search's short lines; `pagesheetrank.py` read in full, beside proposal 9 of SEARCH_WORLD_RESEARCH.md; Sefaria's dictionaries, topics, sage mentions and sugyot measured against the library: their sizes, Hebrew, licences and how much falls on the library's lines, with the rule that turns a Sefaria ref into the library's heRef), what Sefaria offers developers (an open API, MCP servers, `llms.txt`, a schema document), what Pardes seems to lack and what it already has, an optional AI assistant over the semantic search, ideas built from the library's own data (commentators by generation, a local source sheet, accessibility, a daily passage), a numbered list of 23 proposals with what each would touch, a work order of nine steps, and sources. *Note:* Written in Hebrew. Checked against the code on 2026-11-25 (Pardes at `f657229`, SeforimLibrary at its pin `4f07145` and the kdroidFilter/SefariaExport it reads; Sefaria-Project, patot and rabbinic_chunker at that day's master), which corrected it in place: the commentators pane is already grouped and in time order (by a year table in Zayit's code, not the database's years), issue 1's 35% was measured before its fix, a book keeps one merged text and not several versions, English is dropped in the export, Sefaria's `cat_bonus` and `length_penalty` are unused, and new packs would be built in Pardes's own pipeline, since SeforimLibrary stays Zayit's. Its content was measured the same day on Sefaria's public database dump and library 20261012193827: all 14,261 sugyot, Mishnah and story units fall on library lines, as do 88% of the 190,289 topic links and 99.99% of the 494,514 sage mentions; 1,499 of 7,889 books have no link and 339 of 1,080 authors a death year. Its order puts Krupnik's Talmud dictionary first (Hebrew, public domain), then the sugyot, then the topics; Sefaria states no terms for the topics or the sugyot. Since 2026-11-26 it says which proposals were built for a testers' build (17, 18 and 23, and Krupnik of 20: `features/sefaria/`), credited to Sefaria while Pardes asks it, and taken out before a public release if Sefaria refuses; since 2026-11-27, that the data is a pack of its own, `sefaria-<n>`, an SQLite file read by line, which the app offers at start while it is missing and once more when a newer one is out, as the daf's layouts. | Pardes's own |
 | `docs/SEMANTIC_PLAN.md` | Hebrew plan (2026-10-28) for shipping the semantic search's model and vector index as packs: how Zayit ships its library, what is ready, publishing packs as `semantic-*` releases from a Kaggle dataset, the code and the in-app install (both done), incremental index updates (open), the reranker of the first results that was tried and taken out on 2026-11-24, and open decisions. *Note:* Written in Hebrew. | Pardes's own |
 | `docs/ZAYIT_CHANGE_MAP.md` | This map (מפת השינויים): every file in which Pardes differs from the Zayit release it is based on, Zayit's files changed in full, the files added in Zayit's modules by feature, Pardes's own trees in rows, the departures from Zayit's style still to fix, Zayit after the base, and why GitHub does not show Pardes as a fork. | Pardes's own |
 | `docs/ZAYIT_LEXICAL_REPORT.md` | English report addressed to Zayit: lexical.db (release 20261012193827) has 4,711 bases with no forms, 2,479 of them spelled like another base's form, which `MagicDictionaryIndex.expansionFor` prefers, and the 32 forms kept are the first by id; the measured effect and a fix in the generator or at runtime. *Note:* Pardes applies the fix at runtime (PardesLexicon, docs/LEXICON.md) without changing SeforimLibrary. | Pardes's own |
@@ -10993,7 +11092,17 @@ one test added; `siddur-open/README.md`).
 | File | What it is | Where it comes from |
 |---|---|---|
 | `scripts/kleikodesh_dictionary.py` | Packs Klei Kodesh's dictionary data, from a clone of its KitveiHakodeshDictionary repository, into SeforimApp/src/jvmMain/resources/kleikodesh/dictionary.tsv.gz for the Home's dictionary card (Android copies it): the headword indexes of Metzudat Tzion, Malbim's Biur HaMilot, the Mikropedia Talmudit and Machberet Menachem, the synonyms and spellings, Torat Emet's Aramaic-Hebrew dictionary and Hebrew Wikipedia's acronyms; not HaMichlol's definitions (left out on 2026-11-05) nor Otzaria's lists or sources of unknown origin. *Note:* Zayit's scripts/ holds font and test-feed helpers only. Reads the clone as data, runs none of its scripts, and writes a deterministic gzip (mtime 0). | Pardes's own; the data is used with Klei Kodesh's permission, some of it CC BY-SA |
-| `scripts/sefaria_content.py` | Packs Sefaria's topics, the persons its texts mention, its passages and Krupnik's dictionary of the Talmud, from a mongodump of Sefaria's database (the topics, their links, the passages, the lexicon) and the library's seforim.db, into SeforimApp/src/jvmMain/resources/sefaria/*.tsv.gz: Sefaria's refs turned into the library's heRefs as SeforimLibrary's Sefaria reader writes them, only the lines the library has kept; Sefaria's ר written ר', titles of no Hebrew letter, the authors' root and three mentions that are no person left out. *Note:* Needs pymongo's bson; reads the dump as data and writes a deterministic gzip. | Pardes's own; the data credited to Sefaria (resources/sefaria/NOTICE.txt) |
+| `scripts/sefaria_content.py` | Packs Sefaria's topics, the persons its texts mention, its passages and Krupnik's dictionary of the Talmud, from a mongodump of Sefaria's database (the topics, their links, the passages, the lexicon) and the library's seforim.db, into sefaria-data/*.tsv.gz, from which sefaria-release.yml builds the pack the app downloads: Sefaria's refs turned into the library's heRefs as SeforimLibrary's Sefaria reader writes them, only the lines the library has kept; Sefaria's ר written ר', titles of no Hebrew letter, the authors' root and three mentions that are no person left out. *Note:* Needs pymongo's bson; reads the dump as data and writes a deterministic gzip. | Pardes's own; the data credited to Sefaria (sefaria-data/NOTICE.txt) |
+
+#### Sefaria's data (`sefaria-data/`)
+
+| File | What it is | Where it comes from |
+|---|---|---|
+| `sefaria-data/NOTICE.txt` | The credit and terms of the four files beside it: Sefaria's dump of 2026-11-25; its topics, passages and mentions carry no licence in the dump, and are used crediting Sefaria while Pardes asks it; Krupnik's dictionary is in the public domain. The pack's release notes repeat it. *Note:* in SeforimApp/src/jvmMain/resources/sefaria/ until 2026-11-27, when the data left the app for a pack of its own. | Pardes's own, after Pardes's kleikodesh/NOTICE.txt |
+| `sefaria-data/topics.tsv.gz` | Sefaria's topics with Hebrew names, gzipped TSV (2.1 MB): 4,835 topics, the tree's 14 roots, 7,912 relations, and 340,112 rows of a topic's lines (168,976 of Sefaria's 190,289 links mapped to the library's lines). Built into the pack's file by SefariaPackBuilder (sefaria-release.yml). | Packed by scripts/sefaria_content.py from Sefaria's data; terms in NOTICE.txt |
+| `sefaria-data/sages.tsv.gz` | The persons the library's lines mention, gzipped TSV (1.1 MB): 1,557 persons, 88 ambiguous names, 649 relations and 226,297 mentions with the name as written (the people of Israel and the Name left out). Built into the pack's file. | Packed by scripts/sefaria_content.py from Sefaria's data; terms in NOTICE.txt |
+| `sefaria-data/sugyot.tsv.gz` | Sefaria's passages, gzipped TSV (306 KB): 14,261 sugyot, Mishnayot in the Gemara and stories of the Tanakh, each with its lines in the library. Built into the pack's file. | Packed by scripts/sefaria_content.py from Sefaria's data; terms in NOTICE.txt |
+| `sefaria-data/krupnik.tsv.gz` | Krupnik and Silberman's dictionary of the Talmud (1927, public domain) as Sefaria has it, gzipped TSV (485 KB): 18,957 entries, their other headwords and their text. Built into the pack's file. | Packed by scripts/sefaria_content.py from Sefaria's version; public domain |
 
 #### What is left of semantic-model/
 
