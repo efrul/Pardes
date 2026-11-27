@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.util.zip.GZIPOutputStream
 import kotlin.test.AfterTest
@@ -68,6 +69,21 @@ class SefariaPackTest {
         assertEquals(2, assertNotNull(chosen).number)
         assertNull(SefariaPack.select(listOf(release("semantic-2-v3"), release("daf-1"))))
         assertNull(SefariaManifest.parseOrNull("""{"format":2,"pack":1,"file":"a","size":1,"sha256":"a","dbSize":1,"dbSha256":"b"}"""))
+    }
+
+    @Test
+    fun `the packs are read from the site's copy when the API can't be`() {
+        val site =
+            """{"generated_at":"2026-11-27T10:00:00Z","releases":[{"tag_name":"sefaria-1","prerelease":false,""" +
+                """"html_url":"https://x/sefaria-1","assets":[{"name":"${SefariaPack.FILE_NAME}","size":10,""" +
+                """"browser_download_url":"https://x/data"},{"name":"${SefariaPack.MANIFEST_NAME}","size":1,""" +
+                """"browser_download_url":"https://x/manifest"}]}]}"""
+        val releases =
+            runBlocking {
+                SemanticPackReleases { url -> if (url == SefariaPack.SITE_URL) site else throw IOException("HTTP 403") }
+                    .list(SefariaPack.SITE_URL)
+            }
+        assertEquals(1, assertNotNull(SefariaPack.select(releases)).number)
     }
 
     // A pack of [number] with a topic, served from memory: its manifest and its file gzipped

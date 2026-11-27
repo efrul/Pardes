@@ -161,7 +161,7 @@ object StartOffers {
             // The releases read once for both (ReleaseLists); the missing data offered only when a pack is out to download
             val newestSefaria =
                 if (installedSefaria != null || wantSefaria) {
-                    runSuspendCatching { SefariaPack.select(SemanticPackReleases().list())?.number }
+                    runSuspendCatching { SefariaPack.select(SefariaPack.releases())?.number }
                         .onFailure { warnln { "[StartOffers] Sefaria's packs not read: ${it.message}" } }
                         .getOrNull()
                 } else {

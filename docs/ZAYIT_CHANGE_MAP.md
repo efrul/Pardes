@@ -8239,12 +8239,13 @@ open-core seam), `SemanticSearchEngine.kt`, `SearchResultScreen.kt`, `SearchResu
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/semantic/pack/SemanticPackReleases.kt`
 
 - **Feature:** Semantic search packs.
-- **Size:** 130 lines.
+- **Size:** 133 lines.
 - **What:** `SemanticPackReleases`, the packs released with `semantic-*` tags: the GitHub API's list, or the site's copy
-  when the API cannot be reached; the newest pack, and of its builds the installed library's, else the newest library's;
+  when the API cannot be reached (`list`, the semantic packs' copy by default, Sefaria's data's own when it asks for it,
+  `siteUrl`, since 2026-11-27); the newest pack, and of its builds the installed library's, else the newest library's;
   what a pack's manifest says it holds (`infoOf`). The lists are read through `ReleaseLists`, shared with the daf's.
 - **Reached from:** `SemanticPackViewModel.kt`, `SemanticPackCard.kt`, `SemanticPackInstaller.kt`,
-  `PendingSemanticPack.kt`, `IndependentSemanticSearch.kt`, `StartOffers.kt`.
+  `PendingSemanticPack.kt`, `IndependentSemanticSearch.kt`, `StartOffers.kt`, `SefariaPack.kt` (`list`).
 - **Follows:** Zayit's `GitHubReleaseFetcher` use for library releases.
 - **Tests:** `SemanticPackReleasesTest`.
 
@@ -9712,7 +9713,8 @@ is read once for a while. Hooks: `main.kt`, `AppSettings.kt`, `SettingsSidebar.k
   pages marked (`marked`, taken by each card as it is shown, `take`) and the settings opened on the first. The releases
   are read only while the app checks for updates by itself, and for 20 seconds at most. Since 2026-11-27, Sefaria's
   data too, on the data page with a card of its own (`SefariaPackPrompt`): while the folder has none and a pack is out
-  to download (from the same release list, so only while the app checks for updates), at every start until the user
+  to download (from the same release list, or the site's copy of the pack's, `SefariaPack.releases`, so only while
+  the app checks for updates), at every start until the user
   unticks it (`SefariaPackSettings.prompt`), and a newer pack than the folder's once (`SefariaPackSettings.offered`);
   each card of the page comes into view only when it has something new (`newerPack`, `newerSefaria`).
 - **Reached from:** `main.kt` (in place of `SemanticPackPrompt.openAtStart`), `SettingsSidebar.kt` (`marked`),
@@ -10509,12 +10511,14 @@ and offers again once a newer one is out (`pack/`, `sefaria-release.yml`, the us
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/pack/SefariaPack.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 276 lines.
+- **Size:** 285 lines.
 - **What:** Sefaria's data as a pack of its own, the user's word of 2026-11-27 ("עשה זאת ויציע אוטומטית ויזהה עדכונים לאותו קובץ"): `SefariaPack`, its
   release (`sefaria-<n>` of Pardes's repository, `select`: the published one of the highest number with a manifest), its
   files' names (`FILE_NAME`, the data's file gzipped; `MANIFEST_NAME`), its folder beside the library (`DIR_NAME`,
-  `pardes-sefaria`, which a library's full update leaves, and a move carries) and the pack the folder has
-  (`installedIn`); `SefariaManifest` (its format, number, file, size and sha256, the data file's size and sha256, the
+  `pardes-sefaria`, which a library's full update leaves, and a move carries), the repository's releases (`releases`:
+  the API's list, shared with the semantic packs and the daf's layouts, or, when the API can't be read, the site's copy
+  of the pack's releases, `SITE_URL`, `sefaria.json`, since some filters block api.github.com) and the pack the folder
+  has (`installedIn`); `SefariaManifest` (its format, number, file, size and sha256, the data file's size and sha256, the
   export's day); `SefariaPackSettings` (whether a start offers the pack while it is missing, `prompt`, on by default;
   the newest pack a start offered, `offered`); `SefariaPackPrompt`, the card's focus when a start opens the settings on
   it; `SefariaDownloads` (one for the app, `shared`): the folder's pack and the newest release with its manifest
@@ -10590,9 +10594,9 @@ and offers again once a newer one is out (`pack/`, `sefaria-release.yml`, the us
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/pack/SefariaPackTest.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 182 lines.
+- **Size:** 198 lines.
 - **What:** the newest published pack with a manifest chosen (not a prerelease, not one without a manifest, not another
-  release's tag), a manifest of another format refused; a pack downloaded from memory, put beside the library, read,
+  release's tag), a manifest of another format refused; the packs read from the site's copy when the API can't be; a pack downloaded from memory, put beside the library, read,
   the screens told (`revision`), its download's folder gone, then replaced by a newer one though the old one is open,
   and taken out; Krupnik's dictionary read again once the pack is put in place or taken out (`readDictionaries`, on
   the test graph); a file that is not the manifest's not put in place, the folder left as it was.
@@ -10778,7 +10782,7 @@ the description where something needs saying.
 | `.github/scripts/daf_release.py` | Makes a daf-<n> release's files from pardes-rashi-ocr's layouts: each tractate's layout gzipped, pardes-daf.zip of them all to unpack beside the library, the manifest Pardes for desktop downloads them by (sha256 of each file and of its layout), and the release's tag, title and notes. Each tractate has a version of its own, written in its file's header and in the manifest: 1 at first, one more in a release where its layout is not the one of the release before (--previous, that release's manifest, whose contentSha256 is the layout's without its version), the same otherwise, so that a tractate that did not change is the same file byte for byte; the notes name the tractates that changed, and say where the lines' places were measured: on scans of a later edition that keeps the Vilna Shas's page line for line, from which only each line's break and place were taken. | Pardes's own |
 | `.github/scripts/test_daf_release.py` | The release script's tests, run by hand or by pytest and by daf-release.yml before it builds: a tractate's version goes up only in a release where its layout changed (the other's file the same bytes), the version at the head of the file, a layout that comes with a version of its own the same layout, and every tractate's first version after a release without versions or with none before. | Pardes's own |
 | `.github/workflows/android-release.yml` | Workflow, run by hand only (inputs prerelease and note), that builds Pardes for Android's release APK signed with Pardes's key from the repository's secrets, checks its certificate, the lucene-android API 26 gate and the release dex, and publishes `android-<versionName>-<run>` as the Latest release with the APK, the complete source with SeforimLibrary and the desktop-to-phone transfer scripts. *Note:* The notes come from androidApp/CHANGELOG.md's section for the version, and the run stops without one. Zayit's release and site workflows (deploy.yaml, pages.yaml) are removed here. | Pardes's own |
-| `.github/workflows/android-site.yml` | Workflow that deploys androidApp/site to GitHub Pages with the transfer scripts, both changelogs (changelog.md, changelog-desktop.md) and the releases.json, semantic.json, daf.json and downloads.json snapshots; runs on pushes to main that touch them, after every successful Android, Desktop, Semantic pack or Daf layouts release, and by hand. *Note:* The Android updater reads releases.json and changelog.md, Pardes for desktop semantic.json and daf.json (SemanticPackReleases, DafDownloads), so their shapes are a contract (its header). | Pardes's own; Zayit's pages.yaml, which deployed Zayit's website/, was removed |
+| `.github/workflows/android-site.yml` | Workflow that deploys androidApp/site to GitHub Pages with the transfer scripts, both changelogs (changelog.md, changelog-desktop.md) and the releases.json, semantic.json, daf.json, sefaria.json and downloads.json snapshots; runs on pushes to main that touch them, after every successful Android, Desktop, Semantic pack, Daf layouts or Sefaria data release, and by hand. *Note:* The Android updater reads releases.json and changelog.md, Pardes for desktop semantic.json, daf.json and sefaria.json (SemanticPackReleases, DafDownloads, SefariaPack), so their shapes are a contract (its header). | Pardes's own; Zayit's pages.yaml, which deployed Zayit's website/, was removed |
 | `.github/workflows/change-map.yml` | Workflow that runs check_change_map.py --committed on every push and pull request, with the whole history (the map's base must be there): a red run names the files to describe. Its job, Change map, is the check main's ruleset requires, by that name. | Pardes's own |
 | `.github/workflows/daf-release.yml` | Workflow that publishes the daf view's layouts as a release daf-<n> (daf_release.py, after its tests), from this repository's branch daf-layouts, where pardes-rashi-ocr pushes its layouts/*.json, with the manifest of the release before it downloaded for each tractate's version; the notes say what the words are (Wikisource's Gemara under CC BY-SA through Sefaria, the Vilna Rashi and Tosafot) and where the lines' places were measured (scans of a later edition that keeps the Vilna Shas's page), and the files go out under CC BY-SA. | Pardes's own |
 | `.github/workflows/desktop-release.yml` | Workflow, run by hand only, that builds Pardes for desktop through branding/ (Windows x64 GraalVM and arm64 JVM as NSIS, Linux x64 and arm64 as deb, rpm and pacman, macOS Apple Silicon and Intel as dmg and zip), writes Nucleus's latest*.yml update feeds and the complete source, and publishes `desktop-<x.y.z>-<run>` with --latest=false. *Note:* Version and notes from desktop/CHANGELOG.md's top section; GITHUB_REF=refs/tags/v<version> set in the Gradle shell for Versioning. No Zayit secrets, add-ons or Rust installer wrapper; optional Linux GPG and PARDES_FEEDBACK_URL secrets. A build gets 300 minutes, for the Apple Silicon Mac's native image: 2 h 54 for 1.0.9, and 3 h 06 to 3 h 25 in CI for main of 2026-11-18, past the 180 it had. 602 lines. *Note:* From 2026-11-23 to 2026-11-24 each build job took Google's mirror of Maven Central as a fallback, for the kosherkotlin 3.0.5 that Maven Central had stopped serving; it went with the move to 4.0.1, as a build must not fetch a version its author withdrew. | Pardes's own, built as Zayit's deploy.yaml (removed here) builds its platforms |

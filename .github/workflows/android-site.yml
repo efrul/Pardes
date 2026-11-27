@@ -10,8 +10,9 @@
 # (desktop-release.yml), the semantic search's zips and the library's files (SeforimLibrary's latest release).
 # The app reads releases.json and changelog.md too, the same way, to update itself (androidApp/.../update/AppReleases.kt),
 # and Pardes for desktop reads semantic.json, the semantic packs (semantic-release.yml), when it can't reach the API
-# (SeforimApp/.../features/search/semantic/pack/SemanticPackReleases.kt), and daf.json, the daf view's layouts
-# (daf-release.yml, SeforimApp/.../features/bookcontent/daf/DafDownloads.kt): keep their shapes.
+# (SeforimApp/.../features/search/semantic/pack/SemanticPackReleases.kt), daf.json, the daf view's layouts
+# (daf-release.yml, SeforimApp/.../features/bookcontent/daf/DafDownloads.kt), and sefaria.json, Sefaria's data
+# (sefaria-release.yml, SeforimApp/.../features/sefaria/pack/SefariaPack.kt): keep their shapes.
 name: Android site
 
 on:
@@ -26,7 +27,7 @@ on:
       - 'desktop/CHANGELOG.md'
       - '.github/workflows/android-site.yml'
   workflow_run:
-    workflows: [Android release, Semantic pack release, Desktop release, Daf layouts release]
+    workflows: [Android release, Semantic pack release, Desktop release, Daf layouts release, Sefaria data release]
     types: [completed]
   workflow_dispatch:
 
@@ -102,6 +103,20 @@ jobs:
                      | {name, size, browser_download_url, digest}]} ] }
           ' > _site/daf.json
           jq -c '{generated_at, layouts: [.releases[].tag_name]}' _site/daf.json
+
+      # Every release of Sefaria's data, in the API's shape too (its manifest and the data's file)
+      - name: Sefaria's data for the desktop app (sefaria.json)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/releases?per_page=100" | jq -s '
+            { generated_at: (now | todate),
+              releases: [ add[] | select(.draft | not) | select(.tag_name | test("^sefaria-[0-9]+$"))
+                | {tag_name, prerelease, published_at, html_url,
+                   assets: [.assets[] | select(.name == "pardes-sefaria.db.gz" or .name == "pardes-sefaria.manifest.json")
+                     | {name, size, browser_download_url, digest}]} ] }
+          ' > _site/sefaria.json
+          jq -c '{generated_at, packs: [.releases[].tag_name]}' _site/sefaria.json
 
       # Pardes for desktop's releases (their installers) and the semantic packs (their zips) newest first, and the
       # library's latest release (its bundle's files), in the API's shape too. The library is another repository's: the

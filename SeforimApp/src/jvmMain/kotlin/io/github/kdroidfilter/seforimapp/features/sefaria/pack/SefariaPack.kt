@@ -54,6 +54,9 @@ object SefariaPack {
     /** Where a download waits beside the library until it is checked and put in place. */
     const val DOWNLOAD_DIR = ".pardes-sefaria-download"
 
+    /** The site's copy of the pack's releases (.github/workflows/android-site.yml), read when the API can't be. */
+    const val SITE_URL = "https://efrul.github.io/Pardes/sefaria.json"
+
     private val TAG = Regex("""sefaria-(\d+)""")
 
     /** A release of the pack: its number, its page and its files by name. */
@@ -75,6 +78,12 @@ object SefariaPack {
                 }
             }.filter { MANIFEST_NAME in it.assets }
             .maxByOrNull { it.number }
+
+    /**
+     * The repository's releases, the API's list (shared with the semantic packs and the daf's layouts, ReleaseLists), or
+     * the site's copy of the pack's when the API can't be read ([SITE_URL]): some filters block api.github.com.
+     */
+    suspend fun releases(): List<SemanticPackReleases.Release> = SemanticPackReleases().list(SITE_URL)
 
     /** The pack the library's folder [dir] has, its number (0 when its file doesn't say); null when it has none. */
     fun installedIn(dir: File): Int? = SefariaDb.open(SefariaData.fileIn(dir))?.use { it.pack }
@@ -128,7 +137,7 @@ object SefariaPackPrompt {
  */
 class SefariaDownloads(
     private val dir: () -> File?,
-    private val releases: suspend () -> List<SemanticPackReleases.Release> = { SemanticPackReleases().list() },
+    private val releases: suspend () -> List<SemanticPackReleases.Release> = { SefariaPack.releases() },
     private val fetchText: suspend (url: String) -> String = { HttpFileDownloader().downloadText(it) },
     private val fetchFile: suspend (url: String, dest: File, size: Long, sha256: String, onBytes: (Long) -> Unit) -> Unit =
         { url, dest, size, sha256, onBytes -> HttpFileDownloader().download(url, dest, size, sha256, onBytes) },

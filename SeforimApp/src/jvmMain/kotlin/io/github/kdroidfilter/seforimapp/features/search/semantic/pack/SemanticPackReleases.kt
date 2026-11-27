@@ -71,13 +71,16 @@ class SemanticPackReleases(
             runSuspendCatching { PackInfo.parseOrNull(fetchText(manifest.url)) }.getOrNull()
         }
 
-    /** The releases of the repository, newest first; throws IOException when neither list can be read. */
-    suspend fun list(): List<Release> =
+    /**
+     * The releases of the repository, newest first: the API's, else the site's copy [siteUrl] (the semantic packs' by
+     * default; Sefaria's data has its own, SefariaPack); throws IOException when neither list can be read.
+     */
+    suspend fun list(siteUrl: String = SITE_URL): List<Release> =
         runSuspendCatching { json.decodeFromString(ListSerializer(Release.serializer()), fetchText(API_URL)) }
             .getOrElse { apiError ->
-                warnln { "[SemanticPackReleases] $API_URL: ${apiError.message}; trying $SITE_URL" }
-                runSuspendCatching { json.decodeFromString(SiteList.serializer(), fetchText(SITE_URL)).releases }
-                    .getOrElse { throw IOException("Neither $API_URL nor $SITE_URL could be read: ${it.message}", apiError) }
+                warnln { "[SemanticPackReleases] $API_URL: ${apiError.message}; trying $siteUrl" }
+                runSuspendCatching { json.decodeFromString(SiteList.serializer(), fetchText(siteUrl)).releases }
+                    .getOrElse { throw IOException("Neither $API_URL nor $siteUrl could be read: ${it.message}", apiError) }
             }
 
     companion object {
