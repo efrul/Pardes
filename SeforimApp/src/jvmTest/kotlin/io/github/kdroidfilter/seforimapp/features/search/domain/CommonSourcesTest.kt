@@ -14,9 +14,8 @@ class CommonSourcesTest {
 
     private fun pick(
         links: List<LinkEnd>,
-        baseOnly: Boolean = false,
         baseBooks: Set<Long> = emptySet(),
-    ) = CommonSources.pick(page, links, baseBooks, baseOnly)
+    ) = CommonSources.pick(page, links, baseBooks)
 
     @Test
     fun `a line linked from three books of the page is a source`() {
@@ -31,9 +30,32 @@ class CommonSourcesTest {
     }
 
     @Test
-    fun `two books are not enough, and a book counts once`() {
-        val picks = pick(listOf(LinkEnd(1, 100, 9), LinkEnd(4, 100, 9), LinkEnd(4, 100, 9)))
-        assertTrue(picks.isEmpty())
+    fun `while a line is linked from three books, two are not enough, and a book counts once`() {
+        val picks = pick(from(100, 9, 1, 2, 4) + listOf(LinkEnd(1, 200, 8), LinkEnd(4, 200, 8), LinkEnd(4, 200, 8)))
+        assertEquals(listOf(100L), picks.map { it.lineId })
+    }
+
+    @Test
+    fun `without one, a line linked from two results is a source, in a page of one book too`() {
+        val oneBook = (1L..5L).map { it to 11L }
+        val links = from(100, 9, 1, 2) + from(200, 8, 4)
+        assertEquals(listOf(CommonSourcePick(100, 9, 1, listOf(1, 2))), CommonSources.pick(oneBook, links, emptySet()))
+        assertEquals(listOf(CommonSourcePick(100, 9, 2, listOf(1, 2))), pick(links))
+    }
+
+    @Test
+    fun `without a line linked from two results, any line a result links to, a base book's first, then the earliest result's`() {
+        val oneBook = (1L..5L).map { it to 11L }
+        val links = from(100, 9, 3) + from(200, 8, 1) + from(300, 7, 5)
+        assertEquals(listOf(300L, 200L, 100L), CommonSources.pick(oneBook, links, setOf(7)).map { it.lineId })
+    }
+
+    @Test
+    fun `without one, more books first, then a base book, then more results`() {
+        // Results 1 to 3 of book 11, 4 and 5 of book 12
+        val twoBooks = (1L..5L).map { it to if (it <= 3) 11L else 12L }
+        val links = from(100, 9, 1, 2, 3) + from(200, 8, 1, 4) + from(300, 7, 2, 5) + from(400, 6, 1, 3)
+        assertEquals(listOf(300L, 200L, 100L), CommonSources.pick(twoBooks, links, setOf(7)).map { it.lineId })
     }
 
     @Test
@@ -44,16 +66,15 @@ class CommonSourcesTest {
 
     @Test
     fun `a link of a line to itself does not count`() {
-        val picks = pick(listOf(LinkEnd(4, 4, 14), LinkEnd(1, 4, 14), LinkEnd(2, 4, 14)))
-        assertTrue(picks.isEmpty())
+        assertTrue(pick(listOf(LinkEnd(4, 4, 14))).isEmpty())
+        assertEquals(listOf(CommonSourcePick(4, 14, 1, listOf(1))), pick(listOf(LinkEnd(4, 4, 14), LinkEnd(1, 4, 14))))
     }
 
     @Test
-    fun `a base books' search takes only a line of a base book`() {
-        val links = listOf(1L, 2L, 3L).map { LinkEnd(it, 100, 9) }
-        assertTrue(pick(links, baseOnly = true).isEmpty())
-        assertEquals(1, pick(links, baseOnly = true, baseBooks = setOf(9)).size)
-        assertEquals(1, pick(links, baseOnly = false).size)
+    fun `a line of any book is a source, a base book's first among as many books`() {
+        val links = from(100, 9, 1, 2, 3) + from(200, 8, 1, 2, 3)
+        assertEquals(listOf(100L, 200L), pick(links).map { it.lineId })
+        assertEquals(listOf(200L, 100L), pick(links, baseBooks = setOf(8)).map { it.lineId })
     }
 
     @Test
@@ -66,13 +87,13 @@ class CommonSourcesTest {
     fun `a source linked from fewer than half the first's books is left out`() {
         val wide = (1L..8L).map { it to it + 10 }
         val links = from(100, 9, 1, 2, 3, 4, 5, 6, 7) + from(200, 8, 1, 2, 3) + from(300, 7, 1, 2, 3, 4)
-        assertEquals(listOf(100L, 300L), CommonSources.pick(wide, links, emptySet(), false).map { it.lineId })
+        assertEquals(listOf(100L, 300L), CommonSources.pick(wide, links, emptySet()).map { it.lineId })
     }
 
     @Test
-    fun `the line of eval-100's pages is the one measured, by the page's order`() {
-        val (lines, sources) = parity("expectedFirst20Rank") { _, _ -> null }
-        assertEquals(47 to 86, lines to sources)
+    fun `the line of eval-100's pages is the one measured where it has one, by the page's order`() {
+        val (measured, more) = parity("expectedFirst20Rank") { _, _ -> null }
+        assertEquals(47 to 45, measured to more)
     }
 
     @Test
@@ -86,8 +107,9 @@ class CommonSourcesTest {
         }
     }
 
-    // Every query of the fixture against [expected]; [rank] gives a query's ranking, null for the default. The lines and
-    // sources the line shows, counted
+    // Every query of the fixture against [expected], with a base books' search's links to base books alone, as measured;
+    // [rank] gives a query's ranking, null for the default. Where the measured line has none, only lines linked from
+    // fewer books. The queries with the measured line, and with those others, counted
     private fun parity(
         expected: String,
         rank: (JSONObject, List<Pair<Long, Long>>) -> ((Long) -> Int)?,
@@ -98,32 +120,32 @@ class CommonSourcesTest {
             }
         val baseBooks = fixture.getJSONArray("baseBookIds").let { ids -> (0 until ids.length()).mapTo(HashSet()) { ids.getLong(it) } }
         val queries = fixture.getJSONArray("queries")
-        var lines = 0
-        var sources = 0
+        var measured = 0
+        var more = 0
         for (i in 0 until queries.length()) {
             val query = queries.getJSONObject(i)
             val page = query.getJSONArray("page").pairs()
             val links = query.getJSONObject("links")
+            val baseOnly = query.getString("scope") == "base"
             val ends =
                 links
                     .keys()
                     .asSequence()
                     .flatMap { line -> links.getJSONArray(line).pairs().map { (other, book) -> LinkEnd(line.toLong(), other, book) } }
+                    .filter { !baseOnly || it.otherBook in baseBooks }
                     .toList()
-            val baseOnly = query.getString("scope") == "base"
             val order = rank(query, page)
-            val picks =
-                if (order == null) {
-                    CommonSources.pick(page, ends, baseBooks, baseOnly)
-                } else {
-                    CommonSources.pick(page, ends, baseBooks, baseOnly, order)
-                }
+            val picks = if (order == null) CommonSources.pick(page, ends, baseBooks) else CommonSources.pick(page, ends, baseBooks, order)
             val want = query.getJSONArray(expected).pairs().map { (line, books) -> line to books.toInt() }
-            assertEquals(want, picks.map { it.lineId to it.books }, "query ${query.getInt("qid")}")
-            if (picks.isNotEmpty()) lines++
-            sources += picks.size
+            if (want.isEmpty()) {
+                assertTrue(picks.all { it.books < CommonSources.MIN_BOOKS }, "query ${query.getInt("qid")}")
+                if (picks.isNotEmpty()) more++
+            } else {
+                assertEquals(want, picks.map { it.lineId to it.books }, "query ${query.getInt("qid")}")
+                measured++
+            }
         }
-        return lines to sources
+        return measured to more
     }
 
     // The links of [results] (lines of the page) to [line], of [book]

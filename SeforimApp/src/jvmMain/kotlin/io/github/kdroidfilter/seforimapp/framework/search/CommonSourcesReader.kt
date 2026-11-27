@@ -22,8 +22,5 @@ class CommonSourcesReader(
         }
 
     /** The line of common sources of [page] ((lineId, bookId), the engine's order). */
-    suspend fun line(
-        page: List<Pair<Long, Long>>,
-        baseOnly: Boolean,
-    ): List<CommonSource> = queries.line(page, baseOnly)
+    suspend fun line(page: List<Pair<Long, Long>>): List<CommonSource> = queries.line(page)
 }
