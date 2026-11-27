@@ -50,6 +50,8 @@ import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLine
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSages
 import io.github.kdroidfilter.seforimapp.features.sefaria.SourceRow
 import io.github.kdroidfilter.seforimapp.features.sefaria.generationLabel
+import io.github.kdroidfilter.seforimapp.features.sefaria.pack.SefariaPackHint
+import io.github.kdroidfilter.seforimapp.features.sefaria.rememberSefaria
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -104,16 +106,17 @@ internal object SagesTool : HomeWidget {
         modifier: Modifier,
     ) {
         val windows = LocalAppGraph.current.sefariaWindows
-        val sages by produceState<SefariaSages?>(null) { value = withContext(Dispatchers.Default) { SefariaSages.shipped } }
+        // Pardes: Sefaria's data from its file beside the library (SefariaPack), its download offered while it is missing
+        val read = rememberSefaria { it.sages }
         var trail by remember { mutableStateOf(emptyList<Int>()) }
         if (LocalSefariaWindow.current) {
             LaunchedEffect(windows.sageAsks) { windows.sage?.let { trail = listOf(it) } }
         }
         val accent = rememberAccentColor(JewelTheme.isDark)
         PanelCard(modifier) {
-            val loaded = sages
             // Still loading, as the other widgets' loading card: its tag is what the size test waits for
-            if (loaded == null) return@PanelCard CircularProgressIndicator(Modifier.align(Alignment.Center).testTag(WIDGET_LOADING_TAG))
+            if (read == null) return@PanelCard CircularProgressIndicator(Modifier.align(Alignment.Center).testTag(WIDGET_LOADING_TAG))
+            val loaded = read.value ?: return@PanelCard SefariaPackHint(Modifier.align(Alignment.Center))
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 val page = trail.lastOrNull()
                 when {
@@ -152,7 +155,7 @@ private fun ColumnScope.SagesIndex(
     val found = remember(sages, typed) { sages.search(typed, MAX_LISTED) }
     if (found.isEmpty()) return SefariaHint(stringResource(Res.string.sefaria_sages_none_found))
     LazyColumn(Modifier.fillMaxSize()) {
-        items(found, key = { it.id }) { sage -> SageRow(sage, sages.placesOf(sage.id).size, accent) { onSage(sage.id) } }
+        items(found, key = { it.id }) { sage -> SageRow(sage, sages.placeCount(sage.id), accent) { onSage(sage.id) } }
     }
 }
 
@@ -193,9 +196,10 @@ private fun ColumnScope.SagePage(
     val sage = sages.sages[id] ?: return BackTitle("", accent, onBack)
     val graph = LocalAppGraph.current
     val uriHandler = LocalUriHandler.current
-    val heRefs = remember(sages, id) { sages.placesOf(id) }
-    val lines by produceState<List<SefariaLine>?>(null, id) {
-        val found = graph.sefariaLines.linesOf(heRefs)
+    // Its lines read from the file, off the UI thread, then in the library; null while they are read
+    val lines by produceState<List<SefariaLine>?>(null, sages, id) {
+        value = null
+        val found = graph.sefariaLines.linesOf(withContext(Dispatchers.IO) { sages.placesOf(id) })
         value = found.values.sortedWith(compareBy({ it.bookId }, { it.lineIndex }))
     }
     var tractate by remember(id) { mutableStateOf<String?>(null) }
@@ -212,7 +216,7 @@ private fun ColumnScope.SagePage(
         }
     }
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SageAbout(sage, sages, heRefs.size, accent, onSage) }
+        item { SageAbout(sage, sages, sages.placeCount(id), accent, onSage) }
         val found = lines
         if (found == null) {
             item { Text(stringResource(Res.string.sefaria_loading), fontSize = 12.sp, color = JewelTheme.globalColors.text.info) }
@@ -228,7 +232,12 @@ private fun ColumnScope.SagePage(
             }
             val shown = tractate?.let(byBook::get) ?: found
             items(shown.take(MAX_PLACES), key = { it.id }) { line ->
-                val name = sages.at(line.heRef).firstOrNull { it.sageId == id && it.text.isNotEmpty() }?.text ?: sage.name
+                // The name as the line writes it, read from the file off the UI thread
+                val name by produceState(sage.name, line.heRef) {
+                    value =
+                        withContext(Dispatchers.IO) { sages.at(line.heRef) }.firstOrNull { it.sageId == id && it.text.isNotEmpty() }?.text
+                            ?: sage.name
+                }
                 SourceRow(line, accent, around = name) { onOpenLine(line) }
             }
             item { Text(stringResource(Res.string.sefaria_sages_credit), fontSize = 11.sp, color = JewelTheme.globalColors.text.info) }
@@ -249,7 +258,7 @@ private fun ColumnScope.AmbiguousPage(
     Text(stringResource(Res.string.sefaria_sage_ambiguous, name.options.size), fontSize = 14.sp)
     ChipFlow {
         name.options.mapNotNull(sages.sages::get).forEach { sage ->
-            SefariaChip(sage.name, sages.placesOf(sage.id).size, false, accent) { onSage(sage.id) }
+            SefariaChip(sage.name, sages.placeCount(sage.id), false, accent) { onSage(sage.id) }
         }
     }
 }
@@ -282,7 +291,7 @@ private fun PeopleChips(
     accent: Color,
     onSage: (Int) -> Unit,
 ) = ChipSection(title, people.size) {
-    people.distinctBy { it.id }.forEach { sage -> SefariaChip(sage.name, sages.placesOf(sage.id).size, false, accent) { onSage(sage.id) } }
+    people.distinctBy { it.id }.forEach { sage -> SefariaChip(sage.name, sages.placeCount(sage.id), false, accent) { onSage(sage.id) } }
 }
 
 private const val MAX_LISTED = 300

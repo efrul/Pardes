@@ -45,6 +45,8 @@ object LibraryLocation {
             "pardes.vec.lucene",
             "pardes-daf",
             "pardes-scans",
+            // Pardes: Sefaria's data (SefariaPack)
+            "pardes-sefaria",
         )
 
     /**
@@ -59,6 +61,7 @@ object LibraryLocation {
             "delta-cache",
             ".pardes-semantic-download",
             ".pardes-semantic-staged",
+            ".pardes-sefaria-download",
         )
     private const val WAL_NAME = "seforim.db-wal"
 

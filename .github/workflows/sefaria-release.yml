@@ -1,0 +1,110 @@
+name: Sefaria data release
+
+# Publishes Sefaria's data for Pardes for desktop as a release of this repository, sefaria-<n>: the data's SQLite file
+# gzipped and the manifest the app downloads it by (SeforimApp/.../features/sefaria/pack/SefariaPack.kt), which a start
+# of the app offers while the library's folder has none and offers again when a newer one is out. Both are built from
+# sefaria-data/ (Sefaria's public database export, packed by scripts/sefaria_content.py) by a test of the app's,
+# SefariaPackGen, with the builder the tests read their own data files by (SefariaPackBuilder), so that the file is
+# the one the app reads. The topics, the mentions and the passages are Sefaria's data, credited to it: sefaria-data/
+# NOTICE.txt, which the release's notes repeat.
+#
+# Every release is --latest=false and then the Android release is made the Latest again (gh's publishing of a release
+# with files ignores the flag), as daf-release.yml does, so the Android release stays the repository's Latest.
+# Runs only by hand: Actions › Sefaria data release › Run workflow (on main).
+
+on:
+  workflow_dispatch:
+    inputs:
+      number:
+        description: 'The release number, sefaria-<n> (empty: one more than the newest)'
+        type: string
+        default: ''
+      dump:
+        description: "The day of Sefaria's export the data is from (as sefaria-data/NOTICE.txt says)"
+        type: string
+        default: '2026-11-25'
+      note:
+        description: 'Optional paragraph at the top of the release notes (e.g. what changed in the data)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sefaria-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source (with submodules)
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Nucleus
+        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@712f1e520c73fd68e1e7514b17700e577643802c
+
+      - name: The release's number
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ inputs.number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$NUMBER" ]; then
+            last="$(gh release list -R "$GITHUB_REPOSITORY" --limit 200 --json tagName \
+              --jq '[.[].tagName | select(test("^sefaria-[0-9]+$")) | ltrimstr("sefaria-") | tonumber] | max // 0')"
+            NUMBER=$((last + 1))
+          fi
+          case "$NUMBER" in ''|*[!0-9]*) echo "::error::The number is a whole number"; exit 1 ;; esac
+          echo "NUMBER=$NUMBER" >> "$GITHUB_ENV"
+
+      # The community edition, as every Pardes build: no private package's token
+      - name: Build the release's files
+        env:
+          SEFARIA_PACK_OUT: ${{ github.workspace }}/out
+          SEFARIA_PACK_NUMBER: ${{ env.NUMBER }}
+          SEFARIA_PACK_DUMP: ${{ inputs.dump }}
+        run: |
+          set -euo pipefail
+          ./gradlew :SeforimApp:jvmTest --tests "*SefariaPackGen*" --no-daemon
+          test -s out/pardes-sefaria.db.gz && test -s out/pardes-sefaria.manifest.json \
+            || { echo "::error::The pack was not built"; exit 1; }
+          ls -l out
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTE: ${{ inputs.note }}
+          DUMP: ${{ inputs.dump }}
+        run: |
+          set -euo pipefail
+          tag="sefaria-$NUMBER"
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::$tag is already released"; exit 1
+          fi
+          {
+            if [ -n "$NOTE" ]; then printf '%s\n\n' "$NOTE"; fi
+            echo "Sefaria's data for Pardes for desktop, pack $NUMBER: the topics, the persons the texts mention, the passages"
+            echo "and Krupnik's dictionary of the Talmud, from Sefaria's public database export of $DUMP. Pardes downloads it"
+            echo "into the folder pardes-sefaria beside the library (Settings › ניהול נתונים), and offers it at start."
+            echo
+            echo '```'
+            cat sefaria-data/NOTICE.txt
+            echo '```'
+          } > notes.md
+          gh release create "$tag" out/pardes-sefaria.db.gz out/pardes-sefaria.manifest.json -R "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Sefaria's data, pack $NUMBER" --notes-file notes.md --latest=false
+          # The publishing of a release with files makes it the Latest whatever --latest said: the newest Android
+          # release is made the Latest again
+          android="$(gh release list -R "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("android-"))][0] // empty')"
+          if [ -n "$android" ]; then gh release edit "$android" -R "$GITHUB_REPOSITORY" --latest; fi
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" != "$tag" \
+            || { echo "::error::$tag is the repository's Latest release: make the Android release the Latest by hand"; exit 1; }
+          echo "Released [$tag]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$tag)" >> "$GITHUB_STEP_SUMMARY"

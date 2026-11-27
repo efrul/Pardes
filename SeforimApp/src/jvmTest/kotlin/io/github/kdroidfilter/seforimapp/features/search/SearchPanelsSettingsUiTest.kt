@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.kdroidfilter.seforimapp.features.search.area.SearchArea
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaPackBuilder
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.testAppGraph
@@ -40,11 +41,14 @@ class SearchPanelsSettingsUiTest {
     fun askForIt() {
         before = graph.appSettings[SearchPanelsSettings.area]
         graph.appSettings[SearchPanelsSettings.area] = true
+        // Sefaria's data, which the area reads from its file: the repository's
+        SefariaPackBuilder.showRepositoryData()
     }
 
     @AfterTest
     fun putItBack() {
         before?.let { graph.appSettings[SearchPanelsSettings.area] = it }
+        SefariaPackBuilder.hideData()
     }
 
     private fun ComposeUiTest.show(content: @Composable () -> Unit) =

@@ -1,5 +1,6 @@
 """Packs Sefaria's topics, sage mentions, sugyot and Krupnik's dictionary of the Talmud for Pardes for desktop, from
-Sefaria's public database dump: SeforimApp/src/jvmMain/resources/sefaria/{topics,sages,sugyot,krupnik}.tsv.gz.
+Sefaria's public database dump: sefaria-data/{topics,sages,sugyot,krupnik}.tsv.gz, from which
+.github/workflows/sefaria-release.yml builds the pack the app downloads (SefariaPack).
 
     curl -sS https://storage.googleapis.com/sefaria-mongo-backup/dump_small.tar.gz | tar -xz --wildcards --no-anchored \
         index.bson topics.bson topic_links.bson passage.bson lexicon_entry.bson
@@ -43,7 +44,7 @@ from pathlib import Path
 
 import bson
 
-OUT = Path(__file__).resolve().parent.parent / "SeforimApp/src/jvmMain/resources/sefaria"
+OUT = Path(__file__).resolve().parent.parent / "sefaria-data"
 TOPIC_KINDS = {"displays-under": "under", "is-a": "isa", "related-to": "related", "similar-to": "similar",
                "temporally-contains": "contains", "precedes": "precedes", "specifically-dependent-on": "depends"}
 PERSON_KINDS = {"taught": "taught", "child-of": "child", "member-of": "member"}

@@ -7,6 +7,9 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafLayouts
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.newerFor
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.InstalledPack
 import io.github.kdroidfilter.seforimapp.features.search.semantic.pack.SemanticPackReleases
+import io.github.kdroidfilter.seforimapp.features.sefaria.pack.SefariaPack
+import io.github.kdroidfilter.seforimapp.features.sefaria.pack.SefariaPackPrompt
+import io.github.kdroidfilter.seforimapp.features.sefaria.pack.SefariaPackSettings
 import io.github.kdroidfilter.seforimapp.features.settings.navigation.SettingsDestination
 import io.github.kdroidfilter.seforimapp.features.settings.semantic.SemanticPackPrompt
 import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
@@ -31,7 +34,9 @@ import kotlin.time.Duration.Companion.seconds
  * the first page that has one, its card marked and brought into view; another page that has one is marked in the
  * sidebar ([marked]). A newer version is offered once: the version offered is kept (AppSettings), and a start after the
  * settings were closed on it does not open them again for it, until the next one. The releases are read once for both
- * ([ReleaseLists]), and only while the app checks for updates by itself (Settings › כללי).
+ * ([ReleaseLists]), and only while the app checks for updates by itself (Settings › כללי). Pardes: so does Sefaria's
+ * data (SefariaPack) on the same page, its own card: while it is missing and a pack is out (until the user unticks it),
+ * and a newer pack once.
  */
 object StartOffers {
     private val FOCUS_WAIT = 5.seconds
@@ -51,6 +56,10 @@ object StartOffers {
         val newestPack: Int? = null,
         // The newest release of layouts, when it has a newer version of a tractate the folder has
         val newerDaf: Int? = null,
+        // Pardes: Sefaria's data missing from the library's folder while a pack is out, the pack it has, the newest one out
+        val missingSefaria: Boolean = false,
+        val installedSefaria: Int? = null,
+        val newestSefaria: Int? = null,
     )
 
     /**
@@ -66,7 +75,8 @@ object StartOffers {
         open: (SettingsDestination) -> Unit,
     ) {
         val found = withContext(Dispatchers.IO) { find(appSettings) }
-        val pages = pagesFor(found, appSettings.getOfferedSemanticPack(), appSettings.getOfferedDafRelease())
+        val offeredSefaria = appSettings[SefariaPackSettings.offered].toInt()
+        val pages = pagesFor(found, appSettings.getOfferedSemanticPack(), appSettings.getOfferedDafRelease(), offeredSefaria)
         if (pages.isEmpty()) return
         restored.first { it }
         desktopManager.windows.first { it.isNotEmpty() }
@@ -74,7 +84,12 @@ object StartOffers {
         updateDialogVisible.first { !it }
         found.newestPack?.takeIf { SettingsDestination.Data in pages && !found.missingPack }?.let(appSettings::setOfferedSemanticPack)
         found.newerDaf?.takeIf { SettingsDestination.Daf in pages }?.let(appSettings::setOfferedDafRelease)
-        if (SettingsDestination.Data in pages) SemanticPackPrompt.opened()
+        // Each card of the page that has something new comes into view, Sefaria's offered once
+        if (found.missingPack || newerPack(found, appSettings.getOfferedSemanticPack())) SemanticPackPrompt.opened()
+        if (found.missingSefaria || newerSefaria(found, offeredSefaria)) {
+            found.newestSefaria?.takeIf { !found.missingSefaria }?.let { appSettings[SefariaPackSettings.offered] = it.toFloat() }
+            SefariaPackPrompt.opened()
+        }
         _marked.value = pages.toSet()
         open(pages.first())
     }
@@ -88,14 +103,33 @@ object StartOffers {
         found: Found,
         offeredPack: Int,
         offeredDaf: Int,
+        offeredSefaria: Int = 0,
     ): List<SettingsDestination> =
         buildList {
-            val installed = found.installedPack
-            val newest = found.newestPack
-            val newerPack = installed != null && newest != null && newest > installed && newest > offeredPack
-            if (found.missingPack || newerPack) add(SettingsDestination.Data)
+            val sefaria = found.missingSefaria || newerSefaria(found, offeredSefaria)
+            if (found.missingPack || newerPack(found, offeredPack) || sefaria) add(SettingsDestination.Data)
             if (found.newerDaf != null && found.newerDaf > offeredDaf) add(SettingsDestination.Daf)
         }
+
+    // A newer semantic pack than the one in use, not offered yet
+    private fun newerPack(
+        found: Found,
+        offered: Int,
+    ): Boolean {
+        val installed = found.installedPack
+        val newest = found.newestPack
+        return installed != null && newest != null && newest > installed && newest > offered
+    }
+
+    // Pardes: a newer pack of Sefaria's data than the folder's, not offered yet
+    private fun newerSefaria(
+        found: Found,
+        offered: Int,
+    ): Boolean {
+        val installed = found.installedSefaria
+        val newest = found.newestSefaria
+        return installed != null && newest != null && newest > installed && newest > offered
+    }
 
     /** Takes [page]'s mark once its card is shown; whether it had one. */
     fun take(page: SettingsDestination): Boolean {
@@ -107,9 +141,13 @@ object StartOffers {
     // What this start has to offer: the library's folder read, and the releases while the app checks for updates
     private suspend fun find(appSettings: AppSettings): Found {
         val missingPack = SemanticPackPrompt.shouldOpen(appSettings)
-        if (!appSettings.isAutoUpdateCheckEnabled()) return Found(missingPack = missingPack)
         val dir = LibraryLocation.currentDir(appSettings)
-        if (!LibraryLocation.exists(dir)) return Found(missingPack = missingPack)
+        // Pardes: Sefaria's data, read from the folder: the pack it has, or none while the start offers one
+        val library = LibraryLocation.exists(dir)
+        val installedSefaria = if (library) SefariaPack.installedIn(dir) else null
+        val wantSefaria = library && installedSefaria == null && appSettings[SefariaPackSettings.prompt]
+        val offline = Found(missingPack = missingPack, installedSefaria = installedSefaria)
+        if (!appSettings.isAutoUpdateCheckEnabled() || !library) return offline
         val installed = (InstalledPack.read(dir) as? InstalledPack.InUse)?.pack
         return withTimeoutOrNull(NETWORK_WAIT) {
             val newestPack =
@@ -120,8 +158,18 @@ object StartOffers {
                         .onFailure { warnln { "[StartOffers] Semantic packs not read: ${it.message}" } }
                         .getOrNull()
                 }
-            Found(missingPack, installed, newestPack, newerDaf(dir))
-        } ?: Found(missingPack = missingPack, installedPack = installed)
+            // The releases read once for both (ReleaseLists); the missing data offered only when a pack is out to download
+            val newestSefaria =
+                if (installedSefaria != null || wantSefaria) {
+                    runSuspendCatching { SefariaPack.select(SemanticPackReleases().list())?.number }
+                        .onFailure { warnln { "[StartOffers] Sefaria's packs not read: ${it.message}" } }
+                        .getOrNull()
+                } else {
+                    null
+                }
+            val missingSefaria = wantSefaria && newestSefaria != null
+            Found(missingPack, installed, newestPack, newerDaf(dir), missingSefaria, installedSefaria, newestSefaria)
+        } ?: offline.copy(installedPack = installed)
     }
 
     // The newest release of layouts when it has a newer version of a tractate the library's folder has, else null

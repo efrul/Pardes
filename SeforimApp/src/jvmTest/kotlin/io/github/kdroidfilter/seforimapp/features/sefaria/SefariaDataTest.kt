@@ -1,53 +1,73 @@
 package io.github.kdroidfilter.seforimapp.features.sefaria
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SefariaDataTest {
     private fun rows(vararg rows: List<String>) = rows.asSequence().map { it.joinToString("\t") }
 
+    // Sefaria's data file built from [rows] (SefariaPackBuilder), opened as the app opens it
+    private fun db(
+        topics: Sequence<String> = emptySequence(),
+        sages: Sequence<String> = emptySequence(),
+        sugyot: Sequence<String> = emptySequence(),
+        krupnik: Sequence<String> = emptySequence(),
+    ): SefariaDb {
+        val file = File.createTempFile("sefaria", ".db").apply { deleteOnExit() }
+        SefariaPackBuilder.build(file, topics = topics, sages = sages, sugyot = sugyot, krupnik = krupnik)
+        return assertNotNull(SefariaDb.open(file))
+    }
+
     private val topics =
-        SefariaTopics.parse(
-            rows(
-                listOf("T", "1", "תפילה", "תפלה|סידור", "עבודה שבלב"),
-                listOf("T", "2", "קריאת שמע", "שמע", ""),
-                listOf("T", "3", "ברכות", "ברכה", ""),
-                listOf("T", "4", "מועדי השנה", "", ""),
-                listOf("T", "5", "שבת", "השבת", "היום השביעי"),
-                listOf("O", "4", "1"),
-                listOf("O", "1", "0"),
-                listOf("R", "2", "under", "1"),
-                listOf("R", "3", "under", "1"),
-                listOf("R", "2", "isa", "1"),
-                listOf("R", "5", "related", "2"),
-                listOf("R", "2", "unknown", "5"),
-                listOf("A", "2", "ברכות ב., א", "10", "1"),
-                listOf("A", "2", "ברכות ב., ב", "10", "0"),
-                listOf("A", "1", "ברכות ב., א", "5", "1"),
-                listOf("A", "1", "ברכות יא:, א", "3", "1"),
-                listOf("A", "3", "ברכות ב., א", "1", "1"),
+        SefariaTopics.read(
+            db(
+                topics =
+                    rows(
+                        listOf("T", "1", "תפילה", "תפלה|סידור", "עבודה שבלב"),
+                        listOf("T", "2", "קריאת שמע", "שמע", ""),
+                        listOf("T", "3", "ברכות", "ברכה", ""),
+                        listOf("T", "4", "מועדי השנה", "", ""),
+                        listOf("T", "5", "שבת", "השבת", "היום השביעי"),
+                        listOf("O", "4", "1"),
+                        listOf("O", "1", "0"),
+                        listOf("R", "2", "under", "1"),
+                        listOf("R", "3", "under", "1"),
+                        listOf("R", "2", "isa", "1"),
+                        listOf("R", "5", "related", "2"),
+                        listOf("R", "2", "unknown", "5"),
+                        listOf("A", "2", "ברכות ב., א", "10", "1"),
+                        listOf("A", "2", "ברכות ב., ב", "10", "0"),
+                        listOf("A", "1", "ברכות ב., א", "5", "1"),
+                        listOf("A", "1", "ברכות יא:, א", "3", "1"),
+                        listOf("A", "3", "ברכות ב., א", "1", "1"),
+                    ),
             ),
         )
 
     private val sages =
-        SefariaSages.parse(
-            rows(
-                listOf("P", "10", "רבי עקיבא", "עקיבא|ר' עקיבא", "תנא", "T3", "https://he.wikipedia.org/wiki/רבי_עקיבא"),
-                listOf("P", "11", "רבי מאיר", "", "", "T4", ""),
-                listOf("P", "12", "ר' יהושע", "רבי יהושע בן חנניה", "", "T2", ""),
-                listOf("P", "13", "רבי טרפון", "", "", "T3", ""),
-                listOf("P", "40", "חכמי יבנה", "", "", "", ""),
-                listOf("W", "20", "רבן גמליאל", "11|13"),
-                listOf("R", "12", "taught", "10"),
-                listOf("R", "10", "taught", "11"),
-                listOf("R", "10", "member", "40"),
-                listOf("R", "12", "child", "13"),
-                listOf("M", "ברכות ב., א", "10", "רבי עקיבא"),
-                listOf("M", "ברכות ב., א", "10", "רַבִּי עֲקִיבָא"),
-                listOf("M", "ברכות ב., א", "11", "רבי מאיר"),
-                listOf("M", "ברכות ג., ב", "10", ""),
+        SefariaSages.read(
+            db(
+                sages =
+                    rows(
+                        listOf("P", "10", "רבי עקיבא", "עקיבא|ר' עקיבא", "תנא", "T3", "https://he.wikipedia.org/wiki/רבי_עקיבא"),
+                        listOf("P", "11", "רבי מאיר", "", "", "T4", ""),
+                        listOf("P", "12", "ר' יהושע", "רבי יהושע בן חנניה", "", "T2", ""),
+                        listOf("P", "13", "רבי טרפון", "", "", "T3", ""),
+                        listOf("P", "40", "חכמי יבנה", "", "", "", ""),
+                        listOf("W", "20", "רבן גמליאל", "11|13"),
+                        listOf("R", "12", "taught", "10"),
+                        listOf("R", "10", "taught", "11"),
+                        listOf("R", "10", "member", "40"),
+                        listOf("R", "12", "child", "13"),
+                        listOf("M", "ברכות ב., א", "10", "רבי עקיבא"),
+                        listOf("M", "ברכות ב., א", "10", "רַבִּי עֲקִיבָא"),
+                        listOf("M", "ברכות ב., א", "11", "רבי מאיר"),
+                        listOf("M", "ברכות ג., ב", "10", ""),
+                    ),
             ),
         )
 
@@ -149,10 +169,13 @@ class SefariaDataTest {
     @Test
     fun `a line in a sugya and in its Mishnah is the sugya's`() {
         val mishnahFirst =
-            SefariaSugyot.parse(
-                rows(
-                    listOf("S", "M", "steinsaltz", "ברכות ב., א|ברכות ב., ב"),
-                    listOf("S", "S", "steinsaltz", "ברכות ב., ב|ברכות ב., ג"),
+            SefariaSugyot(
+                db(
+                    sugyot =
+                        rows(
+                            listOf("S", "M", "steinsaltz", "ברכות ב., א|ברכות ב., ב"),
+                            listOf("S", "S", "steinsaltz", "ברכות ב., ב|ברכות ב., ג"),
+                        ),
                 ),
             )
         assertEquals('M', mishnahFirst.of("ברכות ב., א")?.kind)
@@ -160,10 +183,13 @@ class SefariaDataTest {
         assertEquals(listOf("ברכות ב., ב", "ברכות ב., ג"), mishnahFirst.of("ברכות ב., ג")?.lines)
         assertNull(mishnahFirst.of("ברכות ד., א"))
         val sugyaFirst =
-            SefariaSugyot.parse(
-                rows(
-                    listOf("S", "S", "steinsaltz", "ברכות ב., ב|ברכות ב., ג"),
-                    listOf("S", "M", "steinsaltz", "ברכות ב., א|ברכות ב., ב"),
+            SefariaSugyot(
+                db(
+                    sugyot =
+                        rows(
+                            listOf("S", "S", "steinsaltz", "ברכות ב., ב|ברכות ב., ג"),
+                            listOf("S", "M", "steinsaltz", "ברכות ב., א|ברכות ב., ב"),
+                        ),
                 ),
             )
         assertEquals('S', sugyaFirst.of("ברכות ב., ב")?.kind)
@@ -172,11 +198,14 @@ class SefariaDataTest {
     @Test
     fun `each headword of Krupnik's dictionary, and each other one, has the entry's text`() {
         val entries =
-            KrupnikDictionary.parse(
-                rows(
-                    listOf("K", "אביא", "", "עי׳ אַסְיָא"),
-                    listOf("K", "בְּסוֹרָא", "בְּסוֹרְתָא", "בשורה טובה"),
-                    listOf("X", "אחר", "", "לא"),
+            KrupnikDictionary.read(
+                db(
+                    krupnik =
+                        rows(
+                            listOf("K", "אביא", "", "עי׳ אַסְיָא"),
+                            listOf("K", "בְּסוֹרָא", "בְּסוֹרְתָא", "בשורה טובה"),
+                            listOf("X", "אחר", "", "לא"),
+                        ),
                 ),
             )
         assertEquals(
@@ -186,20 +215,27 @@ class SefariaDataTest {
     }
 
     @Test
-    fun `the shipped data is read`() {
-        val shipped = SefariaTopics.shipped
+    fun `the repository's data builds the pack the app reads`() {
+        val file = File.createTempFile("sefaria", ".db").apply { deleteOnExit() }
+        SefariaPackBuilder.buildFrom(SefariaPackBuilder.repositoryData, file, pack = 7)
+        val db = assertNotNull(SefariaDb.open(file))
+        assertEquals(7, db.pack)
+        val shipped = SefariaTopics.read(db)
         assertTrue(shipped.topics.size > 4_000, "${shipped.topics.size} topics")
         assertEquals(14, shipped.roots.size)
         assertTrue(shipped.of("ברכות ב., א").map { it.name }.containsAll(listOf("קריאת שמע", "תפילה")))
         assertTrue(shipped.sourceCount(shipped.named("שבת")!!.id) > 100)
-        val sages = SefariaSages.shipped
+        val sages = SefariaSages.read(db)
         assertTrue(sages.at("ברכות ב:, יג").any { it.text == "רבי יהודה" })
         // Sefaria's ר without its geresh is the library's ר'
         assertTrue(sages.sages.values.none { it.name.startsWith("ר ") })
         assertEquals("רבי עקיבא", sages.search("רבי עקיבא", 10).first().name)
+        assertEquals(sages.placesOf(sages.named("רבא")!!.id).size, sages.placeCount(sages.named("רבא")!!.id))
         assertEquals("תפילה", shipped.search("תפלה", 10).first().name)
-        assertEquals('M', SefariaSugyot.shipped.of("ברכות ב., א")?.kind)
-        assertEquals('S', SefariaSugyot.shipped.of("ברכות ב:, ה")?.kind)
-        assertTrue(KrupnikDictionary.shipped.size > 18_000)
+        val sugyot = SefariaSugyot(db)
+        assertEquals('M', sugyot.of("ברכות ב., א")?.kind)
+        assertEquals('S', sugyot.of("ברכות ב:, ה")?.kind)
+        assertTrue(KrupnikDictionary.read(db).size > 18_000)
+        db.close()
     }
 }

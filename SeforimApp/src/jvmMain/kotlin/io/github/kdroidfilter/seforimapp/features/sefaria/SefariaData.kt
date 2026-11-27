@@ -1,14 +1,84 @@
 package io.github.kdroidfilter.seforimapp.features.sefaria
 
 import androidx.compose.runtime.Immutable
+import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
+import io.github.kdroidfilter.seforimapp.features.sefaria.pack.SefariaPack
+import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.search.titles.BookTitleIndex
 import io.github.kdroidfilter.seforimapp.framework.search.titles.TitleAuthor
 import io.github.kdroidfilter.seforimapp.framework.search.titles.TitleText
-import java.util.zip.GZIPInputStream
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import java.io.File
 
-// Sefaria's topics, the persons its texts mention and its passages, as scripts/sefaria_content.py packs them under
-// resources/sefaria/ (their rows are described there): read on first use, off the UI thread, and kept.
+// Sefaria's topics, the persons its texts mention and its passages, read from their file beside the library
+// (SefariaDb, SefariaPack: its tables are built from the rows scripts/sefaria_content.py writes under sefaria-data/):
+// the topics and the persons held once read, a line's topics and mentions read by its heRef, off the UI thread.
+
+/**
+ * Pardes: Sefaria's data of the library's folder, its file opened on first use and kept until it is put in place again,
+ * replaced or taken out ([close], [changed]); none when the folder has no file of it (SefariaPack offers it).
+ */
+object SefariaData {
+    /** The app's settings, given once the app's graph is made (main.kt): where the library is. */
+    @Volatile
+    var appSettings: AppSettings? = null
+
+    private val _revision = MutableStateFlow(0)
+
+    /** Bumped when the file is put in place, replaced or taken out: the screens that show its data read it again. */
+    val revision: StateFlow<Int> = _revision.asStateFlow()
+
+    @Volatile
+    private var opened: Opened? = null
+
+    // Where the data's file is: beside the library; a test puts its own
+    @Volatile
+    internal var locate: () -> File? = { appSettings?.let { fileIn(LibraryLocation.currentDir(it)) } }
+
+    /** The data of one file: its persons and topics read once, a line's read by its heRef. */
+    class Opened internal constructor(
+        internal val file: File,
+        internal val db: SefariaDb,
+    ) {
+        val topics: SefariaTopics by lazy { SefariaTopics.read(db) }
+        val sages: SefariaSages by lazy { SefariaSages.read(db) }
+        val sugyot: SefariaSugyot = SefariaSugyot(db)
+
+        /** The pack the file is (SefariaPack), 0 when it doesn't say. */
+        val pack: Int get() = db.pack
+    }
+
+    /** The data file in the library's folder [dir]. */
+    fun fileIn(dir: File): File = File(File(dir, SefariaPack.DIR_NAME), SefariaPack.DB_NAME)
+
+    /** The data in use, its file opened if it wasn't; null when the library's folder has none. Reads the disk: off the UI thread. */
+    @Synchronized
+    fun current(): Opened? {
+        val file = locate() ?: return null
+        opened?.let { if (it.file == file && file.isFile) return it }
+        close()
+        return SefariaDb.open(file)?.let { Opened(file, it) }.also { opened = it }
+    }
+
+    /** The data once opened, null before: for a menu, which must not wait for it. */
+    fun ifOpen(): Opened? = opened
+
+    /** Closes the file, before it is replaced or taken out: the next [current] opens it again. */
+    @Synchronized
+    fun close() {
+        opened?.db?.close()
+        opened = null
+    }
+
+    /** Tells the screens that show the data to read it again: its file was put in place, replaced or taken out. */
+    fun changed() {
+        _revision.update { it + 1 }
+    }
+}
 
 /** A topic of Sefaria's with a Hebrew [name]: its [others] names and its Hebrew [description], empty when it has none. */
 @Immutable
@@ -48,13 +118,13 @@ data class TopicNeighbours(
  * Sefaria's topics: their [topics], the [roots] of the tree they are shown in, the lines each is about ([sourcesOf], in
  * Sefaria's order) and the topics of a line ([of]).
  */
-class SefariaTopics(
+class SefariaTopics internal constructor(
     val topics: Map<Int, Topic>,
     val roots: List<Int>,
     private val out: Map<Int, List<Pair<TopicRelation, Int>>>,
     private val into: Map<Int, List<Pair<TopicRelation, Int>>>,
-    private val byLine: Map<String, IntArray>,
-    private val sources: Map<Int, List<String>>,
+    private val counts: Map<Int, Int>,
+    private val db: SefariaDb,
 ) {
     // A topic by its names as typed (searchKey), for the search's panel
     private val byName: Map<String, Topic> by lazy {
@@ -65,18 +135,18 @@ class SefariaTopics(
         }
     }
 
-    /** The topics the line [heRef] is about, the ones with the most sources first. */
+    /** The topics the line [heRef] is about, the ones with the most sources first. Reads the file. */
     fun of(heRef: String): List<Topic> =
-        byLine[heRef]
-            ?.asList()
-            ?.mapNotNull { topics[it] }
-            ?.sortedByDescending { sourceCount(it.id) }
-            .orEmpty()
+        db
+            .rows(LINE_TOPICS, heRef) { it.getInt(1) }
+            .distinct()
+            .mapNotNull { topics[it] }
+            .sortedByDescending { sourceCount(it.id) }
 
-    /** The first lines of topic [id]'s sources, in Sefaria's order (the curated first, then by its rank). */
-    fun sourcesOf(id: Int): List<String> = sources[id].orEmpty()
+    /** The first lines of topic [id]'s sources, in Sefaria's order (the curated first, then by its rank). Reads the file. */
+    fun sourcesOf(id: Int): List<String> = db.rows(TOPIC_SOURCES, id) { it.getString(1) }
 
-    fun sourceCount(id: Int): Int = sources[id]?.size ?: 0
+    fun sourceCount(id: Int): Int = counts[id] ?: 0
 
     /** The topics shown under [id] in the tree, the ones with the most sources first. */
     fun children(id: Int): List<Topic> = into.related(id, TopicRelation.UNDER).sortedByDescending { sourceCount(it.id) }
@@ -136,48 +206,35 @@ class SefariaTopics(
     ): List<Topic> = this[id].orEmpty().filter { it.first == kind }.mapNotNull { topics[it.second] }
 
     companion object {
-        private const val RESOURCE = "/sefaria/topics.tsv.gz"
         private const val NAMED_CANDIDATES = 5
 
-        /** The topics packed in the app; empty when the resource can't be read. */
-        val shipped: SefariaTopics by lazy { readResource(RESOURCE, ::parse) ?: parse(emptySequence()) }
+        // A line's topics, every one of its rows (a source of its own or a line of a source's range), in Sefaria's order
+        private const val LINE_TOPICS = "SELECT t.topic FROM topic_line t JOIN line l ON l.id = t.line WHERE l.heref = ? ORDER BY t.ord"
 
-        fun parse(rows: Sequence<String>): SefariaTopics {
-            val topics = HashMap<Int, Topic>()
-            val roots = ArrayList<Pair<Int, Int>>()
+        // A topic's sources, in Sefaria's order
+        private const val TOPIC_SOURCES =
+            "SELECT l.heref FROM topic_line t JOIN line l ON l.id = t.line WHERE t.topic = ? AND t.source = 1 ORDER BY t.ord"
+
+        /** The topics of [db]: their table, the tree's roots and their relations read whole, their lines left in the file. */
+        internal fun read(db: SefariaDb): SefariaTopics {
+            val counts = HashMap<Int, Int>()
+            val topics =
+                db
+                    .rows("SELECT id, name, others, description, sources FROM topic") { row ->
+                        counts[row.getInt(1)] = row.getInt(5)
+                        Topic(row.getInt(1), row.getString(2), row.getString(3).names(), row.getString(4))
+                    }.associateBy { it.id }
+            val kinds = TopicRelation.entries.associateBy { it.code }
             val out = HashMap<Int, MutableList<Pair<TopicRelation, Int>>>()
             val into = HashMap<Int, MutableList<Pair<TopicRelation, Int>>>()
-            val byLine = HashMap<String, MutableList<Int>>()
-            val sources = HashMap<Int, MutableList<String>>()
-            val kinds = TopicRelation.entries.associateBy { it.code }
-            val refs = HashMap<String, String>()
-            for (row in rows) {
-                val f = row.split('\t')
-                when (f[0]) {
-                    "T" -> topics[f[1].toInt()] = Topic(f[1].toInt(), f[2], f.names(3), f.getOrElse(4) { "" })
-                    "O" -> roots += f[1].toInt() to f[2].toInt()
-                    "R" ->
-                        kinds[f[2]]?.let { kind ->
-                            out.getOrPut(f[1].toInt()) { mutableListOf() } += kind to f[3].toInt()
-                            into.getOrPut(f[3].toInt()) { mutableListOf() } += kind to f[1].toInt()
-                        }
-                    "A" -> {
-                        // A line of several topics is one string
-                        val heRef = refs.getOrPut(f[2]) { f[2] }
-                        val topic = f[1].toInt()
-                        byLine.getOrPut(heRef) { mutableListOf() } += topic
-                        if (f[4] == "1") sources.getOrPut(topic) { mutableListOf() } += heRef
-                    }
+            db.rows("SELECT src, kind, dst FROM topic_relation ORDER BY ord") { row ->
+                kinds[row.getString(2)]?.let { kind ->
+                    out.getOrPut(row.getInt(1)) { mutableListOf() } += kind to row.getInt(3)
+                    into.getOrPut(row.getInt(3)) { mutableListOf() } += kind to row.getInt(1)
                 }
             }
-            return SefariaTopics(
-                topics,
-                roots.sortedBy { it.second }.map { it.first }.filter { it in topics },
-                out,
-                into,
-                byLine.mapValues { it.value.distinct().toIntArray() },
-                sources,
-            )
+            val roots = db.rows("SELECT topic FROM topic_root ORDER BY ord") { it.getInt(1) }.filter { it in topics }
+            return SefariaTopics(topics, roots, out, into, counts, db)
         }
     }
 }
@@ -222,24 +279,27 @@ enum class SageRelation(
 }
 
 /** The persons the library's lines mention: [sages], [ambiguous] names, the mentions of a line ([at]) and a person's lines. */
-class SefariaSages(
+class SefariaSages internal constructor(
     val sages: Map<Int, Sage>,
     val ambiguous: Map<Int, AmbiguousSage>,
     private val out: Map<Int, List<Pair<SageRelation, Int>>>,
     private val into: Map<Int, List<Pair<SageRelation, Int>>>,
-    private val byLine: Map<String, List<Mention>>,
-    private val places: Map<Int, List<String>>,
+    private val counts: Map<Int, Int>,
+    private val db: SefariaDb,
 ) {
-    /** The mentions in the line [heRef]. */
-    fun at(heRef: String): List<Mention> = byLine[heRef].orEmpty()
+    /** The mentions in the line [heRef]. Reads the file. */
+    fun at(heRef: String): List<Mention> = db.rows(LINE_MENTIONS, heRef) { Mention(it.getInt(1), it.getString(2)) }
 
-    /** The lines that mention [id], a line once. */
-    fun placesOf(id: Int): List<String> = places[id].orEmpty()
+    /** The lines that mention [id], a line once, in their order. Reads the file. */
+    fun placesOf(id: Int): List<String> = db.rows(SAGE_PLACES, id) { it.getString(1) }
+
+    /** How many lines mention [id]. */
+    fun placeCount(id: Int): Int = counts[id] ?: 0
 
     // A person by its names as typed (searchKey), for the search's area, as the topics' byName
     private val byName: Map<String, Sage> by lazy {
         buildMap {
-            sages.values.sortedByDescending { placesOf(it.id).size }.forEach { sage ->
+            sages.values.sortedByDescending { placeCount(it.id) }.forEach { sage ->
                 (listOf(sage.name) + sage.others).forEach { putIfAbsent(it.searchKey(), sage) }
             }
         }
@@ -269,7 +329,7 @@ class SefariaSages(
     // The persons found by name as the bar finds authors (BookTitleIndex): another spelling, a typo, the words in another
     // order, a leading רבי or הרב not needed
     private val names: BookTitleIndex by lazy {
-        BookTitleIndex(emptyList(), sages.values.map { TitleAuthor(it.id.toLong(), it.name, it.others, placesOf(it.id).size) })
+        BookTitleIndex(emptyList(), sages.values.map { TitleAuthor(it.id.toLong(), it.name, it.others, placeCount(it.id)) })
     }
 
     /** The persons named by [query], as the bar finds authors; all of them when it is blank. The most mentioned first. */
@@ -278,7 +338,7 @@ class SefariaSages(
         limit: Int,
     ): List<Sage> =
         if (query.isBlank()) {
-            sages.values.sortedByDescending { placesOf(it.id).size }.take(limit)
+            sages.values.sortedByDescending { placeCount(it.id) }.take(limit)
         } else {
             names.searchAuthors(query, limit).mapNotNull { sages[it.author.id.toInt()] }
         }
@@ -289,42 +349,46 @@ class SefariaSages(
     ): List<Sage> = this[id].orEmpty().filter { it.first == kind }.mapNotNull { sages[it.second] }
 
     companion object {
-        private const val RESOURCE = "/sefaria/sages.tsv.gz"
         private const val NAMED_CANDIDATES = 5
 
-        val shipped: SefariaSages by lazy { readResource(RESOURCE, ::parse) ?: parse(emptySequence()) }
+        private const val LINE_MENTIONS =
+            "SELECT m.sage, m.text FROM mention m JOIN line l ON l.id = m.line WHERE l.heref = ? ORDER BY m.ord"
 
-        fun parse(rows: Sequence<String>): SefariaSages {
-            val sages = HashMap<Int, Sage>()
-            val ambiguous = HashMap<Int, AmbiguousSage>()
+        // A line once, where its first mention is
+        private const val SAGE_PLACES =
+            "SELECT l.heref FROM mention m JOIN line l ON l.id = m.line WHERE m.sage = ? GROUP BY m.line ORDER BY MIN(m.ord)"
+
+        /** The persons of [db]: their table, the ambiguous names and their relations read whole, their lines left in the file. */
+        internal fun read(db: SefariaDb): SefariaSages {
+            val counts = HashMap<Int, Int>()
+            val sages =
+                db
+                    .rows("SELECT id, name, others, description, generation, wiki, places FROM sage") { row ->
+                        counts[row.getInt(1)] = row.getInt(7)
+                        Sage(
+                            row.getInt(1),
+                            row.getString(2),
+                            row.getString(3).names(),
+                            row.getString(4),
+                            row.getString(5),
+                            row.getString(6),
+                        )
+                    }.associateBy { it.id }
+            val ambiguous =
+                db
+                    .rows("SELECT id, name, options FROM ambiguous") { row ->
+                        AmbiguousSage(row.getInt(1), row.getString(2), row.getString(3).split('|').mapNotNull(String::toIntOrNull))
+                    }.associateBy { it.id }
+            val kinds = SageRelation.entries.associateBy { it.code }
             val out = HashMap<Int, MutableList<Pair<SageRelation, Int>>>()
             val into = HashMap<Int, MutableList<Pair<SageRelation, Int>>>()
-            val byLine = HashMap<String, MutableList<Mention>>()
-            val places = HashMap<Int, MutableList<String>>()
-            val kinds = SageRelation.entries.associateBy { it.code }
-            for (row in rows) {
-                val f = row.split('\t')
-                when (f[0]) {
-                    "P" ->
-                        sages[f[1].toInt()] =
-                            Sage(f[1].toInt(), f[2], f.names(3), f.getOrElse(4) { "" }, f.getOrElse(5) { "" }, f.getOrElse(6) { "" })
-                    "W" ->
-                        ambiguous[f[1].toInt()] =
-                            AmbiguousSage(f[1].toInt(), f[2], f.getOrElse(3) { "" }.split('|').mapNotNull(String::toIntOrNull))
-                    "R" ->
-                        kinds[f[2]]?.let { kind ->
-                            out.getOrPut(f[1].toInt()) { mutableListOf() } += kind to f[3].toInt()
-                            into.getOrPut(f[3].toInt()) { mutableListOf() } += kind to f[1].toInt()
-                        }
-                    "M" -> {
-                        val sage = f[2].toInt()
-                        byLine.getOrPut(f[1]) { mutableListOf() } += Mention(sage, f.getOrElse(3) { "" })
-                        val lines = places.getOrPut(sage) { mutableListOf() }
-                        if (lines.lastOrNull() != f[1]) lines += f[1]
-                    }
+            db.rows("SELECT src, kind, dst FROM sage_relation ORDER BY ord") { row ->
+                kinds[row.getString(2)]?.let { kind ->
+                    out.getOrPut(row.getInt(1)) { mutableListOf() } += kind to row.getInt(3)
+                    into.getOrPut(row.getInt(3)) { mutableListOf() } += kind to row.getInt(1)
                 }
             }
-            return SefariaSages(sages, ambiguous, out, into, byLine, places)
+            return SefariaSages(sages, ambiguous, out, into, counts, db)
         }
     }
 }
@@ -337,52 +401,33 @@ data class Sugya(
     val lines: List<String>,
 )
 
-/** Sefaria's passages, by each of their lines. */
-class SefariaSugyot(
-    private val byLine: Map<String, Sugya>,
+/** Sefaria's passages, by each of their lines, in [db]. */
+class SefariaSugyot internal constructor(
+    private val db: SefariaDb,
 ) {
-    /** The passage the line [heRef] is in: a sugya rather than the Mishnah it starts with. */
-    fun of(heRef: String): Sugya? = byLine[heRef]
+    /** The passage the line [heRef] is in: a sugya rather than the Mishnah it starts with. Reads the file. */
+    fun of(heRef: String): Sugya? =
+        db
+            .rows(LINE_SUGYA, heRef) { row -> Sugya(row.getString(1).firstOrNull() ?: 'S', row.getString(2), row.getString(3).split('|')) }
+            .firstOrNull()
 
-    companion object {
-        private const val RESOURCE = "/sefaria/sugyot.tsv.gz"
-
-        private val read = lazy { readResource(RESOURCE, ::parse) ?: parse(emptySequence()) }
-
-        val shipped: SefariaSugyot by read
-
-        /** The passages once read, null before: for a menu, which must not wait for them. */
-        fun ifRead(): SefariaSugyot? = if (read.isInitialized()) shipped else null
-
-        fun parse(rows: Sequence<String>): SefariaSugyot {
-            val byLine = HashMap<String, Sugya>()
-            for (row in rows) {
-                val f = row.split('\t')
-                if (f[0] != "S" || f.size < 4) continue
-                val sugya = Sugya(f[1].firstOrNull() ?: 'S', f[2], f[3].split('|'))
-                // A sugya over the Mishnah it shares lines with
-                sugya.lines.forEach { line -> if (sugya.kind == 'S' || line !in byLine) byLine[line] = sugya }
-            }
-            return SefariaSugyot(byLine)
-        }
+    private companion object {
+        const val LINE_SUGYA =
+            "SELECT s.kind, s.source, s.lines FROM sugya_line x JOIN line l ON l.id = x.line JOIN sugya s ON s.id = x.sugya WHERE l.heref = ?"
     }
 }
 
 /** Krupnik's dictionary of the Talmud: each headword (and each other headword) with its text, in Sefaria's order. */
 object KrupnikDictionary {
-    private const val RESOURCE = "/sefaria/krupnik.tsv.gz"
+    /** The dictionary's entries in the data in use; none without it. Reads the file: off the UI thread. */
+    fun entries(): List<Pair<String, String>> = SefariaData.current()?.let { read(it.db) }.orEmpty()
 
-    val shipped: List<Pair<String, String>> by lazy { readResource(RESOURCE, ::parse).orEmpty() }
-
-    fun parse(rows: Sequence<String>): List<Pair<String, String>> =
-        rows
-            .map { it.split('\t') }
-            .filter { it[0] == "K" && it.size >= 4 }
-            .flatMap { f -> (listOf(f[1]) + f.names(2)).map { it to f[3] } }
-            .toList()
+    internal fun read(db: SefariaDb): List<Pair<String, String>> =
+        db.rows("SELECT headword, text FROM krupnik ORDER BY ord") { it.getString(1) to it.getString(2) }
 }
 
-private fun List<String>.names(index: Int): List<String> = getOrElse(index) { "" }.split('|').filter { it.isNotEmpty() }
+// The names a row joins by `|`
+private fun String.names(): List<String> = split('|').filter { it.isNotEmpty() }
 
 // The words of [name] are those of [query], each as typed, in another spelling or with the article, in any order
 private fun sameWords(
@@ -401,11 +446,3 @@ private fun sameWords(
         word != null && left.remove(word)
     }
 }
-
-private fun <T> readResource(
-    path: String,
-    parse: (Sequence<String>) -> T,
-): T? =
-    SefariaTopics::class.java.getResourceAsStream(path)?.use { stream ->
-        GZIPInputStream(stream).bufferedReader().useLines(parse)
-    }

@@ -33,6 +33,8 @@ import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLine
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaTopics
 import io.github.kdroidfilter.seforimapp.features.sefaria.SourceRow
 import io.github.kdroidfilter.seforimapp.features.sefaria.Topic
+import io.github.kdroidfilter.seforimapp.features.sefaria.pack.SefariaPackHint
+import io.github.kdroidfilter.seforimapp.features.sefaria.rememberSefaria
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Line
 import kotlinx.coroutines.Dispatchers
@@ -62,18 +64,26 @@ fun LineTopicsPane(
     modifier: Modifier = Modifier,
 ) {
     val accent = rememberAccentColor(JewelTheme.isDark)
-    val topics by produceState<SefariaTopics?>(null) { value = withContext(Dispatchers.Default) { SefariaTopics.shipped } }
+    // Pardes: Sefaria's data from its file beside the library (SefariaPack), its download offered while it is missing
+    val read = rememberSefaria { it.topics }
     val hover = remember { MutableInteractionSource() }
     Column(modifier.fillMaxSize().hoverable(hover)) {
         PaneHeader(label = stringResource(Res.string.sefaria_topics_pane), onHide = onHide, interactionSource = hover)
-        val loaded = topics
+        val loaded = read?.value
         val heRef = line?.heRef?.takeIf { it.isNotBlank() }
-        val shown = remember(loaded, heRef) { if (loaded == null || heRef == null) emptyList() else loaded.of(heRef) }
+        // A line's topics are read from the file: off the UI thread
+        val shown by produceState<List<Topic>?>(null, loaded, heRef) {
+            value = if (loaded == null || heRef == null) emptyList() else withContext(Dispatchers.IO) { loaded.of(heRef) }
+        }
+        val topics = shown
+        // The data's download first while it is missing: no line has topics without it
         when {
+            read == null -> SefariaHint(stringResource(Res.string.sefaria_loading))
+            loaded == null -> SefariaPackHint(Modifier.fillMaxWidth())
             line == null -> SefariaHint(stringResource(Res.string.sefaria_topics_select_line))
-            loaded == null -> SefariaHint(stringResource(Res.string.sefaria_loading))
-            shown.isEmpty() -> SefariaHint(stringResource(Res.string.sefaria_topics_empty_line))
-            else -> LineTopics(heRef.orEmpty(), shown, loaded, accent, onOpenLine, Modifier.weight(1f))
+            topics == null -> SefariaHint(stringResource(Res.string.sefaria_loading))
+            topics.isEmpty() -> SefariaHint(stringResource(Res.string.sefaria_topics_empty_line))
+            else -> LineTopics(heRef.orEmpty(), topics, loaded, accent, onOpenLine, Modifier.weight(1f))
         }
     }
 }
@@ -92,7 +102,7 @@ private fun LineTopics(
     var picked by remember(heRef) { mutableStateOf(shown.first().id) }
     val topic = shown.firstOrNull { it.id == picked } ?: shown.first()
     val sources by produceState(emptyList<SefariaLine>(), topic.id) {
-        val heRefs = topics.sourcesOf(topic.id).take(PREVIEW_SOURCES + 1)
+        val heRefs = withContext(Dispatchers.IO) { topics.sourcesOf(topic.id) }.take(PREVIEW_SOURCES + 1)
         val found = graph.sefariaLines.linesOf(heRefs)
         value = heRefs.mapNotNull(found::get).filter { it.heRef != heRef }.take(PREVIEW_SOURCES)
     }
