@@ -74,12 +74,11 @@ val syncDesktopSearch by tasks.registering(Sync::class) {
     into(layout.buildDirectory.dir("generated/desktopSearch"))
 }
 
-// Desktop's region lists and candle-lighting table (features/zmanim/data, as-is): their names are the stored region
+// Desktop's region lists (features/zmanim/data, as-is): their names are the stored region values, shared with desktop.
 val syncDesktopZmanim by tasks.registering(Sync::class) {
     from(desktopApp) {
         include(
             "io/github/kdroidfilter/seforimapp/features/zmanim/data/Cities.kt",
-            "io/github/kdroidfilter/seforimapp/features/zmanim/data/CandleLighting.kt",
         )
     }
     into(layout.buildDirectory.dir("generated/desktopZmanim"))
@@ -188,6 +187,7 @@ kotlin {
                 implementation(libs.sqlDelight.driver.android)
                 implementation(libs.jsoup)
                 implementation(libs.zmanim)
+                // Desktop's zmanim library: the luach zmanim (data/ZmanimEngine.kt).
                 // It brings kotlin-stdlib 2.4.20, kotlinx-datetime 0.8.0 and kotlinx-serialization-json 1.11.0.
                 implementation(libs.kosherkotlin)
                 implementation(libs.hebrew.numerals)
