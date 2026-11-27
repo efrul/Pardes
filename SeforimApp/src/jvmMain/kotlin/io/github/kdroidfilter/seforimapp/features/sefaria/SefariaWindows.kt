@@ -27,13 +27,20 @@ class SefariaWindows(
     private val toolWindows: ToolWindows,
 ) {
     internal var topic by mutableStateOf<Int?>(null)
+
+    /** The book whose sources the topic's page opens on, all of them; null for the page's top. */
+    internal var topicBook by mutableStateOf<String?>(null)
     internal var topicAsks by mutableIntStateOf(0)
     internal var sage by mutableStateOf<Int?>(null)
     internal var sageAsks by mutableIntStateOf(0)
 
-    /** Opens the topics' window on topic [id]. */
-    fun openTopic(id: Int) {
+    /** Opens the topics' window on topic [id], on its sources in [book] when one is given. */
+    fun openTopic(
+        id: Int,
+        book: String? = null,
+    ) {
         topic = id
+        topicBook = book
         topicAsks++
         toolWindows.open(TopicsTool)
     }

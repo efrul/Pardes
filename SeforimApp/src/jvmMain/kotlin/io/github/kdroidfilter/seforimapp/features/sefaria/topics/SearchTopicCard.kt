@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.kdroidfilter.seforimapp.features.search.ResultLink
 import io.github.kdroidfilter.seforimapp.features.search.readingSecondary
 import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaTopics
 import io.github.kdroidfilter.seforimapp.features.sefaria.Topic
@@ -27,6 +28,7 @@ import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.sefaria_topic_card_kind
+import seforimapp.seforimapp.generated.resources.sefaria_topic_more
 import seforimapp.seforimapp.generated.resources.sefaria_topic_open_page
 import seforimapp.seforimapp.generated.resources.sefaria_topic_related
 import seforimapp.seforimapp.generated.resources.sefaria_topic_sources_in_books
@@ -77,27 +79,41 @@ internal fun ColumnScope.TopicDetails(
             overflow = TextOverflow.Ellipsis,
         )
     }
+    val windows = graph.sefariaWindows
     if (books.isNotEmpty()) {
         Text(
             stringResource(Res.string.sefaria_topic_sources_in_books, topics.sourceCount(topic.id), books.size),
             fontSize = 13.sp,
             color = grey,
         )
+        // Each book a link to the topic's page on its sources, as the parts of Zayit's book details are; the others to
+        // the page
         FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            books.take(TOP_BOOKS).forEach { (book, count) -> Text("$book $count", fontSize = 13.sp, color = accent, maxLines = 1) }
+            books.take(TOP_BOOKS).forEach { (book, count) ->
+                ResultLink("$book $count", accent, 13.sp) { windows.openTopic(topic.id, book) }
+            }
+            if (books.size > TOP_BOOKS) {
+                ResultLink(
+                    stringResource(Res.string.sefaria_topic_more, books.size - TOP_BOOKS),
+                    grey,
+                    13.sp,
+                ) { windows.openTopic(topic.id) }
+            }
         }
     }
+    // Each topic around it a link to its own page
     if (related.isNotEmpty()) {
-        Text(
-            stringResource(Res.string.sefaria_topic_related) + ": " + related.joinToString(" · ") { it.name },
-            fontSize = 12.sp,
-            color = grey,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(Res.string.sefaria_topic_related) + ":", fontSize = 12.sp, color = grey)
+            related.forEach { ResultLink(it.name, accent, 12.sp) { windows.openTopic(it.id) } }
+        }
     }
     // The way to its page, as Zayit's panel has it to an author's (DefaultButton, the accent's) and the sage's card
-    DefaultButton(onClick = { graph.sefariaWindows.openTopic(topic.id) }) { Text(stringResource(Res.string.sefaria_topic_open_page)) }
+    DefaultButton(onClick = { windows.openTopic(topic.id) }) { Text(stringResource(Res.string.sefaria_topic_open_page)) }
     Text(stringResource(Res.string.sefaria_topics_credit), fontSize = 11.sp, color = grey)
 }
 

@@ -25,6 +25,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** The area beside a search's results, as its pane shows it, and the end bar's button of the pane. */
@@ -108,6 +109,20 @@ class SearchPanelsSettingsUiTest {
         }
 
     @Test
+    fun `a topic around the one the query names is a link to its own page`() =
+        runDesktopComposeUiTest(width = 360, height = 640) {
+            show { SearchArea("קריאת שמע", entity = null, sources = persistentListOf(), onShowSource = {}) { _, _ -> } }
+            waitUntil(timeoutMillis = LOADING_MS) { cards() == 1 }
+            val windows = graph.sefariaWindows
+            val asks = windows.topicAsks
+            // A topic Sefaria relates to קריאת שמע
+            onNodeWithText("דיני קריאת שמע").performClick()
+            assertEquals(asks + 1, windows.topicAsks)
+            assertEquals(SHEMA_LAWS, windows.topic)
+            assertNull(windows.topicBook)
+        }
+
+    @Test
     fun `the bar's button hides and shows the area's pane`() =
         runDesktopComposeUiTest(width = 200, height = 200) {
             show { SearchAreaPaneButton() }
@@ -123,6 +138,7 @@ class SearchPanelsSettingsUiTest {
         const val OPEN_PAGE = "לדף הנושא"
         const val PANE = "על החיפוש"
         const val LOADING_MS = 30_000L
+        const val SHEMA_LAWS = 3714
         val SOURCE = CommonSource(2045, 2, "שמות טז, כט", 4, "רְאוּ כִּי יְהֹוָה נָתַן לָכֶם הַשַּׁבָּת", from = listOf(11, 12))
     }
 }

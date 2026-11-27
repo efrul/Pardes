@@ -10328,14 +10328,15 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaWindows.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 55 lines.
+- **Size:** 62 lines.
 - **What:** `SefariaSettings` (`topicsPane`: the reader's pane of the line's topics, one setting for every tab; the
   search's topic card had one until the area's pane, 2026-11-27, whose setting is `SearchPanelsSettings.area`) and
   `SefariaWindows` (Metro-injected, one in the app): the topic or sage asked for and `openTopic`/`openSage`, which open
-  the tools' windows on it; `SAGE_LINK` and `sageOf(uri)`, the sages' links in the texts.
+  the tools' windows on it, a topic on its sources in one book when one is given (`topicBook`, the search's area); `SAGE_LINK` and `sageOf(uri)`, the sages' links in the texts.
 - **Reached from:** `AppGraph.sefariaWindows`; `RefLinkUriHandler.kt`, the reader's pane, the search's card.
 - **Follows:** Zayit's `ToolWindows`, which it drives, and `SettingsGroup`, as `FindResultsSettings`.
-- **Tests:** none of its own; a sage's link and "לדף הנושא" tried in the app.
+- **Tests:** `SearchPanelsSettingsUiTest` (a topic around the one named, opened); a sage's link, "לדף הנושא" and a
+  book of the area's topic tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SugyaMenu.kt`
 
@@ -10365,16 +10366,18 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/TopicsTool.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 377 lines.
+- **Size:** 406 lines.
 - **What:** `TopicsTool`, a Home card and a tool window as the dictionary's ("נושאים", "tag"; 6×5 cells, 4×4 to
   10×6: taller, the tree's fourteen roots leave the card's foot empty; the loading card's spinner and tag until the
   topics are read): the topics searched by name, browsed in
   Sefaria's tree (its roots but the authors, branches opened in place) or by first letter; a topic's page (its
-  description, its sources by book, three a book and "עוד", its neighbours, the credit).
+  description, its sources by book, three a book and "עוד", its neighbours, the credit), each from its top, or, asked
+  for from the search's area, on one book's sources, all of them (`SefariaWindows.topicBook`).
 - **Reached from:** the widget processor (a `HomeWidget` object with a `toolWindowSize`: the Home's gallery and the
   Tools menu); `SefariaWindows.openTopic`.
 - **Follows:** Zayit's tool widgets, as `SagesTool`.
-- **Tests:** none of its own; the tree, the index and תפילה's page tried in the app.
+- **Tests:** none of its own; the tree, the index and תפילה's page tried in the app, and חנוכה's on ספר מקבים א from
+  the search's area (2026-11-27).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/LineTopicsPane.kt`
 
@@ -10390,16 +10393,19 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/SearchTopicCard.kt`
 
 - **Feature:** Sefaria's content, The search's area.
-- **Size:** 106 lines.
+- **Size:** 122 lines.
 - **What:** `TopicDetails`, the topic a search's query names as the area beside its results shows it: its description,
-  its count of sources and the books most of them are in (read off the UI thread), the topics around it, "לדף הנושא"
+  its count of sources and the books most of them are in (read off the UI thread), each a link (Zayit's `ResultLink`)
+  to the topic's page on its sources, and "עוד N" to the page, the topics around it, each a link to its own page (the
+  user's word of 2026-11-27, "מה קורה בלחיצה על אלו ?": they were text, though gold), "לדף הנושא"
   (Jewel's `DefaultButton`, in the accent's gold, as Zayit's panel has "לדף המחבר" and the sage's card "לדף החכם",
   since the user's word of 2026-11-27: "תואם לשפת העיצוב של זית? לא צריך צבע זהב?") and the credit. The card of its own it was until 2026-11-27 is the area's, and its button in the search's end bar the
   area's pane's (`SearchAreaPaneButton`).
 - **Reached from:** `SearchArea.kt`.
-- **Follows:** Zayit's `EntityPanel` (the panel of a book or an author the query names), whose look it takes.
-- **Tests:** `SearchPanelsSettingsUiTest` (the topic the query names, in a column and beside the sources); tried in
-  the app (קריאת שמע, רבא, ברכת כהנים, חנוכה).
+- **Follows:** Zayit's `EntityPanel` (the panel of a book or an author the query names), whose look it takes, and its
+  `BookDetails` (a book's parts as links in a `FlowRow`, 14 dp apart).
+- **Tests:** `SearchPanelsSettingsUiTest` (the topic the query names, in a column and beside the sources; a topic around
+  it opened); tried in the app (קריאת שמע, רבא, ברכת כהנים, חנוכה: ספר מקבים א and חנוכת המשכן opened).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinks.kt`
 
@@ -10516,10 +10522,11 @@ Sefaria's topic, until then. The pane itself is the area's section's (`SearchAre
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettingsUiTest.kt`
 
 - **Feature:** The search's area pane, The search's area.
-- **Size:** 128 lines.
+- **Size:** 144 lines.
 - **What:** the area shows the topic its query names; a source of the results shown alone in the area, with its text,
   a click on its place or its text showing it, and no count of its books; a wide pane, as docked under the results, shows what
-  the query names beside the sources, the sources on its far side; the bar's button turning the pane's setting off and
+  the query names beside the sources, the sources on its far side; a topic around the one named a link to its page;
+  the bar's button turning the pane's setting off and
   on.
 - **Reached from:** the JVM tests.
 - **Follows:** `DictionaryWindowUiTest` (the real graph in a desktop Compose UI test), names in backticks as Zayit's.

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
@@ -112,8 +113,15 @@ internal object TopicsTool : HomeWidget {
         val topics by produceState<SefariaTopics?>(null) { value = withContext(Dispatchers.Default) { SefariaTopics.shipped } }
         // The topics opened one from another, the last shown: back goes to the one before
         var trail by remember { mutableStateOf(emptyList<Int>()) }
+        // The book the page asked for from outside opens on (the search's area), for that page alone
+        var askedBook by remember { mutableStateOf<Pair<Int, String>?>(null) }
         if (LocalSefariaWindow.current) {
-            LaunchedEffect(windows.topicAsks) { windows.topic?.let { trail = listOf(it) } }
+            LaunchedEffect(windows.topicAsks) {
+                windows.topic?.let { id ->
+                    trail = listOf(id)
+                    askedBook = windows.topicBook?.let { id to it }
+                }
+            }
         }
         val accent = rememberAccentColor(JewelTheme.isDark)
         PanelCard(modifier) {
@@ -124,7 +132,14 @@ internal object TopicsTool : HomeWidget {
                 val page = trail.lastOrNull()
                 when {
                     page != null ->
-                        TopicPage(loaded, page, accent, onBack = { trail = trail.dropLast(1) }, onTopic = { trail = trail + it }) { line ->
+                        TopicPage(
+                            loaded,
+                            page,
+                            accent,
+                            book = askedBook?.takeIf { it.first == page && trail.size == 1 }?.second,
+                            onBack = { trail = trail.dropLast(1) },
+                            onTopic = { trail = trail + it },
+                        ) { line ->
                             state.openTab(
                                 TabsDestination.BookContent(bookId = line.bookId, tabId = UUID.randomUUID().toString(), lineId = line.id),
                             )
@@ -263,12 +278,13 @@ private fun TopicRow(
     }
 }
 
-/** A topic's page: its description, its sources by book, and the topics around it. */
+/** A topic's page: its description, its sources by book, and the topics around it; on [book]'s sources, all, if given. */
 @Composable
 private fun TopicPage(
     topics: SefariaTopics,
     id: Int,
     accent: Color,
+    book: String?,
     onBack: () -> Unit,
     onTopic: (Int) -> Unit,
     onOpenLine: (SefariaLine) -> Unit,
@@ -277,9 +293,22 @@ private fun TopicPage(
     val graph = LocalAppGraph.current
     val heRefs = remember(topics, id) { topics.sourcesOf(id) }
     val lines by produceState<Map<String, SefariaLine>?>(null, id) { value = graph.sefariaLines.linesOf(heRefs) }
-    val opened = remember(id) { mutableStateListOf<String>() }
+    val opened = remember(id, book) { mutableStateListOf<String>().apply { book?.let(::add) } }
+    // Each page from its top, or from the book it was asked for
+    val list = remember(id, book) { LazyListState() }
+    // The book asked for at the page's top once its sources are read: after the description and the count
+    LaunchedEffect(lines, book) {
+        val found = lines ?: return@LaunchedEffect
+        val at =
+            heRefs
+                .mapNotNull(found::get)
+                .map { it.bookTitle }
+                .distinct()
+                .indexOf(book ?: return@LaunchedEffect)
+        if (at >= 0) list.scrollToItem(at + if (topic.description.isNotEmpty()) 2 else 1)
+    }
     BackTitle(topic.name, accent, onBack)
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (topic.description.isNotEmpty()) {
             item { Text(topic.description, fontSize = 14.sp, lineHeight = 22.sp, color = JewelTheme.globalColors.text.normal) }
         }
