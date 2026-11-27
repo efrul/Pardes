@@ -172,6 +172,7 @@ kotlin {
                 implementation(libs.sqlDelight.driver.android)
                 implementation(libs.jsoup)
                 implementation(libs.zmanim)
+                // Desktop's zmanim library: the luach zmanim (data/ZmanimEngine.kt).
                 // It brings kotlin-stdlib 2.4.20, kotlinx-datetime 0.8.0 and kotlinx-serialization-json 1.11.0.
                 implementation(libs.kosherkotlin)
                 implementation(libs.hebrew.numerals)
