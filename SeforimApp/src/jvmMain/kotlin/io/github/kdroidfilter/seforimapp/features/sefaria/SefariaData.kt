@@ -245,8 +245,17 @@ class SefariaSages(
         }
     }
 
-    /** The person named [query] (its name or another of its names, as typed), the most mentioned first. */
-    fun named(query: String): Sage? = query.searchKey().takeIf { it.isNotEmpty() }?.let(byName::get)
+    /**
+     * The person named [query], for the search's area as the topics' [SefariaTopics.named]: its name or another of its
+     * names typed whole, as typed or in another spelling, with or without the article, its words in any order; the most
+     * mentioned first. Never a typo.
+     */
+    fun named(query: String): Sage? {
+        val key = query.searchKey().takeIf { it.isNotEmpty() } ?: return null
+        return byName[key] ?: names.searchAuthors(query, NAMED_CANDIDATES).firstNotNullOfOrNull { match ->
+            sages[match.author.id.toInt()]?.takeIf { sage -> (listOf(sage.name) + sage.others).any { sameWords(it, query) } }
+        }
+    }
 
     /** Those [id] taught, those who taught [id], [id]'s parents and children, and the groups [id] belongs to. */
     fun students(id: Int): List<Sage> = out.related(id, SageRelation.TAUGHT)
@@ -281,6 +290,7 @@ class SefariaSages(
 
     companion object {
         private const val RESOURCE = "/sefaria/sages.tsv.gz"
+        private const val NAMED_CANDIDATES = 5
 
         val shipped: SefariaSages by lazy { readResource(RESOURCE, ::parse) ?: parse(emptySequence()) }
 

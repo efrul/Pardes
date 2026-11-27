@@ -136,6 +136,17 @@ class SefariaDataTest {
     }
 
     @Test
+    fun `the search's area names a sage whole, in another spelling or order, never by a typo`() {
+        assertEquals(10, sages.named("רבי עקיבא")?.id)
+        assertEquals(10, sages.named("ר' עקיבא")?.id)
+        assertEquals(10, sages.named("עקיבא רבי")?.id)
+        assertEquals(13, sages.named("רבי טרפן")?.id)
+        assertNull(sages.named("רבי עקיבה"))
+        assertNull(sages.named("רבי"))
+        assertNull(sages.named(""))
+    }
+
+    @Test
     fun `a line in a sugya and in its Mishnah is the sugya's`() {
         val mishnahFirst =
             SefariaSugyot.parse(

@@ -10232,7 +10232,7 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaData.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 401 lines.
+- **Size:** 411 lines.
 - **What:** Sefaria's data as `scripts/sefaria_content.py` packs it under `resources/sefaria/`, each read on first use
   (off the UI thread by its callers) and kept:
   - `SefariaTopics` (`Topic`, `TopicRelation`, `TopicNeighbours`): the topics, the roots of their tree, the lines each
@@ -10244,20 +10244,13 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
     spelling, a typo, another order, the article, a leading רבי or הרב), the name typed whole first, then the most sourced;
   - `SefariaSages` (`Sage`, `AmbiguousSage`, `Mention`, `SageRelation`): the persons the library's lines mention, the
     names Sefaria could not tell apart, the mentions of a line (`at`), a person's lines (`placesOf`, a line once), a
-    person named as typed (`named`, by `searchKey`, the most mentioned first, for the search's area), its students,
-    teachers, family and groups, and the search;
+    person named for the search's area (`named`, by the topics' rules: by `searchKey`, then in another spelling, with
+    or without the article, its words in any order, never a typo; the most mentioned first), its students, teachers,
+    family and groups, and the search, by the same rules as the topics' search, the most mentioned first;
   - `SefariaSugyot` (`Sugya`): the passage of a line, a sugya over the Mishnah it shares lines with; `ifRead()` for the
     menu, which must not wait;
   - `KrupnikDictionary`: Krupnik's headwords, each other headword of an entry with its text.
 - **Reached from:** `SefariaLines`, the reader's pane, the two tools, the search's area, `SageLinks`, `SugyaMenu`, `DictionaryWidget.kt`.
-- **Follows:** Pardes's `KleiKodeshPack` (a gzipped TSV resource parsed lazily into maps).
-
-    names Sefaria could not tell apart, the mentions of a line (`at`), a person's lines (`placesOf`, a line once), its
-    students, teachers, family and groups, and the search, by the same rules, the most mentioned first;
-  - `SefariaSugyot` (`Sugya`): the passage of a line, a sugya over the Mishnah it shares lines with; `ifRead()` for the
-    menu, which must not wait;
-  - `KrupnikDictionary`: Krupnik's headwords, each other headword of an entry with its text.
-- **Reached from:** `SefariaLines`, the reader's pane, the two tools, the search's card, `SageLinks`, `SugyaMenu`, `DictionaryWidget.kt`.
 - **Follows:** Pardes's `BookTitleIndex` (the bar's search of books and authors by name), whose author search it
   uses for the topics and the persons; Pardes's `KleiKodeshPack` (a gzipped TSV resource parsed lazily into maps).
 - **Tests:** `SefariaDataTest`.
@@ -10429,11 +10422,13 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaDataTest.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 194 lines.
+- **Size:** 205 lines.
 - **What:** the topics, the sages, the passages and Krupnik's rows parsed from small fixtures (a line's topics and
   their order, the tree, the neighbours both ways, a name as typed, the index and the search, in another spelling, with a typo and in another
   order; the topic the search's card names, in another spelling or order and never by a typo; mentions, places,
-  relations, an ambiguous name, a person found in another spelling, with a typo or a leading רבי; a sugya over its Mishnah; other headwords), and the shipped data read.
+  relations, an ambiguous name, a person found in another spelling, with a typo or a leading רבי; the person the search's
+  area names, whole, in another spelling or order and never by a typo; a sugya over its Mishnah; other headwords), and the
+  shipped data read.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, names in backticks as Zayit's.
 - **Tests:** it is one (unit).
