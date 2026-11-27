@@ -40,15 +40,12 @@ class CommonSourcesQueries(
     @Volatile
     private var baseBooks: Set<Long>? = null
 
-    /** The line of [page] ((lineId, bookId), the engine's order); none for a page of fewer than three books. */
-    suspend fun line(
-        page: List<Pair<Long, Long>>,
-        baseOnly: Boolean,
-    ): List<CommonSource> =
+    /** The line of [page] ((lineId, bookId), the engine's order); none for an empty page. */
+    suspend fun line(page: List<Pair<Long, Long>>): List<CommonSource> =
         withContext(Dispatchers.IO) {
-            if (page.distinctBy { it.second }.size < CommonSources.MIN_BOOKS) return@withContext emptyList()
+            if (page.isEmpty()) return@withContext emptyList()
             open(path()).use { connection ->
-                val picks = CommonSources.pick(page, links(connection, page.map { it.first }), baseBooks(connection), baseOnly)
+                val picks = CommonSources.pick(page, links(connection, page.map { it.first }), baseBooks(connection))
                 labels(connection, picks)
             }
         }

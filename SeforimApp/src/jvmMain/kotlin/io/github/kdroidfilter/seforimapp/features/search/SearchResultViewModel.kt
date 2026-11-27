@@ -654,7 +654,7 @@ class SearchResultViewModel(
      * Pardes: the sources the first results link to, for the area beside them (docs/COMMON_SOURCES_PLAN.md), in every
      * search, as the user asked on 2026-11-27: read from the first page of the results shown, a tab or the books picked
      * too, in the visible tab only; in the library's order, those read by relevance for the same search and filters, else
-     * the library's first page. Lines of base books alone in a search of the base books.
+     * the library's first page. Lines of any book, in a search of the base books too (the user's word of the same day).
      */
     val commonSourcesFlow: StateFlow<ImmutableList<CommonSource>> =
         _uiVisible
@@ -665,7 +665,7 @@ class SearchResultViewModel(
                     combine(uiState, visibleResultsFlow, filterKeyExtra) { s, shown, filters ->
                         val page = shown.take(CommonSources.PAGE).map { it.lineId to it.bookId }
                         val search = SourcesSearch(s.executedQuery, searchScope, s.globalExtended, s.searchMode, filters)
-                        SourcesPage(page, !s.globalExtended, s.catalogOrder, search)
+                        SourcesPage(page, s.catalogOrder, search)
                     }
                 }
             }.distinctUntilChanged()
@@ -679,7 +679,7 @@ class SearchResultViewModel(
     private suspend fun readSources(page: SourcesPage): ImmutableList<CommonSource> {
         relevanceSources?.takeIf { page.catalogOrder && it.first == page.search }?.let { return it.second }
         if (page.lines.isEmpty()) return persistentListOf()
-        val read = runSuspendCatching { commonSources.line(page.lines, page.baseOnly) }.getOrDefault(emptyList()).toImmutableList()
+        val read = runSuspendCatching { commonSources.line(page.lines) }.getOrDefault(emptyList()).toImmutableList()
         if (!page.catalogOrder) relevanceSources = page.search to read
         return read
     }
@@ -2610,7 +2610,6 @@ internal val HTML_TAG = Regex("<[^>]+>")
 /** Pardes: what the area's sources are read from (`commonSourcesFlow`): the first page of the results shown, of [search]. */
 private data class SourcesPage(
     val lines: List<Pair<Long, Long>>,
-    val baseOnly: Boolean,
     val catalogOrder: Boolean,
     val search: SourcesSearch,
 )

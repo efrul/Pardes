@@ -2392,7 +2392,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +626 −74 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line, The search's area.
+- **Change:** modified, +625 −74 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line, The search's area.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore`, `libraryCategories: LibraryCategories` and
@@ -2460,11 +2460,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
     (`CommonSourcesReader.line`) for the first `CommonSources.PAGE` results shown (`visibleResultsFlow`: a tab, a
     category, books or a contents entry picked too), in the visible tab only, in every search since the user's word of
     2026-11-27 (no condition of the measured cases left: the library's order, a search in a book, in an author's books or
-    in all the books, without the meaning search); lines of base books alone in a search of the base books
-    (`!globalExtended`). In the library's order, the sources last read by relevance for the same search
-    (`relevanceSources`, kept with its `SourcesSearch`: the query, the scope, `globalExtended`, the mode and the filters
-    picked), else the library's first page (`readSources`). `SourcesPage` and `SourcesSearch`, private data classes at
-    the file's end, are the page read and its search.
+    in all the books, without the meaning search), lines of any book, in a search of the base books too (the user's word
+    of the same day: "אני רוצה מקור בלי קשר למה הגבילו בחיפוש"). In the library's order, the sources last read by
+    relevance for the same search (`relevanceSources`, kept with its `SourcesSearch`: the query, the scope,
+    `globalExtended`, the mode and the filters picked), else the library's first page (`readSources`). `SourcesPage` and
+    `SourcesSearch`, private data classes at the file's end, are the page read and its search.
   - **A source in the preview** (the search's area): `previewLine(hit)`, a line that is no result shown in the preview
     with the query it was shown for (`previewedLine`, under a comment marked "Pardes:"); `previewFlow`'s `combine` takes
     it and `uiState` too, the line first while the query is the same, and `selectResult` clears it.
@@ -8954,35 +8954,41 @@ rule measured in pardes-semantic's `eval-real/common_source.py`), each its place
 the preview beside the results. The plan's first version, built for the user's mockup (2026-11-26), a line
 above the results at first; since 2026-11-27 they show in the area beside the results (The search's area, below), in
 every search the user makes, read from the results shown (the user's word of 2026-11-27: "תסיר את כל ההגבלות"; the rule
-was measured on a search everywhere, in the base books, by relevance, with the meaning search). A running read is not
+was measured on a search everywhere, in the base books, by relevance, with the meaning search). Since the same day's
+"אני רוצה מקור בלי קשר למה הגבילו בחיפוש", lines of any book, and when no line is linked from three books of the
+page (a search in one book, or in few), those linked from two of its results, else any line a result links to. A
+running read is not
 yet stopped when another search starts. The hooks in Zayit's files are in `SearchResultViewModel.kt`
 (`commonSourcesFlow`), `SearchResultScreen.kt` (through the area), `TabsContent.kt` and `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSources.kt`
 
 - **Feature:** Common sources line.
-- **Size:** 68 lines.
+- **Size:** 91 lines.
 - **What:** the rule, pure code: `CommonSources.pick` takes the page (its results as lineId and bookId), the ends of
-  their links (`LinkEnd`) and the base books, and gives up to three `CommonSourcePick`: lines at the other end of a
-  link, neither the result itself nor one of the first three, linked from at least three books of the page (in a base
-  books' search, lines of base books only); the most books first, then a base book, then the place in the page, then
-  the id; those linked from half the first's books or more. Each with the page's lines that link to it (`from`, in the
-  page's order), for the list narrowed to them.
+  their links (`LinkEnd`) and the base books, and gives up to three `CommonSourcePick`: lines of any book at the other
+  end of a link, neither the result itself nor one of the first three: those linked from at least three books of the
+  page (`MIN_BOOKS`), the most books first, then a base book, then the place in the page, then the id, as measured;
+  when no line is (a search in one book, or in few), those linked from at least two of its results (`MIN_RESULTS`),
+  else any line a result links to (the user's word of 2026-11-27, "אני רוצה מקור בלי קשר למה הגבילו בחיפוש"), the
+  most books first, then a base book, then the most results, then the earliest result linking to it. Those linked from
+  half the first's books or more, each with the page's lines that link to it (`from`, in the page's order).
 - **Reached from:** `CommonSourcesQueries`.
-- **Follows:** `docs/COMMON_SOURCES_PLAN.md`'s sketch of it, and pardes-semantic's `eval-real/common_source.py`.
+- **Follows:** `docs/COMMON_SOURCES_PLAN.md`'s sketch of it, and pardes-semantic's `eval-real/common_source.py`, which
+  is the same where a line is linked from three books, with a base books' search's links to base books alone.
 - **Tests:** `CommonSourcesTest`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/CommonSourcesQueries.kt`
 
 - **Feature:** Common sources line.
-- **Size:** 127 lines.
+- **Size:** 124 lines.
 - **What:** `CommonSource` (what the area shows: the line, its book, its label, the books linking to it, its text, its
   book's title and its index to show it in the preview, and the page's lines that link to it) and
   `CommonSourcesQueries.line`: on a read-only connection of its own (`open_mode=1`, the path as a plain file name, not
   `?mode=ro`), opened for each read and closed after it, the page's links from the `link` table in both directions, the
   base books (the catalog's, else the database's, kept for the run), `CommonSources.pick`, and each pick's label (its
   `heRef` with its spaces collapsed, else its book's title) and text (its HTML as Jsoup's text, without cantillation,
-  section marks or the verse number before it). None for a page of fewer than three books, with no connection opened.
+  section marks or the verse number before it). None for an empty page, with no connection opened.
 - **Reached from:** `CommonSourcesReader`.
 - **Follows:** `CommentaryLinks` (the library read on a connection of its own); not through `SeforimRepository`, whose
   queries keep a part of the links only (the plan's measurement: 8 right sources of 28).
@@ -8992,9 +8998,9 @@ yet stopped when another search starts. The hooks in Zayit's files are in `Searc
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/CommonSourcesReader.kt`
 
 - **Feature:** Common sources line.
-- **Size:** 29 lines.
+- **Size:** 26 lines.
 - **What:** `CommonSourcesReader`, the app's `CommonSourcesQueries`: on `DatabasePathProvider`'s library, with
-  `CatalogCache`'s base books.
+  `CatalogCache`'s base books, which order the sources.
 - **Reached from:** `SearchResultViewModel` (its constructor).
 - **Follows:** `CommentaryLinks` and `CatalogCache` (Metro's `@Inject`, `@SingleIn(AppScope::class)`).
 - **Tests:** none.
@@ -9002,12 +9008,13 @@ yet stopped when another search starts. The hooks in Zayit's files are in `Searc
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSourcesTest.kt`
 
 - **Feature:** Common sources line.
-- **Size:** 138 lines.
-- **What:** the rule alone (three books needed, a book counted once, the first three never a source, no link of a line
-  to itself, base books only in a base books' search, the order, the half cut, the lines linking to a source in the
-  page's order), and against `common-sources-e100.json.gz`:
-  eval-100's 95 pages give the line measured (47 lines, 86 sources), and with the fused list's order after the page,
-  `common_source.py`'s.
+- **Size:** 160 lines.
+- **What:** the rule alone (three books needed while a line has them, a book counted once, else two results, in a page
+  of one book too, else any line a result links to, the first three never a source, no link of a line to itself, a line
+  of any book, the order in each case, the half cut, the lines linking to a source in the page's order), and against
+  `common-sources-e100.json.gz`, a base books' search's links to base books alone as measured: eval-100's 95 pages give
+  the line measured where it has one (47 pages) and lines linked from fewer books only where it has none (45 of the 48
+  others), and with the fused list's order after the page, `common_source.py`'s.
 - **Reached from:** the JVM tests.
 - **Follows:** `HfTokenizerParityTest` (a gzipped fixture of pardes-semantic's).
 - **Tests:** it is one.
