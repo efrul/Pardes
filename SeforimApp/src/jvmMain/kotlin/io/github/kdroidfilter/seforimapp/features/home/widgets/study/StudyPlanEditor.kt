@@ -35,11 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
@@ -56,29 +51,18 @@ import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishCalendar
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.ThemeUtils
 import io.github.kdroidfilter.seforimapp.core.study.StudyPlan
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.BookSuggestion
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CatBookRow
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.SuggestionKind
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.SuggestionRow
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.baseBooksDetail
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.catBookRows
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.dedupAdjacent
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HoverBox
 import io.github.kdroidfilter.seforimapp.features.home.widgets.luach.hebrewFormatter
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
-import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.luach.LuachDateButton
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
 import io.github.kdroidfilter.seforimlibrary.core.models.Category
 import io.github.kdroidfilter.seforimlibrary.core.models.TocEntry
 import io.github.kdroidfilter.seforimlibrary.dao.repository.SeforimRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.toKotlinLocalDate
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.modifier.trackActivation
@@ -105,7 +89,7 @@ import java.time.LocalDate
 private suspend fun SeforimRepository.categoryPathOf(book: Book): List<String> = pathOf(book.categoryId)
 
 /** The titles of the category [categoryId] and those above it, the root first. */
-private suspend fun SeforimRepository.pathOf(categoryId: Long): List<String> {
+internal suspend fun SeforimRepository.pathOf(categoryId: Long): List<String> {
     val path = ArrayDeque<String>()
     var category = getCategory(categoryId)
     while (category != null) {
@@ -114,29 +98,6 @@ private suspend fun SeforimRepository.pathOf(categoryId: Long): List<String> {
     }
     return path
 }
-
-/**
- * Pardes (request 64 of stage 3): the books and categories [text] names, as the search's bar lists them: the books its
- * lookup suggests (acronyms too: שוע), each with its categories' titles, and the categories it names, in the bar's
- * order ([catBookRows]), a few of each; not the commentaries on a book by their time, which it searches as categories.
- */
-private suspend fun sourcesNamed(
-    graph: AppGraph,
-    text: String,
-): List<CatBookRow> =
-    withContext(Dispatchers.Default) {
-        val repository = graph.repository
-        val books =
-            graph.lookupSearch.suggestBooks(text, limit = BOOK_SUGGESTIONS).map { hit ->
-                BookSuggestion(hit.toBook(), repository.pathOf(hit.categoryId) + hit.title, hit.exactAcronym)
-            }
-        val categories = graph.libraryCategories.named(text, limit = CATEGORY_SUGGESTIONS).filter { repository.getCategory(it.id) != null }
-        catBookRows(text, jumps = emptyList(), textSearch = false, authors = emptyList(), books = books, categories = categories)
-            .filter { it is CatBookRow.Book || it is CatBookRow.Category }
-    }
-
-private const val BOOK_SUGGESTIONS = 6
-private const val CATEGORY_SUGGESTIONS = 4
 
 /** The editor of [plan] (a new one with id 0) in a window of its own: saved, cancelled or deleted, then [onClose]. */
 @Composable
@@ -151,14 +112,7 @@ internal fun StudyPlanEditor(
     val scope = rememberCoroutineScope()
     val inIsrael = state.inIsrael
     val fields = remember { PlanFields(plan) }
-    LaunchedEffect(plan.id) {
-        if (plan.id != 0L && plan.category != 0L) {
-            fields.category = runSuspendCatching { repository.categoryOf(plan) }.getOrNull()
-        } else if (plan.id != 0L) {
-            fields.book = runSuspendCatching { repository.bookOf(plan) }.getOrNull()
-        }
-        fields.bookLoaded = true
-    }
+    LaunchedEffect(plan.id) { fields.load(plan, repository) }
     LaunchedEffect(fields) { fields.readPerDay() }
     val entries by produceState<List<TocEntry>>(emptyList(), fields.book) {
         value = fields.book?.let { runSuspendCatching { repository.getTocEntriesForBook(it.id) }.getOrNull() }.orEmpty()
@@ -170,15 +124,11 @@ internal fun StudyPlanEditor(
     val levels = remember(entries) { studyLevels(entries) }
     // A book whose depths do not have the one chosen: its first
     val shownLevel = levels.firstOrNull { it.level == fields.level } ?: levels.firstOrNull()
-    val names = remember(books, levels, fields.byCategory) { if (fields.byCategory) categoryUnitNames(books) else bookUnitNames(levels) }
-    // A category's unit: the one chosen while its books have it, else their first
-    val shownName = if (fields.byCategory) names.firstOrNull { it.one == fields.unitName } ?: names.firstOrNull() else null
+    val names = remember(books, levels, fields.byCategory) { fields.unitNames(books, levels) }
+    val shownName = fields.shownName(names)
     val units =
         remember(entries, books, shownLevel, shownName, fields.unitName, fields.byCategory) {
-            when {
-                fields.byCategory -> shownName?.let { categoryUnits(books, it.one) }.orEmpty()
-                else -> shownLevel?.let { bookUnits(entries, it.level, fields.unitName) }.orEmpty()
-            }
+            fields.units(books, shownName, entries, shownLevel)
         }
     val startIndex = remember(units, fields.start) { startIndexOf(units, fields.start) }
     val preview = rememberPreview(fields, units, startIndex, inIsrael)
@@ -220,7 +170,7 @@ internal fun StudyPlanEditor(
             }
         }
         EditorButtons(
-            canSave = (if (fields.byCategory) fields.category != null else fields.book != null) && units.isNotEmpty(),
+            canSave = fields.canSave(units),
             onSave = ::save,
             onClose = onClose,
             onDelete = delete.takeIf { plan.id != 0L },
@@ -287,6 +237,45 @@ private class PlanFields(
         val next = if (day in weekdays) weekdays - day else weekdays + day
         if (next.isNotEmpty()) weekdays = next
     }
+
+    /** Reads [plan]'s category or book from the library, the editor's fields set to them. */
+    suspend fun load(
+        plan: StudyPlan,
+        repository: SeforimRepository,
+    ) {
+        if (plan.id != 0L && plan.category != 0L) {
+            category = runSuspendCatching { repository.categoryOf(plan) }.getOrNull()
+        } else if (plan.id != 0L) {
+            book = runSuspendCatching { repository.bookOf(plan) }.getOrNull()
+        }
+        bookLoaded = true
+    }
+
+    /** The units' names a plan can be studied by: a category's [books]' ones, or a book's depths ([levels]) and a daf. */
+    fun unitNames(
+        books: List<PlanBook>,
+        levels: List<StudyLevel>,
+    ): List<UnitName> = if (byCategory) categoryUnitNames(books) else bookUnitNames(levels)
+
+    /** A category's unit among [names]: the one chosen while its books have it, else their first; none for a book. */
+    fun shownName(names: List<UnitName>): UnitName? =
+        if (byCategory) names.firstOrNull { it.one == unitName } ?: names.firstOrNull() else null
+
+    /** The units studied: a category's [books] by [shownName], or a book's [entries] by [shownLevel] or its unit's name. */
+    fun units(
+        books: List<PlanBook>,
+        shownName: UnitName?,
+        entries: List<TocEntry>,
+        shownLevel: StudyLevel?,
+    ): List<StudyUnit> =
+        if (byCategory) {
+            shownName?.let { categoryUnits(books, it.one) }.orEmpty()
+        } else {
+            shownLevel?.let { bookUnits(entries, it.level, unitName) }.orEmpty()
+        }
+
+    /** Whether the plan can be saved: its category or its book chosen, with [units] to study. */
+    fun canSave(units: List<StudyUnit>): Boolean = (if (byCategory) category != null else book != null) && units.isNotEmpty()
 
     /** Follows the field of how many a day: a whole number from 1 to 999 is taken, anything else keeps the last. */
     suspend fun readPerDay() {
@@ -440,6 +429,43 @@ private fun BookRows(
         val chosen = if (fields.byCategory) category else fields.book?.title
         if (fields.bookLoaded) SourceField(chosen, onPickBook = fields::pickBook, onPickCategory = fields::pickCategory)
     }
+    UnitRows(fields, levels, shownLevel, names, shownName)
+    if (units.isNotEmpty()) {
+        FormRow("מתחילים מ־") {
+            ListComboBox(
+                items = units.map { it.headings.joinToString(", ") },
+                selectedIndex = startIndex,
+                onSelectedItemChange = { index -> units.getOrNull(index)?.let { fields.start = it.headings } },
+                modifier = Modifier.fillMaxWidth().testTag("study-start"),
+            )
+        }
+        // How much for how many days: a part a day, or for a few days or a week (request 64 of stage 3)
+        val name = shownName ?: names.firstOrNull { it.one == fields.unitName } ?: shownLevel?.name
+        FormRow("הספק") {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(fields.perDayField, Modifier.width(72.dp).testTag("study-per-day"))
+                Text(if (fields.perDay == 1) name?.one.orEmpty() else name?.many.orEmpty())
+                ListComboBox(
+                    items = PERIOD_DAYS.map(::periodLabel),
+                    selectedIndex = PERIOD_DAYS.indexOf(fields.periodDays).coerceAtLeast(0),
+                    onSelectedItemChange = { index -> fields.periodDays = PERIOD_DAYS[index] },
+                    modifier = Modifier.width(140.dp).testTag("study-period"),
+                )
+            }
+        }
+    }
+}
+
+// The unit studied by: a category's units by their names (request 64 of stage 3), or a book's depths, and a daf where
+// it goes by amud
+@Composable
+private fun UnitRows(
+    fields: PlanFields,
+    levels: List<StudyLevel>,
+    shownLevel: StudyLevel?,
+    names: List<UnitName>,
+    shownName: UnitName?,
+) {
     if (fields.byCategory && names.size > 1) {
         FormRow("לומדים לפי") {
             Column {
@@ -468,30 +494,6 @@ private fun BookRows(
                     }
                 }
                 Hint("הרמות שבתוכן העניינים של הספר")
-            }
-        }
-    }
-    if (units.isNotEmpty()) {
-        FormRow("מתחילים מ־") {
-            ListComboBox(
-                items = units.map { it.headings.joinToString(", ") },
-                selectedIndex = startIndex,
-                onSelectedItemChange = { index -> units.getOrNull(index)?.let { fields.start = it.headings } },
-                modifier = Modifier.fillMaxWidth().testTag("study-start"),
-            )
-        }
-        // How much for how many days: a part a day, or for a few days or a week (request 64 of stage 3)
-        val name = shownName ?: names.firstOrNull { it.one == fields.unitName } ?: shownLevel?.name
-        FormRow("הספק") {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextField(fields.perDayField, Modifier.width(72.dp).testTag("study-per-day"))
-                Text(if (fields.perDay == 1) name?.one.orEmpty() else name?.many.orEmpty())
-                ListComboBox(
-                    items = PERIOD_DAYS.map(::periodLabel),
-                    selectedIndex = PERIOD_DAYS.indexOf(fields.periodDays).coerceAtLeast(0),
-                    onSelectedItemChange = { index -> fields.periodDays = PERIOD_DAYS[index] },
-                    modifier = Modifier.width(140.dp).testTag("study-period"),
-                )
             }
         }
     }
@@ -623,105 +625,6 @@ private fun DayToggle(
         Text(letter, color = if (chosen) Color.White else JewelTheme.globalColors.text.normal, fontWeight = FontWeight.SemiBold)
     }
 }
-
-/**
- * Pardes (request 64 of stage 3, the user's word: "זה יהיה אוטומטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה"): the book
- * or category [chosen] (its title), or a field that finds either as the search's bar does ([sourcesNamed]), each in a
- * row of the bar's ([SuggestionRow]: its icon, its path, and a category in its base books alone so marked); up and down
- * mark one, Enter or a click picks it, Escape lets them go and puts the title picked back.
- */
-@Composable
-private fun SourceField(
-    chosen: String?,
-    onPickBook: (Book) -> Unit,
-    onPickCategory: (Category, Boolean) -> Unit,
-) {
-    val graph = LocalAppGraph.current
-    val repository = graph.repository
-    val scope = rememberCoroutineScope()
-    val field = remember { TextFieldState(chosen.orEmpty()) }
-    // The title picked last, in the field: nothing to look for while it is there
-    var picked by remember { mutableStateOf(chosen.orEmpty()) }
-    var rows by remember { mutableStateOf<List<CatBookRow>>(emptyList()) }
-    var marked by remember(rows) { mutableIntStateOf(0) }
-    LaunchedEffect(field) {
-        snapshotFlow { field.text.toString().trim() }.collectLatest { text ->
-            if (text.length < 2 || text == picked) {
-                rows = emptyList()
-                return@collectLatest
-            }
-            delay(SEARCH_DELAY_MS)
-            rows = runSuspendCatching { sourcesNamed(graph, text) }.getOrNull().orEmpty()
-        }
-    }
-
-    val baseBooksLabel = stringResource(Res.string.scope_base_books_label)
-
-    fun pick(row: CatBookRow) {
-        val title =
-            when (row) {
-                is CatBookRow.Book -> row.suggestion.book.title
-                is CatBookRow.Category -> if (row.hit.baseBooksOnly) baseBooksLabel.format(row.hit.title) else row.hit.title
-                else -> return
-            }
-        rows = emptyList()
-        picked = title
-        field.edit { replace(0, length, title) }
-        scope.launch {
-            when (row) {
-                is CatBookRow.Book ->
-                    onPickBook(runSuspendCatching { repository.getBookCore(row.suggestion.book.id) }.getOrNull() ?: row.suggestion.book)
-                is CatBookRow.Category ->
-                    runSuspendCatching { repository.getCategory(row.hit.id) }.getOrNull()?.let { onPickCategory(it, row.hit.baseBooksOnly) }
-                else -> Unit
-            }
-        }
-    }
-    Column(Modifier.fillMaxWidth()) {
-        TextField(
-            field,
-            Modifier.fillMaxWidth().testTag("study-source").onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown || rows.isEmpty()) return@onPreviewKeyEvent false
-                when (event.key) {
-                    // Round from the last row to the first and back, as every popup of the app
-                    Key.DirectionDown -> marked = (marked + 1).mod(rows.size)
-                    Key.DirectionUp -> marked = (marked - 1).mod(rows.size)
-                    Key.Enter, Key.NumPadEnter -> pick(rows[marked])
-                    // The text typed goes, the title picked comes back
-                    Key.Escape -> {
-                        rows = emptyList()
-                        if (picked.isNotEmpty()) field.edit { replace(0, length, picked) }
-                    }
-                    else -> return@onPreviewKeyEvent false
-                }
-                true
-            },
-            placeholder = { Text("שם של ספר או של קטגוריה") },
-        )
-        rows.forEachIndexed { index, row ->
-            when (row) {
-                is CatBookRow.Book ->
-                    SuggestionRow(
-                        parts = dedupAdjacent(row.suggestion.path),
-                        onClick = { pick(row) },
-                        kind = SuggestionKind.BOOK,
-                        highlighted = index == marked,
-                    )
-                is CatBookRow.Category ->
-                    SuggestionRow(
-                        parts = row.hit.path,
-                        onClick = { pick(row) },
-                        kind = SuggestionKind.CATEGORY,
-                        highlighted = index == marked,
-                        detail = baseBooksDetail(row.hit),
-                    )
-                else -> Unit
-            }
-        }
-    }
-}
-
-private const val SEARCH_DELAY_MS = 150L
 
 /** The day's part as the card will show it (its period's, for a part of [periodDays] days), and how it is reckoned. */
 @Composable

@@ -10,8 +10,9 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.jewel.ui.component.VerticallyScrollableContainer
 
 /**
- * Settings › צורת הדף: the daf view's layouts ([DafLayoutsCard]) and where the tractates' scans are looked for
- * ([DafScansCard]). Its two fonts stay with the other fonts (Settings › גופנים), its marks are shown from the button
+ * Settings › צורת הדף: the daf view's layouts ([DafLayoutsCard]), where the tractates' scans are looked for
+ * ([DafScansCard]), how a page marks the selection ([DafSelectionCard]), and the other books' own pages, an experiment
+ * ([BookDafCard]). Its two fonts stay with the other fonts (Settings › גופנים), its marks are shown from the button
  * beside the daf, and the folder of the reader's reviews is opened from Settings › משוב.
  */
 @Composable
@@ -23,6 +24,8 @@ fun DafSettingsScreen() {
         ) {
             DafLayoutsCard()
             DafScansCard()
+            DafSelectionCard()
+            BookDafCard()
         }
     }
 }

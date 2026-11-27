@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import io.github.kdroidfilter.seforimapp.core.presentation.components.SelectableIconButtonWithToolip
-import io.github.kdroidfilter.seforimapp.core.settings.SettingsGroup
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
@@ -28,12 +27,6 @@ import seforimapp.seforimapp.generated.resources.page_colors_original_tooltip
 // Pardes (request 42 of docs/DESKTOP_STAGE3_PLAN.md): pages drawn as images, a PDF book's and a tractate's scan, in the
 // dark theme's colours, as the daf is drawn: black as the theme's text and white as its panel, with a button of the end
 // bar that brings their original colours back.
-
-/** The colours of pages drawn as images in the dark theme. */
-object PageColorSettings : SettingsGroup("page_colors") {
-    /** Whether pages keep their original colours in the dark theme, rather than its text on its panel; in every tab. */
-    val original by boolean(false)
-}
 
 /**
  * The matrix that draws black as [ink] and white as [paper], each gray between them in proportion, a channel each: a

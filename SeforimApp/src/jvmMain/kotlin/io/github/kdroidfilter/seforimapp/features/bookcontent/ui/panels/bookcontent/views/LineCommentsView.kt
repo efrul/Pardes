@@ -288,23 +288,7 @@ fun DetachedCommentatorView(
             isManualMultiSelection -> LineSelection.Multi(selectedLineIds)
             else -> LineSelection.Single(selectedLine.id)
         }
-    val groups =
-        when {
-            providers == null -> emptyList()
-            selection is LineSelection.Multi -> {
-                val multiGroups by produceState<List<CommentatorGroup>>(emptyList(), selectedLineIds) {
-                    value = providers.getCommentatorGroupsForLines(selectedLineIds)
-                }
-                multiGroups
-            }
-            selection is LineSelection.Single ->
-                rememberCommentarySelectionData(
-                    lineId = selection.lineId,
-                    getCommentatorGroupsForLine = providers.getCommentatorGroupsForLine,
-                    prefetchedGroups = lineConnections[selection.lineId]?.commentatorGroups,
-                ).groups
-            else -> emptyList()
-        }
+    val groups = rememberSelectionGroups(selection, providers, lineConnections)
     val commentatorId = remember(groups, commentator) { bookIdOf(commentator, groups) }
 
     Column(modifier = Modifier.fillMaxSize().hoverable(paneInteractionSource)) {
@@ -343,6 +327,32 @@ fun DetachedCommentatorView(
         }
     }
 }
+
+// Pardes (request 50 of stage 3): the commentators' groups of [selection], read before the detached pane's header:
+// those of a manual selection's lines, read for them, or a line's as the commentaries pane has them; none without
+// [providers] or a line selected
+@Composable
+private fun rememberSelectionGroups(
+    selection: LineSelection?,
+    providers: Providers?,
+    lineConnections: Map<Long, LineConnectionsSnapshot>,
+): List<CommentatorGroup> =
+    when {
+        providers == null -> emptyList()
+        selection is LineSelection.Multi -> {
+            val multiGroups by produceState<List<CommentatorGroup>>(emptyList(), selection.lineIds) {
+                value = providers.getCommentatorGroupsForLines(selection.lineIds)
+            }
+            multiGroups
+        }
+        selection is LineSelection.Single ->
+            rememberCommentarySelectionData(
+                lineId = selection.lineId,
+                getCommentatorGroupsForLine = providers.getCommentatorGroupsForLine,
+                prefetchedGroups = lineConnections[selection.lineId]?.commentatorGroups,
+            ).groups
+        else -> emptyList()
+    }
 
 /** The book of [commentator] among [groups], the commentators of the selected line(s); null when it has none there. */
 private fun bookIdOf(
@@ -666,7 +676,7 @@ private fun MultiLineCommentariesContent(
  */
 @OptIn(ExperimentalSplitPaneApi::class)
 @Composable
-private fun CommentatorsListAndTexts(
+internal fun CommentatorsListAndTexts(
     isListVisible: Boolean,
     compact: Boolean,
     list: @Composable () -> Unit,
@@ -703,7 +713,7 @@ private fun CommentatorsListAndTexts(
 
 @OptIn(FlowPreview::class)
 @Composable
-private fun CommentatorsList(
+internal fun CommentatorsList(
     groups: List<CommentatorGroup>,
     selectedCommentators: Set<String>,
     initialScrollIndex: Int,
@@ -1642,7 +1652,8 @@ private fun rememberCommentariesLayoutConfig(
     val windowInfo = LocalWindowInfo.current
     val commentaryFontCode by appSettings.commentaryFontCodeFlow.collectAsState()
     val commentaryFontFamily = FontCatalog.familyFor(commentaryFontCode)
-    val maxCommentatorsPerPage by appSettings.maxCommentatorsPerPageFlow.collectAsState()
+    // Pardes: a pane at the window's side has its own number (request 99 of stage 3)
+    val maxCommentatorsPerPage = rememberMaxCommentatorsPerPage()
     val boldScaleForPlatform = FontCatalog.boldScaleFor(commentaryFontCode)
     val tearOffs = LocalCommentatorTearOffs.current
 
@@ -1696,7 +1707,7 @@ private fun rememberCommentariesLayoutConfig(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CommentatorsSidebarToggleButton(
+internal fun CommentatorsSidebarToggleButton(
     isVisible: Boolean,
     onToggle: () -> Unit,
 ) {

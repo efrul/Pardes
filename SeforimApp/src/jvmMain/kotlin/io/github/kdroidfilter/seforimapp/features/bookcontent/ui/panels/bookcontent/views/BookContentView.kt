@@ -86,6 +86,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.text.normalizeQueryFo
 import io.github.kdroidfilter.seforimapp.core.presentation.text.noteDisplayRanges
 import io.github.kdroidfilter.seforimapp.core.presentation.text.withBackground
 import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
+import io.github.kdroidfilter.seforimapp.core.presentation.window.rememberFocusStop
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafAnchor
@@ -106,10 +107,13 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.commentAn
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.commentSegments
 import io.github.kdroidfilter.seforimapp.features.bookcontent.segments.passageOf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.LineConnectionsSnapshot
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NoteDraftAnchor
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookFindMatches
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.findInBook
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.queryNarrows
+import io.github.kdroidfilter.seforimapp.features.pdf.shownPageZoom
+import io.github.kdroidfilter.seforimapp.features.pdf.turnPage
 import io.github.kdroidfilter.seforimapp.features.search.semantic.installedSemanticSearch
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.debugln
@@ -195,7 +199,7 @@ fun BookContentView(
 
     // The daf's own list (its items are amudim, not lines), and what the keys and the find bar ask of it
     val dafListState = remember(bookId) { LazyListState() }
-    val dafControl = remember(bookId) { DafControl() }
+    val dafControl = remember(bookId) { DafControl(tabId) }
     val currentDaf by rememberUpdatedState(daf)
 
     // Layout-width of the first rendered line's Text, captured once via `onTextLayout`
@@ -211,14 +215,15 @@ fun BookContentView(
     val zoom = rememberAppTextZoom(onPointerZoomInProgressChange)
     val textSize = zoom.textSize
     // The daf's own zoom, by the same gestures, in percent; the zoom keys, buttons and menu zoom it while it is shown.
-    // Pardes: the daf's alone, the text's size as it was (request 63 of stage 3)
-    val dafZoomValue by appSettings.dafZoomFlow.collectAsState()
+    // Pardes: the daf's alone, the text's size as it was (request 63 of stage 3), and as wide as the view at most,
+    // unless zoomed wider (request 79)
+    val dafZoomValue = shownPageZoom(tabId)
     val dafZoom =
         rememberTextZoom(
             textSize = dafZoomValue * PERCENT,
             minTextSize = AppSettings.MIN_DAF_ZOOM * PERCENT,
             maxTextSize = AppSettings.MAX_DAF_ZOOM * PERCENT,
-            onTextSize = { appSettings.setDafZoom(it / PERCENT) },
+            onTextSize = { appSettings.setDafZoomFrom(tabId, it / PERCENT) },
             animate = isTabSelected,
             onZoomingChange = onPointerZoomInProgressChange,
         )
@@ -391,8 +396,9 @@ fun BookContentView(
                 if (index <= first) {
                     listState.scrollToItem(index, 0)
                 } else {
-                    // Place the item so its bottom aligns with the viewport bottom
-                    listState.scrollToItem(index, 0)
+                    // Place the item so its bottom aligns with the viewport bottom. Pardes: as said, not at the top, a
+                    // page's jump for a step down (request 75 of stage 3); a fix for both brands
+                    listState.revealItem(index)
                 }
             }
         }
@@ -953,17 +959,10 @@ fun BookContentView(
             scope.launch { dafControl.scrollPage(forward) }
             return
         }
-        val visibleItems = listState.layoutInfo.visibleItemsInfo
-        if (visibleItems.isEmpty()) return
-        val targetIndex =
-            computePageScrollTargetIndex(
-                forward = forward,
-                visibleItemIndices = visibleItems.map { it.index },
-                visibleItemEndOffsets = visibleItems.associate { it.index to (it.offset + it.size) },
-                viewportEnd = listState.layoutInfo.viewportEndOffset,
-                firstVisibleItemIndex = listState.firstVisibleItemIndex,
-            ) ?: return
-        scope.launch { listState.animateScrollToItem(targetIndex, 0) }
+        // Pardes: most of a view down or up, a page up the same as a page down, as the daf's, a scan's and a PDF book's
+        // pages turn (request 75 of stage 3: a page up went back by as many lines as were in view, and a line taller
+        // than the view stopped both)
+        scope.launch { listState.turnPage(forward) }
     }
 
     // On the daf, with a comment of Rashi or Tosafot selected, the arrows step through its commentary
@@ -975,9 +974,11 @@ fun BookContentView(
         if (currentDaf == null) onEvent(step) else scope.launch { if (!dafControl.stepComment(forward)) onEvent(step) }
     }
 
-    // Global preview handler: handle basic navigation keys regardless of inner focus
+    // Global preview handler: handle basic navigation keys regardless of inner focus. Pardes: made again with the daf's
+    // control, the book's, which a book opened in the tab replaces (request 86 of stage 3: the arrows went to the former
+    // book's, and stepped through the text's lines on the daf)
     val previewKeyHandler =
-        remember(onEvent) {
+        remember(onEvent, dafControl) {
             { keyEvent: KeyEvent ->
                 // Ctrl/Cmd+F handled globally at window level; do not intercept here
                 if (keyEvent.type == KeyEventType.KeyDown) {
@@ -1072,8 +1073,11 @@ fun BookContentView(
 
     // Back from the daf, the text opens where the daf was: the Gemara's segment at the daf's top at its own top, the
     // selected line in view when it was on the daf, and a comment selected there by a click on itself in the
-    // commentaries pane
+    // commentaries pane; or rather, a comment of Rashi or Tosafot so selected, its commentary's own text in the tab, at
+    // the comment, as the commentary's daf button opens the tractate's daf at it (request 87 of stage 3)
     val currentOnShowCommentaries by rememberUpdatedState(onShowCommentaries)
+    val currentBookId by rememberUpdatedState(bookId)
+    val currentOnEvent by rememberUpdatedState(onEvent)
     LaunchedEffect(showsDaf) {
         if (showsDaf) {
             wasDaf = true
@@ -1088,7 +1092,16 @@ fun BookContentView(
             if (selected < 0 || isLineFullyVisible(shown?.offset, shown?.size, listState.layoutInfo.viewportEndOffset)) return
             listState.scrollToItem(selected)
         }
+
+        // The comment's commentary opened in the tab: the Gemara's text stays hidden until it is, and opens as before
+        // should it not be
+        suspend fun openCommentary(commentId: Long): Boolean {
+            val comment = runSuspendCatching { repository.getLine(commentId) }.getOrNull() ?: return false
+            currentOnEvent(BookContentEvent.OpenBookAtLine(comment.bookId, comment.id))
+            return withTimeoutOrNull(COMMENTARY_WAIT) { snapshotFlow { currentBookId }.first { it == comment.bookId } } != null
+        }
         val place = dafControl.place()
+        if (place?.commentId?.let { openCommentary(it) } == true) return@LaunchedEffect
         val opened = place?.onComment == true && currentOnShowCommentaries()
         try {
             val top = place?.let { runSuspendCatching { repository.getLine(it.topLineId) }.getOrNull() } ?: return@LaunchedEffect
@@ -1118,6 +1131,8 @@ fun BookContentView(
                 .fillMaxSize()
                 .graphicsLayer { alpha = contentAlpha } // Hide until positioned to prevent glitch
                 .then(if (showsDaf) dafZoom.modifier else zoom.modifier)
+                // Pardes: the text is a part the window's focus keys stop at (request 100 of stage 3)
+                .then(rememberFocusStop(isTabSelected) { focusRequester.requestFocus() })
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent(previewKeyHandler)
                 .focusable(),
@@ -1147,6 +1162,10 @@ fun BookContentView(
                 scrollToLineTimestamp = scrollToLineTimestamp,
                 onSelectLine = daf.onSelectLine,
                 onSelectPassage = daf.onSelectPassage,
+                onClearSelection = daf.onClearSelection,
+                // Another book than a tractate: its commentators around its text, in the text's diacritics
+                commentators = daf.commentators,
+                diacritics = diacritics,
                 // The menu acts on the right-clicked word's segment, as on a right-clicked line of the text
                 onContextLine = { id ->
                     selectionContext.setCurrentLineId(id)
@@ -1495,6 +1514,9 @@ private const val PERCENT = 100f
 
 // Longest wait for the commentaries pane, opened back from the daf, to take its part of the view
 private val PANE_WAIT = 3000.milliseconds
+
+// Longest wait for a comment's commentary, opened back from the daf, to be the tab's book (request 87 of stage 3)
+private val COMMENTARY_WAIT = 3000.milliseconds
 
 // Literal find: pause after the last keystroke before querying the index
 private val FIND_DEBOUNCE = 150.milliseconds

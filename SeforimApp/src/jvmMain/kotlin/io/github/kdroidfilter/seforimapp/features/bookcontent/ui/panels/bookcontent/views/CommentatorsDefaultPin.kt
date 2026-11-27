@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +27,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorD
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorDefaults
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.CommentatorSelection
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
@@ -58,11 +60,7 @@ fun rememberCommentatorsDefault(
     selection: CommentatorSelection,
     onEvent: (BookContentEvent) -> Unit,
 ): CommentatorsDefault {
-    val defaults = LocalAppGraph.current.commentatorDefaults
-    val revision by defaults.revision.collectAsState()
-    val state by produceState(CommentatorDefaultState(), bookId, selection, revision) {
-        value = bookId?.let { runSuspendCatching { defaults.stateOf(it, selection) }.getOrNull() } ?: CommentatorDefaultState()
-    }
+    val state = rememberCommentatorDefaultState(bookId, selection)
     val currentOnEvent by rememberUpdatedState(onEvent)
     return remember(state) {
         CommentatorsDefault(
@@ -71,6 +69,42 @@ fun rememberCommentatorsDefault(
             onClear = { currentOnEvent(BookContentEvent.CommentatorsDefaultCleared) },
         )
     }
+}
+
+/**
+ * The reader's default for the book [bookId] as a list of commentators that is not the tab's offers it: a book's own
+ * pages, whose commentators are [selection] (request 93 of stage 3: "וגם אפשרות הנעץ. תשתמש בקוד משותף"). The pin sets
+ * the default to what that list has checked, and lets it go, itself: the tab's events would take the tab's commentators.
+ */
+@Composable
+fun rememberCommentatorsDefault(
+    bookId: Long?,
+    selection: CommentatorSelection,
+): CommentatorsDefault {
+    val defaults = LocalAppGraph.current.commentatorDefaults
+    val state = rememberCommentatorDefaultState(bookId, selection)
+    val scope = rememberCoroutineScope()
+    return remember(state, bookId, selection, defaults, scope) {
+        CommentatorsDefault(
+            state = state,
+            onSet = { bookId?.let { scope.launch { runSuspendCatching { defaults.set(it, selection) } } } },
+            onClear = { bookId?.let { scope.launch { runSuspendCatching { defaults.clear(it) } } } },
+        )
+    }
+}
+
+// Whether a default of the reader's applies to the book and is what [selection] shows, read again as any of them changes
+@Composable
+private fun rememberCommentatorDefaultState(
+    bookId: Long?,
+    selection: CommentatorSelection,
+): CommentatorDefaultState {
+    val defaults = LocalAppGraph.current.commentatorDefaults
+    val revision by defaults.revision.collectAsState()
+    val state by produceState(CommentatorDefaultState(), bookId, selection, revision) {
+        value = bookId?.let { runSuspendCatching { defaults.stateOf(it, selection) }.getOrNull() } ?: CommentatorDefaultState()
+    }
+    return state
 }
 
 /**

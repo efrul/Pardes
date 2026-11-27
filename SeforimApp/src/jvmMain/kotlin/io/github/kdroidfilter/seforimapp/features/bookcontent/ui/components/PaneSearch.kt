@@ -154,16 +154,46 @@ fun <T : PaneSearchResult> PaneSearchLayout(
     }
 }
 
-/** Scrolls the least needed to show item [index] whole; not at all when it already is. */
+/**
+ * Scrolls the least needed to show item [index] whole (its top, when it is taller than the view); not at all when it
+ * already is. Pardes: an item below the view comes in at the view's bottom, as one partly in view does, not at its top,
+ * which made a step down from a row at the bottom a page's jump, and a step up a row's (request 75 of the list after
+ * the public release, docs/DESKTOP_STAGE3_PLAN.md: "למעלה אחד אחד ולמטה מחליף הרבה בבת אחת"); a fix for both brands.
+ */
 suspend fun LazyListState.revealItem(index: Int) {
     val info = layoutInfo
     val item = info.visibleItemsInfo.firstOrNull { it.index == index }
     when {
+        item == null && index > (info.visibleItemsInfo.lastOrNull()?.index ?: Int.MAX_VALUE) -> scrollInFromBelow(index)
         item == null || item.offset < info.viewportStartOffset -> scrollToItem(index)
         item.offset + item.size > info.viewportEndOffset ->
-            scrollBy((item.offset + item.size - info.viewportEndOffset).toFloat())
+            scrollBy(minOf(item.offset + item.size - info.viewportEndOffset, item.offset - info.viewportStartOffset).toFloat())
     }
 }
+
+// Pardes: item [index], below the view, at the view's bottom (its top, when it is taller than the view). A few rows
+// below, the list scrolls down through them, which keeps the rows in view as they were, as a jump to the item and back
+// did not: a row that reads its text once on screen read it again, grew again and pushed the item below the view
+// (request 78 of stage 3); far below, it goes to the item and back.
+private suspend fun LazyListState.scrollInFromBelow(index: Int) {
+    // Down through the rows between while it is a few away: the last row whole, and the next one's top in view
+    var through = true
+    while (through && layoutInfo.visibleItemsInfo.none { it.index == index }) {
+        val info = layoutInfo
+        val last = info.visibleItemsInfo.lastOrNull()
+        val step = last?.let { it.offset + it.size - info.viewportEndOffset + 1 } ?: 0
+        through = last != null && index - last.index <= ROWS_SCROLLED_THROUGH && step > 0 && scrollBy(step.toFloat()) > 0f
+    }
+    if (!through) scrollToItem(index)
+    val info = layoutInfo
+    val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    // Its bottom at the view's bottom, or its top at the view's top when it is taller than the view
+    val shift = minOf(item.offset + item.size - info.viewportEndOffset, item.offset - info.viewportStartOffset)
+    if (shift != 0) scrollBy(shift.toFloat())
+}
+
+// Pardes: the rows a reveal scrolls down through at most, a few views of them; past them it goes to the row
+private const val ROWS_SCROLLED_THROUGH = 60
 
 @OptIn(FlowPreview::class)
 @Composable

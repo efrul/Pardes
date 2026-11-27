@@ -2,9 +2,9 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.daf
 
 /**
  * A tractate's printed lines of the library, the Gemara's and the commentaries': where each is printed first
- * ([places]), which of the Gemara's is read at a place ([gemaraAt]), and each commentary column's comments in the
- * order they are read ([next]), which the arrows step through when a comment is selected. [order] is the amudim as the
- * daf lists them.
+ * ([places]) and last ([ends]), which of the Gemara's is read at a place ([gemaraAt]), and each commentary column's
+ * comments in the order they are read ([next]), which the arrows step through when a comment is selected. [order] is
+ * the amudim as the daf lists them.
  */
 internal class DafIndex(
     file: DafLayoutFile,
@@ -16,6 +16,12 @@ internal class DafIndex(
      */
     val places: Map<Long, Pair<Int, Float>>
 
+    /**
+     * Where each line of the library is printed last: its last amud's place in the order, and the bottom of its last
+     * printed line there (points, from the amud's block's top), for the arrows to bring a segment or a comment in whole.
+     */
+    val ends: Map<Long, Pair<Int, Float>>
+
     // Each commentary column's comments as read, and each comment's column and place there
     private val columns = HashMap<String, MutableList<Long>>()
     private val placeIn = HashMap<Long, Pair<String, Int>>()
@@ -26,11 +32,16 @@ internal class DafIndex(
 
     init {
         val found = HashMap<Long, Pair<Int, Float>>()
+        val last = HashMap<Long, Pair<Int, Float>>()
         val at = order.withIndex().associate { (i, amud) -> amud to i }
         for (amud in file.amudim.sortedBy { at[it.amud] ?: Int.MAX_VALUE }) {
             val index = at[amud.amud] ?: continue
             for (line in amud.lines) {
-                for (id in line.lineIds) found.putIfAbsent(id, index to line.b[1] - amud.block[1])
+                val bottom = index to line.b[3] - amud.block[1]
+                for (id in line.lineIds) {
+                    found.putIfAbsent(id, index to line.b[1] - amud.block[1])
+                    last.merge(id, bottom) { was, now -> if (was.first == now.first && was.second > now.second) was else now }
+                }
             }
             gemara[index] =
                 amud.lines
@@ -49,6 +60,7 @@ internal class DafIndex(
             }
         }
         places = found
+        ends = last
     }
 
     /**

@@ -25,7 +25,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.computePageScrollTargetIndex
+import io.github.kdroidfilter.seforimapp.features.pdf.turnPage
 import io.github.santimattius.structured.annotations.StructuredScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -241,7 +241,7 @@ class BookContentKeyboardUiTest {
     // ==================== Page scroll with LazyColumn ====================
 
     @Test
-    fun `page down scrolls LazyColumn to last fully visible item`() =
+    fun `page down scrolls LazyColumn forward`() =
         runComposeUiTest {
             val listState = LazyListState()
             val items = (0 until 50).toList()
@@ -420,24 +420,14 @@ class BookContentKeyboardUiTest {
         }
 
     /**
-     * Helper that mirrors the scrollByPage logic from BookContentView
-     * using the extracted computePageScrollTargetIndex function.
+     * Helper that mirrors the scrollByPage logic from BookContentView: Pardes's turnPage, most of a view down or up, as
+     * the daf's and a PDF book's pages (request 75 of stage 3).
      */
     private fun scrollByPage(
         forward: Boolean,
         listState: LazyListState,
         @StructuredScope scope: CoroutineScope,
     ) {
-        val visibleItems = listState.layoutInfo.visibleItemsInfo
-        if (visibleItems.isEmpty()) return
-        val targetIndex =
-            computePageScrollTargetIndex(
-                forward = forward,
-                visibleItemIndices = visibleItems.map { it.index },
-                visibleItemEndOffsets = visibleItems.associate { it.index to (it.offset + it.size) },
-                viewportEnd = listState.layoutInfo.viewportEndOffset,
-                firstVisibleItemIndex = listState.firstVisibleItemIndex,
-            ) ?: return
-        scope.launch { listState.animateScrollToItem(targetIndex, 0) }
+        scope.launch { listState.turnPage(forward) }
     }
 }

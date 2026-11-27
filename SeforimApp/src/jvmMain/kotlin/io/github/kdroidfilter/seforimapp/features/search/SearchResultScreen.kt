@@ -41,6 +41,8 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -74,6 +76,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.Enha
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.asStable
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.listMove
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.pageRows
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.BookContentPanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.ContentAwareScrollbarShell
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.HomeSearchCallbacks
@@ -95,9 +98,11 @@ import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -141,6 +146,10 @@ data class SearchShellActions(
     val onOpenAuthor: (Long) -> Unit = {},
     // Pardes: feedback mode, a grade given to a result (again: taken back)
     val onGrade: (SearchResult, FeedbackGrade) -> Unit = { _, _ -> },
+    // Pardes: the bar is asked to take the keys (a tab picked, the tree checked by the pointer), and what asks it for
+    // the tree (request 97 of stage 3: "רק יסנן ויאפשר מיד חיפוש מחדש")
+    val barFocusRequests: Flow<Unit> = emptyFlow(),
+    val onPointerCheck: () -> Unit = {},
 )
 
 /**
@@ -240,9 +249,11 @@ private fun SearchResultContentMvi(
     val listState = rememberLazyListState()
     // A flat list by relevance, as on Google: at most two passages of a book in a row
     // Narrowed to a book ("more from it"), or searched in one from the start (home's book / TOC scope):
-    // all its passages show
-    val inBook = bookFilterIds.isNotEmpty()
-    val oneBook = inBook || state.scopeBook != null || state.scopeTocId != null
+    // all its passages show. Pardes: one book checked alone, the book of the contents pane counting only with nothing
+    // checked; a book checked with other places is a list of theirs too, shown as ever (the reader's word on build 76)
+    val inBook = bookFilterIds.size == 1 && selectedCategoryIds.isEmpty()
+    val noMarks = bookFilterIds.isEmpty() && selectedCategoryIds.isEmpty()
+    val oneBook = inBook || (state.scopeBook != null && noMarks) || state.scopeTocId != null
     // In the library's order every passage shows too: a book's stand together, as it has them
     val everyPassage = oneBook || state.catalogOrder
     val items = remember(visibleResults, bookCounts, everyPassage) { flattenResults(visibleResults, bookCounts, everyPassage) }
@@ -360,6 +371,14 @@ private fun SearchResultContentMvi(
     val listFocus = remember { FocusRequester() }
     // Pardes: back to the bar once a tab is picked, for Enter to search again in the tabs picked
     val barFocus = remember { FocusRequester() }
+    // Pardes: the bar takes the keys when the search's marks changed by the pointer, a tab picked or the tree checked,
+    // a moment later, once its chips follow them: Enter there searches again in what is marked
+    LaunchedEffect(actions.barFocusRequests) {
+        actions.barFocusRequests.collect {
+            delay(BAR_FOCUS_DELAY_MS)
+            runCatching { barFocus.requestFocus() }
+        }
+    }
 
     // In a new tab
     fun openResult(result: SearchResult) = actions.onOpenResult(result, true)
@@ -380,7 +399,8 @@ private fun SearchResultContentMvi(
                 else -> listMove(items.size, index, event.key, listState.pageRows()) ?: return false
             }
         actions.onSelectResult(items[next].hit.lineId)
-        scope.launch { listState.animateScrollToItem(next) }
+        // Pardes: in view by the least scroll, at once, as the book tree's rows (request 77 of stage 3)
+        scope.launch { listState.revealItem(next) }
         return true
     }
 
@@ -428,14 +448,8 @@ private fun SearchResultContentMvi(
                             // Always there, as Google's, even with one category: "הכל" also undoes a kept filter
                             if (categories.isNotEmpty()) {
                                 Spacer(Modifier.height(10.dp))
-                                CategoryTabs(categories, selectedCategoryIds) { id, add ->
-                                    actions.onShowOnlyCategory(id, add)
-                                    // The bar's chips follow the tabs a moment later
-                                    scope.launch {
-                                        delay(BAR_FOCUS_DELAY_MS)
-                                        runCatching { barFocus.requestFocus() }
-                                    }
-                                }
+                                // Pardes: the bar takes the keys after it, as after a check of the tree (barFocusRequests)
+                                CategoryTabs(categories, selectedCategoryIds) { id, add -> actions.onShowOnlyCategory(id, add) }
                             }
                             Spacer(Modifier.height(8.dp))
                             // Inside one book: the way back to all the results
@@ -478,10 +492,11 @@ private fun SearchResultContentMvi(
                                     // In one book, or books and categories picked, where it searched: no choice of the
                                     // library's base books there, a category's own base books instead
                                     scope =
-                                        if (oneBook) {
-                                            state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle
-                                        } else {
-                                            state.scopeLabel
+                                        when {
+                                            // Pardes: the book checked alone, its results' (the contents pane's may be another's)
+                                            inBook -> visibleResults.firstOrNull()?.bookTitle ?: state.scopeBook?.title
+                                            oneBook -> state.scopeBook?.title ?: visibleResults.firstOrNull()?.bookTitle
+                                            else -> state.scopeLabel
                                         },
                                     total = totalResults,
                                     isLoading = showProgress,
@@ -493,7 +508,8 @@ private fun SearchResultContentMvi(
                                     catalogOrder = state.catalogOrder,
                                     onCatalogOrderChange = actions.onCatalogOrderChange,
                                     fartherLines = if (totalResults > 0) state.fartherLines else 0,
-                                    modifier = Modifier.padding(end = 12.dp),
+                                    // Pardes: the row's room, the cancel button's kept, where Zayit's spacer had it
+                                    modifier = (if (showProgress) Modifier else Modifier.weight(1f)).padding(end = 12.dp),
                                 )
 
                                 // The progress shows while searching only
@@ -519,8 +535,6 @@ private fun SearchResultContentMvi(
                                             )
                                         }
                                     }
-                                } else {
-                                    Spacer(Modifier.weight(1f))
                                 }
 
                                 // Reserve space for the cancel button to prevent width jumps
@@ -802,16 +816,19 @@ private fun ResultView(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (item.more > 0) {
-                ResultLink(
-                    stringResource(Res.string.search_more_from_book, item.more, hit.bookTitle),
-                    accent,
-                    resultSp(11f),
-                    onClick = onMoreInBook,
-                )
+                // Pardes: a long book's title cut, not the grade buttons after it (the reader's word on build 76)
+                Box(if (feedbackOn) Modifier.weight(1f) else Modifier) {
+                    ResultLink(
+                        stringResource(Res.string.search_more_from_book, item.more, hit.bookTitle),
+                        accent,
+                        resultSp(11f),
+                        onClick = onMoreInBook,
+                    )
+                }
             }
             // Pardes: feedback mode, at the row's end
             if (feedbackOn) {
-                Spacer(Modifier.weight(1f))
+                if (item.more <= 0) Spacer(Modifier.weight(1f))
                 SearchFeedbackButtons(grade, onGrade)
             }
         }
@@ -1129,23 +1146,79 @@ internal fun FilterTabs(
         } else {
             tabs.take(TOP_TABS) + tabs.drop(TOP_TABS).filter { it.first in selected }
         }
+    val allTab = @Composable { CategoryTab(stringResource(Res.string.search_tab_all), selected.isEmpty()) { onSelect(null) } }
+    val tab = @Composable { index: Int ->
+        CategoryTab(shown[index].second, shown[index].first in selected) { onSelect(shown[index].first) }
+    }
+    // Not a tab: a link, in the accent as the other links of the results
+    val moreLink =
+        @Composable {
+            ResultLink(
+                stringResource(if (showAll) Res.string.search_tabs_less else Res.string.search_tabs_more),
+                JewelTheme.globalColors.outlines.focused,
+                13.sp,
+            ) { showAll = !showAll }
+        }
+    if (!showAll) {
+        // Pardes: in one row, those with no room in it behind "עוד" too (the reader's question on build 76, of five tabs
+        // that took two rows of a narrow pane and no "עוד": "לאיפה נעלם ה"עוד" בטאבי בקטגוריה?")
+        TabsInOneRow(shown.size, tabs.size > TOP_TABS, allTab, tab, moreLink, modifier)
+        return
+    }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxWidth(),
     ) {
-        CategoryTab(stringResource(Res.string.search_tab_all), selected.isEmpty()) { onSelect(null) }
-        shown.forEach { (id, title) ->
-            CategoryTab(title, id in selected) { onSelect(id) }
-        }
-        // Not a tab: a link, in the accent as the other links of the results
-        if (tabs.size > TOP_TABS) {
-            ResultLink(
-                stringResource(if (showAll) Res.string.search_tabs_less else Res.string.search_tabs_more),
-                JewelTheme.globalColors.outlines.focused,
-                13.sp,
-            ) { showAll = !showAll }
+        allTab()
+        shown.indices.forEach { tab(it) }
+        moreLink()
+    }
+}
+
+/**
+ * Pardes: "הכל" ([allTab]) and as many of the [count] tabs ([tab], by index) as the row has room for, then [moreLink]
+ * when some had none, or when there are more anyway ([alwaysMore]); in the row's direction, its items centred on it.
+ */
+@Composable
+private fun TabsInOneRow(
+    count: Int,
+    alwaysMore: Boolean,
+    allTab: @Composable () -> Unit,
+    tab: @Composable (Int) -> Unit,
+    moreLink: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SubcomposeLayout(modifier.fillMaxWidth()) { constraints ->
+        val gap = 8.dp.roundToPx()
+        val loose = constraints.copy(minWidth = 0)
+        val all = subcompose("all", allTab).map { it.measure(loose) }
+        val tabs = (0 until count).map { index -> subcompose(index) { tab(index) }.map { it.measure(loose) } }
+        val more = subcompose("more", moreLink).map { it.measure(loose) }
+
+        fun width(placeables: List<Placeable>) = placeables.sumOf { it.width }
+
+        // The width of "הכל" and the first [n] tabs, with "עוד" after them when [withMore]
+        fun widthOf(
+            n: Int,
+            withMore: Boolean,
+        ) = width(all) + tabs.take(n).sumOf { width(it) + gap } + if (withMore) gap + width(more) else 0
+        val fitting =
+            if (!alwaysMore && widthOf(count, false) <= constraints.maxWidth) {
+                count
+            } else {
+                (count downTo 0).firstOrNull { widthOf(it, true) <= constraints.maxWidth } ?: 0
+            }
+        val withMore = alwaysMore || fitting < count
+        val row = listOf(all) + tabs.take(fitting) + if (withMore) listOf(more) else emptyList()
+        val height = row.flatten().maxOfOrNull { it.height } ?: 0
+        layout(constraints.maxWidth, height) {
+            var x = 0
+            row.forEach { item ->
+                item.forEach { it.placeRelative(x, (height - it.height) / 2) }
+                x += width(item) + gap
+            }
         }
     }
 }
@@ -1293,6 +1366,10 @@ private fun SearchStatusLine(
             color = grey,
             fontSize = 13.sp,
             maxLines = 1,
+            // Pardes: a long place cut, not the links after it (the reader's word on build 76: "המיון לפי וסינון מפרשים
+            // נעלם כשאין מקום בשורה")
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
         if (!isLoading && !baseBooksHadNoResults && scope == null) {
             Text("·", color = grey, fontSize = 13.sp)

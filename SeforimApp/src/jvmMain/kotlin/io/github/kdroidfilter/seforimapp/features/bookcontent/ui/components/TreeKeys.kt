@@ -3,6 +3,7 @@ package io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -26,16 +27,23 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import io.github.kdroidfilter.seforimapp.core.presentation.window.FocusStop
+import io.github.kdroidfilter.seforimapp.core.presentation.window.focusStops
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.NavigationState
+import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.santimattius.structured.annotations.StructuredScope
@@ -62,10 +70,14 @@ data class TreeNode(
     val open: Boolean = false,
 )
 
-/** A row of a tree for its keys: its key in the tree's list, its [node], and its [click] (a folder's opens or closes it). */
+/**
+ * A row of a tree for its keys: its key in the tree's list, its [node], and its [click] (a folder's opens or closes it).
+ * [check]: the row's checkbox, where it has one (a search's tree of books), turned by Space as a checkbox tree's is.
+ */
 class TreeKeyRow(
     val key: Any,
     val node: TreeNode,
+    val check: (() -> Unit)? = null,
     val click: () -> Unit,
 )
 
@@ -127,31 +139,47 @@ internal fun treeMove(
     if (nodes.isEmpty()) return null
     val last = nodes.lastIndex
     if (focused !in nodes.indices) return TreeMove.Focus(if (key == TreeKey.END) last else 0)
+    return rowMove(focused, last, key, page)?.let { TreeMove.Focus(it) } ?: rowAction(nodes, focused, key)
+}
+
+// Where the keys that only move along the rows go from the row [focused], [last] the last row: a row up or down, the
+// first or the last, a page; null for the keys that act on the row
+private fun rowMove(
+    focused: Int,
+    last: Int,
+    key: TreeKey,
+    page: Int,
+): Int? =
+    when (key) {
+        TreeKey.UP -> (focused - 1).coerceAtLeast(0)
+        TreeKey.DOWN -> (focused + 1).coerceAtMost(last)
+        TreeKey.HOME -> 0
+        TreeKey.END -> last
+        TreeKey.PAGE_UP -> (focused - page).coerceAtLeast(0)
+        TreeKey.PAGE_DOWN -> (focused + page).coerceAtMost(last)
+        else -> null
+    }
+
+// What the keys that act on the row [focused] do: Enter clicks it; in, out, the keypad's plus and minus open or close
+// its folder, or go on to the row they lead to; null when there is nothing further, and for the keys that only move
+private fun rowAction(
+    nodes: List<TreeNode>,
+    focused: Int,
+    key: TreeKey,
+): TreeMove? {
     val node = nodes[focused]
+    val closed = node.folder && !node.open
+    val open = node.folder && node.open
     return when (key) {
-        TreeKey.UP -> TreeMove.Focus((focused - 1).coerceAtLeast(0))
-        TreeKey.DOWN -> TreeMove.Focus((focused + 1).coerceAtMost(last))
-        TreeKey.HOME -> TreeMove.Focus(0)
-        TreeKey.END -> TreeMove.Focus(last)
-        TreeKey.PAGE_UP -> TreeMove.Focus((focused - page).coerceAtLeast(0))
-        TreeKey.PAGE_DOWN -> TreeMove.Focus((focused + page).coerceAtMost(last))
         TreeKey.ENTER -> TreeMove.Click(focused)
         // IntelliJ's (TreeAction.selectChild): a closed folder opens, an open one or a leaf goes on to the next row
-        TreeKey.IN ->
-            when {
-                node.folder && !node.open -> TreeMove.Click(focused)
-                focused < last -> TreeMove.Focus(focused + 1)
-                else -> null
-            }
+        TreeKey.IN -> if (closed) TreeMove.Click(focused) else TreeMove.Focus(focused + 1).takeIf { focused < nodes.lastIndex }
         // IntelliJ's (TreeAction.selectParent): an open folder closes, a row goes up to its parent, and a row at the top
         // level, which has none, to the nearest open folder above it, else to the first row
-        TreeKey.OUT ->
-            when {
-                node.folder && node.open -> TreeMove.Click(focused)
-                else -> outOf(nodes, focused)?.let { TreeMove.Focus(it) }
-            }
-        TreeKey.EXPAND -> TreeMove.Click(focused).takeIf { node.folder && !node.open }
-        TreeKey.COLLAPSE -> TreeMove.Click(focused).takeIf { node.folder && node.open }
+        TreeKey.OUT -> if (open) TreeMove.Click(focused) else outOf(nodes, focused)?.let { TreeMove.Focus(it) }
+        TreeKey.EXPAND -> TreeMove.Click(focused).takeIf { closed }
+        TreeKey.COLLAPSE -> TreeMove.Click(focused).takeIf { open }
+        else -> null
     }
 }
 
@@ -214,12 +242,16 @@ class TreeKeys internal constructor(
 ) {
     internal val focusRequester = FocusRequester()
 
+    // The tree as a part the window's focus keys stop at (request 100): Shift with the arrow left or right, F6
+    internal val stop = FocusStop { focusRequester.requestFocus() }
+
     /** The key of the row the keys are on, null before any. */
     var focused: Any? by mutableStateOf(null)
         internal set
 
     internal var hasFocus by mutableStateOf(false)
     internal var rtl = true
+    private var spaceDown = false
     internal var rows: List<TreeKeyRow> = emptyList()
 
     /**
@@ -234,6 +266,7 @@ class TreeKeys internal constructor(
         listState: LazyListState,
         onLeave: (() -> Unit)?,
     ): Boolean {
+        if (isSpace(event)) return check()
         if (event.type != KeyEventType.KeyDown || event.isAltPressed || event.isShiftPressed) return false
         if (event.key == Key.Escape) {
             onLeave?.invoke() ?: return false
@@ -242,9 +275,18 @@ class TreeKeys internal constructor(
         val key = treeKeyOf(event.key, rtl) ?: return false
         // Ctrl/Cmd with Enter opens in a new tab, as with a click; with the other keys, they are the window's
         if ((event.isCtrlPressed || event.isMetaPressed) && key != TreeKey.ENTER) return false
+        move(key, listState, onLeave)
+        return true
+    }
+
+    // The move of [key] from the keys' row: the row it goes to revealed, or the row it acts on clicked
+    private fun move(
+        key: TreeKey,
+        listState: LazyListState,
+        onLeave: (() -> Unit)?,
+    ) {
         val rows = rows
-        val move = treeMove(rows.map { it.node }, rows.indexOfFirst { it.key == focused }, key, listState.pageRows())
-        when (move) {
+        when (val move = treeMove(rows.map { it.node }, rows.indexOfFirst { it.key == focused }, key, listState.pageRows())) {
             is TreeMove.Focus -> {
                 focused = rows[move.index].key
                 scope.launch { listState.revealItem(move.index) }
@@ -256,7 +298,20 @@ class TreeKeys internal constructor(
             }
             null -> Unit
         }
+    }
+
+    // The keys' row's checkbox turned, where it has one
+    private fun check(): Boolean {
+        rows.firstOrNull { it.key == focused }?.check?.invoke() ?: return false
         return true
+    }
+
+    // Space, alone, which checks the keys' row: its key pressed, or its character alone where the window gives a
+    // printed key so, with no key press (the window on Linux; the character after its own key press is the same Space)
+    private fun isSpace(event: KeyEvent): Boolean {
+        if (event.key == Key.Spacebar) spaceDown = event.type == KeyEventType.KeyDown
+        val typed = event.type == KeyEventType.Unknown && event.utf16CodePoint == ' '.code
+        return !event.hasModifier && ((event.key == Key.Spacebar && spaceDown) || (typed && !spaceDown))
     }
 
     // A press at [y] pixels down the list: on a folder's row, the tree takes the keyboard's focus and the keys that row
@@ -286,6 +341,11 @@ fun rememberTreeKeys(selected: Any?): TreeKeys {
     // Only in a reader's pane, which has the graph (a test of the tree alone has neither)
     val focusKey = LocalPaneFocusKey.current
     if (focusKey != null) {
+        val stops = LocalOpenWindow.current.focusStops
+        DisposableEffect(keys, stops) {
+            stops.add(keys.stop)
+            onDispose { stops.remove(keys.stop) }
+        }
         val requests = LocalAppGraph.current.paneFocusRequests
         LaunchedEffect(keys, focusKey) {
             requests.await(focusKey)
@@ -336,9 +396,13 @@ fun Modifier.treeKeys(
     onLeave: (() -> Unit)? = null,
 ): Modifier {
     keys.rows = rows
-    return focusRequester(keys.focusRequester)
-        .onFocusChanged { keys.hasFocus = it.hasFocus }
-        .onPreviewKeyEvent { keys.onKey(it, listState, onLeave) }
+    return onGloballyPositioned { keys.stop.bounds = it.boundsInWindow() }
+        .focusRequester(keys.focusRequester)
+        .onFocusChanged {
+            keys.hasFocus = it.hasFocus
+            keys.stop.focused = it.hasFocus
+        }.onPreviewKeyEvent { keys.onKey(it, listState, onLeave) }
+        .onKeyEvent(keys.stop::key)
         .focusable()
         .pointerInput(keys, listState) {
             awaitPointerEventScope {
@@ -349,3 +413,6 @@ fun Modifier.treeKeys(
             }
         }
 }
+
+// Whether a key comes with Alt, Shift, Ctrl or Cmd held
+private val KeyEvent.hasModifier: Boolean get() = isAltPressed || isShiftPressed || isCtrlPressed || isMetaPressed

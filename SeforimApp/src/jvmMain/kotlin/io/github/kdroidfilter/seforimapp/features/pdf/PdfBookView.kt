@@ -108,7 +108,9 @@ internal fun PdfBookView(
         appSettings.dafShown(tabId)
         onDispose { appSettings.dafHidden(tabId) }
     }
-    val zoom by appSettings.dafZoomFlow.collectAsState()
+    // As wide as the view at most, unless zoomed wider (request 79 of stage 3)
+    val zoom = shownPageZoom(tabId)
+    val onZoom = { to: Float -> appSettings.setDafZoomFrom(tabId, to) }
     val spreads by appSettings.pageSpreadsFlow.collectAsState()
     // At the page read at the top, kept as it scrolls: the rows changed (a page each, or two), a new list opens there
     val top = remember(file) { Top(place.page, place.offset) }
@@ -124,15 +126,7 @@ internal fun PdfBookView(
         },
         onPlace = onPlace,
     )
-    // The contents pane lists the pages once they are known, and sends the page clicked there
-    DisposableEffect(tabId) { onDispose { store.showPages(tabId, null) } }
-    LaunchedEffect(tabId, pages) { if (pages > 0) store.showPages(tabId, PdfPagesShown(pages, top.page.coerceIn(0, pages - 1))) }
-    LaunchedEffect(tabId, listState, pages) {
-        if (pages == 0) return@LaunchedEffect
-        store.pageRequests
-            .filter { (tab, _) -> tab == tabId }
-            .collect { (_, page) -> listState.scrollToItem(rowOf(page.coerceIn(0, pages - 1), spreads)) }
-    }
+    PagesInContents(tabId, pages, top, listState, spreads)
     val error = failure ?: reader.error?.message
     Column(modifier.fillMaxSize()) {
         PdfBar(
@@ -141,7 +135,7 @@ internal fun PdfBookView(
             spreads = spreads,
             goTo = inTab,
             zoom = zoom.takeIf { inTab },
-            onZoom = appSettings::setDafZoom,
+            onZoom = onZoom,
             actions = actions,
         )
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -152,7 +146,7 @@ internal fun PdfBookView(
                 else -> {
                     // Its find, Ctrl/Cmd+F as a book's (request 48 of docs/DESKTOP_STAGE3_PLAN.md)
                     val find = remember(reader) { PdfFind() }
-                    PdfPages(reader, listState, spreads, zoom, onZoom = appSettings::setDafZoom, marks = find.marks)
+                    PdfPages(reader, listState, spreads, zoom, tabId, onZoom = onZoom, marks = find.marks)
                     PdfFindBar(find, reader, tabId, listState, spreads, Modifier.align(Alignment.TopEnd))
                 }
             }
@@ -160,10 +154,32 @@ internal fun PdfBookView(
     }
 }
 
+// The tab [tabId]'s contents pane lists the [pages] once they are known, the page read at the [top] marked, and sends
+// the page clicked there, which the list [listState] of [spreads] goes to
+@Composable
+private fun PagesInContents(
+    tabId: String,
+    pages: Int,
+    top: Top,
+    listState: LazyListState,
+    spreads: Boolean,
+) {
+    val store = LocalAppGraph.current.pdfBookStore
+    DisposableEffect(tabId) { onDispose { store.showPages(tabId, null) } }
+    LaunchedEffect(tabId, pages) { if (pages > 0) store.showPages(tabId, PdfPagesShown(pages, top.page.coerceIn(0, pages - 1))) }
+    LaunchedEffect(tabId, listState, pages) {
+        if (pages == 0) return@LaunchedEffect
+        store.pageRequests
+            .filter { (tab, _) -> tab == tabId }
+            .collect { (_, page) -> listState.scrollToItem(rowOf(page.coerceIn(0, pages - 1), spreads)) }
+    }
+}
+
 /**
- * The pages one under the other, or two side by side with [spreads], [zoom] times the view's width (two, half of it
- * each), centered and scrolled sideways past it. The daf's gestures zoom them, and the keys turn them as the text's:
- * Page Up and Down, Ctrl + Home and End; the zoom keys are the window's, which zoom the daf of the tab.
+ * The pages one under the other, or two side by side with [spreads], as wide as the daf's [zoom] says (two, half of it
+ * each; a size, whatever the view's width: request 73 of docs/DESKTOP_STAGE3_PLAN.md), centered and scrolled sideways
+ * past it, their fit told for the tab [tabId]. The daf's gestures zoom them, and the keys turn them as the text's: Page
+ * Up and Down, Ctrl + Home and End; the zoom keys are the window's, which zoom the daf of the tab.
  */
 @Composable
 private fun PdfPages(
@@ -171,6 +187,7 @@ private fun PdfPages(
     listState: LazyListState,
     spreads: Boolean,
     zoom: Float,
+    tabId: String,
     onZoom: (Float) -> Unit,
     marks: Map<Int, List<PageMark>> = emptyMap(),
 ) {
@@ -190,7 +207,6 @@ private fun PdfPages(
     val aspect by produceState<Float?>(null, reader) {
         value = runSuspendCatching { reader.pageSize(0)?.let { it.heightPoints / it.widthPoints } }.getOrNull()
     }
-    val whole = rememberWholePage()
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -200,8 +216,10 @@ private fun PdfPages(
             .focusable(),
     ) {
         val share = if (spreads) spreadPageWidth(maxWidth) else maxWidth
-        val base = fittedPageWidth(share.value, maxHeight.value, aspect, whole, around = (PAGE_GAP * 2).value).dp
-        PdfPageList(reader, listState, pageWidth = base * (pinch.textSize / PERCENT), spreads = spreads, marks = marks)
+        val columns = if (spreads) 2 else 1
+        TellPageFit(tabId, pageFit(share.value, maxHeight.value, aspect, columns, around = (PAGE_GAP * 2).value))
+        val pageWidth = pageWidthAt(pinch.textSize / PERCENT, columns).dp
+        PdfPageList(reader, listState, pageWidth = pageWidth, spreads = spreads, marks = marks)
     }
     LaunchedEffect(Unit) { keys.requestFocus() }
 }

@@ -63,36 +63,3 @@ internal fun isLineFullyVisible(
         itemSize != null &&
         itemOffset >= 0 &&
         itemOffset + itemSize <= viewportEnd
-
-/**
- * Computes the target index for a Page Up/Page Down scroll.
- *
- * Page Down: scrolls so the last fully visible item becomes the first.
- * Page Up: scrolls backward by approximately one viewport height of items.
- *
- * @param forward true for Page Down, false for Page Up
- * @param visibleItemIndices sorted list of visible item indices
- * @param visibleItemEndOffsets map of item index to (offset + size)
- * @param viewportEnd the viewport end offset
- * @param firstVisibleItemIndex the first visible item index in the list
- * @return the target index to scroll to, or null if no visible items
- */
-internal fun computePageScrollTargetIndex(
-    forward: Boolean,
-    visibleItemIndices: List<Int>,
-    visibleItemEndOffsets: Map<Int, Int>,
-    viewportEnd: Int,
-    firstVisibleItemIndex: Int,
-): Int? {
-    if (visibleItemIndices.isEmpty()) return null
-    return if (forward) {
-        val lastFully =
-            visibleItemIndices.lastOrNull { idx ->
-                (visibleItemEndOffsets[idx] ?: Int.MAX_VALUE) <= viewportEnd
-            }
-        lastFully ?: visibleItemIndices.last()
-    } else {
-        val count = visibleItemIndices.size.coerceAtLeast(1)
-        (firstVisibleItemIndex - count + 1).coerceAtLeast(0)
-    }
-}

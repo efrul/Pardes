@@ -20,9 +20,13 @@ import io.github.kdroidfilter.seforimapp.core.presentation.components.VerticalLa
 import io.github.kdroidfilter.seforimapp.core.presentation.text.DiacriticsMode
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafKey
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafMarksButton
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.DafScanButton
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.hasBookDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.isBavli
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberDafTractate
+import io.github.kdroidfilter.seforimapp.features.bookcontent.daf.rememberOpenTractateDaf
 import io.github.kdroidfilter.seforimapp.features.bookcontent.references.BookConnections
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.BookContentState
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.isChumash
@@ -30,7 +34,7 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.pdf.PageColorsButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageFitButton
 import io.github.kdroidfilter.seforimapp.features.pdf.PageSpreadsButton
-import io.github.kdroidfilter.seforimapp.features.pdf.showsPages
+import io.github.kdroidfilter.seforimapp.features.pdf.showsPrintedPages
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.icons.*
@@ -45,6 +49,8 @@ fun StartVerticalBar(
     onEvent: (BookContentEvent) -> Unit,
     // A search tab has no library tree: its results filter by category tabs
     showBookTree: Boolean = true,
+    // Pardes: whether the book tree's pane is open; a search tab's is the tree of the books it found (request 97)
+    bookTreeShown: Boolean = uiState.navigation.isVisible,
 ) {
     VerticalLateralBar(
         position = VerticalLateralBarPosition.Start,
@@ -53,7 +59,7 @@ fun StartVerticalBar(
                 SelectableIconButtonWithToolip(
                     toolTipText = stringResource(Res.string.book_list),
                     onClick = { onEvent(BookContentEvent.ToggleBookTree) },
-                    isSelected = uiState.navigation.isVisible,
+                    isSelected = bookTreeShown,
                     icon = Library,
                     iconDescription = stringResource(Res.string.books),
                     label = stringResource(Res.string.books),
@@ -151,11 +157,20 @@ fun EndVerticalBar(
             // Diacritics toggle button - only when a book is selected and has nekudot/teamim
             if (!noBookSelected) {
                 val bookHasDiacritics = selectedBook.hasNekudot || selectedBook.hasTeamim
+                // Pardes: the tractate whose daf the book shows, itself or the one a commentary of it is printed on (82),
+                // whose daf a commentary's button opens at its comment, every option of the daf at hand (86)
+                val dafTractate = rememberDafTractate(selectedBook)
+                val commentaryOf = dafTractate?.takeUnless { selectedBook.isBavli }
+                val openTractateDaf =
+                    rememberOpenTractateDaf(uiState.tabId) { bookId, lineId ->
+                        if (!uiState.content.dafView) onEvent(BookContentEvent.ToggleDafView)
+                        onEvent(lineId?.let { BookContentEvent.OpenBookAtLine(bookId, it) } ?: BookContentEvent.OpenBookById(bookId))
+                    }
                 // A daf shown has no diacritics to hide: the button of its marks stands in their place; nor have
                 // pages (Pardes, request 49)
                 if (uiState.content.dafView && selectedBook.isBavli) {
                     DafMarksButton()
-                } else if (bookHasDiacritics && !showsPages(uiState)) {
+                } else if (bookHasDiacritics && !showsPrintedPages(uiState)) {
                     DiacriticsButton(
                         diacritics = diacritics,
                         hasTeamim = selectedBook.hasTeamim,
@@ -176,16 +191,36 @@ fun EndVerticalBar(
                         label = stringResource(Res.string.shnayim_mikra_mode),
                     )
                 }
-                // The Vilna page (צורת הדף): a Talmud tractate as printed, in place of its text
-                if (selectedBook.isBavli) {
+                // The daf (צורת הדף), in place of the text: a Talmud tractate as printed in the Vilna Shas, and from a
+                // commentary printed on it, Rashi's, Tosafot's, the Rashbam's, the tractate's at its comment (requests 82
+                // and 83), not its scan; another book as pages of its own with its commentators (BookDafView)
+                if (dafTractate != null || hasBookDaf(selectedBook)) {
+                    val toggleDaf = {
+                        if (commentaryOf == null) {
+                            onEvent(BookContentEvent.ToggleDafView)
+                        } else {
+                            openTractateDaf(
+                                commentaryOf,
+                                uiState.content.primarySelectedLineId ?: uiState.content.anchorId.takeIf { it > 0 },
+                            )
+                        }
+                    }
+                    // The button's click is its key's too (request 94 of stage 3)
+                    DafKey(uiState.tabId, toggleDaf)
                     SelectableIconButtonWithToolip(
-                        toolTipText = stringResource(Res.string.daf_view_tooltip),
-                        onClick = { onEvent(BookContentEvent.ToggleDafView) },
-                        isSelected = uiState.content.dafView,
+                        toolTipText =
+                            stringResource(
+                                if (dafTractate != null) Res.string.daf_view_tooltip else Res.string.book_daf_tooltip,
+                            ),
+                        onClick = toggleDaf,
+                        isSelected = uiState.content.dafView && commentaryOf == null,
                         icon = GemaraPage,
                         iconDescription = stringResource(Res.string.daf_view),
                         label = stringResource(Res.string.daf_view),
+                        shortcutHint = if (PlatformInfo.isMacOS) "D+⌘" else "D+Ctrl",
                     )
+                }
+                if (selectedBook.isBavli) {
                     // Pardes: the tractate's scan in place of its text or its daf (requests 41 and 46), its page ready (56)
                     DafScanButton(
                         selected = uiState.content.scanView,

@@ -33,6 +33,7 @@ import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.core.settings.AppSettings
 import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.CommentariesPaneSettings
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsViewModel
@@ -40,6 +41,7 @@ import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
 import io.github.kdroidfilter.seforimapp.theme.PreviewContainer
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.ListComboBox
@@ -60,6 +62,8 @@ import seforimapp.seforimapp.generated.resources.settings_compact_mode_descripti
 import seforimapp.seforimapp.generated.resources.settings_max_commentators_per_page
 import seforimapp.seforimapp.generated.resources.settings_max_commentators_per_page_auto
 import seforimapp.seforimapp.generated.resources.settings_max_commentators_per_page_description
+import seforimapp.seforimapp.generated.resources.settings_max_commentators_per_page_tall
+import seforimapp.seforimapp.generated.resources.settings_max_commentators_per_page_tall_description
 import seforimapp.seforimapp.generated.resources.settings_show_home_wallpaper
 import seforimapp.seforimapp.generated.resources.settings_show_home_wallpaper_description
 
@@ -119,6 +123,16 @@ private fun DisplaySettingsView(
                 onValueChange = { onEvent(DisplaySettingsEvents.SetMaxCommentatorsPerPage(it)) },
             )
 
+            // Pardes: the commentaries pane at the window's side, tall, has its own number (request 99 of stage 3)
+            val appSettings = LocalAppGraph.current.appSettings
+            val tallMaxPerPage by appSettings.flow(CommentariesPaneSettings.tallMaxPerPage).collectAsState()
+            MaxCommentatorsPerPageCard(
+                value = tallMaxPerPage,
+                onValueChange = { appSettings[CommentariesPaneSettings.tallMaxPerPage] = it },
+                title = Res.string.settings_max_commentators_per_page_tall,
+                description = Res.string.settings_max_commentators_per_page_tall_description,
+            )
+
             // A low-end machine always renders without anti-aliasing (see main): nothing to pick
             if (!PlatformInfo.isLowEnd) {
                 AntiAliasingCard(
@@ -134,6 +148,9 @@ private fun DisplaySettingsView(
 private fun MaxCommentatorsPerPageCard(
     value: Int,
     onValueChange: (Int) -> Unit,
+    // Pardes: the same card for the pane at the window's side (request 99 of stage 3)
+    title: StringResource = Res.string.settings_max_commentators_per_page,
+    description: StringResource = Res.string.settings_max_commentators_per_page_description,
 ) {
     val shape = RoundedCornerShape(8.dp)
     val autoLabel = stringResource(Res.string.settings_max_commentators_per_page_auto)
@@ -163,7 +180,7 @@ private fun MaxCommentatorsPerPageCard(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = stringResource(Res.string.settings_max_commentators_per_page),
+                text = stringResource(title),
                 modifier = Modifier.weight(1f),
             )
             ListComboBox(
@@ -174,7 +191,7 @@ private fun MaxCommentatorsPerPageCard(
             )
         }
         Text(
-            text = stringResource(Res.string.settings_max_commentators_per_page_description),
+            text = stringResource(description),
             fontSize = 12.sp,
             color = JewelTheme.globalColors.text.info,
         )

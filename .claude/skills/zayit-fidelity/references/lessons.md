@@ -39,11 +39,19 @@ tools and the code did when it was written.
   run, in a worktree of `main` (`git worktree add --detach <dir> origin/main`, its submodules by `git submodule update
   --init --reference .git/modules/<name>`): an issue is new when its file, rule and message, numbers aside, are not in
   the base's list. Stage 3 ran only `detekt`, and its 32 issues (main 299, the branch 331, none in the tests) came to
-  light only at the public release, 2026-11-22. Its
+  light only at the public release, 2026-11-22. Some of Zayit's functions stand at `detekt.yml`'s limits exactly
+  (`NotesPopupContent`, `addCategory`: 60 lines; `desiredPanes`: 15): a hook in them goes in a Pardes function, the
+  rest of Zayit's code moved into one of his file's own when even one line is too many. detekt's baseline matches a
+  finding by its function's signature: a Zayit function made internal for Pardes shows again (`SuggestionRow`), and its
+  id in the baseline takes the new visibility. Its
   structured-coroutines rule `SCOPE_003` wants a scope taken by a constructor marked
   `@param:StructuredScope @property:StructuredScope`. The compiler's plugin of the same rules fails the build on a
   plain function that launches on a `CoroutineScope` parameter not marked `@StructuredScope`, and on a scope a class
   makes for itself unless its property is (`DafDownloads`, `PdfBookStore`).
+- **detekt counts `let`, `also`, `forEach` and `use` as nesting in a function's cyclomatic complexity**: a `?.let` and
+  an `&&` added to Zayit's `BreadcrumbPopupContent` took it from 15 to 17 (2026-11-22). Move such a step into a shared
+  helper (`PopupMarking.reveal`, `markOnPointer` over the list's items) rather than inline it. A file at 15 functions
+  takes its new one into a second file for a second concern (`PopupMarking.kt`, `StudySourceField.kt`).
 - **Kotlin, as it bit:**
   - a constructor or function that ends in a lambda parameter keeps it last, or every caller's trailing lambda binds
     to the new parameter (`FeedbackSource(database) { … }`);
@@ -55,10 +63,32 @@ tools and the code did when it was written.
     `when`s (`TabsContent`'s two, `TabsViewModel.withTabId`, `DesktopSession.tabTypeFor`, `ZayitDeepLink.toShareLink`,
     `SessionManager.computeTabTitles`) and a fixed `@SerialName`, as the session keeps it by name. An older Pardes
     cannot read a session that holds it, and starts on a new one.
+- **Maven Central can stop serving a version.** On 2026-11-23 it answered 404 (`x-amz-error-code: NoSuchKey`) for
+  `io.github.kdroidfilter:kosherkotlin` 3.0.3 to 3.0.5, its index still listing them, the day after 4.0.0 came out;
+  Zayit 0.6.12 is built with 3.0.5, so every clean build failed in its first minutes ("Could not find …"), a testers'
+  build among them, while the container, whose init script takes Maven Central from Google's mirror, built on.
+  `desktop-release.yml` took that mirror as a fallback for a day; it went with the move to 4.0.1 (2026-11-24): the
+  author had withdrawn those versions, at the request of the luach whose method they carried, and a build must not
+  fetch a withdrawn version from elsewhere. Ask the repository itself before blaming the change: `curl -sI` on the
+  artifact's `.pom`, and a scratch project with a clean Gradle home (`-g`).
 - **Building on Windows from a folder whose name has Hebrew letters** (the user's computer, 2026-11-15): the Android
   Gradle plugin refuses the path (`-Pandroid.overridePathCheck=true`), and Kover's agent cannot find its file, its
   path turned to question marks: build from a `subst` drive. Gradle itself needs Java 21 or later (a JBR from
   `~/.jdks`). A test measured again with nothing changed needs `--rerun`, or Gradle skips it.
+- **Other sessions' branches may be ahead of `main`.** Before starting, list the branches ahead of it
+  (`git fetch origin '+refs/heads/*:refs/remotes/origin/*'`, then `git rev-list --count origin/main..<branch>`) and the
+  open pull requests: on 2026-11-23 the newest desktop work (requests 73 to 77, the pages' zoom made a size) was on a
+  branch with no pull request yet, and the user asked that it be heeded ("שים לב לכל תיקונים בענפים אחרים שהתקדמו").
+  Work that builds on a branch starts from it (a fast-forward), and says so; two branches that conflict with each
+  other are not merged together in a third.
+- **An experiment kept on a branch is taken up by its commit, not by its branch.** `git cherry-pick -n` of the book
+  daf's one commit onto the newest code met five small conflicts where a merge of the branch would have met ten days of
+  `main`; code the experiment had moved to a new file had not changed since, which `git diff -U0 <its base> HEAD --
+  <file> | grep '^@@'` showed before trusting the move (2026-11-23).
+- **A feature taken out after a merge is taken out by its own lines.** Restoring a file to the merge's first parent drops
+  everything the other side brought to it: before request 86 put back the files of request 82's commentary mode as the
+  other branch had them, `git show <the side's commit> -- <file>` showed that the side had brought them request 82 alone
+  (and not 81's fits), and `git diff <the parent> -- <file>` that nothing but the new change was left (2026-11-23).
 - **Scratch tests and benches** (`Tmp*`) are deleted before the commit. A benchmark runs alone: mockk in the same JVM
   slows the real repository's calls.
 
@@ -88,6 +118,11 @@ tools and the code did when it was written.
   the pages would flip what inside them reads the direction. A list whose items become rows of two keeps its places
   by the pages' own order, and turns them into rows only where it scrolls (`itemOfAmud`, `rowOf`); turned on or off,
   it reopens at what was at its top (2026-11-13).
+- **A control of one view goes in that view, not in the end bar.** The bar of a Chumash's pages (the zoom's two, two
+  pages, a whole page, the diacritics, shnayim mikra, the daf, then the panes' five) is full at a window 900 pixels
+  tall: one more button pushed the commentaries' button out of the window, with no sign of it (2026-11-23, the book
+  daf's style, which became a button at the pages' corner). Count the bar's buttons in the fullest state before adding
+  one, and look at the bar's bottom in the screenshot.
 - **A binding's internal API, for a bench only, by reflection.** The PDFium binding keeps its reader's constructor and
   its drawing of a page internal (`internal` holds across modules, and Kotlin 2 does not let it be suppressed): a
   test reaches them by their JVM names, a suspend one through `suspendCoroutineUninterceptedOrReturn`
@@ -109,6 +144,16 @@ tools and the code did when it was written.
   item whose content was just set (a part laid out in place of its placeholder) runs on, before then, through the
   items after it: the book daf's experiment landed four chapters on. Wait until `layoutInfo.visibleItemsInfo` gives
   the item its new size (2026-11-13).
+- **A lazy list's item is composed whole.** The list is lazy by item, not inside one: the book daf's item held all a
+  unit's pages, and a chapter with many commentators is hundreds of them, each some hundred and fifty `BasicText`s.
+  Composed and measured together on the main thread they made the testers' build stop answering ("לא מגיב", the
+  user's screenshot of 2026-11-23), and with all the commentators checked the process grew to 6 GB here until the
+  system ended it. An item whose content grows with the data composes the part in view alone (`UnitRows`: an item
+  as tall as all its rows, those near the view placed where the others would leave them), and lays a page out when
+  it comes, off the UI thread. Try a new view with the most the user can ask of it (every commentator checked, the
+  longest chapter), not only with the example's three.
+- **`runSuspendCatching { … }.getOrNull()` hides the failure it catches.** A unit that could not be laid out stayed a
+  spinner, or the pages before it, with nothing said: give the failure to `warnln` before dropping it.
 - Text lines are whole pixels high. A long run of lines at a fractional pitch drifts by half a pixel a line: give each
   line the whole pixels that keep it on the pitch (`fix(daf): a long run's lines no longer drift`).
 - A menu that closes before the coroutine it launched has ended cancels it: do the work, then dismiss
@@ -155,6 +200,58 @@ tools and the code did when it was written.
   stage 3).
 - **A PDF's page size is nullable** (`PdfDocument.pageSize(i)`, a page that cannot be read): `?.let` it, as the daf's
   whole-page fit does (request 63 of stage 3).
+
+- **`scrollToItem` puts its item at the top.** Zayit's `revealItem` used it for a row not in view, so a step down from
+  the row at the bottom (whose next row starts exactly at the view's end, not in `visibleItemsInfo`) was a page's jump,
+  and a step up a row's: "למעלה אחד אחד ולמטה מחליף הרבה בבת אחת" (requests 75 and 76 of the list after the public
+  release, 2026-11-22). The reader's selected line, the search's results, the find pane and the bar's lists each had a
+  way of their own, all with the same jump or an animation. A row below the view comes in at the bottom:
+  `scrollToItem`, then back by the room left under it, the layout info current at once (`forceRemeasure`).
+- **A zoom kept as a share of the view changes with every pane.** The daf's zoom times the view's width shrank the
+  pages as a side pane or the commentaries opened (request 73, 2026-11-22): a zoom is a size (`ZOOM_ONE_WIDTH`), and a
+  fit ("עמוד שלם", the view's width) a zoom set once, from the fit the view tells (`PageFits`, by the tab's id).
+  A size alone is not the answer either: a pane then cut the page ("הגודל כן יקטן אבל רק כמה שצריך", request 79,
+  2026-11-23). The pages are shown at the size, no wider than the view, unless the size was set wider than the view
+  it was set in (`daf_page_zoom_wide`, decided where the zoom is set, by the tab's view, never by a view that merely
+  narrowed); and every step, key, button, pinch, starts from the size shown, or a step beside a pane jumps past it.
+- **An icon is what is customary first.** Asked for a new icon of the pages' fits, a design of Pardes's own came
+  first, and the user asked "לגבי האייקנים - תבדוק מה מקובל" (request 81, 2026-11-23). The icons module is mostly
+  Material Symbols (composables.com's Kotlin of them, the 960 viewport): take the icon from there when it has one
+  (`fit_page_height`, `fit_page_width`), with the Apache License's notice, look at Fluent and the PDF readers beside it,
+  and draw only what none has (two thirds of a page) after the one it is nearest to.
+- **A lambda remembered by some keys keeps what it read in its first composition.** Zayit's `previewKeyHandler`
+  (`remember(onEvent)`) calls `stepLine`, which reads `dafControl`, made by `remember(bookId)`: with another book opened
+  in the tab, the arrows and Page Up/Down went to the former book's daf, and the arrows stepped through the text's
+  lines on the new one (request 86 of stage 3, 2026-11-23). Give `remember` every remembered value its lambda reads
+  that can change, or read it through `rememberUpdatedState`.
+- **A fix of how one path places a line moves every path that leaned on the old placement.** Request 75 brought a
+  selected line below the view in at its bottom, for a step down; a book opened at a line in its tab
+  (`OpenBookAtLine`) had leaned on the old jump to put that line at the top, and showed it at the bottom from then on,
+  found only with request 87 (2026-11-24). Before changing a shared reveal, list who selects a line without placing it
+  (`loadAndSelectLine(…, scroll = false)`), and give them a place of their own (the tab's anchor, as `loadBook` does).
+- **A jump to a row and back starts the rows between again.** `scrollToItem` disposes the rows it leaves, and a row
+  that reads its text once on screen (the find pane's, `produceState`) reads it again, empty first, and grows: after a
+  page down the rows above the row revealed grew and pushed it below the view, round after round (request 78,
+  2026-11-23). A row a few rows below is scrolled to through them (`scrollInFromBelow`), and the row revealed is kept
+  in view while the rows change, until the reader scrolls (`revealSettled`). The reader's scroll is told by the list
+  no longer being where the reveal left it, not by `isScrollInProgress`: a scroll that suspends nowhere (a trackpad's
+  `dispatchRawDelta`, the scrollbar, the reveal's own) sets it and clears it before any `snapshotFlow` looks.
+- **A UI test of rows that change later must let the time pass.** `waitForIdle` runs no `delay` in an effect: the
+  first test of request 78 passed without the fix, the rows never growing. `mainClock.advanceTimeBy` lets them; and a
+  new test is run once against the code it fixes, to see it fail (2026-11-23).
+- **One marking for every popup** (`PopupMarking.kt`, request 74): a popup whose field keeps the focus marks by index,
+  its list told the pointer by `markOnPointer` (a `PointerInputModifierNode` on the `LazyColumn`, the positions the
+  list's own offsets); a popup with no field marks by focus (`rememberHoverFocus`); Jewel's menus mark one item inside
+  `SingleMarkMenus`. A popup's pointer `Enter` is no move, and its first `Move` only noted: a popup opened under a
+  still pointer marks nothing. A modifier factory cannot `rememberUpdatedState` its lambda: make it a node whose
+  `update` takes the new one, or the lambda reads stale values (`filtered` in the breadcrumb's popup).
+- **A text laid over a `SelectionContainer`'s lines takes part in its selections.** The find bar sits inside the
+  book's container, its placeholder and counter over the first lines: a drag from a line past the end of a
+  right-to-left row, into the margin, was crossed by Compose's layout of both texts against its offsets and drawn
+  reversed, which closed the app ("Start(3638) or End(3594) is out of range", the user's report of 2026-11-26; Zayit's
+  `ComposePatches` took a third patch, `SelectionDrawPatch`). A crash inside Compose is read in its sources of the
+  version built (`foundation-desktop-<version>-sources.jar` from Maven Central's mirror) and reproduced in a UI test
+  first: 300 random drags over a plain right-to-left list never crashed, one text laid over a line did at once.
 
 ## Data and settings
 
@@ -338,11 +435,17 @@ Each of these was built, shown, and sent back. They say what the user expects:
   used takes the focus.
 - **A pane of the reader goes where its kind is.** The find's results, a list to go through as the contents is, moved
   to the text's right beside the contents ("יהיה בימין").
+- **A screen opened from elsewhere is the screen itself, not a narrowed copy of it.** Rashi's and Tosafot's tabs got
+  the tractate's daf with the commentary's lines (request 82); the user asked for every option of the Gemara's daf, the
+  Gemara to be focused too ("פתיחה של צורת הדף מרשי תפתח את כל האפשרויות כמו גמרא, אין אפשרות היום להתמקד על הגמרא
+  ככה", 2026-11-23). The commentary's button now opens the tractate's own daf in its tab, the comment selected there as
+  a click selects it. A second mode of a screen lacks what the first one has, and each new option must be built twice.
 - **One row marked, never two alike.** The home's dropdowns tinted the keys' row and the pointer's alike ("עכשיו שתי
   שורות מסומנות באותו צבע. מה התקן?", 2026-11-20). The standard, as in the OS's menus and IntelliJ's popups: the
   pointer's move marks the row under it, the arrows go on from the row marked, and a still pointer's row is not
-  marked again until it moves (`DropdownMarking`). Zayit's breadcrumb popup takes the other accepted way, two tints
-  (the keys' 0.16, the pointer's 0.08). Jewel 0.41's `PopupMenu` (the Tools menu, a tab's) moves its focus to the row
+  marked again until it moves (`DropdownMarking`, every popup's `PopupMarking` since request 74). Zayit's breadcrumb
+  popup took the other accepted way, two tints (the keys' 0.16, the pointer's 0.08), until request 74 made every popup
+  mark one row (2026-11-22). Jewel 0.41's `PopupMenu` (the Tools menu, a tab's) moves its focus to the row
   hovered, yet keeps the hover tint, in the same colour, on the row under a still pointer after an arrow: its
   `FocusableComponentState.chooseValue` puts hovered before focused. Jewel's Swing compatibility mode drops the hover
   and pressed tints, so that only focus marks; `LocalSwingCompatMode` is internal, so `SingleMarkPopupMenu` enters the
@@ -367,5 +470,8 @@ Each of these was built, shown, and sent back. They say what the user expects:
   code ("זה יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף", 2026-11-19). It now finds both
   with the bar's lookup and draws them with its rows, a category in its base books alone too.
 
+- **The same behaviour everywhere, by the same code** ("למה זה לא קוד משותף לכולם?", 2026-11-22). Each popup had kept
+  its own rows and tints, and each fix had gone into each popup in place, so the next popup missed it. A behaviour
+  asked of one list or menu is built once, in a shared file, and every popup reaches it.
 Show a screenshot of a choice of design before building on it, and ask of each new control: does it behave as the
 one beside it does?

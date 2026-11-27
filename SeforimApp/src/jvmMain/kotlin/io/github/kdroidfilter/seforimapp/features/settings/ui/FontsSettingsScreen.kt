@@ -70,7 +70,7 @@ private fun FontsSettingsView(
     // Pardes: the fonts the user added, after the catalog's (UserFonts)
     val userFonts by (UserFonts.sharedOrNull()?.fonts ?: MutableStateFlow(emptyList())).collectAsState()
     val codes = (options.map { it.code } + userFonts.map { it.code }).toImmutableList()
-    val optionLabels = (options.map { stringResource(it.label) } + userFonts.map { it.name }).toImmutableList()
+    val optionLabels = (options.map { stringResource(it.label) } + userFonts.map { it.shortName }).toImmutableList()
 
     VerticallyScrollableContainer(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -143,7 +143,7 @@ private fun FontsSettingsView(
 }
 
 @Composable
-private fun FontSettingCard(
+internal fun FontSettingCard(
     label: StringResource,
     fontCode: String,
     options: ImmutableList<String>,
@@ -180,6 +180,8 @@ private fun FontSettingCard(
                 items = labels,
                 selectedIndex = selectedIndex,
                 onSelectedItemChange = { idx -> onFontChange(codes[idx]) },
+                // Pardes: by code, not by name, which two fonts of the user's may share
+                itemKeys = { idx, _ -> codes[idx] },
                 modifier = Modifier.fillMaxWidth(0.4f),
             )
         }

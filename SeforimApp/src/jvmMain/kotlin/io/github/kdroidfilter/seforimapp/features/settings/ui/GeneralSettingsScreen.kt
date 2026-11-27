@@ -32,6 +32,7 @@ import io.github.kdroidfilter.seforimapp.branding.BrandInfo
 import io.github.kdroidfilter.seforimapp.core.presentation.components.AnimatedHorizontalProgressBar
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.UrlOpener
+import io.github.kdroidfilter.seforimapp.features.search.SearchAnywhereKeysCard
 import io.github.kdroidfilter.seforimapp.features.settings.general.GeneralSettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.general.GeneralSettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.general.GeneralSettingsViewModel
@@ -148,6 +149,9 @@ private fun GeneralSettingsView(
             )
 
             OpenSiddurCard()
+
+            // Pardes: the line of keys under the search from anywhere, for who hid it there
+            SearchAnywhereKeysCard()
         }
     }
 }

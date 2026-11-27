@@ -2,7 +2,6 @@
 
 package io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
@@ -23,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
@@ -75,11 +75,17 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import io.github.kdroidfilter.seforimapp.core.e2e.E2e
+import io.github.kdroidfilter.seforimapp.core.presentation.components.MarkOnHover
+import io.github.kdroidfilter.seforimapp.core.presentation.components.PopupMarking
+import io.github.kdroidfilter.seforimapp.core.presentation.components.StartBelowAnchorPositionProvider
+import io.github.kdroidfilter.seforimapp.core.presentation.components.markOnPointer
+import io.github.kdroidfilter.seforimapp.core.presentation.components.markedRowBackground
 import io.github.kdroidfilter.seforimapp.core.presentation.components.rememberPillTextFieldStyle
 import io.github.kdroidfilter.seforimapp.core.presentation.tabs.LocalTabSelected
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.core.presentation.utils.LocalWindowViewModelStoreOwner
 import io.github.kdroidfilter.seforimapp.features.bookcontent.BookContentEvent
+import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.components.revealItem
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.components.CatalogRow
 import io.github.kdroidfilter.seforimapp.features.home.widgets.FullWidthSection
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeUserLocation
@@ -613,7 +619,13 @@ internal fun UnifiedSearchBar(
         if (seededQuery == initialText && !restoredBook) return@LaunchedEffect
         seededQuery = initialText
         val field = if (inBook) tocSearchState else referenceSearchState
-        if (field.text.toString() != initialText) field.edit { replace(0, length, initialText) }
+        if (field.text.toString() != initialText) {
+            // Pardes: the search's text put in a book's field names none of its pages: its TOC shows once typed in, not
+            // at the focus, where Enter opened a page (a book checked in a search's tree is the bar's book; the reader's
+            // question on build 76: "למה סימון של ספר אחרי חיפוש מציע לי את דפי הספר לפתיחה")
+            if (inBook) skipNextTocQuery = true
+            field.edit { replace(0, length, initialText) }
+        }
     }
 
     // Back to the bar once a book is picked, to type in its TOC. The selected tab's bar only: the window's other
@@ -870,31 +882,17 @@ private fun SuggestionsPanel(
     loadingMessage: String? = null,
     // Books or categories picked already: Tab on another adds it to them
     adding: Boolean = false,
+    // Pardes: one row marked, the keys' or the pointer's ([onMark], its index), as every popup (request 74 of stage 3)
+    marking: PopupMarking? = null,
+    onMark: (Int) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     val menuStyle = JewelTheme.menuStyle
 
+    // Pardes: the row the keys move to in view by the least scroll, as the app's other lists keep theirs: whole at the
+    // list's bottom too, and a step down as a step up, not a page's jump (requests 75 and 76 of stage 3)
     LaunchedEffect(focusedIndex, rows.size) {
-        if (focusedIndex >= 0) {
-            val total = rows.size
-            if (total > 0) {
-                val visible = listState.layoutInfo.visibleItemsInfo
-                val firstVisible = visible.firstOrNull()?.index
-                val lastVisible = visible.lastOrNull()?.index
-                // Scroll down when at last visible
-                if (lastVisible != null && focusedIndex == lastVisible) {
-                    val nextIndex = (focusedIndex + 1).coerceAtMost(total - 1)
-                    if (nextIndex != focusedIndex) listState.scrollToItem(nextIndex)
-                } else if (firstVisible != null && focusedIndex == firstVisible) {
-                    // Scroll up when at first visible
-                    val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
-                    if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
-                } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
-                    // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
-                    listState.scrollToItem(focusedIndex)
-                }
-            }
-        }
+        if (focusedIndex in rows.indices && marking?.pointerMoved != true) listState.revealItem(focusedIndex)
     }
     val isEmpty = rows.isEmpty()
     Column(
@@ -911,7 +909,7 @@ private fun SuggestionsPanel(
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(marking?.let { Modifier.markOnPointer(it, listState, onMark) } ?: Modifier),
         ) {
             if (isLoading && !loadingMessage.isNullOrEmpty() && isEmpty) {
                 item {
@@ -1050,28 +1048,18 @@ private fun TocSuggestionsPanel(
     emptyMessage: String? = null,
     isLoading: Boolean = false,
     loadingMessage: String? = null,
+    // Pardes: one row marked, the keys' or the pointer's, as the bar's book stage (request 74 of stage 3)
+    marking: PopupMarking? = null,
+    onMark: (Int) -> Unit = {},
 ) {
     val isEmpty = suggestions.isEmpty() && textSearchLabel == null && addRows.isEmpty()
     val addStart = suggestions.size + if (textSearchLabel != null) 1 else 0
     val listState = rememberLazyListState()
     val menuStyle = JewelTheme.menuStyle
 
+    // Pardes: the row the keys move to in view by the least scroll, as the bar's book stage (requests 75 and 76 of stage 3)
     LaunchedEffect(focusedIndex, suggestions.size) {
-        if (focusedIndex >= 0 && suggestions.isNotEmpty()) {
-            val visible = listState.layoutInfo.visibleItemsInfo
-            val firstVisible = visible.firstOrNull()?.index
-            val lastVisible = visible.lastOrNull()?.index
-            if (lastVisible != null && focusedIndex == lastVisible) {
-                val nextIndex = (focusedIndex + 1).coerceAtMost(suggestions.lastIndex)
-                if (nextIndex != focusedIndex) listState.scrollToItem(nextIndex)
-            } else if (firstVisible != null && focusedIndex == firstVisible) {
-                val prevIndex = (focusedIndex - 1).coerceAtLeast(0)
-                if (prevIndex != focusedIndex) listState.scrollToItem(prevIndex)
-            } else if (firstVisible != null && lastVisible != null && focusedIndex !in firstVisible..lastVisible) {
-                // Pardes: a row out of view, the arrows rounding the list's end, is brought into it (2026-11-20)
-                listState.scrollToItem(focusedIndex)
-            }
-        }
+        if (!isEmpty && focusedIndex >= 0 && marking?.pointerMoved != true) listState.revealItem(focusedIndex)
     }
     Column(
         modifier =
@@ -1087,7 +1075,7 @@ private fun TocSuggestionsPanel(
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(marking?.let { Modifier.markOnPointer(it, listState, onMark) } ?: Modifier),
         ) {
             if (isLoading && !loadingMessage.isNullOrEmpty() && isEmpty) {
                 item {
@@ -1307,6 +1295,186 @@ internal enum class SuggestionKind { PLACE, TEXT_SEARCH, AUTHOR, BOOK, CATEGORY 
 // A chip of a book or category picked in the bar: several fit beside the text
 private val SCOPE_CHIP_MAX_WIDTH = 160.dp
 
+// Pardes: the share of the bar's width its chips take at most, the most of them shown (the others are counted), and
+// the least a chip is for two to be shown: narrower, their names are cut to a few letters, and one is shown alone
+private const val SCOPE_CHIPS_SHARE = 0.5f
+private const val MAX_SCOPE_CHIPS = 2
+private val SCOPE_CHIP_MIN_WIDTH = 130.dp
+
+// Pardes: the width of the list of the chips the bar has no room for, and how soon after it closed on a press outside a
+// click on its count is that same click (the press closed it: the release must not open it again)
+private val SCOPE_LIST_WIDTH = 280.dp
+private val SCOPE_LIST_MAX_HEIGHT = 320.dp
+private const val SCOPE_LIST_RECLICK_MS = 300L
+private const val KEY_DELETE = "Delete"
+
+/**
+ * Pardes: the bar's chips of what it searches in ([items]), in [room] at most (no less than one chip's): the first
+ * [MAX_SCOPE_CHIPS] of them, sharing the room, a long name cut (one alone where two would be narrower than
+ * [SCOPE_CHIP_MIN_WIDTH]); and how many more there are ([MoreScopeChips]). A chip taken out ([onRemove]) gives the
+ * bar the keys ([onFocusBar]). Three chips filled the bar and hid what was typed (the user's word on the testers'
+ * build, of a results page with a tab picked and two checks of its tree: "עומס בשורת החיפוש לא נראה טוב").
+ */
+@Composable
+private fun ScopeChips(
+    items: List<ScopeItem>,
+    room: Dp,
+    onRemove: (ScopeItem) -> Unit,
+    onFocusBar: () -> Unit,
+) {
+    if (items.isEmpty()) return
+    val width = room.coerceAtLeast(SCOPE_CHIP_MAX_WIDTH)
+    val shown = if (width >= SCOPE_CHIP_MIN_WIDTH * MAX_SCOPE_CHIPS) MAX_SCOPE_CHIPS else 1
+    val more = items.drop(shown)
+    Row(
+        modifier = Modifier.widthIn(max = width),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        items.take(shown).forEach { item ->
+            SelectedBookChip(
+                title = item.chipLabel(),
+                onClear = {
+                    onRemove(item)
+                    onFocusBar()
+                },
+                modifier = Modifier.weight(1f, fill = false).widthIn(max = SCOPE_CHIP_MAX_WIDTH),
+            )
+        }
+        if (more.isNotEmpty()) MoreScopeChips(more, onRemove, onFocusBar)
+    }
+}
+
+/**
+ * Pardes: how many chips the bar has no room for ([more]), their names under the pointer; a click lists them below it
+ * ([ScopeList]), until a click elsewhere, or a second one on it. Its first list, of chips one over the other, did not
+ * look as the app's lists (the user's question on it: "זה תואם לעיצוב הכללי?").
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MoreScopeChips(
+    more: List<ScopeItem>,
+    onRemove: (ScopeItem) -> Unit,
+    onFocusBar: () -> Unit,
+) {
+    var listed by remember { mutableStateOf(false) }
+    // When a press outside closed the list: the click it begins, on the count, closes it, as a menu's button
+    var closedAt by remember { mutableLongStateOf(0L) }
+    val names = more.map { it.chipLabel() }
+    Box {
+        Tooltip(tooltip = { Text(names.joinToString("\n")) }, enabled = !listed) {
+            Text(
+                text = "+${more.size}",
+                fontSize = 12.sp,
+                maxLines = 1,
+                color = JewelTheme.globalColors.text.normal,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(JewelTheme.globalColors.panelBackground)
+                        .border(1.dp, JewelTheme.globalColors.borders.disabled, RoundedCornerShape(14.dp))
+                        .clickable { if (System.currentTimeMillis() - closedAt > SCOPE_LIST_RECLICK_MS) listed = true }
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
+        }
+        if (listed) {
+            Popup(
+                popupPositionProvider = StartBelowAnchorPositionProvider,
+                properties = PopupProperties(focusable = true),
+                onDismissRequest = {
+                    listed = false
+                    closedAt = System.currentTimeMillis()
+                },
+            ) {
+                ScopeList(more, onRemove) {
+                    listed = false
+                    onFocusBar()
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Pardes: the chips the bar has no room for ([items]) in the bar's own rows, as its suggestions ([SuggestionRow]: a
+ * category's or a book's icon, its whole path), in a menu's panel as theirs, as tall as theirs at most and scrolled (the
+ * reader's word on build 76 of a list taller than the window: "הגלילה לא טובה כאשר מסומנים הרבה"): one marked, by
+ * the pointer or the arrows, and kept in view, with its action, "הסרה", which Delete or Backspace does too
+ * ([onRemove]); Escape and Enter close it ([onClose], the bar's keys again), as the last taken out does.
+ */
+@Composable
+private fun ScopeList(
+    items: List<ScopeItem>,
+    onRemove: (ScopeItem) -> Unit,
+    onClose: () -> Unit,
+) {
+    var marked by remember { mutableIntStateOf(0) }
+    val row = marked.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+    // One row marked, the keys' or the pointer's, as every popup of the app (request 74 of stage 3)
+    val marking = remember { PopupMarking() }
+    val focus = remember { FocusRequester() }
+    val menuStyle = JewelTheme.menuStyle
+    val shape = RoundedCornerShape(menuStyle.metrics.cornerSize)
+    val removeLabel = stringResource(Res.string.scope_list_remove)
+
+    fun remove(index: Int) {
+        val last = items.size == 1
+        onRemove(items[index])
+        if (last) onClose()
+    }
+
+    fun onKey(event: KeyEvent): Boolean {
+        if (event.type != KeyEventType.KeyDown || items.isEmpty()) return false
+        when (event.key) {
+            Key.DirectionDown, Key.DirectionUp -> {
+                marking.keysMoved()
+                marked = (row + if (event.key == Key.DirectionDown) 1 else -1).mod(items.size)
+            }
+            Key.Delete, Key.Backspace -> remove(row)
+            Key.Escape, Key.Enter, Key.NumPadEnter -> onClose()
+            else -> return false
+        }
+        return true
+    }
+    val listState = rememberLazyListState()
+    LaunchedEffect(focus) { focus.requestFocus() }
+    // The keys' row in view by the least scroll, as the bar's lists keep theirs (the list is gone with its last row)
+    LaunchedEffect(row, items.size) { if (!marking.pointerMoved) listState.revealItem(row) }
+    Column(
+        modifier =
+            Modifier
+                .padding(top = 4.dp)
+                .width(SCOPE_LIST_WIDTH)
+                .shadow(menuStyle.metrics.shadowSize, shape)
+                .clip(shape)
+                .border(menuStyle.metrics.borderWidth, menuStyle.colors.border, shape)
+                .background(menuStyle.colors.background)
+                .heightIn(max = SCOPE_LIST_MAX_HEIGHT)
+                .padding(menuStyle.metrics.contentPadding)
+                .focusRequester(focus)
+                .focusable()
+                .onPreviewKeyEvent(::onKey),
+    ) {
+        LazyColumn(
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().markOnPointer(marking, listState) { marked = it },
+        ) {
+            itemsIndexed(items) { index, item ->
+                SuggestionRow(
+                    parts = (item as? ScopeItem.CategoryItem)?.category?.path ?: listOf(item.label),
+                    onClick = { marked = index },
+                    kind = if (item is ScopeItem.CategoryItem) SuggestionKind.CATEGORY else SuggestionKind.BOOK,
+                    highlighted = index == row,
+                    detail = (item as? ScopeItem.CategoryItem)?.let { baseBooksDetail(it.category) },
+                    actions = listOf(RowAction(KEY_DELETE, removeLabel) { remove(index) }),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun SuggestionIcon(kind: SuggestionKind) {
     val tint = JewelTheme.globalColors.text.info
@@ -1336,24 +1504,17 @@ internal fun SuggestionRow(
     detail: String? = null,
     // What the row does, with its keys; shown on the highlighted or hovered row, and clickable
     actions: List<RowAction> = emptyList(),
+    // Pardes: in a list whose rows mark themselves (a study plan's field), the pointer moved over the row marks it
+    onMark: (() -> Unit)? = null,
 ) {
     val hScroll = rememberScrollState(0)
     val hoverSource = remember { MutableInteractionSource() }
-    val isHovered by hoverSource.collectIsHoveredAsState()
-    val active = highlighted || isHovered
+    // Pardes: the row marked alone, by the keys or the pointer, tinted at once, as every popup's rows (request 74 of
+    // stage 3: the pointer marks a row of the bar's lists through their list, markOnPointer)
+    onMark?.let { MarkOnHover(hoverSource, onMark = it) }
+    val active = highlighted
     val hasContent = parts.isNotEmpty()
-
-    // Use Jewel-consistent hover color for native look
-    val backgroundColor by animateColorAsState(
-        targetValue =
-            if (active) {
-                JewelTheme.globalColors.outlines.focused
-                    .copy(alpha = 0.12f)
-            } else {
-                Color.Transparent
-            },
-        animationSpec = tween(durationMillis = 150),
-    )
+    val backgroundColor = markedRowBackground(active)
 
     LaunchedEffect(active, parts) {
         if (active) {
@@ -1541,6 +1702,8 @@ private fun SearchBar(
     val minBookPrefixLen = 2
     val minTocPrefixLen = 1
     var focusedIndex by remember { mutableIntStateOf(-1) }
+    // Pardes: whether the keys or the pointer marked the row last, one row marked as every popup's (request 74 of stage 3)
+    val marking = remember { PopupMarking() }
     var popupVisible by remember { mutableStateOf(false) }
     // Bumped when the field gets the focus or a click: the suggestions open (again, after a click outside
     // closed them). None before the first one (a restored results tab); losing the focus to a click in
@@ -1856,6 +2019,7 @@ private fun SearchBar(
                             // held (like Chrome's omnibox); neither event reaches the field, whose caret stays put
                             (ev.key == Key.DirectionDown || ev.key == Key.DirectionUp) && popupVisible -> {
                                 if (ev.type == KeyEventType.KeyDown) {
+                                    marking.keysMoved()
                                     val total = if (isTocMode) totalTocRows else totalCatBook
                                     val step = if (ev.key == Key.DirectionDown) 1 else -1
                                     // Pardes: round from the last row to the first and back, as every popup of the app,
@@ -1875,6 +2039,22 @@ private fun SearchBar(
                             // to prevent default focus movement before our KeyUp handler runs
                             ev.key == Key.Tab && ev.type == KeyEventType.KeyDown && popupVisible -> {
                                 true
+                            }
+
+                            // Pardes: Tab picks a row of the list shown, with no Ctrl, Alt or Cmd, and never the text
+                            // search's, which Enter runs (its row's keys say so). Ctrl+Tab is the window's tabs, which
+                            // take its key-down, and its key-up searched again here, as Tab did on that row, the list's
+                            // first (the reader's remark 97 of stage 3; a fix for both brands)
+                            ev.key == Key.Tab &&
+                                ev.type == KeyEventType.KeyUp &&
+                                (
+                                    !popupVisible ||
+                                        ev.isCtrlPressed ||
+                                        ev.isMetaPressed ||
+                                        ev.isAltPressed ||
+                                        (!isTocMode && catBookRows.getOrNull(focusedIndex) == CatBookRow.TextSearch)
+                                ) -> {
+                                false
                             }
 
                             // In a book, Tab on another book or a category adds it (no TOC entry to open)
@@ -1992,16 +2172,13 @@ private fun SearchBar(
                             },
                         )
                     } else {
-                        scopeChips.forEach { item ->
-                            SelectedBookChip(
-                                title = item.chipLabel(),
-                                onClear = {
-                                    onRemoveScope(item)
-                                    effectiveFocusRequester.requestFocus()
-                                },
-                                modifier = Modifier.widthIn(max = SCOPE_CHIP_MAX_WIDTH),
-                            )
-                        }
+                        // Pardes: the chips share a part of the bar, the first of them shown and the others counted
+                        ScopeChips(
+                            scopeChips,
+                            with(LocalDensity.current) { ((anchor?.size?.width ?: 0) * SCOPE_CHIPS_SHARE).toDp() },
+                            onRemove = onRemoveScope,
+                            onFocusBar = { effectiveFocusRequester.requestFocus() },
+                        )
                     }
                 }
             },
@@ -2071,6 +2248,8 @@ private fun SearchBar(
                             emptyMessage = if (showTocEmptyState) stringResource(Res.string.autocomplete_no_results) else null,
                             isLoading = showTocLoading,
                             loadingMessage = stringResource(Res.string.autocomplete_loading),
+                            marking = marking,
+                            onMark = { focusedIndex = it },
                         )
                     } else if (!isTocMode && (showBookStageSuggestions || showBookEmptyState || showBookLoading)) {
                         SuggestionsPanel(
@@ -2103,6 +2282,8 @@ private fun SearchBar(
                             emptyMessage = if (showBookEmptyState) stringResource(Res.string.autocomplete_no_results) else null,
                             isLoading = showBookLoading,
                             loadingMessage = stringResource(Res.string.autocomplete_loading),
+                            marking = marking,
+                            onMark = { focusedIndex = it },
                         )
                     }
                 }
@@ -2177,6 +2358,8 @@ private fun SelectedBookChip(
             overflow = TextOverflow.Ellipsis,
             fontSize = 12.sp,
             color = JewelTheme.globalColors.text.normal,
+            // Pardes: a chip squeezed beside others cuts its name, not its close icon
+            modifier = Modifier.weight(1f, fill = false),
         )
         Spacer(Modifier.width(8.dp))
         Icon(

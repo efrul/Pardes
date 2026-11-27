@@ -55,7 +55,9 @@ fun ZmanimTool(onBack: () -> Unit) {
                     if (state.shownDate == state.todayDate) NextZmanWidget.Content(state, Modifier.fillMaxWidth().height(NEXT_ZMAN_HEIGHT))
                 },
             )
-            Text("לפי ${state.zmanimOpinion.luachName}", color = Zayit.colors.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp))
+            state.zmanimOpinion.luachName?.let {
+                Text("לפי $it", color = Zayit.colors.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp))
+            }
         }
     }
 }
