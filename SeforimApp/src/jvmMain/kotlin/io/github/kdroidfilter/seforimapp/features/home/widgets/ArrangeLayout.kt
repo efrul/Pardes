@@ -45,6 +45,8 @@ internal fun List<WidgetPlacement>.arranged(
     random: Random? = null,
 ): List<WidgetPlacement> {
     if (isEmpty()) return this
+    // Pardes: more widgets than the search's tables hold are arranged in groups (ArrangeInGroups.kt)
+    if (size > MAX_ARRANGED_AT_ONCE) return arrangedInGroups(pitch, random)
     // The order rows and columns keep where the cost ties
     val reading = sortedWith(compareBy({ it.cell.y }, { it.cell.x }))
     val widgets = random?.let(reading::shuffled) ?: reading

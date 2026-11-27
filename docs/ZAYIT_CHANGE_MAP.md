@@ -23,7 +23,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (156 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (157 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (398 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (399 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -3009,29 +3009,34 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 ### Home widgets
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/ArrangeLayout.kt`
+
+- **Change:** modified, +2 −0 lines. Feature: The Home's "arrange" for more widgets.
+- **What:** `arranged` hands a list of more than `MAX_ARRANGED_AT_ONCE` widgets to `arrangedInGroups`
+  (`ArrangeInGroups.kt`), under a comment marked "Pardes:"; every list of fewer is arranged as before.
+- **Why:** the search keeps two tables of an entry a subset of the widgets placed, so each widget more doubles its
+  memory: the gallery's 20 widgets, all placed, were its most, and Sefaria's two widgets made it run out of memory
+  (`HomeWidgetsLayoutTest`). A Home seldom holds that many, as the user said on 2026-11-27 ("בדרך כלל לא כל
+  הווידגטים על מסך הבית"), but the one that does must not stop the app.
+- **Kind:** fix of Zayit's code (it holds for Zayit as well, at its next widget).
+- **Merge risk:** small; one line at the function's head.
+- **Smaller:** already minimal.
+- **Tests:** `HomeWidgetsLayoutTest` (the gallery's 22 widgets arranged, no hole, every widget within its limits).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/ToolWindows.kt`
 
-- **Change:** modified, +7 −1 lines. Feature: Settings window (request 57 of stage 3), Sefaria's content.
-- **What:**
-  - `DefaultToolWindow` sets `windowState.isMinimized = false` in a `LaunchedEffect(reopened)` of its own, outside the
-    window's content, before its effect inside the content brings the window to the front.
-  - `availableTools`, the tools of the app's Tools menu (the in-app menu and macOS's), adds `sefariaTools` (the topics'
-    and the sages' windows) after Zayit's widgets that open as tools, with a comment marked "Pardes:" and its import.
+- **Change:** modified, +4 −0 lines. Feature: Settings window (request 57 of stage 3).
+- **What:** `DefaultToolWindow` sets `windowState.isMinimized = false` in a `LaunchedEffect(reopened)` of its own,
+  outside the window's content, before its effect inside the content brings the window to the front.
 - **Why:** a minimized window draws no frame, so nothing inside it recomposes and its `LaunchedEffect(reopened)` waited:
   a tool window asked for again while minimized stayed minimized. The settings window, made like these in Pardes, had
   the same fault (request 57 of `docs/DESKTOP_STAGE3_PLAN.md`, 2026-11-18: "לחיצה על הגדרות תחזיר לחזית גם כאשר
   מיזערו אותם"). The window state's `isMinimized` is applied by Nucleus's window in the caller's composition, which
-  keeps running. Sefaria's two windows are tools alone: as widgets of the Home they made 22, and the Home's
-  "arrange", a search over every subset of the widgets placed, ran out of memory with all of them
-  (`HomeWidgetsLayoutTest`), and their cards were half empty at their sizes (`WidgetSizesScreenshotTest`). Classes
-  and not objects, the widget processor leaves them out of `availableHomeWidgets`, and this line puts them in the
-  Tools menu.
-- **Kind:** fix of Zayit's code, for both brands, to drop once upstream has one; and a Pardes feature hook.
-- **Merge risk:** small; four lines before the window, and one expression.
+  keeps running.
+- **Kind:** fix of Zayit's code, for both brands, to drop once upstream has one.
+- **Merge risk:** small; four lines before the window.
 - **Smaller:** already minimal.
-- **Tests:** none for the minimized window: minimizing needs a window manager, which the cloud's display has not; tried
-  on Windows by the user. `HomeWidgetsLayoutTest`, `WidgetSizesScreenshotTest` (the Home's 20 widgets); Sefaria's two
-  windows opened from the Tools menu in the app.
+- **Tests:** none: minimizing needs a window manager, which the cloud's display has not; tried on Windows by the user.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/WidgetFrame.kt`
 
@@ -9972,7 +9977,7 @@ pane beside the text, a topic's page and the topics browsed, the sages' names as
 topic's card in a search, the sugya marked or copied from the reader's menu, and Krupnik in the dictionary. Credited to
 Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalBars.kt`, `BookContentEvent.kt`,
 `BookContentViewModel.kt`, `BookContentScreen.kt`, `SearchResultScreen.kt`, `RefLinkUriHandler.kt`, `DictionaryWidget.kt`,
-`ToolWindows.kt`, `AppGraph.kt`, `strings.xml`; `TextLinks.kt` and `VerseQuotes.kt`, Pardes's own.
+`AppGraph.kt`, `strings.xml`; `TextLinks.kt` and `VerseQuotes.kt`, Pardes's own.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaData.kt`
 
@@ -10020,14 +10025,13 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaWindows.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 63 lines.
-- **What:** `sefariaTools` (the topics' and the sages' windows, for the Tools menu), `SefariaSettings` (`topicsPane`:
+- **Size:** 59 lines.
+- **What:** `SefariaSettings` (`topicsPane`:
   the reader's pane of the line's topics, one setting for every tab; `searchTopicCard`: the search's topic card, until
   it is hidden) and
   `SefariaWindows` (Metro-injected, one in the app): the topic or sage asked for and `openTopic`/`openSage`, which open
   the tools' windows on it; `SAGE_LINK` and `sageOf(uri)`, the sages' links in the texts.
-- **Reached from:** `AppGraph.sefariaWindows`; `RefLinkUriHandler.kt`, the reader's pane, the search's card; `ToolWindows.kt`
-  (`sefariaTools`).
+- **Reached from:** `AppGraph.sefariaWindows`; `RefLinkUriHandler.kt`, the reader's pane, the search's card.
 - **Follows:** Zayit's `ToolWindows`, which it drives, and `SettingsGroup`, as `FindResultsSettings`.
 - **Tests:** none of its own; a sage's link and "לדף הנושא" tried in the app.
 
@@ -10045,25 +10049,28 @@ Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalB
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/sages/SagesTool.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 287 lines.
-- **What:** `SagesTool`, a tool window ("חכמים", "person.2"), the one instance of a private class (`SagesWindow`, as
-  `TopicsWindow`): the persons the library's lines
+- **Size:** 290 lines.
+- **What:** `SagesTool`, a Home card and a tool window as the dictionary's ("חכמים", "person.2"; 6×5 cells, 4×4
+  to 10×10; the loading card's spinner and tag until the persons are read): the persons the library's lines
   mention, the most mentioned first, searched by name; a person's page (its generation, description and Wikipedia page,
   its teachers, students, family and groups, and its places, a tractate's at a time once picked, up to 400, its name
   marked in each); for a name Sefaria could not tell apart, the persons it may be.
-- **Reached from:** the Tools menu (`sefariaTools`, in `ToolWindows.kt`'s `availableTools`); `SefariaWindows.openSage`.
+- **Reached from:** the widget processor (a `HomeWidget` object with a `toolWindowSize`: the Home's gallery and the
+  Tools menu); `SefariaWindows.openSage`.
 - **Follows:** Zayit's tool widgets (`DictionaryWidget`'s own window, `LocalDictionaryWindow`).
 - **Tests:** none of its own; the index and רבי אליעזר's page tried in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/TopicsTool.kt`
 
 - **Feature:** Sefaria's content.
-- **Size:** 372 lines.
-- **What:** `TopicsTool`, a tool window ("נושאים", "tag"), the one instance of a private class (`TopicsWindow`: an
-  object would be made a widget of the Home by the widget processor): the topics searched by name, browsed in
+- **Size:** 377 lines.
+- **What:** `TopicsTool`, a Home card and a tool window as the dictionary's ("נושאים", "tag"; 6×5 cells, 4×4 to
+  10×6: taller, the tree's fourteen roots leave the card's foot empty; the loading card's spinner and tag until the
+  topics are read): the topics searched by name, browsed in
   Sefaria's tree (its roots but the authors, branches opened in place) or by first letter; a topic's page (its
   description, its sources by book, three a book and "עוד", its neighbours, the credit).
-- **Reached from:** the Tools menu (`sefariaTools`, in `ToolWindows.kt`'s `availableTools`); `SefariaWindows.openTopic`.
+- **Reached from:** the widget processor (a `HomeWidget` object with a `toolWindowSize`: the Home's gallery and the
+  Tools menu); `SefariaWindows.openTopic`.
 - **Follows:** Zayit's tool widgets, as `SagesTool`.
 - **Tests:** none of its own; the tree, the index and תפילה's page tried in the app.
 
@@ -10205,6 +10212,23 @@ Pardes's own.
 - **Tests:** it is one (UI).
 - **Notes:** it writes the real graph's settings, the machine's own: both cards on for each test, and the values they
   had put back after it.
+
+### The Home's "arrange" for more widgets than its search holds
+
+The Home's "arrange" searches every subset of the widgets placed, so each widget more doubles its memory: the gallery's
+20 were its most, all placed, and Sefaria's two widgets made it run out of memory. Past that many, the widgets are
+dealt into groups the search holds. Hook: `ArrangeLayout.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/ArrangeInGroups.kt`
+
+- **Feature:** The Home's "arrange" for more widgets.
+- **Size:** 35 lines.
+- **What:** `MAX_ARRANGED_AT_ONCE` (20, the gallery's widgets before Sefaria's two) and `arrangedInGroups`: the
+  widgets dealt in reading order, or shuffled for "arrange again", into the fewest groups of at most that many, as
+  even as can be, each arranged by `arranged` and put under the one before it, the widgets given back in their order.
+- **Reached from:** `ArrangeLayout.kt` (`arranged`, past `MAX_ARRANGED_AT_ONCE` widgets).
+- **Follows:** Zayit's `arranged` and `rearranged` (`ArrangeLayout.kt`), which it calls and whose result it keeps.
+- **Tests:** `HomeWidgetsLayoutTest` (the gallery's 22 widgets, in two groups of 11, without a hole).
 
 ## 3. Pardes's own trees
 
