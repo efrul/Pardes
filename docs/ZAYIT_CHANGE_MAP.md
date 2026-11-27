@@ -10692,7 +10692,7 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `desktop/CHANGELOG.md` | Pardes for desktop's user-facing changelog in Hebrew, one `## <x.y.z> · <date>` section per version, from 1.0.0 (2026-10-28) to 1.0.12 (2026-11-27): desktop-release.yml takes the version and the notes from its top section, and android-site.yml publishes it as changelog-desktop.md. *Note:* Zayit keeps no changelog file. The heading format is a contract with both workflows and the site. | Pardes's own |
+| `desktop/CHANGELOG.md` | Pardes for desktop's user-facing changelog in Hebrew, one `## <x.y.z> · <date>` section per version, from 1.0.0 (2026-10-28) to 1.0.11 (2026-11-25): desktop-release.yml takes the version and the notes from its top section, and android-site.yml publishes it as changelog-desktop.md. *Note:* Zayit keeps no changelog file. The heading format is a contract with both workflows and the site. | Pardes's own |
 
 #### Documents
 
