@@ -16,7 +16,7 @@ import java.util.zip.ZipOutputStream
 
 /**
  * Bytecode patches of Compose's jars on the runtime classpaths, for bugs fixed upstream too late or not at all:
- * [SelectionPinPatch] (foundation) and [PlacedSubtreePatch] (ui).
+ * [SelectionPinPatch] and [SelectionDrawPatch] (foundation), and [PlacedSubtreePatch] (ui).
  */
 object ComposePatches {
     private val patched = Attribute.of("zayit.composePatched", Boolean::class.javaObjectType)
@@ -24,7 +24,11 @@ object ComposePatches {
     /** The patched class files by jar name prefix. */
     private val patches: Map<String, Map<String, (ByteArray) -> ByteArray>> =
         mapOf(
-            "foundation-desktop-" to mapOf(SelectionPinPatch.SELECTION_MANAGER to SelectionPinPatch::patchSelectionManager),
+            "foundation-desktop-" to
+                mapOf(
+                    SelectionPinPatch.SELECTION_MANAGER to SelectionPinPatch::patchSelectionManager,
+                    SelectionDrawPatch.SELECTION_CONTROLLER to SelectionDrawPatch::patchSelectionController,
+                ),
             "ui-desktop-" to mapOf(PlacedSubtreePatch.MEASURE_PASS_DELEGATE to PlacedSubtreePatch::patchMeasurePassDelegate),
         )
 

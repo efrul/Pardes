@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (408 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (411 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -62,7 +62,7 @@ The entries of this section by kind:
 |---|---|
 | Pardes feature hook | 59 |
 | Pardes feature in Zayit's file | 36 |
-| Fix of Zayit's code | 26 |
+| Fix of Zayit's code | 27 |
 | Branding hook | 4 |
 | Removed Zayit file | 5 |
 | Branding hook with Pardes feature hooks or a fix | 7 |
@@ -328,6 +328,26 @@ The entries of this section by kind:
 - **Merge risk:** two blocks inserted inside a 2,900-line generated list; a conflict if Zayit regenerates the file.
 - **Smaller:** already minimal.
 - **Tests:** the native builds of `desktop-release.yml`.
+
+#### `buildSrc/src/main/kotlin/io/github/kdroidfilter/buildsrc/ComposePatches.kt`
+
+- **Change:** modified, +6 −2 lines. Feature: A selection dragged past a row's end.
+- **What:**
+  - `patches`: the foundation jar's map takes `SelectionDrawPatch.SELECTION_CONTROLLER` to
+    `SelectionDrawPatch::patchSelectionController` beside `SelectionPinPatch`'s pair, its `mapOf` written one pair a
+    line.
+  - The object's KDoc names `[SelectionDrawPatch]` among the patches.
+- **Why:** the app closed ("The application encountered an unrecoverable error and will close", the user's report of
+  2026-11-26: `IllegalArgumentException: Start(3638) or End(3594) is out of range [0..3638), or start > end!`, then
+  the same in a text of 17,300 characters) when a selection in the reader was dragged past the end of a row, into
+  the margin, while the find bar, whose texts lie over the book's first lines, was open: Compose drew the selection
+  reversed (`SelectionDrawPatch.kt`, section 2).
+  Compose 1.13.0-rc01 and androidx's 1.14.0-alpha01 have the same code.
+- **Kind:** fix of Zayit's code (a fix for both brands, to drop once Compose has one).
+- **Merge risk:** small; one pair in a map Zayit rarely touches. A patch of Zayit's own to the foundation jar would
+  go in the same `mapOf`.
+- **Smaller:** already minimal.
+- **Tests:** `CrossedSelectionUiTest`; tried in the app (section 2's feature).
 
 #### `buildSrc/src/main/kotlin/io/github/kdroidfilter/buildsrc/Versioning.kt`
 
@@ -3036,20 +3056,26 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontsSettingsScreen.kt`
 
-- **Change:** modified, +38 −10 lines. Feature: Daf view, User fonts.
+- **Change:** modified, +41 −11 lines. Feature: Daf view, User fonts.
 - **What:** two `FontSettingCard`s after Zayit's last, the daf's Gemara and its Rashi and Tosafot; their two imports.
   The daf's checkboxes that stood here too (the unsure lines, the review) are in `DafSettingsScreen.kt` since
   2026-11-10; the fonts stay here, with the other fonts, as the user asked on 2026-11-11.
   - The user fonts (comments marked "Pardes:"): the lists offer the fonts the user added after the catalog's
-    (`UserFonts.fonts`), so `FontSettingCard` takes the fonts' codes in place of `FontOption`s, and a user font of
-    the setting whose file is gone is listed as missing (`withMissingFont`); `UserFontsCard()` after the six cards;
-    the `FontOption` import gone, four imports.
-- **Why:** as for `FontsSettingsEvents.kt`; the user fonts, the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup.
+    (`UserFonts.fonts`, by their `shortName`), so `FontSettingCard` takes the fonts' codes in place of `FontOption`s,
+    and a user font of the setting whose file is gone is listed as missing (`withMissingFont`); `UserFontsCard()`
+    after the six cards; the `FontOption` import gone, four imports.
+  - The card's `ListComboBox` keys its rows by the fonts' codes (`itemKeys`, a comment marked "Pardes:"), and
+    `FontSettingCard` is `internal` (Zayit's is private), for its UI test.
+- **Why:** as for `FontsSettingsEvents.kt`; the user fonts, the user asked on 2026-11-11 (request 25 of `docs/DESKTOP_STAGE2.md`) to add fonts of their own; and on 2026-11-12 that they go into the backup. The keys: Jewel's `ListComboBox` of strings keys its rows by
+  their text, and two fonts of the user's of one family's name (a font's regular and bold files, or one file added
+  twice) closed the app as a list opened (the user's report of 2026-11-26; `Key "David" was already used` in
+  `FontSettingCardUiTest` without the keys).
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small to medium: a block after Zayit's last card, and the card's list of fonts from codes, which a
   Zayit change of the card meets.
 - **Smaller:** already near minimal.
-- **Tests:** none of the screen; `UserFontsTest`; the font added and chosen were tried in the app.
+- **Tests:** `FontSettingCardUiTest` (the card); `UserFontsTest`; the font added and chosen were tried in the app,
+  and two fonts of one name added, their list opened and each chosen (2026-11-26).
 
 ### Home widgets
 
@@ -9459,22 +9485,26 @@ front rather than opening twice. Hooks: `SettingsWindow.kt`, `SettingsWindowStat
 A font from a TTF or OTF file can be added in Settings › גופנים since 2026-11-12, as the user asked: it is copied into
 the app's data folder (fonts/), offered in all six lists of fonts after the catalog's, can be taken out, and goes into the
 backup. A font whose file is gone shows the default font and is listed as missing; one without Hebrew letters is added
-with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`, `PendingUserDataRestore.kt`,
-`strings.xml`.
+with a warning. Two fonts of one family's name are listed with their files' names, and the lists keep them apart by
+their codes (2026-11-26: two of one name closed the app as a list opened; the names, as the user asked on 2026-11-27).
+Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBackup.kt`, `PendingUserDataRestore.kt`, `strings.xml`.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFonts.kt`
 
 - **Feature:** User fonts.
-- **Size:** 138 lines.
+- **Size:** 161 lines.
 - **What:** `UserFonts`, the fonts in a folder (`shared`: the data folder's fonts/, `FileKit.filesDir`; `sharedOrNull`
-  where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, whether
-  its file is there): `add` (a TTF or OTF that Skia loads, copied under a name of its own, and whether it has an alef),
-  `remove`, `familyFor` (a `FontFamily` from the file, kept), `fontOf` (a code's font, one whose file is gone included),
-  `writeTo` and `restoreFrom` (the backup archive's fonts/ entries).
+  where FileKit is not set up), each `UserFont` (its code `user:<file name>`, its family's name read with Skia, with
+  its file's name in parentheses when another font of the folder has the same, whether its file is there, and
+  `shortName`, the name the lists of fonts give it, its file's alone then, as they are too narrow for both): `add` (a
+  TTF or OTF that Skia loads, copied under a name of its own, named as the folder's list names it, and whether it has
+  an alef), `remove`, `familyFor` (a `FontFamily` from the file, kept), `fontOf` (a code's font, one whose file is
+  gone included), `writeTo` and `restoreFrom` (the backup archive's fonts/ entries).
 - **Reached from:** `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserFontsCard.kt`, `UserDataBackup.kt`,
   `PendingUserDataRestore.kt`.
 - **Follows:** Zayit's `FontCatalog` (codes in the settings, a family for each); Skia's `FontMgr` as Compose loads fonts.
-- **Tests:** `UserFontsTest`; a font added from a file, chosen for the book's text and seen there, tried in the app.
+- **Tests:** `UserFontsTest`; a font added from a file, chosen for the book's text and seen there, tried in the app;
+  two files of Noto Sans Hebrew, their names in the card and the lists (2026-11-27).
 - **Notes:** a font loaded from a file in the Windows build (a native image) is for the testers' build.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/fonts/UserFontsCard.kt`
@@ -9503,13 +9533,27 @@ with a warning. Hooks: `FontCatalog.kt`, `FontsSettingsScreen.kt`, `UserDataBack
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/typography/UserFontsTest.kt`
 
 - **Feature:** User fonts.
-- **Size:** 76 lines.
-- **What:** a font file added under a name of its own (twice, two files), listed and offered by its code; one without
-  Hebrew letters said to be so, a file that is not a font refused; a font taken out, or gone, listed as missing and shown
-  in the default font; the fonts written into a backup archive and read back from it.
+- **Size:** 92 lines.
+- **What:** a font file added under a name of its own (twice, two files), listed and offered by its code; two fonts
+  of one family's name told apart by their files' names (by those names alone in the lists), the font added named as
+  the list names it; one without Hebrew letters said to be so, a file that is not a font refused; a font taken out, or
+  gone, listed as missing and shown in the default font; the fonts written into a backup archive and read back from
+  it.
 - **Reached from:** the JVM tests.
 - **Follows:** Kotlin Test, on temporary folders and the app's own font files.
 - **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/FontSettingCardUiTest.kt`
+
+- **Feature:** User fonts.
+- **Size:** 51 lines.
+- **What:** Zayit's `FontSettingCard` with a catalog font and two fonts of the user's of one name: its list opened (a
+  click on the font shown) and the second of the two chosen, which must give its own code. On the card without its
+  `itemKeys` it fails as the app crashed (`Key "David" was already used`).
+- **Reached from:** the JVM tests.
+- **Follows:** Pardes's settings cards' UI tests (`DafLayoutsCardUiTest`: `runDesktopComposeUiTest`, `IntUiTheme`,
+  right to left).
+- **Tests:** it is one (Compose UI).
 
 ### Typing over a side pane
 
@@ -10415,6 +10459,48 @@ Pardes's own.
 - **Notes:** it writes the real graph's settings, the machine's own: both cards on for each test, and the values they
   had put back after it.
 
+### A selection dragged past a row's end (a fix of Compose's code)
+
+The user's report of 2026-11-26: the app closed with "Start(3638) or End(3594) is out of range [0..3638), or start >
+end!" while text was being selected in the reader, and again in a text of 17,300 characters. A selection whose two
+ends are in one text, in a layout that holds another text laid over that one (the find bar's texts, its field's
+placeholder and its counter, over the book's first lines while it is open), is crossed by the layout's slots and not
+by its offsets: a drag past the end of a right-to-left row, into the margin, gives a crossed selection whose start
+comes before its end, which Compose keeps as it is for one text, and its `SelectionController.draw` asks for a
+reversed path. It now draws the range between the two offsets, the text the selection copies, by a patch of
+Compose's jar as Zayit patches it for two other selection bugs. Tried in the app on Berakhot, zoomed in: with the find
+bar open, a drag from a paragraph's last row, under the bar, past the row's end closed the app ("Start(280) or
+End(258) is out of range [0..280)"); with the bar closed, or with the patch, the row's end is selected, and Ctrl+C
+copies the same words. The hook in Zayit's files is in `ComposePatches.kt`.
+
+#### `buildSrc/src/main/kotlin/io/github/kdroidfilter/buildsrc/SelectionDrawPatch.kt`
+
+- **Feature:** A selection dragged past a row's end (a fix of Compose's code, for both brands).
+- **Size:** 95 lines.
+- **What:** `SelectionDrawPatch.patchSelectionController(bytes)`: in `SelectionController.draw()`, the call
+  `params.getPathForRange(start, end)` goes to `zayit$pathForRange(params, start, end)`, a private static method the
+  patch writes into the class, which calls `params.getPathForRange(min(start, end), max(start, end))`; the build fails
+  unless it finds that call exactly once (Compose changed: drop the patch, or update it). `SELECTION_CONTROLLER`, the
+  class's path in the jar.
+- **Reached from:** `ComposePatches.kt` (the foundation jar's patches, on every runtime classpath).
+- **Follows:** Zayit's `PlacedSubtreePatch` (a call replaced by a static helper written into the class, the build
+  failing when the call is gone) and `SelectionPinPatch` (the foundation jar's other patch).
+- **Tests:** `CrossedSelectionUiTest`, `ShiftClickSelectionUiTest` and `UnplacedSelectionUiTest` (the jar's other
+  patches still apply); tried in the app (the feature's text above).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/CrossedSelectionUiTest.kt`
+
+- **Feature:** A selection dragged past a row's end.
+- **Size:** 64 lines.
+- **What:** a right-to-left paragraph with a margin at its end and a short text laid over its first row, in a
+  `SelectionContainer`: a mouse drag from the middle of its third row, below that text, past the row's end into the
+  margin, is drawn, and the row's end is selected. On Compose's code as released it fails with the user's exception
+  ("Start(493) or End(409) is out of range [0..1139), or start > end!").
+- **Reached from:** the JVM tests.
+- **Follows:** Zayit's `UnplacedSelectionUiTest` and `ShiftClickSelectionUiTest` (a Compose UI test of a patch of
+  Compose's selection, its KDoc naming the patch).
+- **Tests:** it is one (Compose UI).
+
 ## 3. Pardes's own trees
 
 Every other file Pardes adds (805 files): Pardes for Android (`androidApp/`), branding, documents,
@@ -10475,7 +10561,7 @@ the description where something needs saying.
 | `.claude/skills/zayit-android/scripts/temple-picture.py` | zayit-android script that builds the Temple countdown widget's picture from a public-domain 1850 painting ("The Siege and Destruction of Jerusalem"): Android's still JPG, three desktop JPGs, and Android's animated WebP whose fires flicker. *Note:* Stale for desktop: it writes SeforimApp/.../drawable/temple_jerusalem_in_fire_{small,medium,large}.jpg, which Zayit deleted (0c8e6c3c) and nothing reads; desktop's files/temple_jerusalem_in_fire.webp is a hand copy of the Android WebP (docs/PARDES_PLAN.md › Phase 1). | Pardes's own; its picture replaced the Shutterstock one inherited from Zayit |
 | `.claude/skills/zayit-fidelity/SKILL.md` | Claude Code skill, mandatory for every change: Pardes stays as identical to Zayit as it can be. The smallest change (nothing, a branding value, a new file behind a one-line hook, then an edit), written as Elie Gambache writes Zayit, committed as he commits, every file that differs from Zayit described in docs/ZAYIT_CHANGE_MAP.md in the same commit with check_change_map.py passing, and main reached only through the Change map check (main's ruleset: a pull request, or a fast-forward to a checked commit); merging a Zayit release (its licence first); why GitHub does not show Pardes as a fork. It points to its lessons (references/lessons.md), to the Gradle wrapper of pardes-desktop-run and to scripts/mapedit.py. | Pardes's own |
 | `.claude/skills/zayit-fidelity/references/eli-style.md` | The zayit-fidelity skill's reference on writing as Zayit's author writes it: his guidelines (AGENTS.md, CONTRIBUTING.md, CLAUDE.md, .editorconfig, detekt.yml, SeforimLibrary/AGENTS.md, CI), what his code shows (structure, state and events, Metro, settings, errors, logging, Compose, comments, KDoc, tests), how he works (Conventional Commits with their counts, one topic a branch, docs and tests with the change), and Pardes in his style. | Pardes's own; measured on Zayit v0.6.12 and its history |
-| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-23): building and checking (what CI runs where, ktlint's and detekt's findings, detekt counted against main's, escapes turned into characters, a version Maven Central stopped serving), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build and the public release with the Apple Silicon Mac's slow native image, and what the user asked to be done again. | Pardes's own |
+| `.claude/skills/zayit-fidelity/references/lessons.md` | The zayit-fidelity skill's record of what went wrong and what was found while Pardes's desktop features were built on Zayit 0.6.12 (2026-11-05 to 2026-11-26): building and checking (what CI runs where, ktlint's and detekt's findings, detekt counted against main's, escapes turned into characters, a version Maven Central stopped serving), Compose and Jewel, the data and the settings, the change map's mechanics, an add-on of Pardes's own and a third party's engine as a module, reading Zayit's later code and telling a commit's licence, a testers' build and the public release with the Apple Silicon Mac's slow native image, and what the user asked to be done again. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/check_change_map.py` | The change map's check: every file that differs from the map's Zayit base has its entry (a heading with Change, What, Why, Kind, Merge risk and Tests for a Zayit file changed; Feature, Size, What, Reached from, Follows and Tests for a file added in Zayit's modules; at least a row for the others), the line counts of detailed entries match the files, no entry is left for a file back to Zayit's, and the base is the last merged release. Compares the working tree (untracked files included), or HEAD with --committed (CI); --stats prints the counts. | Pardes's own |
 | `.claude/skills/zayit-fidelity/scripts/mapedit.py` | A small Python class for scripts that edit the change map by entry: a file's line counts or size set to what they are now, a text replaced inside one entry or one row, a block put before a heading, each asserting it found its text once; run alone it prints each section's count of entries. *Note:* Written after a global sed hit two entries at once. | Pardes's own |
 

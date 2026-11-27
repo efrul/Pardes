@@ -39,6 +39,22 @@ class UserFontsTest {
     }
 
     @Test
+    fun `fonts of one family's name are told apart by their files' names`() {
+        val userFonts = UserFonts(File(root, "fonts"))
+
+        val first = userFonts.add(File(fonts, "notorashihebrew.ttf"))
+        assertEquals("Noto Rashi Hebrew", first.font.name, "alone, by its family's name")
+        val second = userFonts.add(File(fonts, "notorashihebrew.ttf"))
+
+        assertEquals(
+            listOf("Noto Rashi Hebrew (notorashihebrew)", "Noto Rashi Hebrew (notorashihebrew-2)"),
+            userFonts.fonts.value.map { it.name },
+        )
+        assertEquals("Noto Rashi Hebrew (notorashihebrew-2)", second.font.name, "the font added named as the lists name it")
+        assertEquals(listOf("notorashihebrew", "notorashihebrew-2"), userFonts.fonts.value.map { it.shortName }, "in the lists")
+    }
+
+    @Test
     fun `a font without Hebrew letters is added and said to be so, and a file that is not a font is refused`() {
         val userFonts = UserFonts(File(root, "fonts"))
 

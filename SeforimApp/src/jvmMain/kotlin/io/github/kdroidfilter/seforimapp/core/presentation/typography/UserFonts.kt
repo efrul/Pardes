@@ -17,11 +17,16 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-/** A font the user added ([UserFonts]): its code in the settings, its family's name, and whether its file is there. */
+/**
+ * A font the user added ([UserFonts]): its code in the settings, its family's name (with its file's when another font of
+ * the user's has the same), whether its file is there, and the name the lists of fonts give it ([shortName]: its file's
+ * alone then, as they are too narrow for both).
+ */
 data class UserFont(
     val code: String,
     val name: String,
     val present: Boolean = true,
+    val shortName: String = name,
 )
 
 /**
@@ -56,7 +61,8 @@ class UserFonts(
         val target = generateSequence(1) { it + 1 }.map { n -> File(dir, nameFor(source, n)) }.first { !it.exists() }
         source.copyTo(target)
         _fonts.value = read()
-        return Added(UserFont(CODE_PREFIX + target.name, typeface.familyName.ifBlank { target.nameWithoutExtension }), hebrew)
+        // Named as the lists name it
+        return Added(_fonts.value.first { it.code == CODE_PREFIX + target.name }, hebrew)
     }
 
     /** The font of [code] taken out of the folder; a setting that still names it shows the default font. */
@@ -113,12 +119,29 @@ class UserFonts(
     private fun files(): List<File> =
         dir.listFiles { f -> f.isFile && f.extension.lowercase() in EXTENSIONS }.orEmpty().sortedBy { it.name }
 
-    private fun read(): List<UserFont> =
-        files()
-            .map { file ->
+    private fun read(): List<UserFont> {
+        val named =
+            files().map { file ->
                 val name = runCatching { FontMgr.default.makeFromFile(file.path)?.familyName }.getOrNull()
-                UserFont(CODE_PREFIX + file.name, name?.ifBlank { null } ?: file.nameWithoutExtension)
+                file to (name?.ifBlank { null } ?: file.nameWithoutExtension)
+            }
+        // Fonts of one family's name are told apart by their files' names
+        val shared =
+            named
+                .groupingBy { it.second }
+                .eachCount()
+                .filterValues { it > 1 }
+                .keys
+        return named
+            .map { (file, name) ->
+                val code = CODE_PREFIX + file.name
+                if (name in shared) {
+                    UserFont(code, "$name (${file.nameWithoutExtension})", shortName = file.nameWithoutExtension)
+                } else {
+                    UserFont(code, name)
+                }
             }.sortedBy { it.name }
+    }
 
     companion object {
         const val CODE_PREFIX = "user:"
