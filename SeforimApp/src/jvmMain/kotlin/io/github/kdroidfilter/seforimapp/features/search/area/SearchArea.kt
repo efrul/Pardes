@@ -1,6 +1,5 @@
 package io.github.kdroidfilter.seforimapp.features.search.area
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -31,13 +29,9 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.kdroidfilter.seforimapp.core.presentation.typography.FontCatalog
-import io.github.kdroidfilter.seforimapp.features.search.ResultLink
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
-import io.github.kdroidfilter.seforimapp.features.search.domain.CommonSources
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
 import io.github.kdroidfilter.seforimapp.features.search.readingSecondary
@@ -53,7 +47,6 @@ import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
 import io.github.kdroidfilter.seforimapp.icons.Book
 import io.github.kdroidfilter.seforimapp.icons.BootstrapPersonLines
 import io.github.kdroidfilter.seforimapp.icons.Contextual_token
-import io.github.kdroidfilter.seforimapp.icons.Link
 import io.github.kdroidfilter.seforimapp.icons.WritingHand
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -61,11 +54,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.Orientation
-import org.jetbrains.jewel.ui.component.Divider
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
-import org.jetbrains.jewel.ui.component.Tooltip
 import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.author_books_count
 import seforimapp.seforimapp.generated.resources.search_area_also
@@ -74,17 +64,14 @@ import seforimapp.seforimapp.generated.resources.search_area_kind_book
 import seforimapp.seforimapp.generated.resources.search_area_kind_sage
 import seforimapp.seforimapp.generated.resources.search_area_kind_topic
 import seforimapp.seforimapp.generated.resources.search_area_sefaria_credit
-import seforimapp.seforimapp.generated.resources.search_area_source_books
-import seforimapp.seforimapp.generated.resources.search_area_sources
-import seforimapp.seforimapp.generated.resources.search_area_sources_page
 import seforimapp.seforimapp.generated.resources.search_area_topic_sources
-import seforimapp.seforimapp.generated.resources.search_common_source_books_tip
 
 /**
  * Pardes: the area at the top of the passage's pane beside a search's results (the design's ד with ב, the user's
  * choice of 2026-11-27): what the query names, a book, an author, a person or a topic of Sefaria's, one person's faces
  * together (SearchFacets), the first in full and the others on its "also" line, where a click shows one in full; then
- * the sources the first results link to (docs/COMMON_SOURCES_PLAN.md), each with its text. A book or an author is shown
+ * the sources the first results link to (docs/COMMON_SOURCES_PLAN.md), each with its text, shown in the preview by a
+ * click ([onShowSource]), its count narrowing the results to those that link to it ([onNarrowResults]). A book or an author is shown
  * in Zayit's panel ([panel]), with the rest of the area inside it. Nothing when the query names nothing and no source is
  * common to its results.
  */
@@ -93,7 +80,8 @@ fun SearchArea(
     query: String,
     entity: SearchEntity?,
     sources: ImmutableList<CommonSource>,
-    onOpenSource: (CommonSource) -> Unit,
+    onShowSource: (CommonSource) -> Unit,
+    onNarrowResults: (CommonSource) -> Unit,
     modifier: Modifier = Modifier,
     panel: @Composable (entity: SearchEntity, extra: @Composable ColumnScope.() -> Unit) -> Unit,
 ) {
@@ -109,7 +97,7 @@ fun SearchArea(
     val shown = entities.firstOrNull { it.main == picked } ?: entities.firstOrNull()
     val rest: @Composable ColumnScope.() -> Unit = {
         AlsoLine(entities.filter { it != shown }.toImmutableList(), entity, named) { picked = it.main }
-        SourcesPart(sources, onOpenSource, first = shown == null)
+        SourcesPart(sources, onShowSource, onNarrowResults, first = shown == null)
     }
     Box(modifier) {
         when {
@@ -285,54 +273,5 @@ private fun pillOf(
             }
     }
 
-/**
- * The sources the first results link to (docs/COMMON_SOURCES_PLAN.md), each its place, a link that opens it, its text
- * and how many books of the first results link to it; under a divider when the area shows something above them.
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ColumnScope.SourcesPart(
-    sources: ImmutableList<CommonSource>,
-    onOpen: (CommonSource) -> Unit,
-    first: Boolean,
-) {
-    if (sources.isEmpty()) return
-    val grey = readingSecondary()
-    val accent = JewelTheme.globalColors.outlines.focused
-    val fontCode by LocalAppGraph.current.appSettings.bookFontCodeFlow
-        .collectAsState()
-    val font = FontCatalog.familyFor(fontCode)
-    if (!first) Divider(Orientation.Horizontal, Modifier.fillMaxWidth().padding(vertical = 2.dp))
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Icon(Link, contentDescription = null, tint = grey, modifier = Modifier.size(16.dp))
-        Text(stringResource(Res.string.search_area_sources), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = grey)
-        Text("· " + stringResource(Res.string.search_area_sources_page, CommonSources.PAGE), fontSize = 12.sp, color = grey)
-    }
-    sources.forEach { source ->
-        Tooltip(tooltip = { Text(stringResource(Res.string.search_common_source_books_tip, source.books)) }) {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(Modifier.widthIn(min = SOURCE_PLACE)) {
-                    ResultLink(source.label, accent, 13.sp, FontWeight.SemiBold) { onOpen(source) }
-                }
-                Text(
-                    source.text,
-                    fontFamily = font,
-                    fontSize = 14.sp,
-                    color = grey,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(stringResource(Res.string.search_area_source_books, source.books), fontSize = 12.sp, color = grey, maxLines = 1)
-            }
-        }
-    }
-}
-
 // The kinds Zayit's panel shows
 private val ZAYIT_KINDS = setOf(FacetKind.BOOK, FacetKind.AUTHOR)
-private val SOURCE_PLACE = 92.dp

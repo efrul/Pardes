@@ -21,7 +21,13 @@ class CommonSourcesTest {
     @Test
     fun `a line linked from three books of the page is a source`() {
         val picks = pick(listOf(LinkEnd(1, 100, 9), LinkEnd(2, 100, 9), LinkEnd(4, 100, 9)))
-        assertEquals(listOf(CommonSourcePick(100, 9, 3)), picks)
+        assertEquals(listOf(CommonSourcePick(100, 9, 3, listOf(1, 2, 4))), picks)
+    }
+
+    @Test
+    fun `the lines that link to a source come in the page's order, a line once`() {
+        val picks = pick(listOf(LinkEnd(5, 100, 9), LinkEnd(2, 100, 9), LinkEnd(4, 100, 9), LinkEnd(2, 100, 9)))
+        assertEquals(listOf(2L, 4L, 5L), picks.single().from)
     }
 
     @Test
@@ -33,7 +39,7 @@ class CommonSourcesTest {
     @Test
     fun `the first three results are never a source, the fourth may be`() {
         val links = (listOf(1L, 2L, 5L).map { LinkEnd(it, 4, 14) } + listOf(1L, 4L, 5L).map { LinkEnd(it, 3, 13) })
-        assertEquals(listOf(CommonSourcePick(4, 14, 3)), pick(links))
+        assertEquals(listOf(CommonSourcePick(4, 14, 3, listOf(1, 2, 5))), pick(links))
     }
 
     @Test

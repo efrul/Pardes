@@ -7,11 +7,12 @@ data class LinkEnd(
     val otherBook: Long,
 )
 
-/** A source the line shows, and how many books of the page link to it. */
+/** A source shown, how many books of the page link to it, and the page's lines that do ([from], in the page's order). */
 data class CommonSourcePick(
     val lineId: Long,
     val bookId: Long,
     val books: Int,
+    val from: List<Long> = emptyList(),
 )
 
 /**
@@ -47,16 +48,19 @@ object CommonSources {
         val bookOf = page.toMap()
         val skip = page.take(SKIP).mapTo(HashSet()) { it.first }
         val books = HashMap<Pair<Long, Long>, MutableSet<Long>>()
+        val lines = HashMap<Pair<Long, Long>, MutableSet<Long>>()
         for (end in links) {
             val pageBook = bookOf[end.pageLine]
             if (pageBook != null && end.otherLine !in skip && end.otherLine != end.pageLine) {
                 books.getOrPut(end.otherLine to end.otherBook) { HashSet() } += pageBook
+                lines.getOrPut(end.otherLine to end.otherBook) { HashSet() } += end.pageLine
             }
         }
+        val place = page.withIndex().associate { (i, result) -> result.first to i }
         val top =
             books
                 .filter { (line, bs) -> bs.size >= MIN_BOOKS && (!baseOnly || line.second in baseBooks) }
-                .map { (line, bs) -> CommonSourcePick(line.first, line.second, bs.size) }
+                .map { (line, bs) -> CommonSourcePick(line.first, line.second, bs.size, lines.getValue(line).sortedBy(place::getValue)) }
                 .sortedWith(compareBy({ -it.books }, { it.bookId !in baseBooks }, { rank(it.lineId) }, { it.lineId }))
                 .take(SHOWN)
         return top.filter { 2 * it.books >= top.first().books }

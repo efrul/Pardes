@@ -771,6 +771,16 @@ class SearchResultViewModel(
     /** Shows a result in the preview beside the list. */
     fun selectResult(lineId: Long) {
         selectedLineId.value = lineId
+        previewedLine.value = null
+    }
+
+    // Pardes: a line that is no result shown in the preview in place of one (a source of the area beside the results,
+    // SearchArea.kt), with the query it was shown for, until a result is selected or another search runs
+    private val previewedLine = MutableStateFlow<Pair<String, SearchResult>?>(null)
+
+    /** Pardes: shows [hit], a line that is no result, in the preview beside the list, until a result is selected. */
+    fun previewLine(hit: SearchResult) {
+        previewedLine.value = uiState.value.executedQuery to hit
     }
 
     /** The selected result, read in place: its lines around it and its book's details, loaded together. */
@@ -783,8 +793,9 @@ class SearchResultViewModel(
     private suspend fun bookDetails(bookId: Long): SearchEntity.BookEntity? = bookDetailsLoader.load(bookId)
 
     val previewFlow: StateFlow<PassagePreview?> =
-        combine(visibleResultsFlow, selectedLineId) { results, id -> results.firstOrNull { it.lineId == id } ?: results.firstOrNull() }
-            .distinctUntilChangedBy { it?.lineId }
+        combine(visibleResultsFlow, selectedLineId, previewedLine, uiState) { results, id, line, state ->
+            line?.takeIf { it.first == state.executedQuery }?.second ?: results.firstOrNull { it.lineId == id } ?: results.firstOrNull()
+        }.distinctUntilChangedBy { it?.lineId }
             .mapLatest { hit ->
                 hit?.let {
                     PassagePreview(

@@ -83,7 +83,10 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.LogoBranch
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcontent.views.UnifiedSearchBar
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookdetails.BookDetails
+import io.github.kdroidfilter.seforimapp.features.search.area.LinkedResultsLine
 import io.github.kdroidfilter.seforimapp.features.search.area.SearchArea
+import io.github.kdroidfilter.seforimapp.features.search.area.asResult
+import io.github.kdroidfilter.seforimapp.features.search.area.linkedResults
 import io.github.kdroidfilter.seforimapp.features.search.domain.AuthorNames
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchMode
@@ -144,6 +147,8 @@ data class SearchShellActions(
     val onShowOnlyCategory: (Long?, Boolean) -> Unit = { _, _ -> },
     val onOpenBookAt: (bookId: Long, lineId: Long) -> Unit = { _, _ -> },
     val onSelectResult: (lineId: Long) -> Unit = {},
+    // Pardes: a line that is no result shown in the preview (a source of the area beside the results, SearchArea.kt)
+    val onPreviewLine: (SearchResult) -> Unit = {},
     val onMoreFromBook: (bookId: Long) -> Unit = {},
     val onBackFromBook: () -> Unit = {},
     val onOpenAuthor: (Long) -> Unit = {},
@@ -263,7 +268,11 @@ private fun SearchResultContentMvi(
     val oneBook = inBook || (state.scopeBook != null && noMarks) || state.scopeTocId != null
     // In the library's order every passage shows too: a book's stand together, as it has them
     val everyPassage = oneBook || state.catalogOrder
-    val items = remember(visibleResults, bookCounts, everyPassage) { flattenResults(visibleResults, bookCounts, everyPassage) }
+    // Pardes: the list narrowed to the results that link to a source of the area beside it, by the source's count
+    // (SearchArea.kt); all of them otherwise
+    var linkedTo by remember(state.executedQuery) { mutableStateOf<CommonSource?>(null) }
+    val listed = remember(visibleResults, linkedTo) { linkedResults(visibleResults, linkedTo) }
+    val items = remember(listed, bookCounts, everyPassage) { flattenResults(listed, bookCounts, everyPassage) }
     val lineToItemIndex =
         remember(items) {
             buildMap {
@@ -561,6 +570,8 @@ private fun SearchResultContentMvi(
                                     }
                                 }
                             }
+                            // Pardes: while the list shows only the results that link to a source, which, and the way back
+                            LinkedResultsLine(linkedTo, listed.size, onShowAll = { linkedTo = null })
                         }
                         Divider(Orientation.Horizontal, Modifier.fillMaxWidth())
                         Box(
@@ -661,7 +672,12 @@ private fun SearchResultContentMvi(
                         query = state.executedQuery,
                         entity = entity?.takeIf { !duplicate && showEntity },
                         sources = commonSources,
-                        onOpenSource = { source -> actions.onOpenBookAt(source.bookId, source.lineId) },
+                        onShowSource = { source ->
+                            val hit = source.asResult()
+                            actions.onRequestBreadcrumb(hit)
+                            actions.onPreviewLine(hit)
+                        },
+                        onNarrowResults = { source -> linkedTo = source },
                         modifier = Modifier.fillMaxWidth(),
                     ) { shown, extra ->
                         EntityPanel(

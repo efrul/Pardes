@@ -978,7 +978,9 @@
     <string name="search_area_sources">מקורות שהתוצאות מפנות אליהם</string>
     <string name="search_area_sources_page">לפי %1$d התוצאות הראשונות</string>
     <string name="search_area_source_books">%1$d ספרים</string>
-    <string name="search_common_source_books_tip">%1$d ספרים מבין עשרים התוצאות הראשונות מקושרים למקור הזה</string>
+    <string name="search_area_source_books_tip">%1$d ספרים מבין עשרים התוצאות הראשונות מקושרים למקור הזה. לחיצה מציגה רק את התוצאות האלה.</string>
+    <string name="search_area_linked">רק %2$d התוצאות שמפנות אל %1$s</string>
+    <string name="search_area_linked_all">כל התוצאות</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>

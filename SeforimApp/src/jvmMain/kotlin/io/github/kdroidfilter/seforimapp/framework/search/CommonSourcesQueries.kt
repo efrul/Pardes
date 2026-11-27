@@ -11,7 +11,10 @@ import java.sql.Connection
 import java.sql.DriverManager
 import java.util.Properties
 
-/** A source the first results link to, as the area beside them shows it: its place, its [books] and its [text]. */
+/**
+ * A source the first results link to, as the area beside them shows it: its place, its [books] and its [text], where it
+ * is to show it in the preview ([bookTitle], [lineIndex]), and the results that link to it ([from], in their order).
+ */
 @Immutable
 data class CommonSource(
     val lineId: Long,
@@ -19,6 +22,9 @@ data class CommonSource(
     val label: String,
     val books: Int,
     val text: String = "",
+    val bookTitle: String = "",
+    val lineIndex: Int = 0,
+    val from: List<Long> = emptyList(),
 )
 
 /**
@@ -75,27 +81,27 @@ class CommonSourcesQueries(
             }
         ).also { baseBooks = it }
 
-    // Each pick with its place as the library names it (heRef, the book's title when it has none) and its text, in the
-    // picks' order
+    // Each pick with its place as the library names it (heRef, the book's title when it has none), its text and where it
+    // is, in the picks' order
     private fun labels(
         connection: Connection,
         picks: List<CommonSourcePick>,
     ): List<CommonSource> {
         if (picks.isEmpty()) return emptyList()
-        val names = HashMap<Long, Pair<String, String>>()
+        val found = HashMap<Long, CommonSource>()
         connection.prepareStatement(LABELS_SQL.replace("?", picks.joinToString(",") { "?" })).use { statement ->
             picks.forEachIndexed { i, pick -> statement.setLong(i + 1, pick.lineId) }
             statement.executeQuery().use { rows ->
                 while (rows.next()) {
                     val heRef = rows.getString(2)
-                    val label = if (heRef.isNullOrBlank()) rows.getString(3) else heRef.replace(SPACES, " ").trim()
-                    names[rows.getLong(1)] = label to plain(rows.getString(4).orEmpty())
+                    val title = rows.getString(3).orEmpty()
+                    val label = if (heRef.isNullOrBlank()) title else heRef.replace(SPACES, " ").trim()
+                    found[rows.getLong(1)] =
+                        CommonSource(rows.getLong(1), 0, label, 0, plain(rows.getString(4).orEmpty()), title, rows.getInt(5))
                 }
             }
         }
-        return picks.mapNotNull { pick ->
-            names[pick.lineId]?.let { (label, text) -> CommonSource(pick.lineId, pick.bookId, label, pick.books, text) }
-        }
+        return picks.mapNotNull { pick -> found[pick.lineId]?.copy(bookId = pick.bookId, books = pick.books, from = pick.from) }
     }
 
     // A line's text on one row: no tags, no cantillation, no section marks, no verse number before it
@@ -113,7 +119,7 @@ class CommonSourcesQueries(
         const val FROM_TARGET_SQL = "SELECT targetLineId, sourceLineId, sourceBookId FROM link WHERE targetLineId IN (?)"
         const val BASE_BOOKS_SQL = "SELECT id FROM book WHERE isBaseBook = 1"
         const val LABELS_SQL =
-            "SELECT l.id, l.heRef, b.title, l.content FROM line l JOIN book b ON b.id = l.bookId WHERE l.id IN (?)"
+            "SELECT l.id, l.heRef, b.title, l.content, l.lineIndex FROM line l JOIN book b ON b.id = l.bookId WHERE l.id IN (?)"
         val SPACES = Regex("\\s+")
         val MARKS = Regex("[\\u0591-\\u05AF\\u05C0]|\\{[ספ]\\}")
         val VERSE_NUMBER = Regex("^\\s*\\([^)]{1,4}\\)\\s*")

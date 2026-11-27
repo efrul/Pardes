@@ -31,7 +31,7 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (406 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (408 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
@@ -807,8 +807,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +67 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere, Common sources line.
+- **Change:** modified, +68 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere, Common sources line,
+  The search's area.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -820,6 +821,8 @@ The entries of this section by kind:
     where its search looked).
   - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`; so is
     `commonSources`, from `viewModel.commonSourcesFlow`.
+  - `rememberSearchShellActions` wires `onPreviewLine` to `viewModel::previewLine` (a source of the area shown in the
+    preview).
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
     `onNewBarOpened` to `SearchHomeViewModel`.
   - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
@@ -2352,7 +2355,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +591 −72 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line.
+- **Change:** modified, +604 −74 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line, The search's area.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
   - New constructor parameters `feedbackStore: SearchFeedbackStore`, `libraryCategories: LibraryCategories` and
@@ -2421,6 +2424,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     measured: no tab, book or contents entry picked, by relevance (not the library's order), searched everywhere (no
     book, contents entry or category), in the base books or in all of them after the automatic switch
     (`baseBooksHadNoResults`), whose meaning search ran (`highlightsByMeaning`); empty in any other case.
+  - **A source in the preview** (the search's area): `previewLine(hit)`, a line that is no result shown in the preview
+    with the query it was shown for (`previewedLine`, under a comment marked "Pardes:"); `previewFlow`'s `combine` takes
+    it and `uiState` too, the line first while the query is the same, and `selectResult` clears it.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
   the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
@@ -2446,7 +2452,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +260 −59 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Common sources line, Sefaria's content, The search's cards shown or hidden, The search's area.
+- **Change:** modified, +276 −59 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Common sources line, Sefaria's content, The search's cards shown or hidden, The search's area.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
@@ -2507,6 +2513,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
     and `extra = extra`; its import.
   - `EntityPanel` gains `extra` (a `ColumnScope` content, empty by default, under a comment marked "Pardes:"), drawn
     under `EntityDetails`: the rest of the area in Zayit's card.
+  - The area's sources: a click on one asks its breadcrumb and shows it in the preview (`actions.onPreviewLine` of
+    `source.asResult()`; `SearchShellActions` gains `onPreviewLine` under a comment marked "Pardes:"); its count narrows
+    the list to the results that link to it (`linkedTo`, kept for the query, and `listed = linkedResults(…)`, from which
+    `items` is built in place of `visibleResults`, under a comment marked "Pardes:"); while it is narrowed,
+    `LinkedResultsLine` under the status line's row says which source and leads back to all the results.
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2639,8 +2650,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +536 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 495 Hebrew strings added in twenty-five blocks,
+- **Change:** modified, +538 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 497 Hebrew strings added in twenty-five blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2678,8 +2689,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `search_area_also` ("גם:"), the kinds `search_area_kind_book`, `…_author`, `…_sage` and `…_topic`,
     `search_area_topic_sources`, `search_area_topic_line`, `search_area_sage_line`, `search_area_sage_mentions`,
     `search_area_sage_page` ("לדף החכם"), `search_area_sefaria_credit`, the sources' `search_area_sources` ("מקורות
-    שהתוצאות מפנות אליהם"), `search_area_sources_page`, `search_area_source_books` and `search_common_source_books_tip`
-    (what the number counts);
+    שהתוצאות מפנות אליהם"), `search_area_sources_page`, `search_area_source_books`, `search_area_source_books_tip`
+    (what the number counts, and that a click shows those results), `search_area_linked` ("רק %2$d התוצאות שמפנות אל
+    %1$s") and `search_area_linked_all` ("כל התוצאות");
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
     the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
@@ -8900,12 +8912,13 @@ hidden while a filter is being let go. The hooks in Zayit's files are in `Search
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSources.kt`
 
 - **Feature:** Common sources line.
-- **Size:** 64 lines.
+- **Size:** 68 lines.
 - **What:** the rule, pure code: `CommonSources.pick` takes the page (its results as lineId and bookId), the ends of
   their links (`LinkEnd`) and the base books, and gives up to three `CommonSourcePick`: lines at the other end of a
   link, neither the result itself nor one of the first three, linked from at least three books of the page (in a base
   books' search, lines of base books only); the most books first, then a base book, then the place in the page, then
-  the id; those linked from half the first's books or more.
+  the id; those linked from half the first's books or more. Each with the page's lines that link to it (`from`, in the
+  page's order), for the list narrowed to them.
 - **Reached from:** `CommonSourcesQueries`.
 - **Follows:** `docs/COMMON_SOURCES_PLAN.md`'s sketch of it, and pardes-semantic's `eval-real/common_source.py`.
 - **Tests:** `CommonSourcesTest`.
@@ -8913,8 +8926,9 @@ hidden while a filter is being let go. The hooks in Zayit's files are in `Search
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/CommonSourcesQueries.kt`
 
 - **Feature:** Common sources line.
-- **Size:** 121 lines.
-- **What:** `CommonSource` (what the area shows: the line, its book, its label, the books linking to it, its text) and
+- **Size:** 127 lines.
+- **What:** `CommonSource` (what the area shows: the line, its book, its label, the books linking to it, its text, its
+  book's title and its index to show it in the preview, and the page's lines that link to it) and
   `CommonSourcesQueries.line`: on a read-only connection of its own (`open_mode=1`, the path as a plain file name, not
   `?mode=ro`), opened for each read and closed after it, the page's links from the `link` table in both directions, the
   base books (the catalog's, else the database's, kept for the run), `CommonSources.pick`, and each pick's label (its
@@ -8939,9 +8953,10 @@ hidden while a filter is being let go. The hooks in Zayit's files are in `Search
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSourcesTest.kt`
 
 - **Feature:** Common sources line.
-- **Size:** 132 lines.
+- **Size:** 138 lines.
 - **What:** the rule alone (three books needed, a book counted once, the first three never a source, no link of a line
-  to itself, base books only in a base books' search, the order, the half cut), and against `common-sources-e100.json.gz`:
+  to itself, base books only in a base books' search, the order, the half cut, the lines linking to a source in the
+  page's order), and against `common-sources-e100.json.gz`:
   eval-100's 95 pages give the line measured (47 lines, 86 sources), and with the fused list's order after the page,
   `common_source.py`'s.
 - **Reached from:** the JVM tests.
@@ -8990,16 +9005,15 @@ still show or hide the book or author (`SearchPanelsSettings.entity`) and Sefari
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchArea.kt`
 
 - **Feature:** The search's area.
-- **Size:** 338 lines.
+- **Size:** 277 lines.
 - **What:** `SearchArea`: Sefaria's person and topic the query names (`SefariaSages.named`, `SefariaTopics.named` with
   sources), read off the UI thread while their button is on; the facets of Zayit's entity and of them ordered and joined
   by `SearchFacets`; the entity shown, the first or the one picked on the "גם:" line (`AlsoLine`: a pill each, its kind,
   its name and what it holds, a click showing it); a book or an author in Zayit's panel (`panel`), with the lines of the
   person's faces of Sefaria's under it (`PersonFacets`: `SageLine`, `TopicLine`, the credit); a person (`SageDetails`)
-  or a topic (`TopicDetails`) in a card of the panel's look (`AreaCard`); and under them the sources (`SourcesPart`): a
-  title with the page they are read from, then each source's place as a link, its text in the book font on one line and
-  "N ספרים", with the tooltip saying what the number counts. Nothing when the query names nothing and no source is
-  common to its results.
+  or a topic (`TopicDetails`) in a card of the panel's look (`AreaCard`); and under them the sources (`SourcesPart`,
+  `AreaSources.kt`), a click on one showing it in the preview (`onShowSource`), its count narrowing the results to those
+  that link to it (`onNarrowResults`). Nothing when the query names nothing and no source is common to its results.
 - **Reached from:** `SearchResultScreen.kt` (`SearchResultContentMvi`'s passage pane).
 - **Follows:** Zayit's `EntityPanel` (its card: the pane's `card()`, 16 dp in, 8 dp between) and `SearchStatusLine`
   (`ResultLink`, the grey of `readingSecondary`), and the topic card of Sefaria's content, which it takes in.
@@ -9018,6 +9032,32 @@ still show or hide the book or author (`SearchPanelsSettings.entity`) and Sefari
 - **Follows:** the persons' window of Sefaria's content (`SagesTool`'s `SagePage`: the teachers, the students, the lines
   by book), and the dataviz rules for the bars (one series, no legend, values beside, the data end rounded).
 - **Tests:** none of its own; seen in the app (רבא, 2026-11-27).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaSources.kt`
+
+- **Feature:** The search's area.
+- **Size:** 136 lines.
+- **What:** the area's sources: `SourcesPart` (a title with the page they are read from, then each source's place, a
+  link that shows it in the preview, its text in the book font on one line, and "N ספרים", a link to the results that
+  link to it, with the tooltip saying what the number counts and what a click does), `LinkedResultsLine` (over the list
+  narrowed to a source's results: which source, how many, "כל התוצאות"), `CommonSource.asResult` (a source as a result
+  of its own line, for the preview) and `linkedResults` (the results that link to a source, in their order; all of them
+  without one).
+- **Reached from:** `SearchArea`; `SearchResultScreen.kt` (`LinkedResultsLine`, `asResult`, `linkedResults`).
+- **Follows:** the line of common sources it replaces (`SearchStatusLine`'s grey 13 sp text, `ResultLink`, Jewel's
+  `Tooltip`).
+- **Tests:** `AreaSourcesTest`, `SearchPanelsSettingsUiTest`; seen in the app (שמע ישראל: the source in the preview, the
+  list narrowed to its 3 results and back, 2026-11-27).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaSourcesTest.kt`
+
+- **Feature:** The search's area.
+- **Size:** 33 lines.
+- **What:** the list narrowed to the results that link to a source, in their order; whole without a source; a source as
+  a result of its own line, for the preview.
+- **Reached from:** the JVM tests.
+- **Follows:** `SearchFacetsTest` (pure code, small inline cases), names in backticks as Zayit's.
+- **Tests:** it is one.
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchFacetsTest.kt`
 
@@ -10365,10 +10405,10 @@ Pardes's own.
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettingsUiTest.kt`
 
 - **Feature:** The search's cards shown or hidden, The search's area.
-- **Size:** 114 lines.
+- **Size:** 133 lines.
 - **What:** the area's topic shown while its setting is on, gone while it is off; a source of the results shown alone
-  in the area, with its text and its count, opened by a click; the bar's two buttons turning the cards' settings off and
-  on.
+  in the area, with its text, its place showing it and its count narrowing the results to it; the bar's two buttons
+  turning the cards' settings off and on.
 - **Reached from:** the JVM tests.
 - **Follows:** `DictionaryWindowUiTest` (the real graph in a desktop Compose UI test), names in backticks as Zayit's.
 - **Tests:** it is one (UI).
