@@ -962,6 +962,21 @@
     <string name="search_sort_catalog">מיון לפי סדר הספרייה</string>
     <string name="search_sort_relevance">מיון לפי רלוונטיות</string>
     <string name="search_farther_lines">ועוד %1$d קרובות פחות:</string>
+    <!-- Pardes: the area beside the results, what the query names and the sources its first results link to
+         (SearchArea.kt, docs/COMMON_SOURCES_PLAN.md) -->
+    <string name="search_area_also">גם:</string>
+    <string name="search_area_kind_book">ספר</string>
+    <string name="search_area_kind_author">מחבר</string>
+    <string name="search_area_kind_sage">חכם</string>
+    <string name="search_area_kind_topic">נושא</string>
+    <string name="search_area_topic_sources">%1$d מקורות</string>
+    <string name="search_area_topic_line">בנושאים של ספריא: %1$d מקורות</string>
+    <string name="search_area_sage_line">בחכמים של ספריא: %1$s</string>
+    <string name="search_area_sage_mentions">נזכר ב־%1$s שורות בספרייה, הרבה ביותר ב:</string>
+    <string name="search_area_sage_page">לדף החכם</string>
+    <string name="search_area_sefaria_credit">מתוך החכמים והנושאים של ספריא</string>
+    <string name="search_area_sources">מקורות שהתוצאות מפנות אליהם</string>
+    <string name="search_area_sources_page">לפי %1$d התוצאות הראשונות</string>
     <string name="search_tab_all">הכל</string>
     <string name="search_book_details">פרטי הספר</string>
     <string name="search_back_to_all">→ חזרה לכל התוצאות (מוצגות התוצאות מ%1$s)</string>
@@ -1317,5 +1332,56 @@
     <string name="find_results_by_meaning">%1$d שורות קרובות במשמעות</string>
     <!-- Pardes: a find in a PDF book (request 48 of stage 3, PdfFind) -->
     <string name="pdf_find_no_text">אין טקסט בקובץ: זו סריקה בלי שכבת טקסט, ואין בה מה לחפש</string>
+    <!-- Pardes: Sefaria's topics, the sages it finds in the Mishnah and the Talmud, its passages and Krupnik's dictionary (features/sefaria) -->
+    <string name="home_widget_name_topics">נושאים</string>
+    <string name="home_widget_name_sages">חכמים</string>
+    <string name="sefaria_back">חזרה</string>
+    <string name="sefaria_loading">טוען…</string>
+    <string name="sefaria_topics_credit">מתוך הנושאים של ספריא</string>
+    <string name="sefaria_topics_search_hint">חיפוש נושא</string>
+    <string name="sefaria_topics_tree">עץ</string>
+    <string name="sefaria_topics_index">א–ת</string>
+    <string name="sefaria_topics_index_count">%1$d נושאים באות %2$s</string>
+    <string name="sefaria_topics_none_found">לא נמצא נושא בשם הזה</string>
+    <string name="sefaria_topic_sources_in_books">%1$d מקורות ב־%2$d ספרים</string>
+    <string name="sefaria_topic_more">עוד %1$d</string>
+    <string name="sefaria_topic_shown_under">בעץ הנושאים</string>
+    <string name="sefaria_topic_broader">כללי יותר</string>
+    <string name="sefaria_topic_narrower">פרטי יותר</string>
+    <string name="sefaria_topic_time">סמוכים בזמן</string>
+    <string name="sefaria_topic_dependents">תלויים בו</string>
+    <string name="sefaria_topic_related">נושאים קשורים</string>
+    <string name="sefaria_topic_card_kind">· נושא</string>
+    <string name="sefaria_topic_open_page">לדף הנושא</string>
+    <string name="sefaria_topic_open">לדף הנושא · %1$d מקורות ›</string>
+    <string name="sefaria_topics_pane">נושאים</string>
+    <string name="sefaria_topics_tooltip">הצג את הנושאים של שורה זו, מספריא</string>
+    <string name="sefaria_topics_select_line">בחר שורה כדי לראות את הנושאים שלה</string>
+    <string name="sefaria_topics_empty_line">אין נושאים לשורה זו</string>
+    <string name="sefaria_topics_line_count">%1$s · %2$d נושאים</string>
+    <string name="sefaria_sages_credit">מתוך האזכורים של ספריא</string>
+    <string name="sefaria_sages_search_hint">חיפוש חכם</string>
+    <string name="sefaria_sages_none_found">לא נמצא חכם בשם הזה</string>
+    <string name="sefaria_sage_teachers">רבותיו</string>
+    <string name="sefaria_sage_students">תלמידיו</string>
+    <string name="sefaria_sage_family">משפחה</string>
+    <string name="sefaria_sage_groups">בקבוצה</string>
+    <string name="sefaria_sage_mentioned">נזכר ב־%1$d שורות בספרייה</string>
+    <string name="sefaria_sage_all">הכל</string>
+    <string name="sefaria_sage_ambiguous">ספריא לא קבעה מי מהם נזכר כאן: %1$d אפשרויות</string>
+    <string name="sefaria_sage_wiki">בוויקיפדיה</string>
+    <string name="sefaria_generation_tannaim">התנאים, דור %1$s</string>
+    <string name="sefaria_generation_amoraim">האמוראים, דור %1$s</string>
+    <string name="sefaria_generation_zugot">הזוגות, זוג %1$s</string>
+    <string name="sefaria_generation_between">בין התנאים לאמוראים</string>
+    <string name="sefaria_mark_sugya">סמן את הסוגיה</string>
+    <string name="sefaria_copy_sugya">העתק את הסוגיה</string>
+    <string name="sefaria_mark_mishnah">סמן את המשנה</string>
+    <string name="sefaria_copy_mishnah">העתק את המשנה</string>
+    <string name="sefaria_mark_story">סמן את הסיפור</string>
+    <string name="sefaria_copy_story">העתק את הסיפור</string>
 
+    <!-- Pardes: the pane of the area beside a search's results, shown or hidden from the search's end bar (features/search/SearchPanelsSettings.kt, area/SearchAreaPane.kt) -->
+    <string name="search_area_pane">על החיפוש</string>
+    <string name="search_area_pane_tooltip">הצג בחלונית את מה שחיפשת, ספר, מחבר, חכם או נושא, ואת המקורות שהתוצאות מפנות אליהם. את החלונית אפשר לגרור לכל צד, להגדיל ולפתוח בחלון נפרד</string>
 </resources>

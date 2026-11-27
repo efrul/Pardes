@@ -28,6 +28,7 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.BuildSearchTreeU
 import io.github.kdroidfilter.seforimapp.features.search.domain.CatalogOrderEngine
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryNavigationUseCase
+import io.github.kdroidfilter.seforimapp.features.search.domain.CommonSources
 import io.github.kdroidfilter.seforimapp.features.search.domain.ExecuteSearchUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.GetBreadcrumbPiecesUseCase
 import io.github.kdroidfilter.seforimapp.features.search.domain.LibraryCategories
@@ -52,6 +53,8 @@ import io.github.kdroidfilter.seforimapp.features.search.semantic.plusBooks
 import io.github.kdroidfilter.seforimapp.framework.database.LibraryLocation
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
+import io.github.kdroidfilter.seforimapp.framework.search.CommonSource
+import io.github.kdroidfilter.seforimapp.framework.search.CommonSourcesReader
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService
 import io.github.kdroidfilter.seforimapp.framework.session.SearchPersistedState
 import io.github.kdroidfilter.seforimapp.framework.session.TabPersistedStateStore
@@ -142,6 +145,8 @@ class SearchResultViewModel(
     private val appSettings: AppSettings,
     lookup: LuceneLookupSearchService,
     private val libraryCategories: LibraryCategories,
+    // Pardes: the line of common sources above the results (docs/COMMON_SOURCES_PLAN.md)
+    private val commonSources: CommonSourcesReader,
 ) : ViewModel() {
     @AssistedFactory
     @ViewModelAssistedFactoryKey(SearchResultViewModel::class)
@@ -646,6 +651,35 @@ class SearchResultViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /**
+     * Pardes: the line of common sources above the results (docs/COMMON_SOURCES_PLAN.md), in the cases measured: a search
+     * everywhere, in the base books or in all of them after the automatic switch, by relevance, unfiltered, whose meaning
+     * search ran; read from the first page's ids, in the visible tab only. Empty in any other case.
+     */
+    val commonSourcesFlow: StateFlow<ImmutableList<CommonSource>> =
+        _uiVisible
+            .flatMapLatest { visible ->
+                if (!visible) {
+                    emptyFlow()
+                } else {
+                    combine(uiState, _selectedCategoryIds, _selectedBookIds, _selectedTocIds) { s, cats, books, tocs ->
+                        val unfiltered = cats.isEmpty() && books.isEmpty() && tocs.isEmpty() && !s.catalogOrder
+                        val everywhere = s.scopeBook == null && s.scopeTocId == null && s.scopeLabel == null
+                        val applies = unfiltered && everywhere && (!s.globalExtended || s.baseBooksHadNoResults)
+                        val page = if (applies) s.results.take(CommonSources.PAGE).map { it.lineId to it.bookId } else emptyList()
+                        Triple(page, !s.globalExtended, s.executedQuery)
+                    }
+                }
+            }.distinctUntilChanged()
+            .mapLatest { (page, baseOnly, query) ->
+                if (page.isEmpty() || searchScope != SearchScope.Global || !lucene.highlightsByMeaning(query)) {
+                    persistentListOf()
+                } else {
+                    runSuspendCatching { commonSources.line(page, baseOnly) }.getOrDefault(emptyList()).toImmutableList()
+                }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
+
+    /**
      * The lines around a result, by length rather than count: short lines (a verse, a heading) come
      * many, long paragraphs few, about [CONTEXT_CHARS] characters on each side, one line at least.
      */
@@ -737,6 +771,16 @@ class SearchResultViewModel(
     /** Shows a result in the preview beside the list. */
     fun selectResult(lineId: Long) {
         selectedLineId.value = lineId
+        previewedLine.value = null
+    }
+
+    // Pardes: a line that is no result shown in the preview in place of one (a source of the area beside the results,
+    // SearchArea.kt), with the query it was shown for, until a result is selected or another search runs
+    private val previewedLine = MutableStateFlow<Pair<String, SearchResult>?>(null)
+
+    /** Pardes: shows [hit], a line that is no result, in the preview beside the list, until a result is selected. */
+    fun previewLine(hit: SearchResult) {
+        previewedLine.value = uiState.value.executedQuery to hit
     }
 
     /** The selected result, read in place: its lines around it and its book's details, loaded together. */
@@ -749,8 +793,9 @@ class SearchResultViewModel(
     private suspend fun bookDetails(bookId: Long): SearchEntity.BookEntity? = bookDetailsLoader.load(bookId)
 
     val previewFlow: StateFlow<PassagePreview?> =
-        combine(visibleResultsFlow, selectedLineId) { results, id -> results.firstOrNull { it.lineId == id } ?: results.firstOrNull() }
-            .distinctUntilChangedBy { it?.lineId }
+        combine(visibleResultsFlow, selectedLineId, previewedLine, uiState) { results, id, line, state ->
+            line?.takeIf { it.first == state.executedQuery }?.second ?: results.firstOrNull { it.lineId == id } ?: results.firstOrNull()
+        }.distinctUntilChangedBy { it?.lineId }
             .mapLatest { hit ->
                 hit?.let {
                     PassagePreview(

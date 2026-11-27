@@ -59,6 +59,7 @@ import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetMenuItem
 import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetSettings
 import io.github.kdroidfilter.seforimapp.features.home.widgets.WidgetTitle
 import io.github.kdroidfilter.seforimapp.features.home.widgets.rememberAccentColor
+import io.github.kdroidfilter.seforimapp.features.sefaria.KrupnikDictionary
 import io.github.kdroidfilter.seforimapp.framework.di.AppGraph
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.logger.infoln
@@ -129,6 +130,14 @@ internal enum class Dictionary(
         "ראשי תיבות",
         DictionarySource.TEXT,
         attribution = "מתוך ויקיפדיה העברית, בידי כותביה · CC BY-SA",
+    ),
+
+    // Pardes: Krupnik's dictionary of the Talmud (1927, public domain), as Sefaria has it (features/sefaria)
+    KRUPNIK(
+        "מילון התלמוד לקרופניק",
+        "קרופניק",
+        DictionarySource.TEXT,
+        attribution = "מילון התלמוד של קרופניק וזילברמן (1927, נחלת הכלל), כפי שהוא בספריא",
     ),
     ;
 
@@ -285,7 +294,12 @@ internal suspend fun readDictionaries(
                             DictionarySource.INDEX -> readIndexed(graph.repository, dictionary)
                             DictionarySource.TEXT ->
                                 dictionary.textEntries(
-                                    KleiKodeshPack.shipped.texts[dictionary].orEmpty(),
+                                    // Pardes: Krupnik's is Sefaria's text, the others Klei Kodesh's data
+                                    if (dictionary == Dictionary.KRUPNIK) {
+                                        KrupnikDictionary.shipped
+                                    } else {
+                                        KleiKodeshPack.shipped.texts[dictionary].orEmpty()
+                                    },
                                     idBase = -1L - dictionary.ordinal * TEXT_ID_SPAN,
                                 )
                         }
@@ -541,7 +555,11 @@ private fun DictionaryOptionsPage(state: HomeWidgetsState) {
                     modifier = Modifier.weight(1f).testTag("dictionary-option-${dictionary.name}"),
                 )
                 Text(
-                    if (dictionary.source == DictionarySource.BOOK) dictionary.bookTitle else "${dictionary.bookTitle} · כלי קודש",
+                    when {
+                        dictionary.source == DictionarySource.BOOK -> dictionary.bookTitle
+                        dictionary == Dictionary.KRUPNIK -> "${dictionary.bookTitle} · ספריא"
+                        else -> "${dictionary.bookTitle} · כלי קודש"
+                    },
                     fontSize = 12.sp,
                     color = JewelTheme.globalColors.text.info,
                     maxLines = 1,

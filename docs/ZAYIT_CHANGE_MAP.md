@@ -23,7 +23,7 @@ every file Pardes adds.
 
 ## How to read it
 
-- **Section 1, Zayit's files that Pardes changes** (156 files): each in full.
+- **Section 1, Zayit's files that Pardes changes** (158 files): each in full.
   - **Change:** the status, the line counts against the base, the feature.
   - **What:** every change in the file.
   - **Why**, and the **Kind**: branding hook, Pardes feature hook, Pardes feature in Zayit's file, fix of Zayit's
@@ -31,13 +31,13 @@ every file Pardes adds.
   - **Merge risk:** what a merge of the next Zayit release will meet there.
   - **Smaller:** how the change could shrink, when it can.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 2, files Pardes adds inside Zayit's modules** (382 files, by feature): code that sits among
+- **Section 2, files Pardes adds inside Zayit's modules** (414 files, by feature): code that sits among
   Zayit's own and must read like it.
   - **Size**, **What**.
   - **Reached from:** the hook in Zayit's code.
   - **Follows:** the Zayit code it copies or extends.
   - **Tests**, and **Notes** where something needs saying.
-- **Section 3, Pardes's own trees** (803 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
+- **Section 3, Pardes's own trees** (805 files: androidApp/, semantic-model/, branding/, siddur-open/, docs/,
   workflows, skills, …): a row each, what the file is and where it comes from.
 - **Section 4** lists the departures from Zayit's style still to fix. **Section 5** is Zayit after the base,
   **section 6** why GitHub does not show Pardes as a fork.
@@ -444,9 +444,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/di/AppGraph.kt`
 
-- **Change:** modified, +41 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search
+- **Change:** modified, +50 −0 lines. Feature: Reading time, Feedback mode, Dictionary window, More links, Search
   speed, Reader's default commentators, Daily study plans, The user's PDF books, Find results pane, A whole page in
-  the view, Daf view, A book's own pages, Search results.
+  the view, Daf view, A book's own pages, Search results, Sefaria's content, The search's area pane.
 - **What:**
   - `abstract val readingTimeStore: io.github.kdroidfilter.seforimapp.core.reading.ReadingTimeStore`, and after it
     `abstract val studyPlanStore: io.github.kdroidfilter.seforimapp.core.study.StudyPlanStore`.
@@ -473,6 +473,11 @@ The entries of this section by kind:
   - `abstract val dafKeys: …daf.DafKeys`: the daf button's click of each tab, for its key (request 94 of stage 3).
   - `abstract val searchTrees: …search.SearchTrees`, with a comment of its own: which search tabs show their tree of
     books (request 97 of stage 3).
+  - After `libraryLinks`, with a KDoc line each marked "Pardes:", `abstract val sefariaWindows:
+    io.github.kdroidfilter.seforimapp.features.sefaria.SefariaWindows` and `abstract val sefariaLines:
+    io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLines`, fully qualified as the others; and last `abstract
+    val searchAreas: …search.area.SearchAreas`, with a KDoc marked "Pardes:": whether each search tab has the pane of
+    the area beside its results open.
 - **Why:** composables outside a ViewModel reach the reading-time store (the learning split widget, `0083381e`), the
   study plans (their widget and editor) and the
   feedback sender (`main.kt`, `ddf604d8`) through the graph, as the reader's menu and the dictionary's window reach the
@@ -480,11 +485,11 @@ The entries of this section by kind:
   starts, and the commentators list reads the reader's default; the book tree and a PDF book's tab reach the user's
   PDF books, and the daf view a tractate's scan and its pages cut into images; a book's text and the find results pane
   meet in the find hub; a study plan's field finds books by the search bar's lookup, as the bar does; the end bar's
-  "עמוד שלם" reads the fit its tab's pages tell; a commentary's tab hands its tractate's daf the comment to select.
+  "עמוד שלם" reads the fit its tab's pages tell; a commentary's tab hands its tractate's daf the comment to select. The reader's pane, the search's card, the link handler and the menu open Sefaria's topics and sages in their windows and read the lines their data names.
 - **Kind:** Pardes feature hook.
 - **Merge risk:** sixteen declarations among Zayit's, with their comments, and three imports.
 - **Smaller:** already minimal.
-- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`, `PageFitTest`, `DafFocusRequestsTest`, `SearchMarksTest`.
+- **Tests:** `ReadingTimeStoreTest`, `StudyPlanStoreTest`, `FeedbackAutoSenderTest`, `DictionaryWindowUiTest`, `LibraryLinksTest`, `PdfBookStoreTest`, `FindResultsTest`, `PageFitTest`, `DafFocusRequestsTest`, `SearchMarksTest`. `SefariaDataTest`.
 - **Notes:** the first two types, and those of `libraryLinks`, `pdfBookStore`, `dafScans`, `dafScanPages`,
   `bookFindHub`, `lookupSearch`, `paneFocusRequests`, `pageFits`, `dafFocusRequests`, `dafKeys` and `searchTrees`, are written fully qualified instead of imported, unlike every
   other line of the file: fewer import lines to conflict, but not Zayit's way.
@@ -824,8 +829,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/tabs/TabsContent.kt`
 
-- **Change:** modified, +65 −6 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
-  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere.
+- **Change:** modified, +66 −8 lines. Feature: Search in categories, Feedback mode, Result tabs, Results in the library's order,
+  Desktop link, The user's PDF books, Search modes, Two tabs side by side, A search from anywhere, Common sources line,
+  The search's area, The search's area pane.
 - **What:**
   - In `SearchTabContent`, a `LaunchedEffect` that collects `viewModel.scopeChanges` into `barViewModel.showScope(scope)`:
     when the search moves by itself (to a category's base books, or all its books), its bar says where it searches,
@@ -835,7 +841,10 @@ The entries of this section by kind:
     taken out of the bar is a tab picked no longer.
   - The search tab's own bar passes `onNewBarOpened = null` (a bar in a new tab opens empty, as in Zayit; this one opens
     where its search looked).
-  - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`.
+  - `feedback` is collected from `viewModel.feedbackFlow` and passed to `SearchResultInBookShellMvi`; Zayit's
+    `entity` (`viewModel.entityFlow`) no longer is, nor collected here: the area's pane reads it (`SearchAreaPane.kt`).
+  - `rememberSearchShellActions` wires `onPreviewLine` to `viewModel::previewLine` (a source of the area shown in the
+    preview).
   - `rememberHomeSearchCallbacks` wires `onPickCategory`, `onClearCategory`, `onAddScope`, `onRemoveScope` and
     `onNewBarOpened` to `SearchHomeViewModel`.
   - `rememberSearchShellActions` adds `onScopeBaseBooksChange` (event `SetScopeBaseBooksOnly`), `onGrade` (event
@@ -1238,8 +1247,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentEvent.kt`
 
-- **Change:** modified, +53 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator
-  selection kept, Reader's default commentators, Find results pane, A book's own pages.
+- **Change:** modified, +59 −0 lines. Feature: Daf view, Scan view, Commentators in their own panes, Commentator
+  selection kept, Reader's default commentators, Find results pane, A book's own pages, Sefaria's content, The
+  search's area pane.
 - **What:**
   - `ToggleDafView`: shows a Talmud tractate as its Vilna page, or as its text again; `ToggleScanView`: as its scan
     (request 46), or as its text again.
@@ -1255,18 +1265,21 @@ The entries of this section by kind:
     tab (request 55 of `docs/DESKTOP_STAGE3_PLAN.md`).
   - Since 2026-11-24 `SelectionCleared`: a second click on what is marked on a book's own pages lets the selection go,
     its lines and its passage (request 88 of stage 3: "לחיצה חוזרת על מה שכבר מודגש תבטל את ההדגשה").
+  - `ToggleTopics`, after `ToggleFindResults`: the pane of the line's topics, from Sefaria, shown or hidden, in every
+    tab (one setting, `SefariaSettings.topicsPane`), with a KDoc marked "Pardes:"; and after it `ToggleSearchArea`: the
+    pane of the area beside a search's results, in every search tab (`SearchPanelsSettings.area`), with its own.
 - **Why:** the daf view (`4efa3e3c`) and the scan view, the commentators' own panes (`d85afee7`, `831ad272`) and the selection kept from
-  line to line (`3c6bae9b`, `49b456d4`) and the reader's default commentators are driven through the reader's events, as all of Zayit's reader actions are.
+  line to line (`3c6bae9b`, `49b456d4`) and the reader's default commentators are driven through the reader's events, as all of Zayit's reader actions are. The pane of the line's topics, of Sefaria's content the user chose on 2026-11-26, is toggled as the find results' is.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small: new members of the sealed interface, and one defaulted field at the end of an existing event.
 - **Smaller:** already minimal.
 - **Tests:** `CommentatorSelectionTest`, `DetachedCommentatorsTest`, `DafViewStateTest`,
-  `CommentariesUseCaseReaderDefaultTest`; the scan view's toggle was checked in the app.
+  `CommentariesUseCaseReaderDefaultTest`; the scan view's toggle was checked in the app. The topics' pane toggled in the app.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentScreen.kt`
 
-- **Change:** modified, +140 −21 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window,
-  Copy with a commentary's source.
+- **Change:** modified, +152 −21 lines. Feature: Daf view, Daf view (review mode), Reading time, Copy of the words alone, Dictionary window,
+  Copy with a commentary's source, Sefaria's content.
 - **What:**
   - In `BookTextMenus`, `LocalLocatedSelection.current`: when the content locates its own selection in the library (the
     daf's printed words), the context menu's link, note and highlight take that location instead of searching the
@@ -1297,25 +1310,30 @@ The entries of this section by kind:
   - In `BookContentScreen`, a `LaunchedEffect` that tracks the book's reading time (`readingTimeStore.track`) while its
     tab is selected and its window focused (`windowInfo.isWindowFocused` read as a flow).
   - Imports, among them a redundant `androidx.compose.runtime.snapshotFlow` beside the file's `androidx.compose.runtime.*`.
+  - In `BookTextMenus`, the passage of Sefaria's the right-clicked line is in (`rememberSugyaMenu(onEvent)` in the
+    menu's area, under a comment marked "Pardes:", and its import): in the main pane only, before "report an error",
+    its two items (`SugyaMenu.items` of the line whose id is `currentLineId`): the sugya, the Mishnah or the story
+    marked in the text, or copied whole.
 - **Why:** highlights and notes work on the daf's printed words (`d334af46`), a selection survives while another amud
   is composed (`d9cb48b7`), the learning split widget counts the time a book is read (`0083381e`), and a text is copied
   without its nikud, teamim and punctuation, and a selected word is looked up in the dictionary, as the user asked on
   2026-11-09; the daf's review is said in two checkboxes, as the user asked the same day; the copy of the words alone
   only where there is punctuation, with its shortcut, and a copy with source of a commentary, a targum or the daf's
-  words citing them, as asked on 2026-11-12 (requests 39 and 40).
+  words citing them, as asked on 2026-11-12 (requests 39 and 40). The sugya marked or copied is Sefaria's content the user chose on 2026-11-26.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: the edits sit inside Zayit's context-menu builder (`BookTextMenus`), which Zayit changes when
   it adds a menu action.
 - **Smaller:** the reading-time effect could be a Pardes composable called by one line; the menu's branches need the
   menu's locals.
 - **Tests:** `DafAnchorsTest` (the located words), `ReadingTimeStoreTest`, `LettersOnlyTest`, `DictionaryLookupTest`,
-  `CommentarySourceTest`.
+  `CommentarySourceTest`. `SefariaDataTest` (the passages); the sugya's items tried in the app (Berakhot 2a's Mishnah marked).
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do.
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/BookContentViewModel.kt`
 
-- **Change:** modified, +88 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes,
-  Commentator selection kept, Reader's default commentators, Find results pane, A book's own pages.
+- **Change:** modified, +98 −11 lines. Feature: Daf view, Scan view, PDF books, Commentators in their own panes,
+  Commentator selection kept, Reader's default commentators, Find results pane, A book's own pages, Sefaria's content,
+  The search's area pane.
 - **What:**
   - `onEvent` handles `ToggleDafView` and `ToggleScanView` (flip `dafView` and `scanView`, one at a time: the
     text, the daf and the scan are a tractate's three views), `DetachCommentator`, `ReattachCommentator` and
@@ -1349,9 +1367,13 @@ The entries of this section by kind:
     request 87 met: a comment of Rashi or Tosafot opened back from the daf.
   - Since 2026-11-24 `SelectionCleared` empties `selectedLines`, `primarySelectedLineId` and `selectedPassage`
     (request 88 of stage 3), as a Ctrl+click on the only selected line leaves them.
+  - `ToggleSearchArea` turns `SearchPanelsSettings.area` (the pane of the area beside a search's results), with a
+    comment marked "Pardes:" and its import, after `ToggleTopics`.
+  - `ToggleTopics` turns `SefariaSettings.topicsPane` (the pane of the line's topics), with a comment marked "Pardes:"
+    and its import.
 - **Why:** as for `BookContentEvent.kt` (`4efa3e3c`, `d85afee7`, `831ad272`, `3c6bae9b`, `49b456d4`); a PDF book
   opens in the reading screen as the library's books do, "בדומה להצגת גמרא סרוקה" (request 45), its contents are
-  searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54).
+  searched as theirs (request 53, "למה אין חיפוש בתוכן עניינים?"), and the search bar opens it (request 54). The topics' pane is one setting for every tab, as the find results'.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** small to medium: new `when` branches, an edit inside Zayit's prefetch function, a parameter at the
   constructor's end, an elvis in `loadBookById` and in `OpenBookById`, a line before `OpenBookAtLine`'s `loadBookData`,
@@ -1412,8 +1434,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/components/VerticalBars.kt`
 
-- **Change:** modified, +100 −15 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
-  side, Pages in the dark theme's colours, A whole page in the view, A book's own pages.
+- **Change:** modified, +117 −15 lines. Feature: Daf view, More links, Unflagged books, Scan view, Two pages side by
+  side, Pages in the dark theme's colours, A whole page in the view, A book's own pages, Sefaria's content, The search's area pane.
 - **What:**
   - The end bar shows a "צורת הדף" toggle (the `GemaraPage` icon, `daf_view` strings) for a Bavli tractate
     (`selectedBook.isBavli`), sending `ToggleDafView`; for a commentary a tractate's daf prints, Rashi's, Tosafot's,
@@ -1455,16 +1477,23 @@ The entries of this section by kind:
     (`shortcutHint`, "D+Ctrl", "D+⌘" on macOS).
   - Since 2026-11-24 `StartVerticalBar` takes `bookTreeShown` (the navigation's `isVisible` unless given), the book
     tree's button's selected state: in a search tab it is the tree of the books found (request 97 of stage 3).
+  - After the references' button, in every book, the topics' button ("נושאים", Zayit's unused `Contextual_token`
+    icon), lit while `SefariaSettings.topicsPane` is on, sending `ToggleTopics`, with a comment marked "Pardes:" and
+    its import.
+  - In a tab with no book (a search's results: `WindowBody` gives the end bar without a book to a search alone), after
+    "פרטי הספר", `SearchAreaPaneButton()` ("על החיפוש"), under a comment marked "Pardes:", with its import: the pane of
+    the area beside the results, shown or hidden as the reader's panes are from this bar.
 - **Why:** the daf view is opened from the reader's bar, and has a zoom of its own (`4efa3e3c`, `8d3825e7`); a button
   is enabled exactly when its pane has something to show, as Zayit's comment there says. The library of 2026-10-12 has
   75 books with commentary links and no flag for them, the 38 books of חברותא and their 38 books of notes among them:
-  their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10.
+  their notes could not be opened as commentaries, nor the Gemara as their source, as the user reported on 2026-11-10. The pane of the line's topics opens from the bar, as the references' and the other line panes do. The cards' buttons, as the user asked of the testers' builds of 2026-11-26: "עדיף פשוט שיהיה את המתג
+  בסרגל השמאלי כמו בשאר המקומות"; one, the area's pane's, since the area is a pane (2026-11-27: "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים").
 - **Kind:** Pardes feature hook.
 - **Merge risk:** small; two buttons among the bar's and two under the zoom's, a branch before the diacritics button and
   a button after it, `ZoomButtons`' body, the references' availability and the two `…Enabled` lines.
 - **Smaller:** already minimal.
 - **Tests:** `DafZoomTest`, `LibraryLinksTest` (`anyLinked`, `bookConnections`); the scan's, two pages' and the pages'
-  colours' buttons were checked in the app, and the toggle on Bereshit, Mishnah Berakhot and Orach Chaim.
+  colours' buttons were checked in the app, and the toggle on Bereshit, Mishnah Berakhot and Orach Chaim. The topics' button tried in the app. `SearchPanelsSettingsUiTest` (the pane's button); the button tried in the app (חנוכה, רבא, 2026-11-27).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/references/LineReferences.kt`
 
@@ -1581,8 +1610,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panes/ReaderPanes.kt`
 
-- **Change:** modified, +276 −44 lines. Feature: Commentators in their own panes, A pane at the window's edge,
-  Pane layout kept, Find results pane, Keys in the book tree and the contents.
+- **Change:** modified, +363 −44 lines. Feature: Commentators in their own panes, A pane at the window's edge,
+  Pane layout kept, Find results pane, Keys in the book tree and the contents, Sefaria's content, The search's area pane.
 - **What:**
   - `ReaderPane` turns from an `enum class` into a `sealed class`: its eight entries become `data object`s, listed in
     `ReaderPane.standard`, and a `data class Commentator(name)` is a pane per split-off commentator, closed by
@@ -1633,20 +1662,37 @@ The entries of this section by kind:
     the reader's word on the testers' build of 2026-11-24 it let go of the focus asked for as its pane opens: the
     search's tree had no keys; it has the book tree's since, and takes that focus itself
     (`CategoryBookTreeView.kt`).
+  - The pane of the line's topics, from Sefaria: `ReaderPane.Topics` ("topics", docked left of the text after the
+    references, 320 dp, sized by the dock, toggled by `BookContentEvent.ToggleTopics`), among the `standard` panes;
+    `selectedTabDemand` adds it while the book's text is shown (`topicsPane`, as `findResultsPane`, reading
+    `SefariaSettings.topicsPane`); `BookPaneBody` draws it with `LineTopicsPane` on the tab's primary line, a source
+    opened as a commentary's target (`OpenCommentaryTarget`); `writeBack` and `position` handle it as the panes the dock
+    sizes; its imports.
 - **Why:** a commentator can be read in a pane of its own, beside the others, torn off by its header and placed
   anywhere in the dock (`d85afee7`, `d27e086b`, `831ad272`). A pane at the window's edge: as for `WindowBody.kt`; the layout kept, as for `PaneLayouts.kt`.
   - The book tree or contents the tab just opened takes the keyboard's focus (request 47 of
     `docs/DESKTOP_STAGE3_PLAN.md`, the user's word of 2026-11-19: "לאחר פתיחת העץ אין עדין פוקוס עליו עד שלוחצים
     עליו"), with comments marked "Pardes:" and their imports: `PaneSync` asks `PaneFocusRequests` for the navigation
     panes the same tab's demand adds (not those of a tab switched to, nor at start), and `PaneBody` provides each
-    pane's key (`LocalPaneFocusKey`, the window's and the pane's ids) around its content, indented once.
+    pane's key (`LocalPaneFocusKey`, the window's and the pane's ids) around its content, indented once. The pane of the line's topics, of Sefaria's content the user chose on 2026-11-26, beside the references.
+  - The pane of the area beside a search's results: `ReaderPane.SearchArea` ("search-area", "על החיפוש", docked left
+    of the text, 340 dp, sized by the dock, toggled by `BookContentEvent.ToggleSearchArea`), last among the `standard`
+    panes, with a comment marked "Pardes:"; `writeBack` and `position` give it the branch of the panes never planned;
+    `selectedTabDemand` adds it in a search tab while `rememberSearchAreaShown` says so (asked for, and its search
+    naming something or linking to sources) and no book is shown (`searchAreaPane`); `BookPaneBody` draws it with
+    `SearchAreaPane` for the search tab, its hide sending `ToggleSearchArea`. The user's word of 2026-11-27: "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים".
+  - In `PaneSync`, before the planned panes are sized, a pane beside the text that the dock sizes (no navigation pane,
+    none the tab's split percentages size) is brought back to 40% of the inner dock's width when it is wider
+    (`MAX_SIDE_SHARE`, under comments marked "Pardes:"): a pane pulled out into a window as wide as the dock and docked
+    back at a side kept that width, and the text, or the passage beside a search's results, went under it (the area,
+    floated from under the results and docked at their left, 2026-11-27).
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: the enum's every entry was rewritten, so any Zayit change to a pane's declaration, or a new pane,
   conflicts; `PaneSync` and `WindowPanes` are edited in their core loops.
 - **Smaller:** hard. The commentator panes could be a second list of satellites declared by a Pardes composable, leaving
   Zayit's enum as it is, but `PaneSync` needs to know them.
 - **Tests:** `CommentatorPaneIdTest` (the ids), `DetachedCommentatorsTest`; the drops at the window's edge tried in the app;
-  `FindResultsTest`, and the find results pane tried in the app (its header without "פתח בחלון נפרד" since 2026-11-20).
+  `FindResultsTest`, and the find results pane tried in the app (its header without "פתח בחלון נפרד" since 2026-11-20). The topics' pane tried in the app (Berakhot 2a).
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/PostSelectLineTest.kt`
 
@@ -2006,6 +2052,19 @@ The entries of this section by kind:
 - **Tests:** `CommentatorsCheckStateTest`, `CommentatorSelectionTest`, `CommentariesUseCaseAllCommentatorsTest`,
   `KeptCommentatorTest`; the pin was tried in the app.
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/presentation/text/RefLinkUriHandler.kt`
+
+- **Change:** modified, +5 −1 lines. Feature: Sefaria's content.
+- **What:** `rememberRefLinkUriHandler` reads `sefariaWindows` from the graph (a key of its `remember`), and its
+  `openUri` first opens a sage's page for a `seforim://sage/<id>` link (`SefariaWindows.sageOf`, `openSage`), with a
+  comment marked "Pardes:" and its import; every other link as before.
+- **Why:** the names of the sages in the Mishnah and the Talmud are links (`SageLinks`), drawn and clicked as the
+  library's citations are, so the reader's one handler of links opens them.
+- **Kind:** Pardes feature hook.
+- **Merge risk:** small; one line before Zayit's in `openUri`, a key and a local.
+- **Smaller:** already minimal.
+- **Tests:** `SageLinksTest` (the links written); a sage's name clicked in the app (רבי אליעזר in Berakhot 2a).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/CopyWithSource.kt`
 
 - **Change:** modified, +15 −5 lines. Feature: Copy of the words alone, Copy with a commentary's source, A copy cut of its spaces.
@@ -2333,10 +2392,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultViewModel.kt`
 
-- **Change:** modified, +557 −72 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes.
+- **Change:** modified, +604 −74 lines. Feature: Search in categories, Feedback mode, Semantic search's category tabs, Result tabs, Results in the library's order, Search speed, Search modes, Common sources line, The search's area.
 - **What:**
   - `SearchUiState` gains `scopeLabel` (the category, or the books and categories, searched) and `scopeBaseBooksOnly`.
-  - New constructor parameters `feedbackStore: SearchFeedbackStore` and `libraryCategories: LibraryCategories`.
+  - New constructor parameters `feedbackStore: SearchFeedbackStore`, `libraryCategories: LibraryCategories` and
+    `commonSources: CommonSourcesReader`.
   - Events `SetScopeBaseBooksOnly` (the status line's choice in a category with base books and others) and `Grade`.
   - **Feedback mode:** `feedbackFlow` holds the grades of the search shown, read again when the search or the mode
     changes; `grade()` shows a grade at once and saves it in order (a `Mutex`) with the query, rank, scope and the
@@ -2396,6 +2456,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
   - Since then too, "more from it" (`showMoreFromBook`) shows the book alone, whatever else is marked: the marks are
     kept (`marksBeforeBook`) and let go for the book's, and the way back brings them back (`backFromBook`, and
     `clearBookFilter` without kept results); a change of the marks meanwhile, or a new search, lets them go.
+  - **Common sources line** (`docs/COMMON_SOURCES_PLAN.md`): `commonSourcesFlow`, the line's sources
+    (`CommonSourcesReader.line`) for the first `CommonSources.PAGE` results' ids, in the visible tab only, in the cases
+    measured: no tab, book or contents entry picked, by relevance (not the library's order), searched everywhere (no
+    book, contents entry or category), in the base books or in all of them after the automatic switch
+    (`baseBooksHadNoResults`), whose meaning search ran (`highlightsByMeaning`); empty in any other case.
+  - **A source in the preview** (the search's area): `previewLine(hit)`, a line that is no result shown in the preview
+    with the query it was shown for (`previewedLine`, under a comment marked "Pardes:"); `previewFlow`'s `combine` takes
+    it and `uiState` too, the line first while the query is the same, and `selectResult` clears it.
 - **Why:** the category scopes (`54180126`, `574f3d55`, `37d4fe60`), feedback mode (`90f8a24a`), and the meaning
   search's category tabs (`ac5447eb`, `d4711ac8`); the tabs as a filter of the list found: a search by meaning lists
   the first lines found, and a tab that searched its category again gave another list, slowly; the tabs picked as
@@ -2405,7 +2473,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
   of `BuildSearchTreeUseCase.kt`; the guard is a fix of Zayit's code, seen once in the app when the first tree
   from the catalog came in after the facets'. A tab picked alone on a plain click, others added only with Ctrl/Cmd,
   is the user's request of 2026-11-12 (request 38). The search modes, exact, general or hybrid, are the user's
-  decision of 2026-11-18 (request 54 of stage 3), wrapped as the library's order is.
+  decision of 2026-11-18 (request 54 of stage 3), wrapped as the library's order is. The line of common sources
+  is the plan of 2026-10-27, its first version built for the user's mockup of 2026-11-26.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** high: Zayit's largest file (some 2,100 lines), edited through its search, filter and restore paths;
   the rename of `authorBookIds` to `scopeBookIds` touches every caller.
@@ -2413,17 +2482,20 @@ alone. Every entry below that says "Search in categories" is part of that revers
   labels in `LibraryCategories`; keeping Zayit's name `authorBookIds` would shrink the diff.
 - **Tests:** `CategoryScopeSearchTest`, `MeaningFacetsTest`, `SearchFeedbackStoreTest`, `AuthorScopeSearchTest`,
   `SearchMarksTest`, `HybridSearchEngineFallbackTest` (the views), `CatalogOrderSessionTest`,
-  `ResultsTreeLibraryBooksTest`, `SearchModesTest`.
+  `ResultsTreeLibraryBooksTest`, `SearchModesTest`, `CommonSourcesTest` (the line's rule; its flow was seen in the
+  app on the whole library, 2026-11-26).
 - **Notes:** the runs counted take `executeFilteredSearch`'s cyclomatic complexity from 22 to 23 (`detekt.yml` allows
   15; it was past it already).
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchResultScreen.kt`
 
-- **Change:** modified, +238 −57 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents.
+- **Change:** modified, +246 −74 lines. Feature: Search in categories, Feedback mode, Preview highlights, Result tabs, Passage read as a book, Results in the library's order, Search modes, Keys in the book tree and the contents, Common sources line, Sefaria's content, The search's area pane, The search's area.
 - **What:**
   - `SearchShellActions` gains `onScopeBaseBooksChange` and `onGrade`; `SearchResultInBookShellMvi` and
     `SearchResultContentMvi` take `feedback` (the grades shown).
   - With feedback mode on (`searchFeedbackFlow`), each result row ends with `SearchFeedbackButtons`.
+  - `SearchResultInBookShellMvi` and `SearchResultContentMvi` no longer take Zayit's `entity` (the book or author the
+    query names), nor its comment: the area's pane reads it from the view model (`SearchAreaPane.kt`).
   - The status line names the category or books searched (`state.scopeLabel`), and in a category with base books and
     others offers the other choice (`search_switch_scope_all` / `…_base`).
   - The preview's highlights come from `rememberPreviewHighlights(...)` instead of an inline `produceState`.
@@ -2470,6 +2542,14 @@ alone. Every entry below that says "Search in categories" is part of that revers
     the marks), or a search in one book with nothing checked (`state.scopeBook`, which the contents pane of a book
     checked also sets, counting then alone); a book checked with other places gets the screen as ever. The status line
     names the book checked alone by its results (the contents pane's book may be another's).
+  - Zayit's `if (entity != null && !duplicate) EntityPanel(…)` at the top of the passage's pane is gone, with the
+    `duplicate` it reads and `showBookDetails`, a comment marked "Pardes:" in its place: the book or the author the
+    query names, with the rest of the area beside the results, is in the area's pane of the dock (`SearchAreaPane.kt`,
+    which keeps Zayit's rule of the book already in the details pane). `EntityPanel` is internal, for that pane.
+  - `EntityPanel` gains `extra` (a `ColumnScope` content, empty by default, under a comment marked "Pardes:"), drawn
+    under `EntityDetails`: the rest of the area in Zayit's card.
+  - The area's sources: `SearchShellActions` gains `onPreviewLine` under a comment marked "Pardes:" (a source shown in
+    the preview, from the area's pane, as a result is).
 - **Why:** feedback mode (`90f8a24a`), the category scopes (`37d4fe60`), and the preview's highlights shared with
   Pardes's semantic search (`20e2fa81`); the tabs as the user asked on 2026-11-09: a filter of the results found,
   several at once; the categories picked go into the search bar from `SearchResultViewModel`, with nothing of this
@@ -2477,7 +2557,9 @@ alone. Every entry below that says "Search in categories" is part of that revers
   menu on a right click, and scrolling up and down past it. The link to the library's order is the user's request
   of 2026-11-09, beside the status line's other choice. A tab picked alone unless Ctrl/Cmd is held, and the focus in
   the bar after it, are the user's request of 2026-11-12 (request 38). The search modes, the user's decision of
-  2026-11-18 (request 54 of stage 3, the design's variant ב: in the bar's row).
+  2026-11-18 (request 54 of stage 3, the design's variant ב: in the bar's row). The topic's card, of Sefaria's content the user chose on 2026-11-26. The panels hidden, as the user asked of the testers' build of 2026-11-26: "צריך אפשרות להסתיר את
+  הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט שיהיה את המתג בסרגל השמאלי". The area in a pane of
+  its own, as the user asked of build 87 on 2026-11-27: "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים".
 - **Kind:** Pardes feature hook.
 - **Merge risk:** medium: Zayit edits this screen often (0.6.12 rebuilt its layout); the hooks are spread over some fifteen
   places, and `FilterTabs`' body is now the set's form.
@@ -2489,7 +2571,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
   listed הכל, מדרש, תלמוד, תנ"ך, הלכה and "עוד" in one row, the tree open beside it (תוספתא behind "עוד", which listed
   the seven). The book checked with other places, tried in the app on 2026-11-25: מלכים א alone listed its 10 results
   with the way back; the תלמוד tab added by Ctrl+click gave the screen as ever (142 results, grouped, no way back);
-  "עוד 6 תוצאות מחולין" showed its 7 alone, and the way back brought the תלמוד tab and the book back, 142 again.
+  "עוד 6 תוצאות מחולין" showed its 7 alone, and the way back brought the תלמוד tab and the book back, 142 again. The topic's card tried in the app (קריאת שמע: 203 sources in 92 books). `SearchPanelsSettingsUiTest` (the bar's buttons, and the topic card as its setting is).
 - **Notes:** comments here are marked "Pardes:", which Zayit's code does not do. The header's line takes
   `SearchResultContentMvi`'s cyclomatic complexity from 65 to 66, and `TabsInOneRow` the file's functions from 24 to
   25 (`detekt.yml` allows 15 for both; they were past it already). The one-book flags take `SearchResultContentMvi`'s
@@ -2576,10 +2658,10 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/AuthorScopeSearchTest.kt`
 
-- **Change:** modified, +7 −1 lines. Feature: Feedback mode, Search in categories, Results in the library's order.
-- **What:** the test's `SearchResultViewModel` gets a `feedbackStore` (an in-memory `SearchFeedbackStore`) and a
-  `libraryCategories` (a `LibraryCategories` without a catalog), and its engine by the parameter's new name, `engine`.
-- **Why:** the ViewModel's constructor gained both (`90f8a24a`, `37d4fe60`), and wraps the engine it is given
+- **Change:** modified, +8 −1 lines. Feature: Feedback mode, Search in categories, Results in the library's order, Common sources line.
+- **What:** the test's `SearchResultViewModel` gets a `feedbackStore` (an in-memory `SearchFeedbackStore`), a
+  `libraryCategories` (a `LibraryCategories` without a catalog), a `commonSources` (a relaxed mock), and its engine by the parameter's new name, `engine`.
+- **Why:** the ViewModel's constructor gained them (`90f8a24a`, `37d4fe60`, and the line of common sources), and wraps the engine it is given
   (`CatalogOrderEngine`), which keeps the name `lucene` for the wrapped one.
 - **Kind:** Pardes feature hook (a test kept compiling).
 - **Merge risk:** small.
@@ -2601,8 +2683,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +466 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 429 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +532 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 497 Hebrew strings added in twenty-five blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2636,7 +2718,11 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `settings_user_font_missing`;
   - the results' order: `search_sort_catalog` ("מיון לפי סדר הספרייה"), `search_sort_relevance` and
     `search_farther_lines` (the lines found by meaning alone the library's order leaves out), after
-    `search_switch_scope_base`;
+    `search_switch_scope_base`; right after them, under a comment of their own, the search's area (`SearchArea.kt`):
+    `search_area_also` ("גם:"), the kinds `search_area_kind_book`, `…_author`, `…_sage` and `…_topic`,
+    `search_area_topic_sources`, `search_area_topic_line`, `search_area_sage_line`, `search_area_sage_mentions`,
+    `search_area_sage_page` ("לדף החכם"), `search_area_sefaria_credit`, the sources' `search_area_sources` ("מקורות
+    שהתוצאות מפנות אליהם") and `search_area_sources_page`;
   - the commentators' panes and selection: `commentator_pane`, `commentator_reattach`, `commentator_detached_hint`,
     `commentator_not_on_line`, `commentators_all_detached`, `commentators_select_all`, and under a comment the pin of
     the reader's default, `commentators_default_set`, `…_set_hint`, `…_replace`, `…_on` and `…_on_hint`;
@@ -2694,11 +2780,24 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `settings_search_anywhere_keys` with its description (the card that shows the line again);
   - after Zayit's `settings_max_commentators_per_page_*`, under a comment: `settings_max_commentators_per_page_tall`
     and its description (the commentaries pane at the window's side, request 99 of stage 3);
+  - Sefaria's content, under a comment at the file's end: the two tools' names, `home_widget_name_topics` ("נושאים")
+    and `home_widget_name_sages` ("חכמים"); `sefaria_back` and `sefaria_loading`; the topics' window,
+    `sefaria_topics_*` (credit, search hint, tree, index and its count, none found), a topic's page,
+    `sefaria_topic_*` (its sources in books, "עוד %1$d", the six kinds of neighbours, the search card's kind, "לדף
+    הנושא" and its count); the reader's pane, `sefaria_topics_pane` ("נושאים"), its tooltip, and its three states (no
+    line, a line of no topic, the line's count); the sages' window, `sefaria_sages_*` (credit, search hint, none found)
+    and a sage's page, `sefaria_sage_*` (teachers, students, family, groups, mentioned in, all, an ambiguous name, its
+    Wikipedia page); the generations, `sefaria_generation_*` (tannaim, amoraim, zugot, between them); and the reader's
+    menu, `sefaria_mark_*` and `sefaria_copy_*` for a sugya, a Mishnah and a story (47 strings).
+  - The pane of the area beside a search's results, under a comment after Sefaria's block, at the file's end: its
+    name and its button's in the search's end bar, `search_area_pane` ("על החיפוש"), and the button's tooltip,
+    `search_area_pane_tooltip` (what the pane shows, and that it is dragged to any side, sized and opened in a window of
+    its own).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); nineteen insertion points (the onboarding's two blocks stand together), each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); twenty insertion points (the onboarding's two blocks stand together), each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -2992,6 +3091,20 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 ### Home widgets
 
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/ArrangeLayout.kt`
+
+- **Change:** modified, +2 −0 lines. Feature: The Home's "arrange" for more widgets.
+- **What:** `arranged` hands a list of more than `MAX_ARRANGED_AT_ONCE` widgets to `arrangedInGroups`
+  (`ArrangeInGroups.kt`), under a comment marked "Pardes:"; every list of fewer is arranged as before.
+- **Why:** the search keeps two tables of an entry a subset of the widgets placed, so each widget more doubles its
+  memory: the gallery's 20 widgets, all placed, were its most, and Sefaria's two widgets made it run out of memory
+  (`HomeWidgetsLayoutTest`). A Home seldom holds that many, as the user said on 2026-11-27 ("בדרך כלל לא כל
+  הווידגטים על מסך הבית"), but the one that does must not stop the app.
+- **Kind:** fix of Zayit's code (it holds for Zayit as well, at its next widget).
+- **Merge risk:** small; one line at the function's head.
+- **Smaller:** already minimal.
+- **Tests:** `HomeWidgetsLayoutTest` (the gallery's 22 widgets arranged, no hole, every widget within its limits).
+
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/ToolWindows.kt`
 
 - **Change:** modified, +4 −0 lines. Feature: Settings window (request 57 of stage 3).
@@ -3041,7 +3154,7 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/library/DictionaryWidget.kt`
 
-- **Change:** modified, +171 −23 lines. Feature: Klei Kodesh dictionary, Dictionary window.
+- **Change:** modified, +189 −23 lines. Feature: Klei Kodesh dictionary, Dictionary window, Sefaria's content.
 - **What:**
   - `Dictionary` gains a `source` (`BOOK`, `INDEX`, `TEXT`) and an `attribution`, and six entries: four books of the
     library read through Klei Kodesh's index of headwords (מצודת ציון, the Malbim's ביאור המילות, מיקרופדיה תלמודית,
@@ -3060,15 +3173,19 @@ alone. Every entry below that says "Search in categories" is part of that revers
     from `lookupAsRead` in place of `lookup`: a word no entry begins with is found without its prefix letters.
   - The entry page shows a text entry's text and attribution, and no "open in the book" button for it; the options page
     marks Klei Kodesh's dictionaries ("· כלי קודש").
+  - `KRUPNIK`, the last entry, under a comment marked "Pardes:": Krupnik and Silberman's dictionary of the Talmud
+    (1927, public domain), a `TEXT` dictionary read from `KrupnikDictionary.shipped` (Sefaria's text) in place of
+    Klei Kodesh's pack, in `readDictionaries`' `TEXT` branch, and marked "· ספריא" in the options page (a `when` in
+    place of the `if`), with its import.
 - **Why:** more dictionaries and related words in the Home's dictionary card, from Klei Kodesh's Kitvei Hakodesh data
   (`66ae16e8`, `4f86ba1e`, `389f2438`); HaMichlol's definitions were taken out again before release (`f405bb7f`). The
   dictionary opened from the Tools menu is ready to type in, and the reader's menu opens it on a word, as the user asked
-  on 2026-11-09.
+  on 2026-11-09. Krupnik's dictionary is Sefaria's content the user chose on 2026-11-26.
 - **Kind:** Pardes feature in Zayit's file.
 - **Merge risk:** medium: Zayit's `readDictionaries` body was moved into `readBook`, so a Zayit change there conflicts.
 - **Smaller:** `readIndexed`, `titleVariants` and `RelatedWords` could move to `KleiKodeshDictionary.kt`; keeping Zayit's
   reading code where it was would avoid the move.
-- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`, `DictionaryLookupTest`.
+- **Tests:** `KleiKodeshDictionaryTest`, `KleiKodeshDictionaryE2ETest`, `DictionaryWindowUiTest`, `DictionaryLookupTest`. `SefariaDataTest` (Krupnik's rows); Krupnik's entry tried in the app (בסורא).
 - **Notes:** the attributions and the "· כלי קודש" mark are Hebrew literals in Kotlin, as the file's dictionary labels
   already were in Zayit; ktlint left one `if (kind ==` broken over three lines.
 
@@ -7457,15 +7574,18 @@ Hooks: `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt`, `main.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/TextLinks.kt`
 
 - **Feature:** Links in the texts.
-- **Size:** 30 lines.
-- **What:** `TextLinks`, Zayit's `QuoteLinksFeature` as Pardes's two kinds of links: `VerseLinks` and `NoteLinks`, made
-  when `library` is given, once the app's graph is made. A book is covered when one of them covers it, and its lines
-  are decorated by that one; until `library` is given no book is covered, and the reader loads the lines as they are.
+- **Size:** 39 lines.
+- **What:** `TextLinks`, Zayit's `QuoteLinksFeature` as Pardes's kinds of links: `VerseLinks` and `NoteLinks`, made
+  when `library` is given, once the app's graph is made, and over them `SageLinks` (Sefaria's content), the names of
+  the sages in the Mishnah and the Talmud. A book is covered when one of them covers it, and its lines are decorated
+  by that one, then by the sages' links (a word of a verse quoted stays the verse's); until `library` is given no book
+  is covered, and the reader loads the lines as they are.
 - **Reached from:** `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt` (`installedQuoteLinks`), which Zayit's
   `ContentUseCase.buildLinesPager` reads; `main.kt` sets `library`.
 - **Follows:** Zayit's `TalmudQuoteLinks` in `addons/quotelinks/enabled` (an object implementing the feature); Pardes's
   `InstalledSemanticSearch` for a community build that plugs its own.
-- **Tests:** none of its own; `VerseQuotesTest`, `NoteLinksTest` and `LibraryLinksTest` for what it joins.
+- **Tests:** none of its own; `VerseQuotesTest`, `NoteLinksTest`, `SageLinksTest` and `LibraryLinksTest` for what it
+  joins.
 - **Notes:** `library` is a global set at start, as the feature itself is one (`installedQuoteLinks`): the reader
   reaches it without the graph.
 
@@ -7492,7 +7612,7 @@ Hooks: `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt`, `main.kt`.
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/VerseQuotes.kt`
 
 - **Feature:** Links in the texts.
-- **Size:** 269 lines.
+- **Size:** 270 lines.
 - **What:** the finding and the writing of a verse's quote in a line, with no library.
   - `comparedLetters`: a word as it is compared, its letters without nikud and teamim and without ו and י, which a
     quote in the Talmud spells as it pleases (בשכבך for ובשכבך), the Name one word however written (ה׳, יי, אלקים).
@@ -7505,7 +7625,8 @@ Hooks: `addons/quotelinks/disabled/…/InstalledQuoteLinks.kt`, `main.kt`.
   - `withVerseLinks`: each verse's quotes, the longer first (up to three passes, a word linked once), then a word quoted
     by itself that one verse alone has (״לָכֶם״), then the quotes of the `near` verses, those of the lines before, told by
     three words or more; written as `<a class="ref" href="seforim://line/<id>">`, the library's
-    own citation, which the reader already draws and opens. A link crosses no tag and no quote mark.
+    own citation, which the reader already draws and opens. A link crosses no tag and no quote mark
+    (`appendLinked`, internal, its link's `href` given: `SageLinks` writes the sages' links with it).
 - **Reached from:** `VerseLinks.decorate`.
 - **Follows:** Zayit's `LineReferences.kt` (top-level `internal` functions, constants at the file's end).
 - **Tests:** `VerseQuotesTest`.
@@ -7567,7 +7688,7 @@ Hakodesh data, with their permission. Hooks: `DictionaryWidget.kt`, `strings.xml
 - **Size:** 236 lines.
 - **What:** `KleiKodeshPack`, Klei Kodesh's data read from `kleikodesh/dictionary.tsv.gz` (the index of headwords of four
   books of the library, two text dictionaries, and the links between synonyms and spellings), `DictionarySource`,
-  `RelationKind`, `RelatedWord`, `IndexedHeadword`; `indexedEntries` (an index entry kept only when its line in this
+  `RelationKind`, `RelatedWord`, `IndexedHeadword` (`TEXT` is also Krupnik's dictionary, Sefaria's text); `indexedEntries` (an index entry kept only when its line in this
   library holds its headword, a heading read up to the next entry), `linesToRead`, `textEntries` (words of no book, with
   ids of their own), and `letters` (letters alone, final forms as the others).
 - **Reached from:** `DictionaryWidget.kt`.
@@ -8433,7 +8554,8 @@ Hooks: `LuceneLookupSearchService.kt`, `AppCoreBindings.kt`, `SearchHomeViewMode
   the categories right under it (`ofNamedCategory`, `NAMED_CATEGORY_DEPTH`), rank after the titles typed whole or begun
   and before the titles that only hold the name, in the library's order: `תנך` lists בראשית before אור הישר (תנך), as
   the user asked on 2026-11-10.
-- **Reached from:** `LuceneLookupSearchService.kt` (`titleIndex`), `BookTitleIndexLoader.kt`, `AppCoreBindings.kt`.
+- **Reached from:** `LuceneLookupSearchService.kt` (`titleIndex`), `BookTitleIndexLoader.kt`, `AppCoreBindings.kt`;
+  `SefariaData.kt` (Sefaria's topics and persons found by name, through `searchAuthors`).
 - **Follows:** Klei Kodesh's Kitvei Hakodesh search, in spirit; Zayit's lookup index stays behind it for what it misses.
 - **Tests:** `BookTitleIndexTest`, `TitleSearchE2ETest`, `TitleSearchBench`.
 - **Notes:** with some 20 functions it passes `detekt.yml`'s 15.
@@ -8764,9 +8886,9 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CategoryScopeSearchTest.kt`
 
 - **Feature:** Search in categories (base books).
-- **Size:** 105 lines.
+- **Size:** 106 lines.
 - **What:** over the dev database (skipped without it), a category searched in its base books alone finds in its texts
-  only, not in their commentaries.
+  only, not in their commentaries. The line of common sources is a relaxed mock.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's search integration tests (`SearchIntegrationTestBase`).
 - **Tests:** it is one (end to end).
@@ -8810,27 +8932,223 @@ and categories picked with Tab. Zayit dropped the category scope on purpose; see
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/ScopeFlowBench.kt`
 
 - **Feature:** Search in categories.
-- **Size:** 315 lines.
+- **Size:** 316 lines.
 - **What:** a `main` that times a search as the reader waits for it: `SearchResultViewModel` over the engines the app
   builds (`provideSearchEngine`'s, `LibraryCategories` over catalog.pb), on the library `SEFORIMAPP_DATABASE_PATH`
   names, the screen's flows collected; from a search's start to its first results, its tabs and its end, in eight
   scopes (the whole library, a book, three books, a small category, תלמוד, הלכה, אחרונים on the Bavli, ראשונים and
   אחרונים together), then the first two tabs picked and all again, and the library's order with a tab in it; the cold
-  first round apart.
+  first round apart. The line of common sources is a relaxed mock.
 - **Reached from:** run by hand (docs/scope-search-speed/README.md).
 - **Follows:** `CategoryScopeSearchTest` (the view model built in a test), `ScopeSearchBench` and `CategorySearchBench`.
 - **Tests:** a bench.
 
+### Common sources line
+
+Up to three sources: the book lines that many of the first twenty results link to (`docs/COMMON_SOURCES_PLAN.md`, the
+rule measured in pardes-semantic's `eval-real/common_source.py`), each a link that opens it in a new tab, with its text
+and how many books of the page link to it. The plan's first version, built for the user's mockup (2026-11-26), a line
+above the results at first; since 2026-11-27 they show in the area beside the results (The search's area, below). They
+show in the cases measured only, and a running read is not yet stopped when another search starts, nor the sources
+hidden while a filter is being let go. The hooks in Zayit's files are in `SearchResultViewModel.kt`
+(`commonSourcesFlow`), `SearchResultScreen.kt` (through the area), `TabsContent.kt` and `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSources.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 68 lines.
+- **What:** the rule, pure code: `CommonSources.pick` takes the page (its results as lineId and bookId), the ends of
+  their links (`LinkEnd`) and the base books, and gives up to three `CommonSourcePick`: lines at the other end of a
+  link, neither the result itself nor one of the first three, linked from at least three books of the page (in a base
+  books' search, lines of base books only); the most books first, then a base book, then the place in the page, then
+  the id; those linked from half the first's books or more. Each with the page's lines that link to it (`from`, in the
+  page's order), for the list narrowed to them.
+- **Reached from:** `CommonSourcesQueries`.
+- **Follows:** `docs/COMMON_SOURCES_PLAN.md`'s sketch of it, and pardes-semantic's `eval-real/common_source.py`.
+- **Tests:** `CommonSourcesTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/CommonSourcesQueries.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 127 lines.
+- **What:** `CommonSource` (what the area shows: the line, its book, its label, the books linking to it, its text, its
+  book's title and its index to show it in the preview, and the page's lines that link to it) and
+  `CommonSourcesQueries.line`: on a read-only connection of its own (`open_mode=1`, the path as a plain file name, not
+  `?mode=ro`), opened for each read and closed after it, the page's links from the `link` table in both directions, the
+  base books (the catalog's, else the database's, kept for the run), `CommonSources.pick`, and each pick's label (its
+  `heRef` with its spaces collapsed, else its book's title) and text (its HTML as Jsoup's text, without cantillation,
+  section marks or the verse number before it). None for a page of fewer than three books, with no connection opened.
+- **Reached from:** `CommonSourcesReader`.
+- **Follows:** `CommentaryLinks` (the library read on a connection of its own); not through `SeforimRepository`, whose
+  queries keep a part of the links only (the plan's measurement: 8 right sources of 28).
+- **Tests:** none of its own; its rule's are `CommonSourcesTest`, and the sources were seen in the app on the whole
+  library, light and dark (2026-11-26), then with their texts in the area (2026-11-27).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/framework/search/CommonSourcesReader.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 29 lines.
+- **What:** `CommonSourcesReader`, the app's `CommonSourcesQueries`: on `DatabasePathProvider`'s library, with
+  `CatalogCache`'s base books.
+- **Reached from:** `SearchResultViewModel` (its constructor).
+- **Follows:** `CommentaryLinks` and `CatalogCache` (Metro's `@Inject`, `@SingleIn(AppScope::class)`).
+- **Tests:** none.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/domain/CommonSourcesTest.kt`
+
+- **Feature:** Common sources line.
+- **Size:** 138 lines.
+- **What:** the rule alone (three books needed, a book counted once, the first three never a source, no link of a line
+  to itself, base books only in a base books' search, the order, the half cut, the lines linking to a source in the
+  page's order), and against `common-sources-e100.json.gz`:
+  eval-100's 95 pages give the line measured (47 lines, 86 sources), and with the fused list's order after the page,
+  `common_source.py`'s.
+- **Reached from:** the JVM tests.
+- **Follows:** `HfTokenizerParityTest` (a gzipped fixture of pardes-semantic's).
+- **Tests:** it is one.
+
 #### `SeforimApp/src/jvmTest/resources/search/common-sources-e100.json.gz`
 
-- **Feature:** Common sources line (planned).
+- **Feature:** Common sources line.
 - **Size:** binary.
 - **What:** the eval-100 questions' results and the common sources expected for them (215 KB gzipped), for a parity test
-  of the common sources line above the results (`docs/COMMON_SOURCES_PLAN.md`), added with the semantic search
+  of the common sources beside the results (`docs/COMMON_SOURCES_PLAN.md`), added with the semantic search
   (`20e2fa81`).
-- **Reached from:** nothing yet: no test reads it, and `CommonSources` is not written.
+- **Reached from:** `CommonSourcesTest`.
 - **Follows:** Pardes's own data.
-- **Tests:** a fixture of a test still to write.
+- **Tests:** the fixture of `CommonSourcesTest`.
+
+### The search's area
+
+One area at the top of the passage's pane beside the search's results, in place of Zayit's panel of a book or an author,
+Sefaria's topic card and the line of common sources above the results (the design's ד with ב, which the user chose on
+2026-11-27 from the mockups of the day before): what the query names, a book, an author, a person of Sefaria's or a
+topic, one person's faces together (a person and a topic by Sefaria's id, an author and either by two names shared),
+the first in full and the others on its "גם:" line, where a click shows one in full; then the sources the first results
+link to, each with its text. A book or an author stays Zayit's panel, which takes the rest of the area under its details
+(`EntityPanel`'s `extra`); a person or a topic, and the sources alone, are a card of the same look. Since 2026-11-27 the
+area is a pane of the dock, as the user asked of build 87 ("שיוכלו לשלוט בגובה ומיקום חלונית הנושאים"): "על החיפוש", a column beside the passage at first,
+which the reader drags to any side, sizes and pulls out into a window of its own as any pane of the reader, open while
+its search names something or links to sources; one button in the search's end bar shows or hides it (the section after
+the next). The hooks in Zayit's code are in `SearchResultScreen.kt`, `TabsContent.kt` and `ReaderPanes.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchFacets.kt`
+
+- **Feature:** The search's area.
+- **Size:** 86 lines.
+- **What:** the area's rule, pure code: `Facet` (a book, by its title or by its acronym, an author, a person or a topic
+  of Sefaria's, with its id and names), `AreaEntity` (one entity's facets, its `main` first), and
+  `SearchFacets.entities`: a person and a topic of Sefaria's are one when they share the id, an author and either of
+  them when they share two names at least by `searchKey` (`SHARED_NAMES`; one name alone joins persons apart, the רא"ש
+  and the topic ראש), a book never; the entities ordered a book named by its title, an author, a person, a book named by
+  its acronym, a topic.
+- **Reached from:** `SearchArea`.
+- **Follows:** Zayit's `SearchEntityFinder` (a book's title before an author, an author before a book's acronym), whose
+  order it extends to Sefaria's persons and topics.
+- **Tests:** `SearchFacetsTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchArea.kt`
+
+- **Feature:** The search's area.
+- **Size:** 300 lines.
+- **What:** `SearchArea`: Sefaria's person and topic the query names (`SefariaSages.named`, `SefariaTopics.named` with
+  sources), read off the UI thread (`SefariaNamed`, internal, which the pane's demand reads too); the facets of Zayit's entity and of them ordered and joined
+  by `SearchFacets`; the entity shown, the first or the one picked on the "גם:" line (`AlsoLine`: a pill each, its kind,
+  its name and what it holds, a click showing it); a book or an author in Zayit's panel (`panel`), with the lines of the
+  person's faces of Sefaria's under it (`PersonFacets`: `SageLine`, `TopicLine`, the credit); a person (`SageDetails`)
+  or a topic (`TopicDetails`) in a card of the panel's look (`AreaCard`); and under them the sources (`SourcesPart`,
+  `AreaSources.kt`), a click on one showing it in the preview (`onShowSource`), as a result is (its count, which
+  narrowed the results to those that link to it, is gone since 2026-11-27). One column that scrolls; `wide` (the pane far wider than tall, docked under the
+  results), what the query names beside the sources, each scrolling on its own (`NAMED_SHARE` of the width). Nothing
+  when the query names nothing and no source is common to its results.
+- **Reached from:** `SearchAreaPane.kt` (the area's pane of the dock; until 2026-11-27, `SearchResultScreen.kt`'s
+  passage pane).
+- **Follows:** Zayit's `EntityPanel` (its card: the pane's `card()`, 16 dp in, 8 dp between) and `SearchStatusLine`
+  (`ResultLink`, the grey of `readingSecondary`), and the topic card of Sefaria's content, which it takes in.
+- **Tests:** `SearchPanelsSettingsUiTest` (the topic shown, a source alone opened, the wide layout); the rule's are
+  `SearchFacetsTest`; seen in the app on the whole library (שבת, רמב"ם, רבא, ברכת כהנים, שמע ישראל, 2026-11-27; in its
+  pane, חנוכה and רבא, in a column, under the results and in a window of its own).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaPerson.kt`
+
+- **Feature:** The search's area.
+- **Size:** 242 lines.
+- **What:** a person of Sefaria's in the area: `SageDetails` (its name and kinds, its generation, its description, its
+  teachers and students as links to their pages, how many lines of the library mention it and the four books most of
+  them are in as thin bars with their counts, its topic's line when it has one, "לדף החכם" and the credit), and the
+  lines of an author's faces of Sefaria's (`SageLine`, `TopicLine`), each with the way to its page in Sefaria's windows.
+- **Reached from:** `SearchArea`.
+- **Follows:** the persons' window of Sefaria's content (`SagesTool`'s `SagePage`: the teachers, the students, the lines
+  by book), and the dataviz rules for the bars (one series, no legend, values beside, the data end rounded).
+- **Tests:** none of its own; seen in the app (רבא, 2026-11-27).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaSources.kt`
+
+- **Feature:** The search's area.
+- **Size:** 109 lines.
+- **What:** the area's sources: `SourcesPart` (a title with the page they are read from, then each source, `SourceRow`:
+  its place in the accent's colour, underlined while the pointer is on it, over its text in the book font, two lines at
+  most, a click anywhere on it showing it in the preview, as a click on a result does) and `CommonSource.asResult` (a
+  source as a result of its own line, for the preview). Each source's count of the books linking to it ("3 ספרים"),
+  which narrowed the results to them, and the line over the narrowed list are gone, as the user asked on 2026-11-27:
+  "למה צריך להיות רשום ליד כל אחד 3 ספרים? גם רואים מיד כמה מקורות יש. לחיצה גם מסננת את התוצאות - אין בזה צורך שרק תציג את הספר כמו שלחיצה על תוצאה בחיפוש עושה ואז לחיצה על הספר פותחת לשונית".
+- **Reached from:** `SearchArea`; `SearchAreaPane.kt` (`asResult`).
+- **Follows:** the line of common sources it replaces (`SearchStatusLine`'s grey 13 sp text), and Zayit's `ResultLink`
+  (the accent, the underline on hover, the hand) for the whole source.
+- **Tests:** `AreaSourcesTest`, `SearchPanelsSettingsUiTest`; seen in the app (שמע ישראל: the source in the preview,
+  2026-11-27).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchAreaPane.kt`
+
+- **Feature:** The search's area pane.
+- **Size:** 168 lines.
+- **What:** `SearchAreaPane`: the pane of the area beside a search tab's results, Zayit's `PaneHeader` ("על החיפוש",
+  also its grip, its hide sending `ToggleSearchArea`) over `SearchArea`, the tab's query, the book or author it names
+  (none when the details pane shows its book, Zayit's rule), the sources its first results link to, a source shown in
+  the preview (`onRequestBreadcrumb`, `onPreviewLine` of `asResult()`), Zayit's `EntityPanel` as the area's panel, side by side once the pane is at least 720 dp wide and 1.8 times wider than
+  tall (`WIDE_MIN_WIDTH`, `WIDE_RATIO`); `rememberSearchAreaShown`, the pane's demand: asked for
+  (`SearchPanelsSettings.area`), and its search naming a book, an author, a person or a topic, or linking to sources, a
+  search that names nothing closing it once it is no longer loading and `SETTLE_MS` passed, so that a search on its way
+  or a source read late does not close and open it again; `SearchAreas` (Metro-injected, one in the app), whether each
+  search tab has its pane open, so that a tab selected again opens it at once.
+- **Reached from:** `ReaderPanes.kt` (`ReaderPane.SearchArea`'s demand and body); `AppGraph.searchAreas`
+  (`SearchAreas`).
+- **Follows:** Zayit's panes (`BookDetailsPane`: `PaneHeader` over the content, the search's view model and actions of
+  the tab, `tabSearchViewModel`, `rememberSearchShellActions`), `LineTopicsPane` (the header's hover), and `SearchTrees`
+  (a tab's state kept by its id, app-scoped).
+- **Tests:** `SearchAreasTest`, `SearchPanelsSettingsUiTest`; tried in the app on the whole library (חנוכה, רבא, מאי
+  חנוכה: in a column beside the passage, dragged under the results and its height dragged, pulled out into a window,
+  docked back, dragged to the left and its width dragged; no pane for a search that names nothing, 2026-11-27).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchAreasTest.kt`
+
+- **Feature:** The search's area pane.
+- **Size:** 18 lines.
+- **What:** each tab's pane open or closed apart.
+- **Reached from:** the JVM tests.
+- **Follows:** `AreaSourcesTest` (pure code, small inline cases), names in backticks as Zayit's.
+- **Tests:** it is one.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/AreaSourcesTest.kt`
+
+- **Feature:** The search's area.
+- **Size:** 15 lines.
+- **What:** a source as a result of its own line, for the preview.
+- **Reached from:** the JVM tests.
+- **Follows:** `SearchFacetsTest` (pure code, small inline cases), names in backticks as Zayit's.
+- **Tests:** it is one.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/area/SearchFacetsTest.kt`
+
+- **Feature:** The search's area.
+- **Size:** 71 lines.
+- **What:** the rule's cases: a tractate before the topic of its name and apart from it; an author and a topic sharing
+  two names one person, the author first; one name shared not enough; a name written twice counted once; a person and
+  a topic one by their id alone; the order of an author, a person, a book named by its acronym and a topic; a book never
+  joined to a person; nothing named, no entity.
+- **Reached from:** the JVM tests.
+- **Follows:** `CommonSourcesTest` (a pure rule with small inline cases), names in backticks as Zayit's.
+- **Tests:** it is one.
 
 ### Feedback: grades of search results, and sending them
 
@@ -9948,6 +10266,274 @@ and `PopupKeys.kt`.
 - **Follows:** `RevealItemUiTest`.
 - **Tests:** it is one (Compose UI).
 
+### Sefaria's content: the topics, the sages, the passages and Krupnik's dictionary
+
+Sefaria's topics, the sages it finds in the Mishnah and the Talmud, its passages and Krupnik's dictionary of the
+Talmud, from its dump of 2026-11-25, as the user chose on 2026-11-26 ("תממש את כל ההצעות"): the topics of the line in a
+pane beside the text, a topic's page and the topics browsed, the sages' names as links to their page and its places, a
+topic's card in a search, the sugya marked or copied from the reader's menu, and Krupnik in the dictionary. Credited to
+Sefaria while Pardes asks it (`NOTICE.txt`). Hooks: `ReaderPanes.kt`, `VerticalBars.kt`, `BookContentEvent.kt`,
+`BookContentViewModel.kt`, `BookContentScreen.kt`, `SearchResultScreen.kt`, `RefLinkUriHandler.kt`, `DictionaryWidget.kt`,
+`AppGraph.kt`, `strings.xml`; `TextLinks.kt` and `VerseQuotes.kt`, Pardes's own.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaData.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 411 lines.
+- **What:** Sefaria's data as `scripts/sefaria_content.py` packs it under `resources/sefaria/`, each read on first use
+  (off the UI thread by its callers) and kept:
+  - `SefariaTopics` (`Topic`, `TopicRelation`, `TopicNeighbours`): the topics, the roots of their tree, the lines each
+    is about (`sourcesOf`, `sourceCount`, in Sefaria's order), the topics of a line (`of`, the most sourced first), the
+    children in the tree, the neighbours on a page (shown under, broader, narrower, contains and around, dependents,
+    related), a topic named whole for the search's card (`named`: by
+    `searchKey`, then in another spelling, with or without the article, its words in any order, never a typo), the index by first letter, and the search
+    (`search`), as the bar finds authors by name (`BookTitleIndex.searchAuthors` over the topics with sources: another
+    spelling, a typo, another order, the article, a leading רבי or הרב), the name typed whole first, then the most sourced;
+  - `SefariaSages` (`Sage`, `AmbiguousSage`, `Mention`, `SageRelation`): the persons the library's lines mention, the
+    names Sefaria could not tell apart, the mentions of a line (`at`), a person's lines (`placesOf`, a line once), a
+    person named for the search's area (`named`, by the topics' rules: by `searchKey`, then in another spelling, with
+    or without the article, its words in any order, never a typo; the most mentioned first), its students, teachers,
+    family and groups, and the search, by the same rules as the topics' search, the most mentioned first;
+  - `SefariaSugyot` (`Sugya`): the passage of a line, a sugya over the Mishnah it shares lines with; `ifRead()` for the
+    menu, which must not wait;
+  - `KrupnikDictionary`: Krupnik's headwords, each other headword of an entry with its text.
+- **Reached from:** `SefariaLines`, the reader's pane, the two tools, the search's area, `SageLinks`, `SugyaMenu`, `DictionaryWidget.kt`.
+- **Follows:** Pardes's `BookTitleIndex` (the bar's search of books and authors by name), whose author search it
+  uses for the topics and the persons; Pardes's `KleiKodeshPack` (a gzipped TSV resource parsed lazily into maps).
+- **Tests:** `SefariaDataTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaLines.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 102 lines.
+- **What:** `SefariaLines` (Metro-injected), the library's lines by the heRefs Sefaria's data names (`linesOf`, 500 at a
+  time, on a read-only connection of its own) and a passage's lines in order (`range`, for the copy), each as a
+  `SefariaLine` with its book's title.
+- **Reached from:** `AppGraph.sefariaLines`: the pane, the tools, the search's card, `SugyaMenu`.
+- **Follows:** Pardes's `LibraryLinks` (a read-only JDBC connection to the library, opened by a property, not a URI).
+- **Tests:** none of its own; the queries tried in the app (989 sources of תפילה in 0.02 s on a warm cache).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaParts.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 233 lines.
+- **What:** what the Sefaria screens share: `LocalSefariaWindow` (whether a tool is drawn in its own window),
+  `SefariaChip` (a pill with a count, lit when picked), `ChipFlow` and `ChipSection`, `SourceRow` (a line of the library
+  with its place, a few words around a name marked bold), `BackTitle`, `SefariaHint`, `generationLabel` (Sefaria's code,
+  T3 or A5, as "התנאים, דור 3"), and `plainText` and `snippet`.
+- **Reached from:** The reader's pane and the two tools.
+- **Follows:** Zayit's widgets' parts (`HoverBox`, `rememberAccentColor`, `WidgetTitle`), which it uses.
+- **Tests:** none of its own; the screens tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaWindows.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 62 lines.
+- **What:** `SefariaSettings` (`topicsPane`: the reader's pane of the line's topics, one setting for every tab; the
+  search's topic card had one until the area's pane, 2026-11-27, whose setting is `SearchPanelsSettings.area`) and
+  `SefariaWindows` (Metro-injected, one in the app): the topic or sage asked for and `openTopic`/`openSage`, which open
+  the tools' windows on it, a topic on its sources in one book when one is given (`topicBook`, the search's area); `SAGE_LINK` and `sageOf(uri)`, the sages' links in the texts.
+- **Reached from:** `AppGraph.sefariaWindows`; `RefLinkUriHandler.kt`, the reader's pane, the search's card.
+- **Follows:** Zayit's `ToolWindows`, which it drives, and `SettingsGroup`, as `FindResultsSettings`.
+- **Tests:** `SearchPanelsSettingsUiTest` (a topic around the one named, opened); a sage's link, "לדף הנושא" and a
+  book of the area's topic tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SugyaMenu.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 81 lines.
+- **What:** `SugyaMenu`, the reader's menu items of the passage a line is in (`SefariaSugyot`): the sugya (or the
+  Mishnah, or the story of the Tanakh) marked in the text as a reading's range is (`OpenBookAtLine` with its last line),
+  or its lines copied as plain text; `rememberSugyaMenu(onEvent)`, which reads the passages as soon as the reader shows.
+- **Reached from:** `BookContentScreen.kt` (`BookTextMenus`).
+- **Follows:** Zayit's context-menu items (`ContextMenuItemOption`) and its marked reading range (`MarkedEnd`).
+- **Tests:** `SefariaDataTest` (the passages); the Mishnah marked in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/sages/SagesTool.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 290 lines.
+- **What:** `SagesTool`, a Home card and a tool window as the dictionary's ("חכמים", "person.2"; 6×5 cells, 4×4
+  to 10×10; the loading card's spinner and tag until the persons are read): the persons the library's lines
+  mention, the most mentioned first, searched by name; a person's page (its generation, description and Wikipedia page,
+  its teachers, students, family and groups, and its places, a tractate's at a time once picked, up to 400, its name
+  marked in each); for a name Sefaria could not tell apart, the persons it may be.
+- **Reached from:** the widget processor (a `HomeWidget` object with a `toolWindowSize`: the Home's gallery and the
+  Tools menu); `SefariaWindows.openSage`.
+- **Follows:** Zayit's tool widgets (`DictionaryWidget`'s own window, `LocalDictionaryWindow`).
+- **Tests:** none of its own; the index and רבי אליעזר's page tried in the app.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/TopicsTool.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 406 lines.
+- **What:** `TopicsTool`, a Home card and a tool window as the dictionary's ("נושאים", "tag"; 6×5 cells, 4×4 to
+  10×6: taller, the tree's fourteen roots leave the card's foot empty; the loading card's spinner and tag until the
+  topics are read): the topics searched by name, browsed in
+  Sefaria's tree (its roots but the authors, branches opened in place) or by first letter; a topic's page (its
+  description, its sources by book, three a book and "עוד", its neighbours, the credit), each from its top, or, asked
+  for from the search's area, on one book's sources, all of them (`SefariaWindows.topicBook`).
+- **Reached from:** the widget processor (a `HomeWidget` object with a `toolWindowSize`: the Home's gallery and the
+  Tools menu); `SefariaWindows.openTopic`.
+- **Follows:** Zayit's tool widgets, as `SagesTool`.
+- **Tests:** none of its own; the tree, the index and תפילה's page tried in the app, and חנוכה's on ספר מקבים א from
+  the search's area (2026-11-27).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/LineTopicsPane.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 138 lines.
+- **What:** `LineTopicsPane`, the reader's pane of the topics the primary line is about: pills with their counts, the
+  one picked read below (its description, two of its sources) with the way to its page; a hint for no line or a line
+  of no topic.
+- **Reached from:** `ReaderPanes.kt` (`ReaderPane.Topics`).
+- **Follows:** Zayit's side panes (`PaneHeader`, the references pane's place).
+- **Tests:** none of its own; tried in the app (Berakhot 2a: 5 and 7 topics).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/topics/SearchTopicCard.kt`
+
+- **Feature:** Sefaria's content, The search's area.
+- **Size:** 122 lines.
+- **What:** `TopicDetails`, the topic a search's query names as the area beside its results shows it: its description,
+  its count of sources and the books most of them are in (read off the UI thread), each a link (Zayit's `ResultLink`)
+  to the topic's page on its sources, and "עוד N" to the page, the topics around it, each a link to its own page (the
+  user's word of 2026-11-27, "מה קורה בלחיצה על אלו ?": they were text, though gold), "לדף הנושא"
+  (Jewel's `DefaultButton`, in the accent's gold, as Zayit's panel has "לדף המחבר" and the sage's card "לדף החכם",
+  since the user's word of 2026-11-27: "תואם לשפת העיצוב של זית? לא צריך צבע זהב?") and the credit. The card of its own it was until 2026-11-27 is the area's, and its button in the search's end bar the
+  area's pane's (`SearchAreaPaneButton`).
+- **Reached from:** `SearchArea.kt`.
+- **Follows:** Zayit's `EntityPanel` (the panel of a book or an author the query names), whose look it takes, and its
+  `BookDetails` (a book's parts as links in a `FlowRow`, 14 dp apart).
+- **Tests:** `SearchPanelsSettingsUiTest` (the topic the query names, in a column and beside the sources; a topic around
+  it opened); tried in the app (קריאת שמע, רבא, ברכת כהנים, חנוכה: ספר מקבים א and חנוכת המשכן opened).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinks.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 118 lines.
+- **What:** `SageLinks`, a `QuoteLinksFeature` over the Mishnah's, the Bavli's and the Yerushalmi's books
+  (`CatalogPresets` categories): where Sefaria found a person named in a line, the name as the line writes it becomes a
+  `seforim://sage/<id>` link (`withSageLinks`): the line's words compared letter by letter without nikud, the longer
+  names first, a name in short (ר"מ) one link with its gershayim, never inside the line's own links.
+- **Reached from:** `TextLinks`, over the verses' and the notes' links.
+- **Follows:** Pardes's `VerseQuotes.kt` (`wordsOfLine`, `appendLinked`).
+- **Tests:** `SageLinksTest`.
+- **Notes:** of 50,595 distinct mentions in a sample of 20,000 lines, 85.5% are found word for word (a prefix letter is no
+  part of the name); the rest are names the library spells otherwise.
+
+#### `SeforimApp/src/jvmMain/resources/sefaria/NOTICE.txt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 11 lines.
+- **What:** the credit and terms of the four files beside it: Sefaria's dump of 2026-11-25; its topics, passages and
+  mentions carry no licence in the dump, and are used crediting Sefaria while Pardes asks it; Krupnik's dictionary is in
+  the public domain.
+- **Reached from:** shipped beside the data.
+- **Follows:** Pardes's `kleikodesh/NOTICE.txt`.
+- **Tests:** none.
+
+#### `SeforimApp/src/jvmMain/resources/sefaria/topics.tsv.gz`
+
+- **Feature:** Sefaria's content.
+- **Size:** binary.
+- **What:** Sefaria's topics with Hebrew names, gzipped TSV (2.1 MB): 4,835 topics, the tree's 14 roots, 7,912
+  relations, and 340,112 rows of a topic's lines (168,976 of Sefaria's 190,289 links mapped to the library's lines).
+- **Reached from:** `SefariaTopics.shipped`.
+- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
+- **Tests:** `SefariaDataTest` (the shipped data read).
+
+#### `SeforimApp/src/jvmMain/resources/sefaria/sages.tsv.gz`
+
+- **Feature:** Sefaria's content.
+- **Size:** binary.
+- **What:** the persons the library's lines mention, gzipped TSV (1.1 MB): 1,557 persons, 88 ambiguous names, 649
+  relations and 226,297 mentions with the name as written (the people of Israel and the Name left out).
+- **Reached from:** `SefariaSages.shipped`.
+- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
+- **Tests:** `SefariaDataTest`.
+
+#### `SeforimApp/src/jvmMain/resources/sefaria/sugyot.tsv.gz`
+
+- **Feature:** Sefaria's content.
+- **Size:** binary.
+- **What:** Sefaria's passages, gzipped TSV (306 KB): 14,261 sugyot, Mishnayot in the Gemara and stories of the Tanakh,
+  each with its lines in the library.
+- **Reached from:** `SefariaSugyot.shipped`.
+- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
+- **Tests:** `SefariaDataTest`.
+
+#### `SeforimApp/src/jvmMain/resources/sefaria/krupnik.tsv.gz`
+
+- **Feature:** Sefaria's content.
+- **Size:** binary.
+- **What:** Krupnik and Silberman's dictionary of the Talmud (1927, public domain) as Sefaria has it, gzipped TSV
+  (485 KB): 18,957 entries, their other headwords and their text.
+- **Reached from:** `KrupnikDictionary.shipped`.
+- **Follows:** Pardes's own data, packed by `scripts/sefaria_content.py`; terms in `NOTICE.txt`.
+- **Tests:** `SefariaDataTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/sefaria/SefariaDataTest.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 205 lines.
+- **What:** the topics, the sages, the passages and Krupnik's rows parsed from small fixtures (a line's topics and
+  their order, the tree, the neighbours both ways, a name as typed, the index and the search, in another spelling, with a typo and in another
+  order; the topic the search's card names, in another spelling or order and never by a typo; mentions, places,
+  relations, an ambiguous name, a person found in another spelling, with a typo or a leading רבי; the person the search's
+  area names, whole, in another spelling or order and never by a typo; a sugya over its Mishnah; other headwords), and the
+  shipped data read.
+- **Reached from:** the JVM tests.
+- **Follows:** Kotlin Test, names in backticks as Zayit's.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/quotelinks/SageLinksTest.kt`
+
+- **Feature:** Sefaria's content.
+- **Size:** 65 lines.
+- **What:** a name made a link; found whatever its nikud or geresh; the longer name, not one inside it; a word of the
+  line's own link left; a name in short one link, a prefixed word left; the same line when no name is found.
+- **Reached from:** the JVM tests.
+- **Follows:** `VerseQuotesTest` beside it.
+- **Tests:** it is one (unit).
+
+### The search's area in a pane, shown or hidden from the search's bar
+
+The area beside a search's results (the search's area, above) in a pane of the reader's dock, which the reader moves to
+any side, sizes and pulls out into a window of its own, shown or hidden from one button in the search's end bar, as the
+reader's panes are from theirs: the user's words on the testers' builds of Sefaria's content (2026-11-26), "צריך
+אפשרות להסתיר את הדברים הללו בתוצאות חיפוש כמו בשאר המקומות", then "עדיף פשוט שיהיה את המתג בסרגל השמאלי", and on
+build 87 (2026-11-27) "שיוכלו לשלוט בגובה ומיקום חלונית הנושאים", in Zayit's design language: two buttons, one for the book or author panel and one for
+Sefaria's topic, until then. The pane itself is the area's section's (`SearchAreaPane.kt`). Hooks: `ReaderPanes.kt`,
+`VerticalBars.kt`, `BookContentEvent.kt`, `BookContentViewModel.kt`, `AppGraph.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettings.kt`
+
+- **Feature:** The search's area pane.
+- **Size:** 40 lines.
+- **What:** `SearchPanelsSettings` (`area`: the pane of the area beside a search's results, on until turned off, one
+  setting for every search tab) and `SearchAreaPaneButton`, its button in the search's end bar ("על החיפוש", Zayit's
+  `Contextual_token` icon, the topics' pane's), lit while the pane is asked for. Until 2026-11-27 it held `entity` and
+  the button of the book or author panel, beside `SefariaSettings.searchTopicCard` and its button; one pane has one.
+- **Reached from:** `SearchAreaPane.kt` (the pane's demand), `BookContentViewModel.kt` (`ToggleSearchArea`, the pane's
+  own hide), `VerticalBars.kt` (the button).
+- **Follows:** Zayit's end bar buttons (`SelectableIconButtonWithToolip`, as "פרטי הספר" over the book details' setting).
+- **Tests:** `SearchPanelsSettingsUiTest`.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/search/SearchPanelsSettingsUiTest.kt`
+
+- **Feature:** The search's area pane, The search's area.
+- **Size:** 144 lines.
+- **What:** the area shows the topic its query names; a source of the results shown alone in the area, with its text,
+  a click on its place or its text showing it, and no count of its books; a wide pane, as docked under the results, shows what
+  the query names beside the sources, the sources on its far side; a topic around the one named a link to its page;
+  the bar's button turning the pane's setting off and
+  on.
+- **Reached from:** the JVM tests.
+- **Follows:** `DictionaryWindowUiTest` (the real graph in a desktop Compose UI test), names in backticks as Zayit's.
+- **Tests:** it is one (UI).
+- **Notes:** it writes the real graph's setting, the machine's own: the pane asked for in each test, and the value it
+  had put back after it.
+
 ### A selection dragged past a row's end (a fix of Compose's code)
 
 The user's report of 2026-11-26: the app closed with "Start(3638) or End(3594) is out of range [0..3638), or start >
@@ -9990,9 +10576,26 @@ copies the same words. The hook in Zayit's files is in `ComposePatches.kt`.
   Compose's selection, its KDoc naming the patch).
 - **Tests:** it is one (Compose UI).
 
+### The Home's "arrange" for more widgets than its search holds
+
+The Home's "arrange" searches every subset of the widgets placed, so each widget more doubles its memory: the gallery's
+20 were its most, all placed, and Sefaria's two widgets made it run out of memory. Past that many, the widgets are
+dealt into groups the search holds. Hook: `ArrangeLayout.kt`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/ArrangeInGroups.kt`
+
+- **Feature:** The Home's "arrange" for more widgets.
+- **Size:** 35 lines.
+- **What:** `MAX_ARRANGED_AT_ONCE` (20, the gallery's widgets before Sefaria's two) and `arrangedInGroups`: the
+  widgets dealt in reading order, or shuffled for "arrange again", into the fewest groups of at most that many, as
+  even as can be, each arranged by `arranged` and put under the one before it, the widgets given back in their order.
+- **Reached from:** `ArrangeLayout.kt` (`arranged`, past `MAX_ARRANGED_AT_ONCE` widgets).
+- **Follows:** Zayit's `arranged` and `rearranged` (`ArrangeLayout.kt`), which it calls and whose result it keeps.
+- **Tests:** `HomeWidgetsLayoutTest` (the gallery's 22 widgets, in two groups of 11, without a hole).
+
 ## 3. Pardes's own trees
 
-Every other file Pardes adds (803 files): Pardes for Android (`androidApp/`), branding, documents,
+Every other file Pardes adds (805 files): Pardes for Android (`androidApp/`), branding, documents,
 workflows, skills, the feedback service and the rest, a row each: what the file is, and where it comes from
 (Pardes's own, a port or a copy of a named Zayit or Pardes for desktop file, or a third party's). A note follows
 the description where something needs saying.
@@ -10107,7 +10710,7 @@ the description where something needs saying.
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-LICENSE.txt` | MIT licence of ONNX Runtime, which runs the semantic search's model (1.17.1 on desktop). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from ONNX Runtime (MIT); same text as androidApp/app/src/androidMain/assets/licenses/ONNX-Runtime-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/ONNX-Runtime-ThirdPartyNotices.txt` | ONNX Runtime's third-party notices (6,508 lines). Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. *Note:* Differs from androidApp's copy, which is ONNX Runtime 1.22.0's (a665f012). | copied from ONNX Runtime (MIT) |
 | `branding/pardes/assetsExtra/common/licenses/PDFium-LICENSES.txt` | PDFium's licence (BSD 3-Clause) and those of the components of others it is built with (Abseil, AGG 2.3, Brotli, Dragonbox, fast_float, FreeType, HarfBuzz, Highway, ICU, Little CMS, libjpeg-turbo, libyuv, LLVM libc, OpenJPEG, libpng, LibTIFF, simdutf, zlib) and of pdfium-binaries, word for word under a header each (1,739 lines), for the PDF reading experiment, whose Windows builds carry PDFium. Shipped as a plain file in the install folder's licenses/ and listed in its README.md. | the texts the PDFium binaries' build ships, as pypdfium2 5.15.2's wheel carries them (its dist-info licenses/BUILD_LICENSES; FreeType's converted from Latin-1) |
-| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
+| `branding/pardes/assetsExtra/common/licenses/README.md` | Hebrew index of the licences folder, shipped in the install folder: Pardes for desktop's own licence (AGPL v3 with §7b, based on Zayit and not on his behalf, its source) and every bundled library, the semantic model, icon set, font and data source with its copyright, licence and file here, the experimental smart siddur's engine and the two sources of its data (SeforimOpenSiddur, Amud, Hebcal Leyning), Sefaria's topics, sages, passages and Krupnik's dictionary (no licence stated for the first three, credited while Pardes asks; Krupnik public domain), plus the five texts the build copies in (brandLicences). *Note:* Zayit's packages carry no third-party licence texts. A new desktop dependency, font, icon set or data file needs its entry and text here (branding/README.md). HaMichlol's line went with its definitions (2026-11-05). | Pardes's own |
 | `branding/pardes/assetsExtra/common/licenses/Radix-Icons-LICENSE.txt` | MIT licence of Radix Icons, drawn in the app's icons module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Radix Icons (MIT); same text as androidApp/app/src/androidMain/assets/licenses/Radix-Icons-LICENSE.txt |
 | `branding/pardes/assetsExtra/common/licenses/Robius-LICENSE-MIT.txt` | MIT licence of Project Robius's robius-share, derived source in Nucleus's share module. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from Project Robius (MIT); identical to the Nucleus tao jar's META-INF/licenses/LICENSE-MIT-robius.txt |
 | `branding/pardes/assetsExtra/common/licenses/SLF4J-LICENSE.txt` | MIT licence of SLF4J. Shipped as a plain file in the install folder's licenses/ (brand.gradle's brandAssets adds assetsExtra at package time) and listed in its README.md. | copied from SLF4J (MIT) |
@@ -10128,7 +10731,7 @@ the description where something needs saying.
 | `branding/pardes/composeResources/drawable/zayit_new_logo.png` | 1556x715 base layer of the Home logo (`LogoImage` in HomeView.kt): the word פרדס on one line, in gold. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_new_logo.png (the lettering זית between olive branches) |
 | `branding/pardes/composeResources/drawable/zayit_new_logo_text.png` | 1556x715 white mask of the word פרדס, which `LogoImage` paints over the base layer in gold in light mode and in the accent colour in dark mode. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_new_logo_text.png (the mask of זית) |
 | `branding/pardes/composeResources/drawable/zayit_transparent.png` | 645x746 picture of the onboarding's welcome (InitScreen): the Pardes icon, 560 px, centred on a transparent ground. *Note:* Keeps Zayit's file name (the overlay replaces by path). | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; replaces Zayit's drawable/zayit_transparent.png (a gold olive branch) |
-| `branding/pardes/composeResources/files/ABOUT.md` | Pardes for desktop's About page (Settings › אודות, AboutSettingsScreen), in Hebrew: based on Zayit by Elie Gambache and not on his behalf, built from Zayit 0.6.12's open source, his copyright, AGPL v3, the §7b line, Pardes's source, Zayit's private modules left out, and thanks (Zayit and SeforimLibrary, Sefaria and Otzaria, Klei Kodesh's book search and dictionary data, the libraries, fonts, Emoji One, the licences folder, the temple picture's painting). *Note:* The §7b line ends with a space before U+2069, so the autolinker keeps the mark out of the link (branding/README.md › Texts); Klei Kodesh's line, whose address stood right before the mark and was no link, has it as a Markdown link, and no longer says how Klei Kodesh came by Torat Emet's dictionary (the user's request of 2026-11-10; the licences index still does). It does not credit Dicta's model, which CONDITIONS.md and the licences index do. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/ABOUT.md (the author's first-person About) |
+| `branding/pardes/composeResources/files/ABOUT.md` | Pardes for desktop's About page (Settings › אודות, AboutSettingsScreen), in Hebrew: based on Zayit by Elie Gambache and not on his behalf, built from Zayit 0.6.12's open source, his copyright, AGPL v3, the §7b line, Pardes's source, Zayit's private modules left out, and thanks (Zayit and SeforimLibrary, Sefaria and Otzaria, Sefaria again for its topics, sages, passages and Krupnik's dictionary, Klei Kodesh's book search and dictionary data, the libraries, fonts, Emoji One, the licences folder, the temple picture's painting). *Note:* The §7b line ends with a space before U+2069, so the autolinker keeps the mark out of the link (branding/README.md › Texts); Klei Kodesh's line, whose address stood right before the mark and was no link, has it as a Markdown link, and no longer says how Klei Kodesh came by Torat Emet's dictionary (the user's request of 2026-11-10; the licences index still does). It does not credit Dicta's model, which CONDITIONS.md and the licences index do. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/ABOUT.md (the author's first-person About) |
 | `branding/pardes/composeResources/files/CONDITIONS.md` | Pardes for desktop's terms (the onboarding's licence step and Settings › תנאים, through `ConditionsText`), in Hebrew: the books' sources and rights, Rashi Amiti left out, Culmus, Emoji One, the temple painting, the app's licence (based on Zayit and not on his behalf, his copyright, AGPL v3, §7b, built from 0.6.12), the private modules left out, Dicta's model (CC BY 4.0) and privacy: no error reports, and the feedback sent only with the user's consent (what, where to, the question asked at the first install with its boxes checked at first, the searches made in Zayit and in Otzaria on the same computer when the user leaves them checked, their files read only then and never changed; what the open site shows everyone: the figures and the daf marks, and the searches' words only when "פרסום במאגר הפתוח" stayed checked, else to the maintainer alone, never the sender's id; how to stop it and delete it, and that copies others downloaded stay). *Note:* Keeps Zayit's `<!-- if:self-update -->` and `<!-- if:update-helper -->` blocks. | Pardes's own; replaces Zayit's SeforimApp/src/commonMain/composeResources/files/CONDITIONS.md |
 | `branding/pardes/composeResources/values/strings.xml` | The ten strings Pardes for desktop changes, each put by BrandResources in place of Zayit's string of the same name: app_name (פרדס), the onboarding's title bar, welcome title and subtitle, extraction tip and finish message, the Settings › כללי header's created-by, licence and private-modules lines (the §7b line in LRI…PDI), and update_dialog_message. *Note:* Never Zayit's "נוצר על ידי אליהו גמבש" or "שנבנה באהבה…" (the zayit-android skill's authorship rules). | Pardes's own; overrides those names in Zayit's SeforimApp/src/commonMain/composeResources/values/strings.xml |
 | `branding/pardes/desktopAppIcons/LinuxIcon.png` | 1024x1024 Pardes icon of the Linux packages (deb, rpm, pacman), which brand.gradle sets as `linux.iconFile`. *Note:* Not an overlay: brand.gradle points Nucleus at it. The same bytes as the brand's AppIcon.png. | generated by .claude/skills/zayit-android/scripts/pardes-icon.py; used in place of Zayit's SeforimApp/desktopAppIcons/LinuxIcon.png (the olive branch icon) |
@@ -10154,7 +10757,7 @@ the description where something needs saying.
 
 | File | What it is | Where it comes from |
 |---|---|---|
-| `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; not built yet. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
+| `docs/COMMON_SOURCES_PLAN.md` | Hebrew build plan (2026-10-27) for the common sources line above the search results: up to three library lines that many of the first twenty results link to, the rule as measured, the link-table data read on a read-only connection, the code file by file, tests, the work order and open questions; a first version built on the branch claude/eloquent-goldberg-x6t9wz (2026-11-26), its state at the top. *Note:* Written in Hebrew (Zayit's developer docs are in English). Its code line numbers refer to a 2026-10-26 commit. | Pardes's own |
 | `docs/BOOK_DAF_RULES.md` | The user's rules for setting a page of a text with its commentaries, in Hebrew (2026-11-23, "מסמך הוראות וכללים לעימוד מקראות גדולות"): the page's structure and its default measures, the ten rules that decide what a page takes, the typography, the algorithm, what went wrong in the first setting and the rule each fault gave, the checks before a page goes out, and what is still open. Written with a page of Bereshit 1 (Onkelos, Rashi, the Ramban) set in a browser; `BookDafBands.kt` follows it, and its comments name its rules by number. *Note:* Kept as the user gave it. Its sources of text (Sefaria through a browser) are that page's own: Pardes sets the library's texts. | The user's own |
 | `docs/DESKTOP_STAGE2.md` | Hebrew working document (2026-11-11) for the stage after the first 26 requests: the user's sixteen remaining requests in his numbers (an update of the daf layouts by lines, a daily-study widget of one's own, flexible docking, a daf-like view for other books, typing over the contents, fonts of one's own, PDF books, and 29 to 37: a screen that opens by itself when something can be downloaded, a settings page for feedback, the library's order and faint meaning hits, the dictionary item, the daf's review always in the menu with an icon and a third answer, a settings window of its own, a check of the pack's update and import, an index for a category's search), grouped by what relates to what, with what the code and two researches already say of each, a proposed order, and the decisions that wait for the user. *Note:* Not yet a plan with steps: `docs/DESKTOP_STAGE2_PLAN.md` is, and this document's header names the three statements of its own that the plan corrects. | Pardes's own |
 | `docs/DESKTOP_STAGE2_PLAN.md` | Hebrew plan (2026-11-11) for stage 2 of Pardes for desktop, the document that follows DESKTOP_STAGE2.md: what reading the code at main (`abcb687`) found (four places in a semantic pack's install that fit request 36, no screen for the library's update on desktop, the category field the words' index already carries and what was measured of it, Zayit's tool windows as the way to a settings window of its own, `ok: true` still read, the pipeline's fourth and fifth runs done), how each step is worked, four waves in order (34 with 33, 36, 31, 32 and 30; then 35, 29 and 24; then 25, the docking's three steps and 37; then 19, 28, 21, the layouts' update and the docking's step in Nucleus, each after a spike, mock-ups, a measurement or a design), every request's steps with its files and checks (for 36 also what its reproduction on the whole library found on 2026-11-12: packs 2 and 3 share a model id and differ by their lines; for 30 what was built of the page on 2026-11-12, before the user's word on it; for 31 what was measured, the rule first chosen (a fixed 10) and the one by each line's score that replaced it), the versions and testers' builds, the table of the user's decisions with the recommendation and his answer of 2026-11-12 for each (one button above the daf, only the closest meaning-only lines in the library's order, the feedback page first, once per version and no library update for now, the docking also in Nucleus for a pane at full height and the corner chosen by the drag, fonts in the backup, PDF reading first with the files' place a setting, a public release only at the stage's end; the daf's database still open, with its side benefits listed), and what is left out; and under request 21, that it was taken up again on 2026-11-23 as a trial, by the user's rules (docs/BOOK_DAF_RULES.md): what was built, how it is turned on, what was seen in the app, what of the rules is not done yet, and its testers' build, desktop-1.0.11-63, with the Maven Central fault its first run met. *Note:* Written in Hebrew. It says what is to be done; of what was done it keeps only its status line (the requests done, with their commits) and what a step found: the commits and the changelog say the rest. | Pardes's own |
@@ -10169,6 +10772,7 @@ the description where something needs saying.
 | `docs/SEARCH_PLAN.md` | English plan (2026-11-10) for the search after pull request #28: Pardes for desktop 1.0.9 from its Windows pre-release to the public release, per-word forms in the regular search (measure the spelling and ים↔ין forms in the measurement build, then the owner's decision on SeforimLibrary), the new eval-real grades into pardes-semantic, Android's lexicon and fusion behind desktop's, one re-embedding for short lines and the "(א)" numbers, and the open questions with what was measured and is not to do. | Pardes's own |
 | `docs/SEARCH_SYNTAX_REPORT.md` | English report (measured 2026-11-03) on how the search reads quotes, geresh and gershayim, maqaf and niqqud, prefixes and suffixes, word distance (near = 5, which only ranks) and order, with line counts on the October 2026 library, the recommendations not built, and Klei Kodesh's search syntax for comparison. *Note:* Finds that Hebrew-keyboard gershayim (רש״י) search as רשי, typographic quotes are ignored, and Zayit's strings.xml keeps unused search_level_1..5 strings. | Pardes's own |
 | `docs/SEARCH_WORLD_RESEARCH.md` | Hebrew research (2026-11-08) on how search systems outside Pardes handle each problem SEARCH_ORDER_ISSUES.md measures, with sources and what to try, cheapest first; it notes that the words' search adds each of a word's forms as a term of its own, twice, so scores add up across forms and favour long lines (Lucene's `SynonymQuery` is the known remedy). *Note:* Written in Hebrew. | Pardes's own |
+| `docs/SEFARIA_LESSONS.md` | Hebrew research report (2026-11-24), brought by the user, on what Pardes can learn and take from Sefaria: its data and code (a rank by links like its `pagesheetrank`, chronological order, topics, passages, the Linker and its Disambiguator, English as a pack, dictionaries), three deep dives (Patot and the ACL 2025 paper on segmenting ancient Hebrew, against the semantic search's short lines; `pagesheetrank.py` read in full, beside proposal 9 of SEARCH_WORLD_RESEARCH.md; Sefaria's dictionaries, topics, sage mentions and sugyot measured against the library: their sizes, Hebrew, licences and how much falls on the library's lines, with the rule that turns a Sefaria ref into the library's heRef), what Sefaria offers developers (an open API, MCP servers, `llms.txt`, a schema document), what Pardes seems to lack and what it already has, an optional AI assistant over the semantic search, ideas built from the library's own data (commentators by generation, a local source sheet, accessibility, a daily passage), a numbered list of 23 proposals with what each would touch, a work order of nine steps, and sources. *Note:* Written in Hebrew. Checked against the code on 2026-11-25 (Pardes at `f657229`, SeforimLibrary at its pin `4f07145` and the kdroidFilter/SefariaExport it reads; Sefaria-Project, patot and rabbinic_chunker at that day's master), which corrected it in place: the commentators pane is already grouped and in time order (by a year table in Zayit's code, not the database's years), issue 1's 35% was measured before its fix, a book keeps one merged text and not several versions, English is dropped in the export, Sefaria's `cat_bonus` and `length_penalty` are unused, and new packs would be built in Pardes's own pipeline, since SeforimLibrary stays Zayit's. Its content was measured the same day on Sefaria's public database dump and library 20261012193827: all 14,261 sugyot, Mishnah and story units fall on library lines, as do 88% of the 190,289 topic links and 99.99% of the 494,514 sage mentions; 1,499 of 7,889 books have no link and 339 of 1,080 authors a death year. Its order puts Krupnik's Talmud dictionary first (Hebrew, public domain), then the sugyot, then the topics; Sefaria states no terms for the topics or the sugyot. Since 2026-11-26 it says which proposals were built for a testers' build (17, 18 and 23, and Krupnik of 20: `features/sefaria/`), credited to Sefaria while Pardes asks it, and taken out before a public release if Sefaria refuses. | Pardes's own |
 | `docs/SEMANTIC_PLAN.md` | Hebrew plan (2026-10-28) for shipping the semantic search's model and vector index as packs: how Zayit ships its library, what is ready, publishing packs as `semantic-*` releases from a Kaggle dataset, the code and the in-app install (both done), incremental index updates (open), the reranker of the first results that was tried and taken out on 2026-11-24, and open decisions. *Note:* Written in Hebrew. | Pardes's own |
 | `docs/ZAYIT_CHANGE_MAP.md` | This map (מפת השינויים): every file in which Pardes differs from the Zayit release it is based on, Zayit's files changed in full, the files added in Zayit's modules by feature, Pardes's own trees in rows, the departures from Zayit's style still to fix, Zayit after the base, and why GitHub does not show Pardes as a fork. | Pardes's own |
 | `docs/ZAYIT_LEXICAL_REPORT.md` | English report addressed to Zayit: lexical.db (release 20261012193827) has 4,711 bases with no forms, 2,479 of them spelled like another base's form, which `MagicDictionaryIndex.expansionFor` prefers, and the 32 forms kept are the first by id; the measured effect and a fix in the generator or at runtime. *Note:* Pardes applies the fix at runtime (PardesLexicon, docs/LEXICON.md) without changing SeforimLibrary. | Pardes's own |
@@ -10389,6 +10993,7 @@ one test added; `siddur-open/README.md`).
 | File | What it is | Where it comes from |
 |---|---|---|
 | `scripts/kleikodesh_dictionary.py` | Packs Klei Kodesh's dictionary data, from a clone of its KitveiHakodeshDictionary repository, into SeforimApp/src/jvmMain/resources/kleikodesh/dictionary.tsv.gz for the Home's dictionary card (Android copies it): the headword indexes of Metzudat Tzion, Malbim's Biur HaMilot, the Mikropedia Talmudit and Machberet Menachem, the synonyms and spellings, Torat Emet's Aramaic-Hebrew dictionary and Hebrew Wikipedia's acronyms; not HaMichlol's definitions (left out on 2026-11-05) nor Otzaria's lists or sources of unknown origin. *Note:* Zayit's scripts/ holds font and test-feed helpers only. Reads the clone as data, runs none of its scripts, and writes a deterministic gzip (mtime 0). | Pardes's own; the data is used with Klei Kodesh's permission, some of it CC BY-SA |
+| `scripts/sefaria_content.py` | Packs Sefaria's topics, the persons its texts mention, its passages and Krupnik's dictionary of the Talmud, from a mongodump of Sefaria's database (the topics, their links, the passages, the lexicon) and the library's seforim.db, into SeforimApp/src/jvmMain/resources/sefaria/*.tsv.gz: Sefaria's refs turned into the library's heRefs as SeforimLibrary's Sefaria reader writes them, only the lines the library has kept; Sefaria's ר written ר', titles of no Hebrew letter, the authors' root and three mentions that are no person left out. *Note:* Needs pymongo's bson; reads the dump as data and writes a deterministic gzip. | Pardes's own; the data credited to Sefaria (resources/sefaria/NOTICE.txt) |
 
 #### What is left of semantic-model/
 

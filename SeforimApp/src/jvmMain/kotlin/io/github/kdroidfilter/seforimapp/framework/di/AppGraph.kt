@@ -117,4 +117,13 @@ abstract class AppGraph : ViewModelGraph {
 
     /** The links of the kinds the repository does not read, for the references pane. */
     abstract val libraryLinks: io.github.kdroidfilter.seforimapp.features.bookcontent.references.LibraryLinks
+
+    /** Pardes: the windows of Sefaria's topics and persons, opened on one from the reader and the search (features/sefaria). */
+    abstract val sefariaWindows: io.github.kdroidfilter.seforimapp.features.sefaria.SefariaWindows
+
+    /** Pardes: the library's lines by the heRefs Sefaria's data names. */
+    abstract val sefariaLines: io.github.kdroidfilter.seforimapp.features.sefaria.SefariaLines
+
+    /** Pardes: whether each search tab has the pane of the area beside its results open (SearchAreaPane). */
+    abstract val searchAreas: io.github.kdroidfilter.seforimapp.features.search.area.SearchAreas
 }

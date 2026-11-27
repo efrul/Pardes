@@ -65,7 +65,11 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.booktoc.
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.CategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.categorytree.SearchCategoryTreePanel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.notes.NotesPanel
+import io.github.kdroidfilter.seforimapp.features.search.area.SearchAreaPane
+import io.github.kdroidfilter.seforimapp.features.search.area.rememberSearchAreaShown
 import io.github.kdroidfilter.seforimapp.features.search.rememberSearchTreeToggle
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
+import io.github.kdroidfilter.seforimapp.features.sefaria.topics.LineTopicsPane
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopSession
 import io.github.kdroidfilter.seforimapp.framework.desktop.DockSizes
 import io.github.kdroidfilter.seforimapp.framework.desktop.OpenWindow
@@ -87,7 +91,9 @@ import seforimapp.seforimapp.generated.resources.find_results_pane
 import seforimapp.seforimapp.generated.resources.links
 import seforimapp.seforimapp.generated.resources.notes_pane
 import seforimapp.seforimapp.generated.resources.references
+import seforimapp.seforimapp.generated.resources.search_area_pane
 import seforimapp.seforimapp.generated.resources.search_book_details
+import seforimapp.seforimapp.generated.resources.sefaria_topics_pane
 import seforimapp.seforimapp.generated.resources.sources
 import seforimapp.seforimapp.generated.resources.table_of_contents
 import kotlin.math.roundToInt
@@ -192,6 +198,26 @@ sealed class ReaderPane(
         navigation = false,
     )
 
+    // Pardes: the topics of the line, from Sefaria (LineTopicsPane): one setting for every tab, beside the references
+    data object Topics : ReaderPane(
+        "topics",
+        Res.string.sefaria_topics_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 3, extent = 320.dp),
+        toggle = BookContentEvent.ToggleTopics,
+        navigation = false,
+    )
+
+    // Pardes: the area beside a search's results (SearchAreaPane): what its query names and the sources its first
+    // results link to, which the reader moves and sizes as any pane (the user's word, 2026-11-27: "שיוכלו לשלוט בגובה
+    // ומיקום חלונית הנושאים"); a column beside the passage at first, sized by the dock
+    data object SearchArea : ReaderPane(
+        "search-area",
+        Res.string.search_area_pane,
+        SatellitePlacement.Docked(DockSide.Left, order = 4, extent = 340.dp),
+        toggle = BookContentEvent.ToggleSearchArea,
+        navigation = false,
+    )
+
     /**
      * A commentator split off the commentaries pane ([name], DetachedCommentators), in a pane of its own: torn off
      * the commentaries pane by its column's header, it opens where it is dropped, and from there it moves as any line
@@ -223,7 +249,21 @@ sealed class ReaderPane(
 
     companion object {
         /** The panes every reader window has, in their declaration order. */
-        val standard: List<ReaderPane> by lazy { listOf(Tree, Toc, Notes, Targum, Comments, Sources, BookDetails, References, FindResults) }
+        val standard: List<ReaderPane> by lazy {
+            listOf(
+                Tree,
+                Toc,
+                Notes,
+                Targum,
+                Comments,
+                Sources,
+                BookDetails,
+                References,
+                FindResults,
+                Topics,
+                SearchArea,
+            )
+        }
 
         /** The commentator pane whose satellite in window [groupId] is [satelliteId], null for any other satellite. */
         fun commentatorOf(
@@ -512,6 +552,15 @@ private fun PaneSync(
                 return@collect
             }
             val targets = plannedExtents(layout, sizes, frame.open.filter(::sizedByTab).toSet(), splitter)
+            // Pardes: a pane beside the text that the dock sizes takes 40% of their width at most. Pulled out into a
+            // window and docked back at a side, a pane kept the window's width, which may be all of the dock's: the
+            // text, or the passage beside a search's results, went under it (the search's area, out from under them)
+            val widest = (sizes.innerWidthPx * MAX_SIDE_SHARE).roundToInt()
+            val tooWide = frame.open.filter { it !in targets && !it.navigation && layered(it) && (frame.extents[it] ?: 0) > widest }
+            if (tooWide.isNotEmpty()) {
+                tooWide.forEach { setExtent(it, widest, sizes.density) }
+                return@collect
+            }
             var dragged = false
             var settled = true
             for (pane in frame.open) {
@@ -558,10 +607,17 @@ private fun selectedTabDemand(
                 val findResults = rememberFindResultsShown(tabId)
                 // Pardes: a search's tree of books, shown in the tab it was asked for in (request 97 of stage 3)
                 val searchTree = LocalAppGraph.current.searchTrees.isShown(tabId)
+                val topics by LocalAppGraph.current.appSettings
+                    .flow(SefariaSettings.topicsPane)
+                    .collectAsState()
+                // Pardes: the area beside a search's results, while its search names something or links to sources
+                val area = (destination as? TabsDestination.Search)?.let { rememberSearchAreaShown(session.ownerOf(tabId), it) } == true
                 PaneDemand(
                     tabId,
                     desiredPanes(uiState, isSearch = destination is TabsDestination.Search, bookDetails = bookDetails, searchTree) +
-                        findResultsPane(uiState, findResults && destination !is TabsDestination.Search),
+                        findResultsPane(uiState, findResults && destination !is TabsDestination.Search) +
+                        topicsPane(uiState, topics) +
+                        searchAreaPane(uiState, area),
                     viewModel::onEvent,
                     uiState.layout,
                 )
@@ -603,6 +659,10 @@ private fun saveLater(
     }
 
 private const val SAVE_DEBOUNCE_MS = 300L
+
+// Pardes: the most of their width a pane beside the text takes when the dock sizes it: a search's results and their
+// passage keep the rest
+private const val MAX_SIDE_SHARE = 0.4f
 
 @OptIn(ExperimentalSplitPaneApi::class)
 private fun splitPositions(layout: LayoutState): List<Float> =
@@ -696,7 +756,9 @@ private fun writeBack(
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage = ratio
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage = ratio
         // Never planned (see plannedExtents): their size is the dock's own
-        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, is ReaderPane.Commentator -> Unit
+        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, ReaderPane.Topics, ReaderPane.SearchArea,
+        is ReaderPane.Commentator,
+        -> Unit
     }
 }
 
@@ -708,7 +770,9 @@ private fun ReaderPane.position(layout: LayoutState): Float =
         ReaderPane.Notes -> layout.notesSplitState.positionPercentage
         ReaderPane.Targum -> layout.targumSplitState.positionPercentage
         ReaderPane.Comments, ReaderPane.Sources -> layout.contentSplitState.positionPercentage
-        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, is ReaderPane.Commentator -> 0f
+        ReaderPane.BookDetails, ReaderPane.References, ReaderPane.FindResults, ReaderPane.Topics, ReaderPane.SearchArea,
+        is ReaderPane.Commentator,
+        -> 0f
     }
 
 /** The first pane's minimum of this pane's split (the text, for the line panes), in dp. */
@@ -838,6 +902,17 @@ private fun BookPaneBody(
                     modifier,
                     onHide = { onEvent(BookContentEvent.ToggleFindResults) },
                 ) { onEvent(BookContentEvent.FocusText) }
+            ReaderPane.Topics ->
+                LineTopicsPane(
+                    line = uiState.content.primaryLine,
+                    onHide = { onEvent(BookContentEvent.ToggleTopics) },
+                    onOpenLine = { onEvent(BookContentEvent.OpenCommentaryTarget(it.bookId, it.id)) },
+                    modifier = modifier,
+                )
+            ReaderPane.SearchArea ->
+                if (search != null) {
+                    SearchAreaPane(owner, search, onHide = { onEvent(BookContentEvent.ToggleSearchArea) }, modifier = modifier)
+                }
             ReaderPane.Targum, ReaderPane.Comments, ReaderPane.Sources -> {
                 val book = uiState.navigation.selectedBook ?: return@BookTextMenus
                 val connections = tabUi.connections(book.id)
@@ -1000,6 +1075,18 @@ private fun findResultsPane(
     uiState: BookContentState,
     shown: Boolean,
 ): Set<ReaderPane> = if (shown && isBookTextShown(uiState)) setOf(ReaderPane.FindResults) else emptySet()
+
+/** Pardes: the pane of the line's topics, from Sefaria, asked for ([shown]) and only while a book is on screen. */
+private fun topicsPane(
+    uiState: BookContentState,
+    shown: Boolean,
+): Set<ReaderPane> = if (shown && isBookTextShown(uiState)) setOf(ReaderPane.Topics) else emptySet()
+
+/** Pardes: the pane of the area beside a search's results, while it is [shown] and the tab shows the results, no book. */
+private fun searchAreaPane(
+    uiState: BookContentState,
+    shown: Boolean,
+): Set<ReaderPane> = if (shown && !isBookTextShown(uiState)) setOf(ReaderPane.SearchArea) else emptySet()
 
 /** Whether the tab [tabId] shows its find's results in their pane: asked for, and its find bar open on a query. */
 @Composable

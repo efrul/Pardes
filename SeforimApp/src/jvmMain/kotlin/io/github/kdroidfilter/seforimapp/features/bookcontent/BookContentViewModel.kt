@@ -32,8 +32,10 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.state.needsLineSel
 import io.github.kdroidfilter.seforimapp.features.bookcontent.state.showInToc
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.BookContentUseCaseFactory
 import io.github.kdroidfilter.seforimapp.features.bookcontent.usecases.altTocIdOfSearchMatch
+import io.github.kdroidfilter.seforimapp.features.search.SearchPanelsSettings
 import io.github.kdroidfilter.seforimapp.features.search.domain.BookDetailsLoader
 import io.github.kdroidfilter.seforimapp.features.search.domain.SearchEntity
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaSettings
 import io.github.kdroidfilter.seforimapp.framework.desktop.DesktopManager
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
 import io.github.kdroidfilter.seforimapp.framework.session.SessionManager
@@ -669,6 +671,14 @@ class BookContentViewModel(
                 // Pardes: the find results' pane, one setting for every tab (request 55 of stage 3)
                 BookContentEvent.ToggleFindResults ->
                     appSettings[FindResultsSettings.shown] = !appSettings[FindResultsSettings.shown]
+
+                // Pardes: the line's topics' pane, one setting for every tab (LineTopicsPane)
+                BookContentEvent.ToggleTopics ->
+                    appSettings[SefariaSettings.topicsPane] = !appSettings[SefariaSettings.topicsPane]
+
+                // Pardes: the pane of the area beside a search's results, one setting for every search tab (SearchAreaPane)
+                BookContentEvent.ToggleSearchArea ->
+                    appSettings[SearchPanelsSettings.area] = !appSettings[SearchPanelsSettings.area]
 
                 BookContentEvent.CycleDiacritics ->
                     cycleDiacriticsForCurrentCategory()

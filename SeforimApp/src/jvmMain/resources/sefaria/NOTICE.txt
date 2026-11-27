@@ -1,0 +1,11 @@
+topics.tsv.gz, sages.tsv.gz, sugyot.tsv.gz, krupnik.tsv.gz: Sefaria's topics, sage mentions, passages and Krupnik's
+dictionary, packed by scripts/sefaria_content.py from Sefaria's public database dump of 2026-11-25
+(https://storage.googleapis.com/sefaria-mongo-backup/dump_small.tar.gz).
+
+From Sefaria — https://www.sefaria.org
+- The topics, their descriptions and the links between them and to the texts (from Sefaria and from the sources it
+  credits: Aspaklaria, Sefer HaAggadah, Sefaria's learning team and its users), the mentions of persons in the texts,
+  and the passages (sugyot and the Mishnah in the Gemara after Steinsaltz, stories of the Tanakh after Steinsaltz and
+  the Kehot Chumash) are Sefaria's data. Sefaria states a licence for its links (CC-BY) and for each text, not for
+  these: Pardes uses them crediting Sefaria while it asks Sefaria, and takes them out if Sefaria does not allow it.
+- A Dictionary of the Talmud by B. Krupnik (London, 1927), Hebrew, as Sefaria's version of it records: public domain.

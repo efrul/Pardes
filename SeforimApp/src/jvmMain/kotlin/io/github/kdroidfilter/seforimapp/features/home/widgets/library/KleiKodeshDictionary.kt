@@ -16,7 +16,7 @@ internal enum class DictionarySource {
     /** Klei Kodesh's index of its books' lines, each checked against our library's line. */
     INDEX,
 
-    /** Klei Kodesh's data alone: a word and its text, of no book. */
+    /** Klei Kodesh's data alone (Krupnik's dictionary: Sefaria's text, KrupnikDictionary): a word and its text, of no book. */
     TEXT,
 }
 

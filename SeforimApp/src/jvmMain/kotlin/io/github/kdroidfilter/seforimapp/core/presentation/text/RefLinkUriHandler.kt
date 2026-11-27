@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import io.github.kdroidfilter.seforim.tabs.TabsDestination
 import io.github.kdroidfilter.seforim.tabs.TabsViewModel
+import io.github.kdroidfilter.seforimapp.features.sefaria.SefariaWindows
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -22,10 +23,13 @@ internal fun refLinkLineId(uri: String): Long? =
 fun rememberRefLinkUriHandler(tabsViewModel: TabsViewModel): UriHandler {
     val platform = LocalUriHandler.current
     val repository = LocalAppGraph.current.repository
+    val sefariaWindows = LocalAppGraph.current.sefariaWindows
     val scope = rememberCoroutineScope()
-    return remember(platform, repository, tabsViewModel, scope) {
+    return remember(platform, repository, tabsViewModel, scope, sefariaWindows) {
         object : UriHandler {
             override fun openUri(uri: String) {
+                // Pardes: a sage's name in the Mishnah or the Talmud opens its page (SageLinks)
+                SefariaWindows.sageOf(uri)?.let { return sefariaWindows.openSage(it) }
                 val lineId = refLinkLineId(uri) ?: return platform.openUri(uri)
                 scope.launch {
                     val line = repository.getLine(lineId) ?: return@launch

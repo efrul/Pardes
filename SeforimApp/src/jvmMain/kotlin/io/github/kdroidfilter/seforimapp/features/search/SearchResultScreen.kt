@@ -141,6 +141,8 @@ data class SearchShellActions(
     val onShowOnlyCategory: (Long?, Boolean) -> Unit = { _, _ -> },
     val onOpenBookAt: (bookId: Long, lineId: Long) -> Unit = { _, _ -> },
     val onSelectResult: (lineId: Long) -> Unit = {},
+    // Pardes: a line that is no result shown in the preview (a source of the area beside the results, SearchArea.kt)
+    val onPreviewLine: (SearchResult) -> Unit = {},
     val onMoreFromBook: (bookId: Long) -> Unit = {},
     val onBackFromBook: () -> Unit = {},
     val onOpenAuthor: (Long) -> Unit = {},
@@ -172,8 +174,6 @@ fun SearchResultInBookShellMvi(
     selectedCategoryIds: Set<Long>,
     // The books the results were narrowed to ("more from this book")
     bookFilterIds: Set<Long>,
-    // The book or author the query names, beside the results
-    entity: SearchEntity?,
     // The home page's bar state and callbacks, for the same bar here
     homeSearchUi: SearchHomeUiState,
     homeSearchCallbacks: HomeSearchCallbacks,
@@ -212,7 +212,6 @@ fun SearchResultInBookShellMvi(
                 categories = categories,
                 selectedCategoryIds = selectedCategoryIds,
                 bookFilterIds = bookFilterIds,
-                entity = entity,
                 homeSearchUi = homeSearchUi,
                 homeSearchCallbacks = homeSearchCallbacks,
                 preview = preview,
@@ -235,7 +234,6 @@ private fun SearchResultContentMvi(
     categories: ImmutableList<SearchResultViewModel.SearchTreeCategory>,
     selectedCategoryIds: Set<Long>,
     bookFilterIds: Set<Long>,
-    entity: SearchEntity?,
     homeSearchUi: SearchHomeUiState,
     homeSearchCallbacks: HomeSearchCallbacks,
     preview: SearchResultViewModel.PassagePreview?,
@@ -367,7 +365,6 @@ private fun SearchResultContentMvi(
 
     // The selection lives in the ViewModel, as the preview it drives
     val selectedLineId = preview?.hit?.lineId
-    val showBookDetails by appSettings.bookDetailsPaneFlow.collectAsState()
     val listFocus = remember { FocusRequester() }
     // Pardes: back to the bar once a tab is picked, for Enter to search again in the tabs picked
     val barFocus = remember { FocusRequester() }
@@ -644,17 +641,8 @@ private fun SearchResultContentMvi(
             },
             secondContent = {
                 Column(Modifier.fillMaxSize()) {
-                    // The query's book is already in the details pane when a result of it is shown
-                    val duplicate =
-                        entity is SearchEntity.BookEntity && showBookDetails && entity.book.id == preview?.hit?.bookId
-                    if (entity != null && !duplicate) {
-                        EntityPanel(
-                            entity = entity,
-                            onOpenBookAt = actions.onOpenBookAt,
-                            onOpenAuthor = actions.onOpenAuthor,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                    // Pardes: the book or the author the query names, with the rest of the area beside the results, in
+                    // its pane of the dock (area/SearchAreaPane.kt)
                     // Until the first result's passage is loaded, the pane says so
                     if (preview == null && (items.isNotEmpty() || state.isLoading)) {
                         Box(Modifier.weight(1f).fillMaxWidth().card(), contentAlignment = Alignment.Center) {
@@ -1278,14 +1266,17 @@ private const val SPLIT_SAVE_DELAY_MS = 300L
 
 /** The book or author a query names, as Google's knowledge panel: what it is, and buttons to go there. */
 @Composable
-private fun EntityPanel(
+internal fun EntityPanel(
     entity: SearchEntity,
     onOpenBookAt: (bookId: Long, lineId: Long) -> Unit,
     onOpenAuthor: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    // Pardes: the rest of the area beside the results, under the panel's details (SearchArea.kt)
+    extra: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.card().padding(16.dp)) {
         EntityDetails(entity, onOpenBookAt, onOpenAuthor)
+        extra()
     }
 }
 
