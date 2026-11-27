@@ -1814,7 +1814,7 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +593 −121 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +609 −121 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes, The Home's big name shown or hidden, A card's book in place of the
   Home, Daily study plans, One marking in every popup, Scrolling alike.
 - **What:**
@@ -1895,6 +1895,13 @@ The entries of this section by kind:
     query (`skipNextTocQuery`), so the book's entries show once typed in, not at the focus the bar takes after a
     check, where Enter opened the first. With `SearchHomeViewModel.onPickBook`'s, the field's panel then holds the
     search in the book alone ("חיפוש בתוך …"), which Enter runs.
+  - Tab let go picks a row in the list shown only, with no Ctrl, Alt or Cmd held, and never the text search's row,
+    which Enter runs (its keys say so): a branch before Zayit's two of Tab's key-up, which leaves the key to the
+    others, with a comment marked "Pardes:". Zayit's key-up picks the row marked whether the list shows or not, and
+    with Ctrl too: the window's tabs take Ctrl+Tab's key-down (`rememberTabKeys`, the tabs listed while Ctrl is
+    held), and its key-up reached the results page's bar, whose row marked was the text search, the list's first, so
+    it searched again; and Tab alone on that row searched as Enter does. A fix for both brands, to drop once upstream
+    has one.
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -1904,8 +1911,10 @@ The entries of this section by kind:
   pdf לא מציגה אותו?"). On 2026-11-18 that an author's name bring all his books, not only his folders (request 41 of
   stage 3: "חיפוש בקטגוריה לפי שם של מחבר יביא את כל ספריו כהצעות למטה, לא רק את התיקיות של ספריו"). On 2026-11-19
   that a study plan's book or category be found in one field as the search finds them (request 64 of stage 3: "זה
-  יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף").
-- **Kind:** Pardes feature in Zayit's file.
+  יהיה אוטמטי כמו בחיפוש הרגיל, הוא יזהה ספר או קטגוריה, אפשר קוד משותף"). On 2026-11-26 that Tab not search again
+  (remark 97 after the public release, written with Shift for Tab: "קונטרול שיפט במסך חיפוש מבצע חיפוש שוב בכל
+  שיפט", "שיפט לבד מריץ חיפוש כאשר הפוקוס על החיפוש כמו אנטר", then "טעיתי. הכוונה למקש טאב").
+- **Kind:** Pardes feature in Zayit's file; and a fix of Zayit's code (Tab's key-up).
 - **Merge risk:** high: `HomeView.kt` is one of Zayit's largest files (some 1,900 lines), and the edits run through
   its search bar's key handling, its rows and its panels.
 - **Smaller:** the category and scope rows could be drawn by a Pardes composable passed in; the key handling has to
@@ -1922,6 +1931,10 @@ The entries of this section by kind:
   After build 76, on 2026-11-25: twelve top categories checked in the tree, a click on "+12" listed them in a panel of
   nine rows under the bar, and the arrow down ten times brought ספרי מוסר into view at its bottom; מלכים א checked
   alone by its checkbox put it in the bar, whose panel held "חיפוש בתוך מלכים א: אריה" alone, with no chapter.
+  On 2026-11-26, the results page of אריה, its bar's list open on the text search's row, the searches counted by a
+  temporary line in `executeSearch`: Tab ran none (one before the change), Ctrl held with Tab twice listed the tabs
+  and ran none (one before), Tab on הרב זאב בן אריה still put him in the bar, Enter searched once, and Tab once the
+  list closed ran none.
 - **Notes:** Zayit's search UI on purpose has no category scope (`SearchScope.Category` is "read back only" there,
   with category tabs over the results): this file brings back what Zayit chose to drop. The seeding's branch takes
   `UnifiedSearchBar`'s cyclomatic complexity from 38 to 39 and its length from 155 lines to 158 (`detekt.yml` allows
